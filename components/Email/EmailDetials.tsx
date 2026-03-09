@@ -1,20 +1,18 @@
-import DashboardTableList from "./DashboardTableList";
-import TopCardItem from "./TopCardItem";
+import EmailDashboard from "./EmailDashboard";
 import TopHeader from "./TopHeader";
 
-const DashboardDetials = () => {
+const EmailDetials = () => {
   return (
     <div className="space-y-8">
       {/* ── Header ── */}
       <TopHeader />
 
       {/* ── Stat Cards ── */}
-      <TopCardItem />
+      <EmailDashboard />
 
       {/* ── Recent Proposals ── */}
-      <DashboardTableList />
     </div>
   );
 };
 
-export default DashboardDetials;
+export default EmailDetials;

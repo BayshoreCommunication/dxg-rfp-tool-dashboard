@@ -1,20 +1,20 @@
-import DashboardTableList from "./DashboardTableList";
-import TopCardItem from "./TopCardItem";
+import ProposalFilters from "./ProposalFilters";
+import ProposalsTableList from "./ProposalsTableList";
 import TopHeader from "./TopHeader";
 
-const DashboardDetials = () => {
+const ProposalsDetials = () => {
   return (
     <div className="space-y-8">
       {/* ── Header ── */}
       <TopHeader />
 
       {/* ── Stat Cards ── */}
-      <TopCardItem />
+      <ProposalFilters />
 
       {/* ── Recent Proposals ── */}
-      <DashboardTableList />
+      <ProposalsTableList />
     </div>
   );
 };
 
-export default DashboardDetials;
+export default ProposalsDetials;

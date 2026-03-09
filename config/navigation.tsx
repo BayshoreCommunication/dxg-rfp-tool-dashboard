@@ -1,6 +1,7 @@
 import {
   Brain,
   House,
+  Mail,
   NotepadTextDashed,
   Settings,
 } from "lucide-react";
@@ -25,6 +26,12 @@ export const navigationConfig: NavItem[] = [
     title: "Proposals",
     href: "/proposals",
     icon: <NotepadTextDashed size={22} />,
+  },
+  {
+    id: "email",
+    title: "Email",
+    href: "/email",
+    icon: <Mail size={22} />,
   },
   {
     id: "ai-training",

@@ -3,6 +3,7 @@
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { Activity, BellDot, Globe } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -18,13 +19,17 @@ const Sidebar = () => {
   const isItemActive = (item: NavItem) => pathname === item.href;
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-[90px] flex-col bg-white border-r border-gray-100 shadow-sm">
+    <aside className="fixed left-0 top-0 z-50 flex h-screen w-[90px] flex-col bg-white border-r border-gray-100 shadow-sm">
       {/* Logo */}
       <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-100">
         <Link href="/dashboard">
-          <div className="flex h-11 w-11 items-center justify-center">
-            <span className="text-2xl font-black text-black tracking-tight">L</span>
-          </div>
+          <Image
+            src="/assets/logo/logo.svg"
+            alt="Logo"
+            width={400}
+            height={400}
+            className="w-[50px] h-auto"
+          />
         </Link>
       </div>
 
@@ -40,7 +45,7 @@ const Sidebar = () => {
                   "group relative flex w-full flex-col items-center gap-1 rounded-2xl py-3 px-1 transition-all duration-200",
                   isActive
                     ? "bg-gradient-to-b from-primary/10 to-primary/5"
-                    : "hover:bg-primary/5"
+                    : "hover:bg-primary/5",
                 )}
               >
                 {/* Active left pill */}
@@ -54,7 +59,7 @@ const Sidebar = () => {
                     "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
                     isActive
                       ? "bg-primary/15 text-primary"
-                      : "text-gray-400 group-hover:bg-primary/10 group-hover:text-primary"
+                      : "text-gray-400 group-hover:bg-primary/10 group-hover:text-primary",
                   )}
                 >
                   {item.icon}
@@ -64,7 +69,9 @@ const Sidebar = () => {
                 <span
                   className={cn(
                     "text-[9.5px] font-bold tracking-wide leading-none",
-                    isActive ? "text-primary" : "text-gray-400 group-hover:text-primary"
+                    isActive
+                      ? "text-primary"
+                      : "text-gray-400 group-hover:text-primary",
                   )}
                 >
                   {item.title}

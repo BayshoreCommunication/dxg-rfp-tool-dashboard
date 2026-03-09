@@ -1,7 +1,8 @@
+import ProposalsDetials from "@/components/proposals/ProposalsDetials"
 
 const page = () => {
   return (
-    <div>page</div>
+    <div><ProposalsDetials/></div>
   )
 }
 

@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
   providers: [
@@ -33,7 +33,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
         if (!apiUrl) {
-          console.error("❌ [authorize] API URL is not defined in environment variables.");
+          console.error(
+            "❌ [authorize] API URL is not defined in environment variables.",
+          );
           return null;
         }
 
@@ -48,11 +50,18 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             body: JSON.stringify(credentials),
           });
 
-          console.log("📥 [authorize] Response status:", response.status, response.statusText);
+          console.log(
+            "📥 [authorize] Response status:",
+            response.status,
+            response.statusText,
+          );
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error("❌ [authorize] Login failed:", errorData.detail || "Invalid credentials");
+            console.error(
+              "❌ [authorize] Login failed:",
+              errorData.detail || "Invalid credentials",
+            );
             return null;
           }
 
@@ -65,7 +74,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           });
 
           if (!data.user?._id || !data.access_token) {
-            console.error("❌ [authorize] Incomplete user data received from server");
+            console.error(
+              "❌ [authorize] Incomplete user data received from server",
+            );
             return null;
           }
 
@@ -111,7 +122,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
         console.log("check google provide logiin here for test");
-        
 
         if (!apiUrl) {
           console.error("API URL is not defined");
@@ -153,7 +163,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
               website: data.user.website,
               has_paid_subscription: data.user.has_paid_subscription,
               // Store redirect path based on subscription
-              redirectTo: data.user.has_paid_subscription ? "/dashboard" : "/pricing", // Adjusted logic based on subscription flag
+              redirectTo: data.user.has_paid_subscription
+                ? "/dashboard"
+                : "/pricing", // Adjusted logic based on subscription flag
             };
 
             // Only add organization if it exists in response
@@ -167,7 +179,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
             Object.assign(user, userData);
 
-            console.log("📍 [Google signIn] Redirect path:", data.user.has_paid_subscription ? "/dashboard" : "/pricing");
+            console.log(
+              "📍 [Google signIn] Redirect path:",
+              data.user.has_paid_subscription ? "/dashboard" : "/pricing",
+            );
           }
         } catch (error) {
           console.error("Error syncing Google user:", error);
@@ -179,7 +194,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     },
     async jwt({ token, user }) {
       try {
-        console.log("🎫 [jwt callback] Called with user:", user ? "present" : "not present");
+        console.log(
+          "🎫 [jwt callback] Called with user:",
+          user ? "present" : "not present",
+        );
 
         if (user) {
           console.log("✅ [jwt callback] Adding user to token:", {

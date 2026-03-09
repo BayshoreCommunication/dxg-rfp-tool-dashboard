@@ -1,7 +1,8 @@
+import SettingsDetials from "@/components/settings/SettingsDetials"
 
 const page = () => {
   return (
-    <div>page</div>
+    <div><SettingsDetials/></div>
   )
 }
 
