@@ -1,12 +1,12 @@
 "use server";
 
 import { auth } from "@/auth";
-import { revalidateTag, revalidatePath, unstable_cache } from "next/cache";
+import { unstable_cache } from "next/cache";
 
 interface UserDataResponse {
   error?: string;
   ok: boolean;
-  data?: any;
+  data?: unknown;
 }
 
 export async function getUserData(): Promise<UserDataResponse> {
@@ -15,12 +15,12 @@ export async function getUserData(): Promise<UserDataResponse> {
   console.log("🔍 [getUserData] Session check:", {
     hasSession: !!session,
     hasUser: !!session?.user,
-    hasAccessToken: !!session?.user?.accessToken,
+    hasAccessToken: !!(session?.user as any)?.accessToken,
     email: session?.user?.email,
   });
 
   // Check for authentication and access token
-  if (!session?.user?.accessToken) {
+  if (!(session?.user as any)?.accessToken) {
     console.log("❌ [getUserData] No access token in session");
     return {
       error: "User is not authenticated.",
@@ -29,24 +29,24 @@ export async function getUserData(): Promise<UserDataResponse> {
   }
 
   try {
-    // ✅ Updated endpoint: GET /api/user (current user's data)
+    // ✅ Updated endpoint: GET /api/auth/me (current user's data)
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/user`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
       {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.user?.accessToken || ""}`,
+          Authorization: `Bearer ${(session?.user as any)?.accessToken || ""}`,
         },
         next: { tags: ["userDataUpdate"], revalidate: 360 },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       console.error("❌ [getUserData] Failed to fetch user data:", errorData);
       return {
-        error: errorData?.detail || errorData?.message || "Failed to fetch user data.",
+        error: errorData?.message || "Failed to fetch user data.",
         ok: false,
         data: null,
       };
@@ -54,13 +54,12 @@ export async function getUserData(): Promise<UserDataResponse> {
 
     const data = await response.json();
     console.log("✅ [getUserData] Successfully fetched user data:", {
-      hasPayload: !!data?.payload,
-      hasUser: !!data?.payload?.user,
-      email: data?.payload?.user?.email,
+      hasUser: !!data?.user,
+      email: data?.user?.email,
     });
     return {
       ok: true,
-      data: data?.payload?.user || null,
+      data: data?.user || null,
     };
   } catch (error) {
     console.error("Error fetching user data:", error);
@@ -73,23 +72,23 @@ export async function getUserData(): Promise<UserDataResponse> {
 }
 
 export async function getUserDataTest(
-  headers: HeadersInit
+  headers: HeadersInit,
 ): Promise<UserDataResponse> {
   try {
-    // ✅ Updated endpoint: GET /api/user
+    // ✅ Updated endpoint: GET /api/auth/me
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/user`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
       {
         method: "GET",
         headers,
         next: { tags: ["userDataCache"], revalidate: 360 }, // Cache with a tag
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       return {
-        error: errorData?.detail || errorData?.message || "Failed to fetch user data.",
+        error: errorData?.message || "Failed to fetch user data.",
         ok: false,
         data: null,
       };
@@ -98,9 +97,9 @@ export async function getUserDataTest(
     const data = await response.json();
     return {
       ok: true,
-      data: data?.payload?.user || null,
+      data: data?.user || null,
     };
-  } catch (error) {
+  } catch {
     return {
       error: "An unexpected error occurred. Please try again later.",
       ok: false,
@@ -109,21 +108,22 @@ export async function getUserDataTest(
   }
 }
 
-export async function updateUserData(
-  updateData: {
-    organization_name?: string;
-    company_organization_type?: string;
-    website?: string;
-    email?: string;
-    country?: string;
-    language?: string;
-    timeZone?: string;
-  }
-): Promise<UserDataResponse> {
+export async function updateUserData(updateData: {
+  organization_name?: string;
+  company_organization_type?: string;
+  website?: string;
+  email?: string;
+  country?: string;
+  language?: string;
+  timeZone?: string;
+  name?: string;
+  phone?: string;
+  avatar?: string;
+}): Promise<UserDataResponse> {
   const session = await auth();
 
   // Check for authentication and access token
-  if (!session?.user?.accessToken) {
+  if (!(session?.user as any)?.accessToken || !session?.user?.id) {
     return {
       error: "User is not authenticated.",
       ok: false,
@@ -131,17 +131,22 @@ export async function updateUserData(
   }
 
   try {
-    // ✅ Updated endpoint: PUT /api/user (current user)
+    // ✅ Updated endpoint: PUT /api/users/:id (update current user)
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/user`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/users/${session.user.id}`,
       {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.accessToken}`,
+          Authorization: `Bearer ${(session.user as any).accessToken}`,
         },
-        body: JSON.stringify(updateData),
-      }
+        body: JSON.stringify({
+          name: updateData.name,
+          email: updateData.email,
+          phone: updateData.phone,
+          avatar: updateData.avatar,
+        }),
+      },
     );
 
     // TODO: Fix revalidateTag for Next.js 16
@@ -151,7 +156,7 @@ export async function updateUserData(
     if (!response.ok) {
       const errorData = await response.json();
       return {
-        error: errorData?.detail || errorData?.message || "Failed to update user data.",
+        error: errorData?.message || "Failed to update user data.",
         ok: false,
       };
     }
@@ -160,7 +165,7 @@ export async function updateUserData(
     const data = await response.json();
     return {
       ok: true,
-      data: data?.payload?.user || null,
+      data: data?.data || null,
     };
   } catch (error) {
     // Log unexpected errors
@@ -177,11 +182,11 @@ export async function updateUserData(
 export async function getAllUserData(
   search: string = "",
   page: number = 1,
-  limit: number = 10000
+  limit: number = 10000,
 ): Promise<UserDataResponse> {
   const session = await auth();
 
-  if (!session?.user?.accessToken) {
+  if (!(session?.user as any)?.accessToken) {
     return {
       error: "User is not authenticated.",
       ok: false,
@@ -202,19 +207,22 @@ export async function getAllUserData(
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.accessToken}`,
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
         },
         next: {
           tags: ["allUsers"],
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       console.error("Failed to fetch user data:", errorData);
       return {
-        error: errorData?.detail || errorData?.message || "Failed to fetch user data.",
+        error:
+          errorData?.detail ||
+          errorData?.message ||
+          "Failed to fetch user data.",
         ok: false,
         data: null,
       };
@@ -226,12 +234,13 @@ export async function getAllUserData(
       ok: true,
       data: data?.payload || null,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching user data:", error);
     return {
       error:
-        error?.message ||
-        "An unexpected error occurred. Please try again later.",
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred. Please try again later.",
       ok: false,
       data: null,
     };
@@ -241,7 +250,7 @@ export async function getAllUserData(
 export async function userDeletedById(id: string): Promise<UserDataResponse> {
   const session = await auth();
 
-  if (!session?.user?.accessToken) {
+  if (!(session?.user as any)?.accessToken) {
     return {
       error: "User is not authenticated.",
       ok: false,
@@ -250,16 +259,16 @@ export async function userDeletedById(id: string): Promise<UserDataResponse> {
   }
 
   try {
-    // ✅ Updated endpoint: DELETE /api/user/{id} (admin only)
+    // ✅ Updated endpoint: DELETE /api/users/{id} (admin only)
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/user/${id}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/users/${id}`,
       {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.accessToken}`,
+          Authorization: `Bearer ${(session?.user as any)?.accessToken}`,
         },
-      }
+      },
     );
     // TODO: Fix revalidateTag for Next.js 16
     // revalidateTag("userDelete");
@@ -268,7 +277,8 @@ export async function userDeletedById(id: string): Promise<UserDataResponse> {
       const errorData = await response.json();
       console.error("Failed to delete user:", errorData);
       return {
-        error: errorData?.detail || errorData?.message || "Failed to delete user.",
+        error:
+          errorData?.detail || errorData?.message || "Failed to delete user.",
         ok: false,
         data: null,
       };
@@ -291,155 +301,14 @@ export async function userDeletedById(id: string): Promise<UserDataResponse> {
 
 // User deleted by id
 
-/**
- * Get user subscriptions by user ID
- * NOTE: This endpoint (/api/subscription/{userId}) may need to be verified
- * It might be under /admin/subscriptions or a different route
- */
-export async function userSubscriptionByIds(
-  userId: string,
-  search: string = "52",
-  page: number = 1,
-  limit: number = 5,
-  searchOption: string = "all"
-): Promise<UserDataResponse> {
-  const session = await auth();
-
-  if (!session?.user?.accessToken) {
-    return {
-      error: "User is not authenticated.",
-      ok: false,
-      data: null,
-    };
-  }
-
-  try {
-    // Construct query parameters with all required values
-    const queryParams = new URLSearchParams({
-      search,
-      page: page.toString(),
-      limit: limit.toString(),
-      searchOption: searchOption.toString(),
-    });
-
-    // ⚠️ TODO: Verify this endpoint exists on backend
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/subscription/${userId}?${queryParams}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.accessToken}`,
-        },
-      }
-    );
-
-    // TODO: Fix revalidateTag for Next.js 16
-    // revalidateTag("userUpdate");
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Failed to fetch subscription data:", errorData);
-      return {
-        error: errorData?.detail || errorData?.message || "Failed to fetch subscription data.",
-        ok: false,
-        data: null,
-      };
-    }
-
-    const data = await response.json();
-    return {
-      ok: true,
-      data: data?.payload || null,
-    };
-  } catch (error) {
-    console.error("Error fetching subscription data:", error);
-    return {
-      error: "An unexpected error occurred. Please try again later.",
-      ok: false,
-      data: null,
-    };
-  }
-}
-
-/**
- * Get user subscription by user ID
- * NOTE: This endpoint (/api/subscription/{userId}) may need to be verified
- * It might be under /admin/subscriptions or a different route
- */
-export async function userSubscriptionById(
-  userId: string,
-  search: string = "",
-  page: number = 1,
-  limit: number = 10000
-): Promise<UserDataResponse> {
-  const session = await auth();
-
-  if (!session?.user?.accessToken) {
-    return {
-      error: "User is not authenticated.",
-      ok: false,
-    };
-  }
-
-  try {
-    const queryParams = new URLSearchParams({
-      search: search,
-      page: page.toString(),
-      limit: limit.toString(),
-    }).toString();
-
-    // ⚠️ TODO: Verify this endpoint exists on backend
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/subscription/${userId}?${queryParams}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.accessToken}`,
-        },
-        next: {
-          tags: ["userSubscriptions"],
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Failed to fetch user subscription data:", errorData);
-      return {
-        error: errorData?.detail || errorData?.message || "Failed to fetch user subscription data.",
-        ok: false,
-        data: null,
-      };
-    }
-
-    const data = await response.json();
-
-    return {
-      ok: true,
-      data: data?.payload || null,
-    };
-  } catch (error: any) {
-    console.error("Error fetching user subscription data:", error);
-    return {
-      error:
-        error?.message ||
-        "An unexpected error occurred. Please try again later.",
-      ok: false,
-      data: null,
-    };
-  }
-}
-
 export const getCachedAllUsersData = unstable_cache(
   async (headers) => await getUserDataTest(headers), // Ensure async
   ["userDataCache"],
-  { revalidate: 360 }
+  { revalidate: 360 },
 );
 
 export const getCachedUserData = unstable_cache(
   async (headers) => await getAllUserData(headers), // Ensure async
   ["userDataCache"],
-  { revalidate: 360 }
+  { revalidate: 360 },
 );

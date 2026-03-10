@@ -1,12 +1,48 @@
 "use client"
 
 import { ArrowRight, Check, Eye, KeyRound, Mail } from "lucide-react";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const SigninPage = () => {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+      });
+
+      if (result?.error) {
+        setError("Invalid email or password.");
+      } else if (result?.ok) {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (err: any) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F0F2F5] p-4 text-[#000000]">
@@ -33,25 +69,34 @@ const SigninPage = () => {
           Enter your details to access your account
         </p>
 
+        {error && (
+          <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm font-medium text-red-600 border border-red-100/50">
+            {error}
+          </div>
+        )}
+
         {/* Input Fields Container */}
-        <div className="space-y-4 mb-6">
-          {/* Email Input */}
-          <div className="mb-0 group">
-            <label className="mb-2 block text-[13px] font-bold text-gray-700">
-              Email Address
-            </label>
-            <div className="relative flex items-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/50 transition-all duration-300 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 hover:border-gray-300">
-              <div className="pl-4 pr-3 text-gray-400 group-focus-within:text-primary transition-colors">
+        <form onSubmit={handleSignIn}>
+          <div className="space-y-4 mb-6">
+            {/* Email Input */}
+            <div className="mb-0 group">
+              <label className="mb-2 block text-[13px] font-bold text-gray-700">
+                Email Address
+              </label>
+              <div className="relative flex items-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/50 transition-all duration-300 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 hover:border-gray-300">
+                <div className="pl-4 pr-3 text-gray-400 group-focus-within:text-primary transition-colors">
                 <Mail className="h-5 w-5" strokeWidth={2} />
               </div>
-              <input
-                type="email"
-                placeholder="name@company.com"
-                className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400"
-                defaultValue=""
-              />
+                <input
+                  type="email"
+                  placeholder="name@company.com"
+                  className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
             </div>
-          </div>
 
           {/* Password Input */}
           <div className="group">
@@ -62,22 +107,24 @@ const SigninPage = () => {
               <div className="pl-4 pr-3 text-gray-400 group-focus-within:text-primary transition-colors">
                 <KeyRound className="h-5 w-5" strokeWidth={2} />
               </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••••"
-                className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400"
-                defaultValue=""
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="px-4 flex items-center justify-center text-gray-400 hover:text-primary transition-colors focus:outline-none"
-              >
-                <Eye className="h-5 w-5" strokeWidth={2} />
-              </button>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••••"
+                  className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="px-4 flex items-center justify-center text-gray-400 hover:text-primary transition-colors focus:outline-none"
+                >
+                  <Eye className="h-5 w-5" strokeWidth={2} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Options Row */}
         <div className="mb-8 flex items-center justify-between px-2">
@@ -110,12 +157,17 @@ const SigninPage = () => {
           </Link>
         </div>
 
-        {/* Primary Action Button */}
-        <button className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-black py-4 text-[15px] font-bold text-white transition-all hover:bg-gray-900 active:scale-[0.98]">
-          <span>Sign In to Dashboard</span>
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          <div className="absolute inset-0 -translate-x-full bg-white/20 blur-md transition-transform duration-500 group-hover:translate-x-full"></div>
-        </button>
+          {/* Primary Action Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-black py-4 text-[15px] font-bold text-white transition-all hover:bg-gray-900 active:scale-[0.98] disabled:opacity-70"
+          >
+            <span>{loading ? "Signing in..." : "Sign In to Dashboard"}</span>
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <div className="absolute inset-0 -translate-x-full bg-white/20 blur-md transition-transform duration-500 group-hover:translate-x-full"></div>
+          </button>
+        </form>
 
         {/* Divider */}
         <div className="mb-8 flex items-center gap-4 px-2">
@@ -127,7 +179,12 @@ const SigninPage = () => {
         </div>
 
         {/* Google Login Button */}
-    <button className="cursor-pointer mb-8 flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-3.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.1)] active:translate-y-0">
+        <button
+          type="button"
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+          disabled={loading}
+          className="cursor-pointer mb-8 flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-3.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.1)] active:translate-y-0 disabled:opacity-70 disabled:hover:-translate-y-0"
+        >
               <svg
                 viewBox="0 0 24 24"
                 width="20"

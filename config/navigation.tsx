@@ -1,10 +1,4 @@
-import {
-  Brain,
-  House,
-  Mail,
-  NotepadTextDashed,
-  Settings,
-} from "lucide-react";
+import { House, Mail, NotepadTextDashed, Settings } from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -33,12 +27,12 @@ export const navigationConfig: NavItem[] = [
     href: "/email",
     icon: <Mail size={22} />,
   },
-  {
-    id: "ai-training",
-    title: "AI Training",
-    href: "/ai-training",
-    icon: <Brain size={22} />,
-  },
+  // {
+  //   id: "ai-training",
+  //   title: "AI Training",
+  //   href: "/ai-training",
+  //   icon: <Brain size={22} />,
+  // },
   {
     id: "settings",
     title: "Setting",

@@ -1,7 +1,8 @@
+import ForgotPasswordPage from "@/components/auth/ForgotPasswordPage"
 
 const page = () => {
   return (
-    <div>page</div>
+    <div><ForgotPasswordPage/></div>
   )
 }
 

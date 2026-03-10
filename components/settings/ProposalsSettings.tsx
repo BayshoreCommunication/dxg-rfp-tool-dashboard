@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
@@ -14,8 +15,8 @@ const InfoDot = () => (
 );
 
 const SelectCaret = () => (
-  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#eb5d62]">
-    v
+  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-primary">
+    <ChevronDown size={20} />
   </span>
 );
 
@@ -28,8 +29,8 @@ const ProposalsSettings = () => {
   });
 
   return (
-    <section className="rounded-md border border-[#d7dce3] bg-[#f7f8fa] px-5 py-6 md:px-8">
-      <h2 className="text-[36px] font-semibold leading-none text-[#0f1b57]">
+    <section className="rounded-md border border-[#d7dce3] bg-white px-5 py-6 md:px-8">
+      <h2 className="md:text-[26px] font-semibold leading-none text-[#0f1b57]">
         Proposals
       </h2>
 

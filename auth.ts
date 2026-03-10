@@ -30,9 +30,15 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         console.log("👤 [authorize] Email:", credentials.email);
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const baseUrl =
+          process.env.BACKEND_URL ||
+          process.env.NEXT_PUBLIC_API_URL ||
+          "http://localhost:5000";
+        const apiUrl = baseUrl.endsWith("/api")
+          ? baseUrl.slice(0, -4)
+          : baseUrl;
 
-        if (!apiUrl) {
+        if (!baseUrl) {
           console.error(
             "❌ [authorize] API URL is not defined in environment variables.",
           );
@@ -43,8 +49,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         try {
           console.log("📡 [authorize] Sending request to backend...");
-          // Updated endpoint to match backend/routes/auth.py
-          const response = await fetch(`${apiUrl}/auth/login`, {
+          // Updated endpoint to match node backend
+          const response = await fetch(`${apiUrl}/api/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(credentials),
@@ -66,14 +72,13 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           }
 
           const data = await response.json();
-          // Backend returns { access_token, token_type, user: { ... } }
           console.log("✅ [authorize] Backend response received:", {
             hasUser: !!data.user,
-            hasToken: !!data.access_token,
+            hasToken: !!data.accessToken,
             email: data.user?.email,
           });
 
-          if (!data.user?._id || !data.access_token) {
+          if (!data.user?._id || !data.accessToken) {
             console.error(
               "❌ [authorize] Incomplete user data received from server",
             );
@@ -85,11 +90,12 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             _id: data.user._id,
             email: data.user.email,
             name: data.user.name,
+            avatar: data.user.avatar,
             organization_name: data.user.organization_name,
             company_organization_type: data.user.company_organization_type,
             website: data.user.website,
             has_paid_subscription: data.user.has_paid_subscription,
-            accessToken: data.access_token,
+            accessToken: data.accessToken,
           };
 
           // Only add organization if it exists in response
@@ -119,6 +125,12 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     async signIn({ user, account, profile }) {
       // Handle Google OAuth sign-in
       if (account?.provider === "google" && profile?.email) {
+        // For now, skip backend sync as the endpoint doesn't exist
+        // TODO: Implement Google auth sync with backend when endpoint is available
+        console.log("Google signin: skipping backend sync");
+        return true;
+
+        /*
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
         console.log("check google provide logiin here for test");
@@ -188,6 +200,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           console.error("Error syncing Google user:", error);
           return false;
         }
+        */
       }
 
       return true;
