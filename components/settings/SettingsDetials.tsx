@@ -5,7 +5,7 @@ import TopHeader from "./TopHeaser";
 
 const SettingsDetials = () => {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-6">
       {/* ── Header ── */}
       <TopHeader />
       <BrandingSettings />

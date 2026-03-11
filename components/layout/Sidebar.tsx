@@ -30,9 +30,9 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-50 flex h-screen w-[90px] flex-col bg-white border-r border-gray-100 shadow-sm">
+    <aside className="fixed left-0 top-0 z-50 flex h-screen w-[90px] flex-col bg-white border-r border-gray-200 ">
       {/* Logo */}
-      <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-100">
+      <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200 bg-linear-to-b from-blue-50 to-white">
         <Link href="/dashboard">
           <Image
             src="/assets/logo/logo.svg"
@@ -55,7 +55,7 @@ const Sidebar = () => {
                 className={cn(
                   "group relative flex w-full flex-col items-center gap-1 rounded-2xl py-3 px-1 transition-all duration-200",
                   isActive
-                    ? "bg-gradient-to-b from-primary/10 to-primary/5"
+                    ? "bg-linear-to-b from-primary/10 to-primary/5"
                     : "hover:bg-primary/5",
                 )}
               >
@@ -94,7 +94,7 @@ const Sidebar = () => {
       </nav>
 
       {/* Divider */}
-      <div className="mx-4 h-[1px] bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+      <div className="mx-4 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent" />
 
       {/* Bottom Utility Icons */}
       <div className="flex shrink-0 flex-col items-center gap-2 py-4 px-3">
@@ -120,7 +120,7 @@ const Sidebar = () => {
                 className="h-full w-full object-cover"
               />
             ) : ( */}
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-blue-500 text-sm font-black text-white">
+            <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-primary to-blue-500 text-sm font-black text-white">
               U
             </div>
           </div>

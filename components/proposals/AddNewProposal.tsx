@@ -166,8 +166,6 @@ const AddNewProposal = () => {
   const backHandler = () => setProposalProcessStep((s) => Math.max(0, s - 1));
   const handleRemoveFile = () => setSelectedFile(null);
 
-  console.log("dfds", proposalData);
-
   return (
     <div>
       {/* ── Step 0: Upload screen ── */}
@@ -189,8 +187,8 @@ const AddNewProposal = () => {
           />
 
           {selectedFile && (
-            <div className="flex flex-col items-center pt-8 w-full max-w-md animate-in fade-in duration-300">
-              <div className="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] mb-8">
+            <div className="flex flex-col items-center justify-center  w-ful animate-in fade-in duration-300">
+              <div className="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] mb-8 max-w-md">
                 <div className="flex items-center gap-4 overflow-hidden">
                   <div className="w-12 h-12 bg-sky-50 text-[#38bdf8] flex items-center justify-center rounded-lg flex-shrink-0">
                     <FileText size={24} strokeWidth={1.5} />
@@ -229,7 +227,7 @@ const AddNewProposal = () => {
       {proposalProcessStep >= 1 && (
         <div className="flex w-full">
           {/* Form area — 70% */}
-          <div className="w-[70%]">
+          <div className="w-[80%] mr-4">
             {proposalProcessStep === 1 && (
               <EventForm
                 data={proposalData}
@@ -289,8 +287,8 @@ const AddNewProposal = () => {
             )}
           </div>
 
-          {/* Sidebar — 30% */}
-          <div className="w-[30%] sticky top-0 self-start">
+          {/* Sidebar — 20% */}
+          <div className="w-[20%] sticky top-0 self-start">
             <ProcessList activeStep={proposalProcessStep} />
           </div>
         </div>

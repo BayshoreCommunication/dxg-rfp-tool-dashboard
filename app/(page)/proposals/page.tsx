@@ -1,9 +1,11 @@
-import ProposalsDetials from "@/components/proposals/ProposalsDetials"
+import ProposalsDetials from "@/components/proposals/ProposalsDetials";
 
 const page = () => {
   return (
-    <div><ProposalsDetials/></div>
-  )
-}
+    <div>
+      <ProposalsDetials />
+    </div>
+  );
+};
 
-export default page
+export default page;

@@ -1,157 +1,152 @@
-import { Edit3, FileText, MailOpen, MousePointer2, Send } from "lucide-react";
+import {
+  BarChart3,
+  Clock,
+  Copy,
+  Edit3,
+  Eye,
+  MoreHorizontal,
+  Plus,
+  Share2,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import React from "react";
 
-// --- Types ---
-type Status = "PUBLISHED" | "DRAFT";
-
-interface Stat {
-  title: string;
-  value: string;
-  icon: React.ReactNode;
-  color: string;
-  iconColor: string;
-}
-
-interface Proposal {
-  id: string;
-  name: string;
-  prospect: string;
-  clicked: number;
-  opened: number;
-  price: number;
-  status: Status;
-}
-
-// --- Mock Data ---
-const STATS: Stat[] = [
-  {
-    title: "Total Proposals",
-    value: "182",
-    icon: <FileText size={16} />,
-    color: "text-green-500",
-    iconColor: "text-blue-500",
-  },
-  {
-    title: "Total Email Sent",
-    value: "1827",
-    icon: <Send size={16} />,
-    color: "text-cyan-400",
-    iconColor: "text-cyan-400",
-  },
-  {
-    title: "Total Email Opened",
-    value: "1303",
-    icon: <MailOpen size={16} />,
-    color: "text-pink-500",
-    iconColor: "text-pink-500",
-  },
-  {
-    title: "Total Email Clicked",
-    value: "1827",
-    icon: <MousePointer2 size={16} />,
-    color: "text-orange-500",
-    iconColor: "text-orange-500",
-  },
-];
-
-const PROPOSALS: Proposal[] = [
-  {
-    id: "100011",
-    name: "Digital Marketing Proposal Tem...",
-    prospect: "Demo",
-    clicked: 465,
-    opened: 45,
-    price: 5900,
-    status: "PUBLISHED",
-  },
-  {
-    id: "100011",
-    name: "Digital Marketing Proposal Tem...",
-    prospect: "Demo",
-    clicked: 463,
-    opened: 234,
-    price: 5900,
-    status: "DRAFT",
-  },
-  {
-    id: "100011",
-    name: "Digital Marketing Proposal Tem...",
-    prospect: "Demo",
-    clicked: 123,
-    opened: 28,
-    price: 5900,
-    status: "PUBLISHED",
-  },
-];
-
-export default function ProposalsTableList() {
+export default function IntegratedDashboard() {
   return (
-    <div className="">
-      {/* 2. Proposals Table Section */}
-      <div className="space-y-4">
-        {/* Header Bar */}
-        <div className="bg-[#98D8E9] rounded-sm px-6 py-3 grid grid-cols-12 text-[13px] font-bold text-gray-700">
-          <div className="col-span-3">Proposal Name</div>
-          <div className="col-span-2 text-center">Prospect</div>
-          <div className="col-span-1 text-center">Clicked</div>
-          <div className="col-span-1 text-center">Opened</div>
-          <div className="col-span-2 text-center">Price</div>
-          <div className="col-span-2 text-center">Status</div>
-          <div className="col-span-1 text-right">Action</div>
-        </div>
+    <div className="min-h-screen py-6 font-sans text-slate-800 -mt-6 px-6">
+      <div className=" space-y-6">
+        {/* --- 1. PROPOSAL HEADER CARD --- */}
+        <div className="relative overflow-hidden rounded-2xl bg-white p-6 border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
+          {/* Background subtle orbs (light version) */}
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-cyan-50 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-blue-50 blur-3xl pointer-events-none" />
 
-        <h2 className="text-gray-400 text-sm font-medium pt-2">
-          February 2024
-        </h2>
+          {/* Top row */}
+          <div className="relative z-10 flex items-start justify-between mb-6">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[11px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Published
+              </span>
+              <span className="bg-slate-50 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-[11px] font-semibold">
+                Callback
+              </span>
+              <span className="bg-slate-50 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-[11px] font-semibold">
+                Accept
+              </span>
+              <span className="text-slate-400 text-[11px] ml-1 font-medium flex items-center gap-1">
+                <Clock size={10} />
+                Created: <b className="text-slate-700 ml-1">March 11, 2026</b>
+              </span>
+            </div>
+            <button className="text-slate-400 hover:text-slate-600 transition-colors duration-150 p-1 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200">
+              <MoreHorizontal size={18} />
+            </button>
+          </div>
 
-        {/* Proposal Rows */}
-        <div className="space-y-3">
-          {PROPOSALS.map((item, idx) => (
-            <div
-              key={idx}
-              className={`grid grid-cols-12 items-center bg-white px-6 py-4 rounded-sm shadow-sm border-l-4 transition-hover hover:shadow-md ${
-                item.status === "PUBLISHED"
-                  ? "border-cyan-400"
-                  : "border-gray-400"
-              }`}
-            >
-              <div className="col-span-3">
-                <div className="text-sm font-medium text-gray-800">
-                  {item.name}
+          {/* Main content */}
+          <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight truncate">
+                AR's New Proposal
+              </h1>
+              <div className="mt-3 space-y-1.5">
+                <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
+                  <Users size={11} className="text-slate-400" />
+                  Owner: <span className="text-slate-800 font-semibold">AR Sahak</span>
+                </p>
+                <div className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
+                  <Share2 size={11} className="text-slate-400" />
+                  Shared with:{" "}
+                  <span className="text-slate-800 font-semibold">Entire Team</span>
+                  <button className="text-cyan-600 flex items-center gap-1 hover:text-cyan-500 transition-colors ml-2 text-[11px] font-bold bg-cyan-50 px-2 py-0.5 rounded-md">
+                    <Plus size={12} /> Add label
+                  </button>
                 </div>
-                <div className="text-xs text-gray-400">{item.id}</div>
               </div>
-              <div className="col-span-2 text-center text-sm text-gray-600">
-                {item.prospect}
+            </div>
+
+            <div className="flex items-center gap-5 shrink-0">
+              {/* View count */}
+              <div className="text-center bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <div className="text-3xl font-black text-slate-800 leading-none">24</div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center justify-center gap-1">
+                  <TrendingUp size={8} className="text-emerald-500" />
+                  views
+                </div>
               </div>
-              <div className="col-span-1 text-center text-sm text-gray-600">
-                {item.clicked}
-              </div>
-              <div className="col-span-1 text-center text-sm text-gray-600">
-                {item.opened}
-              </div>
-              <div className="col-span-2 text-center text-sm text-gray-600 font-medium">
-                ${item.price.toLocaleString()}
-              </div>
-              <div className="col-span-2 flex justify-center">
-                <span
-                  className={`px-6 py-1 rounded-full text-[11px] font-bold tracking-wider ${
-                    item.status === "PUBLISHED"
-                      ? "bg-cyan-100 text-cyan-500"
-                      : "bg-gray-200 text-gray-500"
-                  }`}
-                >
-                  {item.status}
-                </span>
-              </div>
-              <div className="col-span-1 flex justify-end">
-                <button className="flex items-center gap-1 bg-[#F5F3FF] text-[#5B21B6] px-3 py-1.5 rounded-md text-xs font-bold hover:bg-violet-100 transition-colors">
-                  <Edit3 size={14} /> EDIT
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2">
+                <IconButton icon={<Copy size={16} />} tooltip="Copy" />
+                <IconButton icon={<BarChart3 size={16} />} tooltip="Analytics" />
+                <IconButton icon={<Eye size={16} />} tooltip="Preview" />
+                <button className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-0.5 transition-all duration-200">
+                  <Share2 size={15} /> Share
                 </button>
               </div>
             </div>
-          ))}
+          </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// --- SUB-COMPONENTS ---
+
+function IconButton({ icon, tooltip }: { icon: React.ReactNode; tooltip?: string }) {
+  return (
+    <button
+      title={tooltip}
+      className="w-11 h-11 flex items-center justify-center bg-white text-slate-500 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all duration-150 active:scale-95"
+    >
+      {icon}
+    </button>
+  );
+}
+
+function ProposalListItem({
+  name,
+  id,
+  status,
+}: {
+  name: string;
+  id: string;
+  status: "PUBLISHED" | "DRAFT";
+}) {
+  const isPublished = status === "PUBLISHED";
+  return (
+    <div
+      className={`group flex items-center justify-between bg-white p-6 rounded-sm shadow-sm border-l-4 transition-all hover:shadow-md ${isPublished ? "border-cyan-400" : "border-slate-400"}`}
+    >
+      <div className="flex-1">
+        <h4 className="text-[13px] font-semibold text-slate-700">{name}</h4>
+        <p className="text-[10px] text-slate-400">{id}</p>
+      </div>
+
+      <div className="flex-1 text-center text-sm text-slate-600">Demo</div>
+      <div className="flex-1 text-center text-sm font-semibold text-slate-800">
+        $ 5,900
+      </div>
+
+      <div className="flex-1 flex justify-center">
+        <span
+          className={`px-5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+            isPublished
+              ? "bg-[#E0F7FA] text-[#26C6DA]"
+              : "bg-slate-200 text-slate-500"
+          }`}
+        >
+          {status}
+        </span>
+      </div>
+
+      <div className="flex-none opacity-0 group-hover:opacity-100 transition-opacity">
+        <button className="flex items-center gap-1 bg-slate-50 text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-slate-100 transition-colors">
+          <Edit3 size={12} /> EDIT
+        </button>
       </div>
     </div>
   );

@@ -4,15 +4,20 @@ import TopHeader from "./TopHeader";
 
 const DashboardDetials = () => {
   return (
-    <div className="space-y-8">
-      {/* ── Header ── */}
-      <TopHeader />
+    <div className="relative min-h-screen">
+      {/* Subtle page-level ambient gradient */}
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(45,198,245,0.07),transparent)]" />
 
-      {/* ── Stat Cards ── */}
-      <TopCardItem />
+      <div className="space-y-8 pb-12">
+        {/* ── Header ── */}
+        <TopHeader />
 
-      {/* ── Recent Proposals ── */}
-      <DashboardTableList />
+        {/* ── Stat Cards ── */}
+        <TopCardItem />
+
+        {/* ── Proposals Section ── */}
+        <DashboardTableList />
+      </div>
     </div>
   );
 };
