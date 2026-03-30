@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
 type SettingsResponse = {
   success: boolean;
@@ -36,7 +36,8 @@ export async function getSettingsAction(): Promise<SettingsResponse> {
     const data = await res.json();
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Settings fetched" : "Failed to fetch"),
+      message:
+        data.message || (res.ok ? "Settings fetched" : "Failed to fetch"),
       data: data.data,
     };
   } catch (error: any) {
@@ -46,7 +47,7 @@ export async function getSettingsAction(): Promise<SettingsResponse> {
 
 export async function updateSettingsAction(
   settings: Record<string, any>,
-  logoFile?: File | null
+  logoFile?: File | null,
 ): Promise<SettingsResponse> {
   try {
     const headers = await getAuthHeader();
