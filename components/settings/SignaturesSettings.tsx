@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import type { SignaturesSettingsForm } from "./SettingsDetials";
 
 const labelClass =
   "mb-2 flex items-center justify-between text-sm font-semibold text-[#8f98bf]";
@@ -17,7 +18,12 @@ const SelectCaret = () => (
   </span>
 );
 
-const SignaturesSettings = () => {
+type SignaturesSettingsProps = {
+  value: SignaturesSettingsForm;
+  onChange: (next: SignaturesSettingsForm) => void;
+};
+
+const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
   return (
     <section className="rounded-md border border-[#d7dce3] bg-white px-5 py-6 md:px-8">
       <h2 className="text-xl font-semibold leading-none text-[#0f1b57] md:text-[26px]">
@@ -37,7 +43,10 @@ const SignaturesSettings = () => {
           <div className="relative">
             <select
               id="signatureType"
-              defaultValue="Type"
+              value={value.signatureType}
+              onChange={(e) =>
+                onChange({ ...value, signatureType: e.target.value })
+              }
               className={inputClass + " appearance-none pr-8"}
             >
               <option>Type</option>
@@ -54,15 +63,14 @@ const SignaturesSettings = () => {
             <InfoDot />
           </label>
           <div className="relative flex min-h-10 w-full items-center gap-1 rounded-md border border-[#d7dce3] bg-white px-2 py-1 pr-8">
-            <span className="rounded-sm bg-[#eef0f3] px-2 py-1 text-sm text-[#1f2d5d]">
-              Type x
-            </span>
-            <span className="rounded-sm bg-[#eef0f3] px-2 py-1 text-sm text-[#1f2d5d]">
-              Upload x
-            </span>
-            <span className="rounded-sm bg-[#eef0f3] px-2 py-1 text-sm text-[#1f2d5d]">
-              Draw x
-            </span>
+            {value.prospectOptions.map((option) => (
+              <span
+                key={option}
+                className="rounded-sm bg-[#eef0f3] px-2 py-1 text-sm text-[#1f2d5d]"
+              >
+                {option} x
+              </span>
+            ))}
             <input id="prospectOptions" className="sr-only" readOnly />
             <SelectCaret />
           </div>
@@ -76,7 +84,7 @@ const SignaturesSettings = () => {
                 fontFamily: '"Brush Script MT", "Segoe Script", cursive',
               }}
             >
-              ui.abukawsar
+              {value.signatureText}
             </span>
           </div>
         </div>

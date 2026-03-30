@@ -1,11 +1,11 @@
-import EmailDetials from "@/components/Email/EmailDetials"
+import EmailDetials from "@/components/Email/EmailDetials";
 
 const page = () => {
   return (
     <div>
-      <EmailDetials/>
-      </div>
-  )
-}
+      <EmailDetials />
+    </div>
+  );
+};
 
-export default page
+export default page;

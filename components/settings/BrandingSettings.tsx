@@ -2,7 +2,8 @@
 
 import { ChevronDown } from "lucide-react";
 import Image from "next/image";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef } from "react";
+import type { BrandingSettingsForm } from "./SettingsDetials";
 
 const isHexColor = (value: string) => /^#([0-9A-Fa-f]{6})$/.test(value);
 
@@ -10,31 +11,38 @@ const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
 const inputClass =
   "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
-const BrandingSettings = () => {
-  const [logoFile, setLogoFile] = useState<string | null>(null);
-  const [signatureColor, setSignatureColor] = useState("#2DC6F5");
-  const [buttonTextColor, setButtonTextColor] = useState("#FFFFFF");
+type BrandingSettingsProps = {
+  value: BrandingSettingsForm;
+  onChange: (next: BrandingSettingsForm) => void;
+  onLogoFileSelected?: (file: File | null) => void;
+};
 
+const BrandingSettings = ({
+  value,
+  onChange,
+  onLogoFileSelected,
+}: BrandingSettingsProps) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signaturePickerRef = useRef<HTMLInputElement>(null);
   const textPickerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
-      if (logoFile) {
-        URL.revokeObjectURL(logoFile);
+      if (value.logoFile) {
+        URL.revokeObjectURL(value.logoFile);
       }
     };
-  }, [logoFile]);
+  }, [value.logoFile]);
 
   const handleLogoUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (logoFile) {
-      URL.revokeObjectURL(logoFile);
+    if (value.logoFile) {
+      URL.revokeObjectURL(value.logoFile);
     }
-    setLogoFile(URL.createObjectURL(file));
+    onChange({ ...value, logoFile: URL.createObjectURL(file) });
+    onLogoFileSelected?.(file);
   };
 
   const handleHexChange = (
@@ -67,9 +75,9 @@ const BrandingSettings = () => {
             className="flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-md border border-[#d7dce3] bg-[#e8ebf0] text-[#c7ccd6] hover:border-primary/50"
             aria-label="Upload company logo"
           >
-            {logoFile ? (
+            {value.logoFile ? (
               <Image
-                src={logoFile}
+                src={value.logoFile}
                 alt="Company logo preview"
                 className="h-full w-full object-cover"
                 width={104}
@@ -99,7 +107,7 @@ const BrandingSettings = () => {
             onClick={() => logoInputRef.current?.click()}
             className="rounded-md border border-[#d7dce3] bg-white px-4 py-2 text-sm font-semibold text-[#0f1b57] hover:bg-[#f4f7ff]"
           >
-            {logoFile ? "Change" : "Upload"}
+            {value.logoFile ? "Change" : "Upload"}
           </button>
 
           <input
@@ -117,7 +125,12 @@ const BrandingSettings = () => {
           <label htmlFor="brandName" className={labelClass}>
             Brand Name<span className="text-[#ef5f79]">*</span>
           </label>
-          <input id="brandName" defaultValue="Abuco" className={inputClass} />
+          <input
+            id="brandName"
+            value={value.brandName}
+            onChange={(e) => onChange({ ...value, brandName: e.target.value })}
+            className={inputClass}
+          />
         </div>
 
         <div>
@@ -127,7 +140,10 @@ const BrandingSettings = () => {
           <div className="flex h-10 overflow-hidden rounded-md border border-[#d7dce3] bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
             <input
               id="linkPrefix"
-              defaultValue="abuco"
+              value={value.linkPrefix}
+              onChange={(e) =>
+                onChange({ ...value, linkPrefix: e.target.value })
+              }
               className="w-full px-3 text-sm text-[#1f2d5d] outline-none"
             />
             <span className="flex items-center border-l border-[#d7dce3] bg-[#f9fafc] px-3 text-xs font-medium text-[#1f2d5d]">
@@ -143,7 +159,10 @@ const BrandingSettings = () => {
           <div className="relative">
             <select
               id="defaultFont"
-              defaultValue="Poppins"
+              value={value.defaultFont}
+              onChange={(e) =>
+                onChange({ ...value, defaultFont: e.target.value })
+              }
               className={inputClass + " appearance-none pr-8"}
             >
               <option>Poppins</option>
@@ -166,14 +185,19 @@ const BrandingSettings = () => {
                 type="button"
                 onClick={() => signaturePickerRef.current?.click()}
                 className="h-6 w-6 rounded-sm border border-[#ccd3df]"
-                style={{ backgroundColor: signatureColor }}
+                style={{ backgroundColor: value.signatureColor }}
                 aria-label="Select signature button color"
               />
               <input
                 id="signatureColor"
-                value={signatureColor}
+                value={value.signatureColor}
                 onChange={(e) =>
-                  handleHexChange(e.target.value, setSignatureColor, "#2DC6F5")
+                  handleHexChange(
+                    e.target.value,
+                    (nextValue) =>
+                      onChange({ ...value, signatureColor: nextValue }),
+                    "#2DC6F5",
+                  )
                 }
                 className="w-full text-sm font-medium text-[#1f2d5d] outline-none"
               />
@@ -181,8 +205,13 @@ const BrandingSettings = () => {
             <input
               ref={signaturePickerRef}
               type="color"
-              value={signatureColor}
-              onChange={(e) => setSignatureColor(e.target.value.toUpperCase())}
+              value={value.signatureColor}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  signatureColor: e.target.value.toUpperCase(),
+                })
+              }
               className="sr-only"
               tabIndex={-1}
               aria-hidden="true"
@@ -198,14 +227,19 @@ const BrandingSettings = () => {
                 type="button"
                 onClick={() => textPickerRef.current?.click()}
                 className="h-6 w-6 rounded-sm border border-[#ccd3df] bg-white"
-                style={{ backgroundColor: buttonTextColor }}
+                style={{ backgroundColor: value.buttonTextColor }}
                 aria-label="Select button text color"
               />
               <input
                 id="buttonTextColor"
-                value={buttonTextColor}
+                value={value.buttonTextColor}
                 onChange={(e) =>
-                  handleHexChange(e.target.value, setButtonTextColor, "#FFFFFF")
+                  handleHexChange(
+                    e.target.value,
+                    (nextValue) =>
+                      onChange({ ...value, buttonTextColor: nextValue }),
+                    "#FFFFFF",
+                  )
                 }
                 className="w-full text-sm font-medium text-[#1f2d5d] outline-none"
               />
@@ -213,8 +247,13 @@ const BrandingSettings = () => {
             <input
               ref={textPickerRef}
               type="color"
-              value={buttonTextColor}
-              onChange={(e) => setButtonTextColor(e.target.value.toUpperCase())}
+              value={value.buttonTextColor}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  buttonTextColor: e.target.value.toUpperCase(),
+                })
+              }
               className="sr-only"
               tabIndex={-1}
               aria-hidden="true"

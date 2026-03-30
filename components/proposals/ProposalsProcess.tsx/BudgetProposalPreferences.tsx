@@ -1,31 +1,12 @@
 "use client";
 
 import { ChevronDown, ExternalLink, RotateCcw } from "lucide-react";
-import { useState } from "react";
-import { ProposalData } from "../AddNewProposal";
+import { useCallback, useRef, useState } from "react";
+import type { BudgetData } from "../AddNewProposal";
+import { PillRadio, toggleItem, useClickOutside } from "./shared";
 
 /* ─── Shared constants ─── */
 const labelClass = "mb-3 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
-
-/* ─── Pill Radio ─── */
-const PillRadio = ({
-  name,
-  value,
-  checked,
-  onChange,
-}: { name: string; value: string; checked: boolean; onChange: () => void }) => (
-  <label
-    className={`flex items-center gap-2 px-5 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
-      checked ? "border-[#35bdf2] bg-white text-[#1f2d5d]" : "border-[#d7dce3] bg-white text-[#8f98bf] hover:border-[#35bdf2]/60"
-    }`}
-  >
-    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${checked ? "border-[#35bdf2]" : "border-[#d7dce3]"}`}>
-      {checked && <span className="w-2 h-2 rounded-full bg-[#35bdf2]" />}
-    </span>
-    <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="sr-only" />
-    {value}
-  </label>
-);
 
 /* ─── Green Checkmark ─── */
 const GreenCheck = () => (
@@ -55,25 +36,102 @@ const FormatPill = ({ label, checked, onChange }: { label: string; checked: bool
   </label>
 );
 
-const toggleItem = (arr: string[], item: string) =>
-  arr.includes(item) ? arr.filter((i) => i !== item) : [...arr, item];
-
 const budgetOptions = ["<$10K", "$10-25K", "$25-50K", "$50-100K", "$100K+", "Other"];
 const timelineOptions = ["Within 3 Business Days", "1 Week", "2 Weeks", "Flexible"];
 const formatOptions = ["GEAR ITEMIZATION", "LABOR BREAKDOWN", "ALL-IN ESTIMATE", "ADD-ON OPTIONS"];
 const hearOptions = ["Referral", "Venue", "Google", "Social Media", "LinkedIn", "Other"];
 
 interface BudgetProposalPreferencesProps {
-  data: ProposalData;
-  onChange: (updates: Partial<ProposalData>) => void;
+  data: BudgetData;
+  onChange: (updates: Partial<BudgetData>) => void;
   onContinue: () => void;
   onBack: () => void;
+  showErrors?: boolean;
 }
 
-const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: BudgetProposalPreferencesProps) => {
+/* ─── Dropdown component (moved OUTSIDE parent to avoid remount on each render) ─── */
+const InlineDropdown = ({
+  options,
+  selected,
+  onSelect,
+  placeholder,
+  open,
+  setOpen,
+  dropdownRef,
+  showOther,
+  otherValue,
+  onOtherChange,
+  hasError = false,
+}: {
+  options: string[];
+  selected: string;
+  onSelect: (v: string) => void;
+  placeholder: string;
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  dropdownRef: React.RefObject<HTMLDivElement | null>;
+  showOther?: boolean;
+  otherValue?: string;
+  onOtherChange?: (v: string) => void;
+  hasError?: boolean;
+}) => (
+  <div className={`rounded-md border ${hasError ? "border-red-500 ring-1 ring-red-500/20" : "border-[#d7dce3]"} bg-white overflow-hidden`} ref={dropdownRef}>
+    <button
+      type="button"
+      onClick={() => setOpen(!open)}
+      className={`w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${hasError && !selected ? "bg-red-50/50" : ""}`}
+    >
+      <span className={selected ? "text-[#1f2d5d] font-medium" : "text-gray-400"}>{selected || placeholder}</span>
+      <ChevronDown size={16} className="text-primary flex-shrink-0" />
+    </button>
+    {open && (
+      <div className="border-t border-[#d7dce3]">
+        {options.map((opt) => (
+          <label
+            key={opt}
+            className="flex items-center justify-between px-4 py-3 text-sm text-[#1f2d5d] hover:bg-sky-50 cursor-pointer border-b border-[#f0f0f0] last:border-0"
+          >
+            <span>{opt}</span>
+            {selected === opt ? (
+              <GreenCheck />
+            ) : (
+              <span className="w-5 h-5 rounded-full border-2 border-[#d7dce3]" />
+            )}
+            <input
+              type="radio"
+              className="sr-only"
+              checked={selected === opt}
+              onChange={() => { onSelect(opt); if (opt !== "Other") setOpen(false); }}
+            />
+          </label>
+        ))}
+        {showOther && selected === "Other" && (
+          <div className="px-4 pb-3 pt-1">
+            <input
+              className={`h-9 w-full rounded-md border ${hasError && !otherValue ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : "border-[#d7dce3] focus:border-primary focus:ring-primary/20"} px-3 text-sm text-[#1f2d5d] outline-none`}
+              placeholder="Enter amount..."
+              value={otherValue ?? ""}
+              onChange={(e) => onOtherChange?.(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+);
+
+const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack, showErrors = false }: BudgetProposalPreferencesProps) => {
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [hearOpen, setHearOpen] = useState(false);
+
+  const budgetRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const hearRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(budgetRef, useCallback(() => setBudgetOpen(false), []));
+  useClickOutside(timelineRef, useCallback(() => setTimelineOpen(false), []));
+  useClickOutside(hearRef, useCallback(() => setHearOpen(false), []));
 
   const handleClear = () => {
     onChange({
@@ -87,73 +145,6 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: Budge
     });
   };
 
-  /* ─── Dropdown helper ─── */
-  const InlineDropdown = ({
-    options,
-    selected,
-    onSelect,
-    placeholder,
-    open,
-    setOpen,
-    showOther,
-    otherValue,
-    onOtherChange,
-  }: {
-    options: string[];
-    selected: string;
-    onSelect: (v: string) => void;
-    placeholder: string;
-    open: boolean;
-    setOpen: (v: boolean) => void;
-    showOther?: boolean;
-    otherValue?: string;
-    onOtherChange?: (v: string) => void;
-  }) => (
-    <div className="rounded-md border border-[#d7dce3] bg-white overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
-      >
-        <span className={selected ? "text-[#1f2d5d] font-medium" : "text-gray-400"}>{selected || placeholder}</span>
-        <ChevronDown size={16} className="text-primary flex-shrink-0" />
-      </button>
-      {open && (
-        <div className="border-t border-[#d7dce3]">
-          {options.map((opt) => (
-            <label
-              key={opt}
-              className="flex items-center justify-between px-4 py-3 text-sm text-[#1f2d5d] hover:bg-sky-50 cursor-pointer border-b border-[#f0f0f0] last:border-0"
-            >
-              <span>{opt}</span>
-              {selected === opt ? (
-                <GreenCheck />
-              ) : (
-                <span className="w-5 h-5 rounded-full border-2 border-[#d7dce3]" />
-              )}
-              <input
-                type="radio"
-                className="sr-only"
-                checked={selected === opt}
-                onChange={() => { onSelect(opt); if (opt !== "Other") setOpen(false); }}
-              />
-            </label>
-          ))}
-          {showOther && selected === "Other" && (
-            <div className="px-4 pb-3 pt-1">
-              <input
-                className="h-9 w-full rounded-md border border-[#d7dce3] px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                placeholder="Enter amount..."
-                value={otherValue ?? ""}
-                onChange={(e) => onOtherChange?.(e.target.value)}
-              />
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
       {/* Header */}
@@ -166,7 +157,7 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: Budge
 
         {/* Estimated AV Budget */}
         <div>
-          <label className={labelClass}>Estimated AV Budget</label>
+          <label className={labelClass}>Estimated AV Budget <span className="text-red-500">*</span></label>
           <InlineDropdown
             options={budgetOptions}
             selected={data.estimatedAvBudget}
@@ -174,10 +165,18 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: Budge
             placeholder="Select Estimated AV Budget"
             open={budgetOpen}
             setOpen={setBudgetOpen}
+            dropdownRef={budgetRef}
             showOther
             otherValue={data.budgetCustomAmount}
             onOtherChange={(v) => onChange({ budgetCustomAmount: v })}
+            hasError={showErrors && (!data.estimatedAvBudget.trim() || (data.estimatedAvBudget === "Other" && !data.budgetCustomAmount.trim()))}
           />
+          {showErrors && !data.estimatedAvBudget.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case">Estimated AV Budget is required.</p>
+          )}
+          {showErrors && data.estimatedAvBudget === "Other" && !data.budgetCustomAmount.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case">Please specify the custom amount.</p>
+          )}
         </div>
 
         {/* Proposal Format Preferences */}
@@ -197,7 +196,7 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: Budge
 
         {/* Timeline for Proposal */}
         <div>
-          <label className={labelClass}>Timeline for Proposal</label>
+          <label className={labelClass}>Timeline for Proposal <span className="text-red-500">*</span></label>
           <InlineDropdown
             options={timelineOptions}
             selected={data.timelineForProposal}
@@ -205,12 +204,17 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: Budge
             placeholder="Select Time Line"
             open={timelineOpen}
             setOpen={setTimelineOpen}
+            dropdownRef={timelineRef}
+            hasError={showErrors && !data.timelineForProposal.trim()}
           />
+          {showErrors && !data.timelineForProposal.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case">Timeline is required.</p>
+          )}
         </div>
 
         {/* Call with DXG Producer */}
-        <div>
-          <label className={labelClass}>Call with DXG Producer?</label>
+        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.callWithDxgProducer ? "bg-red-50" : ""}`}>
+          <label className={labelClass}>Call with DXG Producer? <span className="text-red-500">*</span></label>
           <div className="flex gap-3 mb-3">
             {(["YES", "NO"] as const).map((opt) => (
               <PillRadio
@@ -231,11 +235,14 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: Budge
               <ExternalLink size={13} />
             </a>
           )}
+          {showErrors && !data.callWithDxgProducer && (
+            <p className="mt-2 text-sm text-red-500 normal-case">Please select an option.</p>
+          )}
         </div>
 
         {/* How did you hear about this tool? */}
         <div>
-          <label className={labelClass}>How did you hear about this tool?</label>
+          <label className={labelClass}>How did you hear about this tool? <span className="text-red-500">*</span></label>
           <InlineDropdown
             options={hearOptions}
             selected={data.howDidYouHear}
@@ -243,13 +250,15 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: Budge
             placeholder="How did you hear about this tool?"
             open={hearOpen}
             setOpen={setHearOpen}
+            dropdownRef={hearRef}
             showOther
             otherValue={data.howDidYouHearOther}
             onOtherChange={(v) => onChange({ howDidYouHearOther: v })}
+            hasError={showErrors && (!data.howDidYouHear.trim() || (data.howDidYouHear === "Other" && !data.howDidYouHearOther.trim()))}
           />
-          {/* "Other" textarea shown below dropdown when selected */}
+          {/* "Other" textarea shown below dropdown when selected and closed */}
           {data.howDidYouHear === "Other" && !hearOpen && (
-            <div className="mt-2 rounded-md border border-[#d7dce3]">
+            <div className={`mt-2 rounded-md border ${showErrors && !data.howDidYouHearOther.trim() ? "border-red-500 ring-1 ring-red-500/20" : "border-[#d7dce3]"}`}>
               <textarea
                 rows={3}
                 value={data.howDidYouHearOther}
@@ -258,6 +267,12 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack }: Budge
                 className="w-full rounded-md px-4 py-3 text-sm text-[#1f2d5d] outline-none resize-none"
               />
             </div>
+          )}
+          {showErrors && !data.howDidYouHear.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case">Please let us know how you heard about us.</p>
+          )}
+          {showErrors && data.howDidYouHear === "Other" && !data.howDidYouHearOther.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case">Please specify how you heard about us.</p>
           )}
         </div>
 

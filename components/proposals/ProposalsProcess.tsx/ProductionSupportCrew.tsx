@@ -1,80 +1,11 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
-import { ProposalData } from "../AddNewProposal";
+import type { ProductionSupportData } from "../AddNewProposal";
+import { PillRadio, PillCheckbox, toggleItem } from "./shared";
 
 /* ─── Shared style constants ─── */
 const labelClass = "mb-3 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
-
-/* ─── Pill Radio Button ─── */
-const PillRadio = ({
-  name,
-  value,
-  checked,
-  onChange,
-}: {
-  name: string;
-  value: string;
-  checked: boolean;
-  onChange: () => void;
-}) => (
-  <label
-    className={`flex items-center gap-2 px-5 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
-      checked
-        ? "border-[#35bdf2] bg-white text-[#1f2d5d]"
-        : "border-[#d7dce3] bg-white text-[#8f98bf] hover:border-[#35bdf2]/60"
-    }`}
-  >
-    <span
-      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        checked ? "border-[#35bdf2]" : "border-[#d7dce3]"
-      }`}
-    >
-      {checked && <span className="w-2 h-2 rounded-full bg-[#35bdf2]" />}
-    </span>
-    <input
-      type="radio"
-      name={name}
-      value={value}
-      checked={checked}
-      onChange={onChange}
-      className="sr-only"
-    />
-    {value}
-  </label>
-);
-
-/* ─── Pill Checkbox ─── */
-const PillCheckbox = ({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) => (
-  <label
-    className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
-      checked
-        ? "border-[#35bdf2] bg-white text-[#1f2d5d]"
-        : "border-[#d7dce3] bg-white text-[#8f98bf] hover:border-[#35bdf2]/60"
-    }`}
-  >
-    <span
-      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        checked ? "border-[#35bdf2]" : "border-[#d7dce3]"
-      }`}
-    >
-      {checked && <span className="w-2 h-2 rounded-full bg-[#35bdf2]" />}
-    </span>
-    <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
-    {label}
-  </label>
-);
-
-const toggleItem = (arr: string[], item: string) =>
-  arr.includes(item) ? arr.filter((i) => i !== item) : [...arr, item];
 
 const crewRoles = [
   "A1 (AUDIO)",
@@ -88,10 +19,11 @@ const crewRoles = [
 ];
 
 interface ProductionSupportCrewProps {
-  data: ProposalData;
-  onChange: (updates: Partial<ProposalData>) => void;
+  data: ProductionSupportData;
+  onChange: (updates: Partial<ProductionSupportData>) => void;
   onContinue: () => void;
   onBack: () => void;
+  showErrors?: boolean;
 }
 
 const ProductionSupportCrew = ({
@@ -99,6 +31,7 @@ const ProductionSupportCrew = ({
   onChange,
   onContinue,
   onBack,
+  showErrors = false,
 }: ProductionSupportCrewProps) => {
   const handleClear = () => {
     onChange({
@@ -120,9 +53,9 @@ const ProductionSupportCrew = ({
       <div className="flex-1 px-8 py-8 space-y-10">
 
         {/* Scenic / Stage Design */}
-        <div>
+        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.scenicStageDesign ? "bg-red-50" : ""}`}>
           <label className={labelClass}>
-            Scenic / Stage Design?{" "}
+            Scenic / Stage Design? <span className="text-red-500">*</span>{" "}
             <span className="text-[#8f98bf] font-normal normal-case tracking-normal">
               (We can lead the whole show or support your team.)
             </span>
@@ -138,11 +71,14 @@ const ProductionSupportCrew = ({
               />
             ))}
           </div>
+          {showErrors && !data.scenicStageDesign && (
+            <p className="mt-2 text-sm text-red-500 normal-case">Please select an option.</p>
+          )}
         </div>
 
         {/* Union Labor */}
-        <div>
-          <label className={labelClass}>Will this venue require union labor?</label>
+        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.unionLabor ? "bg-red-50" : ""}`}>
+          <label className={labelClass}>Will this venue require union labor? <span className="text-red-500">*</span></label>
           <div className="flex flex-wrap gap-3">
             {(["Yes", "No", "Not Sure"] as const).map((opt) => (
               <PillRadio
@@ -154,11 +90,14 @@ const ProductionSupportCrew = ({
               />
             ))}
           </div>
+          {showErrors && !data.unionLabor && (
+            <p className="mt-2 text-sm text-red-500 normal-case">Please select an option.</p>
+          )}
         </div>
 
         {/* Show Crew Needed */}
-        <div>
-          <label className={labelClass}>Show Crew Needed</label>
+        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && data.showCrewNeeded.length === 0 ? "bg-red-50" : ""}`}>
+          <label className={labelClass}>Show Crew Needed <span className="text-red-500">*</span></label>
           <div className="flex flex-wrap gap-3">
             {crewRoles.map((role) => (
               <PillCheckbox
@@ -171,6 +110,9 @@ const ProductionSupportCrew = ({
               />
             ))}
           </div>
+          {showErrors && data.showCrewNeeded.length === 0 && (
+            <p className="mt-2 text-sm text-red-500 normal-case">Please select at least one crew role.</p>
+          )}
         </div>
 
         {/* Other Roles */}
@@ -191,16 +133,14 @@ const ProductionSupportCrew = ({
 
       {/* Footer */}
       <div className="flex items-center justify-between px-8 py-4 border-t border-[#d7dce3]">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={handleClear}
-            className="flex items-center gap-2 text-sm font-semibold text-[#8f98bf] hover:text-red-400 transition-colors"
-          >
-            <RotateCcw size={15} />
-            CLEAR
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleClear}
+          className="flex items-center gap-2 text-sm font-semibold text-[#8f98bf] hover:text-red-400 transition-colors"
+        >
+          <RotateCcw size={15} />
+          CLEAR
+        </button>
 
         <div className="flex items-center gap-3">
           <button

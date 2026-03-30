@@ -1,7 +1,7 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
-import { ProposalData } from "../AddNewProposal";
+import type { ContactData } from "../AddNewProposal";
 
 /* ─── Shared style constants ─── */
 const labelClass = "mb-1.5 block text-xs font-bold text-[#1f2d5d] uppercase tracking-wide";
@@ -9,13 +9,14 @@ const inputClass =
   "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-[#35bdf2] focus:ring-1 focus:ring-[#35bdf2]/20 placeholder:text-gray-300";
 
 interface ContactInfoProps {
-  data: ProposalData;
-  onChange: (updates: Partial<ProposalData>) => void;
+  data: ContactData;
+  onChange: (updates: Partial<ContactData>) => void;
   onContinue: () => void;
   onBack: () => void;
+  showErrors?: boolean;
 }
 
-const ContactInfo = ({ data, onChange, onContinue, onBack }: ContactInfoProps) => {
+const ContactInfo = ({ data, onChange, onContinue, onBack, showErrors = false }: ContactInfoProps) => {
   const handleClear = () => {
     onChange({
       contactFirstName: "",
@@ -40,26 +41,32 @@ const ContactInfo = ({ data, onChange, onContinue, onBack }: ContactInfoProps) =
 
         {/* First Name */}
         <div>
-          <label htmlFor="contactFirstName" className={labelClass}>First Name</label>
+          <label htmlFor="contactFirstName" className={labelClass}>First Name <span className="text-red-500">*</span></label>
           <input
             id="contactFirstName"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.contactFirstName.trim() ? "border-red-500 ring-1 ring-red-500/20" : ""}`}
             placeholder="John"
             value={data.contactFirstName}
             onChange={(e) => onChange({ contactFirstName: e.target.value })}
           />
+          {showErrors && !data.contactFirstName.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case font-medium">First name is required.</p>
+          )}
         </div>
 
         {/* Last Name */}
         <div>
-          <label htmlFor="contactLastName" className={labelClass}>Last Name</label>
+          <label htmlFor="contactLastName" className={labelClass}>Last Name <span className="text-red-500">*</span></label>
           <input
             id="contactLastName"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.contactLastName.trim() ? "border-red-500 ring-1 ring-red-500/20" : ""}`}
             placeholder="Doe"
             value={data.contactLastName}
             onChange={(e) => onChange({ contactLastName: e.target.value })}
           />
+          {showErrors && !data.contactLastName.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case font-medium">Last name is required.</p>
+          )}
         </div>
 
         {/* Title */}
@@ -88,28 +95,34 @@ const ContactInfo = ({ data, onChange, onContinue, onBack }: ContactInfoProps) =
 
         {/* Email */}
         <div>
-          <label htmlFor="contactEmail" className={labelClass}>Email</label>
+          <label htmlFor="contactEmail" className={labelClass}>Email <span className="text-red-500">*</span></label>
           <input
             id="contactEmail"
             type="email"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.contactEmail.trim() ? "border-red-500 ring-1 ring-red-500/20" : ""}`}
             placeholder="johndoe@gmail.com"
             value={data.contactEmail}
             onChange={(e) => onChange({ contactEmail: e.target.value })}
           />
+          {showErrors && !data.contactEmail.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case font-medium">Email is required.</p>
+          )}
         </div>
 
         {/* Phone */}
         <div>
-          <label htmlFor="contactPhone" className={labelClass}>Phone</label>
+          <label htmlFor="contactPhone" className={labelClass}>Phone <span className="text-red-500">*</span></label>
           <input
             id="contactPhone"
             type="tel"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.contactPhone.trim() ? "border-red-500 ring-1 ring-red-500/20" : ""}`}
             placeholder="Number..."
             value={data.contactPhone}
             onChange={(e) => onChange({ contactPhone: e.target.value })}
           />
+          {showErrors && !data.contactPhone.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case font-medium">Phone number is required.</p>
+          )}
         </div>
 
         {/* Anything else to share */}

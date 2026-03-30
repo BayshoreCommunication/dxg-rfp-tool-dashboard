@@ -1,20 +1,18 @@
-import ProposalFilters from "./ProposalFilters";
-import ProposalsTableList from "./ProposalTableList";
+import EmailSend from "./EmailSend";
 import TopHeader from "./TopHeader";
 
-const ProposalsDetials = () => {
+const EmailSendBody = () => {
   return (
     <div className="space-y-8">
       {/* ── Header ── */}
       <TopHeader />
 
       {/* ── Stat Cards ── */}
-      <ProposalFilters />
+      <EmailSend />
 
       {/* ── Recent Proposals ── */}
-      <ProposalsTableList />
     </div>
   );
 };
 
-export default ProposalsDetials;
+export default EmailSendBody;

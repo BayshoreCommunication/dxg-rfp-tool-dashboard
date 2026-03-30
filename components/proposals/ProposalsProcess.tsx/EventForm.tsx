@@ -1,36 +1,37 @@
 "use client";
 
 import { ChevronDown, RotateCcw } from "lucide-react";
-import { useState } from "react";
-import { ProposalData } from "../AddNewProposal";
+import { useCallback, useRef, useState } from "react";
+import type { EventData } from "../AddNewProposal";
+import { useClickOutside } from "./shared";
 
-/* ─── Shared style constants (same pattern as ProposalsSettings) ─── */
+/* ─── Shared style constants ─── */
 const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
 const inputClass =
   "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 const selectClass = inputClass + " appearance-none pr-8";
-
-/* ─── Reusable mini-components ─── */
-const SelectCaret = () => (
-  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-primary">
-    <ChevronDown size={16} />
-  </span>
-);
 
 const attendeesOptions = ["< 100", "100 - 150", "200 - 500", "500 - 1,000", "1,000+"];
 const eventTypeOptions = ["Conference", "Meeting", "Gala", "Trade Show", "Awards Show", "Other"];
 const formatOptions = ["In-Person", "Hybrid", "Virtual"] as const;
 
 interface EventFormProps {
-  data: ProposalData;
-  onChange: (updates: Partial<ProposalData>) => void;
+  data: EventData;
+  onChange: (updates: Partial<EventData>) => void;
   onContinue: () => void;
   onBack: () => void;
+  showErrors?: boolean;
 }
 
-const EventForm = ({ data, onChange, onContinue, onBack }: EventFormProps) => {
+const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: EventFormProps) => {
   const [attendeesOpen, setAttendeesOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
+
+  const attendeesRef = useRef<HTMLDivElement>(null);
+  const typeRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(attendeesRef, useCallback(() => setAttendeesOpen(false), []));
+  useClickOutside(typeRef, useCallback(() => setTypeOpen(false), []));
 
   const handleClear = () => {
     onChange({
@@ -57,56 +58,69 @@ const EventForm = ({ data, onChange, onContinue, onBack }: EventFormProps) => {
 
         {/* Event Name */}
         <div>
-          <label htmlFor="eventName" className={labelClass}>EVENT</label>
+          <label htmlFor="eventName" className={labelClass}>EVENT <span className="text-red-500">*</span></label>
           <input
             id="eventName"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.eventName.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             placeholder="What's the official name or internal title for this event?"
             value={data.eventName}
             onChange={(e) => onChange({ eventName: e.target.value })}
           />
+          {showErrors && !data.eventName.trim() && (
+            <p className="mt-1 text-sm text-red-500">Event name is required.</p>
+          )}
         </div>
 
         {/* Start Date */}
         <div>
-          <label htmlFor="startDate" className={labelClass}>EVENT START DATE</label>
+          <label htmlFor="startDate" className={labelClass}>EVENT START DATE <span className="text-red-500">*</span></label>
           <input
             id="startDate"
             type="date"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.startDate.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             value={data.startDate}
             onChange={(e) => onChange({ startDate: e.target.value })}
           />
+          {showErrors && !data.startDate.trim() && (
+            <p className="mt-1 text-sm text-red-500">Start date is required.</p>
+          )}
         </div>
 
         {/* End Date */}
         <div>
-          <label htmlFor="endDate" className={labelClass}>EVENT END DATE</label>
+          <label htmlFor="endDate" className={labelClass}>EVENT END DATE <span className="text-red-500">*</span></label>
           <input
             id="endDate"
             type="date"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.endDate.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
+            min={data.startDate || undefined}
             value={data.endDate}
             onChange={(e) => onChange({ endDate: e.target.value })}
           />
+          {showErrors && !data.endDate.trim() && (
+            <p className="mt-1 text-sm text-red-500">End date is required.</p>
+          )}
         </div>
 
         {/* Venue */}
         <div>
-          <label htmlFor="venue" className={labelClass}>EVENT VENUE / HOTEL NAME</label>
+          <label htmlFor="venue" className={labelClass}>EVENT VENUE / HOTEL NAME <span className="text-red-500">*</span></label>
           <input
             id="venue"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.venue.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             placeholder="Where will this take place?"
             value={data.venue}
             onChange={(e) => onChange({ venue: e.target.value })}
           />
+          {showErrors && !data.venue.trim() && (
+            <p className="mt-1 text-sm text-red-500">Venue is required.</p>
+          )}
         </div>
 
         {/* Number of Attendees */}
         <div>
           <label className={labelClass}>NUMBER OF ATTENDEES</label>
-          <div className="relative">
+          <div className="relative" ref={attendeesRef}>
             <button
               type="button"
               onClick={() => setAttendeesOpen((p) => !p)}
@@ -165,7 +179,7 @@ const EventForm = ({ data, onChange, onContinue, onBack }: EventFormProps) => {
         {/* Type of Event */}
         <div>
           <label className={labelClass}>TYPE OF EVENT</label>
-          <div className="relative">
+          <div className="relative" ref={typeRef}>
             <button
               type="button"
               onClick={() => setTypeOpen((p) => !p)}

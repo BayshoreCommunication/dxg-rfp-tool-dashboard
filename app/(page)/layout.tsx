@@ -1,14 +1,7 @@
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
 import "../globals.css";
-
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -22,11 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${montserrat.className} ${montserrat.variable} font-sans antialiased`}
-        suppressHydrationWarning
-      >
-        <LayoutWrapper>{children}</LayoutWrapper>
+      <body className="font-sans antialiased" suppressHydrationWarning>
+        <ToastProvider>
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </ToastProvider>
       </body>
     </html>
   );

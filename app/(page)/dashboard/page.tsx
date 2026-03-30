@@ -1,7 +1,8 @@
-import DashboardDetials from "@/components/dashboard/DashboardDetials"
+import DashboardDetials from "@/components/dashboard/DashboardDetials";
 
-    const page = () => {
-      return <DashboardDetials />
-}
+const Page = () => {
+  return <DashboardDetials />;
+};
 
-export default page
+export default Page;
+

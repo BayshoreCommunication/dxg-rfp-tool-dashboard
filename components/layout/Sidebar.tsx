@@ -126,17 +126,16 @@ const Sidebar = () => {
           </div>
           <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
 
-          {/* Hover Menu */}
-          <div className="absolute bottom-0 left-full ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 py-2 px-3 min-w-[120px]">
-              <button
-                onClick={signOutHandler}
-                className="flex items-center gap-2 w-full text-left text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors"
-              >
-                <LogOut size={14} />
-                Sign Out
-              </button>
-            </div>
+          {/* Hover Sign Out (bubble) */}
+          <div className="absolute left-full top-1/2 ml-2 -translate-y-1/2 opacity-0 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100">
+            <button
+              onClick={signOutHandler}
+              className="relative flex w-24 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-3 text-[12px] font-semibold text-gray-700 shadow-md hover:bg-gray-50"
+            >
+              <span className="absolute -left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-b border-l border-gray-200 bg-white" />
+              <LogOut size={12} className="text-gray-500" />
+              Sign Out
+            </button>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import type { ProposalsSettingsForm } from "./SettingsDetials";
 
 const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
 const inputClass =
@@ -20,14 +20,12 @@ const SelectCaret = () => (
   </span>
 );
 
-const ProposalsSettings = () => {
-  const [enableAiAssistant, setEnableAiAssistant] = useState(true);
-  const [contacts, setContacts] = useState({
-    email: true,
-    call: false,
-    whatsapp: false,
-  });
+type ProposalsSettingsProps = {
+  value: ProposalsSettingsForm;
+  onChange: (next: ProposalsSettingsForm) => void;
+};
 
+const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
   return (
     <section className="rounded-md border border-[#d7dce3] bg-white px-5 py-6 md:px-8">
       <h2 className="md:text-[26px] font-semibold leading-none text-[#0f1b57]">
@@ -42,7 +40,10 @@ const ProposalsSettings = () => {
           <div className="relative">
             <select
               id="proposalLanguage"
-              defaultValue="English"
+              value={value.proposalLanguage}
+              onChange={(e) =>
+                onChange({ ...value, proposalLanguage: e.target.value })
+              }
               className={selectClass}
             >
               <option>English</option>
@@ -57,7 +58,14 @@ const ProposalsSettings = () => {
           <label htmlFor="defaultCurrency" className={labelClass}>
             Default Currency
           </label>
-          <input id="defaultCurrency" defaultValue="$" className={inputClass} />
+          <input
+            id="defaultCurrency"
+            value={value.defaultCurrency}
+            onChange={(e) =>
+              onChange({ ...value, defaultCurrency: e.target.value })
+            }
+            className={inputClass}
+          />
         </div>
 
         <div>
@@ -69,7 +77,14 @@ const ProposalsSettings = () => {
             <InfoDot />
           </label>
           <div className="relative">
-            <select id="expiryDate" defaultValue="None" className={selectClass}>
+            <select
+              id="expiryDate"
+              value={value.expiryDate}
+              onChange={(e) =>
+                onChange({ ...value, expiryDate: e.target.value })
+              }
+              className={selectClass}
+            >
               <option>None</option>
               <option>7 Days</option>
               <option>14 Days</option>
@@ -86,7 +101,10 @@ const ProposalsSettings = () => {
           <div className="relative">
             <select
               id="priceSeparator"
-              defaultValue="NONE"
+              value={value.priceSeparator}
+              onChange={(e) =>
+                onChange({ ...value, priceSeparator: e.target.value })
+              }
               className={selectClass}
             >
               <option>NONE</option>
@@ -104,7 +122,10 @@ const ProposalsSettings = () => {
           <div className="relative">
             <select
               id="dateFormat"
-              defaultValue="MM/DD/YYYY"
+              value={value.dateFormat}
+              onChange={(e) =>
+                onChange({ ...value, dateFormat: e.target.value })
+              }
               className={selectClass}
             >
               <option>MM/DD/YYYY</option>
@@ -122,7 +143,10 @@ const ProposalsSettings = () => {
           <div className="relative">
             <select
               id="decimalPrecision"
-              defaultValue="2"
+              value={value.decimalPrecision}
+              onChange={(e) =>
+                onChange({ ...value, decimalPrecision: e.target.value })
+              }
               className={selectClass}
             >
               <option>0</option>
@@ -141,12 +165,18 @@ const ProposalsSettings = () => {
               <label className="mb-2 flex items-center gap-2 text-sm font-medium text-[#8f98bf]">
                 <input
                   type="checkbox"
-                  checked={contacts.email}
+                  checked={value.contacts.email.enabled}
                   onChange={(e) =>
-                    setContacts((prev) => ({
-                      ...prev,
-                      email: e.target.checked,
-                    }))
+                    onChange({
+                      ...value,
+                      contacts: {
+                        ...value.contacts,
+                        email: {
+                          ...value.contacts.email,
+                          enabled: e.target.checked,
+                        },
+                      },
+                    })
                   }
                   className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#373798] focus:ring-1 focus:ring-[#373798]/30"
                 />
@@ -154,8 +184,20 @@ const ProposalsSettings = () => {
               </label>
               <input
                 className={inputClass + " bg-white"}
-                defaultValue="ui.abukawsar@gmail.com"
-                disabled={!contacts.email}
+                value={value.contacts.email.value}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    contacts: {
+                      ...value.contacts,
+                      email: {
+                        ...value.contacts.email,
+                        value: e.target.value,
+                      },
+                    },
+                  })
+                }
+                disabled={!value.contacts.email.enabled}
               />
             </div>
 
@@ -164,12 +206,18 @@ const ProposalsSettings = () => {
                 <span className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={contacts.call}
+                    checked={value.contacts.call.enabled}
                     onChange={(e) =>
-                      setContacts((prev) => ({
-                        ...prev,
-                        call: e.target.checked,
-                      }))
+                      onChange({
+                        ...value,
+                        contacts: {
+                          ...value.contacts,
+                          call: {
+                            ...value.contacts.call,
+                            enabled: e.target.checked,
+                          },
+                        },
+                      })
                     }
                     className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#373798] focus:ring-1 focus:ring-[#373798]/30"
                   />
@@ -179,8 +227,20 @@ const ProposalsSettings = () => {
               </label>
               <input
                 className={inputClass + " bg-white"}
-                defaultValue="+12163547758"
-                disabled={!contacts.call}
+                value={value.contacts.call.value}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    contacts: {
+                      ...value.contacts,
+                      call: {
+                        ...value.contacts.call,
+                        value: e.target.value,
+                      },
+                    },
+                  })
+                }
+                disabled={!value.contacts.call.enabled}
               />
             </div>
 
@@ -189,12 +249,18 @@ const ProposalsSettings = () => {
                 <span className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={contacts.whatsapp}
+                    checked={value.contacts.whatsapp.enabled}
                     onChange={(e) =>
-                      setContacts((prev) => ({
-                        ...prev,
-                        whatsapp: e.target.checked,
-                      }))
+                      onChange({
+                        ...value,
+                        contacts: {
+                          ...value.contacts,
+                          whatsapp: {
+                            ...value.contacts.whatsapp,
+                            enabled: e.target.checked,
+                          },
+                        },
+                      })
                     }
                     className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#373798] focus:ring-1 focus:ring-[#373798]/30"
                   />
@@ -204,8 +270,20 @@ const ProposalsSettings = () => {
               </label>
               <input
                 className={inputClass + " bg-white"}
-                defaultValue="+12163547758"
-                disabled={!contacts.whatsapp}
+                value={value.contacts.whatsapp.value}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    contacts: {
+                      ...value.contacts,
+                      whatsapp: {
+                        ...value.contacts.whatsapp,
+                        value: e.target.value,
+                      },
+                    },
+                  })
+                }
+                disabled={!value.contacts.whatsapp.enabled}
               />
             </div>
           </div>
@@ -218,8 +296,21 @@ const ProposalsSettings = () => {
               <span>After(seconds)</span>
             </label>
             <div className="grid grid-cols-[1fr_86px] gap-2">
-              <input className={inputClass} placeholder="Redirect URL" />
-              <input className={inputClass} defaultValue="0" />
+              <input
+                className={inputClass}
+                placeholder="Redirect URL"
+                value={value.redirectUrl}
+                onChange={(e) =>
+                  onChange({ ...value, redirectUrl: e.target.value })
+                }
+              />
+              <input
+                className={inputClass}
+                value={value.redirectDelay}
+                onChange={(e) =>
+                  onChange({ ...value, redirectDelay: e.target.value })
+                }
+              />
             </div>
           </div>
 
@@ -230,7 +321,10 @@ const ProposalsSettings = () => {
             <div className="relative">
               <select
                 id="downloadPreviewTop"
-                defaultValue="Yes"
+                value={value.downloadPreviewTop}
+                onChange={(e) =>
+                  onChange({ ...value, downloadPreviewTop: e.target.value })
+                }
                 className={selectClass}
               >
                 <option>Yes</option>
@@ -253,6 +347,10 @@ const ProposalsSettings = () => {
                 id="teammateEmail"
                 className="h-10 w-full px-3 text-sm text-[#1f2d5d] outline-none"
                 placeholder="example@email.com"
+                value={value.teammateEmail}
+                onChange={(e) =>
+                  onChange({ ...value, teammateEmail: e.target.value })
+                }
               />
               <button
                 type="button"
@@ -270,7 +368,10 @@ const ProposalsSettings = () => {
             <div className="relative">
               <select
                 id="downloadPreviewBottom"
-                defaultValue="Yes"
+                value={value.downloadPreviewBottom}
+                onChange={(e) =>
+                  onChange({ ...value, downloadPreviewBottom: e.target.value })
+                }
                 className={selectClass}
               >
                 <option>Yes</option>
@@ -290,17 +391,22 @@ const ProposalsSettings = () => {
             </label>
             <button
               type="button"
-              onClick={() => setEnableAiAssistant((prev) => !prev)}
+              onClick={() =>
+                onChange({
+                  ...value,
+                  enableAiAssistant: !value.enableAiAssistant,
+                })
+              }
               className={
                 "relative h-6 w-11 rounded-full transition " +
-                (enableAiAssistant ? "bg-[#373798]" : "bg-gray-300")
+                (value.enableAiAssistant ? "bg-[#373798]" : "bg-gray-300")
               }
               aria-label="Toggle AI assistant"
             >
               <span
                 className={
                   "absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white transition " +
-                  (enableAiAssistant ? "right-1" : "left-1")
+                  (value.enableAiAssistant ? "right-1" : "left-1")
                 }
               />
             </button>

@@ -1,24 +1,17 @@
 "use client";
 
 import { ChevronDown, RotateCcw } from "lucide-react";
-import { useState } from "react";
-import { ProposalData } from "../AddNewProposal";
+import { useCallback, useRef, useState } from "react";
+import type { RoomByRoomData } from "../AddNewProposal";
+import { toggleItem } from "./shared";
+import { useClickOutside } from "./shared";
 
-/* ─── Shared style constants (same pattern as ProposalsSettings) ─── */
+/* ─── Shared style constants ─── */
 const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf] uppercase tracking-wide";
 const inputClass =
   "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 const selectClass = inputClass + " appearance-none pr-8";
 
-const SelectCaret = () => (
-  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-primary">
-    <ChevronDown size={16} />
-  </span>
-);
-
-/* ─── Checkbox helper ─── */
-const toggleArrayItem = (arr: string[], item: string) =>
-  arr.includes(item) ? arr.filter((i) => i !== item) : [...arr, item];
 
 /* ─── Inline unit input ─── */
 const UnitInput = ({
@@ -53,10 +46,11 @@ const SectionTitle = ({ title }: { title: string }) => (
 );
 
 interface RoombyRoomAvFormProps {
-  data: ProposalData;
-  onChange: (updates: Partial<ProposalData>) => void;
+  data: RoomByRoomData;
+  onChange: (updates: Partial<RoomByRoomData>) => void;
   onContinue: () => void;
   onBack: () => void;
+  showErrors?: boolean;
 }
 
 const riggingOptions = ["Overhead", "Projection", "Creative Video", "LED Walls", "Truss"];
@@ -66,11 +60,21 @@ const avSpecOptions = ["Basic", "Standard", "Premium", "Custom"];
 const mainSoundOptions = ["L'Acoustics", "d&b audiotechnik", "Meyer Sound", "QSC", "JBL", "Other"];
 const frontScreenOptions = ["16:9", "4:3", "Custom Aspect", "Curved", "LED"];
 
-const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack }: RoombyRoomAvFormProps) => {
+const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack, showErrors = false }: RoombyRoomAvFormProps) => {
   const [setupOpen, setSetupOpen] = useState(false);
   const [avSpecOpen, setAvSpecOpen] = useState(false);
   const [mainSoundOpen, setMainSoundOpen] = useState(false);
   const [frontScreenOpen, setFrontScreenOpen] = useState(false);
+
+  const setupRef = useRef<HTMLDivElement>(null);
+  const avSpecRef = useRef<HTMLDivElement>(null);
+  const mainSoundRef = useRef<HTMLDivElement>(null);
+  const frontScreenRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(setupRef, useCallback(() => setSetupOpen(false), []));
+  useClickOutside(avSpecRef, useCallback(() => setAvSpecOpen(false), []));
+  useClickOutside(mainSoundRef, useCallback(() => setMainSoundOpen(false), []));
+  useClickOutside(frontScreenRef, useCallback(() => setFrontScreenOpen(false), []));
 
   const handleClear = () => {
     onChange({
@@ -117,27 +121,33 @@ const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack }: RoombyRoomAvFo
 
         {/* Room/Hall Function */}
         <div>
-          <label htmlFor="roomFunction" className={labelClass}>Room / Hall Function</label>
+          <label htmlFor="roomFunction" className={labelClass}>Room / Hall Function <span className="text-red-500">*</span></label>
           <input
             id="roomFunction"
-            className={inputClass}
+            className={`${inputClass} ${showErrors && !data.roomFunction.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             placeholder="Select Room / Space"
             value={data.roomFunction}
             onChange={(e) => onChange({ roomFunction: e.target.value })}
           />
+          {showErrors && !data.roomFunction.trim() && (
+            <p className="mt-1 text-sm text-red-500 normal-case">Room / Hall function is required.</p>
+          )}
         </div>
 
         {/* Number of Rooms & Ceiling */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Number of Rooms in the Room</label>
+            <label className={labelClass}>Number of Rooms <span className="text-red-500">*</span></label>
             <input
               type="number"
-              className={inputClass}
+              className={`${inputClass} ${showErrors && !data.numberOfRooms.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
               placeholder="0"
               value={data.numberOfRooms}
               onChange={(e) => onChange({ numberOfRooms: e.target.value })}
             />
+            {showErrors && !data.numberOfRooms.trim() && (
+              <p className="mt-1 text-sm text-red-500 normal-case">Number of rooms is required.</p>
+            )}
           </div>
           <div>
             <label className={labelClass}>Ceiling Height</label>
@@ -147,18 +157,21 @@ const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack }: RoombyRoomAvFo
 
         {/* Room Setup dropdown */}
         <div>
-          <label className={labelClass}>Room Setup</label>
-          <div className="relative">
+          <label className={labelClass}>Room Setup <span className="text-red-500">*</span></label>
+          <div className="relative" ref={setupRef}>
             <button
               type="button"
               onClick={() => setSetupOpen((p) => !p)}
-              className={selectClass + " flex items-center justify-between cursor-pointer"}
+              className={`${selectClass} flex items-center justify-between cursor-pointer ${showErrors && !data.roomSetup.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             >
               <span className={data.roomSetup ? "text-[#1f2d5d]" : "text-gray-400"}>
                 {data.roomSetup || "Select Setup"}
               </span>
               <ChevronDown size={16} className="text-primary flex-shrink-0" />
             </button>
+            {showErrors && !data.roomSetup.trim() && (
+              <p className="mt-1 text-sm text-red-500 normal-case">Room setup is required.</p>
+            )}
             {setupOpen && (
               <div className="absolute z-10 w-full mt-1 rounded-md border border-[#d7dce3] bg-white shadow-md overflow-hidden">
                 {roomSetupOptions.map((opt) => (
@@ -233,7 +246,7 @@ const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack }: RoombyRoomAvFo
                 <input
                   type="checkbox"
                   checked={data.preferredRigging.includes(opt)}
-                  onChange={() => onChange({ preferredRigging: toggleArrayItem(data.preferredRigging, opt) })}
+                  onChange={() => onChange({ preferredRigging: toggleItem(data.preferredRigging, opt) })}
                   className="h-4 w-4 rounded accent-[#373798]"
                 />
                 {opt}
@@ -258,18 +271,21 @@ const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack }: RoombyRoomAvFo
 
         {/* AV Spec */}
         <div>
-          <label className={labelClass}>AV Spec</label>
-          <div className="relative">
+          <label className={labelClass}>AV Spec <span className="text-red-500">*</span></label>
+          <div className="relative" ref={avSpecRef}>
             <button
               type="button"
               onClick={() => setAvSpecOpen((p) => !p)}
-              className={selectClass + " flex items-center justify-between cursor-pointer"}
+              className={`${selectClass} flex items-center justify-between cursor-pointer ${showErrors && !data.avSpec.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             >
               <span className={data.avSpec ? "text-[#1f2d5d]" : "text-gray-400"}>
                 {data.avSpec || "Select AV Spec"}
               </span>
               <ChevronDown size={16} className="text-primary flex-shrink-0" />
             </button>
+            {showErrors && !data.avSpec.trim() && (
+              <p className="mt-1 text-sm text-red-500 normal-case">AV spec is required.</p>
+            )}
             {avSpecOpen && (
               <div className="absolute z-10 w-full mt-1 rounded-md border border-[#d7dce3] bg-white shadow-md overflow-hidden">
                 {avSpecOptions.map((opt) => (
@@ -311,7 +327,7 @@ const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack }: RoombyRoomAvFo
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Main Sound</label>
-            <div className="relative">
+            <div className="relative" ref={mainSoundRef}>
               <button
                 type="button"
                 onClick={() => setMainSoundOpen((p) => !p)}
@@ -423,7 +439,7 @@ const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack }: RoombyRoomAvFo
                 <input
                   type="checkbox"
                   checked={data.stageRisers.includes(opt)}
-                  onChange={() => onChange({ stageRisers: toggleArrayItem(data.stageRisers, opt) })}
+                  onChange={() => onChange({ stageRisers: toggleItem(data.stageRisers, opt) })}
                   className="h-4 w-4 rounded accent-[#373798]"
                 />
                 {opt}
@@ -468,7 +484,7 @@ const RoombyRoomAvForm = ({ data, onChange, onContinue, onBack }: RoombyRoomAvFo
         {/* Front Screen */}
         <div>
           <label className={labelClass}>Front Screen (Staging)</label>
-          <div className="relative">
+          <div className="relative" ref={frontScreenRef}>
             <button
               type="button"
               onClick={() => setFrontScreenOpen((p) => !p)}

@@ -1,116 +1,86 @@
 "use client";
 
 import {
-  BarChart3,
   ChevronRight,
   Clock,
   Copy,
-  Edit3,
   Eye,
   Filter,
   Search,
   Share2,
-  Users
+  Users,
 } from "lucide-react";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-type Status = "PUBLISHED" | "DRAFT" | "REVIEW" | "SENT";
+type ProposalStatus = "draft" | "submitted" | "reviewed" | "approved" | "rejected";
 
-interface Proposal {
-  id: string;
-  name: string;
-  client: string;
-  amount: string;
-  status: Status;
-  date: string;
-  views: number;
-  type: string;
-}
+type ProposalItem = {
+  _id: string;
+  status?: string;
+  viewsCount?: number;
+  createdAt?: string;
+  event?: { eventName?: string };
+  contact?: {
+    contactFirstName?: string;
+    contactLastName?: string;
+    contactEmail?: string;
+  };
+};
 
-// ── Data ──────────────────────────────────────────────────────────────────────
-const PROPOSALS: Proposal[] = [
-  {
-    id: "PRO-001",
-    name: "AR's New Proposal",
-    client: "AR Sahak",
-    amount: "$5,900",
-    status: "PUBLISHED",
-    date: "Mar 11, 2026",
-    views: 24,
-    type: "Demo",
-  },
-  {
-    id: "PRO-002",
-    name: "Enterprise Cloud Solution",
-    client: "TechCorp Inc.",
-    amount: "$12,400",
-    status: "SENT",
-    date: "Mar 09, 2026",
-    views: 8,
-    type: "Enterprise",
-  },
-  {
-    id: "PRO-003",
-    name: "Marketing Automation Suite",
-    client: "BrightMedia LLC",
-    amount: "$3,750",
-    status: "REVIEW",
-    date: "Mar 07, 2026",
-    views: 3,
-    type: "SaaS",
-  },
-  {
-    id: "PRO-004",
-    name: "Annual Support Package",
-    client: "Global Logistics",
-    amount: "$8,200",
-    status: "DRAFT",
-    date: "Mar 05, 2026",
-    views: 0,
-    type: "Support",
-  },
-  {
-    id: "PRO-005",
-    name: "SEO Growth Campaign",
-    client: "Sunrise Retail",
-    amount: "$2,300",
-    status: "PUBLISHED",
-    date: "Mar 02, 2026",
-    views: 41,
-    type: "Marketing",
-  },
-];
-
-// ── Status helpers ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
-  Status,
+  ProposalStatus,
   { label: string; dot: string; pill: string }
 > = {
-  PUBLISHED: {
-    label: "Published",
-    dot: "bg-emerald-400",
-    pill: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  draft: {
+    label: "Draft",
+    dot: "bg-slate-400",
+    pill: "bg-slate-100 text-slate-600 border-slate-200",
   },
-  SENT: {
-    label: "Sent",
+  submitted: {
+    label: "Submitted",
     dot: "bg-sky-400",
     pill: "bg-sky-50 text-sky-600 border-sky-200",
   },
-  REVIEW: {
-    label: "In Review",
+  reviewed: {
+    label: "Reviewed",
     dot: "bg-amber-400",
     pill: "bg-amber-50 text-amber-600 border-amber-200",
   },
-  DRAFT: {
-    label: "Draft",
-    dot: "bg-slate-400",
-    pill: "bg-slate-100 text-slate-500 border-slate-200",
+  approved: {
+    label: "Approved",
+    dot: "bg-emerald-400",
+    pill: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  },
+  rejected: {
+    label: "Rejected",
+    dot: "bg-rose-400",
+    pill: "bg-rose-50 text-rose-600 border-rose-200",
   },
 };
 
-// ── IconButton ─────────────────────────────────────────────────────────────────
+function toStatus(value?: string): ProposalStatus {
+  const normalized = (value || "draft").toLowerCase();
+  if (
+    normalized === "draft" ||
+    normalized === "submitted" ||
+    normalized === "reviewed" ||
+    normalized === "approved" ||
+    normalized === "rejected"
+  ) {
+    return normalized;
+  }
+  return "draft";
+}
+
+function toSlug(title: string) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function IconButton({
   icon,
   tooltip,
@@ -128,135 +98,140 @@ function IconButton({
   );
 }
 
-// ── Proposal Row ──────────────────────────────────────────────────────────────
-function ProposalRow({ proposal }: { proposal: Proposal }) {
-  const cfg = STATUS_CONFIG[proposal.status];
+function ProposalRow({ proposal }: { proposal: ProposalItem }) {
+  const title = proposal.event?.eventName || "Untitled Proposal";
+  const status = toStatus(proposal.status);
+  const cfg = STATUS_CONFIG[status];
+  const created = proposal.createdAt
+    ? new Date(proposal.createdAt).toLocaleDateString()
+    : "-";
+  const views = proposal.viewsCount || 0;
+  const clientName = `${proposal.contact?.contactFirstName || ""} ${
+    proposal.contact?.contactLastName || ""
+  }`.trim();
+  const slug = `${toSlug(title) || "proposal"}-${proposal._id}`;
+
   return (
     <tr className="group transition-colors duration-150 hover:bg-slate-50/80 border-b border-slate-100 last:border-0">
-      {/* Name + ID */}
       <td className="px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shrink-0 shadow-sm">
             <span className="text-[10px] font-black text-white">
-              {proposal.name.slice(0, 2).toUpperCase()}
+              {(title || "UP").slice(0, 2).toUpperCase()}
             </span>
           </div>
           <div>
             <p className="text-[13px] font-semibold text-slate-800 leading-tight group-hover:text-cyan-600 transition-colors duration-150">
-              {proposal.name}
+              {title}
             </p>
             <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-              {proposal.id}
+              {proposal._id}
             </p>
           </div>
         </div>
       </td>
 
-      {/* Client */}
       <td className="px-5 py-4 text-[13px] text-slate-600 font-medium">
         <div className="flex items-center gap-1.5">
           <Users size={12} className="text-slate-400" />
-          {proposal.client}
+          {clientName || proposal.contact?.contactEmail || "-"}
         </div>
       </td>
 
-      {/* Type */}
-      <td className="px-5 py-4">
-        <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
-          {proposal.type}
-        </span>
-      </td>
-
-      {/* Amount */}
-      <td className="px-5 py-4">
-        <span className="text-[14px] font-black text-slate-900 tracking-tight">
-          {proposal.amount}
-        </span>
-      </td>
-
-      {/* Status */}
       <td className="px-5 py-4">
         <span
           className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${cfg.pill}`}
         >
-          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${proposal.status === "PUBLISHED" ? "animate-pulse" : ""}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
           {cfg.label}
         </span>
       </td>
 
-      {/* Date */}
       <td className="px-5 py-4">
         <div className="flex items-center gap-1.5 text-[12px] text-slate-400 font-medium">
           <Clock size={11} />
-          {proposal.date}
+          {created}
         </div>
       </td>
 
-      {/* Views */}
       <td className="px-5 py-4">
         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 font-semibold">
           <Eye size={12} className="text-slate-400" />
-          {proposal.views}
+          {views}
         </div>
       </td>
 
-      {/* Actions */}
       <td className="px-5 py-4">
-        <div className="flex items-center gap-1.5  transition-opacity duration-150">
-          <IconButton icon={<Copy size={14} />} tooltip="Copy" />
-          <IconButton icon={<BarChart3 size={14} />} tooltip="Analytics" />
-          <IconButton
-            icon={<Edit3 size={14} />}
-            tooltip="Edit"
-          />
-          <button className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-150">
+        <div className="flex items-center gap-1.5">
+          <IconButton icon={<Copy size={14} />} tooltip="Copy ID" />
+          <Link href={`/proposals/${slug}`}>
+            <IconButton icon={<Eye size={14} />} tooltip="Preview" />
+          </Link>
+          <Link
+            href={`/email/send-email?proposalId=${proposal._id}`}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-150"
+          >
             <Share2 size={12} />
             Share
-          </button>
+          </Link>
         </div>
       </td>
     </tr>
   );
 }
 
-
-// ── Main Export ───────────────────────────────────────────────────────────────
-export default function DashboardTableList() {
-  const [filter, setFilter] = useState<Status | "ALL">("ALL");
+export default function DashboardTableList({
+  proposals,
+}: {
+  proposals: ProposalItem[];
+}) {
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<ProposalStatus | "all">("all");
 
-  const filtered = PROPOSALS.filter((p) => {
-    const matchStatus = filter === "ALL" || p.status === filter;
-    const matchSearch =
-      search === "" ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.client.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
+  const filtered = useMemo(
+    () =>
+      proposals.filter((p) => {
+        const title = p.event?.eventName || "";
+        const clientName = `${p.contact?.contactFirstName || ""} ${
+          p.contact?.contactLastName || ""
+        }`.trim();
+        const matchSearch =
+          !search ||
+          title.toLowerCase().includes(search.toLowerCase()) ||
+          clientName.toLowerCase().includes(search.toLowerCase()) ||
+          (p.contact?.contactEmail || "").toLowerCase().includes(search.toLowerCase());
 
-  const tabs: (Status | "ALL")[] = ["ALL", "PUBLISHED", "SENT", "REVIEW", "DRAFT"];
+        const status = toStatus(p.status);
+        const matchStatus = filter === "all" || status === filter;
+
+        return matchSearch && matchStatus;
+      }),
+    [filter, proposals, search],
+  );
+
+  const tabs: Array<ProposalStatus | "all"> = [
+    "all",
+    "approved",
+    "submitted",
+    "reviewed",
+    "draft",
+    "rejected",
+  ];
 
   return (
     <div className="space-y-6 px-5">
-      {/* ── Featured Proposal ── */}
-
-
-      {/* ── Proposals Table ── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        {/* Table Header */}
         <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-100 flex-wrap gap-y-3">
           <div className="flex items-center gap-2">
             <h3 className="text-[14px] font-black text-slate-900 tracking-tight">
-              Recent Proposals
+              Latest Proposals
             </h3>
             <span className="bg-slate-100 text-slate-500 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
-              {PROPOSALS.length}
+              {proposals.length}
             </span>
           </div>
 
-          {/* Controls */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Search */}
             <div className="relative">
               <Search
                 size={13}
@@ -271,7 +246,6 @@ export default function DashboardTableList() {
               />
             </div>
 
-            {/* Filter pills */}
             <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1.5">
               {tabs.map((t) => (
                 <button
@@ -283,7 +257,7 @@ export default function DashboardTableList() {
                       : "text-slate-500 hover:text-slate-700"
                   }`}
                 >
-                  {t === "ALL" ? "All" : STATUS_CONFIG[t as Status].label}
+                  {t === "all" ? "All" : STATUS_CONFIG[t].label}
                 </button>
               ))}
             </div>
@@ -292,44 +266,35 @@ export default function DashboardTableList() {
               <Filter size={12} />
               Filter
             </button>
-
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
-                {[
-                  "Proposal",
-                  "Client",
-                  "Type",
-                  "Amount",
-                  "Status",
-                  "Date",
-                  "Views",
-                  "Actions",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400"
-                  >
-                    {h}
-                  </th>
-                ))}
+                {["Proposal", "Client", "Status", "Date", "Views", "Actions"].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400"
+                    >
+                      {h}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
               {filtered.length > 0 ? (
-                filtered.map((p) => <ProposalRow key={p.id} proposal={p} />)
+                filtered.map((p) => <ProposalRow key={p._id} proposal={p} />)
               ) : (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={6}
                     className="px-5 py-12 text-center text-slate-400 text-sm font-medium"
                   >
-                    No proposals match your filter.
+                    No proposals found.
                   </td>
                 </tr>
               )}
@@ -337,13 +302,12 @@ export default function DashboardTableList() {
           </table>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 bg-slate-50/50">
           <p className="text-[12px] text-slate-400 font-medium">
             Showing{" "}
             <span className="text-slate-700 font-bold">{filtered.length}</span>{" "}
             of{" "}
-            <span className="text-slate-700 font-bold">{PROPOSALS.length}</span>{" "}
+            <span className="text-slate-700 font-bold">{proposals.length}</span>{" "}
             proposals
           </p>
           <Link
@@ -357,3 +321,4 @@ export default function DashboardTableList() {
     </div>
   );
 }
+
