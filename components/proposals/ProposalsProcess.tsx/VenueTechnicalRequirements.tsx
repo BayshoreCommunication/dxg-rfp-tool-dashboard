@@ -2,7 +2,7 @@
 
 import { ChevronDown, RotateCcw } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
-import type { VenueTechnicalData } from "../AddNewProposal";
+import type { ProposalSettings, VenueTechnicalData } from "../AddNewProposal";
 import { PillRadio, useClickOutside } from "./shared";
 
 
@@ -18,6 +18,7 @@ interface VenueTechnicalRequirementsProps {
   onContinue: () => void;
   onBack: () => void;
   showErrors?: boolean;
+  proposalSettings: ProposalSettings;
 }
 
 const VenueTechnicalRequirements = ({
@@ -26,6 +27,7 @@ const VenueTechnicalRequirements = ({
   onContinue,
   onBack,
   showErrors = false,
+  proposalSettings,
 }: VenueTechnicalRequirementsProps) => {
   const [ampOpen, setAmpOpen] = useState(false);
   const ampRef = useRef<HTMLDivElement>(null);
@@ -42,7 +44,10 @@ const VenueTechnicalRequirements = ({
   };
 
   return (
-    <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
+    <section
+      className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
+      style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
+    >
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <h2 className="text-[22px] font-bold text-[#0f1b57]">Venue &amp; Technical Requirements</h2>

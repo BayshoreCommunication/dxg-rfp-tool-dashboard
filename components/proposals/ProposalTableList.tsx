@@ -1,11 +1,14 @@
 "use client";
+
 import { getProposalsAction } from "@/app/actions/proposals";
+import type { ProposalFilterType } from "./ProposalFilters";
 import {
   Clock,
   Copy,
   Eye,
   FileText,
   MoreHorizontal,
+  Plus,
   Share2,
   TrendingUp,
   Users,
@@ -18,6 +21,7 @@ type ProposalListItem = {
   status?: string;
   isAccepted?: boolean;
   isOpen?: boolean;
+  isFavorite?: boolean;
   viewsCount?: number;
   createdAt?: string;
   event?: {
@@ -29,32 +33,96 @@ type ProposalListItem = {
   };
 };
 
-export default function IntegratedDashboard() {
+type ProposalTableListProps = {
+  searchValue: string;
+  activeFilter: ProposalFilterType;
+  onCountsChange?: (counts: Partial<Record<ProposalFilterType, number>>) => void;
+};
+
+const getTotal = (pagination: unknown): number => {
+  if (!pagination || typeof pagination !== "object") return 0;
+  const total = (pagination as { total?: unknown }).total;
+  return typeof total === "number" ? total : 0;
+};
+
+export default function ProposalTableList({
+  searchValue,
+  activeFilter,
+  onCountsChange,
+}: ProposalTableListProps) {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
+    const timer = setTimeout(async () => {
       setLoading(true);
-      const res = await getProposalsAction({ page: 1, limit: 10 });
+
+      const params: {
+        page: number;
+        limit: number;
+        search?: string;
+        status?: string;
+        favorite?: boolean;
+      } = {
+        page: 1,
+        limit: 10,
+      };
+
+      const search = searchValue.trim();
+      if (search) {
+        params.search = search;
+      }
+
+      if (activeFilter === "draft") {
+        params.status = "draft";
+      } else if (activeFilter === "live") {
+        params.status = "submitted";
+      } else if (activeFilter === "favorite") {
+        params.favorite = true;
+      }
+
+      const [listRes, allRes, draftRes, liveRes, favoriteRes] =
+        await Promise.all([
+          getProposalsAction(params),
+          getProposalsAction({ page: 1, limit: 1, search }),
+          getProposalsAction({ page: 1, limit: 1, search, status: "draft" }),
+          getProposalsAction({
+            page: 1,
+            limit: 1,
+            search,
+            status: "submitted",
+          }),
+          getProposalsAction({ page: 1, limit: 1, search, favorite: true }),
+        ]);
+
       if (!mounted) return;
-      if (res.success && Array.isArray(res.data)) {
-        setProposals(res.data as ProposalListItem[]);
+
+      if (listRes.success && Array.isArray(listRes.data)) {
+        setProposals(listRes.data as ProposalListItem[]);
       } else {
         setProposals([]);
       }
+
+      onCountsChange?.({
+        all: getTotal(allRes.pagination),
+        draft: getTotal(draftRes.pagination),
+        live: getTotal(liveRes.pagination),
+        favorite: getTotal(favoriteRes.pagination),
+      });
+
       setLoading(false);
-    };
-    load();
+    }, 300);
+
     return () => {
       mounted = false;
+      clearTimeout(timer);
     };
-  }, []);
+  }, [activeFilter, onCountsChange, searchValue]);
 
   return (
     <div className="min-h-screen py-6 font-sans text-slate-800 -mt-6 px-6">
-      <div className=" space-y-6">
+      <div className="space-y-6">
         {loading ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="h-4 w-28 rounded bg-slate-100 animate-pulse" />
@@ -71,16 +139,26 @@ export default function IntegratedDashboard() {
             </div>
           </div>
         ) : proposals.length === 0 ? (
-          <div className="rounded-2xl text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-              <FileText size={22} />
+          <div className="rounded-3xl border border-slate-200 bg-white py-12 px-6 text-center shadow-sm">
+            <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+              <FileText size={64} strokeWidth={1.6} />
             </div>
-            <p className="mt-4 text-sm font-semibold text-slate-700">
-              No proposal available now.
+
+            <p className="mx-auto mt-7 max-w-md text-[20px] font-semibold leading-snug text-slate-700">
+              No proposals found for this filter. Try another filter or clear
+              your search.
             </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Create your first proposal to get started.
-            </p>
+
+            <div className="mt-7 mx-auto max-w-[180px]">
+              <Link
+                href="/proposals/add-new-proposal"
+                className="group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-primary-gradient px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_24px_rgba(45,198,245,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(45,198,245,0.55)] active:translate-y-0"
+              >
+                <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+                <Plus size={15} strokeWidth={3} className="shrink-0" />
+                New Proposal
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
@@ -102,7 +180,7 @@ export default function IntegratedDashboard() {
                 .join(" ");
               const createdAt = proposal?.createdAt
                 ? new Date(proposal.createdAt).toLocaleDateString()
-                : "—";
+                : "-";
               const views = proposal?.viewsCount ?? 0;
               const statusLabel = proposal?.status || "draft";
               const acceptedLabel = proposal?.isAccepted
@@ -130,10 +208,14 @@ export default function IntegratedDashboard() {
                       <span className="bg-slate-50 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-[11px] font-semibold">
                         {acceptedLabel}
                       </span>
+                      {proposal?.isFavorite && (
+                        <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full text-[11px] font-semibold">
+                          Favorite
+                        </span>
+                      )}
                       <span className="text-slate-400 text-[11px] ml-1 font-medium flex items-center gap-1">
                         <Clock size={10} />
-                        Created:{" "}
-                        <b className="text-slate-700 ml-1">{createdAt}</b>
+                        Created: <b className="text-slate-700 ml-1">{createdAt}</b>
                       </span>
                     </div>
                     <button className="text-slate-400 hover:text-slate-600 transition-colors duration-150 p-1 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200">
@@ -151,7 +233,7 @@ export default function IntegratedDashboard() {
                           <Users size={11} className="text-slate-400" />
                           Owner:{" "}
                           <span className="text-slate-800 font-semibold">
-                            {ownerName || "—"}
+                            {ownerName || "-"}
                           </span>
                         </p>
                         <div className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
@@ -177,18 +259,12 @@ export default function IntegratedDashboard() {
 
                       <div className="flex items-center gap-2">
                         <IconButton icon={<Copy size={16} />} tooltip="Copy" />
-                        {/* <IconButton
-                          icon={<BarChart3 size={16} />}
-                          tooltip="Analytics"
-                        /> */}
                         <Link
-                          href={`/proposals/${proposalSlug}`}
+                          href={`/proposal/${proposalSlug}`}
                           className="cursor-pointer"
+                          target="_blank"
                         >
-                          <IconButton
-                            icon={<Eye size={16} />}
-                            tooltip="Preview"
-                          />
+                          <IconButton icon={<Eye size={16} />} tooltip="Preview" />
                         </Link>
                         <Link
                           href={`/email/send-email?proposalId=${proposal._id}`}
@@ -225,3 +301,4 @@ function IconButton({
     </button>
   );
 }
+

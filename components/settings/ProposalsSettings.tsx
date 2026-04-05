@@ -178,7 +178,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
                       },
                     })
                   }
-                  className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#373798] focus:ring-1 focus:ring-[#373798]/30"
+                  className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#6366f1] focus:ring-1 focus:ring-[#6366f1]/30"
                 />
                 Email
               </label>
@@ -219,7 +219,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
                         },
                       })
                     }
-                    className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#373798] focus:ring-1 focus:ring-[#373798]/30"
+                    className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#6366f1] focus:ring-1 focus:ring-[#6366f1]/30"
                   />
                   Call
                 </span>
@@ -262,7 +262,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
                         },
                       })
                     }
-                    className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#373798] focus:ring-1 focus:ring-[#373798]/30"
+                    className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#6366f1] focus:ring-1 focus:ring-[#6366f1]/30"
                   />
                   Whatsapp
                 </span>
@@ -354,7 +354,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
               />
               <button
                 type="button"
-                className="w-11 border-l border-[#d7dce3] text-xs font-semibold text-[#373798] hover:bg-[#f2f4f8]"
+                className="w-11 border-l border-[#d7dce3] text-xs font-semibold text-[#6366f1] hover:bg-[#f2f4f8]"
               >
                 Add
               </button>
@@ -399,7 +399,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
               }
               className={
                 "relative h-6 w-11 rounded-full transition " +
-                (value.enableAiAssistant ? "bg-[#373798]" : "bg-gray-300")
+                (value.enableAiAssistant ? "bg-[#6366f1]" : "bg-gray-300")
               }
               aria-label="Toggle AI assistant"
             >

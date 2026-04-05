@@ -12,6 +12,7 @@ type ProposalOption = {
   event?: { eventName?: string };
   contact?: { contactEmail?: string };
   proposalLink?: string;
+  publicProposalLink?: string;
   proposalSlug?: string;
 };
 
@@ -42,7 +43,8 @@ export default function EmailSend() {
 
   const selectedProposal =
     proposals.find((item) => item._id === proposalId) || null;
-  const selectedProposalLink = selectedProposal?.proposalLink || "";
+  const selectedProposalLink =
+    selectedProposal?.publicProposalLink || selectedProposal?.proposalLink || "";
   const preselectedProposalId = searchParams.get("proposalId")?.trim() || "";
 
   const loadData = useCallback(async () => {

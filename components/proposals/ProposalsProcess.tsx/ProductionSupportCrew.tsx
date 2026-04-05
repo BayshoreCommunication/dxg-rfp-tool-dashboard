@@ -1,7 +1,7 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
-import type { ProductionSupportData } from "../AddNewProposal";
+import type { ProductionSupportData, ProposalSettings } from "../AddNewProposal";
 import { PillRadio, PillCheckbox, toggleItem } from "./shared";
 
 /* ─── Shared style constants ─── */
@@ -24,6 +24,7 @@ interface ProductionSupportCrewProps {
   onContinue: () => void;
   onBack: () => void;
   showErrors?: boolean;
+  proposalSettings: ProposalSettings;
 }
 
 const ProductionSupportCrew = ({
@@ -32,6 +33,7 @@ const ProductionSupportCrew = ({
   onContinue,
   onBack,
   showErrors = false,
+  proposalSettings,
 }: ProductionSupportCrewProps) => {
   const handleClear = () => {
     onChange({
@@ -43,7 +45,10 @@ const ProductionSupportCrew = ({
   };
 
   return (
-    <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
+    <section
+      className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
+      style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
+    >
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <h2 className="text-[22px] font-bold text-[#0f1b57]">Production Support &amp; Crew</h2>

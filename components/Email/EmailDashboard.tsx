@@ -4,7 +4,7 @@ import {
   deleteEmailCampaignAction,
   getEmailCampaignsAction,
 } from "@/app/actions/email";
-import { Clock, Trash2 } from "lucide-react";
+import { BarChart3, Clock, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
@@ -77,8 +77,17 @@ export default function EmailDashboard() {
 
   if (campaigns.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white px-5 py-7 text-[13px] text-slate-500 shadow-sm">
-        No sent email analytics yet.
+      <div className="rounded-3xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+          <BarChart3 size={28} strokeWidth={1.8} />
+        </div>
+        <p className="mt-5 text-[18px] font-semibold text-slate-800">
+          No sent email analytics yet
+        </p>
+        <p className="mx-auto mt-1 max-w-md text-[13px] text-slate-500">
+          Once you send proposal emails, delivery, opens, and clicks will appear
+          here.
+        </p>
       </div>
     );
   }

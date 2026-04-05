@@ -2,7 +2,7 @@
 
 import { ChevronDown, ExternalLink, RotateCcw } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
-import type { BudgetData } from "../AddNewProposal";
+import type { BudgetData, ProposalSettings } from "../AddNewProposal";
 import { PillRadio, toggleItem, useClickOutside } from "./shared";
 
 /* ─── Shared constants ─── */
@@ -47,6 +47,7 @@ interface BudgetProposalPreferencesProps {
   onContinue: () => void;
   onBack: () => void;
   showErrors?: boolean;
+  proposalSettings: ProposalSettings;
 }
 
 /* ─── Dropdown component (moved OUTSIDE parent to avoid remount on each render) ─── */
@@ -120,7 +121,14 @@ const InlineDropdown = ({
   </div>
 );
 
-const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack, showErrors = false }: BudgetProposalPreferencesProps) => {
+const BudgetProposalPreferences = ({
+  data,
+  onChange,
+  onContinue,
+  onBack,
+  showErrors = false,
+  proposalSettings,
+}: BudgetProposalPreferencesProps) => {
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [hearOpen, setHearOpen] = useState(false);
@@ -154,6 +162,7 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack, showErr
 
       {/* Form Body */}
       <div className="flex-1 px-8 py-8 space-y-8">
+  
 
         {/* Estimated AV Budget */}
         <div>
@@ -171,6 +180,11 @@ const BudgetProposalPreferences = ({ data, onChange, onContinue, onBack, showErr
             onOtherChange={(v) => onChange({ budgetCustomAmount: v })}
             hasError={showErrors && (!data.estimatedAvBudget.trim() || (data.estimatedAvBudget === "Other" && !data.budgetCustomAmount.trim()))}
           />
+          {data.estimatedAvBudget === "Other" && (
+            <p className="mt-1 text-xs text-[#8f98bf] normal-case">
+              Enter amount in {proposalSettings.proposals.defaultCurrency}
+            </p>
+          )}
           {showErrors && !data.estimatedAvBudget.trim() && (
             <p className="mt-1 text-sm text-red-500 normal-case">Estimated AV Budget is required.</p>
           )}

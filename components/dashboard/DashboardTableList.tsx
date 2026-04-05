@@ -5,7 +5,6 @@ import {
   Clock,
   Copy,
   Eye,
-  Filter,
   Search,
   Share2,
   Users,
@@ -13,11 +12,17 @@ import {
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 
-type ProposalStatus = "draft" | "submitted" | "reviewed" | "approved" | "rejected";
+type ProposalStatus =
+  | "draft"
+  | "submitted"
+  | "reviewed"
+  | "approved"
+  | "rejected";
 
 type ProposalItem = {
   _id: string;
   status?: string;
+  isFavorite?: boolean;
   viewsCount?: number;
   createdAt?: string;
   event?: { eventName?: string };
@@ -72,6 +77,15 @@ function toStatus(value?: string): ProposalStatus {
   }
   return "draft";
 }
+
+type DashboardFilterType = "all" | "draft" | "live" | "favorite";
+
+const FILTER_TABS: Array<{ key: DashboardFilterType; label: string }> = [
+  { key: "all", label: "All" },
+  { key: "draft", label: "Draft" },
+  { key: "live", label: "Live" },
+  { key: "favorite", label: "Favorite" },
+];
 
 function toSlug(title: string) {
   return title
@@ -164,7 +178,7 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
       <td className="px-5 py-4">
         <div className="flex items-center gap-1.5">
           <IconButton icon={<Copy size={14} />} tooltip="Copy ID" />
-          <Link href={`/proposals/${slug}`}>
+          <Link href={`/proposal/${slug}`} target="_blank">
             <IconButton icon={<Eye size={14} />} tooltip="Preview" />
           </Link>
           <Link
@@ -186,7 +200,7 @@ export default function DashboardTableList({
   proposals: ProposalItem[];
 }) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<ProposalStatus | "all">("all");
+  const [filter, setFilter] = useState<DashboardFilterType>("all");
 
   const filtered = useMemo(
     () =>
@@ -199,24 +213,31 @@ export default function DashboardTableList({
           !search ||
           title.toLowerCase().includes(search.toLowerCase()) ||
           clientName.toLowerCase().includes(search.toLowerCase()) ||
-          (p.contact?.contactEmail || "").toLowerCase().includes(search.toLowerCase());
+          (p.contact?.contactEmail || "")
+            .toLowerCase()
+            .includes(search.toLowerCase());
 
         const status = toStatus(p.status);
-        const matchStatus = filter === "all" || status === filter;
+        const matchStatus =
+          filter === "all" ||
+          (filter === "draft" && status === "draft") ||
+          (filter === "live" && status === "submitted") ||
+          (filter === "favorite" && Boolean(p.isFavorite));
 
         return matchSearch && matchStatus;
       }),
     [filter, proposals, search],
   );
 
-  const tabs: Array<ProposalStatus | "all"> = [
-    "all",
-    "approved",
-    "submitted",
-    "reviewed",
-    "draft",
-    "rejected",
-  ];
+  const tabCounts = useMemo(
+    () => ({
+      all: proposals.length,
+      draft: proposals.filter((p) => toStatus(p.status) === "draft").length,
+      live: proposals.filter((p) => toStatus(p.status) === "submitted").length,
+      favorite: proposals.filter((p) => Boolean(p.isFavorite)).length,
+    }),
+    [proposals],
+  );
 
   return (
     <div className="space-y-6 px-5">
@@ -247,25 +268,23 @@ export default function DashboardTableList({
             </div>
 
             <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1.5">
-              {tabs.map((t) => (
+              {FILTER_TABS.map((tab) => (
                 <button
-                  key={t}
-                  onClick={() => setFilter(t)}
+                  key={tab.key}
+                  onClick={() => setFilter(tab.key)}
                   className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all duration-150 ${
-                    filter === t
+                    filter === tab.key
                       ? "bg-white text-slate-900 shadow-sm"
                       : "text-slate-500 hover:text-slate-700"
                   }`}
                 >
-                  {t === "all" ? "All" : STATUS_CONFIG[t].label}
+                  <span>{tab.label}</span>
+                  <span className="ml-1.5 rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-extrabold text-slate-600">
+                    {tabCounts[tab.key]}
+                  </span>
                 </button>
               ))}
             </div>
-
-            <button className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 hover:text-slate-700 transition-all duration-150">
-              <Filter size={12} />
-              Filter
-            </button>
           </div>
         </div>
 
@@ -273,16 +292,21 @@ export default function DashboardTableList({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
-                {["Proposal", "Client", "Status", "Date", "Views", "Actions"].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400"
-                    >
-                      {h}
-                    </th>
-                  ),
-                )}
+                {[
+                  "Proposal",
+                  "Client",
+                  "Status",
+                  "Date",
+                  "Views",
+                  "Actions",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -321,4 +345,3 @@ export default function DashboardTableList({
     </div>
   );
 }
-

@@ -1,11 +1,18 @@
 import ProposalView from "../../../../components/proposals/ProposalView";
 
-const Page = async ({ params }: { params: Promise<{ slug?: string }> }) => {
+const Page = async ({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug?: string }>;
+  searchParams: Promise<{ source?: string }>;
+}) => {
   const { slug } = await params;
+  const { source } = await searchParams;
 
   return (
     <div className="">
-      <ProposalView slug={slug} />
+      <ProposalView slug={slug} source={source} />
     </div>
   );
 };

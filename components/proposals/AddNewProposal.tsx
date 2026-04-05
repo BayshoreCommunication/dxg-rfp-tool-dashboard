@@ -1,17 +1,22 @@
 "use client";
+import {
+  createProposalAction,
+  extractProposalFromFile,
+} from "@/app/actions/proposals";
+import { getSettingsAction } from "@/app/actions/settings";
 import { FileText, X } from "lucide-react";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createProposalAction, extractProposalFromFile } from "@/app/actions/proposals";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AddProposalUpload from "./AddProposalUpload";
-import ProposalFilters from "./ProposalFilters";
+import ProposalFilters, { type ProposalFilterType } from "./ProposalFilters";
 import BudgetProposalPreferences from "./ProposalsProcess.tsx/BudgetProposalPreferences";
 import ContactInfo from "./ProposalsProcess.tsx/ContactInfo";
 import EventForm from "./ProposalsProcess.tsx/EventForm";
 import ProcessList from "./ProposalsProcess.tsx/ProcessList";
 import ProductionSupportCrew from "./ProposalsProcess.tsx/ProductionSupportCrew";
 import RoombyRoomAvForm from "./ProposalsProcess.tsx/RoombyRoomAvForm";
+import TemplateSelection from "./ProposalsProcess.tsx/TemplateSelection";
 import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMaterials";
 import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalRequirements";
 import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
@@ -30,6 +35,45 @@ export type EventData = {
 
 export type RoomByRoomData = {
   roomFunction: string;
+  estimatedAttendeesInRoom: string;
+  loadInDateTime: string;
+  rehearsalDateTime: string;
+  showStartDateTime: string;
+  showEndDateTime: string;
+  audioSystemForHowManyPpl: string;
+  podiumMic: string;
+  podiumMicQty: string;
+  wirelessMics: string;
+  wirelessMicsQty: string;
+  wirelessMicsType: string;
+  audioRecording: string;
+  largeMonitorsOrScreenProjector: string;
+  largeMonitorsQty: string;
+  ledWall: string;
+  clientProvideOwnPresentationLaptop: string;
+  clientLaptopQty: string;
+  presentationLaptops: string;
+  presentationLaptopQty: string;
+  videoPlayback: string;
+  videoPlaybackCount: string;
+  videoFormatAspectRatio: string;
+  audienceQa: string;
+  audienceQaMethod: string;
+  cameras: string;
+  camerasQty: string;
+  videoRecording: string;
+  videoRecordingType: string;
+  stageWashLighting: string;
+  stageWashLightingStageSize: string;
+  backlightingFor: string;
+  drapeOrScenicUplighting: string;
+  audienceLighting: string;
+  programConfidenceMonitor: string;
+  programConfidenceMonitorQty: string;
+  notesConfidenceMonitor: string;
+  notesConfidenceMonitorQty: string;
+  speakerTimer: string;
+  scenicStageDesign: string;
   numberOfRooms: string;
   ceilingHeight: string;
   roomSetup: string;
@@ -54,6 +98,18 @@ export type RoomByRoomData = {
   videoStage: boolean;
   frontScreen: string;
   contentVideoNeeds: string;
+  stageDimensions: string;
+  confidenceMonitor: string;
+  confidenceMonitorCount: string;
+  projectorsProvided: string;
+  projectorCount: string;
+  cameraPackage: string;
+  cameraCount: string;
+  livestreamNeeded: string;
+  lightingPackage: string;
+  lightingConsole: string;
+  teleprompterNeeded: string;
+  showCallingRequired: string;
 };
 
 export type ProductionSupportData = {
@@ -97,7 +153,28 @@ export type ContactData = {
   anythingElse: string;
 };
 
+export type ProposalSettings = {
+  branding: {
+    linkPrefix: string;
+    defaultFont: "Inter" | "Poppins" | "Roboto";
+  };
+  proposals: {
+    proposalLanguage: string;
+    defaultCurrency: string;
+    expiryDate: string;
+    dateFormat: string;
+  };
+};
+
 export interface ProposalData {
+  templateId: "template-one" | "template-two" | "";
+  proposalStatus: "draft" | "submitted";
+  proposalSettings: {
+    linkPrefix: string;
+    defaultFont: "Inter" | "Poppins" | "Roboto";
+    defaultCurrency: string;
+    dateFormat: string;
+  };
   event: EventData;
   roomByRoom: RoomByRoomData;
   production: ProductionSupportData;
@@ -107,7 +184,19 @@ export interface ProposalData {
   contact: ContactData;
 }
 
+type ProposalSectionKey = {
+  [K in keyof ProposalData]: ProposalData[K] extends object ? K : never;
+}[keyof ProposalData];
+
 const defaultProposalData: ProposalData = {
+  templateId: "",
+  proposalStatus: "submitted",
+  proposalSettings: {
+    linkPrefix: "abuco",
+    defaultFont: "Poppins",
+    defaultCurrency: "$",
+    dateFormat: "MM/DD/YYYY",
+  },
   event: {
     eventName: "",
     startDate: "",
@@ -120,6 +209,45 @@ const defaultProposalData: ProposalData = {
   },
   roomByRoom: {
     roomFunction: "",
+    estimatedAttendeesInRoom: "",
+    loadInDateTime: "",
+    rehearsalDateTime: "",
+    showStartDateTime: "",
+    showEndDateTime: "",
+    audioSystemForHowManyPpl: "",
+    podiumMic: "",
+    podiumMicQty: "",
+    wirelessMics: "",
+    wirelessMicsQty: "",
+    wirelessMicsType: "",
+    audioRecording: "",
+    largeMonitorsOrScreenProjector: "",
+    largeMonitorsQty: "",
+    ledWall: "",
+    clientProvideOwnPresentationLaptop: "",
+    clientLaptopQty: "",
+    presentationLaptops: "",
+    presentationLaptopQty: "",
+    videoPlayback: "",
+    videoPlaybackCount: "",
+    videoFormatAspectRatio: "",
+    audienceQa: "",
+    audienceQaMethod: "",
+    cameras: "",
+    camerasQty: "",
+    videoRecording: "",
+    videoRecordingType: "",
+    stageWashLighting: "",
+    stageWashLightingStageSize: "",
+    backlightingFor: "",
+    drapeOrScenicUplighting: "",
+    audienceLighting: "",
+    programConfidenceMonitor: "",
+    programConfidenceMonitorQty: "",
+    notesConfidenceMonitor: "",
+    notesConfidenceMonitorQty: "",
+    speakerTimer: "",
+    scenicStageDesign: "",
     numberOfRooms: "",
     ceilingHeight: "",
     roomSetup: "",
@@ -144,6 +272,18 @@ const defaultProposalData: ProposalData = {
     videoStage: false,
     frontScreen: "",
     contentVideoNeeds: "",
+    stageDimensions: "",
+    confidenceMonitor: "",
+    confidenceMonitorCount: "",
+    projectorsProvided: "",
+    projectorCount: "",
+    cameraPackage: "",
+    cameraCount: "",
+    livestreamNeeded: "",
+    lightingPackage: "",
+    lightingConsole: "",
+    teleprompterNeeded: "",
+    showCallingRequired: "",
   },
   production: {
     scenicStageDesign: "",
@@ -183,6 +323,32 @@ const defaultProposalData: ProposalData = {
   },
 };
 
+const defaultProposalSettings: ProposalSettings = {
+  branding: {
+    linkPrefix: "abuco",
+    defaultFont: "Poppins",
+  },
+  proposals: {
+    proposalLanguage: "English",
+    defaultCurrency: "$",
+    expiryDate: "None",
+    dateFormat: "MM/DD/YYYY",
+  },
+};
+
+const ALLOWED_PROPOSAL_FONTS = ["Inter", "Poppins", "Roboto"] as const;
+
+const normalizeProposalFont = (
+  value: string | undefined,
+): "Inter" | "Poppins" | "Roboto" => {
+  const fallback: "Inter" | "Poppins" | "Roboto" = "Poppins";
+  if (!value) return fallback;
+  const matched = ALLOWED_PROPOSAL_FONTS.find(
+    (font) => font.toLowerCase() === value.trim().toLowerCase(),
+  );
+  return matched || fallback;
+};
+
 /* ─── Normalize AI-extracted values to exactly match option strings ─── */
 const matchOption = (value: string | undefined, options: string[]): string => {
   if (!value) return "";
@@ -195,65 +361,250 @@ const matchOption = (value: string | undefined, options: string[]): string => {
   );
 };
 
-const matchOptionsArray = (values: string[] | string | undefined, options: string[]): string[] => {
+const matchOptionsArray = (
+  values: string[] | string | undefined,
+  options: string[],
+): string[] => {
   if (!values) return [];
-  const valArray = Array.isArray(values) ? values : values.split(",").map((v) => v.trim());
-  
-  const matched = valArray
-    .map((v) => matchOption(v, options))
-    .filter(Boolean);
-    
+  const valArray = Array.isArray(values)
+    ? values
+    : values.split(",").map((v) => v.trim());
+
+  const matched = valArray.map((v) => matchOption(v, options)).filter(Boolean);
+
   // Deduplicate
   return Array.from(new Set(matched));
 };
 
-const normalizeExtracted = (raw: Partial<ProposalData>): Partial<ProposalData> => ({
-  event: raw.event ? {
-    ...raw.event,
-    attendees: matchOption(raw.event.attendees, ["< 100", "100 - 150", "200 - 500", "500 - 1,000", "1,000+"]),
-    eventFormat: (matchOption(raw.event.eventFormat, ["In-Person", "Hybrid", "Virtual"]) || raw.event.eventFormat) as EventData["eventFormat"],
-    eventType: matchOption(raw.event.eventType, ["Conference", "Meeting", "Gala", "Trade Show", "Awards Show", "Other"]),
-  } : undefined,
-  roomByRoom: raw.roomByRoom ? {
-    ...raw.roomByRoom,
-    roomSetup: matchOption(raw.roomByRoom.roomSetup, ["Theatre", "Classroom", "Banquet Rounds", "U-Shape", "Boardroom", "Cocktail", "Custom"]),
-    avSpec: matchOption(raw.roomByRoom.avSpec, ["Basic", "Standard", "Premium", "Custom"]),
-    avPa: matchOption(raw.roomByRoom.avPa, ["Yes", "No"]) as RoomByRoomData["avPa"],
-    mainSound: matchOption(raw.roomByRoom.mainSound, ["L'Acoustics", "d&b audiotechnik", "Meyer Sound", "QSC", "JBL", "Other"]),
-    hearingImpaired: matchOption(raw.roomByRoom.hearingImpaired, ["Yes", "No"]) as RoomByRoomData["hearingImpaired"],
-    recordAudio: matchOption(raw.roomByRoom.recordAudio, ["Yes", "No", "Multi-Track"]) as RoomByRoomData["recordAudio"],
-    frontScreen: matchOption(raw.roomByRoom.frontScreen, ["16:9", "4:3", "Custom Aspect", "Curved", "LED"]),
-  } : undefined,
-  production: raw.production ? {
-    ...raw.production,
-    scenicStageDesign: matchOption(raw.production.scenicStageDesign, ["Yes", "No"]) as ProductionSupportData["scenicStageDesign"],
-    unionLabor: matchOption(raw.production.unionLabor, ["Yes", "No", "Not Sure"]) as ProductionSupportData["unionLabor"],
-    showCrewNeeded: matchOptionsArray(raw.production.showCrewNeeded, [
-      "A1 (AUDIO)", "A2 (AUDIO ASSIST)", "V1 (VIDEO)", "V2 (VIDEO ASSIST)", 
-      "TD (TECHNICAL DIRECTOR)", "L1 (LIGHTING)", "L2 (LIGHTING ASSIST)", 
-      "GRAPHICS OP", "CAMERA OPERATOR", "SHOWCALLER", "STAGE MANAGER", 
-      "PRODUCER", "TELEPROMPTER OP", "RIGGER", "STAGEHAND", "OTHER"
-    ]),
-  } : undefined,
-  venue: raw.venue ? {
-    ...raw.venue,
-    needRiggingForFlown: matchOption(raw.venue.needRiggingForFlown, ["YES", "NO"]).toUpperCase() as VenueTechnicalData["needRiggingForFlown"],
-    needDedicatedPowerDrops: matchOption(raw.venue.needDedicatedPowerDrops, ["YES", "NO"]).toUpperCase() as VenueTechnicalData["needDedicatedPowerDrops"],
-    standardAmpWall: matchOption(raw.venue.standardAmpWall, ["100A", "200A", "400A"]) || raw.venue.standardAmpWall,
-  } : undefined,
-  budget: raw.budget ? {
-    ...raw.budget,
-    estimatedAvBudget: matchOption(raw.budget.estimatedAvBudget, ["<$10K", "$10-25K", "$25-50K", "$50-100K", "$100K+", "Other"]),
-    proposalFormatPreferences: matchOptionsArray(raw.budget.proposalFormatPreferences, [
-      "GEAR ITEMIZATION", "LABOR BREAKDOWN", "ALL-IN ESTIMATE", "ADD-ON OPTIONS"
-    ]),
-    timelineForProposal: matchOption(raw.budget.timelineForProposal, ["Within 3 Business Days", "1 Week", "2 Weeks", "Flexible"]),
-    callWithDxgProducer: matchOption(raw.budget.callWithDxgProducer, ["YES", "NO"]).toUpperCase() as BudgetData["callWithDxgProducer"],
-    howDidYouHear: matchOption(raw.budget.howDidYouHear, ["Referral", "Venue", "Google", "Social Media", "LinkedIn", "Other"]) || raw.budget.howDidYouHear,
-  } : undefined,
-  contact: raw.contact ? {
-    ...raw.contact,
-  } : undefined,
+const normalizeExtracted = (
+  raw: Partial<ProposalData>,
+): Partial<ProposalData> => ({
+  event: raw.event
+    ? {
+        ...raw.event,
+        attendees: matchOption(raw.event.attendees, [
+          "< 100",
+          "100 - 150",
+          "200 - 500",
+          "500 - 1,000",
+          "1,000+",
+        ]),
+        eventFormat: (matchOption(raw.event.eventFormat, [
+          "In-Person",
+          "Hybrid",
+          "Virtual",
+        ]) || raw.event.eventFormat) as EventData["eventFormat"],
+        eventType: matchOption(raw.event.eventType, [
+          "Conference",
+          "Meeting",
+          "Gala",
+          "Trade Show",
+          "Awards Show",
+          "Other",
+        ]),
+      }
+    : undefined,
+  roomByRoom: raw.roomByRoom
+    ? {
+        ...raw.roomByRoom,
+        roomSetup: matchOption(raw.roomByRoom.roomSetup, [
+          "Theatre",
+          "Classroom",
+          "Banquet Rounds",
+          "U-Shape",
+          "Boardroom",
+          "Cocktail",
+          "Custom",
+        ]),
+        avSpec: matchOption(raw.roomByRoom.avSpec, [
+          "Basic",
+          "Standard",
+          "Premium",
+          "Custom",
+        ]),
+        avPa: matchOption(raw.roomByRoom.avPa, [
+          "Yes",
+          "No",
+        ]) as RoomByRoomData["avPa"],
+        mainSound: matchOption(raw.roomByRoom.mainSound, [
+          "L'Acoustics",
+          "d&b audiotechnik",
+          "Meyer Sound",
+          "QSC",
+          "JBL",
+          "Other",
+        ]),
+        hearingImpaired: matchOption(raw.roomByRoom.hearingImpaired, [
+          "Yes",
+          "No",
+        ]) as RoomByRoomData["hearingImpaired"],
+        recordAudio: matchOption(raw.roomByRoom.recordAudio, [
+          "Yes",
+          "No",
+          "Multi-Track",
+        ]) as RoomByRoomData["recordAudio"],
+        audioRecording: matchOption(raw.roomByRoom.audioRecording, [
+          "Yes",
+          "No",
+        ]) as RoomByRoomData["audioRecording"],
+        videoFormatAspectRatio:
+          matchOption(raw.roomByRoom.videoFormatAspectRatio, [
+            "16:9 format",
+            "Unique Aspect Ratio",
+            "Both",
+          ]) ||
+          matchOption(raw.roomByRoom.frontScreen, [
+            "16:9 format",
+            "Unique Aspect Ratio",
+            "Both",
+          ]) ||
+          raw.roomByRoom.videoFormatAspectRatio,
+        audienceQa: matchOption(raw.roomByRoom.audienceQa, [
+          "Yes",
+          "No",
+        ]) as RoomByRoomData["audienceQa"],
+        audienceQaMethod: matchOption(raw.roomByRoom.audienceQaMethod, [
+          "Via an App",
+          "Passing a Microphone",
+          "Both",
+        ]),
+        videoRecording: matchOption(raw.roomByRoom.videoRecording, [
+          "Yes",
+          "No",
+        ]) as RoomByRoomData["videoRecording"],
+        videoRecordingType: matchOption(raw.roomByRoom.videoRecordingType, [
+          "Camera Feed Only",
+          "Presentation Only",
+          "Side by Side (Camera and Presentation)",
+          "All The Above",
+        ]),
+        stageWashLighting: matchOption(raw.roomByRoom.stageWashLighting, [
+          "Yes",
+          "No",
+        ]) as RoomByRoomData["stageWashLighting"],
+        frontScreen: matchOption(raw.roomByRoom.frontScreen, [
+          "16:9",
+          "4:3",
+          "Custom Aspect",
+          "Curved",
+          "LED",
+        ]),
+        confidenceMonitor: matchOption(raw.roomByRoom.confidenceMonitor, [
+          "Yes",
+          "No",
+        ]),
+        projectorsProvided: matchOption(raw.roomByRoom.projectorsProvided, [
+          "Yes",
+          "No",
+        ]),
+        livestreamNeeded: matchOption(raw.roomByRoom.livestreamNeeded, [
+          "Yes",
+          "No",
+        ]),
+        teleprompterNeeded: matchOption(raw.roomByRoom.teleprompterNeeded, [
+          "Yes",
+          "No",
+        ]),
+        showCallingRequired: matchOption(raw.roomByRoom.showCallingRequired, [
+          "Yes",
+          "No",
+        ]),
+      }
+    : undefined,
+  production: raw.production
+    ? {
+        ...raw.production,
+        scenicStageDesign: matchOption(raw.production.scenicStageDesign, [
+          "Yes",
+          "No",
+        ]) as ProductionSupportData["scenicStageDesign"],
+        unionLabor: matchOption(raw.production.unionLabor, [
+          "Yes",
+          "No",
+          "Not Sure",
+        ]) as ProductionSupportData["unionLabor"],
+        showCrewNeeded: matchOptionsArray(raw.production.showCrewNeeded, [
+          "A1 (AUDIO)",
+          "A2 (AUDIO ASSIST)",
+          "V1 (VIDEO)",
+          "V2 (VIDEO ASSIST)",
+          "TD (TECHNICAL DIRECTOR)",
+          "L1 (LIGHTING)",
+          "L2 (LIGHTING ASSIST)",
+          "GRAPHICS OP",
+          "CAMERA OPERATOR",
+          "SHOWCALLER",
+          "STAGE MANAGER",
+          "PRODUCER",
+          "TELEPROMPTER OP",
+          "RIGGER",
+          "STAGEHAND",
+          "OTHER",
+        ]),
+      }
+    : undefined,
+  venue: raw.venue
+    ? {
+        ...raw.venue,
+        needRiggingForFlown: matchOption(raw.venue.needRiggingForFlown, [
+          "YES",
+          "NO",
+        ]).toUpperCase() as VenueTechnicalData["needRiggingForFlown"],
+        needDedicatedPowerDrops: matchOption(
+          raw.venue.needDedicatedPowerDrops,
+          ["YES", "NO"],
+        ).toUpperCase() as VenueTechnicalData["needDedicatedPowerDrops"],
+        standardAmpWall:
+          matchOption(raw.venue.standardAmpWall, ["100A", "200A", "400A"]) ||
+          raw.venue.standardAmpWall,
+      }
+    : undefined,
+  budget: raw.budget
+    ? {
+        ...raw.budget,
+        estimatedAvBudget: matchOption(raw.budget.estimatedAvBudget, [
+          "<$10K",
+          "$10-25K",
+          "$25-50K",
+          "$50-100K",
+          "$100K+",
+          "Other",
+        ]),
+        proposalFormatPreferences: matchOptionsArray(
+          raw.budget.proposalFormatPreferences,
+          [
+            "GEAR ITEMIZATION",
+            "LABOR BREAKDOWN",
+            "ALL-IN ESTIMATE",
+            "ADD-ON OPTIONS",
+          ],
+        ),
+        timelineForProposal: matchOption(raw.budget.timelineForProposal, [
+          "Within 3 Business Days",
+          "1 Week",
+          "2 Weeks",
+          "Flexible",
+        ]),
+        callWithDxgProducer: matchOption(raw.budget.callWithDxgProducer, [
+          "YES",
+          "NO",
+        ]).toUpperCase() as BudgetData["callWithDxgProducer"],
+        howDidYouHear:
+          matchOption(raw.budget.howDidYouHear, [
+            "Referral",
+            "Venue",
+            "Google",
+            "Social Media",
+            "LinkedIn",
+            "Other",
+          ]) || raw.budget.howDidYouHear,
+      }
+    : undefined,
+  contact: raw.contact
+    ? {
+        ...raw.contact,
+      }
+    : undefined,
 });
 
 const AddNewProposal = () => {
@@ -263,18 +614,87 @@ const AddNewProposal = () => {
   const [saving, setSaving] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  const [uploadSearchValue, setUploadSearchValue] = useState("");
+  const [uploadActiveFilter, setUploadActiveFilter] =
+    useState<ProposalFilterType>("all");
   const [createdProposal, setCreatedProposal] = useState<{
     id: string;
     title: string;
   } | null>(null);
 
+  const [proposalSettings, setProposalSettings] = useState<ProposalSettings>(
+    defaultProposalSettings,
+  );
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadSettings = async () => {
+      const res = await getSettingsAction();
+      if (!mounted) return;
+
+      if (res.success && res.data && typeof res.data === "object") {
+        const data = res.data as {
+          branding?: { linkPrefix?: string; defaultFont?: string };
+          proposals?: {
+            proposalLanguage?: string;
+            defaultCurrency?: string;
+            expiryDate?: string;
+            dateFormat?: string;
+          };
+        };
+
+        setProposalSettings({
+          branding: {
+            linkPrefix:
+              data.branding?.linkPrefix?.trim() ||
+              defaultProposalSettings.branding.linkPrefix,
+            defaultFont: normalizeProposalFont(data.branding?.defaultFont),
+          },
+          proposals: {
+            proposalLanguage:
+              data.proposals?.proposalLanguage?.trim() ||
+              defaultProposalSettings.proposals.proposalLanguage,
+            defaultCurrency:
+              data.proposals?.defaultCurrency?.trim() ||
+              defaultProposalSettings.proposals.defaultCurrency,
+            expiryDate:
+              data.proposals?.expiryDate?.trim() ||
+              defaultProposalSettings.proposals.expiryDate,
+            dateFormat:
+              data.proposals?.dateFormat?.trim() ||
+              defaultProposalSettings.proposals.dateFormat,
+          },
+        });
+      }
+    };
+
+    void loadSettings();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setProposalData((prev) => ({
+      ...prev,
+      proposalSettings: {
+        linkPrefix: proposalSettings.branding.linkPrefix,
+        defaultFont: proposalSettings.branding.defaultFont,
+        defaultCurrency: proposalSettings.proposals.defaultCurrency,
+        dateFormat: proposalSettings.proposals.dateFormat,
+      },
+    }));
+  }, [proposalSettings]);
+
   /* ─── Single source of truth for all steps ─── */
   const [proposalData, setProposalData] =
     useState<ProposalData>(defaultProposalData);
 
-  const updateProposalSection = <K extends keyof ProposalData>(
+  const updateProposalSection = <K extends ProposalSectionKey>(
     section: K,
-    updates: Partial<ProposalData[K]>
+    updates: Partial<ProposalData[K]>,
   ) => {
     setProposalData((prev) => ({
       ...prev,
@@ -293,13 +713,21 @@ const AddNewProposal = () => {
   };
 
   const isRoomByRoomStepValid = () => {
-    const { roomFunction, numberOfRooms, roomSetup, avSpec } =
-      proposalData.roomByRoom;
+    const {
+      roomFunction,
+      estimatedAttendeesInRoom,
+      loadInDateTime,
+      rehearsalDateTime,
+      showStartDateTime,
+      showEndDateTime,
+    } = proposalData.roomByRoom;
     return (
       roomFunction.trim().length > 0 &&
-      numberOfRooms.trim().length > 0 &&
-      roomSetup.trim().length > 0 &&
-      avSpec.trim().length > 0
+      estimatedAttendeesInRoom.trim().length > 0 &&
+      loadInDateTime.trim().length > 0 &&
+      rehearsalDateTime.trim().length > 0 &&
+      showStartDateTime.trim().length > 0 &&
+      showEndDateTime.trim().length > 0
     );
   };
 
@@ -321,8 +749,7 @@ const AddNewProposal = () => {
     if (needDedicatedPowerDrops === "YES") {
       const { standardAmpWall, powerDropsHowMany } = proposalData.venue;
       return (
-        standardAmpWall.trim().length > 0 &&
-        powerDropsHowMany.trim().length > 0
+        standardAmpWall.trim().length > 0 && powerDropsHowMany.trim().length > 0
       );
     }
     return true;
@@ -366,12 +793,8 @@ const AddNewProposal = () => {
   };
 
   const isContactStepValid = () => {
-    const {
-      contactFirstName,
-      contactLastName,
-      contactEmail,
-      contactPhone,
-    } = proposalData.contact;
+    const { contactFirstName, contactLastName, contactEmail, contactPhone } =
+      proposalData.contact;
     return (
       contactFirstName.trim().length > 0 &&
       contactLastName.trim().length > 0 &&
@@ -380,7 +803,65 @@ const AddNewProposal = () => {
     );
   };
 
-  const handleSubmit = async () => {
+  const normalizeRoomByRoomForSubmit = (
+    roomByRoom: RoomByRoomData,
+  ): RoomByRoomData => {
+    type YesNoField =
+      | "wirelessMics"
+      | "largeMonitorsOrScreenProjector"
+      | "clientProvideOwnPresentationLaptop"
+      | "presentationLaptops"
+      | "videoPlayback"
+      | "cameras"
+      | "programConfidenceMonitor"
+      | "notesConfidenceMonitor";
+    type QtyField =
+      | "wirelessMicsQty"
+      | "largeMonitorsQty"
+      | "clientLaptopQty"
+      | "presentationLaptopQty"
+      | "videoPlaybackCount"
+      | "camerasQty"
+      | "programConfidenceMonitorQty"
+      | "notesConfidenceMonitorQty";
+
+    const yesNoQtyPairs: Array<[YesNoField, QtyField]> = [
+      ["wirelessMics", "wirelessMicsQty"],
+      ["largeMonitorsOrScreenProjector", "largeMonitorsQty"],
+      ["clientProvideOwnPresentationLaptop", "clientLaptopQty"],
+      ["presentationLaptops", "presentationLaptopQty"],
+      ["videoPlayback", "videoPlaybackCount"],
+      ["cameras", "camerasQty"],
+      ["programConfidenceMonitor", "programConfidenceMonitorQty"],
+      ["notesConfidenceMonitor", "notesConfidenceMonitorQty"],
+    ];
+
+    const normalized = yesNoQtyPairs.reduce((acc, [valueField, qtyField]) => {
+      if (roomByRoom[valueField] !== "Yes") {
+        acc[qtyField] = "";
+      }
+      return acc;
+    }, { ...roomByRoom } as RoomByRoomData);
+
+    if (normalized.wirelessMics !== "Yes") {
+      normalized.wirelessMicsType = "";
+    }
+    if (normalized.audienceQa !== "Yes") {
+      normalized.audienceQaMethod = "";
+    }
+    if (normalized.videoRecording !== "Yes") {
+      normalized.videoRecordingType = "";
+    }
+    if (normalized.stageWashLighting !== "Yes") {
+      normalized.stageWashLightingStageSize = "";
+    }
+
+    return normalized;
+  };
+
+  const handleSubmit = async (
+    statusOverride?: "draft" | "submitted",
+  ) => {
     setShowErrors(true);
     if (!isContactStepValid()) {
       toast.error("Please complete all required contact fields.");
@@ -388,25 +869,49 @@ const AddNewProposal = () => {
     }
 
     setSaving(true);
-    
+
     // Mongoose expects arrays of strings (e.g. file URLs), but state holds File objects
     // Temporarily, we just strip them out or map them to their names so validation passes.
     // (If you want true file uploading, you'd send them to S3/Cloudinary first and pass the URLs here.)
     const payload: ProposalData = {
       ...proposalData,
+      proposalSettings: {
+        linkPrefix: proposalSettings.branding.linkPrefix,
+        defaultFont: proposalSettings.branding.defaultFont,
+        defaultCurrency: proposalSettings.proposals.defaultCurrency,
+        dateFormat: proposalSettings.proposals.dateFormat,
+      },
+      roomByRoom: normalizeRoomByRoomForSubmit(proposalData.roomByRoom),
       uploads: {
         ...proposalData.uploads,
         supportDocuments: proposalData.uploads.supportDocuments
           .map((f) => (typeof f === "string" ? f : f?.name || ""))
-          .filter((f) => typeof f === 'string' && f.trim() !== "" && f !== "[ {} ]" && f !== "[object Object]"),
+          .filter(
+            (f) =>
+              typeof f === "string" &&
+              f.trim() !== "" &&
+              f !== "[ {} ]" &&
+              f !== "[object Object]",
+          ),
         avQuoteFiles: proposalData.uploads.avQuoteFiles
           .map((f) => (typeof f === "string" ? f : f?.name || ""))
-          .filter((f) => typeof f === 'string' && f.trim() !== "" && f !== "[ {} ]" && f !== "[object Object]"),
+          .filter(
+            (f) =>
+              typeof f === "string" &&
+              f.trim() !== "" &&
+              f !== "[ {} ]" &&
+              f !== "[object Object]",
+          ),
       },
     };
 
+    const payloadWithStatus = {
+      ...payload,
+      status: statusOverride ?? proposalData.proposalStatus,
+    };
+
     try {
-      const result = await createProposalAction(payload);
+      const result = await createProposalAction(payloadWithStatus);
       if (result.success) {
         toast.success("Proposal created successfully!");
         const data =
@@ -415,7 +920,10 @@ const AddNewProposal = () => {
             : null;
 
         const createdId = data?._id || "";
-        const createdTitle = data?.event?.eventName || proposalData.event.eventName || "Untitled Proposal";
+        const createdTitle =
+          data?.event?.eventName ||
+          proposalData.event.eventName ||
+          "Untitled Proposal";
 
         if (createdId) {
           setCreatedProposal({ id: createdId, title: createdTitle });
@@ -440,24 +948,39 @@ const AddNewProposal = () => {
       setIsExtracting(true);
       try {
         const result = await extractProposalFromFile(selectedFile);
-        if (result.success && result.data && Object.keys(result.data).length > 0) {
+        if (
+          result.success &&
+          result.data &&
+          Object.keys(result.data).length > 0
+        ) {
           // Normalize enum/dropdown fields so they exactly match option strings
           const normalized = normalizeExtracted(result.data);
           setProposalData((prev) => ({
-            event:      { ...prev.event,      ...(normalized.event      ?? {}) },
-            roomByRoom: { ...prev.roomByRoom, ...(normalized.roomByRoom ?? {}) },
-            production: { ...prev.production, ...(normalized.production ?? {}) },
-            venue:      { ...prev.venue,      ...(normalized.venue      ?? {}) },
-            uploads:    { ...prev.uploads,    ...(normalized.uploads    ?? {}) },
-            budget:     { ...prev.budget,     ...(normalized.budget     ?? {}) },
-            contact:    { ...prev.contact,    ...(normalized.contact    ?? {}) },
+            ...prev,
+            event: { ...prev.event, ...(normalized.event ?? {}) },
+            roomByRoom: {
+              ...prev.roomByRoom,
+              ...(normalized.roomByRoom ?? {}),
+            },
+            production: {
+              ...prev.production,
+              ...(normalized.production ?? {}),
+            },
+            venue: { ...prev.venue, ...(normalized.venue ?? {}) },
+            uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
+            budget: { ...prev.budget, ...(normalized.budget ?? {}) },
+            contact: { ...prev.contact, ...(normalized.contact ?? {}) },
           }));
           toast.success("✅ Fields pre-filled from your document!");
         } else {
-          toast.info("No matching fields found — please fill the form manually.");
+          toast.info(
+            "No matching fields found — please fill the form manually.",
+          );
         }
       } catch {
-        toast.info("Couldn't read the document — please fill the form manually.");
+        toast.info(
+          "Couldn't read the document — please fill the form manually.",
+        );
       } finally {
         setIsExtracting(false);
       }
@@ -466,9 +989,9 @@ const AddNewProposal = () => {
       setShowErrors(false);
       return;
     }
-    
+
     setShowErrors(true);
-    
+
     if (proposalProcessStep === 1 && !isEventStepValid()) {
       return;
     }
@@ -489,11 +1012,15 @@ const AddNewProposal = () => {
     }
 
     if (proposalProcessStep === 7) {
-      if (!saving) {
-        handleSubmit();
+      if (!isContactStepValid()) {
+        return;
       }
+      setProposalProcessStep(8);
+      setShowErrors(false);
       return;
     }
+
+    if (proposalProcessStep === 8) return;
 
     setProposalProcessStep((s) => s + 1);
     setShowErrors(false);
@@ -508,7 +1035,7 @@ const AddNewProposal = () => {
         onBackToList={() => router.push("/proposals")}
         onSendEmail={() =>
           router.push(
-            `/email/send-email?proposalId=${encodeURIComponent(createdProposal.id)}`
+            `/email/send-email?proposalId=${encodeURIComponent(createdProposal.id)}`,
           )
         }
       />
@@ -516,7 +1043,11 @@ const AddNewProposal = () => {
   }
 
   return (
-    <div>
+    <div
+      style={{
+        fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
+      }}
+    >
       {/* â”€â”€ Step 0: Upload screen â”€â”€ */}
       {proposalProcessStep === 0 && (
         <>
@@ -528,7 +1059,13 @@ const AddNewProposal = () => {
             </div>
           </div>
           <div className="mt-8">
-            <ProposalFilters />
+            <ProposalFilters
+              searchValue={uploadSearchValue}
+              onSearchChange={setUploadSearchValue}
+              activeFilter={uploadActiveFilter}
+              onFilterChange={setUploadActiveFilter}
+              counts={{ all: 0, draft: 0, live: 0, favorite: 0 }}
+            />
           </div>
           <AddProposalUpload
             selectedFile={selectedFile}
@@ -568,13 +1105,31 @@ const AddNewProposal = () => {
               >
                 {isExtracting ? (
                   <>
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8H4z"
+                      />
                     </svg>
                     Reading document...
                   </>
-                ) : "Continue"}
+                ) : (
+                  "Continue"
+                )}
               </button>
             </div>
           )}
@@ -593,6 +1148,7 @@ const AddNewProposal = () => {
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
+                proposalSettings={proposalSettings}
               />
             )}
             {/* Add Step 2â€“7 components here as you build them */}
@@ -605,6 +1161,7 @@ const AddNewProposal = () => {
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
+                proposalSettings={proposalSettings}
               />
             )}
             {proposalProcessStep === 3 && (
@@ -616,6 +1173,7 @@ const AddNewProposal = () => {
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
+                proposalSettings={proposalSettings}
               />
             )}
             {proposalProcessStep === 4 && (
@@ -625,6 +1183,7 @@ const AddNewProposal = () => {
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
+                proposalSettings={proposalSettings}
               />
             )}
             {proposalProcessStep === 5 && (
@@ -636,6 +1195,7 @@ const AddNewProposal = () => {
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
+                proposalSettings={proposalSettings}
               />
             )}
             {proposalProcessStep === 6 && (
@@ -645,6 +1205,7 @@ const AddNewProposal = () => {
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
+                proposalSettings={proposalSettings}
               />
             )}
             {proposalProcessStep === 7 && (
@@ -653,9 +1214,28 @@ const AddNewProposal = () => {
                 onChange={(updates) =>
                   updateProposalSection("contact", updates)
                 }
-                onContinue={handleSubmit}
+                onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
+                proposalSettings={proposalSettings}
+              />
+            )}
+            {proposalProcessStep === 8 && (
+              <TemplateSelection
+                templateId={proposalData.templateId}
+                onSelect={(templateId) =>
+                  setProposalData((prev) => ({ ...prev, templateId }))
+                }
+                onCreate={(status) => {
+                  setShowErrors(true);
+                  if (!proposalData.templateId) return;
+                  if (!saving) {
+                    void handleSubmit(status);
+                  }
+                }}
+                onBack={backHandler}
+                showErrors={showErrors}
+                proposalSettings={proposalSettings}
               />
             )}
           </div>

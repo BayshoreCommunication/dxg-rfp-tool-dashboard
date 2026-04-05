@@ -1,16 +1,76 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Proxima Nova";
+  src: url("/fonts/Proxima_Nova_Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Proxima Nova";
+  src: url("/fonts/Proxima_Nova_Semibold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Proxima Nova";
+  src: url("/fonts/Proxima_Nova_Extrabold.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --color-primary: #2dc6f5;
-  --color-secondary: #373798;
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --color-primary: #0ea5e9;
+  --color-secondary: #6366f1;
+  --color-primary-start: #22d3ee;
+  --color-primary-end: #6366f1;
+  --font-sans:
+    "Proxima Nova", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui,
+    sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+.bg-primary-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-start) 0%,
+    var(--color-primary) 50%,
+    var(--color-primary-end) 100%
+  );
 }
 
 body {
-  background-color: #f4f4f4;
+  /* background-color: #f4f4f4; */
   font-family: var(--font-sans);
+  font-weight: 400;
 }
 
-h1, h2, h3, h4, h5, h6, p, a, span, button, input {
+h1,
+h2 {
   font-family: var(--font-sans);
+  font-weight: 800;
+}
+
+h3,
+h4,
+h5,
+h6,
+p,
+a,
+span,
+button,
+input,
+label,
+li,
+td,
+th,
+small,
+strong {
+  font-family: var(--font-sans);
+  font-weight: 400;
 }

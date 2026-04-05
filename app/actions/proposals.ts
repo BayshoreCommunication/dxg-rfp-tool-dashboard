@@ -37,12 +37,18 @@ const buildProposalMeta = (proposal: any) => {
   const proposalId = proposal?._id ? String(proposal._id) : "";
   const title = proposal?.event?.eventName || "proposal";
   const slug = `${toSlug(title) || "proposal"}-${proposalId}`;
-  const proposalLink = `${FRONTEND_URL.replace(/\/+$/, "")}/proposals/${slug}`;
+  const appProposalLink = `${FRONTEND_URL.replace(/\/+$/, "")}/proposal/${slug}`;
+  const prefix = String(proposal?.proposalSettings?.linkPrefix || "")
+    .trim()
+    .toLowerCase();
+  const proposalLinkPrefix = prefix || "abuco";
+  const publicProposalLink = `https://${proposalLinkPrefix}.goprospero.com/proposal/${slug}`;
 
   return {
     ...proposal,
     proposalSlug: slug,
-    proposalLink,
+    proposalLink: appProposalLink,
+    publicProposalLink,
   };
 };
 
@@ -57,7 +63,9 @@ const withProposalMeta = (payload: unknown) => {
 };
 
 export async function createProposalAction(
-  payload: ProposalData
+  payload: ProposalData & {
+    status?: "draft" | "submitted" | "reviewed" | "approved" | "rejected";
+  }
 ): Promise<ApiResponse> {
   try {
     const token = await getAccessToken();
@@ -122,6 +130,7 @@ export async function extractProposalFromFile(
 
 export async function getProposalsAction(params?: {
   status?: string;
+  favorite?: boolean;
   search?: string;
   page?: number;
   limit?: number;
@@ -135,6 +144,9 @@ export async function getProposalsAction(params?: {
 
   const query = new URLSearchParams();
   if (params?.status) query.set("status", params.status);
+  if (typeof params?.favorite === "boolean") {
+    query.set("favorite", String(params.favorite));
+  }
   if (params?.search) query.set("search", params.search);
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));

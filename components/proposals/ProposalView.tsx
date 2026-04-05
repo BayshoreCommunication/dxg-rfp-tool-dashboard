@@ -1,20 +1,13 @@
-"use client";
+﻿"use client";
 
-import {
-  CalendarDays,
-  CheckCircle2,
-  Eye,
-  Mail,
-  MapPin,
-  Phone,
-  Presentation,
-  Sparkles,
-  UserRound,
-} from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import TemplateOne, { type TemplateOneData } from "@/components/proposalTemplate/TemplateOne";
+import TemplateTwo from "@/components/proposalTemplate/TemplateTwo";
 import {
   getProposalByIdAction,
   incrementProposalViewsAction,
+  updateProposalMetaAction,
+  updateProposalStatusAction,
 } from "@/app/actions/proposals";
 
 type ProposalData = {
@@ -22,8 +15,17 @@ type ProposalData = {
   createdAt?: string;
   updatedAt?: string;
   status?: string;
+  isAccepted?: boolean;
+  isOpen?: boolean;
   viewsCount?: number;
   proposalLink?: string;
+  templateId?: "template-one" | "template-two";
+  proposalSettings?: {
+    linkPrefix?: string;
+    defaultFont?: "Inter" | "Poppins" | "Roboto";
+    defaultCurrency?: string;
+    dateFormat?: string;
+  };
   event?: {
     eventName?: string;
     startDate?: string;
@@ -36,29 +38,55 @@ type ProposalData = {
   };
   roomByRoom?: {
     roomFunction?: string;
+    estimatedAttendeesInRoom?: string;
+    loadInDateTime?: string;
+    rehearsalDateTime?: string;
+    showStartDateTime?: string;
+    showEndDateTime?: string;
+    audioSystemForHowManyPpl?: string;
+    podiumMic?: string;
+    podiumMicQty?: string;
+    wirelessMics?: string;
+    wirelessMicsQty?: string;
+    wirelessMicsType?: string;
+    audioRecording?: string;
+    largeMonitorsOrScreenProjector?: string;
+    largeMonitorsQty?: string;
+    ledWall?: string;
+    clientProvideOwnPresentationLaptop?: string;
+    clientLaptopQty?: string;
+    presentationLaptops?: string;
+    presentationLaptopQty?: string;
+    videoPlayback?: string;
+    videoPlaybackCount?: string;
+    videoFormatAspectRatio?: string;
+    audienceQa?: string;
+    audienceQaMethod?: string;
+    cameras?: string;
+    camerasQty?: string;
+    videoRecording?: string;
+    videoRecordingType?: string;
+    stageWashLighting?: string;
+    stageWashLightingStageSize?: string;
+    backlightingFor?: string;
+    drapeOrScenicUplighting?: string;
+    audienceLighting?: string;
+    programConfidenceMonitor?: string;
+    programConfidenceMonitorQty?: string;
+    notesConfidenceMonitor?: string;
+    notesConfidenceMonitorQty?: string;
+    speakerTimer?: string;
+    scenicStageDesign?: string;
     numberOfRooms?: string;
     ceilingHeight?: string;
     roomSetup?: string;
-    showPrep?: string;
-    showSize?: string;
-    hasPipeAndDrape?: boolean;
-    showRig?: boolean;
     rigPowerSize?: string;
     preferredRigging?: string[];
-    decibelLimitation?: string;
     avSpec?: string;
-    avPa?: string;
     mainSound?: string;
-    mainSoundSize?: string;
     hearingImpaired?: string;
-    preferredA1?: string;
     recordAudio?: string;
     chairs?: string;
-    stageRisers?: string[];
-    backdropsWallSize?: string;
-    scenicElements?: boolean;
-    videoStage?: boolean;
-    frontScreen?: string;
     contentVideoNeeds?: string;
   };
   production?: {
@@ -69,24 +97,15 @@ type ProposalData = {
   };
   venue?: {
     needRiggingForFlown?: string;
-    riggingPlotOrSpecs?: string;
     needDedicatedPowerDrops?: string;
     standardAmpWall?: string;
     powerDropsHowMany?: string;
   };
-  uploads?: {
-    supportDocuments?: string[];
-    reviewExistingAvQuote?: string;
-    avQuoteFiles?: string[];
-  };
   budget?: {
     estimatedAvBudget?: string;
-    budgetCustomAmount?: string;
-    proposalFormatPreferences?: string[];
     timelineForProposal?: string;
+    proposalFormatPreferences?: string[];
     callWithDxgProducer?: string;
-    howDidYouHear?: string;
-    howDidYouHearOther?: string;
   };
   contact?: {
     contactFirstName?: string;
@@ -107,16 +126,8 @@ const extractObjectId = (slugOrId?: string | null) => {
   return match?.[0] || "";
 };
 
-const showValue = (value?: string | number | boolean | null) => {
-  if (value === true) return "Yes";
-  if (value === false) return "No";
-  if (value === null || value === undefined) return "-";
-  const normalized = String(value).trim();
-  return normalized.length > 0 ? normalized : "-";
-};
-
 const formatDate = (value?: string) => {
-  if (!value) return "-";
+  if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString(undefined, {
@@ -126,9 +137,464 @@ const formatDate = (value?: string) => {
   });
 };
 
-export default function ProposalView({ slug }: { slug?: string }) {
+const toListText = (values?: string[]) => {
+  const clean = (values || []).filter((v) => v && v.trim().length > 0);
+  return clean.length > 0 ? clean.join(", ") : "";
+};
+
+const withFallback = (value: string, fallback = "Not specified") =>
+  value || fallback;
+
+const splitTitle = (name: string) => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length <= 1) {
+    return { lineOne: name || "Event Proposal", lineTwo: "Overview" };
+  }
+  const mid = Math.ceil(parts.length / 2);
+  return {
+    lineOne: parts.slice(0, mid).join(" "),
+    lineTwo: parts.slice(mid).join(" "),
+  };
+};
+
+const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData> => {
+  const pick = (value?: string) => (value && value.trim() ? value.trim() : "");
+  const eventName = proposal.event?.eventName?.trim() || "Event Proposal";
+  const title = splitTitle(eventName);
+  const organization = pick(proposal.contact?.contactOrganization);
+  const createdLabel = formatDate(proposal.createdAt);
+  const start = formatDate(proposal.event?.startDate);
+  const end = formatDate(proposal.event?.endDate);
+  const fullName =
+    `${proposal.contact?.contactFirstName || ""} ${proposal.contact?.contactLastName || ""}`.trim();
+  const contactTitle = pick(proposal.contact?.contactTitle);
+
+  const formatYesNoWithQty = (value?: string, qty?: string) => {
+    const safeValue = pick(value);
+    const safeQty = pick(qty);
+    if (!safeValue) return "";
+    if (safeValue === "Yes" && safeQty) {
+      return `Yes (${safeQty})`;
+    }
+    return safeValue;
+  };
+  const formatYesNoWithDetail = (value?: string, detail?: string) => {
+    const safeValue = pick(value);
+    const safeDetail = pick(detail);
+    if (!safeValue) return "";
+    if (safeValue === "Yes" && safeDetail) {
+      return `Yes (${safeDetail})`;
+    }
+    return safeValue;
+  };
+
+  const services: Array<{ title: string; text: string }> = [];
+  const eventProfile = [
+    pick(proposal.event?.eventFormat)
+      ? `${pick(proposal.event?.eventFormat)} format`
+      : "",
+    pick(proposal.event?.attendees)
+      ? `${pick(proposal.event?.attendees)} attendees`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" • ");
+  if (eventProfile) {
+    services.push({ title: "Event Profile", text: eventProfile });
+  }
+
+  const venueSetup = [pick(proposal.event?.venue), pick(proposal.roomByRoom?.roomSetup)]
+    .filter(Boolean)
+    .join(" • ");
+  if (venueSetup) {
+    services.push({ title: "Venue & Setup", text: venueSetup });
+  }
+
+  const crewList = toListText(proposal.production?.showCrewNeeded);
+  const avProduction = [
+    pick(proposal.roomByRoom?.avSpec),
+    crewList ? `Crew: ${crewList}` : "",
+  ]
+    .filter(Boolean)
+    .join(" • ");
+  if (avProduction) {
+    services.push({ title: "AV & Production", text: avProduction });
+  }
+
+  const powerRigging = [
+    pick(proposal.venue?.needRiggingForFlown)
+      ? `Rigging: ${pick(proposal.venue?.needRiggingForFlown)}`
+      : "",
+    pick(proposal.venue?.needDedicatedPowerDrops)
+      ? `Dedicated Power: ${pick(proposal.venue?.needDedicatedPowerDrops)}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" • ");
+  if (powerRigging) {
+    services.push({ title: "Power & Rigging", text: powerRigging });
+  }
+
+  const metaChips = [
+    proposal.status ? `Status: ${proposal.status}` : "",
+    proposal.event?.attendees ? `Attendees: ${proposal.event.attendees}` : "",
+    proposal.event?.eventFormat ? `Format: ${proposal.event.eventFormat}` : "",
+    start ? `Start: ${start}` : "",
+    proposal.viewsCount !== undefined ? `Views: ${proposal.viewsCount}` : "",
+  ].filter((item) => item.trim().length > 0);
+
+  const summaryBullets = [
+    proposal.event?.venue ? `Venue: ${proposal.event.venue}` : "",
+    proposal.roomByRoom?.roomFunction
+      ? `Room Function: ${proposal.roomByRoom.roomFunction}`
+      : "",
+    proposal.budget?.timelineForProposal
+      ? `Timeline: ${proposal.budget.timelineForProposal}`
+      : "",
+    proposal.production?.otherRolesNeeded
+      ? `Additional roles: ${proposal.production.otherRolesNeeded}`
+      : "",
+  ].filter((item) => item.trim().length > 0);
+
+  const dateRange = start && end ? `${start} - ${end}` : start || end;
+  const aboutParts = [dateRange, pick(proposal.event?.venue)].filter(Boolean);
+  const aboutText = aboutParts.length
+    ? `${aboutParts.join(". ")}. This proposal is tailored to your submitted scope and preferences.`
+    : "This proposal is tailored to your submitted scope and preferences.";
+
+  const pricing: Array<{ name: string; price: string; bullets: string[] }> = [];
+
+  const budgetBullets = [
+    pick(proposal.budget?.timelineForProposal)
+      ? `Timeline: ${pick(proposal.budget?.timelineForProposal)}`
+      : "",
+    toListText(proposal.budget?.proposalFormatPreferences)
+      ? `Format: ${toListText(proposal.budget?.proposalFormatPreferences)}`
+      : "",
+    pick(proposal.budget?.callWithDxgProducer)
+      ? `Producer Call: ${pick(proposal.budget?.callWithDxgProducer)}`
+      : "",
+  ].filter(Boolean);
+  const budgetPrice = pick(proposal.budget?.estimatedAvBudget);
+  if (budgetPrice || budgetBullets.length > 0) {
+    pricing.push({
+      name: "Budget",
+      price: budgetPrice || "Budget",
+      bullets: budgetBullets,
+    });
+  }
+
+  const roomBullets = [
+    pick(proposal.roomByRoom?.roomFunction)
+      ? `Room Function: ${pick(proposal.roomByRoom?.roomFunction)}`
+      : "",
+    pick(proposal.roomByRoom?.roomSetup)
+      ? `Room Setup: ${pick(proposal.roomByRoom?.roomSetup)}`
+      : "",
+    pick(proposal.production?.scenicStageDesign)
+      ? `Scenic Design: ${pick(proposal.production?.scenicStageDesign)}`
+      : "",
+  ].filter(Boolean);
+  const roomPrice = pick(proposal.roomByRoom?.numberOfRooms);
+  if (roomPrice || roomBullets.length > 0) {
+    pricing.push({
+      name: "Room Planning",
+      price: roomPrice || "Room Planning",
+      bullets: roomBullets,
+    });
+  }
+
+  const technicalBullets = [
+    pick(proposal.production?.unionLabor)
+      ? `Union Labor: ${pick(proposal.production?.unionLabor)}`
+      : "",
+    pick(proposal.venue?.standardAmpWall)
+      ? `Amp Wall: ${pick(proposal.venue?.standardAmpWall)}`
+      : "",
+    pick(proposal.venue?.powerDropsHowMany)
+      ? `Power Drops: ${pick(proposal.venue?.powerDropsHowMany)}`
+      : "",
+  ].filter(Boolean);
+  const technicalPrice = pick(proposal.roomByRoom?.avSpec);
+  if (technicalPrice || technicalBullets.length > 0) {
+    pricing.push({
+      name: "Technical",
+      price: technicalPrice || "Technical",
+      bullets: technicalBullets,
+    });
+  }
+
+  const avGroups: TemplateOneData["avGroups"] = [
+    {
+      title: "Room & Logistics",
+      items: [
+        {
+          label: "Function",
+          value: withFallback(pick(proposal.roomByRoom?.roomFunction)),
+        },
+        {
+          label: "Attendees",
+          value: withFallback(pick(proposal.roomByRoom?.estimatedAttendeesInRoom)),
+        },
+        {
+          label: "Room Setup",
+          value: withFallback(pick(proposal.roomByRoom?.roomSetup)),
+        },
+        {
+          label: "Show Timing",
+          value: withFallback(
+            [formatDate(proposal.roomByRoom?.showStartDateTime), formatDate(proposal.roomByRoom?.showEndDateTime)]
+              .filter(Boolean)
+              .join(" - "),
+          ),
+        },
+      ],
+    },
+    {
+      title: "Audio & Video",
+      items: [
+        {
+          label: "Podium Mic",
+          value: withFallback(
+            formatYesNoWithQty(
+              proposal.roomByRoom?.podiumMic,
+              proposal.roomByRoom?.podiumMicQty,
+            ),
+          ),
+        },
+        {
+          label: "Wireless Mics",
+          value: withFallback(
+            formatYesNoWithDetail(
+              proposal.roomByRoom?.wirelessMics,
+              [
+                pick(proposal.roomByRoom?.wirelessMicsQty),
+                pick(proposal.roomByRoom?.wirelessMicsType),
+              ]
+                .filter(Boolean)
+                .join(", "),
+            ),
+          ),
+        },
+        {
+          label: "Audio Recording",
+          value: withFallback(pick(proposal.roomByRoom?.audioRecording)),
+        },
+        {
+          label: "Cameras",
+          value: withFallback(
+            formatYesNoWithQty(
+              proposal.roomByRoom?.cameras,
+              proposal.roomByRoom?.camerasQty,
+            ),
+          ),
+        },
+        {
+          label: "LED Wall",
+          value: withFallback(pick(proposal.roomByRoom?.ledWall)),
+        },
+      ],
+    },
+    {
+      title: "Display & Monitoring",
+      items: [
+        {
+          label: "Large Monitors",
+          value: withFallback(
+            formatYesNoWithQty(
+              proposal.roomByRoom?.largeMonitorsOrScreenProjector,
+              proposal.roomByRoom?.largeMonitorsQty,
+            ),
+          ),
+        },
+        {
+          label: "Presentation Laptops",
+          value: withFallback(
+            formatYesNoWithQty(
+              proposal.roomByRoom?.presentationLaptops,
+              proposal.roomByRoom?.presentationLaptopQty,
+            ),
+          ),
+        },
+        {
+          label: "Video Playback",
+          value: withFallback(
+            formatYesNoWithQty(
+              proposal.roomByRoom?.videoPlayback,
+              proposal.roomByRoom?.videoPlaybackCount,
+            ),
+          ),
+        },
+        {
+          label: "Video Format",
+          value: withFallback(pick(proposal.roomByRoom?.videoFormatAspectRatio)),
+        },
+      ],
+    },
+    {
+      title: "Engagement & Lighting",
+      items: [
+        {
+          label: "Audience Q&A",
+          value: withFallback(
+            formatYesNoWithDetail(
+              proposal.roomByRoom?.audienceQa,
+              proposal.roomByRoom?.audienceQaMethod,
+            ),
+          ),
+        },
+        {
+          label: "Video Recording",
+          value: withFallback(
+            formatYesNoWithDetail(
+              proposal.roomByRoom?.videoRecording,
+              proposal.roomByRoom?.videoRecordingType,
+            ),
+          ),
+        },
+        {
+          label: "Stage Wash Lighting",
+          value: withFallback(
+            formatYesNoWithDetail(
+              proposal.roomByRoom?.stageWashLighting,
+              proposal.roomByRoom?.stageWashLightingStageSize,
+            ),
+          ),
+        },
+        {
+          label: "Backlighting / Scenic / Audience",
+          value: withFallback(
+            [
+              pick(proposal.roomByRoom?.backlightingFor),
+              pick(proposal.roomByRoom?.drapeOrScenicUplighting),
+              pick(proposal.roomByRoom?.audienceLighting),
+            ]
+              .filter(Boolean)
+              .join(" / "),
+          ),
+        },
+      ],
+    },
+    {
+      title: "Confidence & Monitoring",
+      items: [
+        {
+          label: "Program Confidence",
+          value: withFallback(
+            formatYesNoWithQty(
+              proposal.roomByRoom?.programConfidenceMonitor,
+              proposal.roomByRoom?.programConfidenceMonitorQty,
+            ),
+          ),
+        },
+        {
+          label: "Notes Confidence",
+          value: withFallback(
+            formatYesNoWithQty(
+              proposal.roomByRoom?.notesConfidenceMonitor,
+              proposal.roomByRoom?.notesConfidenceMonitorQty,
+            ),
+          ),
+        },
+      ],
+    },
+  ];
+
+  const scenicLabel = pick(proposal.production?.scenicStageDesign);
+  const scenicStageDesignLabel =
+    scenicLabel === "Yes"
+      ? "Required (Yes)"
+      : scenicLabel === "No"
+        ? "Not Required (No)"
+        : scenicLabel || "TBD";
+  const unionLaborLabel = pick(proposal.production?.unionLabor) || "TBD / Not Sure";
+  const riggingMethod = toListText(proposal.roomByRoom?.preferredRigging);
+  const powerDrops = pick(proposal.venue?.powerDropsHowMany);
+  const ampWall = pick(proposal.venue?.standardAmpWall);
+  const additionalNotes =
+    pick(proposal.contact?.anythingElse) ||
+    pick(proposal.roomByRoom?.contentVideoNeeds);
+
+  return {
+    badge: `Proposal${proposal.status ? ` • ${proposal.status}` : ""}${createdLabel ? ` • ${createdLabel}` : ""}`,
+    ...(organization ? { brandName: organization } : {}),
+    titleLineOne: title.lineOne,
+    titleLineTwo: title.lineTwo,
+    heroText:
+      proposal.event?.eventTypeOther ||
+      proposal.event?.eventType ||
+      "A custom proposal prepared from your submitted event and production requirements.",
+    ...(metaChips.length > 0 ? { metaChips } : {}),
+    ...(fullName ? { ctaPrimary: `Send To ${fullName}` } : {}),
+    ctaSecondary: "Download Brief",
+    aboutTitle: "Project Snapshot",
+    aboutText,
+    ...(summaryBullets.length > 0 ? { summaryBullets } : {}),
+    ...(services.length > 0
+      ? { servicesTitle: "Scope & Requirements", services }
+      : {}),
+    pricingTitle: "Budget & Delivery",
+    ...(pricing.length > 0 ? { pricing } : {}),
+    closingTitle: "Ready To Move Forward With",
+    ...(pick(proposal.event?.venue)
+      ? { brandAddress: pick(proposal.event?.venue) }
+      : {}),
+    ...(pick(proposal.contact?.contactEmail)
+      ? { brandEmail: pick(proposal.contact?.contactEmail) }
+      : {}),
+    ...(fullName ? { contactName: fullName } : {}),
+    ...(pick(proposal.contact?.contactPhone)
+      ? { contactPhone: pick(proposal.contact?.contactPhone) }
+      : {}),
+    ...(contactTitle || organization
+      ? { closingSubtitle: [contactTitle, organization].filter(Boolean).join(" - ") }
+      : {}),
+    ...(additionalNotes ? { additionalNotes } : {}),
+    ...(proposal.budget?.estimatedAvBudget
+      ? { budgetDisplay: pick(proposal.budget?.estimatedAvBudget) }
+      : {}),
+    ...(proposal.budget?.proposalFormatPreferences &&
+    proposal.budget.proposalFormatPreferences.length > 0
+      ? { proposalFormats: proposal.budget.proposalFormatPreferences }
+      : {}),
+    ...(proposal.production?.showCrewNeeded &&
+    proposal.production.showCrewNeeded.length > 0
+      ? { crewRoles: proposal.production.showCrewNeeded }
+      : {}),
+    scenicStageDesignLabel,
+    unionLaborLabel,
+    ...(pick(proposal.roomByRoom?.rigPowerSize)
+      ? { riggingMaxPointWeight: pick(proposal.roomByRoom?.rigPowerSize) }
+      : {}),
+    ...(riggingMethod ? { riggingMethod } : {}),
+    ...(powerDrops ? { powerDropsLabel: `${powerDrops} Dedicated` } : {}),
+    ...(ampWall ? { ampWallLabel: `${ampWall} Main Amp Wall` } : {}),
+    avGroups,
+    ...(pick(proposal.roomByRoom?.contentVideoNeeds)
+      ? { ledDescription: pick(proposal.roomByRoom?.contentVideoNeeds) }
+      : {}),
+    ...(proposal.roomByRoom?.ledWall === "Yes"
+      ? { ledHeadline: "LED Wall Requested" }
+      : {}),
+    ledTags: [
+      pick(proposal.roomByRoom?.videoFormatAspectRatio),
+      pick(proposal.roomByRoom?.videoRecordingType),
+      pick(proposal.roomByRoom?.audienceQaMethod),
+    ].filter(Boolean),
+  };
+};
+
+export default function ProposalView({
+  slug,
+  source,
+}: {
+  slug?: string;
+  source?: string;
+}) {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const incrementedRef = useRef(false);
 
@@ -184,7 +650,12 @@ export default function ProposalView({ slug }: { slug?: string }) {
   }, [proposalId]);
 
   if (loading) {
-    return <ProposalViewSkeleton />;
+    return (
+      <div className="mx-auto w-full max-w-[1280px] px-4 py-10 sm:px-6">
+        <div className="h-12 w-60 animate-pulse rounded bg-slate-200" />
+        <div className="mt-4 h-[420px] animate-pulse rounded-2xl bg-slate-100" />
+      </div>
+    );
   }
 
   if (error || !proposal) {
@@ -198,439 +669,83 @@ export default function ProposalView({ slug }: { slug?: string }) {
     );
   }
 
-  const title = proposal.event?.eventName || "Untitled Proposal";
-  const fullName =
-    `${proposal.contact?.contactFirstName || ""} ${proposal.contact?.contactLastName || ""}`.trim();
-  const views = proposal.viewsCount ?? 0;
-  const createdAt = formatDate(proposal.createdAt);
-  const updatedAt = formatDate(proposal.updatedAt);
+  const handleAcceptProposal = async () => {
+    if (source !== "email") return;
+    if (!proposalId || accepting || proposal.isAccepted) return;
 
-  return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#e0f2fe_0%,_#f8fafc_45%,_#ffffff_100%)] px-4 py-6 sm:px-6 lg:px-8 ">
-      <div className="mx-auto w-full max-w-[1280px] space-y-6">
-        <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur sm:p-8">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-cyan-200/35 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-blue-200/35 blur-3xl" />
+    setAccepting(true);
+    try {
+      let updatedProposal: ProposalData = proposal;
 
-          <div className="relative z-10 grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-end">
-            <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-700">
-                <Sparkles size={13} />
-                Proposal Overview
-              </p>
-              <h1 className="mt-4 text-2xl font-black leading-tight text-slate-900 sm:text-4xl">
-                {title}
-              </h1>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                <InfoBadge label="Status" value={showValue(proposal.status)} />
-                <InfoBadge label="Created" value={createdAt} />
-                <InfoBadge label="Updated" value={updatedAt} />
-              </div>
-            </div>
+      const acceptRes = await updateProposalMetaAction(proposalId, {
+        isAccepted: true,
+        isOpen: false,
+      });
+      if (acceptRes.success && acceptRes.data && typeof acceptRes.data === "object") {
+        updatedProposal = acceptRes.data as ProposalData;
+      }
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <StatCard
-                label="Views"
-                value={showValue(views)}
-                icon={<Eye size={16} />}
-              />
-              <StatCard
-                label="Attendees"
-                value={showValue(proposal.event?.attendees)}
-                icon={<UserRound size={16} />}
-              />
-              <StatCard
-                label="Event Type"
-                value={showValue(
-                  proposal.event?.eventTypeOther || proposal.event?.eventType,
-                )}
-                icon={<Presentation size={16} />}
-              />
-            </div>
-          </div>
-        </section>
+      const statusRes = await updateProposalStatusAction(proposalId, "approved");
+      if (statusRes.success && statusRes.data && typeof statusRes.data === "object") {
+        updatedProposal = statusRes.data as ProposalData;
+      }
 
-        <section className="grid gap-6 lg:grid-cols-3">
-          <Panel title="Event Details" icon={<CalendarDays size={16} />}>
-            <FieldRow label="Event Name" value={proposal.event?.eventName} />
-            <FieldRow label="Start Date" value={proposal.event?.startDate} />
-            <FieldRow label="End Date" value={proposal.event?.endDate} />
-            <FieldRow label="Venue" value={proposal.event?.venue} />
-            <FieldRow label="Attendees" value={proposal.event?.attendees} />
-            <FieldRow label="Format" value={proposal.event?.eventFormat} />
-            <FieldRow label="Type" value={proposal.event?.eventType} />
-            <FieldRow
-              label="Type (Other)"
-              value={proposal.event?.eventTypeOther}
-            />
-          </Panel>
+      setProposal(updatedProposal);
+    } finally {
+      setAccepting(false);
+    }
+  };
 
-          <Panel title="Contact Details" icon={<UserRound size={16} />}>
-            <FieldRow label="Full Name" value={fullName} />
-            <FieldRow label="Title" value={proposal.contact?.contactTitle} />
-            <FieldRow
-              label="Organization"
-              value={proposal.contact?.contactOrganization}
-            />
-            <FieldRow
-              label="Email"
-              value={proposal.contact?.contactEmail}
-              icon={<Mail size={13} />}
-            />
-            <FieldRow
-              label="Phone"
-              value={proposal.contact?.contactPhone}
-              icon={<Phone size={13} />}
-            />
-            <FieldRow
-              label="Notes"
-              value={proposal.contact?.anythingElse}
-              multiline
-            />
-          </Panel>
+  const handleDownloadProposal = () => {
+    if (downloading) return;
+    setDownloading(true);
 
-          <Panel title="Venue & Power" icon={<MapPin size={16} />}>
-            <FieldRow
-              label="Need Rigging"
-              value={proposal.venue?.needRiggingForFlown}
-            />
-            <FieldRow
-              label="Rigging Specs"
-              value={proposal.venue?.riggingPlotOrSpecs}
-              multiline
-            />
-            <FieldRow
-              label="Dedicated Power"
-              value={proposal.venue?.needDedicatedPowerDrops}
-            />
-            <FieldRow
-              label="Standard Amp Wall"
-              value={proposal.venue?.standardAmpWall}
-            />
-            <FieldRow
-              label="Power Drop Count"
-              value={proposal.venue?.powerDropsHowMany}
-            />
-          </Panel>
-        </section>
+    const originalTitle = document.title;
+    const printableTitle =
+      proposal.event?.eventName?.trim() ||
+      proposal.contact?.contactOrganization?.trim() ||
+      "proposal";
+    document.title = `${printableTitle}-proposal`;
 
-        <section className="grid gap-6 lg:grid-cols-2">
-          <Panel
-            title="Room & AV Requirements"
-            icon={<CheckCircle2 size={16} />}
-          >
-            <FieldRow
-              label="Room Function"
-              value={proposal.roomByRoom?.roomFunction}
-            />
-            <FieldRow
-              label="Number of Rooms"
-              value={proposal.roomByRoom?.numberOfRooms}
-            />
-            <FieldRow
-              label="Ceiling Height"
-              value={proposal.roomByRoom?.ceilingHeight}
-            />
-            <FieldRow
-              label="Room Setup"
-              value={proposal.roomByRoom?.roomSetup}
-            />
-            <FieldRow label="Show Prep" value={proposal.roomByRoom?.showPrep} />
-            <FieldRow label="Show Size" value={proposal.roomByRoom?.showSize} />
-            <FieldRow
-              label="Pipe & Drape"
-              value={proposal.roomByRoom?.hasPipeAndDrape}
-            />
-            <FieldRow label="Show Rig" value={proposal.roomByRoom?.showRig} />
-            <FieldRow
-              label="Rig Power Size"
-              value={proposal.roomByRoom?.rigPowerSize}
-            />
-            <ChipRow
-              label="Preferred Rigging"
-              values={proposal.roomByRoom?.preferredRigging}
-            />
-            <FieldRow
-              label="Decibel Limitation"
-              value={proposal.roomByRoom?.decibelLimitation}
-            />
-            <FieldRow label="AV Spec" value={proposal.roomByRoom?.avSpec} />
-            <FieldRow label="AV PA" value={proposal.roomByRoom?.avPa} />
-            <FieldRow
-              label="Main Sound"
-              value={proposal.roomByRoom?.mainSound}
-            />
-            <FieldRow
-              label="Main Sound Size"
-              value={proposal.roomByRoom?.mainSoundSize}
-            />
-            <FieldRow
-              label="Hearing Impaired"
-              value={proposal.roomByRoom?.hearingImpaired}
-            />
-            <FieldRow
-              label="Preferred A1"
-              value={proposal.roomByRoom?.preferredA1}
-            />
-            <FieldRow
-              label="Record Audio"
-              value={proposal.roomByRoom?.recordAudio}
-            />
-            <FieldRow label="Chairs" value={proposal.roomByRoom?.chairs} />
-            <ChipRow
-              label="Stage Risers"
-              values={proposal.roomByRoom?.stageRisers}
-            />
-            <FieldRow
-              label="Backdrops Wall Size"
-              value={proposal.roomByRoom?.backdropsWallSize}
-            />
-            <FieldRow
-              label="Scenic Elements"
-              value={proposal.roomByRoom?.scenicElements}
-            />
-            <FieldRow
-              label="Video Stage"
-              value={proposal.roomByRoom?.videoStage}
-            />
-            <FieldRow
-              label="Front Screen"
-              value={proposal.roomByRoom?.frontScreen}
-            />
-            <FieldRow
-              label="Video Needs"
-              value={proposal.roomByRoom?.contentVideoNeeds}
-              multiline
-            />
-          </Panel>
+    requestAnimationFrame(() => {
+      try {
+        window.print();
+      } finally {
+        document.title = originalTitle;
+        setDownloading(false);
+      }
+    });
+  };
 
-          <div className="space-y-6">
-            <Panel title="Production Plan" icon={<Presentation size={16} />}>
-              <FieldRow
-                label="Scenic Stage Design"
-                value={proposal.production?.scenicStageDesign}
-              />
-              <FieldRow
-                label="Union Labor"
-                value={proposal.production?.unionLabor}
-              />
-              <ChipRow
-                label="Show Crew Needed"
-                values={proposal.production?.showCrewNeeded}
-              />
-              <FieldRow
-                label="Other Roles Needed"
-                value={proposal.production?.otherRolesNeeded}
-                multiline
-              />
-            </Panel>
+  const mappedTemplateData = mapProposalToTemplate(proposal);
+  const showAcceptButton = source === "email";
 
-            <Panel title="Budget & Timeline" icon={<CalendarDays size={16} />}>
-              <FieldRow
-                label="Estimated AV Budget"
-                value={proposal.budget?.estimatedAvBudget}
-              />
-              <FieldRow
-                label="Custom Budget Amount"
-                value={proposal.budget?.budgetCustomAmount}
-              />
-              <ChipRow
-                label="Format Preferences"
-                values={proposal.budget?.proposalFormatPreferences}
-              />
-              <FieldRow
-                label="Proposal Timeline"
-                value={proposal.budget?.timelineForProposal}
-              />
-              <FieldRow
-                label="Call with Producer"
-                value={proposal.budget?.callWithDxgProducer}
-              />
-              <FieldRow
-                label="How Did You Hear"
-                value={proposal.budget?.howDidYouHear}
-              />
-              <FieldRow
-                label="How Did You Hear (Other)"
-                value={proposal.budget?.howDidYouHearOther}
-              />
-            </Panel>
+  const templateData: Partial<TemplateOneData> = {
+    ...mappedTemplateData,
+    ctaPrimary: showAcceptButton
+      ? proposal.isAccepted
+        ? "Proposal Accepted"
+        : mappedTemplateData.ctaPrimary || "Accept Proposal"
+      : undefined,
+    ctaSecondary: "Download PDF",
+  };
+  const templateFont = proposal.proposalSettings?.defaultFont || "Poppins";
 
-            <Panel title="Uploaded Files" icon={<CheckCircle2 size={16} />}>
-              <ChipRow
-                label="Support Documents"
-                values={proposal.uploads?.supportDocuments}
-              />
-              <FieldRow
-                label="Review Existing AV Quote"
-                value={proposal.uploads?.reviewExistingAvQuote}
-              />
-              <ChipRow
-                label="AV Quote Files"
-                values={proposal.uploads?.avQuoteFiles}
-              />
-              <FieldRow
-                label="Proposal Link"
-                value={proposal.proposalLink}
-                multiline
-              />
-            </Panel>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
+  const sharedTemplateProps = {
+    data: templateData,
+    fontFamily: templateFont,
+    onPrimaryAction: handleAcceptProposal,
+    onSecondaryAction: handleDownloadProposal,
+    showPrimaryAction: showAcceptButton,
+    isPrimaryLoading: accepting,
+    isSecondaryLoading: downloading,
+    isPrimaryDisabled: Boolean(proposal.isAccepted),
+  };
+
+  if (proposal.templateId === "template-two") {
+    return <TemplateTwo {...sharedTemplateProps} />;
+  }
+
+  return <TemplateOne {...sharedTemplateProps} />;
 }
 
-function ProposalViewSkeleton() {
-  return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-[1280px] space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="h-5 w-40 animate-pulse rounded bg-slate-100" />
-          <div className="mt-4 h-10 w-3/4 animate-pulse rounded bg-slate-100" />
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="h-20 animate-pulse rounded-xl border border-slate-100 bg-slate-50"
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div
-              key={idx}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <div className="h-4 w-36 animate-pulse rounded bg-slate-100" />
-              <div className="mt-4 space-y-3">
-                {Array.from({ length: 6 }).map((__, row) => (
-                  <div
-                    key={row}
-                    className="h-3 w-full animate-pulse rounded bg-slate-100"
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Panel({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <header className="mb-4 flex items-center gap-2">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700">
-          {icon}
-        </span>
-        <h2 className="text-sm font-black uppercase tracking-wide text-slate-800">
-          {title}
-        </h2>
-      </header>
-      <div className="space-y-3">{children}</div>
-    </article>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string;
-  icon: ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <div className="flex items-center justify-between text-slate-500">
-        <span className="text-[11px] font-semibold uppercase tracking-wider">
-          {label}
-        </span>
-        {icon}
-      </div>
-      <p className="mt-2 text-lg font-black text-slate-900">{value}</p>
-    </div>
-  );
-}
-
-function InfoBadge({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
-      <span className="mr-1 text-slate-500">{label}:</span>
-      <span className="font-bold text-slate-800">{value}</span>
-    </span>
-  );
-}
-
-function FieldRow({
-  label,
-  value,
-  multiline,
-  icon,
-}: {
-  label: string;
-  value?: string | number | boolean | null;
-  multiline?: boolean;
-  icon?: ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-        {label}
-      </p>
-      <p
-        className={`mt-1 text-sm font-medium text-slate-800 ${
-          multiline ? "whitespace-pre-wrap break-words" : ""
-        }`}
-      >
-        <span className="inline-flex items-center gap-1.5">
-          {icon}
-          {showValue(value)}
-        </span>
-      </p>
-    </div>
-  );
-}
-
-function ChipRow({ label, values }: { label: string; values?: string[] }) {
-  const list = (values || []).filter(
-    (value) => value && value.trim().length > 0,
-  );
-
-  return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-        {label}
-      </p>
-      {list.length === 0 ? (
-        <p className="mt-1 text-sm font-medium text-slate-800">-</p>
-      ) : (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {list.map((value) => (
-            <span
-              key={`${label}-${value}`}
-              className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-800"
-            >
-              {value}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

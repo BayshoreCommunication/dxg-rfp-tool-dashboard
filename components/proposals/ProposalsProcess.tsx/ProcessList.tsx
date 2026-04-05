@@ -11,6 +11,7 @@ const steps: Step[] = [
   { id: 5, label: "Uploads & Reference Materials" },
   { id: 6, label: "Budget & Proposal Preferences" },
   { id: 7, label: "Contact Info" },
+  { id: 8, label: "Template Selection" },
 ];
 
 /* ─── Checkmark SVG for completed steps ─── */
@@ -33,7 +34,6 @@ const ProcessList = ({ activeStep = 1 }: { activeStep?: number }) => {
         {steps.map((step, index) => {
           const isActive = activeStep === step.id;
           const isCompleted = activeStep > step.id;
-          const isFuture = activeStep < step.id;
 
           return (
             <div

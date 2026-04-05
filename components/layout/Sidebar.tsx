@@ -1,19 +1,16 @@
 "use client";
-
 import { signOutAction } from "@/app/actions/auth";
+import { getUserData } from "@/app/actions/user";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-import { Activity, BellDot, Globe, LogOut } from "lucide-react";
+import { BellDot, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const bottomIcons = [
-  { icon: <Activity size={17} />, label: "Activity" },
-  { icon: <Globe size={17} />, label: "Web" },
-  { icon: <BellDot size={17} />, label: "Alerts" },
-];
+const bottomIcons = [{ icon: <BellDot size={17} />, label: "Alerts" }];
 
 const Sidebar = () => {
   const pathname = usePathname();
@@ -29,10 +26,25 @@ const Sidebar = () => {
     signOut({ callbackUrl: "/sign-in" });
   };
 
+  const [userData, setUserData] = useState<any>(null);
+  const [showSignOut, setShowSignOut] = useState(false);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const res = await getUserData();
+      console.log("check user data", res); // real data here
+      setUserData(res?.data ?? null);
+    };
+
+    loadUser();
+  }, []);
+
+  console.log("check user data", userData?.name);
+
   return (
     <aside className="fixed left-0 top-0 z-50 flex h-screen w-[90px] flex-col bg-white border-r border-gray-200 ">
       {/* Logo */}
-      <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200 bg-linear-to-b from-blue-50 to-white">
+      <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200 ">
         <Link href="/dashboard">
           <Image
             src="/assets/logo/logo.svg"
@@ -109,28 +121,48 @@ const Sidebar = () => {
         ))}
 
         {/* User Avatar */}
-        <div className="mt-2 mb-4 group relative cursor-pointer">
-          <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-primary/20 transition-all group-hover:ring-primary/40 group-hover:scale-105">
-            {/* {session?.user?.avatar ? (
-              <Image
-                src={session.user.avatar}
-                alt="User Avatar"
-                width={40}
-                height={40}
-                className="h-full w-full object-cover"
-              />
-            ) : ( */}
-            <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-primary to-blue-500 text-sm font-black text-white">
-              U
+        <div
+          className="relative mt-2 mb-4"
+          onMouseEnter={() => setShowSignOut(true)}
+          onMouseLeave={() => setShowSignOut(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setShowSignOut((prev) => !prev)}
+            className="block cursor-prointer"
+          >
+            <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-primary/20 transition-all duration-200 hover:scale-105 hover:ring-primary/40">
+              {/* {session?.user?.avatar ? (
+                <Image
+                  src={session.user.avatar}
+                  alt="User Avatar"
+                  width={40}
+                  height={40}
+                  className="h-full w-full object-cover"
+                />
+              ) : ( */}
+              <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-primary to-blue-500 text-sm font-black text-white">
+                {userData?.name?.charAt(0)?.toUpperCase() || "U"}
+              </div>
             </div>
-          </div>
+          </button>
+
           <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
 
-          {/* Hover Sign Out (bubble) */}
-          <div className="absolute left-full top-1/2 ml-2 -translate-y-1/2 opacity-0 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100">
+          {/* Hover bridge area to prevent flicker while moving right */}
+          <div className="pointer-events-none absolute left-full top-1/2 h-12 w-2 -translate-y-1/2" />
+
+          <div
+            className={cn(
+              "absolute left-full top-1/2 z-10 -translate-y-1/2 pl-2 transition-all duration-200 ease-out",
+              showSignOut
+                ? "pointer-events-auto translate-x-0 opacity-100"
+                : "pointer-events-none -translate-x-1 opacity-0",
+            )}
+          >
             <button
               onClick={signOutHandler}
-              className="relative flex w-24 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-3 text-[12px] font-semibold text-gray-700 shadow-md hover:bg-gray-50"
+              className="relative flex w-24 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-3 text-[12px] font-semibold text-gray-700 shadow-md hover:bg-gray-50 cursor-prointer"
             >
               <span className="absolute -left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-b border-l border-gray-200 bg-white" />
               <LogOut size={12} className="text-gray-500" />

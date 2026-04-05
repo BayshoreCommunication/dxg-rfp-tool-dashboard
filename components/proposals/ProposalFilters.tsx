@@ -1,32 +1,41 @@
 "use client";
+
 import { Search, SlidersHorizontal } from "lucide-react";
-import { useState } from "react";
 
-type TabType =
-  | "ALL"
-  | "DRAFT"
-  | "LIVE"
-  | "ACCEPTED"
-  | "CALLBACK"
-  | "FAVOURITES";
+export type ProposalFilterType = "all" | "draft" | "live" | "favorite";
 
-const TABS: { label: TabType; count: number }[] = [
-  { label: "ALL", count: 1 },
-  { label: "DRAFT", count: 1 },
-  { label: "LIVE", count: 0 },
-  { label: "ACCEPTED", count: 0 },
-  { label: "CALLBACK", count: 0 },
-  { label: "FAVOURITES", count: 0 },
+const TAB_CONFIG: Array<{ key: ProposalFilterType; label: string }> = [
+  { key: "all", label: "ALL" },
+  { key: "draft", label: "DRAFT" },
+  { key: "live", label: "LIVE" },
+  { key: "favorite", label: "FAVORITE" },
 ];
 
-export default function ProposalFilters() {
-  const [activeTab, setActiveTab] = useState<TabType>("ALL");
+type ProposalFiltersProps = {
+  searchValue: string;
+  onSearchChange: (value: string) => void;
+  activeFilter: ProposalFilterType;
+  onFilterChange: (filter: ProposalFilterType) => void;
+  counts?: Partial<Record<ProposalFilterType, number>>;
+};
+
+export default function ProposalFilters({
+  searchValue,
+  onSearchChange,
+  activeFilter,
+  onFilterChange,
+  counts,
+}: ProposalFiltersProps) {
+  const tabCounts: Record<ProposalFilterType, number> = {
+    all: counts?.all ?? 0,
+    draft: counts?.draft ?? 0,
+    live: counts?.live ?? 0,
+    favorite: counts?.favorite ?? 0,
+  };
 
   return (
     <div className="w-full space-y-5 py-4 px-6">
-      {/* ── Search & Filter Row ── */}
       <div className="flex flex-col sm:flex-row gap-4">
-        {/* Search Input */}
         <div className="relative flex-1 group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search
@@ -36,26 +45,30 @@ export default function ProposalFilters() {
           </div>
           <input
             type="text"
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search proposals by name, client, or ID..."
             className="w-full h-12 pl-11 pr-5 bg-white border border-slate-200 rounded-xl shadow-sm text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-400 transition-all"
           />
         </div>
 
-        {/* Filter Button */}
-        <button className="flex items-center justify-center gap-2 h-12 px-5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[13px] font-bold shadow-sm hover:bg-slate-50 hover:text-cyan-600 hover:border-cyan-200 transition-all duration-200 shrink-0">
+        <button
+          type="button"
+          className="flex items-center justify-center gap-2 h-12 px-5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[13px] font-bold shadow-sm hover:bg-slate-50 hover:text-cyan-600 hover:border-cyan-200 transition-all duration-200 shrink-0"
+        >
           <SlidersHorizontal size={16} />
           Filters
         </button>
       </div>
 
-      {/* ── Tab Navigation ── */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 -mb-2 no-scrollbar">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.label;
+        {TAB_CONFIG.map((tab) => {
+          const isActive = activeFilter === tab.key;
           return (
             <button
-              key={tab.label}
-              onClick={() => setActiveTab(tab.label)}
+              key={tab.key}
+              type="button"
+              onClick={() => onFilterChange(tab.key)}
               className={`flex flex-shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-lg text-[11px] font-black tracking-widest uppercase transition-all duration-200 ${
                 isActive
                   ? "bg-slate-800 text-white shadow-md border border-transparent"
@@ -70,7 +83,7 @@ export default function ProposalFilters() {
                     : "bg-slate-100 text-slate-500"
                 }`}
               >
-                {tab.count}
+                {tabCounts[tab.key]}
               </span>
             </button>
           );
@@ -79,3 +92,4 @@ export default function ProposalFilters() {
     </div>
   );
 }
+

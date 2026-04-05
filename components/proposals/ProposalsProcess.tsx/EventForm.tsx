@@ -2,8 +2,9 @@
 
 import { ChevronDown, RotateCcw } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
-import type { EventData } from "../AddNewProposal";
+import type { EventData, ProposalSettings } from "../AddNewProposal";
 import { useClickOutside } from "./shared";
+import GlobalDateInput from "@/components/shared/GlobalDateInput";
 
 /* ─── Shared style constants ─── */
 const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
@@ -11,9 +12,72 @@ const inputClass =
   "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 const selectClass = inputClass + " appearance-none pr-8";
 
-const attendeesOptions = ["< 100", "100 - 150", "200 - 500", "500 - 1,000", "1,000+"];
-const eventTypeOptions = ["Conference", "Meeting", "Gala", "Trade Show", "Awards Show", "Other"];
+const attendeesOptions = [
+  "< 100",
+  "100 - 150",
+  "200 - 500",
+  "500 - 1,000",
+  "1,000+",
+];
+const eventTypeOptions = [
+  "Conference",
+  "Meeting",
+  "Gala",
+  "Trade Show",
+  "Awards Show",
+  "Other",
+];
 const formatOptions = ["In-Person", "Hybrid", "Virtual"] as const;
+
+const normalizeDateFormat = (format: string) =>
+  (format || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
+
+const toIsoDateValue = (raw: string | undefined) => {
+  if (!raw) return "";
+  const value = raw.trim();
+  if (!value) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const delimiter = value.includes("/") ? "/" : "-";
+  const parts = value.split(delimiter);
+  if (parts.length !== 3) {
+    return "";
+  }
+
+  const [a, b, c] = parts;
+  if (c.length === 4) {
+    const day = a.padStart(2, "0");
+    const month = b.padStart(2, "0");
+    return `${c}-${month}-${day}`;
+  }
+
+  if (a.length === 4) {
+    const month = b.padStart(2, "0");
+    const day = c.padStart(2, "0");
+    return `${a}-${month}-${day}`;
+  }
+
+  return "";
+};
+
+const fromIsoToDate = (value?: string) => {
+  const iso = toIsoDateValue(value);
+  if (!iso) return null;
+  const [year, month, day] = iso.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const fromDateToIso = (value: Date | null) => {
+  if (!value) return "";
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 interface EventFormProps {
   data: EventData;
@@ -21,17 +85,37 @@ interface EventFormProps {
   onContinue: () => void;
   onBack: () => void;
   showErrors?: boolean;
+  proposalSettings: ProposalSettings;
 }
 
-const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: EventFormProps) => {
+const EventForm = ({
+  data,
+  onChange,
+  onContinue,
+  onBack,
+  showErrors = false,
+  proposalSettings,
+}: EventFormProps) => {
+  const currentDateFormat = normalizeDateFormat(
+    proposalSettings.proposals.dateFormat,
+  );
+  const normalizedEndDate = toIsoDateValue(data.endDate);
+  const startDateValue = fromIsoToDate(data.startDate);
+  const endDateValue = fromIsoToDate(data.endDate);
   const [attendeesOpen, setAttendeesOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
 
   const attendeesRef = useRef<HTMLDivElement>(null);
   const typeRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(attendeesRef, useCallback(() => setAttendeesOpen(false), []));
-  useClickOutside(typeRef, useCallback(() => setTypeOpen(false), []));
+  useClickOutside(
+    attendeesRef,
+    useCallback(() => setAttendeesOpen(false), []),
+  );
+  useClickOutside(
+    typeRef,
+    useCallback(() => setTypeOpen(false), []),
+  );
 
   const handleClear = () => {
     onChange({
@@ -46,19 +130,34 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
     });
   };
 
+  const handleStartDateChange = (value: Date | null) => {
+    const normalizedNextStart = fromDateToIso(value);
+    const shouldAutoSetEndDate =
+      !normalizedEndDate ||
+      (normalizedNextStart && normalizedEndDate < normalizedNextStart);
+
+    onChange({
+      startDate: normalizedNextStart,
+      ...(shouldAutoSetEndDate ? { endDate: normalizedNextStart } : {}),
+    });
+  };
+
   return (
     <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
       {/* Header */}
       <div className="px-6 py-5 border-b border-[#d7dce3]">
-        <h2 className="text-[20px] font-semibold text-[#0f1b57]">Event Overview</h2>
+        <h2 className="text-[20px] font-semibold text-[#0f1b57]">
+          Event Overview
+        </h2>
       </div>
 
       {/* Form Body */}
       <div className="flex-1 px-6 py-6 space-y-6">
-
         {/* Event Name */}
         <div>
-          <label htmlFor="eventName" className={labelClass}>EVENT <span className="text-red-500">*</span></label>
+          <label htmlFor="eventName" className={labelClass}>
+            EVENT <span className="text-red-500">*</span>
+          </label>
           <input
             id="eventName"
             className={`${inputClass} ${showErrors && !data.eventName.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
@@ -73,14 +172,28 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
 
         {/* Start Date */}
         <div>
-          <label htmlFor="startDate" className={labelClass}>EVENT START DATE <span className="text-red-500">*</span></label>
-          <input
+          <label htmlFor="startDate" className={labelClass}>
+            EVENT START DATE <span className="text-red-500">*</span>
+          </label>
+          <GlobalDateInput
             id="startDate"
-            type="date"
-            className={`${inputClass} ${showErrors && !data.startDate.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-            value={data.startDate}
-            onChange={(e) => onChange({ startDate: e.target.value })}
+            label="Start Date"
+            hideLabel
+            showFormatInLabel={false}
+            showErrorMessage={false}
+            value={startDateValue}
+            onChange={handleStartDateChange}
+            format="yyyy-MM-dd"
+            inputClassName={`${inputClass} pr-10 ${
+              showErrors && !data.startDate.trim()
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                : ""
+            }`}
+            buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f98bf] hover:text-primary"
           />
+          <p className="mt-1 text-xs text-[#8f98bf] normal-case">
+            Date format preference: {currentDateFormat}
+          </p>
           {showErrors && !data.startDate.trim() && (
             <p className="mt-1 text-sm text-red-500">Start date is required.</p>
           )}
@@ -88,15 +201,29 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
 
         {/* End Date */}
         <div>
-          <label htmlFor="endDate" className={labelClass}>EVENT END DATE <span className="text-red-500">*</span></label>
-          <input
+          <label htmlFor="endDate" className={labelClass}>
+            EVENT END DATE <span className="text-red-500">*</span>
+          </label>
+          <GlobalDateInput
             id="endDate"
-            type="date"
-            className={`${inputClass} ${showErrors && !data.endDate.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-            min={data.startDate || undefined}
-            value={data.endDate}
-            onChange={(e) => onChange({ endDate: e.target.value })}
+            label="End Date"
+            hideLabel
+            showFormatInLabel={false}
+            showErrorMessage={false}
+            value={endDateValue}
+            onChange={(value) => onChange({ endDate: fromDateToIso(value) })}
+            minDate={startDateValue || undefined}
+            format="yyyy-MM-dd"
+            inputClassName={`${inputClass} pr-10 ${
+              showErrors && !data.endDate.trim()
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                : ""
+            }`}
+            buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f98bf] hover:text-primary"
           />
+          <p className="mt-1 text-xs text-[#8f98bf] normal-case">
+            Date format preference: {currentDateFormat}
+          </p>
           {showErrors && !data.endDate.trim() && (
             <p className="mt-1 text-sm text-red-500">End date is required.</p>
           )}
@@ -104,7 +231,9 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
 
         {/* Venue */}
         <div>
-          <label htmlFor="venue" className={labelClass}>EVENT VENUE / HOTEL NAME <span className="text-red-500">*</span></label>
+          <label htmlFor="venue" className={labelClass}>
+            EVENT VENUE / HOTEL NAME <span className="text-red-500">*</span>
+          </label>
           <input
             id="venue"
             className={`${inputClass} ${showErrors && !data.venue.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
@@ -124,9 +253,14 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
             <button
               type="button"
               onClick={() => setAttendeesOpen((p) => !p)}
-              className={selectClass + " flex items-center justify-between cursor-pointer"}
+              className={
+                selectClass +
+                " flex items-center justify-between cursor-pointer"
+              }
             >
-              <span className={data.attendees ? "text-[#1f2d5d]" : "text-gray-400"}>
+              <span
+                className={data.attendees ? "text-[#1f2d5d]" : "text-gray-400"}
+              >
                 {data.attendees || "Select number of Attendees"}
               </span>
               <ChevronDown size={16} className="text-primary flex-shrink-0" />
@@ -148,7 +282,7 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
                         onChange({ attendees: opt });
                         setAttendeesOpen(false);
                       }}
-                      className="accent-[#373798]"
+                      className="accent-[#6366f1]"
                     />
                   </label>
                 ))}
@@ -162,7 +296,10 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
           <label className={labelClass}>EVENT FORMAT</label>
           <div className="flex items-center gap-6">
             {formatOptions.map((fmt) => (
-              <label key={fmt} className="flex items-center gap-2 cursor-pointer text-sm text-[#1f2d5d]">
+              <label
+                key={fmt}
+                className="flex items-center gap-2 cursor-pointer text-sm text-[#1f2d5d]"
+              >
                 <input
                   type="radio"
                   name="eventFormat"
@@ -183,9 +320,14 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
             <button
               type="button"
               onClick={() => setTypeOpen((p) => !p)}
-              className={selectClass + " flex items-center justify-between cursor-pointer"}
+              className={
+                selectClass +
+                " flex items-center justify-between cursor-pointer"
+              }
             >
-              <span className={data.eventType ? "text-[#1f2d5d]" : "text-gray-400"}>
+              <span
+                className={data.eventType ? "text-[#1f2d5d]" : "text-gray-400"}
+              >
                 {data.eventType || "Select type of event"}
               </span>
               <ChevronDown size={16} className="text-primary flex-shrink-0" />
@@ -207,7 +349,7 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
                         onChange({ eventType: opt });
                         if (opt !== "Other") setTypeOpen(false);
                       }}
-                      className="accent-[#373798]"
+                      className="accent-[#6366f1]"
                     />
                   </label>
                 ))}
@@ -217,7 +359,9 @@ const EventForm = ({ data, onChange, onContinue, onBack, showErrors = false }: E
                     <textarea
                       rows={2}
                       value={data.eventTypeOther}
-                      onChange={(e) => onChange({ eventTypeOther: e.target.value })}
+                      onChange={(e) =>
+                        onChange({ eventTypeOther: e.target.value })
+                      }
                       placeholder="Write here..."
                       className="w-full rounded-md border border-[#d7dce3] px-3 py-2 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
                     />
