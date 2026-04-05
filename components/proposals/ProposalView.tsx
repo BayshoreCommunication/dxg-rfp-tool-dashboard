@@ -23,6 +23,7 @@ type ProposalData = {
   proposalSettings?: {
     linkPrefix?: string;
     defaultFont?: "Inter" | "Poppins" | "Roboto";
+    proposalLanguage?: string;
     defaultCurrency?: string;
     dateFormat?: string;
   };
@@ -157,9 +158,21 @@ const splitTitle = (name: string) => {
   };
 };
 
-const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData> => {
+const mapProposalToTemplate = (
+  proposal: ProposalData,
+  proposalLanguage = "English",
+): Partial<TemplateOneData> => {
+  const language = proposalLanguage.trim().toLowerCase();
+  const t = (english: string, spanish: string, french = english) =>
+    language === "spanish"
+      ? spanish
+      : language === "french"
+        ? french
+        : english;
   const pick = (value?: string) => (value && value.trim() ? value.trim() : "");
-  const eventName = proposal.event?.eventName?.trim() || "Event Proposal";
+  const eventName =
+    proposal.event?.eventName?.trim() ||
+    t("Event Proposal", "Propuesta del Evento", "Proposition d'evenement");
   const title = splitTitle(eventName);
   const organization = pick(proposal.contact?.contactOrganization);
   const createdLabel = formatDate(proposal.createdAt);
@@ -168,6 +181,7 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
   const fullName =
     `${proposal.contact?.contactFirstName || ""} ${proposal.contact?.contactLastName || ""}`.trim();
   const contactTitle = pick(proposal.contact?.contactTitle);
+  const fallbackText = t("Not specified", "No especificado", "Non specifie");
 
   const formatYesNoWithQty = (value?: string, qty?: string) => {
     const safeValue = pick(value);
@@ -191,10 +205,10 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
   const services: Array<{ title: string; text: string }> = [];
   const eventProfile = [
     pick(proposal.event?.eventFormat)
-      ? `${pick(proposal.event?.eventFormat)} format`
+      ? `${pick(proposal.event?.eventFormat)} ${t("format", "formato")}`
       : "",
     pick(proposal.event?.attendees)
-      ? `${pick(proposal.event?.attendees)} attendees`
+      ? `${pick(proposal.event?.attendees)} ${t("attendees", "asistentes")}`
       : "",
   ]
     .filter(Boolean)
@@ -213,7 +227,7 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
   const crewList = toListText(proposal.production?.showCrewNeeded);
   const avProduction = [
     pick(proposal.roomByRoom?.avSpec),
-    crewList ? `Crew: ${crewList}` : "",
+    crewList ? `${t("Crew", "Equipo")}: ${crewList}` : "",
   ]
     .filter(Boolean)
     .join(" • ");
@@ -223,10 +237,10 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
 
   const powerRigging = [
     pick(proposal.venue?.needRiggingForFlown)
-      ? `Rigging: ${pick(proposal.venue?.needRiggingForFlown)}`
+      ? `${t("Rigging", "Rigging")}: ${pick(proposal.venue?.needRiggingForFlown)}`
       : "",
     pick(proposal.venue?.needDedicatedPowerDrops)
-      ? `Dedicated Power: ${pick(proposal.venue?.needDedicatedPowerDrops)}`
+      ? `${t("Dedicated Power", "Energía dedicada")}: ${pick(proposal.venue?.needDedicatedPowerDrops)}`
       : "",
   ]
     .filter(Boolean)
@@ -236,122 +250,133 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
   }
 
   const metaChips = [
-    proposal.status ? `Status: ${proposal.status}` : "",
-    proposal.event?.attendees ? `Attendees: ${proposal.event.attendees}` : "",
-    proposal.event?.eventFormat ? `Format: ${proposal.event.eventFormat}` : "",
-    start ? `Start: ${start}` : "",
-    proposal.viewsCount !== undefined ? `Views: ${proposal.viewsCount}` : "",
+    proposal.status ? `${t("Status", "Estado")}: ${proposal.status}` : "",
+    proposal.event?.attendees
+      ? `${t("Attendees", "Asistentes")}: ${proposal.event.attendees}`
+      : "",
+    proposal.event?.eventFormat
+      ? `${t("Format", "Formato")}: ${proposal.event.eventFormat}`
+      : "",
+    start ? `${t("Start", "Inicio")}: ${start}` : "",
+    proposal.viewsCount !== undefined ? `${t("Views", "Vistas")}: ${proposal.viewsCount}` : "",
   ].filter((item) => item.trim().length > 0);
 
   const summaryBullets = [
-    proposal.event?.venue ? `Venue: ${proposal.event.venue}` : "",
+    proposal.event?.venue ? `${t("Venue", "Lugar")}: ${proposal.event.venue}` : "",
     proposal.roomByRoom?.roomFunction
-      ? `Room Function: ${proposal.roomByRoom.roomFunction}`
+      ? `${t("Room Function", "Función de sala")}: ${proposal.roomByRoom.roomFunction}`
       : "",
     proposal.budget?.timelineForProposal
-      ? `Timeline: ${proposal.budget.timelineForProposal}`
+      ? `${t("Timeline", "Cronograma")}: ${proposal.budget.timelineForProposal}`
       : "",
     proposal.production?.otherRolesNeeded
-      ? `Additional roles: ${proposal.production.otherRolesNeeded}`
+      ? `${t("Additional roles", "Roles adicionales")}: ${proposal.production.otherRolesNeeded}`
       : "",
   ].filter((item) => item.trim().length > 0);
 
   const dateRange = start && end ? `${start} - ${end}` : start || end;
   const aboutParts = [dateRange, pick(proposal.event?.venue)].filter(Boolean);
   const aboutText = aboutParts.length
-    ? `${aboutParts.join(". ")}. This proposal is tailored to your submitted scope and preferences.`
-    : "This proposal is tailored to your submitted scope and preferences.";
+    ? `${aboutParts.join(". ")}. ${t(
+        "This proposal is tailored to your submitted scope and preferences.",
+        "Esta propuesta está adaptada a su alcance y preferencias enviadas.",
+      )}`
+    : t(
+        "This proposal is tailored to your submitted scope and preferences.",
+        "Esta propuesta está adaptada a su alcance y preferencias enviadas.",
+      );
 
   const pricing: Array<{ name: string; price: string; bullets: string[] }> = [];
 
   const budgetBullets = [
     pick(proposal.budget?.timelineForProposal)
-      ? `Timeline: ${pick(proposal.budget?.timelineForProposal)}`
+      ? `${t("Timeline", "Cronograma")}: ${pick(proposal.budget?.timelineForProposal)}`
       : "",
     toListText(proposal.budget?.proposalFormatPreferences)
-      ? `Format: ${toListText(proposal.budget?.proposalFormatPreferences)}`
+      ? `${t("Format", "Formato")}: ${toListText(proposal.budget?.proposalFormatPreferences)}`
       : "",
     pick(proposal.budget?.callWithDxgProducer)
-      ? `Producer Call: ${pick(proposal.budget?.callWithDxgProducer)}`
+      ? `${t("Producer Call", "Llamada con productor")}: ${pick(proposal.budget?.callWithDxgProducer)}`
       : "",
   ].filter(Boolean);
   const budgetPrice = pick(proposal.budget?.estimatedAvBudget);
   if (budgetPrice || budgetBullets.length > 0) {
     pricing.push({
-      name: "Budget",
-      price: budgetPrice || "Budget",
+      name: t("Budget", "Presupuesto"),
+      price: budgetPrice || t("Budget", "Presupuesto"),
       bullets: budgetBullets,
     });
   }
 
   const roomBullets = [
     pick(proposal.roomByRoom?.roomFunction)
-      ? `Room Function: ${pick(proposal.roomByRoom?.roomFunction)}`
+      ? `${t("Room Function", "Función de sala")}: ${pick(proposal.roomByRoom?.roomFunction)}`
       : "",
     pick(proposal.roomByRoom?.roomSetup)
-      ? `Room Setup: ${pick(proposal.roomByRoom?.roomSetup)}`
+      ? `${t("Room Setup", "Montaje de sala")}: ${pick(proposal.roomByRoom?.roomSetup)}`
       : "",
     pick(proposal.production?.scenicStageDesign)
-      ? `Scenic Design: ${pick(proposal.production?.scenicStageDesign)}`
+      ? `${t("Scenic Design", "Diseño escénico")}: ${pick(proposal.production?.scenicStageDesign)}`
       : "",
   ].filter(Boolean);
   const roomPrice = pick(proposal.roomByRoom?.numberOfRooms);
   if (roomPrice || roomBullets.length > 0) {
     pricing.push({
-      name: "Room Planning",
-      price: roomPrice || "Room Planning",
+      name: t("Room Planning", "Planificación de salas"),
+      price: roomPrice || t("Room Planning", "Planificación de salas"),
       bullets: roomBullets,
     });
   }
 
   const technicalBullets = [
     pick(proposal.production?.unionLabor)
-      ? `Union Labor: ${pick(proposal.production?.unionLabor)}`
+      ? `${t("Union Labor", "Mano de obra sindical")}: ${pick(proposal.production?.unionLabor)}`
       : "",
     pick(proposal.venue?.standardAmpWall)
-      ? `Amp Wall: ${pick(proposal.venue?.standardAmpWall)}`
+      ? `${t("Amp Wall", "Panel eléctrico")}: ${pick(proposal.venue?.standardAmpWall)}`
       : "",
     pick(proposal.venue?.powerDropsHowMany)
-      ? `Power Drops: ${pick(proposal.venue?.powerDropsHowMany)}`
+      ? `${t("Power Drops", "Tomas de energía")}: ${pick(proposal.venue?.powerDropsHowMany)}`
       : "",
   ].filter(Boolean);
   const technicalPrice = pick(proposal.roomByRoom?.avSpec);
   if (technicalPrice || technicalBullets.length > 0) {
     pricing.push({
-      name: "Technical",
-      price: technicalPrice || "Technical",
+      name: t("Technical", "Técnico"),
+      price: technicalPrice || t("Technical", "Técnico"),
       bullets: technicalBullets,
     });
   }
 
   const avGroups: TemplateOneData["avGroups"] = [
     {
-      title: "Room & Logistics",
+      title: t("Room & Logistics", "Sala y logística"),
       items: [
         {
-          label: "Function",
-          value: withFallback(pick(proposal.roomByRoom?.roomFunction)),
+          label: t("Function", "Función"),
+          value: withFallback(pick(proposal.roomByRoom?.roomFunction), fallbackText),
         },
         {
-          label: "Attendees",
-          value: withFallback(pick(proposal.roomByRoom?.estimatedAttendeesInRoom)),
+          label: t("Attendees", "Asistentes"),
+          value: withFallback(pick(proposal.roomByRoom?.estimatedAttendeesInRoom), fallbackText),
         },
         {
-          label: "Room Setup",
-          value: withFallback(pick(proposal.roomByRoom?.roomSetup)),
+          label: t("Room Setup", "Montaje de sala"),
+          value: withFallback(pick(proposal.roomByRoom?.roomSetup), fallbackText),
         },
         {
-          label: "Show Timing",
+          label: t("Show Timing", "Horario del show"),
           value: withFallback(
             [formatDate(proposal.roomByRoom?.showStartDateTime), formatDate(proposal.roomByRoom?.showEndDateTime)]
               .filter(Boolean)
               .join(" - "),
+            fallbackText,
           ),
         },
       ],
     },
     {
-      title: "Audio & Video",
+      title: t("Audio & Video", "Audio y video"),
       items: [
         {
           label: "Podium Mic",
@@ -396,7 +421,7 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
       ],
     },
     {
-      title: "Display & Monitoring",
+      title: t("Display & Monitoring", "Pantallas y monitoreo"),
       items: [
         {
           label: "Large Monitors",
@@ -432,7 +457,7 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
       ],
     },
     {
-      title: "Engagement & Lighting",
+      title: t("Engagement & Lighting", "Interacción e iluminación"),
       items: [
         {
           label: "Audience Q&A",
@@ -476,7 +501,7 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
       ],
     },
     {
-      title: "Confidence & Monitoring",
+      title: t("Confidence & Monitoring", "Monitores de confianza"),
       items: [
         {
           label: "Program Confidence",
@@ -503,11 +528,12 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
   const scenicLabel = pick(proposal.production?.scenicStageDesign);
   const scenicStageDesignLabel =
     scenicLabel === "Yes"
-      ? "Required (Yes)"
+      ? t("Required (Yes)", "Requerido (Sí)")
       : scenicLabel === "No"
-        ? "Not Required (No)"
-        : scenicLabel || "TBD";
-  const unionLaborLabel = pick(proposal.production?.unionLabor) || "TBD / Not Sure";
+        ? t("Not Required (No)", "No requerido (No)")
+        : scenicLabel || t("TBD", "Pendiente");
+  const unionLaborLabel =
+    pick(proposal.production?.unionLabor) || t("TBD / Not Sure", "Pendiente / No seguro");
   const riggingMethod = toListText(proposal.roomByRoom?.preferredRigging);
   const powerDrops = pick(proposal.venue?.powerDropsHowMany);
   const ampWall = pick(proposal.venue?.standardAmpWall);
@@ -516,26 +542,35 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
     pick(proposal.roomByRoom?.contentVideoNeeds);
 
   return {
-    badge: `Proposal${proposal.status ? ` • ${proposal.status}` : ""}${createdLabel ? ` • ${createdLabel}` : ""}`,
+    badge: `${t("Proposal", "Propuesta")}${proposal.status ? ` • ${proposal.status}` : ""}${createdLabel ? ` • ${createdLabel}` : ""}`,
     ...(organization ? { brandName: organization } : {}),
     titleLineOne: title.lineOne,
     titleLineTwo: title.lineTwo,
     heroText:
       proposal.event?.eventTypeOther ||
       proposal.event?.eventType ||
-      "A custom proposal prepared from your submitted event and production requirements.",
+      t(
+        "A custom proposal prepared from your submitted event and production requirements.",
+        "Una propuesta personalizada preparada según su evento y requisitos de producción enviados.",
+      ),
     ...(metaChips.length > 0 ? { metaChips } : {}),
-    ...(fullName ? { ctaPrimary: `Send To ${fullName}` } : {}),
-    ctaSecondary: "Download Brief",
-    aboutTitle: "Project Snapshot",
+    ...(fullName
+      ? { ctaPrimary: `${t("Send To", "Enviar a")} ${fullName}` }
+      : {}),
+    ctaSecondary: t("Download Brief", "Descargar resumen", "Telecharger le resume"),
+    aboutTitle: t("Project Snapshot", "Resumen del proyecto", "Apercu du projet"),
     aboutText,
     ...(summaryBullets.length > 0 ? { summaryBullets } : {}),
     ...(services.length > 0
-      ? { servicesTitle: "Scope & Requirements", services }
+      ? { servicesTitle: t("Scope & Requirements", "Alcance y requisitos"), services }
       : {}),
-    pricingTitle: "Budget & Delivery",
+    pricingTitle: t("Budget & Delivery", "Presupuesto y entrega", "Budget et livraison"),
     ...(pricing.length > 0 ? { pricing } : {}),
-    closingTitle: "Ready To Move Forward With",
+    closingTitle: t(
+      "Ready To Move Forward With",
+      "Listo para avanzar con",
+      "Pret a avancer avec",
+    ),
     ...(pick(proposal.event?.venue)
       ? { brandAddress: pick(proposal.event?.venue) }
       : {}),
@@ -567,14 +602,18 @@ const mapProposalToTemplate = (proposal: ProposalData): Partial<TemplateOneData>
       ? { riggingMaxPointWeight: pick(proposal.roomByRoom?.rigPowerSize) }
       : {}),
     ...(riggingMethod ? { riggingMethod } : {}),
-    ...(powerDrops ? { powerDropsLabel: `${powerDrops} Dedicated` } : {}),
-    ...(ampWall ? { ampWallLabel: `${ampWall} Main Amp Wall` } : {}),
+    ...(powerDrops
+      ? { powerDropsLabel: `${powerDrops} ${t("Dedicated", "dedicado")}` }
+      : {}),
+    ...(ampWall
+      ? { ampWallLabel: `${ampWall} ${t("Main Amp Wall", "panel principal")}` }
+      : {}),
     avGroups,
     ...(pick(proposal.roomByRoom?.contentVideoNeeds)
       ? { ledDescription: pick(proposal.roomByRoom?.contentVideoNeeds) }
       : {}),
     ...(proposal.roomByRoom?.ledWall === "Yes"
-      ? { ledHeadline: "LED Wall Requested" }
+      ? { ledHeadline: t("LED Wall Requested", "Pantalla LED solicitada") }
       : {}),
     ledTags: [
       pick(proposal.roomByRoom?.videoFormatAspectRatio),
@@ -597,6 +636,14 @@ export default function ProposalView({
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const incrementedRef = useRef(false);
+  const proposalLanguage = proposal?.proposalSettings?.proposalLanguage || "English";
+  const languageKey = proposalLanguage.trim().toLowerCase();
+  const t = (english: string, spanish: string, french = english) =>
+    languageKey === "spanish"
+      ? spanish
+      : languageKey === "french"
+        ? french
+        : english;
 
   const proposalId = useMemo(() => extractObjectId(slug), [slug]);
 
@@ -662,8 +709,16 @@ export default function ProposalView({
     return (
       <div className="mx-auto w-full max-w-[1280px] px-4 py-10 sm:px-6">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
-          <h2 className="text-lg font-bold">Unable to load proposal</h2>
-          <p className="mt-2 text-sm">{error || "Proposal not found."}</p>
+          <h2 className="text-lg font-bold">
+            {t(
+              "Unable to load proposal",
+              "No se pudo cargar la propuesta",
+              "Impossible de charger la proposition",
+            )}
+          </h2>
+          <p className="mt-2 text-sm">
+            {error || t("Proposal not found.", "Propuesta no encontrada.", "Proposition introuvable.")}
+          </p>
         </div>
       </div>
     );
@@ -717,22 +772,27 @@ export default function ProposalView({
     });
   };
 
-  const mappedTemplateData = mapProposalToTemplate(proposal);
+  const mappedTemplateData = mapProposalToTemplate(
+    proposal,
+    proposalLanguage,
+  );
   const showAcceptButton = source === "email";
 
   const templateData: Partial<TemplateOneData> = {
     ...mappedTemplateData,
     ctaPrimary: showAcceptButton
       ? proposal.isAccepted
-        ? "Proposal Accepted"
-        : mappedTemplateData.ctaPrimary || "Accept Proposal"
+        ? t("Proposal Accepted", "Propuesta aceptada", "Proposition acceptee")
+        : mappedTemplateData.ctaPrimary ||
+          t("Accept Proposal", "Aceptar propuesta", "Accepter la proposition")
       : undefined,
-    ctaSecondary: "Download PDF",
+    ctaSecondary: t("Download PDF", "Descargar PDF", "Telecharger le PDF"),
   };
   const templateFont = proposal.proposalSettings?.defaultFont || "Poppins";
 
   const sharedTemplateProps = {
     data: templateData,
+    proposalLanguage,
     fontFamily: templateFont,
     onPrimaryAction: handleAcceptProposal,
     onSecondaryAction: handleDownloadProposal,

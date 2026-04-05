@@ -2,6 +2,8 @@
 import {
   createProposalAction,
   extractProposalFromFile,
+  getProposalByIdAction,
+  updateProposalAction,
 } from "@/app/actions/proposals";
 import { getSettingsAction } from "@/app/actions/settings";
 import { FileText, X } from "lucide-react";
@@ -172,6 +174,7 @@ export interface ProposalData {
   proposalSettings: {
     linkPrefix: string;
     defaultFont: "Inter" | "Poppins" | "Roboto";
+    proposalLanguage: string;
     defaultCurrency: string;
     dateFormat: string;
   };
@@ -184,6 +187,11 @@ export interface ProposalData {
   contact: ContactData;
 }
 
+type AddNewProposalProps = {
+  mode?: "create" | "edit";
+  proposalId?: string;
+};
+
 type ProposalSectionKey = {
   [K in keyof ProposalData]: ProposalData[K] extends object ? K : never;
 }[keyof ProposalData];
@@ -194,6 +202,7 @@ const defaultProposalData: ProposalData = {
   proposalSettings: {
     linkPrefix: "abuco",
     defaultFont: "Poppins",
+    proposalLanguage: "English",
     defaultCurrency: "$",
     dateFormat: "MM/DD/YYYY",
   },
@@ -607,12 +616,88 @@ const normalizeExtracted = (
     : undefined,
 });
 
-const AddNewProposal = () => {
+type EditableProposalApiResponse = {
+  _id?: string;
+  status?: string;
+  templateId?: ProposalData["templateId"];
+  proposalSettings?: Partial<ProposalData["proposalSettings"]>;
+  event?: Partial<EventData>;
+  roomByRoom?: Partial<RoomByRoomData>;
+  production?: Partial<ProductionSupportData>;
+  venue?: Partial<VenueTechnicalData>;
+  uploads?: Partial<UploadsData>;
+  budget?: Partial<BudgetData>;
+  contact?: Partial<ContactData>;
+};
+
+const mapApiProposalToFormData = (
+  raw: EditableProposalApiResponse,
+): ProposalData => ({
+  ...defaultProposalData,
+  templateId: raw.templateId || defaultProposalData.templateId,
+  proposalStatus:
+    raw.status === "draft" || raw.status === "submitted"
+      ? raw.status
+      : defaultProposalData.proposalStatus,
+  proposalSettings: {
+    ...defaultProposalData.proposalSettings,
+    ...(raw.proposalSettings || {}),
+    defaultFont: normalizeProposalFont(raw.proposalSettings?.defaultFont),
+    proposalLanguage:
+      raw.proposalSettings?.proposalLanguage?.trim() ||
+      defaultProposalData.proposalSettings.proposalLanguage,
+  },
+  event: {
+    ...defaultProposalData.event,
+    ...(raw.event || {}),
+  },
+  roomByRoom: {
+    ...defaultProposalData.roomByRoom,
+    ...(raw.roomByRoom || {}),
+  },
+  production: {
+    ...defaultProposalData.production,
+    ...(raw.production || {}),
+  },
+  venue: {
+    ...defaultProposalData.venue,
+    ...(raw.venue || {}),
+  },
+  uploads: {
+    ...defaultProposalData.uploads,
+    supportDocuments: Array.isArray(raw.uploads?.supportDocuments)
+      ? raw.uploads?.supportDocuments
+      : defaultProposalData.uploads.supportDocuments,
+    reviewExistingAvQuote:
+      raw.uploads?.reviewExistingAvQuote ??
+      defaultProposalData.uploads.reviewExistingAvQuote,
+    avQuoteFiles: Array.isArray(raw.uploads?.avQuoteFiles)
+      ? raw.uploads?.avQuoteFiles
+      : defaultProposalData.uploads.avQuoteFiles,
+  },
+  budget: {
+    ...defaultProposalData.budget,
+    ...(raw.budget || {}),
+  },
+  contact: {
+    ...defaultProposalData.contact,
+    ...(raw.contact || {}),
+  },
+});
+
+const AddNewProposal = ({
+  mode = "create",
+  proposalId,
+}: AddNewProposalProps) => {
+  const isEditMode = mode === "edit";
   const router = useRouter();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [proposalProcessStep, setProposalProcessStep] = useState(0);
+  const [proposalProcessStep, setProposalProcessStep] = useState(
+    isEditMode ? 1 : 0,
+  );
   const [saving, setSaving] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(isEditMode);
   const [showErrors, setShowErrors] = useState(false);
   const [uploadSearchValue, setUploadSearchValue] = useState("");
   const [uploadActiveFilter, setUploadActiveFilter] =
@@ -621,12 +706,17 @@ const AddNewProposal = () => {
     id: string;
     title: string;
   } | null>(null);
+  const [updatedProposalTitle, setUpdatedProposalTitle] = useState<
+    string | null
+  >(null);
 
   const [proposalSettings, setProposalSettings] = useState<ProposalSettings>(
     defaultProposalSettings,
   );
 
   useEffect(() => {
+    if (isEditMode) return;
+
     let mounted = true;
 
     const loadSettings = async () => {
@@ -674,7 +764,7 @@ const AddNewProposal = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isEditMode]);
 
   useEffect(() => {
     setProposalData((prev) => ({
@@ -682,11 +772,65 @@ const AddNewProposal = () => {
       proposalSettings: {
         linkPrefix: proposalSettings.branding.linkPrefix,
         defaultFont: proposalSettings.branding.defaultFont,
+        proposalLanguage: proposalSettings.proposals.proposalLanguage,
         defaultCurrency: proposalSettings.proposals.defaultCurrency,
         dateFormat: proposalSettings.proposals.dateFormat,
       },
     }));
   }, [proposalSettings]);
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setLoadingExisting(false);
+      return;
+    }
+
+    if (!proposalId) {
+      toast.error("Missing proposal id for editing.");
+      router.push("/proposals");
+      return;
+    }
+
+    let mounted = true;
+    const loadEditableProposal = async () => {
+      setLoadingExisting(true);
+      const result = await getProposalByIdAction(proposalId);
+      if (!mounted) return;
+
+      if (!result.success || !result.data || typeof result.data !== "object") {
+        toast.error(result.message || "Failed to load proposal for editing.");
+        router.push("/proposals");
+        return;
+      }
+
+      const mapped = mapApiProposalToFormData(
+        result.data as EditableProposalApiResponse,
+      );
+      setProposalData(mapped);
+      setProposalSettings((prev) => ({
+        ...prev,
+        branding: {
+          ...prev.branding,
+          linkPrefix: mapped.proposalSettings.linkPrefix,
+          defaultFont: mapped.proposalSettings.defaultFont,
+        },
+        proposals: {
+          ...prev.proposals,
+          proposalLanguage: mapped.proposalSettings.proposalLanguage,
+          defaultCurrency: mapped.proposalSettings.defaultCurrency,
+          dateFormat: mapped.proposalSettings.dateFormat,
+        },
+      }));
+      setProposalProcessStep(1);
+      setLoadingExisting(false);
+    };
+
+    void loadEditableProposal();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isEditMode, proposalId, router]);
 
   /* ─── Single source of truth for all steps ─── */
   const [proposalData, setProposalData] =
@@ -878,6 +1022,7 @@ const AddNewProposal = () => {
       proposalSettings: {
         linkPrefix: proposalSettings.branding.linkPrefix,
         defaultFont: proposalSettings.branding.defaultFont,
+        proposalLanguage: proposalSettings.proposals.proposalLanguage,
         defaultCurrency: proposalSettings.proposals.defaultCurrency,
         dateFormat: proposalSettings.proposals.dateFormat,
       },
@@ -911,9 +1056,25 @@ const AddNewProposal = () => {
     };
 
     try {
-      const result = await createProposalAction(payloadWithStatus);
+      const result =
+        isEditMode && proposalId
+          ? await updateProposalAction(
+              proposalId,
+              payloadWithStatus as Partial<ProposalData>,
+            )
+          : await createProposalAction(payloadWithStatus);
       if (result.success) {
-        toast.success("Proposal created successfully!");
+        toast.success(
+          isEditMode
+            ? "Proposal updated successfully!"
+            : "Proposal created successfully!",
+        );
+        if (isEditMode) {
+          const updatedTitle =
+            proposalData.event.eventName?.trim() || "Untitled Proposal";
+          setUpdatedProposalTitle(updatedTitle);
+          return;
+        }
         const data =
           result.data && typeof result.data === "object"
             ? (result.data as { _id?: string; event?: { eventName?: string } })
@@ -931,10 +1092,17 @@ const AddNewProposal = () => {
           router.push("/proposals");
         }
       } else {
-        toast.error(result.message || "Failed to create proposal.");
+        toast.error(
+          result.message ||
+            (isEditMode ? "Failed to update proposal." : "Failed to create proposal."),
+        );
       }
     } catch {
-      toast.error("An error occurred while creating the proposal.");
+      toast.error(
+        isEditMode
+          ? "An error occurred while updating the proposal."
+          : "An error occurred while creating the proposal.",
+      );
     } finally {
       setSaving(false);
     }
@@ -1042,14 +1210,48 @@ const AddNewProposal = () => {
     );
   }
 
+  if (updatedProposalTitle) {
+    return (
+      <section className="mx-auto w-full max-w-3xl rounded-3xl border border-blue-200 bg-white p-6 shadow-sm sm:p-10">
+        <div className="mt-2 text-center">
+          <h2 className="text-2xl font-black text-slate-900 sm:text-3xl">
+            Proposal Updated Successfully
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:text-base">
+            Your proposal{" "}
+            <span className="font-semibold text-slate-800">
+              &quot;{updatedProposalTitle}&quot;
+            </span>{" "}
+            has been updated.
+          </p>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-1">
+          <button
+            type="button"
+            onClick={() => router.push("/proposals")}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            Back To Proposal List
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
     >
+      {loadingExisting && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-sm">
+          Loading proposal for editing...
+        </div>
+      )}
       {/* â”€â”€ Step 0: Upload screen â”€â”€ */}
-      {proposalProcessStep === 0 && (
+      {!loadingExisting && !isEditMode && proposalProcessStep === 0 && (
         <>
           <div className="flex items-center justify-between">
             <div>
@@ -1137,7 +1339,7 @@ const AddNewProposal = () => {
       )}
 
       {/* â”€â”€ Steps 1â€“7: Multi-step form â”€â”€ */}
-      {proposalProcessStep >= 1 && (
+      {!loadingExisting && proposalProcessStep >= 1 && (
         <div className="flex w-full">
           {/* Form area â€” 70% */}
           <div className="w-[80%] mr-4">
@@ -1236,6 +1438,10 @@ const AddNewProposal = () => {
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                draftActionLabel={
+                  isEditMode ? "UPDATE AS DRAFT" : "SAVE AS DRAFT"
+                }
+                liveActionLabel={isEditMode ? "UPDATE LIVE" : "CREATE LIVE"}
               />
             )}
           </div>

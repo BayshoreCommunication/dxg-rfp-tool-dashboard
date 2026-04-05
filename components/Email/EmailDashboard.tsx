@@ -140,7 +140,7 @@ export default function EmailDashboard() {
               {/* Center */}
               <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-center lg:gap-6">
                 <MetricCard label="Sent" value={campaign.sentCount || 0} />
-                <MetricCard label="Views" value={campaign.openedCount || 0} />
+                {/* <MetricCard label="Views" value={campaign.openedCount || 0} /> */}
                 <MetricCard label="Click" value={campaign.clickedCount || 0} />
               </div>
 

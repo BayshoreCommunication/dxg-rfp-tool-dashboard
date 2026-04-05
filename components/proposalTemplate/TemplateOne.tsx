@@ -45,6 +45,7 @@ export type TemplateOneData = {
 
 export default function TemplateOne({
   data,
+  proposalLanguage = "English",
   onPrimaryAction,
   onSecondaryAction,
   showPrimaryAction = true,
@@ -54,6 +55,7 @@ export default function TemplateOne({
   fontFamily = "Poppins",
 }: {
   data?: Partial<TemplateOneData>;
+  proposalLanguage?: string;
   onPrimaryAction?: () => void;
   onSecondaryAction?: () => void;
   showPrimaryAction?: boolean;
@@ -62,6 +64,14 @@ export default function TemplateOne({
   isPrimaryDisabled?: boolean;
   fontFamily?: "Inter" | "Poppins" | "Roboto";
 }) {
+  const languageKey = proposalLanguage.trim().toLowerCase();
+  const t = (english: string, spanish: string, french = english) =>
+    languageKey === "spanish"
+      ? spanish
+      : languageKey === "french"
+        ? french
+        : english;
+
   const avGroups = data?.avGroups || [
     {
       title: "Room & Logistics",
@@ -195,8 +205,9 @@ export default function TemplateOne({
               }}
             >
               {isPrimaryLoading
-                ? "Accepting..."
-                : data?.ctaPrimary || "Approve Proposal"}
+                ? t("Accepting...", "Aceptando...", "Acceptation...")
+                : data?.ctaPrimary ||
+                  t("Approve Proposal", "Aprobar propuesta", "Approuver la proposition")}
             </button>
           )}
           <button
@@ -211,8 +222,9 @@ export default function TemplateOne({
             }}
           >
             {isSecondaryLoading
-              ? "Generating PDF..."
-              : data?.ctaSecondary || "Download Deck"}
+              ? t("Generating PDF...", "Generando PDF...", "Generation du PDF...")
+              : data?.ctaSecondary ||
+                t("Download Deck", "Descargar documento", "Telecharger le dossier")}
           </button>
         </div>
       </div>
@@ -305,7 +317,11 @@ export default function TemplateOne({
               className="font-bold tracking-[0.14em] text-sm uppercase"
               style={{ color: "var(--color-primary)" }}
             >
-              Step 2: Technical Specifications
+              {t(
+                "Step 2: Technical Specifications",
+                "Paso 2: Especificaciones tecnicas",
+                "Etape 2: Specifications techniques",
+              )}
             </span>
             <div
               className="h-[2px] w-10 rounded-full"
@@ -314,8 +330,10 @@ export default function TemplateOne({
           </div>
 
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-12 text-center">
-            Room-by-Room{" "}
-            <span style={{ color: "var(--color-primary)" }}>AV Needs</span>
+            {t("Room-by-Room", "Sala por sala", "Salle par salle")}{" "}
+            <span style={{ color: "var(--color-primary)" }}>
+              {t("AV Needs", "Necesidades AV", "Besoins AV")}
+            </span>
           </h2>
 
           <div
@@ -359,7 +377,11 @@ export default function TemplateOne({
                   className="inline-block px-5 py-2 rounded-full text-xs font-bold uppercase tracking-[0.1em] mb-6 bg-white shadow-sm border border-slate-200"
                   style={{ color: "var(--color-primary)" }}
                 >
-                  Premium Upgrade Added
+                  {t(
+                    "Premium Upgrade Added",
+                    "Mejora premium agregada",
+                    "Mise a niveau premium ajoutee",
+                  )}
                 </div>
                 <h3 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">
                   {data?.ledHeadline || "Full 120ft Curved LED Experience"}
@@ -405,19 +427,31 @@ export default function TemplateOne({
           <div className="flex items-center justify-center gap-3 mb-6">
             <div className="h-[2px] w-10 rounded-full bg-white/50" />
             <span className="font-bold tracking-[0.14em] text-sm uppercase text-white/90">
-              Step 3: Production Support
+              {t(
+                "Step 3: Production Support",
+                "Paso 3: Soporte de produccion",
+                "Etape 3: Support de production",
+              )}
             </span>
             <div className="h-[2px] w-10 rounded-full bg-white/50" />
           </div>
 
           <h2 className="text-4xl md:text-5xl font-black text-white mb-12 text-center">
-            Show Crew & Labor Strategy
+            {t(
+              "Show Crew & Labor Strategy",
+              "Estrategia de equipo y mano de obra",
+              "Strategie d'equipe et de main-d'oeuvre",
+            )}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl mb-12">
             <div className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-md border border-white/25 rounded-2xl hover:bg-white/15 transition-colors duration-300">
               <span className="text-white/90 font-bold uppercase text-sm md:text-base tracking-[0.04em]">
-                Scenic / Stage Design
+                {t(
+                  "Scenic / Stage Design",
+                  "Diseno escenico / escenario",
+                  "Conception scenique / scene",
+                )}
               </span>
               <span className="px-4 py-1.5 bg-white text-emerald-600 rounded-full text-sm font-black uppercase shadow-sm">
                 {data?.scenicStageDesignLabel || "Required (Yes)"}
@@ -425,7 +459,7 @@ export default function TemplateOne({
             </div>
             <div className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-md border border-white/25 rounded-2xl hover:bg-white/15 transition-colors duration-300">
               <span className="text-white/90 font-bold uppercase text-sm md:text-base tracking-[0.04em]">
-                Union Labor
+                {t("Union Labor", "Mano de obra sindical", "Main-d'oeuvre syndicale")}
               </span>
               <span className="px-4 py-1.5 bg-amber-400 text-amber-950 rounded-full text-sm font-black uppercase shadow-sm">
                 {data?.unionLaborLabel || "TBD / Not Sure"}
@@ -435,7 +469,7 @@ export default function TemplateOne({
 
           <div className="w-full max-w-5xl p-8 md:p-10 rounded-[2.5rem] bg-white/5 backdrop-blur-xl border border-white/25 shadow-2xl">
             <h3 className="text-xl font-bold text-center mb-8 uppercase tracking-[0.1em] text-white/85">
-              Assigned Crew Roster
+              {t("Assigned Crew Roster", "Equipo asignado", "Equipe assignee")}
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {crewRoles.map((role) => (
@@ -465,7 +499,11 @@ export default function TemplateOne({
               className="font-bold tracking-[0.14em] text-sm uppercase"
               style={{ color: "var(--color-primary)" }}
             >
-              Step 4: Infrastructure
+              {t(
+                "Step 4: Infrastructure",
+                "Paso 4: Infraestructura",
+                "Etape 4: Infrastructure",
+              )}
             </span>
             <div
               className="h-[2px] w-10 rounded-full"
@@ -476,11 +514,11 @@ export default function TemplateOne({
           <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
             <div className="p-8 md:p-10 rounded-[2.5rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/40 hover:-translate-y-0.5 transition-transform duration-300">
               <h3 className="text-2xl font-black mb-8 uppercase text-slate-800 tracking-[0.04em]">
-                Rigging & Hoist
+                {t("Rigging & Hoist", "Rigging y aparejos", "Accrochage et levage")}
               </h3>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 mb-6">
                 <p className="text-xs uppercase font-bold text-slate-500 mb-2 tracking-[0.1em]">
-                  Max Point Weight
+                  {t("Max Point Weight", "Peso maximo por punto", "Poids max par point")}
                 </p>
                 <p className="text-4xl font-black text-slate-900">
                   {data?.riggingMaxPointWeight || "1,500 lbs"}
@@ -510,7 +548,7 @@ export default function TemplateOne({
               />
 
               <h3 className="text-2xl font-black mb-8 uppercase text-slate-800 tracking-[0.04em]">
-                Electrical Drops
+                {t("Electrical Drops", "Tomas electricas", "Alimentations electriques")}
               </h3>
               <div
                 className="p-6 rounded-2xl border mb-6"
@@ -525,7 +563,11 @@ export default function TemplateOne({
                   className="text-xs uppercase font-bold mb-2 tracking-[0.1em]"
                   style={{ color: "var(--color-primary)" }}
                 >
-                  Total Power Drops
+                  {t(
+                    "Total Power Drops",
+                    "Total de tomas de energia",
+                    "Total des prises d'alimentation",
+                  )}
                 </p>
                 <p className="text-4xl font-black italic text-slate-900">
                   {data?.powerDropsLabel || "12 Dedicated"}
@@ -555,7 +597,7 @@ export default function TemplateOne({
               className="font-bold tracking-[0.14em] text-sm uppercase"
               style={{ color: "var(--color-primary)" }}
             >
-              Step 6: Financials
+              {t("Step 6: Financials", "Paso 6: Finanzas", "Etape 6: Finances")}
             </span>
             <div
               className="h-[2px] w-10 rounded-full"
@@ -584,7 +626,11 @@ export default function TemplateOne({
               </div>
 
               <p className="text-sm uppercase font-bold tracking-[0.14em] text-white/80 mb-4">
-                Estimated AV Budget
+                {t(
+                  "Estimated AV Budget",
+                  "Presupuesto AV estimado",
+                  "Budget AV estime",
+                )}
               </p>
               <h3 className="text-6xl md:text-7xl font-black italic tracking-tighter drop-shadow-lg">
                 {data?.budgetDisplay || "$50-100K"}
@@ -593,7 +639,7 @@ export default function TemplateOne({
 
             <div className="lg:col-span-5 p-8 md:p-10 rounded-[2.5rem] border border-slate-200 bg-slate-50 flex flex-col justify-center">
               <p className="text-slate-500 text-xs md:text-sm uppercase font-bold mb-6 tracking-[0.1em]">
-                Preferred Formats
+                {t("Preferred Formats", "Formatos preferidos", "Formats preferes")}
               </p>
               <div className="space-y-3">
                 {proposalFormats.map((f) => (
@@ -629,7 +675,7 @@ export default function TemplateOne({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
             <div className="bg-white p-10 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100">
               <p className="text-xs uppercase font-bold tracking-[0.1em] text-slate-500 mb-6">
-                Point of Contact
+                {t("Point of Contact", "Punto de contacto", "Point de contact")}
               </p>
               <h3 className="text-4xl md:text-5xl font-black text-slate-900 mb-3">
                 {data?.contactName || "Sarah Jennings"}
@@ -701,7 +747,7 @@ export default function TemplateOne({
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   ></path>
                 </svg>
-                Additional Notes
+                {t("Additional Notes", "Notas adicionales", "Notes additionnelles")}
               </h4>
               <p className="text-lg leading-relaxed text-slate-300">
                 {data?.additionalNotes ||

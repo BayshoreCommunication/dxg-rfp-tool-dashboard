@@ -9,6 +9,8 @@ type TemplateSelectionProps = {
   onBack: () => void;
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
+  draftActionLabel?: string;
+  liveActionLabel?: string;
 };
 
 const cardBaseClass =
@@ -21,6 +23,8 @@ export default function TemplateSelection({
   onBack,
   showErrors = false,
   proposalSettings,
+  draftActionLabel = "SAVE AS DRAFT",
+  liveActionLabel = "CREATE LIVE",
 }: TemplateSelectionProps) {
   const hasError = showErrors && !templateId;
 
@@ -119,14 +123,14 @@ export default function TemplateSelection({
           onClick={() => onCreate("draft")}
           className="h-10 px-6 rounded-md border border-[#d7dce3] bg-white hover:bg-gray-50 text-sm font-bold text-[#1f2d5d] transition-colors"
         >
-          SAVE AS DRAFT
+          {draftActionLabel}
         </button>
         <button
           type="button"
           onClick={() => onCreate("submitted")}
           className="h-10 px-8 rounded-md bg-[#35bdf2] hover:bg-[#20A4D5] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(56,189,248,0.39)] transition-transform active:scale-95"
         >
-          CREATE LIVE
+          {liveActionLabel}
         </button>
       </div>
     </section>

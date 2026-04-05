@@ -1,20 +1,26 @@
 "use client";
 
-import { getProposalsAction } from "@/app/actions/proposals";
-import type { ProposalFilterType } from "./ProposalFilters";
+import {
+  deleteProposalAction,
+  getProposalsAction,
+} from "@/app/actions/proposals";
 import {
   Clock,
   Copy,
+  Edit3,
   Eye,
   FileText,
   MoreHorizontal,
   Plus,
   Share2,
+  Trash2,
   TrendingUp,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import type { ProposalFilterType } from "./ProposalFilters";
 
 type ProposalListItem = {
   _id: string;
@@ -36,7 +42,9 @@ type ProposalListItem = {
 type ProposalTableListProps = {
   searchValue: string;
   activeFilter: ProposalFilterType;
-  onCountsChange?: (counts: Partial<Record<ProposalFilterType, number>>) => void;
+  onCountsChange?: (
+    counts: Partial<Record<ProposalFilterType, number>>,
+  ) => void;
 };
 
 const getTotal = (pagination: unknown): number => {
@@ -52,6 +60,8 @@ export default function ProposalTableList({
 }: ProposalTableListProps) {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -118,7 +128,50 @@ export default function ProposalTableList({
       mounted = false;
       clearTimeout(timer);
     };
-  }, [activeFilter, onCountsChange, searchValue]);
+  }, [activeFilter, onCountsChange, refreshTick, searchValue]);
+
+  const handleDeleteProposal = async (proposal: ProposalListItem) => {
+    const proposalId = proposal._id;
+    if (!proposalId || deletingId) return;
+
+    const proposalName = proposal?.event?.eventName || "this proposal";
+    const confirmed = window.confirm(
+      `Delete "${proposalName}"? This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(proposalId);
+    try {
+      const res = await deleteProposalAction(proposalId);
+      if (!res.success) {
+        toast.error(res.message || "Failed to delete proposal.");
+        return;
+      }
+      toast.success("Proposal deleted successfully.");
+      setRefreshTick((prev) => prev + 1);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleCopyProposalUrl = async (proposalSlug: string) => {
+    if (!proposalSlug) return;
+
+    const proposalUrl = `${window.location.origin}/proposal/${proposalSlug}`;
+
+    try {
+      await navigator.clipboard.writeText(proposalUrl);
+      toast.success("Proposal URL copied to clipboard.");
+    } catch {
+      const input = document.createElement("input");
+      input.value = proposalUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      toast.success("Proposal URL copied to clipboard.");
+    }
+  };
 
   return (
     <div className="min-h-screen py-6 font-sans text-slate-800 -mt-6 px-6">
@@ -215,7 +268,8 @@ export default function ProposalTableList({
                       )}
                       <span className="text-slate-400 text-[11px] ml-1 font-medium flex items-center gap-1">
                         <Clock size={10} />
-                        Created: <b className="text-slate-700 ml-1">{createdAt}</b>
+                        Created:{" "}
+                        <b className="text-slate-700 ml-1">{createdAt}</b>
                       </span>
                     </div>
                     <button className="text-slate-400 hover:text-slate-600 transition-colors duration-150 p-1 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200">
@@ -258,14 +312,41 @@ export default function ProposalTableList({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <IconButton icon={<Copy size={16} />} tooltip="Copy" />
+                        <IconButton
+                          icon={<Copy size={16} />}
+                          tooltip="Copy URL"
+                          onClick={() => void handleCopyProposalUrl(proposalSlug)}
+                        />
+
                         <Link
                           href={`/proposal/${proposalSlug}`}
                           className="cursor-pointer"
                           target="_blank"
                         >
-                          <IconButton icon={<Eye size={16} />} tooltip="Preview" />
+                          <IconButton
+                            icon={<Eye size={16} />}
+                            tooltip="Preview"
+                          />
                         </Link>
+                        <Link
+                          href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`}
+                          className="cursor-pointer"
+                        >
+                          <IconButton
+                            icon={<Edit3 size={16} />}
+                            tooltip="Edit"
+                          />
+                        </Link>
+                        <IconButton
+                          icon={<Trash2 size={16} />}
+                          tooltip={
+                            deletingId === proposal._id
+                              ? "Deleting..."
+                              : "Delete"
+                          }
+                          onClick={() => void handleDeleteProposal(proposal)}
+                          disabled={deletingId === proposal._id}
+                        />
                         <Link
                           href={`/email/send-email?proposalId=${proposal._id}`}
                           className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-0.5 transition-all duration-200"
@@ -288,17 +369,22 @@ export default function ProposalTableList({
 function IconButton({
   icon,
   tooltip,
+  onClick,
+  disabled = false,
 }: {
   icon: React.ReactNode;
   tooltip?: string;
+  onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       title={tooltip}
-      className="w-11 h-11 flex items-center justify-center bg-white text-slate-500 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all duration-150 active:scale-95"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-11 h-11 flex items-center justify-center bg-white text-slate-500 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
     >
       {icon}
     </button>
   );
 }
-

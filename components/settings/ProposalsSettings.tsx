@@ -381,7 +381,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             <label className="mb-2 flex items-center gap-1 text-sm font-semibold text-[#8f98bf]">
               AI Assistant
               <InfoDot />
@@ -410,7 +410,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
                 }
               />
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </section>
