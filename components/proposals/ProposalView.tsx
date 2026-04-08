@@ -3,8 +3,6 @@
 import {
   getProposalByIdAction,
   incrementProposalViewsAction,
-  updateProposalMetaAction,
-  updateProposalStatusAction,
 } from "@/app/actions/proposals";
 import TemplateOne, {
   type TemplateOneData,
@@ -526,7 +524,6 @@ export default function ProposalView({
 }) {
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [accepting, setAccepting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const incrementedRef = useRef(false);
@@ -649,44 +646,6 @@ export default function ProposalView({
     );
   }
 
-  const handleAcceptProposal = async () => {
-    if (source !== "email") return;
-    if (!proposalId || accepting || proposal.isAccepted) return;
-
-    setAccepting(true);
-    try {
-      let updatedProposal: ProposalData = proposal;
-
-      const acceptRes = await updateProposalMetaAction(proposalId, {
-        isAccepted: true,
-        isOpen: false,
-      });
-      if (
-        acceptRes.success &&
-        acceptRes.data &&
-        typeof acceptRes.data === "object"
-      ) {
-        updatedProposal = acceptRes.data as ProposalData;
-      }
-
-      const statusRes = await updateProposalStatusAction(
-        proposalId,
-        "approved",
-      );
-      if (
-        statusRes.success &&
-        statusRes.data &&
-        typeof statusRes.data === "object"
-      ) {
-        updatedProposal = statusRes.data as ProposalData;
-      }
-
-      setProposal(updatedProposal);
-    } finally {
-      setAccepting(false);
-    }
-  };
-
   const handleDownloadProposal = () => {
     if (downloading) return;
     setDownloading(true);
@@ -697,12 +656,33 @@ export default function ProposalView({
       proposal.contact?.contactOrganization?.trim() ||
       "proposal";
     document.title = `${printableTitle}-proposal`;
+    const printStyleId = "proposal-a4-print-style";
+    const existingStyle = document.getElementById(printStyleId);
+    const temporaryPrintStyle =
+      existingStyle ||
+      Object.assign(document.createElement("style"), { id: printStyleId });
+    temporaryPrintStyle.textContent = `
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
+        html, body {
+          width: 210mm;
+          min-height: 297mm;
+        }
+      }
+    `;
+    if (!existingStyle) {
+      document.head.appendChild(temporaryPrintStyle);
+    }
 
     requestAnimationFrame(() => {
       try {
         window.print();
       } finally {
         document.title = originalTitle;
+        temporaryPrintStyle.remove();
         setDownloading(false);
       }
     });
@@ -732,8 +712,6 @@ export default function ProposalView({
     },
     brandName: resolvedSettings.brandName,
   });
-  const showAcceptButton = source === "email";
-
   const templateData: Partial<TemplateOneData> = {
     ...mappedTemplateData,
     createdAt: proposal.createdAt,
@@ -766,12 +744,6 @@ export default function ProposalView({
         signatureStyle: resolvedSettings.signatures.signatureStyle,
       },
     },
-    ctaPrimary: showAcceptButton
-      ? proposal.isAccepted
-        ? t("Proposal Accepted", "Propuesta aceptada", "Proposition acceptee")
-        : mappedTemplateData.ctaPrimary ||
-          t("Accept Proposal", "Aceptar propuesta", "Accepter la proposition")
-      : undefined,
     ctaSecondary: t("Download PDF", "Descargar PDF", "Telecharger le PDF"),
   };
   const templateFont = resolvedSettings.defaultFont;
@@ -789,17 +761,6 @@ export default function ProposalView({
   } as CSSProperties;
   const fontClassNames = `${inter.variable} ${poppins.variable} ${roboto.variable}`;
 
-  const sharedTemplateProps = {
-    data: templateData,
-    proposalLanguage,
-    fontFamily: templateFont,
-    onPrimaryAction: handleAcceptProposal,
-    onSecondaryAction: handleDownloadProposal,
-    showPrimaryAction: showAcceptButton,
-    isPrimaryLoading: accepting,
-    isSecondaryLoading: downloading,
-    isPrimaryDisabled: Boolean(proposal.isAccepted),
-  };
   const templateOneProps = {
     proposalData: {
       ...(proposal as unknown as Partial<TemplateOneData>),
@@ -810,23 +771,11 @@ export default function ProposalView({
   };
 
   const canDownloadPreview = resolvedSettings.downloadPreview === "Yes";
-  const hasGlobalActions = showAcceptButton || canDownloadPreview;
+  const hasGlobalActions = canDownloadPreview;
 
   const globalFloatingActions = hasGlobalActions ? (
     <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[99] no-print" style={{ fontFamily: "var(--font-sans)" }}>
       <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-xl backdrop-blur-md">
-        {showAcceptButton && !proposal.isAccepted && (
-          <button
-            type="button"
-            onClick={handleAcceptProposal}
-            disabled={accepting}
-            className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white disabled:opacity-60 hover:bg-slate-800 transition"
-          >
-            {accepting
-              ? t("Accepting...", "Aceptando...", "Acceptation...")
-              : t("Accept Proposal", "Aceptar propuesta", "Accepter la proposition")}
-          </button>
-        )}
         {canDownloadPreview && (
           <button
             type="button"
