@@ -175,10 +175,10 @@ const BrandingSettings = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="">
           <div>
             <label htmlFor="signatureColor" className={labelClass}>
-              Signature Button Color
+              Signature Color
             </label>
             <div className="flex h-10 items-center gap-2 rounded-md border border-[#d7dce3] bg-white px-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
               <button
@@ -218,47 +218,6 @@ const BrandingSettings = ({
             />
           </div>
 
-          <div>
-            <label htmlFor="buttonTextColor" className={labelClass}>
-              Button Text Color
-            </label>
-            <div className="flex h-10 items-center gap-2 rounded-md border border-[#d7dce3] bg-white px-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
-              <button
-                type="button"
-                onClick={() => textPickerRef.current?.click()}
-                className="h-6 w-6 rounded-sm border border-[#ccd3df] bg-white"
-                style={{ backgroundColor: value.buttonTextColor }}
-                aria-label="Select button text color"
-              />
-              <input
-                id="buttonTextColor"
-                value={value.buttonTextColor}
-                onChange={(e) =>
-                  handleHexChange(
-                    e.target.value,
-                    (nextValue) =>
-                      onChange({ ...value, buttonTextColor: nextValue }),
-                    "#FFFFFF",
-                  )
-                }
-                className="w-full text-sm font-medium text-[#1f2d5d] outline-none"
-              />
-            </div>
-            <input
-              ref={textPickerRef}
-              type="color"
-              value={value.buttonTextColor}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  buttonTextColor: e.target.value.toUpperCase(),
-                })
-              }
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden="true"
-            />
-          </div>
         </div>
       </div>
     </section>

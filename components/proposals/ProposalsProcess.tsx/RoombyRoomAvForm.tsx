@@ -1,12 +1,42 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
+import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import type { ProposalSettings, RoomByRoomData } from "../AddNewProposal";
 
 const labelClass =
   "mb-2 block text-sm font-semibold text-[#8f98bf] uppercase tracking-wide";
 const inputClass =
   "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
+
+const normalizeDateFormat = (format: string) =>
+  (format || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
+
+type DateTimePickerFormat = "dd-MM-yyyy" | "yyyy-MM-dd" | "MM-dd-yyyy";
+
+const toPickerFormat = (displayFormat: string): DateTimePickerFormat => {
+  const f = displayFormat.toUpperCase();
+  if (f === "DD/MM/YYYY") return "dd-MM-yyyy";
+  if (f === "YYYY-MM-DD") return "yyyy-MM-dd";
+  return "MM-dd-yyyy"; 
+};
+
+const fromStringToDate = (value?: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return null;
+  return date;
+};
+
+const fromDateToString = (value: Date | null) => {
+  if (!value) return "";
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  const hours = `${value.getHours()}`.padStart(2, "0");
+  const minutes = `${value.getMinutes()}`.padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 interface RoombyRoomAvFormProps {
   data: RoomByRoomData;
@@ -105,6 +135,37 @@ const RadioOptionsField = ({
   </div>
 );
 
+const ACTIVE_ROOM_BY_ROOM_FIELDS: Array<keyof RoomByRoomData> = [
+  "roomFunction",
+  "estimatedAttendeesInRoom",
+  "loadInDateTime",
+  "rehearsalDateTime",
+  "showStartDateTime",
+  "showEndDateTime",
+  "audioSystemForHowManyPpl",
+  "podiumMic",
+  "wirelessMics",
+  "audioRecording",
+  "largeMonitorsOrScreenProjector",
+  "ledWall",
+  "clientProvideOwnPresentationLaptop",
+  "presentationLaptops",
+  "videoPlayback",
+  "videoFormatAspectRatio",
+  "audienceQa",
+  "cameras",
+  "videoRecording",
+  "stageWashLighting",
+  "backlightingFor",
+  "drapeOrScenicUplighting",
+  "audienceLighting",
+  "programConfidenceMonitor",
+  "notesConfidenceMonitor",
+  "speakerTimer",
+  "scenicStageDesign",
+  "contentVideoNeeds",
+];
+
 const RoombyRoomAvForm = ({
   data,
   onChange,
@@ -113,6 +174,11 @@ const RoombyRoomAvForm = ({
   showErrors = false,
   proposalSettings,
 }: RoombyRoomAvFormProps) => {
+  const currentDateFormat = normalizeDateFormat(
+    proposalSettings.proposals.dateFormat,
+  );
+  const pickerFormat = toPickerFormat(currentDateFormat);
+
   const handleYesNoChange = (
     valueField: RoomByRoomStringKey,
     value: string,
@@ -151,80 +217,41 @@ const RoombyRoomAvForm = ({
       showStartDateTime: "",
       showEndDateTime: "",
       audioSystemForHowManyPpl: "",
-      podiumMic: "",
-      podiumMicQty: "",
-      wirelessMics: "",
-      wirelessMicsQty: "",
-      wirelessMicsType: "",
+      podiumMic: { podiumMic: "", podiumMicQty: "" },
+      wirelessMics: { wirelessMics: "", wirelessMicsQty: "", wirelessMicsType: "" },
       audioRecording: "",
-      largeMonitorsOrScreenProjector: "",
-      largeMonitorsQty: "",
+      largeMonitorsOrScreenProjector: { largeMonitorsOrScreenProjector: "", largeMonitorsQty: "" },
       ledWall: "",
-      clientProvideOwnPresentationLaptop: "",
-      clientLaptopQty: "",
-      presentationLaptops: "",
-      presentationLaptopQty: "",
-      videoPlayback: "",
-      videoPlaybackCount: "",
+      clientProvideOwnPresentationLaptop: { clientProvideOwnPresentationLaptop: "", clientLaptopQty: "" },
+      presentationLaptops: { presentationLaptops: "", presentationLaptopQty: "" },
+      videoPlayback: { videoPlayback: "", videoPlaybackCount: "" },
       videoFormatAspectRatio: "",
-      audienceQa: "",
-      audienceQaMethod: "",
-      cameras: "",
-      camerasQty: "",
-      videoRecording: "",
-      videoRecordingType: "",
-      stageWashLighting: "",
-      stageWashLightingStageSize: "",
+      audienceQa: { audienceQa: "", audienceQaMethod: "" },
+      cameras: { cameras: "", camerasQty: "" },
+      videoRecording: { videoRecording: "", videoRecordingType: "" },
+      stageWashLighting: { stageWashLighting: "", stageWashLightingStageSize: "" },
       backlightingFor: "",
       drapeOrScenicUplighting: "",
       audienceLighting: "",
-      programConfidenceMonitor: "",
-      programConfidenceMonitorQty: "",
-      notesConfidenceMonitor: "",
-      notesConfidenceMonitorQty: "",
+      programConfidenceMonitor: { programConfidenceMonitor: "", programConfidenceMonitorQty: "" },
+      notesConfidenceMonitor: { notesConfidenceMonitor: "", notesConfidenceMonitorQty: "" },
       speakerTimer: "",
       scenicStageDesign: "",
       contentVideoNeeds: "",
-      // legacy room-by-room keys reset too
-      numberOfRooms: "",
-      ceilingHeight: "",
-      roomSetup: "",
-      showPrep: "",
-      showSize: "",
-      hasPipeAndDrape: false,
-      showRig: false,
-      rigPowerSize: "",
-      preferredRigging: [],
-      decibelLimitation: "",
-      avSpec: "",
-      avPa: "",
-      mainSound: "",
-      mainSoundSize: "",
-      hearingImpaired: "",
-      preferredA1: "",
-      recordAudio: "",
-      chairs: "",
-      stageRisers: [],
-      backdropsWallSize: "",
-      scenicElements: false,
-      videoStage: false,
-      frontScreen: "",
-      stageDimensions: "",
-      confidenceMonitor: "",
-      confidenceMonitorCount: "",
-      projectorsProvided: "",
-      projectorCount: "",
-      cameraPackage: "",
-      cameraCount: "",
-      livestreamNeeded: "",
-      lightingPackage: "",
-      lightingConsole: "",
-      teleprompterNeeded: "",
-      showCallingRequired: "",
     });
   };
 
   const requiredError = (value: string) => showErrors && !value.trim();
+  const confidenceMonitors = {
+    program: {
+      value: data.programConfidenceMonitor?.programConfidenceMonitor || "",
+      qty: data.programConfidenceMonitor?.programConfidenceMonitorQty || "",
+    },
+    notes: {
+      value: data.notesConfidenceMonitor?.notesConfidenceMonitor || "",
+      qty: data.notesConfidenceMonitor?.notesConfidenceMonitorQty || "",
+    },
+  };
 
   return (
     <section
@@ -269,51 +296,79 @@ const RoombyRoomAvForm = ({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>
-              Load-in <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              className={`${inputClass} ${requiredError(data.loadInDateTime) ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-              value={data.loadInDateTime}
-              onChange={(e) => onChange({ loadInDateTime: e.target.value })}
+            <GlobalDateTimeInput
+              label="Load-in"
+              value={fromStringToDate(data.loadInDateTime)}
+              onChange={(date) => onChange({ loadInDateTime: fromDateToString(date) })}
+              format={pickerFormat}
+              showTime
+              use12Hours
+              hideLabel={false}
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              labelClassName={`${labelClass} lowercase capitalize-first`}
+              inputClassName={`${inputClass} pr-10 ${requiredError(data.loadInDateTime) ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             />
+            {requiredError(data.loadInDateTime) && (
+              <p className="mt-1 text-sm text-red-500">Load-in time is required.</p>
+            )}
           </div>
           <div>
-            <label className={labelClass}>
-              Rehearsal <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              className={`${inputClass} ${requiredError(data.rehearsalDateTime) ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-              value={data.rehearsalDateTime}
-              onChange={(e) => onChange({ rehearsalDateTime: e.target.value })}
+            <GlobalDateTimeInput
+              label="Rehearsal"
+              value={fromStringToDate(data.rehearsalDateTime)}
+              onChange={(date) => onChange({ rehearsalDateTime: fromDateToString(date) })}
+              format={pickerFormat}
+              showTime
+              use12Hours
+              hideLabel={false}
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              labelClassName={`${labelClass} lowercase capitalize-first`}
+              inputClassName={`${inputClass} pr-10 ${requiredError(data.rehearsalDateTime) ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             />
+            {requiredError(data.rehearsalDateTime) && (
+              <p className="mt-1 text-sm text-red-500">Rehearsal time is required.</p>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>
-              Show Start <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              className={`${inputClass} ${requiredError(data.showStartDateTime) ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-              value={data.showStartDateTime}
-              onChange={(e) => onChange({ showStartDateTime: e.target.value })}
+            <GlobalDateTimeInput
+              label="Show Start"
+              value={fromStringToDate(data.showStartDateTime)}
+              onChange={(date) => onChange({ showStartDateTime: fromDateToString(date) })}
+              format={pickerFormat}
+              showTime
+              use12Hours
+              hideLabel={false}
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              labelClassName={`${labelClass} lowercase capitalize-first`}
+              inputClassName={`${inputClass} pr-10 ${requiredError(data.showStartDateTime) ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             />
+            {requiredError(data.showStartDateTime) && (
+              <p className="mt-1 text-sm text-red-500">Show start time is required.</p>
+            )}
           </div>
           <div>
-            <label className={labelClass}>
-              Show End <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              className={`${inputClass} ${requiredError(data.showEndDateTime) ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-              value={data.showEndDateTime}
-              onChange={(e) => onChange({ showEndDateTime: e.target.value })}
+            <GlobalDateTimeInput
+              label="Show End"
+              value={fromStringToDate(data.showEndDateTime)}
+              onChange={(date) => onChange({ showEndDateTime: fromDateToString(date) })}
+              format={pickerFormat}
+              showTime
+              use12Hours
+              hideLabel={false}
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              labelClassName={`${labelClass} lowercase capitalize-first`}
+              inputClassName={`${inputClass} pr-10 ${requiredError(data.showEndDateTime) ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
             />
+            {requiredError(data.showEndDateTime) && (
+              <p className="mt-1 text-sm text-red-500">Show end time is required.</p>
+            )}
           </div>
         </div>
 
@@ -335,8 +390,12 @@ const RoombyRoomAvForm = ({
           <label className={labelClass}>Podium Mic</label>
           <YesNoField
             name="podiumMic"
-            value={data.podiumMic}
-            onChange={(v) => handleYesNoChange("podiumMic", v, ["podiumMicQty"])}
+            value={data.podiumMic.podiumMic}
+            onChange={(v) =>
+              onChange({
+                podiumMic: { ...data.podiumMic, podiumMic: v, podiumMicQty: v !== "Yes" ? "" : data.podiumMic.podiumMicQty },
+              })
+            }
           />
         </div>
 
@@ -345,24 +404,23 @@ const RoombyRoomAvForm = ({
           <div className="space-y-3">
             <YesNoWithQty
               name="wirelessMics"
-              value={data.wirelessMics}
-              qty={data.wirelessMicsQty}
+              value={data.wirelessMics.wirelessMics}
+              qty={data.wirelessMics.wirelessMicsQty}
               onValueChange={(v) =>
-                handleYesNoChange("wirelessMics", v, [
-                  "wirelessMicsQty",
-                  "wirelessMicsType",
-                ])
+                onChange({
+                  wirelessMics: { wirelessMics: v, wirelessMicsQty: v !== "Yes" ? "" : data.wirelessMics.wirelessMicsQty, wirelessMicsType: v !== "Yes" ? "" : data.wirelessMics.wirelessMicsType },
+                })
               }
-              onQtyChange={(v) => onChange({ wirelessMicsQty: v })}
+              onQtyChange={(v) => onChange({ wirelessMics: { ...data.wirelessMics, wirelessMicsQty: v } })}
             />
-            {data.wirelessMics === "Yes" && (
+            {data.wirelessMics.wirelessMics === "Yes" && (
               <div>
                 <label className={labelClass}>Wireless Mic Type</label>
                 <RadioOptionsField
                   name="wirelessMicsType"
-                  value={data.wirelessMicsType}
+                  value={data.wirelessMics.wirelessMicsType}
                   options={["Handhelds", "Headset Mics"]}
-                  onChange={(v) => onChange({ wirelessMicsType: v })}
+                  onChange={(v) => onChange({ wirelessMics: { ...data.wirelessMics, wirelessMicsType: v } })}
                 />
               </div>
             )}
@@ -384,16 +442,19 @@ const RoombyRoomAvForm = ({
           </label>
           <YesNoWithQty
             name="largeMonitorsOrScreenProjector"
-            value={data.largeMonitorsOrScreenProjector}
-            qty={data.largeMonitorsQty}
+            value={data.largeMonitorsOrScreenProjector.largeMonitorsOrScreenProjector}
+            qty={data.largeMonitorsOrScreenProjector.largeMonitorsQty}
             onValueChange={(v) =>
-              handleYesNoWithQtyValueChange(
-                "largeMonitorsOrScreenProjector",
-                "largeMonitorsQty",
-                v,
-              )
+              onChange({
+                largeMonitorsOrScreenProjector: {
+                  largeMonitorsOrScreenProjector: v,
+                  largeMonitorsQty: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.largeMonitorsQty,
+                },
+              })
             }
-            onQtyChange={(v) => onChange({ largeMonitorsQty: v })}
+            onQtyChange={(v) =>
+              onChange({ largeMonitorsOrScreenProjector: { ...data.largeMonitorsOrScreenProjector, largeMonitorsQty: v } })
+            }
           />
         </div>
 
@@ -412,16 +473,19 @@ const RoombyRoomAvForm = ({
           </label>
           <YesNoWithQty
             name="clientProvideOwnPresentationLaptop"
-            value={data.clientProvideOwnPresentationLaptop}
-            qty={data.clientLaptopQty}
+            value={data.clientProvideOwnPresentationLaptop.clientProvideOwnPresentationLaptop}
+            qty={data.clientProvideOwnPresentationLaptop.clientLaptopQty}
             onValueChange={(v) =>
-              handleYesNoWithQtyValueChange(
-                "clientProvideOwnPresentationLaptop",
-                "clientLaptopQty",
-                v,
-              )
+              onChange({
+                clientProvideOwnPresentationLaptop: {
+                  clientProvideOwnPresentationLaptop: v,
+                  clientLaptopQty: v !== "Yes" ? "" : data.clientProvideOwnPresentationLaptop.clientLaptopQty,
+                },
+              })
             }
-            onQtyChange={(v) => onChange({ clientLaptopQty: v })}
+            onQtyChange={(v) =>
+              onChange({ clientProvideOwnPresentationLaptop: { ...data.clientProvideOwnPresentationLaptop, clientLaptopQty: v } })
+            }
           />
         </div>
 
@@ -429,16 +493,19 @@ const RoombyRoomAvForm = ({
           <label className={labelClass}>Presentation Laptops</label>
           <YesNoWithQty
             name="presentationLaptops"
-            value={data.presentationLaptops}
-            qty={data.presentationLaptopQty}
+            value={data.presentationLaptops.presentationLaptops}
+            qty={data.presentationLaptops.presentationLaptopQty}
             onValueChange={(v) =>
-              handleYesNoWithQtyValueChange(
-                "presentationLaptops",
-                "presentationLaptopQty",
-                v,
-              )
+              onChange({
+                presentationLaptops: {
+                  presentationLaptops: v,
+                  presentationLaptopQty: v !== "Yes" ? "" : data.presentationLaptops.presentationLaptopQty,
+                },
+              })
             }
-            onQtyChange={(v) => onChange({ presentationLaptopQty: v })}
+            onQtyChange={(v) =>
+              onChange({ presentationLaptops: { ...data.presentationLaptops, presentationLaptopQty: v } })
+            }
           />
         </div>
 
@@ -447,17 +514,22 @@ const RoombyRoomAvForm = ({
           <div className="space-y-3">
             <YesNoField
               name="videoPlayback"
-              value={data.videoPlayback}
+              value={data.videoPlayback.videoPlayback}
               onChange={(v) =>
-                handleYesNoChange("videoPlayback", v, ["videoPlaybackCount"])
+                onChange({
+                  videoPlayback: {
+                    videoPlayback: v,
+                    videoPlaybackCount: v !== "Yes" ? "" : data.videoPlayback.videoPlaybackCount,
+                  },
+                })
               }
             />
-            {data.videoPlayback === "Yes" && (
+            {data.videoPlayback.videoPlayback === "Yes" && (
               <input
                 className={inputClass}
-                value={data.videoPlaybackCount}
+                value={data.videoPlayback.videoPlaybackCount}
                 onChange={(e) =>
-                  onChange({ videoPlaybackCount: e.target.value })
+                  onChange({ videoPlayback: { ...data.videoPlayback, videoPlaybackCount: e.target.value } })
                 }
                 placeholder="How many?"
               />
@@ -480,21 +552,26 @@ const RoombyRoomAvForm = ({
           <div className="space-y-3">
             <YesNoField
               name="audienceQa"
-              value={data.audienceQa}
+              value={data.audienceQa.audienceQa}
               onChange={(v) =>
-                handleYesNoChange("audienceQa", v, ["audienceQaMethod"])
+                onChange({
+                  audienceQa: {
+                    audienceQa: v,
+                    audienceQaMethod: v !== "Yes" ? "" : data.audienceQa.audienceQaMethod,
+                  },
+                })
               }
             />
-            {data.audienceQa === "Yes" && (
+            {data.audienceQa.audienceQa === "Yes" && (
               <RadioOptionsField
                 name="audienceQaMethod"
-                value={data.audienceQaMethod}
+                value={data.audienceQa.audienceQaMethod}
                 options={[
                   "Via an App",
                   "Passing a Microphone",
                   "Both",
                 ]}
-                onChange={(v) => onChange({ audienceQaMethod: v })}
+                onChange={(v) => onChange({ audienceQa: { ...data.audienceQa, audienceQaMethod: v } })}
               />
             )}
           </div>
@@ -504,12 +581,17 @@ const RoombyRoomAvForm = ({
           <label className={labelClass}>Cameras</label>
           <YesNoWithQty
             name="cameras"
-            value={data.cameras}
-            qty={data.camerasQty}
+            value={data.cameras.cameras}
+            qty={data.cameras.camerasQty}
             onValueChange={(v) =>
-              handleYesNoWithQtyValueChange("cameras", "camerasQty", v)
+              onChange({
+                cameras: {
+                  cameras: v,
+                  camerasQty: v !== "Yes" ? "" : data.cameras.camerasQty,
+                },
+              })
             }
-            onQtyChange={(v) => onChange({ camerasQty: v })}
+            onQtyChange={(v) => onChange({ cameras: { ...data.cameras, camerasQty: v } })}
           />
         </div>
 
@@ -518,22 +600,27 @@ const RoombyRoomAvForm = ({
           <div className="space-y-3">
             <YesNoField
               name="videoRecording"
-              value={data.videoRecording}
+              value={data.videoRecording.videoRecording}
               onChange={(v) =>
-                handleYesNoChange("videoRecording", v, ["videoRecordingType"])
+                onChange({
+                  videoRecording: {
+                    videoRecording: v,
+                    videoRecordingType: v !== "Yes" ? "" : data.videoRecording.videoRecordingType,
+                  },
+                })
               }
             />
-            {data.videoRecording === "Yes" && (
+            {data.videoRecording.videoRecording === "Yes" && (
               <RadioOptionsField
                 name="videoRecordingType"
-                value={data.videoRecordingType}
+                value={data.videoRecording.videoRecordingType}
                 options={[
                   "Camera Feed Only",
                   "Presentation Only",
                   "Side by Side (Camera and Presentation)",
                   "All The Above",
                 ]}
-                onChange={(v) => onChange({ videoRecordingType: v })}
+                onChange={(v) => onChange({ videoRecording: { ...data.videoRecording, videoRecordingType: v } })}
               />
             )}
           </div>
@@ -544,19 +631,22 @@ const RoombyRoomAvForm = ({
           <div className="space-y-3">
             <YesNoField
               name="stageWashLighting"
-              value={data.stageWashLighting}
+              value={data.stageWashLighting.stageWashLighting}
               onChange={(v) =>
-                handleYesNoChange("stageWashLighting", v, [
-                  "stageWashLightingStageSize",
-                ])
+                onChange({
+                  stageWashLighting: {
+                    stageWashLighting: v,
+                    stageWashLightingStageSize: v !== "Yes" ? "" : data.stageWashLighting.stageWashLightingStageSize,
+                  },
+                })
               }
             />
-            {data.stageWashLighting === "Yes" && (
+            {data.stageWashLighting.stageWashLighting === "Yes" && (
               <input
                 className={inputClass}
-                value={data.stageWashLightingStageSize}
+                value={data.stageWashLighting.stageWashLightingStageSize}
                 onChange={(e) =>
-                  onChange({ stageWashLightingStageSize: e.target.value })
+                  onChange({ stageWashLighting: { ...data.stageWashLighting, stageWashLightingStageSize: e.target.value } })
                 }
                 placeholder="Enter stage size"
               />
@@ -597,16 +687,29 @@ const RoombyRoomAvForm = ({
           </label>
           <YesNoWithQty
             name="programConfidenceMonitor"
-            value={data.programConfidenceMonitor}
-            qty={data.programConfidenceMonitorQty}
+            value={confidenceMonitors.program.value}
+            qty={confidenceMonitors.program.qty}
             onValueChange={(v) =>
-              handleYesNoWithQtyValueChange(
-                "programConfidenceMonitor",
-                "programConfidenceMonitorQty",
-                v,
-              )
+              onChange({
+                programConfidenceMonitor: {
+                  ...data.programConfidenceMonitor,
+                  programConfidenceMonitor: v,
+                  programConfidenceMonitorQty:
+                    v === "Yes"
+                      ? data.programConfidenceMonitor
+                          ?.programConfidenceMonitorQty || ""
+                      : "",
+                },
+              })
             }
-            onQtyChange={(v) => onChange({ programConfidenceMonitorQty: v })}
+            onQtyChange={(v) =>
+              onChange({
+                programConfidenceMonitor: {
+                  ...data.programConfidenceMonitor,
+                  programConfidenceMonitorQty: v,
+                },
+              })
+            }
           />
         </div>
 
@@ -616,16 +719,29 @@ const RoombyRoomAvForm = ({
           </label>
           <YesNoWithQty
             name="notesConfidenceMonitor"
-            value={data.notesConfidenceMonitor}
-            qty={data.notesConfidenceMonitorQty}
+            value={confidenceMonitors.notes.value}
+            qty={confidenceMonitors.notes.qty}
             onValueChange={(v) =>
-              handleYesNoWithQtyValueChange(
-                "notesConfidenceMonitor",
-                "notesConfidenceMonitorQty",
-                v,
-              )
+              onChange({
+                notesConfidenceMonitor: {
+                  ...data.notesConfidenceMonitor,
+                  notesConfidenceMonitor: v,
+                  notesConfidenceMonitorQty:
+                    v === "Yes"
+                      ? data.notesConfidenceMonitor?.notesConfidenceMonitorQty ||
+                        ""
+                      : "",
+                },
+              })
             }
-            onQtyChange={(v) => onChange({ notesConfidenceMonitorQty: v })}
+            onQtyChange={(v) =>
+              onChange({
+                notesConfidenceMonitor: {
+                  ...data.notesConfidenceMonitor,
+                  notesConfidenceMonitorQty: v,
+                },
+              })
+            }
           />
         </div>
 

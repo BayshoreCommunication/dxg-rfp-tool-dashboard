@@ -13,6 +13,8 @@ type DashboardOverviewPayload = {
   latestProposals?: Array<{
     _id: string;
     status?: string;
+    isActive?: boolean;
+    isFavorite?: boolean;
     viewsCount?: number;
     createdAt?: string;
     event?: { eventName?: string };

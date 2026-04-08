@@ -15,6 +15,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Signature cursive fonts */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Great+Vibes&family=Pacifico&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <ToastProvider>
           <LayoutWrapper>{children}</LayoutWrapper>

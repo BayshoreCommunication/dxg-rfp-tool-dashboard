@@ -2,15 +2,21 @@
 
 import { sendProposalEmailAction } from "@/app/actions/email";
 import { getProposalsAction } from "@/app/actions/proposals";
-import { Mail, Plus, Send, Trash2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Mail, Send, Users, X } from "lucide-react"; // Replaced Plus and Trash2 with X
+import { useRouter, useSearchParams } from "next/navigation";
+import { KeyboardEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+
 
 type ProposalOption = {
   _id: string;
   event?: { eventName?: string };
   contact?: { contactEmail?: string };
+  proposalSetting?: {
+    proposals?: {
+      teammateEmail?: string;
+    };
+  };
   proposalLink?: string;
   publicProposalLink?: string;
   proposalSlug?: string;
@@ -28,7 +34,15 @@ DXG Team`;
 const validateEmail = (email: string) =>
   EMAIL_REGEX.test(email.trim().toLowerCase());
 
+const getTeammateEmail = (proposal: ProposalOption | null): string => {
+  const teammateEmail = proposal?.proposalSetting?.proposals?.teammateEmail;
+  if (!teammateEmail) return "";
+  const normalized = teammateEmail.trim().toLowerCase();
+  return validateEmail(normalized) ? normalized : "";
+};
+
 export default function EmailSend() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -44,13 +58,21 @@ export default function EmailSend() {
   const selectedProposal =
     proposals.find((item) => item._id === proposalId) || null;
   const selectedProposalLink =
-    selectedProposal?.publicProposalLink || selectedProposal?.proposalLink || "";
+    selectedProposal?.publicProposalLink ||
+    selectedProposal?.proposalLink ||
+    "";
+  const autoTeammateEmail = getTeammateEmail(selectedProposal);
   const preselectedProposalId = searchParams.get("proposalId")?.trim() || "";
 
   const loadData = useCallback(async () => {
     setLoading(true);
 
-    const proposalsRes = await getProposalsAction({ page: 1, limit: 100 });
+    const proposalsRes = await getProposalsAction({
+      page: 1,
+      limit: 100,
+      status: "submitted",
+      isActive: true,
+    });
 
     if (proposalsRes.success && Array.isArray(proposalsRes.data)) {
       const proposalItems = proposalsRes.data as ProposalOption[];
@@ -67,7 +89,7 @@ export default function EmailSend() {
             ? prev
             : `Proposal for ${
                 preferredProposal.event?.eventName || "Untitled Proposal"
-              } - DXG RFP Tool`
+              } - DXG RFP Tool`,
         );
       } else if (!proposalId && proposalItems[0]?._id) {
         setProposalId(proposalItems[0]._id);
@@ -80,9 +102,20 @@ export default function EmailSend() {
   }, [preselectedProposalId, proposalId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData();
   }, [loadData]);
+
+  // Gmail-style input handler
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (["Enter", ",", " "].includes(event.key)) {
+      event.preventDefault();
+      addEmailsFromInput();
+    } else if (event.key === "Backspace" && recipientInput === "") {
+      // Remove the last email chip if backspace is pressed on an empty input
+      event.preventDefault();
+      setRecipientEmails((prev) => prev.slice(0, -1));
+    }
+  };
 
   const addEmailsFromInput = () => {
     const rawItems = recipientInput
@@ -94,6 +127,8 @@ export default function EmailSend() {
 
     const validItems = rawItems.filter(validateEmail);
     const invalidCount = rawItems.length - validItems.length;
+
+    // Prevent duplicates
     const merged = [...new Set([...recipientEmails, ...validItems])];
 
     setRecipientEmails(merged);
@@ -104,11 +139,19 @@ export default function EmailSend() {
     }
   };
 
+  // Add emails when the input loses focus (optional but good UX)
+  const handleBlur = () => {
+    if (recipientInput.trim()) {
+      addEmailsFromInput();
+    }
+  };
+
   const removeRecipient = (email: string) => {
     setRecipientEmails((prev) => prev.filter((entry) => entry !== email));
   };
 
   const handleSend = async () => {
+    // Process anything left in the input field just in case
     addEmailsFromInput();
 
     if (!proposalId) {
@@ -116,7 +159,8 @@ export default function EmailSend() {
       return;
     }
 
-    const finalRecipients =
+    // Final merge of state emails and any lingering input that valid
+    const manualRecipients =
       recipientInput.trim().length > 0
         ? [
             ...new Set([
@@ -125,6 +169,14 @@ export default function EmailSend() {
             ]),
           ]
         : recipientEmails;
+
+    const finalRecipients = [
+      ...new Set(
+        [...manualRecipients, autoTeammateEmail]
+          .map((item) => item.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ];
 
     if (finalRecipients.length === 0) {
       toast.error("Please add at least one valid recipient email.");
@@ -137,7 +189,7 @@ export default function EmailSend() {
     }
     if (!selectedProposalLink) {
       toast.error(
-        "Proposal link is missing. Please refresh and select proposal again."
+        "Proposal link is missing. Please refresh and select proposal again.",
       );
       return;
     }
@@ -165,7 +217,12 @@ export default function EmailSend() {
     toast.success(res.message || "Email campaign sent.");
     setRecipientInput("");
     setRecipientEmails([]);
-    await loadData();
+    router.push("/email");
+    setTimeout(() => {
+      if (window.location.pathname !== "/email") {
+        window.location.href = "/email";
+      }
+    }, 250);
   };
 
   const handleProposalChange = (nextProposalId: string) => {
@@ -188,6 +245,7 @@ export default function EmailSend() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Select Proposal Section */}
           <div className="space-y-2">
             <label className="text-[12px] font-semibold text-slate-600">
               Select Proposal
@@ -197,6 +255,11 @@ export default function EmailSend() {
               onChange={(event) => handleProposalChange(event.target.value)}
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-cyan-400"
             >
+              {proposals.length === 0 && (
+                <option value="">
+                  No active submitted proposals available
+                </option>
+              )}
               {proposals.map((proposal) => (
                 <option key={proposal._id} value={proposal._id}>
                   {proposal.event?.eventName || "Untitled Proposal"}
@@ -224,51 +287,55 @@ export default function EmailSend() {
             ) : null}
           </div>
 
+          {/* New Gmail-Style Recipient Section */}
           <div className="space-y-2">
-            <label className="text-[12px] font-semibold text-slate-600">
-              Add Recipient Emails
+            <label className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-600">
+              Recipients
+              <span className="text-[10px] font-normal text-slate-400">
+                (Press Enter, Space, or Comma)
+              </span>
             </label>
-            <div className="flex items-center gap-2">
+
+            <div className="flex w-full min-h-[46px] flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] transition-colors focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400">
+              {/* Chips */}
+              {recipientEmails.map((email) => (
+                <span
+                  key={email}
+                  className="flex items-center gap-1.5 rounded-md border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[12px] font-medium text-cyan-800"
+                >
+                  {email}
+                  <button
+                    type="button"
+                    onClick={() => removeRecipient(email)}
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-cyan-600 hover:bg-cyan-200 hover:text-cyan-900"
+                    aria-label={`Remove ${email}`}
+                  >
+                    <X size={12} strokeWidth={3} />
+                  </button>
+                </span>
+              ))}
+
+              {/* Seamless Input */}
               <input
                 value={recipientInput}
                 onChange={(event) => setRecipientInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    addEmailsFromInput();
-                  }
-                }}
-                placeholder="john@email.com, anna@email.com"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-cyan-400"
+                onKeyDown={handleInputKeyDown}
+                onBlur={handleBlur}
+                placeholder={
+                  recipientEmails.length === 0
+                    ? "john@email.com, anna@email.com"
+                    : ""
+                }
+                className="flex-1 min-w-[150px] bg-transparent text-slate-700 outline-none placeholder:text-slate-400"
               />
-              <button
-                type="button"
-                onClick={addEmailsFromInput}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-50"
-              >
-                <Plus size={14} />
-                Add
-              </button>
             </div>
-            {recipientEmails.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {recipientEmails.map((email) => (
-                  <span
-                    key={email}
-                    className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-[11px] font-semibold text-cyan-700"
-                  >
-                    {email}
-                    <button
-                      type="button"
-                      onClick={() => removeRecipient(email)}
-                      className="text-cyan-700 hover:text-cyan-900"
-                      aria-label={`Remove ${email}`}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </span>
-                ))}
-              </div>
+
+            {/* Auto-Teammate Notification */}
+            {autoTeammateEmail && (
+              <p className="mt-1 flex items-center gap-1.5 text-[11px] text-emerald-600">
+                <Users size={12} />
+                Teammate automatically included: {autoTeammateEmail}
+              </p>
             )}
           </div>
         </div>
@@ -301,7 +368,7 @@ export default function EmailSend() {
             type="button"
             onClick={handleSend}
             disabled={sending || loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider text-white shadow-sm hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-5 py-2.5 text-[12px] font-bold uppercase tracking-wider text-white shadow-sm transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Send size={14} />
             {sending ? "Sending..." : "Send Campaign"}

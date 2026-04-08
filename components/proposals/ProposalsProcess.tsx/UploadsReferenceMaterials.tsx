@@ -1,9 +1,10 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
-import { useRef } from "react";
+import { RotateCcw, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
 import type { ProposalSettings, UploadsData } from "../AddNewProposal";
 import { PillRadio } from "./shared";
+import { uploadProposalFilesAction } from "@/app/actions/proposals";
 
 /* ─── Upload Box ─── */
 const UploadBox = ({
@@ -11,23 +12,52 @@ const UploadBox = ({
   onFiles,
   accept = ".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg",
   label = "Accept PDFs, PowerPoint, Docs, Images.",
+  uploadField,
 }: {
   files: Array<File | string>;
   onFiles: (files: Array<File | string>) => void;
   accept?: string;
   label?: string;
+  uploadField: "supportDocuments" | "avQuoteFiles";
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const incoming = Array.from(e.target.files);
-      // Deduplicate by name
+      // Deduplicate by name or URL end
       const existing = new Set(
-        files.map((f) => (typeof f === "string" ? f : f.name))
+        files.map((f) => {
+          if (typeof f === "string") return f.split("/").pop() || f;
+          return f.name;
+        })
       );
       const unique = incoming.filter((f) => !existing.has(f.name));
-      onFiles([...files, ...unique]);
+      
+      if (unique.length === 0) return;
+
+      setIsUploading(true);
+      const formData = new FormData();
+      unique.forEach((f) => formData.append(uploadField, f));
+
+      try {
+        const res = await uploadProposalFilesAction(formData);
+        if (res.success) {
+          const urls =
+            uploadField === "supportDocuments"
+              ? res.supportDocumentUrls
+              : res.avQuoteFileUrls;
+          onFiles([...files, ...urls]);
+        } else {
+          alert(res.message || "Failed to upload files");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Upload failed. Please try again.");
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -48,8 +78,9 @@ const UploadBox = ({
       <p className="text-[17px] font-bold text-gray-800 mb-1">File Upload</p>
       <p className="text-[12px] text-gray-400 mb-6 font-medium">{label}</p>
 
-      <label className="cursor-pointer bg-[#35bdf2] hover:bg-[#20A4D5] text-white font-bold text-[13px] py-3 px-8 rounded transition-colors tracking-wide">
-        <span>BROWSE FILE</span>
+      <label className={`cursor-pointer bg-[#35bdf2] hover:bg-[#20A4D5] text-white font-bold text-[13px] py-3 px-8 rounded transition-colors tracking-wide flex items-center justify-center gap-2 ${isUploading ? 'opacity-70 pointer-events-none' : ''}`}>
+        {isUploading && <Loader2 size={16} className="animate-spin" />}
+        <span>{isUploading ? "UPLOADING..." : "BROWSE FILE"}</span>
         <input
           ref={inputRef}
           type="file"
@@ -57,6 +88,7 @@ const UploadBox = ({
           accept={accept}
           className="hidden"
           onChange={handleChange}
+          disabled={isUploading}
         />
       </label>
 
@@ -66,9 +98,11 @@ const UploadBox = ({
           {files.map((f, i) => (
             <span
               key={i}
-              className="flex items-center gap-1.5 bg-sky-50 text-[#1f2d5d] text-xs font-semibold px-3 py-1.5 rounded-full border border-[#38bdf8]"
+              className="flex items-center gap-1.5 bg-sky-50 text-[#1f2d5d] text-xs font-semibold px-3 py-1.5 rounded-full border border-[#38bdf8] max-w-full"
             >
-              {typeof f === "string" ? f : f.name}
+              <span className="truncate max-w-[200px]">
+                {typeof f === "string" ? f.split("/").pop() || f : f.name}
+              </span>
               <button
                 type="button"
                 onClick={() => removeFile(i)}
@@ -104,8 +138,10 @@ const UploadsReferenceMaterials = ({
   const handleClear = () => {
     onChange({
       supportDocuments: [],
-      reviewExistingAvQuote: "",
-      avQuoteFiles: [],
+      reviewExistingAvQuote: {
+        reviewExistingAvQuote: "",
+        avQuoteFiles: [],
+      },
     });
   };
 
@@ -123,7 +159,7 @@ const UploadsReferenceMaterials = ({
       <div className="flex-1 px-8 py-8 space-y-10">
 
         {/* Review AV Quote */}
-        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.reviewExistingAvQuote ? "bg-red-50" : ""}`}>
+        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.reviewExistingAvQuote.reviewExistingAvQuote ? "bg-red-50" : ""}`}>
           <label className="mb-3 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide">
             Review an existing AV Quote? <span className="text-red-500">*</span>
           </label>
@@ -133,23 +169,33 @@ const UploadsReferenceMaterials = ({
                 key={opt}
                 name="reviewExistingAvQuote"
                 value={opt}
-                checked={data.reviewExistingAvQuote === opt}
-                onChange={() => onChange({ reviewExistingAvQuote: opt, avQuoteFiles: opt === "NO" ? [] : data.avQuoteFiles })}
+                checked={data.reviewExistingAvQuote.reviewExistingAvQuote === opt}
+                onChange={() =>
+                  onChange({
+                    reviewExistingAvQuote: {
+                      reviewExistingAvQuote: opt,
+                      avQuoteFiles: opt === "NO" ? [] : data.reviewExistingAvQuote.avQuoteFiles,
+                    },
+                  })
+                }
               />
             ))}
           </div>
-          {showErrors && !data.reviewExistingAvQuote && (
+          {showErrors && !data.reviewExistingAvQuote.reviewExistingAvQuote && (
             <p className="mt-2 text-sm text-red-500 normal-case">Please select an option.</p>
           )}
 
-          {data.reviewExistingAvQuote === "YES" && (
-            <div className={`mt-4 rounded-xl transition-all ${showErrors && data.avQuoteFiles.length === 0 ? "ring-2 ring-red-500 ring-offset-2 ring-offset-red-50" : ""}`}>
+          {data.reviewExistingAvQuote.reviewExistingAvQuote === "YES" && (
+            <div className={`mt-4 rounded-xl transition-all ${showErrors && data.reviewExistingAvQuote.avQuoteFiles.length === 0 ? "ring-2 ring-red-500 ring-offset-2 ring-offset-red-50" : ""}`}>
               <UploadBox
-                files={data.avQuoteFiles}
-                onFiles={(files) => onChange({ avQuoteFiles: files })}
+                files={data.reviewExistingAvQuote.avQuoteFiles}
+                onFiles={(files) =>
+                  onChange({ reviewExistingAvQuote: { ...data.reviewExistingAvQuote, avQuoteFiles: files } })
+                }
                 label="Required: Please upload your AV Quote"
+                uploadField="avQuoteFiles"
               />
-              {showErrors && data.avQuoteFiles.length === 0 && (
+              {showErrors && data.reviewExistingAvQuote.avQuoteFiles.length === 0 && (
                 <p className="mt-2 text-sm text-red-500 normal-case mb-2">Please upload at least one AV quote file.</p>
               )}
             </div>
@@ -157,7 +203,7 @@ const UploadsReferenceMaterials = ({
         </div>
 
         {/* Support Documents Upload */}
-        {(data.reviewExistingAvQuote === "NO" || !data.reviewExistingAvQuote) && (
+        {(data.reviewExistingAvQuote.reviewExistingAvQuote === "NO" || !data.reviewExistingAvQuote.reviewExistingAvQuote) && (
           <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && data.supportDocuments.length === 0 ? "bg-red-50/50" : ""}`}>
             <label className="mb-4 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide">
               Upload any support documents <span className="text-red-500">*</span>
@@ -167,6 +213,7 @@ const UploadsReferenceMaterials = ({
                 files={data.supportDocuments}
                 onFiles={(files) => onChange({ supportDocuments: files })}
                 label="Required: Please upload at least one support document"
+                uploadField="supportDocuments"
               />
             </div>
             {showErrors && data.supportDocuments.length === 0 && (

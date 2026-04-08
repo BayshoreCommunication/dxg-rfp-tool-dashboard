@@ -9,13 +9,21 @@ const labelClass = "mb-3 block text-sm font-bold text-[#1f2d5d] uppercase tracki
 
 const crewRoles = [
   "A1 (AUDIO)",
+  "A2 (AUDIO ASSIST)",
   "V1 (VIDEO)",
+  "V2 (VIDEO ASSIST)",
   "TD (TECHNICAL DIRECTOR)",
+  "L1 (LIGHTING)",
+  "L2 (LIGHTING ASSIST)",
   "GRAPHICS OP",
   "CAMERA OPERATOR",
   "SHOWCALLER",
   "STAGE MANAGER",
-  "LIGHTING DIRECTOR",
+  "PRODUCER",
+  "TELEPROMPTER OP",
+  "RIGGER",
+  "STAGEHAND",
+  "OTHER",
 ];
 
 interface ProductionSupportCrewProps {

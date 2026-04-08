@@ -4,7 +4,7 @@ import {
   deleteEmailCampaignAction,
   getEmailCampaignsAction,
 } from "@/app/actions/email";
-import { BarChart3, Clock, Trash2 } from "lucide-react";
+import { BarChart3, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
@@ -67,7 +67,7 @@ export default function EmailDashboard() {
 
   if (loading) {
     return (
-      <div className="space-y-4 px-2">
+      <div className="space-y-6 px-6">
         {[1, 2, 3].map((key) => (
           <LoadingSkeletonCard key={key} />
         ))}
@@ -93,7 +93,7 @@ export default function EmailDashboard() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 px-6">
       {campaigns.map((campaign) => {
         const title = campaign.subject?.trim() || FALLBACK_TITLE;
         const body = campaign.message?.trim() || FALLBACK_BODY;
@@ -102,7 +102,7 @@ export default function EmailDashboard() {
         return (
           <div
             key={campaign._id}
-            className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm transition-shadow hover:shadow-md"
+            className="relative overflow-hidden rounded-2xl bg-white p-6 border border-slate-200 shadow-sm transition-shadow hover:shadow-md"
           >
             <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-cyan-50 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-14 -left-14 h-40 w-40 rounded-full bg-blue-50 blur-3xl" />
@@ -114,23 +114,23 @@ export default function EmailDashboard() {
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-cyan-700">
                     Proposal Email
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500">
+                  {/* <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500">
                     <Clock size={10} />
                     {campaign?.createdAt
                       ? new Date(campaign.createdAt).toLocaleDateString()
                       : "No date"}
-                  </span>
+                  </span> */}
                 </div>
 
-                <h3 className="text-[17px] font-black text-slate-900 line-clamp-1">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight truncate">
                   {title}
-                </h3>
+                </h1>
 
-                <p className="mt-1 text-[13px] leading-6 text-slate-500 line-clamp-2">
+                <p className="mt-1 text-[15px] leading-6 text-slate-500 line-clamp-2">
                   {body}
                 </p>
 
-                <p className="mt-3 text-[11px] font-medium text-slate-400">
+                <p className="mt-3 text-[14px] font-medium text-slate-400">
                   {campaign?.createdAt
                     ? new Date(campaign.createdAt).toLocaleString()
                     : "Not available"}

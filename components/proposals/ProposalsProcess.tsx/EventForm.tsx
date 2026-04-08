@@ -1,10 +1,10 @@
 "use client";
 
+import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import { ChevronDown, RotateCcw } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
 import { useClickOutside } from "./shared";
-import GlobalDateInput from "@/components/shared/GlobalDateInput";
 
 /* ─── Shared style constants ─── */
 const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
@@ -31,6 +31,16 @@ const formatOptions = ["In-Person", "Hybrid", "Virtual"] as const;
 
 const normalizeDateFormat = (format: string) =>
   (format || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
+
+/** Convert a settings display format string → date-fns format token */
+type DatePickerFormat = "dd-MM-yyyy" | "yyyy-MM-dd" | "MM-dd-yyyy";
+
+const toPickerFormat = (displayFormat: string): DatePickerFormat => {
+  const f = displayFormat.toUpperCase();
+  if (f === "DD/MM/YYYY") return "dd-MM-yyyy";
+  if (f === "YYYY-MM-DD") return "yyyy-MM-dd";
+  return "MM-dd-yyyy";
+};
 
 const toIsoDateValue = (raw: string | undefined) => {
   if (!raw) return "";
@@ -99,6 +109,7 @@ const EventForm = ({
   const currentDateFormat = normalizeDateFormat(
     proposalSettings.proposals.dateFormat,
   );
+  const pickerFormat = toPickerFormat(currentDateFormat);
   const normalizedEndDate = toIsoDateValue(data.endDate);
   const startDateValue = fromIsoToDate(data.startDate);
   const endDateValue = fromIsoToDate(data.endDate);
@@ -125,8 +136,10 @@ const EventForm = ({
       venue: "",
       attendees: "",
       eventFormat: "In-Person",
-      eventType: "",
-      eventTypeOther: "",
+      eventType: {
+        eventType: "",
+        eventTypeOther: "",
+      },
     });
   };
 
@@ -141,6 +154,8 @@ const EventForm = ({
       ...(shouldAutoSetEndDate ? { endDate: normalizedNextStart } : {}),
     });
   };
+
+  
 
   return (
     <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
@@ -183,7 +198,7 @@ const EventForm = ({
             showErrorMessage={false}
             value={startDateValue}
             onChange={handleStartDateChange}
-            format="yyyy-MM-dd"
+            format={pickerFormat}
             inputClassName={`${inputClass} pr-10 ${
               showErrors && !data.startDate.trim()
                 ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
@@ -213,7 +228,7 @@ const EventForm = ({
             value={endDateValue}
             onChange={(value) => onChange({ endDate: fromDateToIso(value) })}
             minDate={startDateValue || undefined}
-            format="yyyy-MM-dd"
+            format={pickerFormat}
             inputClassName={`${inputClass} pr-10 ${
               showErrors && !data.endDate.trim()
                 ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
@@ -326,9 +341,9 @@ const EventForm = ({
               }
             >
               <span
-                className={data.eventType ? "text-[#1f2d5d]" : "text-gray-400"}
+                className={data.eventType.eventType ? "text-[#1f2d5d]" : "text-gray-400"}
               >
-                {data.eventType || "Select type of event"}
+                {data.eventType.eventType || "Select type of event"}
               </span>
               <ChevronDown size={16} className="text-primary flex-shrink-0" />
             </button>
@@ -344,9 +359,9 @@ const EventForm = ({
                     <input
                       type="radio"
                       name="eventType"
-                      checked={data.eventType === opt}
+                      checked={data.eventType.eventType === opt}
                       onChange={() => {
-                        onChange({ eventType: opt });
+                        onChange({ eventType: { eventType: opt, eventTypeOther: opt !== "Other" ? "" : data.eventType.eventTypeOther } });
                         if (opt !== "Other") setTypeOpen(false);
                       }}
                       className="accent-[#6366f1]"
@@ -354,13 +369,13 @@ const EventForm = ({
                   </label>
                 ))}
 
-                {data.eventType === "Other" && (
+                {data.eventType.eventType === "Other" && (
                   <div className="px-4 pb-3">
                     <textarea
                       rows={2}
-                      value={data.eventTypeOther}
+                      value={data.eventType.eventTypeOther}
                       onChange={(e) =>
-                        onChange({ eventTypeOther: e.target.value })
+                        onChange({ eventType: { ...data.eventType, eventTypeOther: e.target.value } })
                       }
                       placeholder="Write here..."
                       className="w-full rounded-md border border-[#d7dce3] px-3 py-2 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"

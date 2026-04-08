@@ -2,13 +2,14 @@
 
 import { Search, SlidersHorizontal } from "lucide-react";
 
-export type ProposalFilterType = "all" | "draft" | "live" | "favorite";
+export type ProposalFilterType = "all" | "draft" | "live" | "favorite" | "expired";
 
 const TAB_CONFIG: Array<{ key: ProposalFilterType; label: string }> = [
   { key: "all", label: "ALL" },
   { key: "draft", label: "DRAFT" },
   { key: "live", label: "LIVE" },
   { key: "favorite", label: "FAVORITE" },
+  { key: "expired", label: "EXPIRED" },
 ];
 
 type ProposalFiltersProps = {
@@ -31,6 +32,7 @@ export default function ProposalFilters({
     draft: counts?.draft ?? 0,
     live: counts?.live ?? 0,
     favorite: counts?.favorite ?? 0,
+    expired: counts?.expired ?? 0,
   };
 
   return (

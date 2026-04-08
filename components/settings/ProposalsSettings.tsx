@@ -47,8 +47,8 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
               className={selectClass}
             >
               <option>English</option>
-              <option>Spanish</option>
-              <option>French</option>
+              {/* <option>Spanish</option>
+              <option>French</option> */}
             </select>
             <SelectCaret />
           </div>
@@ -243,87 +243,20 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
                 disabled={!value.contacts.call.enabled}
               />
             </div>
-
-            <div>
-              <label className="mb-2 flex items-center justify-between text-sm font-medium text-[#8f98bf]">
-                <span className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={value.contacts.whatsapp.enabled}
-                    onChange={(e) =>
-                      onChange({
-                        ...value,
-                        contacts: {
-                          ...value.contacts,
-                          whatsapp: {
-                            ...value.contacts.whatsapp,
-                            enabled: e.target.checked,
-                          },
-                        },
-                      })
-                    }
-                    className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#6366f1] focus:ring-1 focus:ring-[#6366f1]/30"
-                  />
-                  Whatsapp
-                </span>
-                <InfoDot />
-              </label>
-              <input
-                className={inputClass + " bg-white"}
-                value={value.contacts.whatsapp.value}
-                onChange={(e) =>
-                  onChange({
-                    ...value,
-                    contacts: {
-                      ...value.contacts,
-                      whatsapp: {
-                        ...value.contacts.whatsapp,
-                        value: e.target.value,
-                      },
-                    },
-                  })
-                }
-                disabled={!value.contacts.whatsapp.enabled}
-              />
-            </div>
           </div>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="mb-2 grid grid-cols-[1fr_auto] gap-2 text-sm font-semibold text-[#8f98bf]">
-              <span>Redirect Signed Prospect To</span>
-              <span>After(seconds)</span>
-            </label>
-            <div className="grid grid-cols-[1fr_86px] gap-2">
-              <input
-                className={inputClass}
-                placeholder="Redirect URL"
-                value={value.redirectUrl}
-                onChange={(e) =>
-                  onChange({ ...value, redirectUrl: e.target.value })
-                }
-              />
-              <input
-                className={inputClass}
-                value={value.redirectDelay}
-                onChange={(e) =>
-                  onChange({ ...value, redirectDelay: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="downloadPreviewTop" className={labelClass}>
+            <label htmlFor="downloadPreview" className={labelClass}>
               Enable Download In Preview
             </label>
             <div className="relative">
               <select
-                id="downloadPreviewTop"
-                value={value.downloadPreviewTop}
+                id="downloadPreview"
+                value={value.downloadPreview}
                 onChange={(e) =>
-                  onChange({ ...value, downloadPreviewTop: e.target.value })
+                  onChange({ ...value, downloadPreview: e.target.value })
                 }
                 className={selectClass}
               >
@@ -361,56 +294,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
             </div>
           </div>
 
-          <div>
-            <label htmlFor="downloadPreviewBottom" className={labelClass}>
-              Enable Download In Preview
-            </label>
-            <div className="relative">
-              <select
-                id="downloadPreviewBottom"
-                value={value.downloadPreviewBottom}
-                onChange={(e) =>
-                  onChange({ ...value, downloadPreviewBottom: e.target.value })
-                }
-                className={selectClass}
-              >
-                <option>Yes</option>
-                <option>No</option>
-              </select>
-              <SelectCaret />
-            </div>
-          </div>
-
-          {/* <div>
-            <label className="mb-2 flex items-center gap-1 text-sm font-semibold text-[#8f98bf]">
-              AI Assistant
-              <InfoDot />
-              <span className="ml-1 rounded bg-[#ffe8cf] px-2 py-0.5 text-[10px] font-bold text-[#f28d36]">
-                BETA
-              </span>
-            </label>
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  ...value,
-                  enableAiAssistant: !value.enableAiAssistant,
-                })
-              }
-              className={
-                "relative h-6 w-11 rounded-full transition " +
-                (value.enableAiAssistant ? "bg-[#6366f1]" : "bg-gray-300")
-              }
-              aria-label="Toggle AI assistant"
-            >
-              <span
-                className={
-                  "absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white transition " +
-                  (value.enableAiAssistant ? "right-1" : "left-1")
-                }
-              />
-            </button>
-          </div> */}
+         
         </div>
       </div>
     </section>

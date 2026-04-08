@@ -5,8 +5,10 @@ export type EventData = {
   venue: string;
   attendees: string;
   eventFormat: "In-Person" | "Hybrid" | "Virtual";
-  eventType: string;
-  eventTypeOther: string;
+  eventType: {
+    eventType: string;
+    eventTypeOther: string;
+  };
 };
 
 export type RoomByRoomData = {
@@ -45,34 +47,13 @@ export type RoomByRoomData = {
   drapeOrScenicUplighting: string;
   audienceLighting: string;
   programConfidenceMonitor: string;
-  programConfidenceMonitorQty: string;
   notesConfidenceMonitor: string;
-  notesConfidenceMonitorQty: string;
   speakerTimer: string;
   scenicStageDesign: string;
-  numberOfRooms: string;
-  ceilingHeight: string;
-  roomSetup: string;
   showPrep: string;
   showSize: string;
-  hasPipeAndDrape: boolean;
-  showRig: boolean;
-  rigPowerSize: string;
-  preferredRigging: string[];
-  decibelLimitation: string;
-  avSpec: string;
-  avPa: string;
-  mainSound: string;
-  mainSoundSize: string;
-  hearingImpaired: string;
   preferredA1: string;
-  recordAudio: string;
-  chairs: string;
-  stageRisers: string[];
   backdropsWallSize: string;
-  scenicElements: boolean;
-  videoStage: boolean;
-  frontScreen: string;
   contentVideoNeeds: string;
   stageDimensions: string;
   confidenceMonitor: string;
@@ -96,17 +77,23 @@ export type ProductionSupportData = {
 };
 
 export type VenueTechnicalData = {
-  needRiggingForFlown: "YES" | "NO" | "";
-  riggingPlotOrSpecs: string;
-  needDedicatedPowerDrops: "YES" | "NO" | "";
-  standardAmpWall: string;
+  needRiggingForFlown: {
+    needRiggingForFlown: "YES" | "NO" | "";
+    riggingPlotOrSpecs: string;
+  };
+  needDedicatedPowerDrops: {
+    needDedicatedPowerDrops: "YES" | "NO" | "";
+    standardAmpWall: string;
+  };
   powerDropsHowMany: string;
 };
 
 export type UploadsData = {
   supportDocuments: Array<File | string>;
-  reviewExistingAvQuote: "YES" | "NO" | "";
-  avQuoteFiles: Array<File | string>;
+  reviewExistingAvQuote: {
+    reviewExistingAvQuote: "YES" | "NO" | "";
+    avQuoteFiles: Array<File | string>;
+  };
 };
 
 export type BudgetData = {

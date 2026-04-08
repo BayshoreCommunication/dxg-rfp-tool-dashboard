@@ -35,7 +35,7 @@ const TopHeader = () => {
       {/* Ambient glow behind header */}
       <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-purple-500/5 rounded-3xl blur-2xl pointer-events-none" />
 
-      <div className="relative flex items-center justify-between px-5">
+      <div className="relative flex items-center justify-between px-6">
         {/* Left: Title block */}
         <div className="flex flex-col gap-1">
           {/* Pill badge */}
@@ -65,13 +65,16 @@ const TopHeader = () => {
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
           {/* Notification bell */}
-          <button className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
+          <Link
+            href={"/settings"}
+            className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 hover:shadow-md transition-all duration-200 group"
+          >
             <Settings2
               size={18}
               className="group-hover:scale-110 transition-transform duration-200"
             />
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 border-2 border-white" />
-          </button>
+          </Link>
 
           {/* CTA Button */}
           <Link

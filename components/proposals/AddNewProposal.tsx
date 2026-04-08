@@ -31,8 +31,10 @@ export type EventData = {
   venue: string;
   attendees: string;
   eventFormat: "In-Person" | "Hybrid" | "Virtual";
-  eventType: string;
-  eventTypeOther: string;
+  eventType: {
+    eventType: string;
+    eventTypeOther: string;
+  };
 };
 
 export type RoomByRoomData = {
@@ -43,75 +45,64 @@ export type RoomByRoomData = {
   showStartDateTime: string;
   showEndDateTime: string;
   audioSystemForHowManyPpl: string;
-  podiumMic: string;
-  podiumMicQty: string;
-  wirelessMics: string;
-  wirelessMicsQty: string;
-  wirelessMicsType: string;
+  podiumMic: {
+    podiumMic: string;
+    podiumMicQty: string;
+  };
+  wirelessMics: {
+    wirelessMics: string;
+    wirelessMicsQty: string;
+    wirelessMicsType: string;
+  };
   audioRecording: string;
-  largeMonitorsOrScreenProjector: string;
-  largeMonitorsQty: string;
+  largeMonitorsOrScreenProjector: {
+    largeMonitorsOrScreenProjector: string;
+    largeMonitorsQty: string;
+  };
   ledWall: string;
-  clientProvideOwnPresentationLaptop: string;
-  clientLaptopQty: string;
-  presentationLaptops: string;
-  presentationLaptopQty: string;
-  videoPlayback: string;
-  videoPlaybackCount: string;
+  clientProvideOwnPresentationLaptop: {
+    clientProvideOwnPresentationLaptop: string;
+    clientLaptopQty: string;
+  };
+  presentationLaptops: {
+    presentationLaptops: string;
+    presentationLaptopQty: string;
+  };
+  videoPlayback: {
+    videoPlayback: string;
+    videoPlaybackCount: string;
+  };
   videoFormatAspectRatio: string;
-  audienceQa: string;
-  audienceQaMethod: string;
-  cameras: string;
-  camerasQty: string;
-  videoRecording: string;
-  videoRecordingType: string;
-  stageWashLighting: string;
-  stageWashLightingStageSize: string;
+  audienceQa: {
+    audienceQa: string;
+    audienceQaMethod: string;
+  };
+  cameras: {
+    cameras: string;
+    camerasQty: string;
+  };
+  videoRecording: {
+    videoRecording: string;
+    videoRecordingType: string;
+  };
+  stageWashLighting: {
+    stageWashLighting: string;
+    stageWashLightingStageSize: string;
+  };
   backlightingFor: string;
   drapeOrScenicUplighting: string;
   audienceLighting: string;
-  programConfidenceMonitor: string;
-  programConfidenceMonitorQty: string;
-  notesConfidenceMonitor: string;
-  notesConfidenceMonitorQty: string;
+  programConfidenceMonitor: {
+    programConfidenceMonitor: string;
+    programConfidenceMonitorQty: string;
+  };
+  notesConfidenceMonitor: {
+    notesConfidenceMonitor: string;
+    notesConfidenceMonitorQty: string;
+  };
   speakerTimer: string;
   scenicStageDesign: string;
-  numberOfRooms: string;
-  ceilingHeight: string;
-  roomSetup: string;
-  showPrep: string;
-  showSize: string;
-  hasPipeAndDrape: boolean;
-  showRig: boolean;
-  rigPowerSize: string;
-  preferredRigging: string[];
-  decibelLimitation: string;
-  avSpec: string;
-  avPa: string;
-  mainSound: string;
-  mainSoundSize: string;
-  hearingImpaired: string;
-  preferredA1: string;
-  recordAudio: string;
-  chairs: string;
-  stageRisers: string[];
-  backdropsWallSize: string;
-  scenicElements: boolean;
-  videoStage: boolean;
-  frontScreen: string;
   contentVideoNeeds: string;
-  stageDimensions: string;
-  confidenceMonitor: string;
-  confidenceMonitorCount: string;
-  projectorsProvided: string;
-  projectorCount: string;
-  cameraPackage: string;
-  cameraCount: string;
-  livestreamNeeded: string;
-  lightingPackage: string;
-  lightingConsole: string;
-  teleprompterNeeded: string;
-  showCallingRequired: string;
 };
 
 export type ProductionSupportData = {
@@ -122,17 +113,23 @@ export type ProductionSupportData = {
 };
 
 export type VenueTechnicalData = {
-  needRiggingForFlown: "YES" | "NO" | "";
-  riggingPlotOrSpecs: string;
-  needDedicatedPowerDrops: "YES" | "NO" | "";
-  standardAmpWall: string;
+  needRiggingForFlown: {
+    needRiggingForFlown: "YES" | "NO" | "";
+    riggingPlotOrSpecs: string;
+  };
+  needDedicatedPowerDrops: {
+    needDedicatedPowerDrops: "YES" | "NO" | "";
+    standardAmpWall: string;
+  };
   powerDropsHowMany: string;
 };
 
 export type UploadsData = {
   supportDocuments: Array<File | string>;
-  reviewExistingAvQuote: "YES" | "NO" | "";
-  avQuoteFiles: Array<File | string>;
+  reviewExistingAvQuote: {
+    reviewExistingAvQuote: "YES" | "NO" | "";
+    avQuoteFiles: Array<File | string>;
+  };
 };
 
 export type BudgetData = {
@@ -164,7 +161,9 @@ export type ProposalSettings = {
     proposalLanguage: string;
     defaultCurrency: string;
     expiryDate: string;
+    priceSeparator: string;
     dateFormat: string;
+    decimalPrecision: string;
   };
 };
 
@@ -176,6 +175,8 @@ export interface ProposalData {
     defaultFont: "Inter" | "Poppins" | "Roboto";
     proposalLanguage: string;
     defaultCurrency: string;
+    priceSeparator: string;
+    decimalPrecision: string;
     dateFormat: string;
   };
   event: EventData;
@@ -204,6 +205,8 @@ const defaultProposalData: ProposalData = {
     defaultFont: "Poppins",
     proposalLanguage: "English",
     defaultCurrency: "$",
+    priceSeparator: "NONE",
+    decimalPrecision: "2",
     dateFormat: "MM/DD/YYYY",
   },
   event: {
@@ -213,8 +216,10 @@ const defaultProposalData: ProposalData = {
     venue: "",
     attendees: "",
     eventFormat: "In-Person",
-    eventType: "",
-    eventTypeOther: "",
+    eventType: {
+      eventType: "",
+      eventTypeOther: "",
+    },
   },
   roomByRoom: {
     roomFunction: "",
@@ -224,75 +229,64 @@ const defaultProposalData: ProposalData = {
     showStartDateTime: "",
     showEndDateTime: "",
     audioSystemForHowManyPpl: "",
-    podiumMic: "",
-    podiumMicQty: "",
-    wirelessMics: "",
-    wirelessMicsQty: "",
-    wirelessMicsType: "",
+    podiumMic: {
+      podiumMic: "",
+      podiumMicQty: "",
+    },
+    wirelessMics: {
+      wirelessMics: "",
+      wirelessMicsQty: "",
+      wirelessMicsType: "",
+    },
     audioRecording: "",
-    largeMonitorsOrScreenProjector: "",
-    largeMonitorsQty: "",
+    largeMonitorsOrScreenProjector: {
+      largeMonitorsOrScreenProjector: "",
+      largeMonitorsQty: "",
+    },
     ledWall: "",
-    clientProvideOwnPresentationLaptop: "",
-    clientLaptopQty: "",
-    presentationLaptops: "",
-    presentationLaptopQty: "",
-    videoPlayback: "",
-    videoPlaybackCount: "",
+    clientProvideOwnPresentationLaptop: {
+      clientProvideOwnPresentationLaptop: "",
+      clientLaptopQty: "",
+    },
+    presentationLaptops: {
+      presentationLaptops: "",
+      presentationLaptopQty: "",
+    },
+    videoPlayback: {
+      videoPlayback: "",
+      videoPlaybackCount: "",
+    },
     videoFormatAspectRatio: "",
-    audienceQa: "",
-    audienceQaMethod: "",
-    cameras: "",
-    camerasQty: "",
-    videoRecording: "",
-    videoRecordingType: "",
-    stageWashLighting: "",
-    stageWashLightingStageSize: "",
+    audienceQa: {
+      audienceQa: "",
+      audienceQaMethod: "",
+    },
+    cameras: {
+      cameras: "",
+      camerasQty: "",
+    },
+    videoRecording: {
+      videoRecording: "",
+      videoRecordingType: "",
+    },
+    stageWashLighting: {
+      stageWashLighting: "",
+      stageWashLightingStageSize: "",
+    },
     backlightingFor: "",
     drapeOrScenicUplighting: "",
     audienceLighting: "",
-    programConfidenceMonitor: "",
-    programConfidenceMonitorQty: "",
-    notesConfidenceMonitor: "",
-    notesConfidenceMonitorQty: "",
+    programConfidenceMonitor: {
+      programConfidenceMonitor: "",
+      programConfidenceMonitorQty: "",
+    },
+    notesConfidenceMonitor: {
+      notesConfidenceMonitor: "",
+      notesConfidenceMonitorQty: "",
+    },
     speakerTimer: "",
     scenicStageDesign: "",
-    numberOfRooms: "",
-    ceilingHeight: "",
-    roomSetup: "",
-    showPrep: "",
-    showSize: "",
-    hasPipeAndDrape: false,
-    showRig: false,
-    rigPowerSize: "",
-    preferredRigging: [],
-    decibelLimitation: "",
-    avSpec: "",
-    avPa: "",
-    mainSound: "",
-    mainSoundSize: "",
-    hearingImpaired: "",
-    preferredA1: "",
-    recordAudio: "",
-    chairs: "",
-    stageRisers: [],
-    backdropsWallSize: "",
-    scenicElements: false,
-    videoStage: false,
-    frontScreen: "",
     contentVideoNeeds: "",
-    stageDimensions: "",
-    confidenceMonitor: "",
-    confidenceMonitorCount: "",
-    projectorsProvided: "",
-    projectorCount: "",
-    cameraPackage: "",
-    cameraCount: "",
-    livestreamNeeded: "",
-    lightingPackage: "",
-    lightingConsole: "",
-    teleprompterNeeded: "",
-    showCallingRequired: "",
   },
   production: {
     scenicStageDesign: "",
@@ -301,16 +295,22 @@ const defaultProposalData: ProposalData = {
     otherRolesNeeded: "",
   },
   venue: {
-    needRiggingForFlown: "",
-    riggingPlotOrSpecs: "",
-    needDedicatedPowerDrops: "",
-    standardAmpWall: "",
+    needRiggingForFlown: {
+      needRiggingForFlown: "",
+      riggingPlotOrSpecs: "",
+    },
+    needDedicatedPowerDrops: {
+      needDedicatedPowerDrops: "",
+      standardAmpWall: "",
+    },
     powerDropsHowMany: "",
   },
   uploads: {
     supportDocuments: [],
-    reviewExistingAvQuote: "",
-    avQuoteFiles: [],
+    reviewExistingAvQuote: {
+      reviewExistingAvQuote: "",
+      avQuoteFiles: [],
+    },
   },
   budget: {
     estimatedAvBudget: "",
@@ -334,14 +334,16 @@ const defaultProposalData: ProposalData = {
 
 const defaultProposalSettings: ProposalSettings = {
   branding: {
-    linkPrefix: "abuco",
+    linkPrefix: "",
     defaultFont: "Poppins",
   },
   proposals: {
     proposalLanguage: "English",
     defaultCurrency: "$",
     expiryDate: "None",
+    priceSeparator: "NONE",
     dateFormat: "MM/DD/YYYY",
+    decimalPrecision: "2",
   },
 };
 
@@ -403,55 +405,23 @@ const normalizeExtracted = (
           "Hybrid",
           "Virtual",
         ]) || raw.event.eventFormat) as EventData["eventFormat"],
-        eventType: matchOption(raw.event.eventType, [
-          "Conference",
-          "Meeting",
-          "Gala",
-          "Trade Show",
-          "Awards Show",
-          "Other",
-        ]),
+        eventType: {
+          eventType: matchOption(
+            typeof raw.event.eventType === "object"
+              ? (raw.event.eventType as { eventType?: string }).eventType
+              : (raw.event.eventType as unknown as string),
+            ["Conference", "Meeting", "Gala", "Trade Show", "Awards Show", "Other"],
+          ),
+          eventTypeOther:
+            typeof raw.event.eventType === "object"
+              ? ((raw.event.eventType as { eventTypeOther?: string }).eventTypeOther ?? "")
+              : "",
+        },
       }
     : undefined,
   roomByRoom: raw.roomByRoom
     ? {
         ...raw.roomByRoom,
-        roomSetup: matchOption(raw.roomByRoom.roomSetup, [
-          "Theatre",
-          "Classroom",
-          "Banquet Rounds",
-          "U-Shape",
-          "Boardroom",
-          "Cocktail",
-          "Custom",
-        ]),
-        avSpec: matchOption(raw.roomByRoom.avSpec, [
-          "Basic",
-          "Standard",
-          "Premium",
-          "Custom",
-        ]),
-        avPa: matchOption(raw.roomByRoom.avPa, [
-          "Yes",
-          "No",
-        ]) as RoomByRoomData["avPa"],
-        mainSound: matchOption(raw.roomByRoom.mainSound, [
-          "L'Acoustics",
-          "d&b audiotechnik",
-          "Meyer Sound",
-          "QSC",
-          "JBL",
-          "Other",
-        ]),
-        hearingImpaired: matchOption(raw.roomByRoom.hearingImpaired, [
-          "Yes",
-          "No",
-        ]) as RoomByRoomData["hearingImpaired"],
-        recordAudio: matchOption(raw.roomByRoom.recordAudio, [
-          "Yes",
-          "No",
-          "Multi-Track",
-        ]) as RoomByRoomData["recordAudio"],
         audioRecording: matchOption(raw.roomByRoom.audioRecording, [
           "Yes",
           "No",
@@ -462,62 +432,42 @@ const normalizeExtracted = (
             "Unique Aspect Ratio",
             "Both",
           ]) ||
-          matchOption(raw.roomByRoom.frontScreen, [
-            "16:9 format",
-            "Unique Aspect Ratio",
-            "Both",
-          ]) ||
           raw.roomByRoom.videoFormatAspectRatio,
-        audienceQa: matchOption(raw.roomByRoom.audienceQa, [
-          "Yes",
-          "No",
-        ]) as RoomByRoomData["audienceQa"],
-        audienceQaMethod: matchOption(raw.roomByRoom.audienceQaMethod, [
-          "Via an App",
-          "Passing a Microphone",
-          "Both",
-        ]),
-        videoRecording: matchOption(raw.roomByRoom.videoRecording, [
-          "Yes",
-          "No",
-        ]) as RoomByRoomData["videoRecording"],
-        videoRecordingType: matchOption(raw.roomByRoom.videoRecordingType, [
-          "Camera Feed Only",
-          "Presentation Only",
-          "Side by Side (Camera and Presentation)",
-          "All The Above",
-        ]),
-        stageWashLighting: matchOption(raw.roomByRoom.stageWashLighting, [
-          "Yes",
-          "No",
-        ]) as RoomByRoomData["stageWashLighting"],
-        frontScreen: matchOption(raw.roomByRoom.frontScreen, [
-          "16:9",
-          "4:3",
-          "Custom Aspect",
-          "Curved",
-          "LED",
-        ]),
-        confidenceMonitor: matchOption(raw.roomByRoom.confidenceMonitor, [
-          "Yes",
-          "No",
-        ]),
-        projectorsProvided: matchOption(raw.roomByRoom.projectorsProvided, [
-          "Yes",
-          "No",
-        ]),
-        livestreamNeeded: matchOption(raw.roomByRoom.livestreamNeeded, [
-          "Yes",
-          "No",
-        ]),
-        teleprompterNeeded: matchOption(raw.roomByRoom.teleprompterNeeded, [
-          "Yes",
-          "No",
-        ]),
-        showCallingRequired: matchOption(raw.roomByRoom.showCallingRequired, [
-          "Yes",
-          "No",
-        ]),
+        audienceQa: ((): RoomByRoomData["audienceQa"] => {
+          const raw_n = raw.roomByRoom!.audienceQa;
+          if (raw_n && typeof raw_n === "object") {
+            const v = raw_n as { audienceQa?: string; audienceQaMethod?: string };
+            return { audienceQa: matchOption(v.audienceQa ?? "", ["Yes", "No"]), audienceQaMethod: matchOption(v.audienceQaMethod ?? "", ["Via an App", "Passing a Microphone", "Both"]) };
+          }
+          const qa = (raw.roomByRoom as Record<string, unknown>);
+          return { audienceQa: matchOption(raw_n as unknown as string ?? "", ["Yes", "No"]), audienceQaMethod: matchOption(qa.audienceQaMethod as string ?? "", ["Via an App", "Passing a Microphone", "Both"]) };
+        })(),
+        videoRecording: ((): RoomByRoomData["videoRecording"] => {
+          const raw_n = raw.roomByRoom!.videoRecording;
+          if (raw_n && typeof raw_n === "object") {
+            const v = raw_n as { videoRecording?: string; videoRecordingType?: string };
+            return { videoRecording: matchOption(v.videoRecording ?? "", ["Yes", "No"]), videoRecordingType: matchOption(v.videoRecordingType ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]) };
+          }
+          const vr = (raw.roomByRoom as Record<string, unknown>);
+          return { videoRecording: matchOption(raw_n as unknown as string ?? "", ["Yes", "No"]), videoRecordingType: matchOption(vr.videoRecordingType as string ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]) };
+        })(),
+        stageWashLighting: ((): RoomByRoomData["stageWashLighting"] => {
+          const raw_n = raw.roomByRoom!.stageWashLighting;
+          if (raw_n && typeof raw_n === "object") {
+            const v = raw_n as { stageWashLighting?: string; stageWashLightingStageSize?: string };
+            return { stageWashLighting: matchOption(v.stageWashLighting ?? "", ["Yes", "No"]), stageWashLightingStageSize: v.stageWashLightingStageSize ?? "" };
+          }
+          const sw = (raw.roomByRoom as Record<string, unknown>);
+          return { stageWashLighting: matchOption(raw_n as unknown as string ?? "", ["Yes", "No"]), stageWashLightingStageSize: sw.stageWashLightingStageSize as string ?? "" };
+        })(),
+        programConfidenceMonitor: normalizeProgramConfidenceMonitor(
+          (raw.roomByRoom as Record<string, unknown>).programConfidenceMonitor,
+          (raw.roomByRoom as Record<string, unknown>).programConfidenceMonitorQty,
+        ),
+        notesConfidenceMonitor: normalizeNotesConfidenceMonitor(
+          (raw.roomByRoom as Record<string, unknown>).notesConfidenceMonitor,
+          (raw.roomByRoom as Record<string, unknown>).notesConfidenceMonitorQty,
+        ),
       }
     : undefined,
   production: raw.production
@@ -554,18 +504,29 @@ const normalizeExtracted = (
     : undefined,
   venue: raw.venue
     ? {
-        ...raw.venue,
-        needRiggingForFlown: matchOption(raw.venue.needRiggingForFlown, [
-          "YES",
-          "NO",
-        ]).toUpperCase() as VenueTechnicalData["needRiggingForFlown"],
-        needDedicatedPowerDrops: matchOption(
-          raw.venue.needDedicatedPowerDrops,
-          ["YES", "NO"],
-        ).toUpperCase() as VenueTechnicalData["needDedicatedPowerDrops"],
-        standardAmpWall:
-          matchOption(raw.venue.standardAmpWall, ["100A", "200A", "400A"]) ||
-          raw.venue.standardAmpWall,
+        powerDropsHowMany: raw.venue.powerDropsHowMany ?? "",
+        needRiggingForFlown: ((): VenueTechnicalData["needRiggingForFlown"] => {
+          const raw_n = raw.venue!.needRiggingForFlown;
+          if (raw_n && typeof raw_n === "object") {
+            const v = raw_n as { needRiggingForFlown?: string; riggingPlotOrSpecs?: string };
+            const matched = matchOption(v.needRiggingForFlown ?? "", ["YES", "NO"]).toUpperCase();
+            return { needRiggingForFlown: (matched || "") as "YES" | "NO" | "", riggingPlotOrSpecs: v.riggingPlotOrSpecs ?? "" };
+          }
+          const matched = matchOption(raw_n as unknown as string ?? "", ["YES", "NO"]).toUpperCase();
+          return { needRiggingForFlown: (matched || "") as "YES" | "NO" | "", riggingPlotOrSpecs: (raw.venue as Record<string, unknown>).riggingPlotOrSpecs as string ?? "" };
+        })(),
+        needDedicatedPowerDrops: ((): VenueTechnicalData["needDedicatedPowerDrops"] => {
+          const raw_n = raw.venue!.needDedicatedPowerDrops;
+          if (raw_n && typeof raw_n === "object") {
+            const v = raw_n as { needDedicatedPowerDrops?: string; standardAmpWall?: string };
+            const amp = matchOption(v.standardAmpWall ?? "", ["15amp", "20amp", "30amp", "100A", "200A", "400A"]) || v.standardAmpWall || "";
+            const matched = matchOption(v.needDedicatedPowerDrops ?? "", ["YES", "NO"]).toUpperCase();
+            return { needDedicatedPowerDrops: (matched || "") as "YES" | "NO" | "", standardAmpWall: amp };
+          }
+          const matched = matchOption(raw_n as unknown as string ?? "", ["YES", "NO"]).toUpperCase();
+          const amp = matchOption((raw.venue as Record<string, unknown>).standardAmpWall as string ?? "", ["15amp", "20amp", "30amp", "100A", "200A", "400A"]) || (raw.venue as Record<string, unknown>).standardAmpWall as string || "";
+          return { needDedicatedPowerDrops: (matched || "") as "YES" | "NO" | "", standardAmpWall: amp };
+        })(),
       }
     : undefined,
   budget: raw.budget
@@ -609,6 +570,22 @@ const normalizeExtracted = (
           ]) || raw.budget.howDidYouHear,
       }
     : undefined,
+  uploads: raw.uploads
+    ? {
+        supportDocuments: Array.isArray(raw.uploads.supportDocuments) ? raw.uploads.supportDocuments : [],
+        reviewExistingAvQuote: ((): UploadsData["reviewExistingAvQuote"] => {
+          const rv = raw.uploads!.reviewExistingAvQuote;
+          if (rv && typeof rv === "object") {
+            const v = rv as { reviewExistingAvQuote?: string; avQuoteFiles?: Array<File | string> };
+            const matched = matchOption(v.reviewExistingAvQuote ?? "", ["YES", "NO"]).toUpperCase();
+            return { reviewExistingAvQuote: (matched || "") as "YES" | "NO" | "", avQuoteFiles: Array.isArray(v.avQuoteFiles) ? v.avQuoteFiles : [] };
+          }
+          const matched = matchOption(rv as unknown as string ?? "", ["YES", "NO"]).toUpperCase();
+          const avFiles = Array.isArray((raw.uploads as Record<string, unknown>).avQuoteFiles) ? (raw.uploads as Record<string, unknown>).avQuoteFiles as Array<File | string> : [];
+          return { reviewExistingAvQuote: (matched || "") as "YES" | "NO" | "", avQuoteFiles: avFiles };
+        })(),
+      }
+    : undefined,
   contact: raw.contact
     ? {
         ...raw.contact,
@@ -622,12 +599,77 @@ type EditableProposalApiResponse = {
   templateId?: ProposalData["templateId"];
   proposalSettings?: Partial<ProposalData["proposalSettings"]>;
   event?: Partial<EventData>;
-  roomByRoom?: Partial<RoomByRoomData>;
+  roomByRoom?: Partial<RoomByRoomData> & {
+    programConfidenceMonitor?: unknown;
+    programConfidenceMonitorQty?: string;
+    notesConfidenceMonitor?: unknown;
+    notesConfidenceMonitorQty?: string;
+  };
   production?: Partial<ProductionSupportData>;
   venue?: Partial<VenueTechnicalData>;
   uploads?: Partial<UploadsData>;
   budget?: Partial<BudgetData>;
   contact?: Partial<ContactData>;
+};
+
+const normalizeProgramConfidenceMonitor = (
+  value: unknown,
+  legacyQty?: unknown,
+): RoomByRoomData["programConfidenceMonitor"] => {
+  const fallbackQty = typeof legacyQty === "string" ? legacyQty : "";
+  if (value && typeof value === "object") {
+    const v = value as Record<string, unknown>;
+    return {
+      programConfidenceMonitor:
+        typeof v.programConfidenceMonitor === "string"
+          ? v.programConfidenceMonitor
+          : "",
+      programConfidenceMonitorQty:
+        typeof v.programConfidenceMonitorQty === "string"
+          ? v.programConfidenceMonitorQty
+          : fallbackQty,
+    };
+  }
+  if (typeof value === "string") {
+    return {
+      programConfidenceMonitor: value,
+      programConfidenceMonitorQty: fallbackQty,
+    };
+  }
+  return {
+    programConfidenceMonitor: "",
+    programConfidenceMonitorQty: fallbackQty,
+  };
+};
+
+const normalizeNotesConfidenceMonitor = (
+  value: unknown,
+  legacyQty?: unknown,
+): RoomByRoomData["notesConfidenceMonitor"] => {
+  const fallbackQty = typeof legacyQty === "string" ? legacyQty : "";
+  if (value && typeof value === "object") {
+    const v = value as Record<string, unknown>;
+    return {
+      notesConfidenceMonitor:
+        typeof v.notesConfidenceMonitor === "string"
+          ? v.notesConfidenceMonitor
+          : "",
+      notesConfidenceMonitorQty:
+        typeof v.notesConfidenceMonitorQty === "string"
+          ? v.notesConfidenceMonitorQty
+          : fallbackQty,
+    };
+  }
+  if (typeof value === "string") {
+    return {
+      notesConfidenceMonitor: value,
+      notesConfidenceMonitorQty: fallbackQty,
+    };
+  }
+  return {
+    notesConfidenceMonitor: "",
+    notesConfidenceMonitorQty: fallbackQty,
+  };
 };
 
 const mapApiProposalToFormData = (
@@ -654,6 +696,14 @@ const mapApiProposalToFormData = (
   roomByRoom: {
     ...defaultProposalData.roomByRoom,
     ...(raw.roomByRoom || {}),
+    programConfidenceMonitor: normalizeProgramConfidenceMonitor(
+      raw.roomByRoom?.programConfidenceMonitor,
+      raw.roomByRoom?.programConfidenceMonitorQty,
+    ),
+    notesConfidenceMonitor: normalizeNotesConfidenceMonitor(
+      raw.roomByRoom?.notesConfidenceMonitor,
+      raw.roomByRoom?.notesConfidenceMonitorQty,
+    ),
   },
   production: {
     ...defaultProposalData.production,
@@ -661,19 +711,30 @@ const mapApiProposalToFormData = (
   },
   venue: {
     ...defaultProposalData.venue,
-    ...(raw.venue || {}),
+    needRiggingForFlown: {
+      needRiggingForFlown: (raw.venue?.needRiggingForFlown as unknown as { needRiggingForFlown?: string })?.needRiggingForFlown ?? (raw.venue?.needRiggingForFlown as unknown as string) ?? "",
+      riggingPlotOrSpecs: (raw.venue?.needRiggingForFlown as unknown as { riggingPlotOrSpecs?: string })?.riggingPlotOrSpecs ?? (raw.venue as unknown as Record<string, string>)?.riggingPlotOrSpecs ?? "",
+    } as VenueTechnicalData["needRiggingForFlown"],
+    needDedicatedPowerDrops: {
+      needDedicatedPowerDrops: (raw.venue?.needDedicatedPowerDrops as unknown as { needDedicatedPowerDrops?: string })?.needDedicatedPowerDrops ?? (raw.venue?.needDedicatedPowerDrops as unknown as string) ?? "",
+      standardAmpWall: (raw.venue?.needDedicatedPowerDrops as unknown as { standardAmpWall?: string })?.standardAmpWall ?? (raw.venue as unknown as Record<string, string>)?.standardAmpWall ?? "",
+    } as VenueTechnicalData["needDedicatedPowerDrops"],
+    powerDropsHowMany: (raw.venue as unknown as Record<string, string>)?.powerDropsHowMany ?? "",
   },
   uploads: {
     ...defaultProposalData.uploads,
     supportDocuments: Array.isArray(raw.uploads?.supportDocuments)
-      ? raw.uploads?.supportDocuments
+      ? raw.uploads!.supportDocuments!
       : defaultProposalData.uploads.supportDocuments,
-    reviewExistingAvQuote:
-      raw.uploads?.reviewExistingAvQuote ??
-      defaultProposalData.uploads.reviewExistingAvQuote,
-    avQuoteFiles: Array.isArray(raw.uploads?.avQuoteFiles)
-      ? raw.uploads?.avQuoteFiles
-      : defaultProposalData.uploads.avQuoteFiles,
+    reviewExistingAvQuote: ((): UploadsData["reviewExistingAvQuote"] => {
+      const rv = raw.uploads?.reviewExistingAvQuote;
+      if (rv && typeof rv === "object") {
+        const v = rv as { reviewExistingAvQuote?: string; avQuoteFiles?: Array<File | string> };
+        return { reviewExistingAvQuote: (v.reviewExistingAvQuote ?? "") as "YES" | "NO" | "", avQuoteFiles: Array.isArray(v.avQuoteFiles) ? v.avQuoteFiles : [] };
+      }
+      const avFiles = Array.isArray((raw.uploads as Record<string, unknown>)?.avQuoteFiles) ? (raw.uploads as Record<string, unknown>).avQuoteFiles as Array<File | string> : [];
+      return { reviewExistingAvQuote: ((rv as unknown as string) ?? "") as "YES" | "NO" | "", avQuoteFiles: avFiles };
+    })(),
   },
   budget: {
     ...defaultProposalData.budget,
@@ -730,7 +791,9 @@ const AddNewProposal = ({
             proposalLanguage?: string;
             defaultCurrency?: string;
             expiryDate?: string;
+            priceSeparator?: string;
             dateFormat?: string;
+            decimalPrecision?: string;
           };
         };
 
@@ -751,9 +814,15 @@ const AddNewProposal = ({
             expiryDate:
               data.proposals?.expiryDate?.trim() ||
               defaultProposalSettings.proposals.expiryDate,
+            priceSeparator:
+              data.proposals?.priceSeparator?.trim() ||
+              defaultProposalSettings.proposals.priceSeparator,
             dateFormat:
               data.proposals?.dateFormat?.trim() ||
               defaultProposalSettings.proposals.dateFormat,
+            decimalPrecision:
+              data.proposals?.decimalPrecision?.trim() ||
+              defaultProposalSettings.proposals.decimalPrecision,
           },
         });
       }
@@ -774,6 +843,8 @@ const AddNewProposal = ({
         defaultFont: proposalSettings.branding.defaultFont,
         proposalLanguage: proposalSettings.proposals.proposalLanguage,
         defaultCurrency: proposalSettings.proposals.defaultCurrency,
+        priceSeparator: proposalSettings.proposals.priceSeparator,
+        decimalPrecision: proposalSettings.proposals.decimalPrecision,
         dateFormat: proposalSettings.proposals.dateFormat,
       },
     }));
@@ -886,27 +957,26 @@ const AddNewProposal = ({
   };
 
   const isVenueStepValid = () => {
-    const { needRiggingForFlown, needDedicatedPowerDrops } = proposalData.venue;
-    if (!needRiggingForFlown.trim() || !needDedicatedPowerDrops.trim()) {
+    const { needRiggingForFlown, needDedicatedPowerDrops, powerDropsHowMany } = proposalData.venue;
+    if (!needRiggingForFlown.needRiggingForFlown.trim() || !needDedicatedPowerDrops.needDedicatedPowerDrops.trim()) {
       return false;
     }
-    if (needDedicatedPowerDrops === "YES") {
-      const { standardAmpWall, powerDropsHowMany } = proposalData.venue;
+    if (needDedicatedPowerDrops.needDedicatedPowerDrops === "YES") {
       return (
-        standardAmpWall.trim().length > 0 && powerDropsHowMany.trim().length > 0
+        needDedicatedPowerDrops.standardAmpWall.trim().length > 0 &&
+        powerDropsHowMany.trim().length > 0
       );
     }
     return true;
   };
 
   const isUploadsStepValid = () => {
-    const { reviewExistingAvQuote, avQuoteFiles, supportDocuments } =
-      proposalData.uploads;
-    if (!reviewExistingAvQuote.trim()) {
+    const { reviewExistingAvQuote, supportDocuments } = proposalData.uploads;
+    if (!reviewExistingAvQuote.reviewExistingAvQuote.trim()) {
       return false;
     }
-    if (reviewExistingAvQuote === "YES") {
-      return avQuoteFiles.length > 0;
+    if (reviewExistingAvQuote.reviewExistingAvQuote === "YES") {
+      return reviewExistingAvQuote.avQuoteFiles.length > 0;
     }
     return supportDocuments.length > 0;
   };
@@ -950,54 +1020,41 @@ const AddNewProposal = ({
   const normalizeRoomByRoomForSubmit = (
     roomByRoom: RoomByRoomData,
   ): RoomByRoomData => {
-    type YesNoField =
-      | "wirelessMics"
-      | "largeMonitorsOrScreenProjector"
-      | "clientProvideOwnPresentationLaptop"
-      | "presentationLaptops"
-      | "videoPlayback"
-      | "cameras"
-      | "programConfidenceMonitor"
-      | "notesConfidenceMonitor";
-    type QtyField =
-      | "wirelessMicsQty"
-      | "largeMonitorsQty"
-      | "clientLaptopQty"
-      | "presentationLaptopQty"
-      | "videoPlaybackCount"
-      | "camerasQty"
-      | "programConfidenceMonitorQty"
-      | "notesConfidenceMonitorQty";
+    const normalized = { ...roomByRoom };
 
-    const yesNoQtyPairs: Array<[YesNoField, QtyField]> = [
-      ["wirelessMics", "wirelessMicsQty"],
-      ["largeMonitorsOrScreenProjector", "largeMonitorsQty"],
-      ["clientProvideOwnPresentationLaptop", "clientLaptopQty"],
-      ["presentationLaptops", "presentationLaptopQty"],
-      ["videoPlayback", "videoPlaybackCount"],
-      ["cameras", "camerasQty"],
-      ["programConfidenceMonitor", "programConfidenceMonitorQty"],
-      ["notesConfidenceMonitor", "notesConfidenceMonitorQty"],
-    ];
-
-    const normalized = yesNoQtyPairs.reduce((acc, [valueField, qtyField]) => {
-      if (roomByRoom[valueField] !== "Yes") {
-        acc[qtyField] = "";
-      }
-      return acc;
-    }, { ...roomByRoom } as RoomByRoomData);
-
-    if (normalized.wirelessMics !== "Yes") {
-      normalized.wirelessMicsType = "";
+    // Clear nested qty fields when parent is not "Yes"
+    if (normalized.wirelessMics.wirelessMics !== "Yes") {
+      normalized.wirelessMics = { ...normalized.wirelessMics, wirelessMicsQty: "", wirelessMicsType: "" };
     }
-    if (normalized.audienceQa !== "Yes") {
-      normalized.audienceQaMethod = "";
+    if (normalized.largeMonitorsOrScreenProjector.largeMonitorsOrScreenProjector !== "Yes") {
+      normalized.largeMonitorsOrScreenProjector = { ...normalized.largeMonitorsOrScreenProjector, largeMonitorsQty: "" };
     }
-    if (normalized.videoRecording !== "Yes") {
-      normalized.videoRecordingType = "";
+    if (normalized.clientProvideOwnPresentationLaptop.clientProvideOwnPresentationLaptop !== "Yes") {
+      normalized.clientProvideOwnPresentationLaptop = { ...normalized.clientProvideOwnPresentationLaptop, clientLaptopQty: "" };
     }
-    if (normalized.stageWashLighting !== "Yes") {
-      normalized.stageWashLightingStageSize = "";
+    if (normalized.presentationLaptops.presentationLaptops !== "Yes") {
+      normalized.presentationLaptops = { ...normalized.presentationLaptops, presentationLaptopQty: "" };
+    }
+    if (normalized.videoPlayback.videoPlayback !== "Yes") {
+      normalized.videoPlayback = { ...normalized.videoPlayback, videoPlaybackCount: "" };
+    }
+    if (normalized.cameras.cameras !== "Yes") {
+      normalized.cameras = { ...normalized.cameras, camerasQty: "" };
+    }
+    if (normalized.audienceQa.audienceQa !== "Yes") {
+      normalized.audienceQa = { ...normalized.audienceQa, audienceQaMethod: "" };
+    }
+    if (normalized.videoRecording.videoRecording !== "Yes") {
+      normalized.videoRecording = { ...normalized.videoRecording, videoRecordingType: "" };
+    }
+    if (normalized.stageWashLighting.stageWashLighting !== "Yes") {
+      normalized.stageWashLighting = { ...normalized.stageWashLighting, stageWashLightingStageSize: "" };
+    }
+    if (normalized.programConfidenceMonitor.programConfidenceMonitor !== "Yes") {
+      normalized.programConfidenceMonitor = { ...normalized.programConfidenceMonitor, programConfidenceMonitorQty: "" };
+    }
+    if (normalized.notesConfidenceMonitor.notesConfidenceMonitor !== "Yes") {
+      normalized.notesConfidenceMonitor = { ...normalized.notesConfidenceMonitor, notesConfidenceMonitorQty: "" };
     }
 
     return normalized;
@@ -1024,11 +1081,12 @@ const AddNewProposal = ({
         defaultFont: proposalSettings.branding.defaultFont,
         proposalLanguage: proposalSettings.proposals.proposalLanguage,
         defaultCurrency: proposalSettings.proposals.defaultCurrency,
+        priceSeparator: proposalSettings.proposals.priceSeparator,
+        decimalPrecision: proposalSettings.proposals.decimalPrecision,
         dateFormat: proposalSettings.proposals.dateFormat,
       },
       roomByRoom: normalizeRoomByRoomForSubmit(proposalData.roomByRoom),
       uploads: {
-        ...proposalData.uploads,
         supportDocuments: proposalData.uploads.supportDocuments
           .map((f) => (typeof f === "string" ? f : f?.name || ""))
           .filter(
@@ -1038,15 +1096,18 @@ const AddNewProposal = ({
               f !== "[ {} ]" &&
               f !== "[object Object]",
           ),
-        avQuoteFiles: proposalData.uploads.avQuoteFiles
-          .map((f) => (typeof f === "string" ? f : f?.name || ""))
-          .filter(
-            (f) =>
-              typeof f === "string" &&
-              f.trim() !== "" &&
-              f !== "[ {} ]" &&
-              f !== "[object Object]",
-          ),
+        reviewExistingAvQuote: {
+          reviewExistingAvQuote: proposalData.uploads.reviewExistingAvQuote.reviewExistingAvQuote,
+          avQuoteFiles: proposalData.uploads.reviewExistingAvQuote.avQuoteFiles
+            .map((f) => (typeof f === "string" ? f : f?.name || ""))
+            .filter(
+              (f) =>
+                typeof f === "string" &&
+                f.trim() !== "" &&
+                f !== "[ {} ]" &&
+                f !== "[object Object]",
+            ),
+        },
       },
     };
 

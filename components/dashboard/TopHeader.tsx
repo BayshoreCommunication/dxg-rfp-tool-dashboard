@@ -14,7 +14,6 @@ const TopHeader = () => {
     return () => clearInterval(timer);
   }, []);
 
-
   const formattedDate = currentTime
     ? currentTime.toLocaleDateString("en-US", {
         weekday: "long",
@@ -66,17 +65,24 @@ const TopHeader = () => {
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
           {/* Notification bell */}
-          <button className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
-            <Settings2 size={18} className="group-hover:scale-110 transition-transform duration-200" />
+          <Link
+            href={"/settings"}
+            className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 hover:shadow-md transition-all duration-200 group"
+          >
+            <Settings2
+              size={18}
+              className="group-hover:scale-110 transition-transform duration-200"
+            />
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 border-2 border-white" />
-          </button>
+          </Link>
 
           {/* CTA Button */}
           <Link
             href="/proposals/add-new-proposal"
             className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_24px_rgba(45,198,245,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(45,198,245,0.55)] active:translate-y-0 cursor-pointer"
             style={{
-              background: "linear-gradient(135deg, #22d3ee 0%, #0ea5e9 50%, #6366f1 100%)",
+              background:
+                "linear-gradient(135deg, #22d3ee 0%, #0ea5e9 50%, #6366f1 100%)",
             }}
           >
             {/* Shine sweep */}

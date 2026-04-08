@@ -1,21 +1,20 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import BrandingSettings from "./BrandingSettings";
-import ProposalsSettings from "./ProposalsSettings";
-import SignaturesSettings from "./SignaturesSettings";
-import TopHeader from "./TopHeaser";
 import {
   getSettingsAction,
   updateSettingsAction,
 } from "@/app/actions/settings";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import BrandingSettings from "./BrandingSettings";
+import ProposalsSettings from "./ProposalsSettings";
+import SignaturesSettings from "./SignaturesSettings";
+import TopHeader from "./TopHeaser";
 
 export type BrandingSettingsForm = {
   brandName: string;
   linkPrefix: string;
   defaultFont: string;
   signatureColor: string;
-  buttonTextColor: string;
   logoFile: string | null;
 };
 
@@ -29,20 +28,16 @@ export type ProposalsSettingsForm = {
   contacts: {
     email: { enabled: boolean; value: string };
     call: { enabled: boolean; value: string };
-    whatsapp: { enabled: boolean; value: string };
   };
-  redirectUrl: string;
-  redirectDelay: string;
-  downloadPreviewTop: string;
+  downloadPreview: string;
   teammateEmail: string;
-  downloadPreviewBottom: string;
-  enableAiAssistant: boolean;
 };
 
 export type SignaturesSettingsForm = {
-  signatureType: string;
-  prospectOptions: string[];
-  signatureText: string;
+  signatureType: string;       // "Upload" | "Draw"
+  signatureImageUrl: string;   // used when type = "Upload" (base64 or remote URL)
+  signatureText: string;       // used when type = "Draw" (typed name)
+  signatureStyle: string;      // used when type = "Draw" (font family)
 };
 
 export type SettingsForm = {
@@ -55,11 +50,10 @@ const SettingsDetials = () => {
   const defaultSettings = useMemo<SettingsForm>(
     () => ({
       branding: {
-        brandName: "Abuco",
-        linkPrefix: "abuco",
+        brandName: "",
+        linkPrefix: "",
         defaultFont: "Poppins",
         signatureColor: "#2DC6F5",
-        buttonTextColor: "#FFFFFF",
         logoFile: null,
       },
       proposals: {
@@ -70,21 +64,17 @@ const SettingsDetials = () => {
         dateFormat: "MM/DD/YYYY",
         decimalPrecision: "2",
         contacts: {
-          email: { enabled: true, value: "ui.abukawsar@gmail.com" },
-          call: { enabled: false, value: "+12163547758" },
-          whatsapp: { enabled: false, value: "+12163547758" },
+          email: { enabled: true, value: "" },
+          call: { enabled: false, value: "" },
         },
-        redirectUrl: "",
-        redirectDelay: "0",
-        downloadPreviewTop: "Yes",
+        downloadPreview: "Yes",
         teammateEmail: "",
-        downloadPreviewBottom: "Yes",
-        enableAiAssistant: true,
       },
       signatures: {
-        signatureType: "Type",
-        prospectOptions: ["Type", "Upload", "Draw"],
-        signatureText: "ui.abukawsar",
+        signatureType: "Upload",
+        signatureImageUrl: "",
+        signatureText: "",
+        signatureStyle: "",
       },
     }),
     [],
@@ -140,7 +130,7 @@ const SettingsDetials = () => {
   };
 
   return (
-    <div className="space-y-8 px-6">
+    <div className="space-y-6 px-6">
       <TopHeader />
 
       {loading ? (

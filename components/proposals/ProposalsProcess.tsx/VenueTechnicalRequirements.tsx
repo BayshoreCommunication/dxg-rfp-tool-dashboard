@@ -35,10 +35,14 @@ const VenueTechnicalRequirements = ({
 
   const handleClear = () => {
     onChange({
-      needRiggingForFlown: "",
-      riggingPlotOrSpecs: "",
-      needDedicatedPowerDrops: "",
-      standardAmpWall: "",
+      needRiggingForFlown: {
+        needRiggingForFlown: "",
+        riggingPlotOrSpecs: "",
+      },
+      needDedicatedPowerDrops: {
+        needDedicatedPowerDrops: "",
+        standardAmpWall: "",
+      },
       powerDropsHowMany: "",
     });
   };
@@ -57,7 +61,7 @@ const VenueTechnicalRequirements = ({
       <div className="flex-1 px-8 py-8 space-y-10">
 
         {/* Need Rigging for Flown Elements? */}
-        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.needRiggingForFlown ? "bg-red-50" : ""}`}>
+        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.needRiggingForFlown.needRiggingForFlown ? "bg-red-50" : ""}`}>
           <label className={labelClass}>Need Rigging for Flown Elements? <span className="text-red-500">*</span></label>
           <div className="flex gap-3">
             {(["YES", "NO"] as const).map((opt) => (
@@ -65,12 +69,16 @@ const VenueTechnicalRequirements = ({
                 key={opt}
                 name="needRiggingForFlown"
                 value={opt}
-                checked={data.needRiggingForFlown === opt}
-                onChange={() => onChange({ needRiggingForFlown: opt })}
+                checked={data.needRiggingForFlown.needRiggingForFlown === opt}
+                onChange={() =>
+                  onChange({
+                    needRiggingForFlown: { ...data.needRiggingForFlown, needRiggingForFlown: opt },
+                  })
+                }
               />
             ))}
           </div>
-          {showErrors && !data.needRiggingForFlown && (
+          {showErrors && !data.needRiggingForFlown.needRiggingForFlown && (
             <p className="mt-2 text-sm text-red-500 normal-case">Please select an option.</p>
           )}
         </div>
@@ -84,13 +92,17 @@ const VenueTechnicalRequirements = ({
             id="riggingPlot"
             className={inputClass}
             placeholder="Describe or paste link..."
-            value={data.riggingPlotOrSpecs}
-            onChange={(e) => onChange({ riggingPlotOrSpecs: e.target.value })}
+            value={data.needRiggingForFlown.riggingPlotOrSpecs}
+            onChange={(e) =>
+              onChange({
+                needRiggingForFlown: { ...data.needRiggingForFlown, riggingPlotOrSpecs: e.target.value },
+              })
+            }
           />
         </div>
 
         {/* Need Dedicated Power Drops? */}
-        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.needDedicatedPowerDrops ? "bg-red-50" : ""}`}>
+        <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.needDedicatedPowerDrops.needDedicatedPowerDrops ? "bg-red-50" : ""}`}>
           <label className={labelClass}>Need Dedicated Power Drops? <span className="text-red-500">*</span></label>
           <div className="flex gap-3 mb-5">
             {(["YES", "NO"] as const).map((opt) => (
@@ -98,30 +110,34 @@ const VenueTechnicalRequirements = ({
                 key={opt}
                 name="needDedicatedPowerDrops"
                 value={opt}
-                checked={data.needDedicatedPowerDrops === opt}
-                onChange={() => onChange({ needDedicatedPowerDrops: opt })}
+                checked={data.needDedicatedPowerDrops.needDedicatedPowerDrops === opt}
+                onChange={() =>
+                  onChange({
+                    needDedicatedPowerDrops: { ...data.needDedicatedPowerDrops, needDedicatedPowerDrops: opt },
+                  })
+                }
               />
             ))}
           </div>
-          {showErrors && !data.needDedicatedPowerDrops && (
+          {showErrors && !data.needDedicatedPowerDrops.needDedicatedPowerDrops && (
             <p className="mt-2 text-sm text-red-500 normal-case">Please select an option.</p>
           )}
 
           {/* Amp Wall selector — shown when YES */}
-          {data.needDedicatedPowerDrops === "YES" && (
-            <div className={`rounded-md border ${showErrors && (!data.standardAmpWall || !data.powerDropsHowMany) ? "border-red-500" : "border-[#d7dce3]"} bg-white overflow-hidden`} ref={ampRef}>
+          {data.needDedicatedPowerDrops.needDedicatedPowerDrops === "YES" && (
+            <div className={`rounded-md border ${showErrors && (!data.needDedicatedPowerDrops.standardAmpWall || !data.powerDropsHowMany) ? "border-red-500" : "border-[#d7dce3]"} bg-white overflow-hidden`} ref={ampRef}>
               {/* Dropdown trigger */}
               <button
                 type="button"
                 onClick={() => setAmpOpen((p) => !p)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-50 transition-colors ${showErrors && !data.standardAmpWall ? "bg-red-50/50" : ""}`}
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-50 transition-colors ${showErrors && !data.needDedicatedPowerDrops.standardAmpWall ? "bg-red-50/50" : ""}`}
               >
-                <span className={data.standardAmpWall ? "text-[#1f2d5d]" : ""}>
-                  {data.standardAmpWall || "Select Standard AMP Wall"}
+                <span className={data.needDedicatedPowerDrops.standardAmpWall ? "text-[#1f2d5d]" : ""}>
+                  {data.needDedicatedPowerDrops.standardAmpWall || "Select Standard AMP Wall"}
                 </span>
                 <ChevronDown size={16} className="text-primary flex-shrink-0" />
               </button>
-              {showErrors && !data.standardAmpWall && (
+              {showErrors && !data.needDedicatedPowerDrops.standardAmpWall && (
                 <div className="px-4 pb-2">
                   <p className="text-sm text-red-500 normal-case">Standard AMP Wall is required.</p>
                 </div>
@@ -138,12 +154,12 @@ const VenueTechnicalRequirements = ({
                       <span>{opt}</span>
                       <span
                         className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                          data.standardAmpWall === opt
+                          data.needDedicatedPowerDrops.standardAmpWall === opt
                             ? "bg-[#35bdf2]"
                             : "border-2 border-[#d7dce3]"
                         }`}
                       >
-                        {data.standardAmpWall === opt && (
+                        {data.needDedicatedPowerDrops.standardAmpWall === opt && (
                           <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                             <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
@@ -152,9 +168,9 @@ const VenueTechnicalRequirements = ({
                       <input
                         type="radio"
                         className="sr-only"
-                        checked={data.standardAmpWall === opt}
+                        checked={data.needDedicatedPowerDrops.standardAmpWall === opt}
                         onChange={() => {
-                          onChange({ standardAmpWall: opt });
+                          onChange({ needDedicatedPowerDrops: { ...data.needDedicatedPowerDrops, standardAmpWall: opt } });
                           setAmpOpen(false);
                         }}
                       />

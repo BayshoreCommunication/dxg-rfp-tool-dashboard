@@ -1,32 +1,94 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import TemplateOne, { type TemplateOneData } from "@/components/proposalTemplate/TemplateOne";
-import TemplateTwo from "@/components/proposalTemplate/TemplateTwo";
 import {
   getProposalByIdAction,
   incrementProposalViewsAction,
   updateProposalMetaAction,
   updateProposalStatusAction,
 } from "@/app/actions/proposals";
+import TemplateOne, {
+  type TemplateOneData,
+} from "@/components/proposalTemplate/TemplateOne";
+import TemplateTwo from "@/components/proposalTemplate/TemplateTwo";
+import { Inter, Poppins, Roboto } from "next/font/google";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-proposal-inter",
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  variable: "--font-proposal-poppins",
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  variable: "--font-proposal-roboto",
+  weight: ["400", "500", "700", "900"],
+  display: "swap",
+});
+
+type ProposalFont = "Inter" | "Poppins" | "Roboto";
+
+type LegacyProposalSettings = {
+  linkPrefix?: string;
+  defaultFont?: ProposalFont;
+  proposalLanguage?: string;
+  defaultCurrency?: string;
+  dateFormat?: string;
+};
+
+type ProposalSettingSnapshot = {
+  branding?: {
+    brandName?: string;
+    linkPrefix?: string;
+    defaultFont?: ProposalFont | string;
+    signatureColor?: string;
+    logoFile?: string | null;
+  };
+  proposals?: {
+    proposalLanguage?: string;
+    defaultCurrency?: string;
+    dateFormat?: string;
+    downloadPreview?: string;
+    contacts?: {
+      email?: { enabled?: boolean; value?: string };
+      call?: { enabled?: boolean; value?: string };
+    };
+  };
+  signatures?: {
+    signatureType?: string;
+    signatureImageUrl?: string;
+    signatureText?: string;
+    signatureStyle?: string;
+  };
+};
 
 type ProposalData = {
   _id: string;
   createdAt?: string;
   updatedAt?: string;
   status?: string;
+  isActive?: boolean;
   isAccepted?: boolean;
   isOpen?: boolean;
   viewsCount?: number;
   proposalLink?: string;
   templateId?: "template-one" | "template-two";
-  proposalSettings?: {
-    linkPrefix?: string;
-    defaultFont?: "Inter" | "Poppins" | "Roboto";
-    proposalLanguage?: string;
-    defaultCurrency?: string;
-    dateFormat?: string;
-  };
+  proposalSettings?: LegacyProposalSettings;
+  proposalSetting?: ProposalSettingSnapshot;
   event?: {
     eventName?: string;
     startDate?: string;
@@ -34,8 +96,7 @@ type ProposalData = {
     venue?: string;
     attendees?: string;
     eventFormat?: string;
-    eventType?: string;
-    eventTypeOther?: string;
+    eventType?: { eventType?: string; eventTypeOther?: string } | string;
   };
   roomByRoom?: {
     roomFunction?: string;
@@ -45,36 +106,42 @@ type ProposalData = {
     showStartDateTime?: string;
     showEndDateTime?: string;
     audioSystemForHowManyPpl?: string;
-    podiumMic?: string;
+    podiumMic?: any;
     podiumMicQty?: string;
-    wirelessMics?: string;
+    wirelessMics?: any;
     wirelessMicsQty?: string;
     wirelessMicsType?: string;
     audioRecording?: string;
-    largeMonitorsOrScreenProjector?: string;
+    largeMonitorsOrScreenProjector?: any;
     largeMonitorsQty?: string;
     ledWall?: string;
-    clientProvideOwnPresentationLaptop?: string;
+    clientProvideOwnPresentationLaptop?: any;
     clientLaptopQty?: string;
-    presentationLaptops?: string;
+    presentationLaptops?: any;
     presentationLaptopQty?: string;
-    videoPlayback?: string;
+    videoPlayback?: any;
     videoPlaybackCount?: string;
     videoFormatAspectRatio?: string;
-    audienceQa?: string;
+    audienceQa?: any;
     audienceQaMethod?: string;
-    cameras?: string;
+    cameras?: any;
     camerasQty?: string;
-    videoRecording?: string;
+    videoRecording?: any;
     videoRecordingType?: string;
-    stageWashLighting?: string;
+    stageWashLighting?: any;
     stageWashLightingStageSize?: string;
     backlightingFor?: string;
     drapeOrScenicUplighting?: string;
     audienceLighting?: string;
-    programConfidenceMonitor?: string;
+    programConfidenceMonitor?: any;
     programConfidenceMonitorQty?: string;
-    notesConfidenceMonitor?: string;
+
+    notesConfidenceMonitor?:
+      | string
+      | {
+          notesConfidenceMonitor?: string;
+          notesConfidenceMonitorQty?: string;
+        };
     notesConfidenceMonitorQty?: string;
     speakerTimer?: string;
     scenicStageDesign?: string;
@@ -97,8 +164,8 @@ type ProposalData = {
     otherRolesNeeded?: string;
   };
   venue?: {
-    needRiggingForFlown?: string;
-    needDedicatedPowerDrops?: string;
+    needRiggingForFlown?: any;
+    needDedicatedPowerDrops?: any;
     standardAmpWall?: string;
     powerDropsHowMany?: string;
   };
@@ -123,7 +190,8 @@ const extractObjectId = (slugOrId?: string | null) => {
   if (!slugOrId || typeof slugOrId !== "string") {
     return "";
   }
-  const match = slugOrId.match(/[a-fA-F0-9]{24}$/);
+  // Match any 24-character hex sequence in the string
+  const match = slugOrId.match(/[a-fA-F0-9]{24}/);
   return match?.[0] || "";
 };
 
@@ -158,43 +226,171 @@ const splitTitle = (name: string) => {
   };
 };
 
+const normalizeProposalFont = (font?: string): ProposalFont => {
+  if (font === "Inter" || font === "Poppins" || font === "Roboto") {
+    return font;
+  }
+  return "Poppins";
+};
+
+const normalizeHexColor = (value?: string) => {
+  const raw = (value || "").trim();
+  const cleaned = raw.startsWith("#") ? raw.slice(1) : raw;
+  if (/^[0-9a-fA-F]{6}$/.test(cleaned)) return `#${cleaned.toUpperCase()}`;
+  if (/^[0-9a-fA-F]{3}$/.test(cleaned)) {
+    return `#${cleaned
+      .split("")
+      .map((char) => `${char}${char}`)
+      .join("")
+      .toUpperCase()}`;
+  }
+  return "#2DC6F5";
+};
+
+const formatDateByPattern = (value?: string, dateFormat?: string) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear());
+
+  switch ((dateFormat || "").trim().toUpperCase()) {
+    case "MM/DD/YYYY":
+      return `${month}/${day}/${year}`;
+    case "DD/MM/YYYY":
+      return `${day}/${month}/${year}`;
+    case "YYYY-MM-DD":
+      return `${year}-${month}-${day}`;
+    default:
+      return formatDate(value);
+  }
+};
+
+const normalizeProposalSettings = (proposal?: ProposalData) => {
+  const legacy = proposal?.proposalSettings;
+  const snapshot = proposal?.proposalSetting;
+  const defaultFont = normalizeProposalFont(
+    legacy?.defaultFont || snapshot?.branding?.defaultFont,
+  );
+
+  return {
+    linkPrefix:
+      legacy?.linkPrefix?.trim() ||
+      snapshot?.branding?.linkPrefix?.trim() ||
+      "",
+    defaultFont,
+    proposalLanguage:
+      legacy?.proposalLanguage?.trim() ||
+      snapshot?.proposals?.proposalLanguage?.trim() ||
+      "English",
+    defaultCurrency:
+      legacy?.defaultCurrency?.trim() ||
+      snapshot?.proposals?.defaultCurrency?.trim() ||
+      "USD",
+    dateFormat:
+      legacy?.dateFormat?.trim() ||
+      snapshot?.proposals?.dateFormat?.trim() ||
+      "",
+    downloadPreview: snapshot?.proposals?.downloadPreview?.trim() || "Yes",
+    brandName: snapshot?.branding?.brandName?.trim() || "",
+    signatureColor: snapshot?.branding?.signatureColor?.trim() || "#2DC6F5",
+    contacts: {
+      emailEnabled: snapshot?.proposals?.contacts?.email?.enabled,
+      emailValue: snapshot?.proposals?.contacts?.email?.value?.trim() || "",
+      callEnabled: snapshot?.proposals?.contacts?.call?.enabled,
+      callValue: snapshot?.proposals?.contacts?.call?.value?.trim() || "",
+    },
+    signatures: {
+      signatureType: snapshot?.signatures?.signatureType?.trim() || "",
+      signatureImageUrl: snapshot?.signatures?.signatureImageUrl?.trim() || "",
+      signatureText: snapshot?.signatures?.signatureText?.trim() || "",
+      signatureStyle: snapshot?.signatures?.signatureStyle?.trim() || "",
+    },
+  };
+};
+
 const mapProposalToTemplate = (
   proposal: ProposalData,
   proposalLanguage = "English",
+  options?: {
+    dateFormat?: string;
+    defaultCurrency?: string;
+    signatureColor?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    signature?: {
+      type?: string;
+      imageUrl?: string;
+      text?: string;
+      style?: string;
+    };
+    brandName?: string;
+  },
 ): Partial<TemplateOneData> => {
   const language = proposalLanguage.trim().toLowerCase();
   const t = (english: string, spanish: string, french = english) =>
-    language === "spanish"
-      ? spanish
-      : language === "french"
-        ? french
-        : english;
+    language === "spanish" ? spanish : language === "french" ? french : english;
   const pick = (value?: string) => (value && value.trim() ? value.trim() : "");
   const eventName =
     proposal.event?.eventName?.trim() ||
     t("Event Proposal", "Propuesta del Evento", "Proposition d'evenement");
   const title = splitTitle(eventName);
   const organization = pick(proposal.contact?.contactOrganization);
-  const createdLabel = formatDate(proposal.createdAt);
-  const start = formatDate(proposal.event?.startDate);
-  const end = formatDate(proposal.event?.endDate);
+  const createdLabel = formatDateByPattern(
+    proposal.createdAt,
+    options?.dateFormat,
+  );
+  const start = formatDateByPattern(
+    proposal.event?.startDate,
+    options?.dateFormat,
+  );
+  const end = formatDateByPattern(proposal.event?.endDate, options?.dateFormat);
   const fullName =
     `${proposal.contact?.contactFirstName || ""} ${proposal.contact?.contactLastName || ""}`.trim();
   const contactTitle = pick(proposal.contact?.contactTitle);
   const fallbackText = t("Not specified", "No especificado", "Non specifie");
+  const resolvedContactEmail =
+    options?.contactEmail || pick(proposal.contact?.contactEmail);
+  const resolvedContactPhone =
+    options?.contactPhone || pick(proposal.contact?.contactPhone);
+  const budgetCurrency = (options?.defaultCurrency || "").trim();
+  const formatBudgetDisplay = (value?: string) => {
+    const text = pick(value);
+    if (!text) return "";
+    if (!budgetCurrency) return text;
+    if (text.toUpperCase().includes(budgetCurrency.toUpperCase())) return text;
+    if (!/\d/.test(text)) return text;
+    return `${budgetCurrency} ${text}`;
+  };
 
-  const formatYesNoWithQty = (value?: string, qty?: string) => {
-    const safeValue = pick(value);
-    const safeQty = pick(qty);
+  const formatYesNoWithQty = (value?: any, qtyField?: string, oldQty?: string) => {
+    let safeValue = "";
+    let safeQty = "";
+    if (typeof value === "object" && value !== null) {
+       safeValue = pick(value[Object.keys(value)[0]]);
+       safeQty = qtyField ? pick(value[qtyField]) : "";
+    } else {
+       safeValue = pick(value);
+       safeQty = pick(oldQty);
+    }
     if (!safeValue) return "";
     if (safeValue === "Yes" && safeQty) {
       return `Yes (${safeQty})`;
     }
     return safeValue;
   };
-  const formatYesNoWithDetail = (value?: string, detail?: string) => {
-    const safeValue = pick(value);
-    const safeDetail = pick(detail);
+  const formatYesNoWithDetail = (value?: any, detailField?: string, oldDetail?: string) => {
+    let safeValue = "";
+    let safeDetail = "";
+    if (typeof value === "object" && value !== null) {
+       safeValue = pick(value[Object.keys(value)[0]]);
+       safeDetail = detailField ? pick(value[detailField]) : "";
+    } else {
+       safeValue = pick(value);
+       safeDetail = pick(oldDetail);
+    }
     if (!safeValue) return "";
     if (safeValue === "Yes" && safeDetail) {
       return `Yes (${safeDetail})`;
@@ -202,52 +398,6 @@ const mapProposalToTemplate = (
     return safeValue;
   };
 
-  const services: Array<{ title: string; text: string }> = [];
-  const eventProfile = [
-    pick(proposal.event?.eventFormat)
-      ? `${pick(proposal.event?.eventFormat)} ${t("format", "formato")}`
-      : "",
-    pick(proposal.event?.attendees)
-      ? `${pick(proposal.event?.attendees)} ${t("attendees", "asistentes")}`
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" • ");
-  if (eventProfile) {
-    services.push({ title: "Event Profile", text: eventProfile });
-  }
-
-  const venueSetup = [pick(proposal.event?.venue), pick(proposal.roomByRoom?.roomSetup)]
-    .filter(Boolean)
-    .join(" • ");
-  if (venueSetup) {
-    services.push({ title: "Venue & Setup", text: venueSetup });
-  }
-
-  const crewList = toListText(proposal.production?.showCrewNeeded);
-  const avProduction = [
-    pick(proposal.roomByRoom?.avSpec),
-    crewList ? `${t("Crew", "Equipo")}: ${crewList}` : "",
-  ]
-    .filter(Boolean)
-    .join(" • ");
-  if (avProduction) {
-    services.push({ title: "AV & Production", text: avProduction });
-  }
-
-  const powerRigging = [
-    pick(proposal.venue?.needRiggingForFlown)
-      ? `${t("Rigging", "Rigging")}: ${pick(proposal.venue?.needRiggingForFlown)}`
-      : "",
-    pick(proposal.venue?.needDedicatedPowerDrops)
-      ? `${t("Dedicated Power", "Energía dedicada")}: ${pick(proposal.venue?.needDedicatedPowerDrops)}`
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" • ");
-  if (powerRigging) {
-    services.push({ title: "Power & Rigging", text: powerRigging });
-  }
 
   const metaChips = [
     proposal.status ? `${t("Status", "Estado")}: ${proposal.status}` : "",
@@ -258,23 +408,35 @@ const mapProposalToTemplate = (
       ? `${t("Format", "Formato")}: ${proposal.event.eventFormat}`
       : "",
     start ? `${t("Start", "Inicio")}: ${start}` : "",
-    proposal.viewsCount !== undefined ? `${t("Views", "Vistas")}: ${proposal.viewsCount}` : "",
+    proposal.viewsCount !== undefined
+      ? `${t("Views", "Vistas")}: ${proposal.viewsCount}`
+      : "",
   ].filter((item) => item.trim().length > 0);
 
+  const dateRange = start && end ? `${start} - ${end}` : start || end;
+  const startDateLabel = start
+    ? `${t("Start Date", "Fecha de inicio")}: ${start}`
+    : "";
+  const endDateLabel = end ? `${t("End Date", "Fecha de fin")}: ${end}` : "";
+  const fallbackTimelineLabel = pick(proposal.budget?.timelineForProposal)
+    ? `${t("Timeline", "Cronograma")}: ${pick(proposal.budget?.timelineForProposal)}`
+    : "";
+
   const summaryBullets = [
-    proposal.event?.venue ? `${t("Venue", "Lugar")}: ${proposal.event.venue}` : "",
+    proposal.event?.venue
+      ? `${t("Venue", "Lugar")}: ${proposal.event.venue}`
+      : "",
     proposal.roomByRoom?.roomFunction
       ? `${t("Room Function", "Función de sala")}: ${proposal.roomByRoom.roomFunction}`
       : "",
-    proposal.budget?.timelineForProposal
-      ? `${t("Timeline", "Cronograma")}: ${proposal.budget.timelineForProposal}`
-      : "",
+    startDateLabel,
+    endDateLabel,
+    !startDateLabel && !endDateLabel ? fallbackTimelineLabel : "",
     proposal.production?.otherRolesNeeded
       ? `${t("Additional roles", "Roles adicionales")}: ${proposal.production.otherRolesNeeded}`
       : "",
   ].filter((item) => item.trim().length > 0);
 
-  const dateRange = start && end ? `${start} - ${end}` : start || end;
   const aboutParts = [dateRange, pick(proposal.event?.venue)].filter(Boolean);
   const aboutText = aboutParts.length
     ? `${aboutParts.join(". ")}. ${t(
@@ -286,269 +448,22 @@ const mapProposalToTemplate = (
         "Esta propuesta está adaptada a su alcance y preferencias enviadas.",
       );
 
-  const pricing: Array<{ name: string; price: string; bullets: string[] }> = [];
-
-  const budgetBullets = [
-    pick(proposal.budget?.timelineForProposal)
-      ? `${t("Timeline", "Cronograma")}: ${pick(proposal.budget?.timelineForProposal)}`
-      : "",
-    toListText(proposal.budget?.proposalFormatPreferences)
-      ? `${t("Format", "Formato")}: ${toListText(proposal.budget?.proposalFormatPreferences)}`
-      : "",
-    pick(proposal.budget?.callWithDxgProducer)
-      ? `${t("Producer Call", "Llamada con productor")}: ${pick(proposal.budget?.callWithDxgProducer)}`
-      : "",
-  ].filter(Boolean);
-  const budgetPrice = pick(proposal.budget?.estimatedAvBudget);
-  if (budgetPrice || budgetBullets.length > 0) {
-    pricing.push({
-      name: t("Budget", "Presupuesto"),
-      price: budgetPrice || t("Budget", "Presupuesto"),
-      bullets: budgetBullets,
-    });
-  }
-
-  const roomBullets = [
-    pick(proposal.roomByRoom?.roomFunction)
-      ? `${t("Room Function", "Función de sala")}: ${pick(proposal.roomByRoom?.roomFunction)}`
-      : "",
-    pick(proposal.roomByRoom?.roomSetup)
-      ? `${t("Room Setup", "Montaje de sala")}: ${pick(proposal.roomByRoom?.roomSetup)}`
-      : "",
-    pick(proposal.production?.scenicStageDesign)
-      ? `${t("Scenic Design", "Diseño escénico")}: ${pick(proposal.production?.scenicStageDesign)}`
-      : "",
-  ].filter(Boolean);
-  const roomPrice = pick(proposal.roomByRoom?.numberOfRooms);
-  if (roomPrice || roomBullets.length > 0) {
-    pricing.push({
-      name: t("Room Planning", "Planificación de salas"),
-      price: roomPrice || t("Room Planning", "Planificación de salas"),
-      bullets: roomBullets,
-    });
-  }
-
-  const technicalBullets = [
-    pick(proposal.production?.unionLabor)
-      ? `${t("Union Labor", "Mano de obra sindical")}: ${pick(proposal.production?.unionLabor)}`
-      : "",
-    pick(proposal.venue?.standardAmpWall)
-      ? `${t("Amp Wall", "Panel eléctrico")}: ${pick(proposal.venue?.standardAmpWall)}`
-      : "",
-    pick(proposal.venue?.powerDropsHowMany)
-      ? `${t("Power Drops", "Tomas de energía")}: ${pick(proposal.venue?.powerDropsHowMany)}`
-      : "",
-  ].filter(Boolean);
-  const technicalPrice = pick(proposal.roomByRoom?.avSpec);
-  if (technicalPrice || technicalBullets.length > 0) {
-    pricing.push({
-      name: t("Technical", "Técnico"),
-      price: technicalPrice || t("Technical", "Técnico"),
-      bullets: technicalBullets,
-    });
-  }
-
-  const avGroups: TemplateOneData["avGroups"] = [
-    {
-      title: t("Room & Logistics", "Sala y logística"),
-      items: [
-        {
-          label: t("Function", "Función"),
-          value: withFallback(pick(proposal.roomByRoom?.roomFunction), fallbackText),
-        },
-        {
-          label: t("Attendees", "Asistentes"),
-          value: withFallback(pick(proposal.roomByRoom?.estimatedAttendeesInRoom), fallbackText),
-        },
-        {
-          label: t("Room Setup", "Montaje de sala"),
-          value: withFallback(pick(proposal.roomByRoom?.roomSetup), fallbackText),
-        },
-        {
-          label: t("Show Timing", "Horario del show"),
-          value: withFallback(
-            [formatDate(proposal.roomByRoom?.showStartDateTime), formatDate(proposal.roomByRoom?.showEndDateTime)]
-              .filter(Boolean)
-              .join(" - "),
-            fallbackText,
-          ),
-        },
-      ],
-    },
-    {
-      title: t("Audio & Video", "Audio y video"),
-      items: [
-        {
-          label: "Podium Mic",
-          value: withFallback(
-            formatYesNoWithQty(
-              proposal.roomByRoom?.podiumMic,
-              proposal.roomByRoom?.podiumMicQty,
-            ),
-          ),
-        },
-        {
-          label: "Wireless Mics",
-          value: withFallback(
-            formatYesNoWithDetail(
-              proposal.roomByRoom?.wirelessMics,
-              [
-                pick(proposal.roomByRoom?.wirelessMicsQty),
-                pick(proposal.roomByRoom?.wirelessMicsType),
-              ]
-                .filter(Boolean)
-                .join(", "),
-            ),
-          ),
-        },
-        {
-          label: "Audio Recording",
-          value: withFallback(pick(proposal.roomByRoom?.audioRecording)),
-        },
-        {
-          label: "Cameras",
-          value: withFallback(
-            formatYesNoWithQty(
-              proposal.roomByRoom?.cameras,
-              proposal.roomByRoom?.camerasQty,
-            ),
-          ),
-        },
-        {
-          label: "LED Wall",
-          value: withFallback(pick(proposal.roomByRoom?.ledWall)),
-        },
-      ],
-    },
-    {
-      title: t("Display & Monitoring", "Pantallas y monitoreo"),
-      items: [
-        {
-          label: "Large Monitors",
-          value: withFallback(
-            formatYesNoWithQty(
-              proposal.roomByRoom?.largeMonitorsOrScreenProjector,
-              proposal.roomByRoom?.largeMonitorsQty,
-            ),
-          ),
-        },
-        {
-          label: "Presentation Laptops",
-          value: withFallback(
-            formatYesNoWithQty(
-              proposal.roomByRoom?.presentationLaptops,
-              proposal.roomByRoom?.presentationLaptopQty,
-            ),
-          ),
-        },
-        {
-          label: "Video Playback",
-          value: withFallback(
-            formatYesNoWithQty(
-              proposal.roomByRoom?.videoPlayback,
-              proposal.roomByRoom?.videoPlaybackCount,
-            ),
-          ),
-        },
-        {
-          label: "Video Format",
-          value: withFallback(pick(proposal.roomByRoom?.videoFormatAspectRatio)),
-        },
-      ],
-    },
-    {
-      title: t("Engagement & Lighting", "Interacción e iluminación"),
-      items: [
-        {
-          label: "Audience Q&A",
-          value: withFallback(
-            formatYesNoWithDetail(
-              proposal.roomByRoom?.audienceQa,
-              proposal.roomByRoom?.audienceQaMethod,
-            ),
-          ),
-        },
-        {
-          label: "Video Recording",
-          value: withFallback(
-            formatYesNoWithDetail(
-              proposal.roomByRoom?.videoRecording,
-              proposal.roomByRoom?.videoRecordingType,
-            ),
-          ),
-        },
-        {
-          label: "Stage Wash Lighting",
-          value: withFallback(
-            formatYesNoWithDetail(
-              proposal.roomByRoom?.stageWashLighting,
-              proposal.roomByRoom?.stageWashLightingStageSize,
-            ),
-          ),
-        },
-        {
-          label: "Backlighting / Scenic / Audience",
-          value: withFallback(
-            [
-              pick(proposal.roomByRoom?.backlightingFor),
-              pick(proposal.roomByRoom?.drapeOrScenicUplighting),
-              pick(proposal.roomByRoom?.audienceLighting),
-            ]
-              .filter(Boolean)
-              .join(" / "),
-          ),
-        },
-      ],
-    },
-    {
-      title: t("Confidence & Monitoring", "Monitores de confianza"),
-      items: [
-        {
-          label: "Program Confidence",
-          value: withFallback(
-            formatYesNoWithQty(
-              proposal.roomByRoom?.programConfidenceMonitor,
-              proposal.roomByRoom?.programConfidenceMonitorQty,
-            ),
-          ),
-        },
-        {
-          label: "Notes Confidence",
-          value: withFallback(
-            formatYesNoWithQty(
-              proposal.roomByRoom?.notesConfidenceMonitor,
-              proposal.roomByRoom?.notesConfidenceMonitorQty,
-            ),
-          ),
-        },
-      ],
-    },
-  ];
-
-  const scenicLabel = pick(proposal.production?.scenicStageDesign);
-  const scenicStageDesignLabel =
-    scenicLabel === "Yes"
-      ? t("Required (Yes)", "Requerido (Sí)")
-      : scenicLabel === "No"
-        ? t("Not Required (No)", "No requerido (No)")
-        : scenicLabel || t("TBD", "Pendiente");
-  const unionLaborLabel =
-    pick(proposal.production?.unionLabor) || t("TBD / Not Sure", "Pendiente / No seguro");
-  const riggingMethod = toListText(proposal.roomByRoom?.preferredRigging);
-  const powerDrops = pick(proposal.venue?.powerDropsHowMany);
-  const ampWall = pick(proposal.venue?.standardAmpWall);
   const additionalNotes =
     pick(proposal.contact?.anythingElse) ||
     pick(proposal.roomByRoom?.contentVideoNeeds);
 
+  const eventTypeRaw = proposal.event?.eventType;
+  const eventTypeString = typeof eventTypeRaw === "object" ? (eventTypeRaw.eventType === "Other" ? eventTypeRaw.eventTypeOther : eventTypeRaw.eventType) : eventTypeRaw;
+
   return {
     badge: `${t("Proposal", "Propuesta")}${proposal.status ? ` • ${proposal.status}` : ""}${createdLabel ? ` • ${createdLabel}` : ""}`,
-    ...(organization ? { brandName: organization } : {}),
+    ...(options?.brandName || organization
+      ? { brandName: options?.brandName || organization }
+      : {}),
     titleLineOne: title.lineOne,
     titleLineTwo: title.lineTwo,
     heroText:
-      proposal.event?.eventTypeOther ||
-      proposal.event?.eventType ||
+      eventTypeString ||
       t(
         "A custom proposal prepared from your submitted event and production requirements.",
         "Una propuesta personalizada preparada según su evento y requisitos de producción enviados.",
@@ -557,63 +472,42 @@ const mapProposalToTemplate = (
     ...(fullName
       ? { ctaPrimary: `${t("Send To", "Enviar a")} ${fullName}` }
       : {}),
-    ctaSecondary: t("Download Brief", "Descargar resumen", "Telecharger le resume"),
-    aboutTitle: t("Project Snapshot", "Resumen del proyecto", "Apercu du projet"),
+    ctaSecondary: t(
+      "Download Brief",
+      "Descargar resumen",
+      "Telecharger le resume",
+    ),
+    aboutTitle: t(
+      "Project Snapshot",
+      "Resumen del proyecto",
+      "Apercu du projet",
+    ),
     aboutText,
     ...(summaryBullets.length > 0 ? { summaryBullets } : {}),
-    ...(services.length > 0
-      ? { servicesTitle: t("Scope & Requirements", "Alcance y requisitos"), services }
-      : {}),
-    pricingTitle: t("Budget & Delivery", "Presupuesto y entrega", "Budget et livraison"),
-    ...(pricing.length > 0 ? { pricing } : {}),
-    closingTitle: t(
-      "Ready To Move Forward With",
-      "Listo para avanzar con",
-      "Pret a avancer avec",
+
+    signatureColor: normalizeHexColor(options?.signatureColor),
+    signatureTitle: t(
+      "Authorized Signature",
+      "Firma autorizada",
+      "Signature autorisee",
     ),
-    ...(pick(proposal.event?.venue)
-      ? { brandAddress: pick(proposal.event?.venue) }
-      : {}),
-    ...(pick(proposal.contact?.contactEmail)
-      ? { brandEmail: pick(proposal.contact?.contactEmail) }
-      : {}),
-    ...(fullName ? { contactName: fullName } : {}),
-    ...(pick(proposal.contact?.contactPhone)
-      ? { contactPhone: pick(proposal.contact?.contactPhone) }
-      : {}),
+    ...(fullName ? { signatureName: fullName } : {}),
     ...(contactTitle || organization
-      ? { closingSubtitle: [contactTitle, organization].filter(Boolean).join(" - ") }
+      ? {
+          signatureRole: [contactTitle, organization]
+            .filter(Boolean)
+            .join(" - "),
+        }
       : {}),
-    ...(additionalNotes ? { additionalNotes } : {}),
-    ...(proposal.budget?.estimatedAvBudget
-      ? { budgetDisplay: pick(proposal.budget?.estimatedAvBudget) }
+    ...(createdLabel ? { signatureDate: createdLabel } : {}),
+    ...(options?.signature?.imageUrl && options?.signature?.type === "Upload"
+      ? { signatureImageUrl: options.signature.imageUrl }
       : {}),
-    ...(proposal.budget?.proposalFormatPreferences &&
-    proposal.budget.proposalFormatPreferences.length > 0
-      ? { proposalFormats: proposal.budget.proposalFormatPreferences }
+    ...(options?.signature?.text && options?.signature?.type !== "Upload"
+      ? { signatureText: options.signature.text }
       : {}),
-    ...(proposal.production?.showCrewNeeded &&
-    proposal.production.showCrewNeeded.length > 0
-      ? { crewRoles: proposal.production.showCrewNeeded }
-      : {}),
-    scenicStageDesignLabel,
-    unionLaborLabel,
-    ...(pick(proposal.roomByRoom?.rigPowerSize)
-      ? { riggingMaxPointWeight: pick(proposal.roomByRoom?.rigPowerSize) }
-      : {}),
-    ...(riggingMethod ? { riggingMethod } : {}),
-    ...(powerDrops
-      ? { powerDropsLabel: `${powerDrops} ${t("Dedicated", "dedicado")}` }
-      : {}),
-    ...(ampWall
-      ? { ampWallLabel: `${ampWall} ${t("Main Amp Wall", "panel principal")}` }
-      : {}),
-    avGroups,
-    ...(pick(proposal.roomByRoom?.contentVideoNeeds)
-      ? { ledDescription: pick(proposal.roomByRoom?.contentVideoNeeds) }
-      : {}),
-    ...(proposal.roomByRoom?.ledWall === "Yes"
-      ? { ledHeadline: t("LED Wall Requested", "Pantalla LED solicitada") }
+    ...(options?.signature?.style
+      ? { signatureStyle: options.signature.style }
       : {}),
     ledTags: [
       pick(proposal.roomByRoom?.videoFormatAspectRatio),
@@ -636,7 +530,12 @@ export default function ProposalView({
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const incrementedRef = useRef(false);
-  const proposalLanguage = proposal?.proposalSettings?.proposalLanguage || "English";
+  const resolvedSettings = useMemo(
+    () => normalizeProposalSettings(proposal || undefined),
+    [proposal],
+  );
+  const proposalLanguage = resolvedSettings.proposalLanguage || "English";
+  const isPublicAccess = source === "email" || source === "public";
   const languageKey = proposalLanguage.trim().toLowerCase();
   const t = (english: string, spanish: string, french = english) =>
     languageKey === "spanish"
@@ -675,7 +574,11 @@ export default function ProposalView({
       setProposal(current);
       setLoading(false);
 
-      if (!incrementedRef.current) {
+      const canTrackView =
+        !isPublicAccess ||
+        (current?.status === "submitted" && current?.isActive !== false);
+
+      if (!incrementedRef.current && canTrackView) {
         incrementedRef.current = true;
         const viewsRes = await incrementProposalViewsAction(proposalId);
         if (!mounted) return;
@@ -717,7 +620,29 @@ export default function ProposalView({
             )}
           </h2>
           <p className="mt-2 text-sm">
-            {error || t("Proposal not found.", "Propuesta no encontrada.", "Proposition introuvable.")}
+            {error ||
+              t(
+                "Proposal not found.",
+                "Propuesta no encontrada.",
+                "Proposition introuvable.",
+              )}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const isLiveProposal =
+    proposal.status === "submitted" && proposal.isActive !== false;
+
+  if (isPublicAccess && !isLiveProposal) {
+    return (
+      <div className="mx-auto w-full max-w-[1280px] px-4 py-10 sm:px-6">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+          <h2 className="text-lg font-bold">Proposal is not available</h2>
+          <p className="mt-2 text-sm">
+            This public proposal link is only available while the proposal is
+            live.
           </p>
         </div>
       </div>
@@ -736,12 +661,23 @@ export default function ProposalView({
         isAccepted: true,
         isOpen: false,
       });
-      if (acceptRes.success && acceptRes.data && typeof acceptRes.data === "object") {
+      if (
+        acceptRes.success &&
+        acceptRes.data &&
+        typeof acceptRes.data === "object"
+      ) {
         updatedProposal = acceptRes.data as ProposalData;
       }
 
-      const statusRes = await updateProposalStatusAction(proposalId, "approved");
-      if (statusRes.success && statusRes.data && typeof statusRes.data === "object") {
+      const statusRes = await updateProposalStatusAction(
+        proposalId,
+        "approved",
+      );
+      if (
+        statusRes.success &&
+        statusRes.data &&
+        typeof statusRes.data === "object"
+      ) {
         updatedProposal = statusRes.data as ProposalData;
       }
 
@@ -772,14 +708,64 @@ export default function ProposalView({
     });
   };
 
-  const mappedTemplateData = mapProposalToTemplate(
-    proposal,
-    proposalLanguage,
-  );
+  const mappedTemplateData = mapProposalToTemplate(proposal, proposalLanguage, {
+    dateFormat: resolvedSettings.dateFormat,
+    defaultCurrency: resolvedSettings.defaultCurrency,
+    signatureColor: resolvedSettings.signatureColor,
+    contactEmail:
+      resolvedSettings.contacts.emailEnabled === false
+        ? ""
+        : resolvedSettings.contacts.emailValue ||
+          proposal.contact?.contactEmail ||
+          "",
+    contactPhone:
+      resolvedSettings.contacts.callEnabled === false
+        ? ""
+        : resolvedSettings.contacts.callValue ||
+          proposal.contact?.contactPhone ||
+          "",
+    signature: {
+      type: resolvedSettings.signatures.signatureType,
+      imageUrl: resolvedSettings.signatures.signatureImageUrl,
+      text: resolvedSettings.signatures.signatureText,
+      style: resolvedSettings.signatures.signatureStyle,
+    },
+    brandName: resolvedSettings.brandName,
+  });
   const showAcceptButton = source === "email";
 
   const templateData: Partial<TemplateOneData> = {
     ...mappedTemplateData,
+    createdAt: proposal.createdAt,
+    proposalSetting: proposal.proposalSetting || {
+      branding: {
+        brandName: resolvedSettings.brandName,
+        linkPrefix: resolvedSettings.linkPrefix,
+        defaultFont: resolvedSettings.defaultFont,
+        signatureColor: resolvedSettings.signatureColor,
+      },
+      proposals: {
+        proposalLanguage: resolvedSettings.proposalLanguage,
+        defaultCurrency: resolvedSettings.defaultCurrency,
+        dateFormat: resolvedSettings.dateFormat,
+        contacts: {
+          email: {
+            enabled: resolvedSettings.contacts.emailEnabled,
+            value: resolvedSettings.contacts.emailValue,
+          },
+          call: {
+            enabled: resolvedSettings.contacts.callEnabled,
+            value: resolvedSettings.contacts.callValue,
+          },
+        },
+      },
+      signatures: {
+        signatureType: resolvedSettings.signatures.signatureType,
+        signatureImageUrl: resolvedSettings.signatures.signatureImageUrl,
+        signatureText: resolvedSettings.signatures.signatureText,
+        signatureStyle: resolvedSettings.signatures.signatureStyle,
+      },
+    },
     ctaPrimary: showAcceptButton
       ? proposal.isAccepted
         ? t("Proposal Accepted", "Propuesta aceptada", "Proposition acceptee")
@@ -788,7 +774,20 @@ export default function ProposalView({
       : undefined,
     ctaSecondary: t("Download PDF", "Descargar PDF", "Telecharger le PDF"),
   };
-  const templateFont = proposal.proposalSettings?.defaultFont || "Poppins";
+  const templateFont = resolvedSettings.defaultFont;
+  const selectedFontVariable =
+    templateFont === "Inter"
+      ? "var(--font-proposal-inter)"
+      : templateFont === "Roboto"
+        ? "var(--font-proposal-roboto)"
+        : "var(--font-proposal-poppins)";
+  const templateWrapperStyle = {
+    "--proposal-font-family": `${selectedFontVariable}, var(--font-sans)`,
+    "--proposal-signature-color": normalizeHexColor(
+      resolvedSettings.signatureColor,
+    ),
+  } as CSSProperties;
+  const fontClassNames = `${inter.variable} ${poppins.variable} ${roboto.variable}`;
 
   const sharedTemplateProps = {
     data: templateData,
@@ -801,11 +800,57 @@ export default function ProposalView({
     isSecondaryLoading: downloading,
     isPrimaryDisabled: Boolean(proposal.isAccepted),
   };
+  const templateOneProps = {
+    proposalData: {
+      ...(proposal as unknown as Partial<TemplateOneData>),
+      ...templateData,
+    },
+    rawProposal: proposal,
+    fontFamily: templateFont,
+  };
 
-  if (proposal.templateId === "template-two") {
-    return <TemplateTwo {...sharedTemplateProps} />;
-  }
+  const canDownloadPreview = resolvedSettings.downloadPreview === "Yes";
+  const hasGlobalActions = showAcceptButton || canDownloadPreview;
 
-  return <TemplateOne {...sharedTemplateProps} />;
+  const globalFloatingActions = hasGlobalActions ? (
+    <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[99] no-print" style={{ fontFamily: "var(--font-sans)" }}>
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-xl backdrop-blur-md">
+        {showAcceptButton && !proposal.isAccepted && (
+          <button
+            type="button"
+            onClick={handleAcceptProposal}
+            disabled={accepting}
+            className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white disabled:opacity-60 hover:bg-slate-800 transition"
+          >
+            {accepting
+              ? t("Accepting...", "Aceptando...", "Acceptation...")
+              : t("Accept Proposal", "Aceptar propuesta", "Accepter la proposition")}
+          </button>
+        )}
+        {canDownloadPreview && (
+          <button
+            type="button"
+            onClick={handleDownloadProposal}
+            disabled={downloading}
+            className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-800 disabled:opacity-60 hover:bg-slate-50 transition"
+          >
+            {downloading
+              ? t("Generating PDF...", "Generando PDF...", "Generation du PDF...")
+              : t("Download PDF", "Descargar PDF", "Telecharger le PDF")}
+          </button>
+        )}
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <div className={fontClassNames} style={templateWrapperStyle}>
+      {globalFloatingActions}
+      {proposal.templateId === "template-two" ? (
+        <TemplateTwo {...templateOneProps} />
+      ) : (
+        <TemplateOne {...templateOneProps} />
+      )}
+    </div>
+  );
 }
-

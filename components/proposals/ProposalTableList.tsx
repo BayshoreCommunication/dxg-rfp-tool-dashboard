@@ -3,6 +3,7 @@
 import {
   deleteProposalAction,
   getProposalsAction,
+  updateProposalMetaAction,
 } from "@/app/actions/proposals";
 import {
   Clock,
@@ -10,7 +11,7 @@ import {
   Edit3,
   Eye,
   FileText,
-  MoreHorizontal,
+  Heart,
   Plus,
   Share2,
   Trash2,
@@ -27,9 +28,15 @@ type ProposalListItem = {
   status?: string;
   isAccepted?: boolean;
   isOpen?: boolean;
+  isActive?: boolean;
   isFavorite?: boolean;
   viewsCount?: number;
   createdAt?: string;
+  proposalSetting?: {
+    proposals?: {
+      expiryDate?: string;
+    };
+  };
   event?: {
     eventName?: string;
   };
@@ -61,7 +68,72 @@ export default function ProposalTableList({
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [favoritingId, setFavoritingId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+
+  const parseExpiryDays = (expiryValue?: string): number | null => {
+    if (!expiryValue) return null;
+    const trimmed = expiryValue.trim().toLowerCase();
+    if (!trimmed || trimmed === "none") return null;
+    const match = trimmed.match(/(\d+)/);
+    if (!match) return null;
+    const parsed = Number(match[1]);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  const formatDisplayDate = (value?: string): string => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const getExpiryMeta = (
+    createdAt?: string,
+    expiryValue?: string,
+  ): {
+    expiryLabel: string;
+    expiryDateLabel: string;
+    isExpiredByDate: boolean;
+  } => {
+    const createdDate = createdAt ? new Date(createdAt) : null;
+    const expiryDays = parseExpiryDays(expiryValue);
+
+    if (!createdDate || Number.isNaN(createdDate.getTime()) || !expiryDays) {
+      return {
+        expiryLabel: "No expiry",
+        expiryDateLabel: "-",
+        isExpiredByDate: false,
+      };
+    }
+
+    const expiryDate = new Date(
+      createdDate.getTime() + expiryDays * 24 * 60 * 60 * 1000,
+    );
+    const now = Date.now();
+    const diffMs = expiryDate.getTime() - now;
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    if (diffMs < 0) {
+      const daysAfterExpiry = Math.max(1, Math.floor(Math.abs(diffMs) / dayMs));
+      return {
+        expiryLabel: `Expired ${daysAfterExpiry} day${daysAfterExpiry > 1 ? "s" : ""} ago`,
+        expiryDateLabel: formatDisplayDate(expiryDate.toISOString()),
+        isExpiredByDate: true,
+      };
+    }
+
+    const daysLeft = Math.ceil(diffMs / dayMs);
+    return {
+      expiryLabel: `${daysLeft} day${daysLeft > 1 ? "s" : ""} left`,
+      expiryDateLabel: formatDisplayDate(expiryDate.toISOString()),
+      isExpiredByDate: false,
+    };
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -74,6 +146,7 @@ export default function ProposalTableList({
         search?: string;
         status?: string;
         favorite?: boolean;
+        isActive?: boolean;
       } = {
         page: 1,
         limit: 10,
@@ -90,9 +163,11 @@ export default function ProposalTableList({
         params.status = "submitted";
       } else if (activeFilter === "favorite") {
         params.favorite = true;
+      } else if (activeFilter === "expired") {
+        params.isActive = false;
       }
 
-      const [listRes, allRes, draftRes, liveRes, favoriteRes] =
+      const [listRes, allRes, draftRes, liveRes, favoriteRes, expiredRes] =
         await Promise.all([
           getProposalsAction(params),
           getProposalsAction({ page: 1, limit: 1, search }),
@@ -104,6 +179,7 @@ export default function ProposalTableList({
             status: "submitted",
           }),
           getProposalsAction({ page: 1, limit: 1, search, favorite: true }),
+          getProposalsAction({ page: 1, limit: 1, search, isActive: false }),
         ]);
 
       if (!mounted) return;
@@ -119,6 +195,7 @@ export default function ProposalTableList({
         draft: getTotal(draftRes.pagination),
         live: getTotal(liveRes.pagination),
         favorite: getTotal(favoriteRes.pagination),
+        expired: getTotal(expiredRes.pagination),
       });
 
       setLoading(false);
@@ -173,23 +250,64 @@ export default function ProposalTableList({
     }
   };
 
+  const handleToggleFavorite = async (proposal: ProposalListItem) => {
+    if (!proposal?._id || favoritingId) return;
+
+    const nextFavorite = !Boolean(proposal.isFavorite);
+    setFavoritingId(proposal._id);
+
+    try {
+      setProposals((prev) =>
+        prev.map((item) =>
+          item._id === proposal._id
+            ? { ...item, isFavorite: nextFavorite }
+            : item,
+        ),
+      );
+
+      const res = await updateProposalMetaAction(proposal._id, {
+        isFavorite: nextFavorite,
+      });
+
+      if (!res.success) {
+        setProposals((prev) =>
+          prev.map((item) =>
+            item._id === proposal._id
+              ? { ...item, isFavorite: !nextFavorite }
+              : item,
+          ),
+        );
+        toast.error(res.message || "Failed to update favorite.");
+      }
+    } finally {
+      setFavoritingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen py-6 font-sans text-slate-800 -mt-6 px-6">
       <div className="space-y-6">
         {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="h-4 w-28 rounded bg-slate-100 animate-pulse" />
-            <div className="mt-4 space-y-3">
-              <div className="h-6 w-3/5 rounded bg-slate-100 animate-pulse" />
-              <div className="h-4 w-2/5 rounded bg-slate-100 animate-pulse" />
-              <div className="h-4 w-1/3 rounded bg-slate-100 animate-pulse" />
-            </div>
-            <div className="mt-6 flex items-center gap-4">
-              <div className="h-16 w-20 rounded-xl bg-slate-100 animate-pulse" />
-              <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
-              <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
-              <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
-            </div>
+          <div className="space-y-6">
+            {[1, 2].map((item) => (
+              <div
+                key={`proposal-skeleton-${item}`}
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+              >
+                <div className="h-4 w-28 rounded bg-slate-100 animate-pulse" />
+                <div className="mt-4 space-y-3">
+                  <div className="h-6 w-3/5 rounded bg-slate-100 animate-pulse" />
+                  <div className="h-4 w-2/5 rounded bg-slate-100 animate-pulse" />
+                  <div className="h-4 w-1/3 rounded bg-slate-100 animate-pulse" />
+                </div>
+                <div className="mt-6 flex items-center gap-4">
+                  <div className="h-16 w-20 rounded-xl bg-slate-100 animate-pulse" />
+                  <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
+                  <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
+                  <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : proposals.length === 0 ? (
           <div className="rounded-3xl border border-slate-200 bg-white py-12 px-6 text-center shadow-sm">
@@ -231,15 +349,17 @@ export default function ProposalTableList({
               ]
                 .filter(Boolean)
                 .join(" ");
-              const createdAt = proposal?.createdAt
-                ? new Date(proposal.createdAt).toLocaleDateString()
-                : "-";
+              const createdAt = formatDisplayDate(proposal?.createdAt);
               const views = proposal?.viewsCount ?? 0;
-              const statusLabel = proposal?.status || "draft";
-              const acceptedLabel = proposal?.isAccepted
-                ? "Accepted"
-                : "Not Accepted";
-              const openLabel = proposal?.isOpen ? "Open" : "Closed";
+              const isDraft = (proposal?.status || "draft") === "draft";
+              const expiryMeta = getExpiryMeta(
+                proposal?.createdAt,
+                proposal?.proposalSetting?.proposals?.expiryDate,
+              );
+              const isExpired =
+                proposal?.isActive === false || expiryMeta.isExpiredByDate;
+              const liveOrExpiredLabel = isExpired ? "Expired" : "Live";
+              const submittedLabel = isDraft ? "Not Submitted" : "Submitted";
 
               return (
                 <div
@@ -251,30 +371,52 @@ export default function ProposalTableList({
 
                   <div className="relative z-10 flex items-start justify-between mb-6">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[11px] font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        {statusLabel}
-                      </span>
-                      <span className="bg-slate-50 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-[11px] font-semibold">
-                        {openLabel}
-                      </span>
-                      <span className="bg-slate-50 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-[11px] font-semibold">
-                        {acceptedLabel}
-                      </span>
-                      {proposal?.isFavorite && (
-                        <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full text-[11px] font-semibold">
-                          Favorite
+                      {isDraft && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
+                          Draft
                         </span>
                       )}
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
+                        {submittedLabel}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${isExpired ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-emerald-50 text-emerald-600 border-emerald-200"}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${isExpired ? "bg-rose-400" : "bg-emerald-400 animate-pulse"}`}
+                        />
+                        {liveOrExpiredLabel}
+                      </span>
                       <span className="text-slate-400 text-[11px] ml-1 font-medium flex items-center gap-1">
                         <Clock size={10} />
                         Created:{" "}
                         <b className="text-slate-700 ml-1">{createdAt}</b>
                       </span>
                     </div>
-                    <button className="text-slate-400 hover:text-slate-600 transition-colors duration-150 p-1 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200">
-                      <MoreHorizontal size={18} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        title={
+                          proposal?.isFavorite
+                            ? "Remove favorite"
+                            : "Mark as favorite"
+                        }
+                        disabled={favoritingId === proposal._id}
+                        onClick={() => void handleToggleFavorite(proposal)}
+                        className={`text-slate-400 transition-colors duration-150 p-1 rounded-lg border hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed ${proposal?.isFavorite ? "text-rose-500 border-rose-200 bg-rose-50 hover:text-rose-600" : "border-transparent hover:border-slate-200 hover:text-slate-600"}`}
+                      >
+                        <Heart
+                          size={18}
+                          className={
+                            proposal?.isFavorite
+                              ? "fill-current text-rose-500"
+                              : ""
+                          }
+                        />
+                      </button>
+                      {/* <button className="text-slate-400 hover:text-slate-600 transition-colors duration-150 p-1 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200">
+                        <MoreHorizontal size={18} />
+                      </button> */}
+                    </div>
                   </div>
 
                   <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -290,13 +432,20 @@ export default function ProposalTableList({
                             {ownerName || "-"}
                           </span>
                         </p>
-                        <div className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
-                          <Share2 size={11} className="text-slate-400" />
-                          Shared with:{" "}
+                        <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
+                          <Clock size={11} className="text-slate-400" />
+                          Expiry:{" "}
                           <span className="text-slate-800 font-semibold">
-                            Entire Team
+                            {expiryMeta.expiryLabel}
                           </span>
-                        </div>
+                        </p>
+                        {/* <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
+                          <Clock size={11} className="text-slate-400" />
+                          Expiry date:
+                         
+                            {expiryMeta.expiryDateLabel}
+                      
+                        </p> */}
                       </div>
                     </div>
 
@@ -315,7 +464,9 @@ export default function ProposalTableList({
                         <IconButton
                           icon={<Copy size={16} />}
                           tooltip="Copy URL"
-                          onClick={() => void handleCopyProposalUrl(proposalSlug)}
+                          onClick={() =>
+                            void handleCopyProposalUrl(proposalSlug)
+                          }
                         />
 
                         <Link

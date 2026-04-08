@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { ProposalSettings } from "../AddNewProposal";
 
 type TemplateSelectionProps = {
@@ -56,18 +57,16 @@ export default function TemplateSelection({
                 : "border-slate-200 bg-white hover:border-cyan-300"
             }`}
           >
-            <div className="h-40 rounded-xl border border-slate-200 bg-gradient-to-br from-cyan-100 via-white to-blue-100 p-4">
-              <div className="h-3 w-36 rounded bg-cyan-300" />
-              <div className="mt-3 h-2 w-48 rounded bg-slate-200" />
-              <div className="mt-2 h-2 w-40 rounded bg-slate-200" />
-              <div className="mt-6 grid grid-cols-3 gap-2">
-                <div className="h-12 rounded bg-white border border-slate-200" />
-                <div className="h-12 rounded bg-white border border-slate-200" />
-                <div className="h-12 rounded bg-white border border-slate-200" />
-              </div>
+            <div className="relative h-40 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <Image
+                src="/assets/template-modern-preview.svg"
+                alt="Modern template preview"
+                fill
+                className="object-cover"
+              />
             </div>
             <div className="mt-3 text-left">
-              <p className="text-sm font-bold text-slate-900">Template One</p>
+              <p className="text-sm font-bold text-slate-900">Modern</p>
               <p className="text-xs text-slate-500">
                 Modern, bold, sectioned presentation layout.
               </p>
@@ -83,19 +82,16 @@ export default function TemplateSelection({
                 : "border-slate-200 bg-white hover:border-cyan-300"
             }`}
           >
-            <div className="h-40 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-100 via-white to-emerald-100 p-4">
-              <div className="flex items-center justify-between">
-                <div className="h-3 w-28 rounded bg-emerald-300" />
-                <div className="h-3 w-14 rounded bg-slate-300" />
-              </div>
-              <div className="mt-4 h-16 rounded bg-white border border-slate-200" />
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="h-8 rounded bg-white border border-slate-200" />
-                <div className="h-8 rounded bg-white border border-slate-200" />
-              </div>
+            <div className="relative h-40 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <Image
+                src="/assets/template-classic-preview.svg"
+                alt="Classic template preview"
+                fill
+                className="object-cover"
+              />
             </div>
             <div className="mt-3 text-left">
-              <p className="text-sm font-bold text-slate-900">Template Two</p>
+              <p className="text-sm font-bold text-slate-900">Classic</p>
               <p className="text-xs text-slate-500">
                 Clean executive summary style with compact sections.
               </p>

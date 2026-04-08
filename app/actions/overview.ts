@@ -24,6 +24,8 @@ export type DashboardOverviewTotals = {
 export type DashboardOverviewProposal = {
   _id: string;
   status?: string;
+  isActive?: boolean;
+  isFavorite?: boolean;
   viewsCount?: number;
   createdAt?: string;
   event?: {

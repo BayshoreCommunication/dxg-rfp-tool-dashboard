@@ -42,7 +42,7 @@ const buildProposalMeta = (proposal: any) => {
     .trim()
     .toLowerCase();
   const proposalLinkPrefix = prefix || "abuco";
-  const publicProposalLink = `https://${proposalLinkPrefix}.goprospero.com/proposal/${slug}`;
+  const publicProposalLink = `https://${proposalLinkPrefix}.goprospero.com/proposal/${slug}?source=public`;
 
   return {
     ...proposal,
@@ -131,6 +131,7 @@ export async function extractProposalFromFile(
 export async function getProposalsAction(params?: {
   status?: string;
   favorite?: boolean;
+  isActive?: boolean;
   search?: string;
   page?: number;
   limit?: number;
@@ -146,6 +147,9 @@ export async function getProposalsAction(params?: {
   if (params?.status) query.set("status", params.status);
   if (typeof params?.favorite === "boolean") {
     query.set("favorite", String(params.favorite));
+  }
+  if (typeof params?.isActive === "boolean") {
+    query.set("isActive", String(params.isActive));
   }
   if (params?.search) query.set("search", params.search);
   if (params?.page) query.set("page", String(params.page));
@@ -338,5 +342,73 @@ export async function deleteProposalAction(id: string): Promise<ApiResponse> {
     };
   } catch (error: any) {
     return { success: false, message: error.message || "Network error" };
+  }
+}
+
+/**
+ * Upload proposal support documents or AV quote files to DigitalOcean Spaces.
+ * Returns the CDN URLs grouped by field name.
+ *
+ * Usage:
+ *   const result = await uploadProposalFilesAction(formData);
+ *   // formData fields: "supportDocuments" and/or "avQuoteFiles"
+ */
+export async function uploadProposalFilesAction(
+  formData: FormData
+): Promise<{
+  success: boolean;
+  message?: string;
+  supportDocumentUrls: string[];
+  avQuoteFileUrls: string[];
+}> {
+  try {
+    const token = await getAccessToken();
+    if (!token) {
+      return {
+        success: false,
+        message: "User is not authenticated.",
+        supportDocumentUrls: [],
+        avQuoteFileUrls: [],
+      };
+    }
+
+    const res = await fetch(`${API_URL}/api/proposals/upload-files`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+      cache: "no-store",
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      return {
+        success: false,
+        message: json.message || "Upload failed",
+        supportDocumentUrls: [],
+        avQuoteFileUrls: [],
+      };
+    }
+
+    const results: Array<{ fieldname: string; originalname: string; url: string }> =
+      json.data || [];
+
+    return {
+      success: true,
+      message: json.message,
+      supportDocumentUrls: results
+        .filter((r) => r.fieldname === "supportDocuments")
+        .map((r) => r.url),
+      avQuoteFileUrls: results
+        .filter((r) => r.fieldname === "avQuoteFiles")
+        .map((r) => r.url),
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Network error",
+      supportDocumentUrls: [],
+      avQuoteFileUrls: [],
+    };
   }
 }

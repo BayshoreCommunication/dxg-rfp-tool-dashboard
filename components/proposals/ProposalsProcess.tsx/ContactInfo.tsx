@@ -175,7 +175,7 @@ const ContactInfo = ({
             onClick={onContinue}
             className="h-10 px-8 rounded-md bg-[#35bdf2] hover:bg-[#20A4D5] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(56,189,248,0.39)] transition-transform active:scale-95 tracking-wide"
           >
-            CREATE PROPOSAL
+            CONTINUE
           </button>
         </div>
       </div>

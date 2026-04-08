@@ -22,6 +22,7 @@ type ProposalStatus =
 type ProposalItem = {
   _id: string;
   status?: string;
+  isActive?: boolean;
   isFavorite?: boolean;
   viewsCount?: number;
   createdAt?: string;
@@ -78,13 +79,14 @@ function toStatus(value?: string): ProposalStatus {
   return "draft";
 }
 
-type DashboardFilterType = "all" | "draft" | "live" | "favorite";
+type DashboardFilterType = "all" | "draft" | "live" | "favorite" | "expired";
 
 const FILTER_TABS: Array<{ key: DashboardFilterType; label: string }> = [
-  { key: "all", label: "All" },
-  { key: "draft", label: "Draft" },
-  { key: "live", label: "Live" },
-  { key: "favorite", label: "Favorite" },
+  { key: "all", label: "ALL" },
+  { key: "draft", label: "DRAFT" },
+  { key: "live", label: "LIVE" },
+  { key: "favorite", label: "FAVORITE" },
+  { key: "expired", label: "EXPIRED" },
 ];
 
 function toSlug(title: string) {
@@ -222,7 +224,8 @@ export default function DashboardTableList({
           filter === "all" ||
           (filter === "draft" && status === "draft") ||
           (filter === "live" && status === "submitted") ||
-          (filter === "favorite" && Boolean(p.isFavorite));
+          (filter === "favorite" && Boolean(p.isFavorite)) ||
+          (filter === "expired" && p.isActive === false);
 
         return matchSearch && matchStatus;
       }),
@@ -235,6 +238,7 @@ export default function DashboardTableList({
       draft: proposals.filter((p) => toStatus(p.status) === "draft").length,
       live: proposals.filter((p) => toStatus(p.status) === "submitted").length,
       favorite: proposals.filter((p) => Boolean(p.isFavorite)).length,
+      expired: proposals.filter((p) => p.isActive === false).length,
     }),
     [proposals],
   );
@@ -252,7 +256,7 @@ export default function DashboardTableList({
             </span>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="relative">
               <Search
                 size={13}
@@ -267,23 +271,33 @@ export default function DashboardTableList({
               />
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1.5">
-              {FILTER_TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setFilter(tab.key)}
-                  className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all duration-150 ${
-                    filter === tab.key
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span className="ml-1.5 rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-extrabold text-slate-600">
-                    {tabCounts[tab.key]}
-                  </span>
-                </button>
-              ))}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1 no-scrollbar">
+              {FILTER_TABS.map((tab) => {
+                const isActive = filter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setFilter(tab.key)}
+                    className={`flex flex-shrink-0 items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all duration-200 ${
+                      isActive
+                        ? "bg-slate-800 text-white shadow-md border border-transparent"
+                        : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700"
+                    }`}
+                  >
+                    {tab.label}
+                    <span
+                      className={`flex items-center justify-center px-1.5 py-0.5 rounded-md text-[10px] ${
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {tabCounts[tab.key]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
