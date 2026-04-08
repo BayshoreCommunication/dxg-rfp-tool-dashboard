@@ -3,6 +3,8 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -25,10 +27,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           return null;
         }
 
-        const baseUrl =
-          process.env.BACKEND_URL ||
-          process.env.NEXT_PUBLIC_API_URL ||
-          "http://localhost:5000";
+        const baseUrl = process.env.BACKEND_URL || "http://localhost:8000";
         const apiUrl = baseUrl.endsWith("/api")
           ? baseUrl.slice(0, -4)
           : baseUrl;
