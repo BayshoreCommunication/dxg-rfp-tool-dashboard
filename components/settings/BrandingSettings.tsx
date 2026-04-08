@@ -6,6 +6,8 @@ import { ChangeEvent, useEffect, useRef } from "react";
 import type { BrandingSettingsForm } from "./SettingsDetials";
 
 const isHexColor = (value: string) => /^#([0-9A-Fa-f]{6})$/.test(value);
+const isObjectUrl = (value?: string | null) =>
+  Boolean(value && value.startsWith("blob:"));
 
 const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
 const inputClass =
@@ -28,8 +30,8 @@ const BrandingSettings = ({
 
   useEffect(() => {
     return () => {
-      if (value.logoFile) {
-        URL.revokeObjectURL(value.logoFile);
+      if (isObjectUrl(value.logoFile)) {
+        URL.revokeObjectURL(value.logoFile as string);
       }
     };
   }, [value.logoFile]);
@@ -38,8 +40,8 @@ const BrandingSettings = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (value.logoFile) {
-      URL.revokeObjectURL(value.logoFile);
+    if (isObjectUrl(value.logoFile)) {
+      URL.revokeObjectURL(value.logoFile as string);
     }
     onChange({ ...value, logoFile: URL.createObjectURL(file) });
     onLogoFileSelected?.(file);

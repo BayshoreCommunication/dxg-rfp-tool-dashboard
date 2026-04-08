@@ -83,6 +83,7 @@ const SettingsDetials = () => {
   const [settingForms, setSettingForms] =
     useState<SettingsForm>(defaultSettings);
   const [logoUploadFile, setLogoUploadFile] = useState<File | null>(null);
+  const [persistedLogoUrl, setPersistedLogoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -94,6 +95,7 @@ const SettingsDetials = () => {
       if (!mounted) return;
       if (res.success && res.data) {
         const data = res.data as Partial<SettingsForm>;
+        setPersistedLogoUrl(data.branding?.logoFile || null);
         setSettingForms({
           branding: { ...defaultSettings.branding, ...data.branding },
           proposals: {
@@ -117,10 +119,26 @@ const SettingsDetials = () => {
 
   const handleUpdate = async () => {
     setSaving(true);
-    const res = await updateSettingsAction(settingForms, logoUploadFile);
+    const payload: SettingsForm = {
+      ...settingForms,
+      branding: {
+        ...settingForms.branding,
+      },
+    };
+
+    // Never persist local preview URLs from browser into DB.
+    if (
+      typeof payload.branding.logoFile === "string" &&
+      payload.branding.logoFile.startsWith("blob:")
+    ) {
+      payload.branding.logoFile = persistedLogoUrl;
+    }
+
+    const res = await updateSettingsAction(payload, logoUploadFile);
     if (res.success && res.data) {
       const data = res.data as SettingsForm;
       setSettingForms(data);
+      setPersistedLogoUrl(data.branding?.logoFile || null);
       setLogoUploadFile(null);
       toast.success("Settings updated successfully.");
     } else {
@@ -224,4 +242,3 @@ const SettingsSectionSkeleton = () => {
 };
 
 export default SettingsDetials;
-
