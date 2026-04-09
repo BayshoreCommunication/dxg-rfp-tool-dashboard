@@ -2,6 +2,7 @@ import ProposalsDetials from "@/components/proposals/ProposalsDetials";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://dxg-rfp-tool-dashboard.vercel.app"),
   title:
     "Dxg RFP Tool - Streamline Your Request for Proposal Process with Our User-Friendly Platform",
   description:
@@ -13,7 +14,20 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
+    title:
+      "Dxg RFP Tool - Streamline Your Request for Proposal Process with Our User-Friendly Platform",
+    description:
+      "Discover the Dxg RFP Tool, a powerful platform designed to simplify and enhance your request for proposal process.",
+    url: "/proposal",
     images: [{ url: "/opengraph-image.jpg" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title:
+      "Dxg RFP Tool - Streamline Your Request for Proposal Process with Our User-Friendly Platform",
+    description:
+      "Discover the Dxg RFP Tool, a powerful platform designed to simplify and enhance your request for proposal process.",
+    images: ["/opengraph-image.jpg"],
   },
 };
 

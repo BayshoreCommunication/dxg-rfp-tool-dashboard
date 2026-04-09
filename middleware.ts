@@ -13,6 +13,7 @@ export async function middleware(request: NextRequest) {
   const excludedPaths = [
     "/_next/",
     "/favicon.ico",
+    "/opengraph-image.jpg",
     "/opengraph-image.png",
     "/assets/",
   ];
@@ -82,7 +83,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/|favicon.ico|assets/).*)"],
+  matcher: ["/((?!_next/|favicon.ico|opengraph-image.jpg|opengraph-image.png|assets/).*)"],
 };
 
 export default middleware;
