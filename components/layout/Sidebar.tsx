@@ -1,6 +1,10 @@
 "use client";
 
 import { signOutAction } from "@/app/actions/auth";
+import {
+  getNotificationSocketConfigAction,
+  getUnreadNotificationCountAction,
+} from "@/app/actions/notification";
 import { getSettingsAction } from "@/app/actions/settings";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
@@ -10,6 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
 type SidebarSettings = {
   branding?: {
@@ -18,12 +23,21 @@ type SidebarSettings = {
   };
 };
 
-const bottomIcons = [{ icon: <BellDot size={17} />, label: "Alerts" }];
+type NotificationSocketPayload = {
+  event: "connected" | "notification:new" | "notification:unread-count";
+  data?: {
+    title?: string;
+    message?: string;
+    count?: number;
+  };
+};
 
 const Sidebar = () => {
   const pathname = usePathname();
   const [userData, setUserData] = useState<SidebarSettings | null>(null);
   const [showSignOut, setShowSignOut] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [socketUrl, setSocketUrl] = useState("");
 
   const isItemActive = (item: NavItem) => pathname === item.href;
 
@@ -58,6 +72,81 @@ const Sidebar = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const loadUnreadCount = async () => {
+      const res = await getUnreadNotificationCountAction();
+      if (!mounted || !res.success) return;
+      setUnreadCount(typeof res.unreadCount === "number" ? res.unreadCount : 0);
+    };
+
+    void loadUnreadCount();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadSocketUrl = async () => {
+      const res = await getNotificationSocketConfigAction();
+      if (!mounted || !res.success || !res.socketUrl) return;
+      setSocketUrl(res.socketUrl);
+    };
+
+    void loadSocketUrl();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!socketUrl) return;
+
+    const socket = new WebSocket(socketUrl);
+
+    socket.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as NotificationSocketPayload;
+
+        if (payload.event === "notification:unread-count") {
+          setUnreadCount(
+            typeof payload.data?.count === "number" ? payload.data.count : 0,
+          );
+          return;
+        }
+
+        if (payload.event === "notification:new") {
+          setUnreadCount((current) => current + 1);
+          if (pathname !== "/notification") {
+            toast.info(
+              <div>
+                <p className="font-semibold">
+                  {payload.data?.title || "New notification"}
+                </p>
+                <p className="mt-1 text-sm">{payload.data?.message || ""}</p>
+              </div>,
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Notification socket parse error:", error);
+      }
+    };
+
+    socket.onerror = () => {
+      console.warn("Notification WebSocket connection error.");
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [pathname, socketUrl]);
+
   const avatarUrl = userData?.branding?.logoFile?.trim() || "";
   const brandInitial =
     userData?.branding?.brandName?.charAt(0)?.toUpperCase() || "U";
@@ -68,7 +157,7 @@ const Sidebar = () => {
         <Link
           href="/dashboard"
           aria-label="Go to dashboard"
-          className="group flex h-12 w-12 items-center justify-center overflow-hidden transition-all duration-200 hover:-translate-y-0.5 "
+          className="group flex h-12 w-12 items-center justify-center overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
         >
           {avatarUrl ? (
             <Image
@@ -133,17 +222,24 @@ const Sidebar = () => {
 
       <div className="mx-4 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent" />
 
-      <div className="flex shrink-0 flex-col items-center gap-2 px-3 py-4">
-        {bottomIcons.map(({ icon, label }) => (
-          <button
-            key={label}
-            type="button"
-            title={label}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-all duration-200 hover:bg-primary/5 hover:text-primary"
-          >
-            {icon}
-          </button>
-        ))}
+      <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3">
+        <Link
+          href="/notification"
+          title="Notifications"
+          className={cn(
+            "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200",
+            pathname === "/notification"
+              ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(45,198,245,0.95)]"
+              : "border-slate-200 bg-white text-slate-500 hover:border-primary/10 hover:bg-primary/5 hover:text-primary",
+          )}
+        >
+          <BellDot size={19} strokeWidth={2.1} />
+          {unreadCount > 0 && (
+            <span className="pointer-events-none absolute right-0 top-0 inline-flex h-4 min-w-[20px] translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-black leading-none text-white ring-2 ring-white shadow-[0_8px_18px_-8px_rgba(244,63,94,0.95)]">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </Link>
 
         <div
           className="relative mb-4 mt-2"
