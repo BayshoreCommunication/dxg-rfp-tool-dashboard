@@ -172,6 +172,7 @@ const UploadsReferenceMaterials = ({
                 checked={data.reviewExistingAvQuote.reviewExistingAvQuote === opt}
                 onChange={() =>
                   onChange({
+                    supportDocuments: [],
                     reviewExistingAvQuote: {
                       reviewExistingAvQuote: opt,
                       avQuoteFiles: opt === "NO" ? [] : data.reviewExistingAvQuote.avQuoteFiles,
@@ -201,26 +202,6 @@ const UploadsReferenceMaterials = ({
             </div>
           )}
         </div>
-
-        {/* Support Documents Upload */}
-        {(data.reviewExistingAvQuote.reviewExistingAvQuote === "NO" || !data.reviewExistingAvQuote.reviewExistingAvQuote) && (
-          <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && data.supportDocuments.length === 0 ? "bg-red-50/50" : ""}`}>
-            <label className="mb-4 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide">
-              Upload any support documents <span className="text-red-500">*</span>
-            </label>
-            <div className={`rounded-xl transition-all ${showErrors && data.supportDocuments.length === 0 ? "ring-2 ring-red-500 ring-offset-2 ring-offset-red-50" : ""}`}>
-              <UploadBox
-                files={data.supportDocuments}
-                onFiles={(files) => onChange({ supportDocuments: files })}
-                label="Required: Please upload at least one support document"
-                uploadField="supportDocuments"
-              />
-            </div>
-            {showErrors && data.supportDocuments.length === 0 && (
-              <p className="mt-2 text-sm text-red-500 normal-case">Please upload at least one support document.</p>
-            )}
-          </div>
-        )}
 
       </div>
 

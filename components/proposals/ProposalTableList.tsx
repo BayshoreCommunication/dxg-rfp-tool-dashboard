@@ -54,10 +54,22 @@ type ProposalTableListProps = {
   ) => void;
 };
 
-const getTotal = (pagination: unknown): number => {
-  if (!pagination || typeof pagination !== "object") return 0;
-  const total = (pagination as { total?: unknown }).total;
-  return typeof total === "number" ? total : 0;
+const getCounts = (
+  counts: unknown,
+): Partial<Record<ProposalFilterType, number>> => {
+  if (!counts || typeof counts !== "object") return {};
+
+  const value = counts as Partial<Record<ProposalFilterType, unknown>>;
+  const read = (key: ProposalFilterType) =>
+    typeof value[key] === "number" ? (value[key] as number) : 0;
+
+  return {
+    all: read("all"),
+    draft: read("draft"),
+    live: read("live"),
+    favorite: read("favorite"),
+    expired: read("expired"),
+  };
 };
 
 export default function ProposalTableList({
@@ -167,20 +179,10 @@ export default function ProposalTableList({
         params.isActive = false;
       }
 
-      const [listRes, allRes, draftRes, liveRes, favoriteRes, expiredRes] =
-        await Promise.all([
-          getProposalsAction(params),
-          getProposalsAction({ page: 1, limit: 1, search }),
-          getProposalsAction({ page: 1, limit: 1, search, status: "draft" }),
-          getProposalsAction({
-            page: 1,
-            limit: 1,
-            search,
-            status: "submitted",
-          }),
-          getProposalsAction({ page: 1, limit: 1, search, favorite: true }),
-          getProposalsAction({ page: 1, limit: 1, search, isActive: false }),
-        ]);
+      const listRes = await getProposalsAction({
+        ...params,
+        includeCounts: true,
+      });
 
       if (!mounted) return;
 
@@ -190,13 +192,7 @@ export default function ProposalTableList({
         setProposals([]);
       }
 
-      onCountsChange?.({
-        all: getTotal(allRes.pagination),
-        draft: getTotal(draftRes.pagination),
-        live: getTotal(liveRes.pagination),
-        favorite: getTotal(favoriteRes.pagination),
-        expired: getTotal(expiredRes.pagination),
-      });
+      onCountsChange?.(getCounts(listRes.counts));
 
       setLoading(false);
     }, 300);

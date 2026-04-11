@@ -19,6 +19,7 @@ type ApiResponse = {
   message?: string;
   data?: unknown;
   pagination?: unknown;
+  counts?: unknown;
 };
 
 const getAccessToken = async (): Promise<string | null> => {
@@ -137,6 +138,7 @@ export async function getProposalsAction(params?: {
   limit?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  includeCounts?: boolean;
 }): Promise<ApiResponse> {
   const token = await getAccessToken();
   if (!token) {
@@ -156,6 +158,9 @@ export async function getProposalsAction(params?: {
   if (params?.limit) query.set("limit", String(params.limit));
   if (params?.sortBy) query.set("sortBy", params.sortBy);
   if (params?.sortOrder) query.set("sortOrder", params.sortOrder);
+  if (typeof params?.includeCounts === "boolean") {
+    query.set("includeCounts", String(params.includeCounts));
+  }
 
   try {
     const res = await fetch(
@@ -172,6 +177,7 @@ export async function getProposalsAction(params?: {
       message: data.message || (res.ok ? "Proposals fetched" : "Fetch failed"),
       data: withProposalMeta(data.data),
       pagination: data.pagination,
+      counts: data.counts,
     };
   } catch (error: any) {
     return { success: false, message: error.message || "Network error" };

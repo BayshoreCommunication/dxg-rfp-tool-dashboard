@@ -65,7 +65,7 @@ const TopHeader = () => {
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
           {/* Notification bell */}
-          <Link
+          {/* <Link
             href={"/settings"}
             className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 hover:shadow-md transition-all duration-200 group"
           >
@@ -74,7 +74,7 @@ const TopHeader = () => {
               className="group-hover:scale-110 transition-transform duration-200"
             />
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 border-2 border-white" />
-          </Link>
+          </Link> */}
 
           {/* CTA Button */}
           <Link

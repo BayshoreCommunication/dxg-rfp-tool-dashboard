@@ -1,20 +1,22 @@
 "use client";
 
-import { CheckCircle2, List, Mail } from "lucide-react";
+import { CheckCircle2, Eye, List, Mail } from "lucide-react";
 
 type ProposalSuccessfullyCreateProps = {
   proposalTitle: string;
   onBackToList: () => void;
   onSendEmail: () => void;
+  onViewProposal: () => void;
 };
 
 const ProposalSuccessfullyCreate = ({
   proposalTitle,
   onBackToList,
   onSendEmail,
+  onViewProposal,
 }: ProposalSuccessfullyCreateProps) => {
   return (
-    <section className="mx-auto w-full max-w-3xl rounded-3xl border border-emerald-200 bg-white p-6 shadow-sm sm:p-10">
+    <section className="mx-auto flex w-full max-w-5xl flex-col items-center rounded-3xl border border-emerald-200 bg-white p-6 text-center shadow-sm sm:p-10">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
         <CheckCircle2 size={34} />
       </div>
@@ -30,11 +32,11 @@ const ProposalSuccessfullyCreate = ({
         </p>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-8 grid w-full max-w-4xl grid-cols-1 justify-center gap-3 sm:grid-cols-3">
         <button
           type="button"
           onClick={onBackToList}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
         >
           <List size={16} />
           Back To Proposal List
@@ -42,8 +44,17 @@ const ProposalSuccessfullyCreate = ({
 
         <button
           type="button"
+          onClick={onViewProposal}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-100"
+        >
+          <Eye size={16} />
+          View Proposal
+        </button>
+
+        <button
+          type="button"
           onClick={onSendEmail}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95"
         >
           <Mail size={16} />
           Send This Proposal By Email

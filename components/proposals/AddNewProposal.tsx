@@ -6,12 +6,10 @@ import {
   updateProposalAction,
 } from "@/app/actions/proposals";
 import { getSettingsAction } from "@/app/actions/settings";
-import { FileText, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AddProposalUpload from "./AddProposalUpload";
-import ProposalFilters, { type ProposalFilterType } from "./ProposalFilters";
 import BudgetProposalPreferences from "./ProposalsProcess.tsx/BudgetProposalPreferences";
 import ContactInfo from "./ProposalsProcess.tsx/ContactInfo";
 import EventForm from "./ProposalsProcess.tsx/EventForm";
@@ -360,6 +358,16 @@ const normalizeProposalFont = (
   return matched || fallback;
 };
 
+const toProposalSlug = (title: string, id: string): string => {
+  const slugTitle = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return id ? `${slugTitle || "proposal"}-${id}` : slugTitle || "proposal";
+};
+
 /* ─── Normalize AI-extracted values to exactly match option strings ─── */
 const matchOption = (value: string | undefined, options: string[]): string => {
   if (!value) return "";
@@ -410,11 +418,19 @@ const normalizeExtracted = (
             typeof raw.event.eventType === "object"
               ? (raw.event.eventType as { eventType?: string }).eventType
               : (raw.event.eventType as unknown as string),
-            ["Conference", "Meeting", "Gala", "Trade Show", "Awards Show", "Other"],
+            [
+              "Conference",
+              "Meeting",
+              "Gala",
+              "Trade Show",
+              "Awards Show",
+              "Other",
+            ],
           ),
           eventTypeOther:
             typeof raw.event.eventType === "object"
-              ? ((raw.event.eventType as { eventTypeOther?: string }).eventTypeOther ?? "")
+              ? ((raw.event.eventType as { eventTypeOther?: string })
+                  .eventTypeOther ?? "")
               : "",
         },
       }
@@ -431,38 +447,101 @@ const normalizeExtracted = (
             "16:9 format",
             "Unique Aspect Ratio",
             "Both",
-          ]) ||
-          raw.roomByRoom.videoFormatAspectRatio,
+          ]) || raw.roomByRoom.videoFormatAspectRatio,
         audienceQa: ((): RoomByRoomData["audienceQa"] => {
           const raw_n = raw.roomByRoom!.audienceQa;
           if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as { audienceQa?: string; audienceQaMethod?: string };
-            return { audienceQa: matchOption(v.audienceQa ?? "", ["Yes", "No"]), audienceQaMethod: matchOption(v.audienceQaMethod ?? "", ["Via an App", "Passing a Microphone", "Both"]) };
+            const v = raw_n as {
+              audienceQa?: string;
+              audienceQaMethod?: string;
+            };
+            return {
+              audienceQa: matchOption(v.audienceQa ?? "", ["Yes", "No"]),
+              audienceQaMethod: matchOption(v.audienceQaMethod ?? "", [
+                "Via an App",
+                "Passing a Microphone",
+                "Both",
+              ]),
+            };
           }
-          const qa = (raw.roomByRoom as Record<string, unknown>);
-          return { audienceQa: matchOption(raw_n as unknown as string ?? "", ["Yes", "No"]), audienceQaMethod: matchOption(qa.audienceQaMethod as string ?? "", ["Via an App", "Passing a Microphone", "Both"]) };
+          const qa = raw.roomByRoom as Record<string, unknown>;
+          return {
+            audienceQa: matchOption((raw_n as unknown as string) ?? "", [
+              "Yes",
+              "No",
+            ]),
+            audienceQaMethod: matchOption(
+              (qa.audienceQaMethod as string) ?? "",
+              ["Via an App", "Passing a Microphone", "Both"],
+            ),
+          };
         })(),
         videoRecording: ((): RoomByRoomData["videoRecording"] => {
           const raw_n = raw.roomByRoom!.videoRecording;
           if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as { videoRecording?: string; videoRecordingType?: string };
-            return { videoRecording: matchOption(v.videoRecording ?? "", ["Yes", "No"]), videoRecordingType: matchOption(v.videoRecordingType ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]) };
+            const v = raw_n as {
+              videoRecording?: string;
+              videoRecordingType?: string;
+            };
+            return {
+              videoRecording: matchOption(v.videoRecording ?? "", [
+                "Yes",
+                "No",
+              ]),
+              videoRecordingType: matchOption(v.videoRecordingType ?? "", [
+                "Camera Feed Only",
+                "Presentation Only",
+                "Side by Side (Camera and Presentation)",
+                "All The Above",
+              ]),
+            };
           }
-          const vr = (raw.roomByRoom as Record<string, unknown>);
-          return { videoRecording: matchOption(raw_n as unknown as string ?? "", ["Yes", "No"]), videoRecordingType: matchOption(vr.videoRecordingType as string ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]) };
+          const vr = raw.roomByRoom as Record<string, unknown>;
+          return {
+            videoRecording: matchOption((raw_n as unknown as string) ?? "", [
+              "Yes",
+              "No",
+            ]),
+            videoRecordingType: matchOption(
+              (vr.videoRecordingType as string) ?? "",
+              [
+                "Camera Feed Only",
+                "Presentation Only",
+                "Side by Side (Camera and Presentation)",
+                "All The Above",
+              ],
+            ),
+          };
         })(),
         stageWashLighting: ((): RoomByRoomData["stageWashLighting"] => {
           const raw_n = raw.roomByRoom!.stageWashLighting;
           if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as { stageWashLighting?: string; stageWashLightingStageSize?: string };
-            return { stageWashLighting: matchOption(v.stageWashLighting ?? "", ["Yes", "No"]), stageWashLightingStageSize: v.stageWashLightingStageSize ?? "" };
+            const v = raw_n as {
+              stageWashLighting?: string;
+              stageWashLightingStageSize?: string;
+            };
+            return {
+              stageWashLighting: matchOption(v.stageWashLighting ?? "", [
+                "Yes",
+                "No",
+              ]),
+              stageWashLightingStageSize: v.stageWashLightingStageSize ?? "",
+            };
           }
-          const sw = (raw.roomByRoom as Record<string, unknown>);
-          return { stageWashLighting: matchOption(raw_n as unknown as string ?? "", ["Yes", "No"]), stageWashLightingStageSize: sw.stageWashLightingStageSize as string ?? "" };
+          const sw = raw.roomByRoom as Record<string, unknown>;
+          return {
+            stageWashLighting: matchOption((raw_n as unknown as string) ?? "", [
+              "Yes",
+              "No",
+            ]),
+            stageWashLightingStageSize:
+              (sw.stageWashLightingStageSize as string) ?? "",
+          };
         })(),
         programConfidenceMonitor: normalizeProgramConfidenceMonitor(
           (raw.roomByRoom as Record<string, unknown>).programConfidenceMonitor,
-          (raw.roomByRoom as Record<string, unknown>).programConfidenceMonitorQty,
+          (raw.roomByRoom as Record<string, unknown>)
+            .programConfidenceMonitorQty,
         ),
         notesConfidenceMonitor: normalizeNotesConfidenceMonitor(
           (raw.roomByRoom as Record<string, unknown>).notesConfidenceMonitor,
@@ -508,25 +587,76 @@ const normalizeExtracted = (
         needRiggingForFlown: ((): VenueTechnicalData["needRiggingForFlown"] => {
           const raw_n = raw.venue!.needRiggingForFlown;
           if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as { needRiggingForFlown?: string; riggingPlotOrSpecs?: string };
-            const matched = matchOption(v.needRiggingForFlown ?? "", ["YES", "NO"]).toUpperCase();
-            return { needRiggingForFlown: (matched || "") as "YES" | "NO" | "", riggingPlotOrSpecs: v.riggingPlotOrSpecs ?? "" };
+            const v = raw_n as {
+              needRiggingForFlown?: string;
+              riggingPlotOrSpecs?: string;
+            };
+            const matched = matchOption(v.needRiggingForFlown ?? "", [
+              "YES",
+              "NO",
+            ]).toUpperCase();
+            return {
+              needRiggingForFlown: (matched || "") as "YES" | "NO" | "",
+              riggingPlotOrSpecs: v.riggingPlotOrSpecs ?? "",
+            };
           }
-          const matched = matchOption(raw_n as unknown as string ?? "", ["YES", "NO"]).toUpperCase();
-          return { needRiggingForFlown: (matched || "") as "YES" | "NO" | "", riggingPlotOrSpecs: (raw.venue as Record<string, unknown>).riggingPlotOrSpecs as string ?? "" };
+          const matched = matchOption((raw_n as unknown as string) ?? "", [
+            "YES",
+            "NO",
+          ]).toUpperCase();
+          return {
+            needRiggingForFlown: (matched || "") as "YES" | "NO" | "",
+            riggingPlotOrSpecs:
+              ((raw.venue as Record<string, unknown>)
+                .riggingPlotOrSpecs as string) ?? "",
+          };
         })(),
-        needDedicatedPowerDrops: ((): VenueTechnicalData["needDedicatedPowerDrops"] => {
-          const raw_n = raw.venue!.needDedicatedPowerDrops;
-          if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as { needDedicatedPowerDrops?: string; standardAmpWall?: string };
-            const amp = matchOption(v.standardAmpWall ?? "", ["15amp", "20amp", "30amp", "100A", "200A", "400A"]) || v.standardAmpWall || "";
-            const matched = matchOption(v.needDedicatedPowerDrops ?? "", ["YES", "NO"]).toUpperCase();
-            return { needDedicatedPowerDrops: (matched || "") as "YES" | "NO" | "", standardAmpWall: amp };
-          }
-          const matched = matchOption(raw_n as unknown as string ?? "", ["YES", "NO"]).toUpperCase();
-          const amp = matchOption((raw.venue as Record<string, unknown>).standardAmpWall as string ?? "", ["15amp", "20amp", "30amp", "100A", "200A", "400A"]) || (raw.venue as Record<string, unknown>).standardAmpWall as string || "";
-          return { needDedicatedPowerDrops: (matched || "") as "YES" | "NO" | "", standardAmpWall: amp };
-        })(),
+        needDedicatedPowerDrops:
+          ((): VenueTechnicalData["needDedicatedPowerDrops"] => {
+            const raw_n = raw.venue!.needDedicatedPowerDrops;
+            if (raw_n && typeof raw_n === "object") {
+              const v = raw_n as {
+                needDedicatedPowerDrops?: string;
+                standardAmpWall?: string;
+              };
+              const amp =
+                matchOption(v.standardAmpWall ?? "", [
+                  "15amp",
+                  "20amp",
+                  "30amp",
+                  "100A",
+                  "200A",
+                  "400A",
+                ]) ||
+                v.standardAmpWall ||
+                "";
+              const matched = matchOption(v.needDedicatedPowerDrops ?? "", [
+                "YES",
+                "NO",
+              ]).toUpperCase();
+              return {
+                needDedicatedPowerDrops: (matched || "") as "YES" | "NO" | "",
+                standardAmpWall: amp,
+              };
+            }
+            const matched = matchOption((raw_n as unknown as string) ?? "", [
+              "YES",
+              "NO",
+            ]).toUpperCase();
+            const amp =
+              matchOption(
+                ((raw.venue as Record<string, unknown>)
+                  .standardAmpWall as string) ?? "",
+                ["15amp", "20amp", "30amp", "100A", "200A", "400A"],
+              ) ||
+              ((raw.venue as Record<string, unknown>)
+                .standardAmpWall as string) ||
+              "";
+            return {
+              needDedicatedPowerDrops: (matched || "") as "YES" | "NO" | "",
+              standardAmpWall: amp,
+            };
+          })(),
       }
     : undefined,
   budget: raw.budget
@@ -572,17 +702,40 @@ const normalizeExtracted = (
     : undefined,
   uploads: raw.uploads
     ? {
-        supportDocuments: Array.isArray(raw.uploads.supportDocuments) ? raw.uploads.supportDocuments : [],
+        supportDocuments: Array.isArray(raw.uploads.supportDocuments)
+          ? raw.uploads.supportDocuments
+          : [],
         reviewExistingAvQuote: ((): UploadsData["reviewExistingAvQuote"] => {
           const rv = raw.uploads!.reviewExistingAvQuote;
           if (rv && typeof rv === "object") {
-            const v = rv as { reviewExistingAvQuote?: string; avQuoteFiles?: Array<File | string> };
-            const matched = matchOption(v.reviewExistingAvQuote ?? "", ["YES", "NO"]).toUpperCase();
-            return { reviewExistingAvQuote: (matched || "") as "YES" | "NO" | "", avQuoteFiles: Array.isArray(v.avQuoteFiles) ? v.avQuoteFiles : [] };
+            const v = rv as {
+              reviewExistingAvQuote?: string;
+              avQuoteFiles?: Array<File | string>;
+            };
+            const matched = matchOption(v.reviewExistingAvQuote ?? "", [
+              "YES",
+              "NO",
+            ]).toUpperCase();
+            return {
+              reviewExistingAvQuote: (matched || "") as "YES" | "NO" | "",
+              avQuoteFiles: Array.isArray(v.avQuoteFiles) ? v.avQuoteFiles : [],
+            };
           }
-          const matched = matchOption(rv as unknown as string ?? "", ["YES", "NO"]).toUpperCase();
-          const avFiles = Array.isArray((raw.uploads as Record<string, unknown>).avQuoteFiles) ? (raw.uploads as Record<string, unknown>).avQuoteFiles as Array<File | string> : [];
-          return { reviewExistingAvQuote: (matched || "") as "YES" | "NO" | "", avQuoteFiles: avFiles };
+          const matched = matchOption((rv as unknown as string) ?? "", [
+            "YES",
+            "NO",
+          ]).toUpperCase();
+          const avFiles = Array.isArray(
+            (raw.uploads as Record<string, unknown>).avQuoteFiles,
+          )
+            ? ((raw.uploads as Record<string, unknown>).avQuoteFiles as Array<
+                File | string
+              >)
+            : [];
+          return {
+            reviewExistingAvQuote: (matched || "") as "YES" | "NO" | "",
+            avQuoteFiles: avFiles,
+          };
         })(),
       }
     : undefined,
@@ -712,14 +865,43 @@ const mapApiProposalToFormData = (
   venue: {
     ...defaultProposalData.venue,
     needRiggingForFlown: {
-      needRiggingForFlown: (raw.venue?.needRiggingForFlown as unknown as { needRiggingForFlown?: string })?.needRiggingForFlown ?? (raw.venue?.needRiggingForFlown as unknown as string) ?? "",
-      riggingPlotOrSpecs: (raw.venue?.needRiggingForFlown as unknown as { riggingPlotOrSpecs?: string })?.riggingPlotOrSpecs ?? (raw.venue as unknown as Record<string, string>)?.riggingPlotOrSpecs ?? "",
+      needRiggingForFlown:
+        (
+          raw.venue?.needRiggingForFlown as unknown as {
+            needRiggingForFlown?: string;
+          }
+        )?.needRiggingForFlown ??
+        (raw.venue?.needRiggingForFlown as unknown as string) ??
+        "",
+      riggingPlotOrSpecs:
+        (
+          raw.venue?.needRiggingForFlown as unknown as {
+            riggingPlotOrSpecs?: string;
+          }
+        )?.riggingPlotOrSpecs ??
+        (raw.venue as unknown as Record<string, string>)?.riggingPlotOrSpecs ??
+        "",
     } as VenueTechnicalData["needRiggingForFlown"],
     needDedicatedPowerDrops: {
-      needDedicatedPowerDrops: (raw.venue?.needDedicatedPowerDrops as unknown as { needDedicatedPowerDrops?: string })?.needDedicatedPowerDrops ?? (raw.venue?.needDedicatedPowerDrops as unknown as string) ?? "",
-      standardAmpWall: (raw.venue?.needDedicatedPowerDrops as unknown as { standardAmpWall?: string })?.standardAmpWall ?? (raw.venue as unknown as Record<string, string>)?.standardAmpWall ?? "",
+      needDedicatedPowerDrops:
+        (
+          raw.venue?.needDedicatedPowerDrops as unknown as {
+            needDedicatedPowerDrops?: string;
+          }
+        )?.needDedicatedPowerDrops ??
+        (raw.venue?.needDedicatedPowerDrops as unknown as string) ??
+        "",
+      standardAmpWall:
+        (
+          raw.venue?.needDedicatedPowerDrops as unknown as {
+            standardAmpWall?: string;
+          }
+        )?.standardAmpWall ??
+        (raw.venue as unknown as Record<string, string>)?.standardAmpWall ??
+        "",
     } as VenueTechnicalData["needDedicatedPowerDrops"],
-    powerDropsHowMany: (raw.venue as unknown as Record<string, string>)?.powerDropsHowMany ?? "",
+    powerDropsHowMany:
+      (raw.venue as unknown as Record<string, string>)?.powerDropsHowMany ?? "",
   },
   uploads: {
     ...defaultProposalData.uploads,
@@ -729,11 +911,32 @@ const mapApiProposalToFormData = (
     reviewExistingAvQuote: ((): UploadsData["reviewExistingAvQuote"] => {
       const rv = raw.uploads?.reviewExistingAvQuote;
       if (rv && typeof rv === "object") {
-        const v = rv as { reviewExistingAvQuote?: string; avQuoteFiles?: Array<File | string> };
-        return { reviewExistingAvQuote: (v.reviewExistingAvQuote ?? "") as "YES" | "NO" | "", avQuoteFiles: Array.isArray(v.avQuoteFiles) ? v.avQuoteFiles : [] };
+        const v = rv as {
+          reviewExistingAvQuote?: string;
+          avQuoteFiles?: Array<File | string>;
+        };
+        return {
+          reviewExistingAvQuote: (v.reviewExistingAvQuote ?? "") as
+            | "YES"
+            | "NO"
+            | "",
+          avQuoteFiles: Array.isArray(v.avQuoteFiles) ? v.avQuoteFiles : [],
+        };
       }
-      const avFiles = Array.isArray((raw.uploads as Record<string, unknown>)?.avQuoteFiles) ? (raw.uploads as Record<string, unknown>).avQuoteFiles as Array<File | string> : [];
-      return { reviewExistingAvQuote: ((rv as unknown as string) ?? "") as "YES" | "NO" | "", avQuoteFiles: avFiles };
+      const avFiles = Array.isArray(
+        (raw.uploads as Record<string, unknown>)?.avQuoteFiles,
+      )
+        ? ((raw.uploads as Record<string, unknown>).avQuoteFiles as Array<
+            File | string
+          >)
+        : [];
+      return {
+        reviewExistingAvQuote: ((rv as unknown as string) ?? "") as
+          | "YES"
+          | "NO"
+          | "",
+        avQuoteFiles: avFiles,
+      };
     })(),
   },
   budget: {
@@ -760,9 +963,6 @@ const AddNewProposal = ({
   const [isExtracting, setIsExtracting] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEditMode);
   const [showErrors, setShowErrors] = useState(false);
-  const [uploadSearchValue, setUploadSearchValue] = useState("");
-  const [uploadActiveFilter, setUploadActiveFilter] =
-    useState<ProposalFilterType>("all");
   const [createdProposal, setCreatedProposal] = useState<{
     id: string;
     title: string;
@@ -957,8 +1157,12 @@ const AddNewProposal = ({
   };
 
   const isVenueStepValid = () => {
-    const { needRiggingForFlown, needDedicatedPowerDrops, powerDropsHowMany } = proposalData.venue;
-    if (!needRiggingForFlown.needRiggingForFlown.trim() || !needDedicatedPowerDrops.needDedicatedPowerDrops.trim()) {
+    const { needRiggingForFlown, needDedicatedPowerDrops, powerDropsHowMany } =
+      proposalData.venue;
+    if (
+      !needRiggingForFlown.needRiggingForFlown.trim() ||
+      !needDedicatedPowerDrops.needDedicatedPowerDrops.trim()
+    ) {
       return false;
     }
     if (needDedicatedPowerDrops.needDedicatedPowerDrops === "YES") {
@@ -971,14 +1175,14 @@ const AddNewProposal = ({
   };
 
   const isUploadsStepValid = () => {
-    const { reviewExistingAvQuote, supportDocuments } = proposalData.uploads;
+    const { reviewExistingAvQuote } = proposalData.uploads;
     if (!reviewExistingAvQuote.reviewExistingAvQuote.trim()) {
       return false;
     }
     if (reviewExistingAvQuote.reviewExistingAvQuote === "YES") {
       return reviewExistingAvQuote.avQuoteFiles.length > 0;
     }
-    return supportDocuments.length > 0;
+    return true;
   };
 
   const isBudgetStepValid = () => {
@@ -1024,45 +1228,82 @@ const AddNewProposal = ({
 
     // Clear nested qty fields when parent is not "Yes"
     if (normalized.wirelessMics.wirelessMics !== "Yes") {
-      normalized.wirelessMics = { ...normalized.wirelessMics, wirelessMicsQty: "", wirelessMicsType: "" };
+      normalized.wirelessMics = {
+        ...normalized.wirelessMics,
+        wirelessMicsQty: "",
+        wirelessMicsType: "",
+      };
     }
-    if (normalized.largeMonitorsOrScreenProjector.largeMonitorsOrScreenProjector !== "Yes") {
-      normalized.largeMonitorsOrScreenProjector = { ...normalized.largeMonitorsOrScreenProjector, largeMonitorsQty: "" };
+    if (
+      normalized.largeMonitorsOrScreenProjector
+        .largeMonitorsOrScreenProjector !== "Yes"
+    ) {
+      normalized.largeMonitorsOrScreenProjector = {
+        ...normalized.largeMonitorsOrScreenProjector,
+        largeMonitorsQty: "",
+      };
     }
-    if (normalized.clientProvideOwnPresentationLaptop.clientProvideOwnPresentationLaptop !== "Yes") {
-      normalized.clientProvideOwnPresentationLaptop = { ...normalized.clientProvideOwnPresentationLaptop, clientLaptopQty: "" };
+    if (
+      normalized.clientProvideOwnPresentationLaptop
+        .clientProvideOwnPresentationLaptop !== "Yes"
+    ) {
+      normalized.clientProvideOwnPresentationLaptop = {
+        ...normalized.clientProvideOwnPresentationLaptop,
+        clientLaptopQty: "",
+      };
     }
     if (normalized.presentationLaptops.presentationLaptops !== "Yes") {
-      normalized.presentationLaptops = { ...normalized.presentationLaptops, presentationLaptopQty: "" };
+      normalized.presentationLaptops = {
+        ...normalized.presentationLaptops,
+        presentationLaptopQty: "",
+      };
     }
     if (normalized.videoPlayback.videoPlayback !== "Yes") {
-      normalized.videoPlayback = { ...normalized.videoPlayback, videoPlaybackCount: "" };
+      normalized.videoPlayback = {
+        ...normalized.videoPlayback,
+        videoPlaybackCount: "",
+      };
     }
     if (normalized.cameras.cameras !== "Yes") {
       normalized.cameras = { ...normalized.cameras, camerasQty: "" };
     }
     if (normalized.audienceQa.audienceQa !== "Yes") {
-      normalized.audienceQa = { ...normalized.audienceQa, audienceQaMethod: "" };
+      normalized.audienceQa = {
+        ...normalized.audienceQa,
+        audienceQaMethod: "",
+      };
     }
     if (normalized.videoRecording.videoRecording !== "Yes") {
-      normalized.videoRecording = { ...normalized.videoRecording, videoRecordingType: "" };
+      normalized.videoRecording = {
+        ...normalized.videoRecording,
+        videoRecordingType: "",
+      };
     }
     if (normalized.stageWashLighting.stageWashLighting !== "Yes") {
-      normalized.stageWashLighting = { ...normalized.stageWashLighting, stageWashLightingStageSize: "" };
+      normalized.stageWashLighting = {
+        ...normalized.stageWashLighting,
+        stageWashLightingStageSize: "",
+      };
     }
-    if (normalized.programConfidenceMonitor.programConfidenceMonitor !== "Yes") {
-      normalized.programConfidenceMonitor = { ...normalized.programConfidenceMonitor, programConfidenceMonitorQty: "" };
+    if (
+      normalized.programConfidenceMonitor.programConfidenceMonitor !== "Yes"
+    ) {
+      normalized.programConfidenceMonitor = {
+        ...normalized.programConfidenceMonitor,
+        programConfidenceMonitorQty: "",
+      };
     }
     if (normalized.notesConfidenceMonitor.notesConfidenceMonitor !== "Yes") {
-      normalized.notesConfidenceMonitor = { ...normalized.notesConfidenceMonitor, notesConfidenceMonitorQty: "" };
+      normalized.notesConfidenceMonitor = {
+        ...normalized.notesConfidenceMonitor,
+        notesConfidenceMonitorQty: "",
+      };
     }
 
     return normalized;
   };
 
-  const handleSubmit = async (
-    statusOverride?: "draft" | "submitted",
-  ) => {
+  const handleSubmit = async (statusOverride?: "draft" | "submitted") => {
     setShowErrors(true);
     if (!isContactStepValid()) {
       toast.error("Please complete all required contact fields.");
@@ -1087,17 +1328,10 @@ const AddNewProposal = ({
       },
       roomByRoom: normalizeRoomByRoomForSubmit(proposalData.roomByRoom),
       uploads: {
-        supportDocuments: proposalData.uploads.supportDocuments
-          .map((f) => (typeof f === "string" ? f : f?.name || ""))
-          .filter(
-            (f) =>
-              typeof f === "string" &&
-              f.trim() !== "" &&
-              f !== "[ {} ]" &&
-              f !== "[object Object]",
-          ),
+        supportDocuments: [],
         reviewExistingAvQuote: {
-          reviewExistingAvQuote: proposalData.uploads.reviewExistingAvQuote.reviewExistingAvQuote,
+          reviewExistingAvQuote:
+            proposalData.uploads.reviewExistingAvQuote.reviewExistingAvQuote,
           avQuoteFiles: proposalData.uploads.reviewExistingAvQuote.avQuoteFiles
             .map((f) => (typeof f === "string" ? f : f?.name || ""))
             .filter(
@@ -1155,7 +1389,9 @@ const AddNewProposal = ({
       } else {
         toast.error(
           result.message ||
-            (isEditMode ? "Failed to update proposal." : "Failed to create proposal."),
+            (isEditMode
+              ? "Failed to update proposal."
+              : "Failed to create proposal."),
         );
       }
     } catch {
@@ -1254,14 +1490,59 @@ const AddNewProposal = ({
     setProposalProcessStep((s) => s + 1);
     setShowErrors(false);
   };
+  const handleUploadAndContinue = async () => {
+    if (!selectedFile) return;
+
+    setIsExtracting(true);
+    try {
+      const result = await extractProposalFromFile(selectedFile);
+      if (
+        result.success &&
+        result.data &&
+        Object.keys(result.data).length > 0
+      ) {
+        const normalized = normalizeExtracted(result.data);
+        setProposalData((prev) => ({
+          ...prev,
+          event: { ...prev.event, ...(normalized.event ?? {}) },
+          roomByRoom: {
+            ...prev.roomByRoom,
+            ...(normalized.roomByRoom ?? {}),
+          },
+          production: {
+            ...prev.production,
+            ...(normalized.production ?? {}),
+          },
+          venue: { ...prev.venue, ...(normalized.venue ?? {}) },
+          uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
+          budget: { ...prev.budget, ...(normalized.budget ?? {}) },
+          contact: { ...prev.contact, ...(normalized.contact ?? {}) },
+        }));
+        toast.success("Fields pre-filled from your document.");
+      } else {
+        toast.info("No matching fields found. You can continue manually.");
+      }
+    } catch {
+      toast.info("Couldn't read the document. You can continue manually.");
+    } finally {
+      setIsExtracting(false);
+    }
+
+    setProposalProcessStep(1);
+    setShowErrors(false);
+  };
   const backHandler = () => setProposalProcessStep((s) => Math.max(0, s - 1));
-  const handleRemoveFile = () => setSelectedFile(null);
 
   if (createdProposal) {
     return (
       <ProposalSuccessfullyCreate
         proposalTitle={createdProposal.title}
         onBackToList={() => router.push("/proposals")}
+        onViewProposal={() =>
+          router.push(
+            `/proposal/${toProposalSlug(createdProposal.title, createdProposal.id)}`,
+          )
+        }
         onSendEmail={() =>
           router.push(
             `/email/send-email?proposalId=${encodeURIComponent(createdProposal.id)}`,
@@ -1305,6 +1586,7 @@ const AddNewProposal = ({
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
+      className="space-y-6 px-6"
     >
       {loadingExisting && (
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-sm">
@@ -1321,81 +1603,16 @@ const AddNewProposal = ({
               </h1>
             </div>
           </div>
-          <div className="mt-8">
-            <ProposalFilters
-              searchValue={uploadSearchValue}
-              onSearchChange={setUploadSearchValue}
-              activeFilter={uploadActiveFilter}
-              onFilterChange={setUploadActiveFilter}
-              counts={{ all: 0, draft: 0, live: 0, favorite: 0 }}
-            />
-          </div>
           <AddProposalUpload
             selectedFile={selectedFile}
             setSelectedFile={setSelectedFile}
+            isExtracting={isExtracting}
+            onContinueWithUpload={() => void handleUploadAndContinue()}
+            onContinueWithoutUpload={() => {
+              setProposalProcessStep(1);
+              setShowErrors(false);
+            }}
           />
-
-          {selectedFile && (
-            <div className="flex flex-col items-center justify-center  w-ful animate-in fade-in duration-300">
-              <div className="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] mb-8 max-w-md">
-                <div className="flex items-center gap-4 overflow-hidden">
-                  <div className="w-12 h-12 bg-sky-50 text-[#38bdf8] flex items-center justify-center rounded-lg flex-shrink-0">
-                    <FileText size={24} strokeWidth={1.5} />
-                  </div>
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-bold text-gray-800 truncate">
-                      {selectedFile.name}
-                    </span>
-                    <span className="text-xs text-gray-500 font-medium mt-0.5">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB â€¢{" "}
-                      {selectedFile.name.split(".").pop()?.toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={handleRemoveFile}
-                  className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors flex-shrink-0"
-                  title="Remove file"
-                >
-                  <X size={18} strokeWidth={2.5} />
-                </button>
-              </div>
-
-              <button
-                className="bg-[#35bdf2] hover:bg-[#20A4D5] text-white font-bold text-[14px] py-3.5 px-12 rounded shadow-[0_4px_14px_0_rgba(56,189,248,0.39)] transition-transform active:scale-95 tracking-wide cursor-pointer flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                onClick={continueHandler}
-                disabled={isExtracting}
-              >
-                {isExtracting ? (
-                  <>
-                    <svg
-                      className="animate-spin h-4 w-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8H4z"
-                      />
-                    </svg>
-                    Reading document...
-                  </>
-                ) : (
-                  "Continue"
-                )}
-              </button>
-            </div>
-          )}
         </>
       )}
 

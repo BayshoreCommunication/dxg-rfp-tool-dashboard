@@ -65,14 +65,24 @@ const Sidebar = () => {
   return (
     <aside className="fixed left-0 top-0 z-50 flex h-screen w-[90px] flex-col border-r border-gray-200 bg-white">
       <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200">
-        <Link href="/dashboard">
-          <Image
-            src="/assets/logo/logo.svg"
-            alt="Logo"
-            width={400}
-            height={400}
-            className="h-auto w-[50px]"
-          />
+        <Link
+          href="/dashboard"
+          aria-label="Go to dashboard"
+          className="group flex h-12 w-12 items-center justify-center overflow-hidden transition-all duration-200 hover:-translate-y-0.5 "
+        >
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt={userData?.branding?.brandName || "Logo"}
+              width={64}
+              height={64}
+              className="h-full w-full object-contain p-1.5"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              Logo
+            </div>
+          )}
         </Link>
       </div>
 
@@ -146,19 +156,9 @@ const Sidebar = () => {
             className="block cursor-pointer"
           >
             <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-primary/20 transition-all duration-200 hover:scale-105 hover:ring-primary/40">
-              {avatarUrl ? (
-                <Image
-                  src={avatarUrl}
-                  alt="User Avatar"
-                  width={40}
-                  height={40}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-primary to-blue-500 text-sm font-black text-white">
-                  {brandInitial}
-                </div>
-              )}
+              <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-primary to-blue-500 text-sm font-black text-white">
+                {brandInitial}
+              </div>
             </div>
           </button>
 
