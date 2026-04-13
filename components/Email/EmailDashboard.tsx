@@ -4,7 +4,7 @@ import {
   deleteEmailCampaignAction,
   getEmailCampaignsAction,
 } from "@/app/actions/email";
-import { BarChart3, Trash2 } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
@@ -21,35 +21,89 @@ type EmailCampaign = {
   createdAt: string;
 };
 
+type EmailPagination = {
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+};
+
 const FALLBACK_TITLE =
   "Official email request to the prospect to sign the proposal link";
 const FALLBACK_BODY =
   "This email will be sent if you choose to notify the prospect when publishing a proposal.";
+const PER_PAGE = 6;
+
+const buildPageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, "...", totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [
+      1,
+      "...",
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+
+  return [
+    1,
+    "...",
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    "...",
+    totalPages,
+  ];
+};
 
 export default function EmailDashboard() {
   const [loading, setLoading] = useState(true);
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
+  const [pagination, setPagination] = useState<EmailPagination>({
+    page: 1,
+    limit: PER_PAGE,
+    total: 0,
+    totalPages: 1,
+  });
+  const [currentPage, setCurrentPage] = useState(1);
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(
     null,
   );
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (page = 1) => {
     setLoading(true);
-    const campaignsRes = await getEmailCampaignsAction({ page: 1, limit: 100 });
+    const campaignsRes = await getEmailCampaignsAction({
+      page,
+      limit: PER_PAGE,
+    });
 
     if (campaignsRes.success && Array.isArray(campaignsRes.data)) {
       setCampaigns(campaignsRes.data as EmailCampaign[]);
+      setPagination(
+        campaignsRes.pagination && typeof campaignsRes.pagination === "object"
+          ? (campaignsRes.pagination as EmailPagination)
+          : { page, limit: PER_PAGE, total: 0, totalPages: 1 },
+      );
     } else {
       setCampaigns([]);
+      setPagination({ page, limit: PER_PAGE, total: 0, totalPages: 1 });
     }
 
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadData();
-  }, [loadData]);
+    void loadData(currentPage);
+  }, [currentPage, loadData]);
 
   const handleDelete = async (campaignId: string) => {
     setDeletingCampaignId(campaignId);
@@ -62,13 +116,21 @@ export default function EmailDashboard() {
     }
 
     toast.success(res.message || "Email campaign deleted.");
-    await loadData();
+    const nextPage =
+      campaigns.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+    setCurrentPage(nextPage);
+    await loadData(nextPage);
   };
+
+  const totalPages = Math.max(1, pagination.totalPages || 1);
+  const totalItems = pagination.total || 0;
+  const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * PER_PAGE + 1;
+  const toItem = Math.min(currentPage * PER_PAGE, totalItems);
 
   if (loading) {
     return (
       <div className="space-y-6 px-6">
-        {[1, 2, 3].map((key) => (
+        {[1, 2, 3, 4, 5, 6].map((key) => (
           <LoadingSkeletonCard key={key} />
         ))}
       </div>
@@ -160,6 +222,67 @@ export default function EmailDashboard() {
           </div>
         );
       })}
+
+      <div className="pt-2">
+        <div className="flex justify-end">
+          <nav aria-label="Email campaigns pagination">
+            <ul className="flex -space-x-px text-sm">
+              <li>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="flex h-10 w-10 items-center justify-center rounded-s-lg border border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <span className="sr-only">Previous</span>
+                  <ChevronLeft size={16} />
+                </button>
+              </li>
+
+              {buildPageItems(currentPage, totalPages).map((item, index) =>
+                item === "..." ? (
+                  <li key={`ellipsis-${index}`}>
+                    <span className="flex h-10 w-10 items-center justify-center border border-slate-200 bg-slate-50 text-slate-400">
+                      ...
+                    </span>
+                  </li>
+                ) : (
+                  <li key={item}>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(item as number)}
+                      aria-current={currentPage === item ? "page" : undefined}
+                      className={`flex h-10 w-10 items-center justify-center border border-slate-200 font-semibold transition-colors ${
+                        currentPage === item
+                          ? "bg-sky-100 text-sky-700"
+                          : "bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  </li>
+                ),
+              )}
+
+              <li>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                  disabled={currentPage >= totalPages}
+                  className="flex h-10 w-10 items-center justify-center rounded-e-lg border border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <span className="sr-only">Next</span>
+                  <ChevronRight size={16} />
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
     </div>
   );
 }

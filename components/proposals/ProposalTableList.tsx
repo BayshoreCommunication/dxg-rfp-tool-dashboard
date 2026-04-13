@@ -6,6 +6,8 @@ import {
   updateProposalMetaAction,
 } from "@/app/actions/proposals";
 import {
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Copy,
   Edit3,
@@ -54,6 +56,46 @@ type ProposalTableListProps = {
   ) => void;
 };
 
+type ProposalPagination = {
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+};
+
+const PER_PAGE = 5;
+
+const buildPageItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, "...", totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [
+      1,
+      "...",
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+
+  return [
+    1,
+    "...",
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    "...",
+    totalPages,
+  ];
+};
+
 const getCounts = (
   counts: unknown,
 ): Partial<Record<ProposalFilterType, number>> => {
@@ -82,6 +124,13 @@ export default function ProposalTableList({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [favoritingId, setFavoritingId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<ProposalPagination>({
+    page: 1,
+    limit: PER_PAGE,
+    total: 0,
+    totalPages: 1,
+  });
 
   const parseExpiryDays = (expiryValue?: string): number | null => {
     if (!expiryValue) return null;
@@ -160,8 +209,8 @@ export default function ProposalTableList({
         favorite?: boolean;
         isActive?: boolean;
       } = {
-        page: 1,
-        limit: 10,
+        page: currentPage,
+        limit: PER_PAGE,
       };
 
       const search = searchValue.trim();
@@ -188,8 +237,19 @@ export default function ProposalTableList({
 
       if (listRes.success && Array.isArray(listRes.data)) {
         setProposals(listRes.data as ProposalListItem[]);
+        setPagination(
+          listRes.pagination && typeof listRes.pagination === "object"
+            ? (listRes.pagination as ProposalPagination)
+            : { page: currentPage, limit: PER_PAGE, total: 0, totalPages: 1 },
+        );
       } else {
         setProposals([]);
+        setPagination({
+          page: currentPage,
+          limit: PER_PAGE,
+          total: 0,
+          totalPages: 1,
+        });
       }
 
       onCountsChange?.(getCounts(listRes.counts));
@@ -201,7 +261,11 @@ export default function ProposalTableList({
       mounted = false;
       clearTimeout(timer);
     };
-  }, [activeFilter, onCountsChange, refreshTick, searchValue]);
+  }, [activeFilter, currentPage, onCountsChange, refreshTick, searchValue]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchValue, activeFilter]);
 
   const handleDeleteProposal = async (proposal: ProposalListItem) => {
     const proposalId = proposal._id;
@@ -221,11 +285,21 @@ export default function ProposalTableList({
         return;
       }
       toast.success("Proposal deleted successfully.");
+      const nextPage =
+        proposals.length === 1 && currentPage > 1
+          ? currentPage - 1
+          : currentPage;
+      setCurrentPage(nextPage);
       setRefreshTick((prev) => prev + 1);
     } finally {
       setDeletingId(null);
     }
   };
+
+  const totalPages = Math.max(1, pagination.totalPages || 1);
+  const totalItems = pagination.total || 0;
+  const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * PER_PAGE + 1;
+  const toItem = Math.min(currentPage * PER_PAGE, totalItems);
 
   const handleCopyProposalUrl = async (proposalSlug: string) => {
     if (!proposalSlug) return;
@@ -506,6 +580,72 @@ export default function ProposalTableList({
                 </div>
               );
             })}
+
+            <div className="pt-2">
+              <div className="flex justify-end">
+                <nav aria-label="Proposals pagination">
+                  <ul className="flex -space-x-px text-sm">
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentPage((page) => Math.max(1, page - 1))
+                        }
+                        disabled={currentPage === 1}
+                        className="flex h-10 w-10 items-center justify-center rounded-s-lg border border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <span className="sr-only">Previous</span>
+                        <ChevronLeft size={16} />
+                      </button>
+                    </li>
+
+                    {buildPageItems(currentPage, totalPages).map(
+                      (item, index) =>
+                        item === "..." ? (
+                          <li key={`ellipsis-${index}`}>
+                            <span className="flex h-10 w-10 items-center justify-center border border-slate-200 bg-slate-50 text-slate-400">
+                              ...
+                            </span>
+                          </li>
+                        ) : (
+                          <li key={item}>
+                            <button
+                              type="button"
+                              onClick={() => setCurrentPage(item as number)}
+                              aria-current={
+                                currentPage === item ? "page" : undefined
+                              }
+                              className={`flex h-10 w-10 items-center justify-center border border-slate-200 font-semibold transition-colors ${
+                                currentPage === item
+                                  ? "bg-sky-100 text-sky-700"
+                                  : "bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              }`}
+                            >
+                              {item}
+                            </button>
+                          </li>
+                        ),
+                    )}
+
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentPage((page) =>
+                            Math.min(totalPages, page + 1),
+                          )
+                        }
+                        disabled={currentPage >= totalPages}
+                        className="flex h-10 w-10 items-center justify-center rounded-e-lg border border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <span className="sr-only">Next</span>
+                        <ChevronRight size={16} />
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
           </div>
         )}
       </div>
