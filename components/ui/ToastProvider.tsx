@@ -3,16 +3,12 @@
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export const ToastProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       {children}
       <ToastContainer
-        position="bottom-right"
+        position="bottom-center"
         autoClose={3000}
         hideProgressBar={false}
         newestOnTop

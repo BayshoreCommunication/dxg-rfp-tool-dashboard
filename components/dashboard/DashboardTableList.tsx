@@ -59,7 +59,7 @@ const STATUS_CONFIG: Record<
     pill: "bg-emerald-50 text-emerald-600 border-emerald-200",
   },
   rejected: {
-    label: "Rejected",
+    label: "Expired",
     dot: "bg-rose-400",
     pill: "bg-rose-50 text-rose-600 border-rose-200",
   },
@@ -225,7 +225,7 @@ export default function DashboardTableList({
           (filter === "draft" && status === "draft") ||
           (filter === "live" && status === "submitted") ||
           (filter === "favorite" && Boolean(p.isFavorite)) ||
-          (filter === "expired" && p.isActive === false);
+          (filter === "expired" && (p.isActive === false || status === "rejected"));
 
         return matchSearch && matchStatus;
       }),
@@ -238,7 +238,7 @@ export default function DashboardTableList({
       draft: proposals.filter((p) => toStatus(p.status) === "draft").length,
       live: proposals.filter((p) => toStatus(p.status) === "submitted").length,
       favorite: proposals.filter((p) => Boolean(p.isFavorite)).length,
-      expired: proposals.filter((p) => p.isActive === false).length,
+      expired: proposals.filter((p) => p.isActive === false || toStatus(p.status) === "rejected").length,
     }),
     [proposals],
   );

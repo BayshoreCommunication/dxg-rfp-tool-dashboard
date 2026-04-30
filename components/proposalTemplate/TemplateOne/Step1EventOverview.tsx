@@ -110,6 +110,23 @@ export default function Step1EventOverview({
       }}
     >
       <div className="max-w-[1280px] w-full mx-auto px-6 py-20 flex flex-col items-center text-center relative z-10">
+        {(data?.proposalSetting?.branding?.logoFile || data?.proposalSetting?.branding?.brandName) && (
+          <div className="mb-10 flex items-center justify-center gap-3">
+            {data.proposalSetting?.branding?.logoFile ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.proposalSetting.branding.logoFile}
+                alt={data.proposalSetting.branding.brandName || "Brand logo"}
+                className="h-12 w-auto max-w-40 object-contain"
+              />
+            ) : (
+              <span className="text-lg font-black text-slate-800 tracking-tight">
+                {data?.proposalSetting?.branding?.brandName}
+              </span>
+            )}
+          </div>
+        )}
+
         {formattedCreatedAt && (
           <div className="flex items-center justify-center gap-3 mb-8">
             <div

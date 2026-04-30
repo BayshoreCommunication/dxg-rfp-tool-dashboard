@@ -363,15 +363,19 @@ const mapProposalToTemplate = (
     return `${budgetCurrency} ${text}`;
   };
 
-  const formatYesNoWithQty = (value?: any, qtyField?: string, oldQty?: string) => {
+  const formatYesNoWithQty = (
+    value?: any,
+    qtyField?: string,
+    oldQty?: string,
+  ) => {
     let safeValue = "";
     let safeQty = "";
     if (typeof value === "object" && value !== null) {
-       safeValue = pick(value[Object.keys(value)[0]]);
-       safeQty = qtyField ? pick(value[qtyField]) : "";
+      safeValue = pick(value[Object.keys(value)[0]]);
+      safeQty = qtyField ? pick(value[qtyField]) : "";
     } else {
-       safeValue = pick(value);
-       safeQty = pick(oldQty);
+      safeValue = pick(value);
+      safeQty = pick(oldQty);
     }
     if (!safeValue) return "";
     if (safeValue === "Yes" && safeQty) {
@@ -379,15 +383,19 @@ const mapProposalToTemplate = (
     }
     return safeValue;
   };
-  const formatYesNoWithDetail = (value?: any, detailField?: string, oldDetail?: string) => {
+  const formatYesNoWithDetail = (
+    value?: any,
+    detailField?: string,
+    oldDetail?: string,
+  ) => {
     let safeValue = "";
     let safeDetail = "";
     if (typeof value === "object" && value !== null) {
-       safeValue = pick(value[Object.keys(value)[0]]);
-       safeDetail = detailField ? pick(value[detailField]) : "";
+      safeValue = pick(value[Object.keys(value)[0]]);
+      safeDetail = detailField ? pick(value[detailField]) : "";
     } else {
-       safeValue = pick(value);
-       safeDetail = pick(oldDetail);
+      safeValue = pick(value);
+      safeDetail = pick(oldDetail);
     }
     if (!safeValue) return "";
     if (safeValue === "Yes" && safeDetail) {
@@ -395,7 +403,6 @@ const mapProposalToTemplate = (
     }
     return safeValue;
   };
-
 
   const metaChips = [
     proposal.status ? `${t("Status", "Estado")}: ${proposal.status}` : "",
@@ -451,7 +458,12 @@ const mapProposalToTemplate = (
     pick(proposal.roomByRoom?.contentVideoNeeds);
 
   const eventTypeRaw = proposal.event?.eventType;
-  const eventTypeString = typeof eventTypeRaw === "object" ? (eventTypeRaw.eventType === "Other" ? eventTypeRaw.eventTypeOther : eventTypeRaw.eventType) : eventTypeRaw;
+  const eventTypeString =
+    typeof eventTypeRaw === "object"
+      ? eventTypeRaw.eventType === "Other"
+        ? eventTypeRaw.eventTypeOther
+        : eventTypeRaw.eventType
+      : eventTypeRaw;
 
   return {
     badge: `${t("Proposal", "Propuesta")}${proposal.status ? ` • ${proposal.status}` : ""}${createdLabel ? ` • ${createdLabel}` : ""}`,
@@ -774,7 +786,10 @@ export default function ProposalView({
   const hasGlobalActions = canDownloadPreview;
 
   const globalFloatingActions = hasGlobalActions ? (
-    <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[99] no-print" style={{ fontFamily: "var(--font-sans)" }}>
+    <div
+      className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[99] no-print"
+      style={{ fontFamily: "var(--font-sans)" }}
+    >
       <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-xl backdrop-blur-md">
         {canDownloadPreview && (
           <button
@@ -784,7 +799,11 @@ export default function ProposalView({
             className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-800 disabled:opacity-60 hover:bg-slate-50 transition"
           >
             {downloading
-              ? t("Generating PDF...", "Generando PDF...", "Generation du PDF...")
+              ? t(
+                  "Generating PDF...",
+                  "Generando PDF...",
+                  "Generation du PDF...",
+                )
               : t("Download PDF", "Descargar PDF", "Telecharger le PDF")}
           </button>
         )}
@@ -792,11 +811,18 @@ export default function ProposalView({
     </div>
   ) : null;
 
+  console.log("check proposal data", proposal);
+
   return (
     <div className={fontClassNames} style={templateWrapperStyle}>
       {globalFloatingActions}
       {proposal.templateId === "template-two" ? (
-        <TemplateTwo {...templateOneProps} />
+        <TemplateTwo
+          proposalData={proposal as unknown as Partial<TemplateOneData>}
+          rawProposal={proposal}
+          proposalLanguage={proposalLanguage}
+          fontFamily={templateFont}
+        />
       ) : (
         <TemplateOne {...templateOneProps} />
       )}

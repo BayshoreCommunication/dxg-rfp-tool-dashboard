@@ -502,13 +502,15 @@ export default function ProposalTableList({
                             {ownerName || "-"}
                           </span>
                         </p>
-                        <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
-                          <Clock size={11} className="text-slate-400" />
-                          Expiry:{" "}
-                          <span className="text-slate-800 font-semibold">
-                            {expiryMeta.expiryLabel}
-                          </span>
-                        </p>
+                        {!isExpired && (
+                          <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
+                            <Clock size={11} className="text-slate-400" />
+                            Expiry:{" "}
+                            <span className="text-slate-800 font-semibold">
+                              {expiryMeta.expiryLabel}
+                            </span>
+                          </p>
+                        )}
                         {/* <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
                           <Clock size={11} className="text-slate-400" />
                           Expiry date:

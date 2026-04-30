@@ -60,6 +60,8 @@ export default function TemplateTwo({
   // Construct Data from Raw JSON
   const eventName = raw.event?.eventName || "";
   const proposalBadge = "EVENT PROPOSAL";
+  const logoFile = raw.proposalSetting?.branding?.logoFile || null;
+  const brandName = raw.proposalSetting?.branding?.brandName || "";
   
   const eventTypeRaw = raw.event?.eventType;
   const eventTypeString = typeof eventTypeRaw === "object" 
@@ -292,6 +294,23 @@ export default function TemplateTwo({
 
       <main className="mx-auto max-w-6xl px-6 py-10 print:px-12 print:py-12">
         <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          {(logoFile || brandName) && (
+            <div className="mb-6 flex items-center gap-3">
+              {logoFile && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoFile}
+                  alt={brandName || "Brand logo"}
+                  className="h-10 w-auto max-w-40 object-contain"
+                />
+              )}
+              {!logoFile && brandName && (
+                <span className="text-base font-black text-slate-800 tracking-tight">
+                  {brandName}
+                </span>
+              )}
+            </div>
+          )}
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-600">
             {proposalBadge}
           </p>

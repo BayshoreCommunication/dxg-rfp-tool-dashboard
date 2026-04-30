@@ -215,11 +215,12 @@ const SigninPage = () => {
 
         {/* Footer */}
         <p className="text-center text-[13.5px] font-bold text-gray-400">
-          New to Proposify?{" "}
-          <Link href="/sign-up" className="text-primary hover:text-blue-500 transition-colors">
-            Create an account
-          </Link>
+            Don't have an account?{" "}
+            <Link href="/sign-up" className="text-primary hover:text-blue-500 transition-colors">
+              Sign up
+            </Link>
         </p>
+
       </div>
     </div>
   );

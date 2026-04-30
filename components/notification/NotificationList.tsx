@@ -8,18 +8,26 @@ import {
 import {
   BellDot,
   CheckCheck,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Eye,
   Siren,
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+
+const PAGE_SIZE = 10;
 
 type NotificationListProps = {
   initialNotifications: NotificationItem[];
   initialUnreadCount: number;
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
 };
 
 const formatDateTime = (value: string) => {
@@ -57,6 +65,9 @@ const getNotificationIconStyle = (type: NotificationItem["type"]) => {
 export default function NotificationList({
   initialNotifications,
   initialUnreadCount,
+  currentPage,
+  totalPages,
+  totalCount,
 }: NotificationListProps) {
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(initialNotifications);
@@ -151,6 +162,9 @@ export default function NotificationList({
     return "Good evening";
   };
 
+  const rangeStart = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, totalCount);
+
   return (
     <section className="space-y-6 px-6">
       <div className="relative">
@@ -215,45 +229,115 @@ export default function NotificationList({
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {notifications.map((notification) => (
-              <button
-                key={notification._id}
-                type="button"
-                onClick={() => void markOneAsRead(notification._id)}
-                disabled={notification.isRead || markingId === notification._id}
-                className={`flex w-full items-start gap-4 rounded-2xl border px-4 py-4 text-left transition-colors ${
-                  notification.isRead
-                    ? "border-slate-200 bg-white"
-                    : "border-cyan-200 bg-cyan-50/40"
-                } disabled:cursor-default`}
-              >
-                <div
-                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${getNotificationIconStyle(notification.type)}`}
+          <>
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <button
+                  key={notification._id}
+                  type="button"
+                  onClick={() => void markOneAsRead(notification._id)}
+                  disabled={notification.isRead || markingId === notification._id}
+                  className={`flex w-full items-start gap-4 rounded-2xl border px-4 py-4 text-left transition-colors ${
+                    notification.isRead
+                      ? "border-slate-200 bg-white"
+                      : "border-cyan-200 bg-cyan-50/40"
+                  } disabled:cursor-default`}
                 >
-                  {getNotificationIcon(notification.type)}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm font-bold text-slate-900">
-                      {notification.title}
-                    </p>
-                    <span className="text-xs font-medium text-slate-500">
-                      {formatDateTime(notification.createdAt)}
-                    </span>
+                  <div
+                    className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${getNotificationIconStyle(notification.type)}`}
+                  >
+                    {getNotificationIcon(notification.type)}
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {notification.message}
-                  </p>
-                </div>
 
-                {!notification.isRead && (
-                  <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-500" />
-                )}
-              </button>
-            ))}
-          </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm font-bold text-slate-900">
+                        {notification.title}
+                      </p>
+                      <span className="text-xs font-medium text-slate-500">
+                        {formatDateTime(notification.createdAt)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      {notification.message}
+                    </p>
+                  </div>
+
+                  {!notification.isRead && (
+                    <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-500" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-5">
+                <p className="text-xs font-medium text-slate-400">
+                  Showing {rangeStart}–{rangeEnd} of {totalCount}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Link
+                    href={`?page=${currentPage - 1}`}
+                    aria-disabled={currentPage === 1}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 ${
+                      currentPage === 1 ? "pointer-events-none opacity-40" : ""
+                    }`}
+                  >
+                    <ChevronLeft size={15} />
+                  </Link>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(
+                      (p) =>
+                        p === 1 ||
+                        p === totalPages ||
+                        Math.abs(p - currentPage) <= 1,
+                    )
+                    .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                      if (idx > 0 && p - (arr[idx - 1] as number) > 1) {
+                        acc.push("…");
+                      }
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((item, idx) =>
+                      item === "…" ? (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          className="flex h-8 w-8 items-center justify-center text-xs text-slate-400"
+                        >
+                          …
+                        </span>
+                      ) : (
+                        <Link
+                          key={item}
+                          href={`?page=${item}`}
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
+                            item === currentPage
+                              ? "border-cyan-500 bg-cyan-50 text-cyan-700"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          {item}
+                        </Link>
+                      ),
+                    )}
+
+                  <Link
+                    href={`?page=${currentPage + 1}`}
+                    aria-disabled={currentPage === totalPages}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 ${
+                      currentPage === totalPages
+                        ? "pointer-events-none opacity-40"
+                        : ""
+                    }`}
+                  >
+                    <ChevronRight size={15} />
+                  </Link>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
