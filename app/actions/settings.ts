@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 
-const API_URL = process.env.BACKEND_URL || "http://localhost:8000";
+import { BACKEND_URL as API_URL } from "@/lib/config";
 
 type SettingsResponse = {
   success: boolean;

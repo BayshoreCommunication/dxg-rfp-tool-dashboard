@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { BACKEND_URL } from "@/lib/config";
 
 interface UserDataResponse {
   error?: string;
@@ -12,14 +13,9 @@ export async function getUserData(): Promise<UserDataResponse> {
   const session = await auth();
   const accessToken = (session?.user as { accessToken?: string } | undefined)
     ?.accessToken;
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    process.env.BACKEND_URL ||
-    "http://localhost:8000";
-  const normalizedBaseUrl = baseUrl.trim();
-  const apiUrl = normalizedBaseUrl.endsWith("/api")
-    ? normalizedBaseUrl.slice(0, -4)
-    : normalizedBaseUrl;
+  const apiUrl = BACKEND_URL.endsWith("/api")
+    ? BACKEND_URL.slice(0, -4)
+    : BACKEND_URL;
 
   if (!accessToken) {
     return {

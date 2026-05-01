@@ -4,15 +4,7 @@
 import { auth } from "@/auth";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
 
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.BACKEND_URL ||
-  "http://localhost:8000"
-).trim();
-const FRONTEND_URL =
-  process.env.NEXT_PUBLIC_FRONTEND_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  "http://localhost:3000";
+import { BACKEND_URL as API_URL, FRONTEND_URL } from "@/lib/config";
 
 type ApiResponse = {
   success: boolean;
@@ -66,14 +58,17 @@ const withProposalMeta = (payload: unknown) => {
 export async function createProposalAction(
   payload: ProposalData & {
     status?: "draft" | "submitted" | "reviewed" | "approved" | "rejected";
-  }
+  },
 ): Promise<ApiResponse> {
   try {
     const token = await getAccessToken();
     if (!token) {
       return { success: false, message: "User is not authenticated." };
     }
-    console.log("PAYLOAD FROM FRONTEND ACTION:", JSON.stringify(payload, null, 2));
+    console.log(
+      "PAYLOAD FROM FRONTEND ACTION:",
+      JSON.stringify(payload, null, 2),
+    );
 
     const res = await fetch(`${API_URL}/api/proposals`, {
       method: "POST",
@@ -99,9 +94,11 @@ export async function createProposalAction(
  * Send a document file to the backend AI extraction endpoint.
  * Returns a partial ProposalData object with only the fields found in the document.
  */
-export async function extractProposalFromFile(
-  file: File
-): Promise<{ success: boolean; data?: Partial<ProposalData>; message?: string }> {
+export async function extractProposalFromFile(file: File): Promise<{
+  success: boolean;
+  data?: Partial<ProposalData>;
+  message?: string;
+}> {
   try {
     const token = await getAccessToken();
     if (!token) {
@@ -163,14 +160,11 @@ export async function getProposalsAction(params?: {
   }
 
   try {
-    const res = await fetch(
-      `${API_URL}/api/proposals?${query.toString()}`,
-      {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      }
-    );
+    const res = await fetch(`${API_URL}/api/proposals?${query.toString()}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
     const data = await res.json();
     return {
       success: res.ok,
@@ -184,9 +178,7 @@ export async function getProposalsAction(params?: {
   }
 }
 
-export async function getProposalByIdAction(
-  id: string
-): Promise<ApiResponse> {
+export async function getProposalByIdAction(id: string): Promise<ApiResponse> {
   const token = await getAccessToken();
   if (!token) {
     return { success: false, message: "User is not authenticated." };
@@ -211,7 +203,7 @@ export async function getProposalByIdAction(
 
 export async function updateProposalAction(
   id: string,
-  updates: Partial<ProposalData>
+  updates: Partial<ProposalData>,
 ): Promise<ApiResponse> {
   const token = await getAccessToken();
   if (!token) {
@@ -240,7 +232,7 @@ export async function updateProposalAction(
 
 export async function updateProposalStatusAction(
   id: string,
-  status: "draft" | "submitted" | "reviewed" | "approved" | "rejected"
+  status: "draft" | "submitted" | "reviewed" | "approved" | "rejected",
 ): Promise<ApiResponse> {
   const token = await getAccessToken();
   if (!token) {
@@ -259,8 +251,7 @@ export async function updateProposalStatusAction(
     const data = await res.json();
     return {
       success: res.ok,
-      message:
-        data.message || (res.ok ? "Status updated" : "Update failed"),
+      message: data.message || (res.ok ? "Status updated" : "Update failed"),
       data: withProposalMeta(data.data),
     };
   } catch (error: any) {
@@ -276,7 +267,7 @@ export async function updateProposalMetaAction(
     isAccepted?: boolean;
     isOpen?: boolean;
     viewsCount?: number;
-  }
+  },
 ): Promise<ApiResponse> {
   const token = await getAccessToken();
   if (!token) {
@@ -295,8 +286,7 @@ export async function updateProposalMetaAction(
     const data = await res.json();
     return {
       success: res.ok,
-      message:
-        data.message || (res.ok ? "Proposal updated" : "Update failed"),
+      message: data.message || (res.ok ? "Proposal updated" : "Update failed"),
       data: withProposalMeta(data.data),
     };
   } catch (error: any) {
@@ -305,7 +295,7 @@ export async function updateProposalMetaAction(
 }
 
 export async function incrementProposalViewsAction(
-  id: string
+  id: string,
 ): Promise<ApiResponse> {
   try {
     const token = await getAccessToken();
@@ -359,9 +349,7 @@ export async function deleteProposalAction(id: string): Promise<ApiResponse> {
  *   const result = await uploadProposalFilesAction(formData);
  *   // formData fields: "supportDocuments" and/or "avQuoteFiles"
  */
-export async function uploadProposalFilesAction(
-  formData: FormData
-): Promise<{
+export async function uploadProposalFilesAction(formData: FormData): Promise<{
   success: boolean;
   message?: string;
   supportDocumentUrls: string[];
@@ -396,8 +384,11 @@ export async function uploadProposalFilesAction(
       };
     }
 
-    const results: Array<{ fieldname: string; originalname: string; url: string }> =
-      json.data || [];
+    const results: Array<{
+      fieldname: string;
+      originalname: string;
+      url: string;
+    }> = json.data || [];
 
     return {
       success: true,

@@ -27,10 +27,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           return null;
         }
 
-        const baseUrl = process.env.BACKEND_URL || "http://localhost:8000";
-        const apiUrl = baseUrl.endsWith("/api")
-          ? baseUrl.slice(0, -4)
-          : baseUrl;
+        const { BACKEND_URL } = await import("@/lib/config");
+        const apiUrl = BACKEND_URL.endsWith("/api")
+          ? BACKEND_URL.slice(0, -4)
+          : BACKEND_URL;
 
         try {
           const response = await fetch(`${apiUrl}/api/auth/login`, {
@@ -77,13 +77,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           return false;
         }
 
-        const baseUrl =
-          process.env.BACKEND_URL ||
-          process.env.NEXT_PUBLIC_API_URL ||
-          "http://localhost:5000";
-        const apiUrl = baseUrl.endsWith("/api")
-          ? baseUrl.slice(0, -4)
-          : baseUrl;
+        const { BACKEND_URL } = await import("@/lib/config");
+        const apiUrl = BACKEND_URL.endsWith("/api")
+          ? BACKEND_URL.slice(0, -4)
+          : BACKEND_URL;
 
         try {
           const response = await fetch(`${apiUrl}/api/auth/google`, {

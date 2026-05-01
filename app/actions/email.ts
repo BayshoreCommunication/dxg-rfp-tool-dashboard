@@ -2,11 +2,7 @@
 
 import { auth } from "@/auth";
 
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.BACKEND_URL ||
-  "http://localhost:8000"
-).trim();
+import { BACKEND_URL as API_URL } from "@/lib/config";
 
 type ApiResponse = {
   success: boolean;
@@ -17,7 +13,9 @@ type ApiResponse = {
 
 const getAccessToken = async (): Promise<string | null> => {
   const session = await auth();
-  return (session?.user as { accessToken?: string } | undefined)?.accessToken || null;
+  return (
+    (session?.user as { accessToken?: string } | undefined)?.accessToken || null
+  );
 };
 
 export type SendProposalEmailPayload = {
@@ -28,7 +26,7 @@ export type SendProposalEmailPayload = {
 };
 
 export async function sendProposalEmailAction(
-  payload: SendProposalEmailPayload
+  payload: SendProposalEmailPayload,
 ): Promise<ApiResponse> {
   try {
     const token = await getAccessToken();
@@ -96,7 +94,7 @@ export async function getEmailCampaignsAction(params?: {
 }
 
 export async function getEmailStatsAction(
-  proposalId?: string
+  proposalId?: string,
 ): Promise<ApiResponse> {
   try {
     const token = await getAccessToken();
@@ -127,7 +125,7 @@ export async function getEmailStatsAction(
 }
 
 export async function deleteEmailCampaignsByProposalAction(
-  proposalId: string
+  proposalId: string,
 ): Promise<ApiResponse> {
   try {
     const token = await getAccessToken();
@@ -143,7 +141,8 @@ export async function deleteEmailCampaignsByProposalAction(
     const data = await res.json();
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Deleted successfully" : "Delete failed"),
+      message:
+        data.message || (res.ok ? "Deleted successfully" : "Delete failed"),
       data,
     };
   } catch (error: unknown) {
@@ -155,7 +154,7 @@ export async function deleteEmailCampaignsByProposalAction(
 }
 
 export async function deleteEmailCampaignAction(
-  campaignId: string
+  campaignId: string,
 ): Promise<ApiResponse> {
   try {
     const token = await getAccessToken();
@@ -171,7 +170,8 @@ export async function deleteEmailCampaignAction(
     const data = await res.json();
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Deleted successfully" : "Delete failed"),
+      message:
+        data.message || (res.ok ? "Deleted successfully" : "Delete failed"),
       data,
     };
   } catch (error: unknown) {

@@ -2,11 +2,7 @@
 
 import { auth } from "@/auth";
 
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.BACKEND_URL ||
-  "http://localhost:8000"
-).trim();
+import { BACKEND_URL as API_URL } from "@/lib/config";
 
 type ApiResponse = {
   success: boolean;
@@ -20,7 +16,9 @@ type ApiResponse = {
 
 const getAccessToken = async (): Promise<string | null> => {
   const session = await auth();
-  return (session?.user as { accessToken?: string } | undefined)?.accessToken || null;
+  return (
+    (session?.user as { accessToken?: string } | undefined)?.accessToken || null
+  );
 };
 
 export type NotificationItem = {
@@ -53,16 +51,20 @@ export async function getNotificationsAction(params?: {
       query.set("unreadOnly", String(params.unreadOnly));
     }
 
-    const res = await fetch(`${API_URL}/api/notifications?${query.toString()}`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
+    const res = await fetch(
+      `${API_URL}/api/notifications?${query.toString()}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      },
+    );
     const data = await res.json();
 
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Notifications fetched" : "Fetch failed"),
+      message:
+        data.message || (res.ok ? "Notifications fetched" : "Fetch failed"),
       data: data.data,
       pagination: data.pagination,
       unreadCount: data.unreadCount,
@@ -92,7 +94,8 @@ export async function getUnreadNotificationCountAction(): Promise<ApiResponse> {
 
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Unread count fetched" : "Fetch failed"),
+      message:
+        data.message || (res.ok ? "Unread count fetched" : "Fetch failed"),
       data: data.data,
       unreadCount: data.data?.unreadCount,
     };
@@ -122,7 +125,8 @@ export async function markNotificationAsReadAction(
 
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Notification updated" : "Update failed"),
+      message:
+        data.message || (res.ok ? "Notification updated" : "Update failed"),
       data: data.data,
     };
   } catch (error: unknown) {
@@ -149,7 +153,8 @@ export async function markAllNotificationsAsReadAction(): Promise<ApiResponse> {
 
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Notifications updated" : "Update failed"),
+      message:
+        data.message || (res.ok ? "Notifications updated" : "Update failed"),
       data: data.data,
     };
   } catch (error: unknown) {
