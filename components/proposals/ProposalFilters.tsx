@@ -4,12 +4,42 @@ import { Search, SlidersHorizontal } from "lucide-react";
 
 export type ProposalFilterType = "all" | "draft" | "live" | "favorite" | "expired";
 
-const TAB_CONFIG: Array<{ key: ProposalFilterType; label: string }> = [
-  { key: "all", label: "ALL" },
-  { key: "draft", label: "DRAFT" },
-  { key: "live", label: "LIVE" },
-  { key: "favorite", label: "FAVORITE" },
-  { key: "expired", label: "EXPIRED" },
+const TAB_CONFIG: Array<{
+  key: ProposalFilterType;
+  label: string;
+  activeClass: string;
+  badgeClass: string;
+}> = [
+  {
+    key: "all",
+    label: "ALL",
+    activeClass: "bg-slate-800 text-white border-transparent shadow-md",
+    badgeClass: "bg-white/20 text-white",
+  },
+  {
+    key: "draft",
+    label: "DRAFT",
+    activeClass: "bg-amber-500 text-white border-transparent shadow-md shadow-amber-200",
+    badgeClass: "bg-white/25 text-white",
+  },
+  {
+    key: "live",
+    label: "LIVE",
+    activeClass: "bg-emerald-500 text-white border-transparent shadow-md shadow-emerald-200",
+    badgeClass: "bg-white/25 text-white",
+  },
+  {
+    key: "favorite",
+    label: "FAVORITE",
+    activeClass: "bg-rose-500 text-white border-transparent shadow-md shadow-rose-200",
+    badgeClass: "bg-white/25 text-white",
+  },
+  {
+    key: "expired",
+    label: "EXPIRED",
+    activeClass: "bg-red-600 text-white border-transparent shadow-md shadow-red-200",
+    badgeClass: "bg-white/25 text-white",
+  },
 ];
 
 type ProposalFiltersProps = {
@@ -73,16 +103,14 @@ export default function ProposalFilters({
               onClick={() => onFilterChange(tab.key)}
               className={`flex flex-shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-lg text-[11px] font-black tracking-widest uppercase transition-all duration-200 ${
                 isActive
-                  ? "bg-slate-800 text-white shadow-md border border-transparent"
+                  ? tab.activeClass
                   : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700"
               }`}
             >
               {tab.label}
               <span
                 className={`flex items-center justify-center px-1.5 py-0.5 rounded-md text-[10px] ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "bg-slate-100 text-slate-500"
+                  isActive ? tab.badgeClass : "bg-slate-100 text-slate-500"
                 }`}
               >
                 {tabCounts[tab.key]}

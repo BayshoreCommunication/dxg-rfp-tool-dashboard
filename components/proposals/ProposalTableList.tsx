@@ -502,22 +502,33 @@ export default function ProposalTableList({
                             {ownerName || "-"}
                           </span>
                         </p>
-                        {!isExpired && (
-                          <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
-                            <Clock size={11} className="text-slate-400" />
+                        {expiryMeta.expiryDateLabel !== "-" && (
+                          <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2 flex-wrap">
+                            <Clock
+                              size={11}
+                              className={
+                                isExpired
+                                  ? "text-rose-400"
+                                  : "text-slate-400"
+                              }
+                            />
                             Expiry:{" "}
-                            <span className="text-slate-800 font-semibold">
+                            <span
+                              className={`font-semibold ${isExpired ? "text-rose-600" : "text-slate-800"}`}
+                            >
+                              {expiryMeta.expiryDateLabel}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                isExpired
+                                  ? "bg-rose-50 text-rose-500 border border-rose-100"
+                                  : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              }`}
+                            >
                               {expiryMeta.expiryLabel}
                             </span>
                           </p>
                         )}
-                        {/* <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
-                          <Clock size={11} className="text-slate-400" />
-                          Expiry date:
-                         
-                            {expiryMeta.expiryDateLabel}
-                      
-                        </p> */}
                       </div>
                     </div>
 
