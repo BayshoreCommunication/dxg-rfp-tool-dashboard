@@ -16,6 +16,7 @@ const ProposalsDetials = () => {
     draft: 0,
     live: 0,
     favorite: 0,
+    expired: 0,
   });
 
   return (

@@ -252,7 +252,11 @@ export default function ProposalTableList({
         });
       }
 
-      onCountsChange?.(getCounts(listRes.counts));
+      // Only update counts when the backend returns them — prevents a failed
+      // or unauthenticated request from resetting all badges back to 0.
+      if (listRes.success && listRes.counts) {
+        onCountsChange?.(getCounts(listRes.counts));
+      }
 
       setLoading(false);
     }, 300);
