@@ -3,11 +3,9 @@
 import { ArrowRight, Check, Eye, KeyRound, Mail } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const SigninPage = () => {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState("");
@@ -34,8 +32,10 @@ const SigninPage = () => {
       if (result?.error) {
         setError("Invalid email or password.");
       } else if (result?.ok) {
-        router.push("/dashboard");
-        router.refresh();
+        // Full navigation ensures the new session cookie is read by the
+        // middleware immediately. router.refresh() + router.push() would
+        // fire two server round-trips; window.location.replace fires one.
+        window.location.replace("/dashboard");
       }
     } catch (err: any) {
       setError("An error occurred. Please try again.");

@@ -1,6 +1,29 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import { BACKEND_URL } from "@/lib/config";
+
+// Strip a trailing "/api" segment once at module load — avoids repeated string
+// manipulation on every login attempt.
+const API_ORIGIN = BACKEND_URL.endsWith("/api")
+  ? BACKEND_URL.slice(0, -4)
+  : BACKEND_URL;
+
+// Default timeout (ms) for backend auth requests. Prevents indefinite hangs
+// caused by Vercel cold-starts or slow networks.
+const AUTH_FETCH_TIMEOUT_MS = 8000;
+
+function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = AUTH_FETCH_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(id),
+  );
+}
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
@@ -27,20 +50,18 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           return null;
         }
 
-        const { BACKEND_URL } = await import("@/lib/config");
-        const apiUrl = BACKEND_URL.endsWith("/api")
-          ? BACKEND_URL.slice(0, -4)
-          : BACKEND_URL;
-
         try {
-          const response = await fetch(`${apiUrl}/api/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          });
+          const response = await fetchWithTimeout(
+            `${API_ORIGIN}/api/auth/login`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+              }),
+            },
+          );
 
           if (!response.ok) {
             return null;
@@ -77,22 +98,20 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           return false;
         }
 
-        const { BACKEND_URL } = await import("@/lib/config");
-        const apiUrl = BACKEND_URL.endsWith("/api")
-          ? BACKEND_URL.slice(0, -4)
-          : BACKEND_URL;
-
         try {
-          const response = await fetch(`${apiUrl}/api/auth/google`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email,
-              name: googleProfile?.name || user?.name || "",
-              avatar: googleProfile?.picture || user?.image || "",
-              googleId: account.providerAccountId || "",
-            }),
-          });
+          const response = await fetchWithTimeout(
+            `${API_ORIGIN}/api/auth/google`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email,
+                name: googleProfile?.name || user?.name || "",
+                avatar: googleProfile?.picture || user?.image || "",
+                googleId: account.providerAccountId || "",
+              }),
+            },
+          );
 
           if (!response.ok) {
             return false;
