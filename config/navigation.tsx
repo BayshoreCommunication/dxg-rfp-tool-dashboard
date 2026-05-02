@@ -27,12 +27,6 @@ export const navigationConfig: NavItem[] = [
     href: "/email",
     icon: <Mail size={22} />,
   },
-  // {
-  //   id: "ai-training",
-  //   title: "AI Training",
-  //   href: "/ai-training",
-  //   icon: <Brain size={22} />,
-  // },
   {
     id: "settings",
     title: "Setting",
