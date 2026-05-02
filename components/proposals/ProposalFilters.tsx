@@ -1,5 +1,6 @@
 "use client";
 
+import type { ProposalCounts } from "@/app/actions/proposals";
 import { Search, SlidersHorizontal } from "lucide-react";
 
 export type ProposalFilterType = "all" | "draft" | "live" | "favorite" | "expired";
@@ -47,7 +48,7 @@ type ProposalFiltersProps = {
   onSearchChange: (value: string) => void;
   activeFilter: ProposalFilterType;
   onFilterChange: (filter: ProposalFilterType) => void;
-  counts?: Partial<Record<ProposalFilterType, number>>;
+  counts: ProposalCounts;
 };
 
 export default function ProposalFilters({
@@ -57,13 +58,6 @@ export default function ProposalFilters({
   onFilterChange,
   counts,
 }: ProposalFiltersProps) {
-  const tabCounts: Record<ProposalFilterType, number> = {
-    all: counts?.all ?? 0,
-    draft: counts?.draft ?? 0,
-    live: counts?.live ?? 0,
-    favorite: counts?.favorite ?? 0,
-    expired: counts?.expired ?? 0,
-  };
 
   return (
     <div className="w-full space-y-5 py-4 px-6">
@@ -113,7 +107,7 @@ export default function ProposalFilters({
                   isActive ? tab.badgeClass : "bg-slate-100 text-slate-500"
                 }`}
               >
-                {tabCounts[tab.key]}
+                {counts[tab.key]}
               </span>
             </button>
           );

@@ -6,12 +6,20 @@ import type { ProposalData } from "@/components/proposals/AddNewProposal";
 
 import { BACKEND_URL as API_URL, FRONTEND_URL } from "@/lib/config";
 
+export type ProposalCounts = {
+  all: number;
+  draft: number;
+  live: number;
+  favorite: number;
+  expired: number;
+};
+
 type ApiResponse = {
   success: boolean;
   message?: string;
   data?: unknown;
   pagination?: unknown;
-  counts?: unknown;
+  counts?: ProposalCounts;
 };
 
 const getAccessToken = async (): Promise<string | null> => {
@@ -175,6 +183,49 @@ export async function getProposalsAction(params?: {
     };
   } catch (error: any) {
     return { success: false, message: error.message || "Network error" };
+  }
+}
+
+export async function getProposalCountsAction(search?: string): Promise<{
+  success: boolean;
+  message?: string;
+  counts: ProposalCounts;
+}> {
+  const empty: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0 };
+
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, message: "User is not authenticated.", counts: empty };
+  }
+
+  const query = new URLSearchParams({ includeCounts: "true", limit: "1", page: "1" });
+  if (search?.trim()) query.set("search", search.trim());
+
+  try {
+    const res = await fetch(`${API_URL}/api/proposals?${query.toString()}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.counts) {
+      return { success: false, message: data.message || "Fetch failed", counts: empty };
+    }
+
+    const raw = data.counts as Partial<ProposalCounts>;
+    return {
+      success: true,
+      counts: {
+        all: raw.all ?? 0,
+        draft: raw.draft ?? 0,
+        live: raw.live ?? 0,
+        favorite: raw.favorite ?? 0,
+        expired: raw.expired ?? 0,
+      },
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error", counts: empty };
   }
 }
 

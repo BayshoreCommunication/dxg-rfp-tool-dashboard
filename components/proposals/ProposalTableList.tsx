@@ -51,9 +51,7 @@ type ProposalListItem = {
 type ProposalTableListProps = {
   searchValue: string;
   activeFilter: ProposalFilterType;
-  onCountsChange?: (
-    counts: Partial<Record<ProposalFilterType, number>>,
-  ) => void;
+  onRefreshCounts?: () => void;
 };
 
 type ProposalPagination = {
@@ -96,28 +94,10 @@ const buildPageItems = (currentPage: number, totalPages: number) => {
   ];
 };
 
-const getCounts = (
-  counts: unknown,
-): Partial<Record<ProposalFilterType, number>> => {
-  if (!counts || typeof counts !== "object") return {};
-
-  const value = counts as Partial<Record<ProposalFilterType, unknown>>;
-  const read = (key: ProposalFilterType) =>
-    typeof value[key] === "number" ? (value[key] as number) : 0;
-
-  return {
-    all: read("all"),
-    draft: read("draft"),
-    live: read("live"),
-    favorite: read("favorite"),
-    expired: read("expired"),
-  };
-};
-
 export default function ProposalTableList({
   searchValue,
   activeFilter,
-  onCountsChange,
+  onRefreshCounts,
 }: ProposalTableListProps) {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -228,10 +208,7 @@ export default function ProposalTableList({
         params.isActive = false;
       }
 
-      const listRes = await getProposalsAction({
-        ...params,
-        includeCounts: true,
-      });
+      const listRes = await getProposalsAction(params);
 
       if (!mounted) return;
 
@@ -252,12 +229,6 @@ export default function ProposalTableList({
         });
       }
 
-      // Only update counts when the backend returns them — prevents a failed
-      // or unauthenticated request from resetting all badges back to 0.
-      if (listRes.success && listRes.counts) {
-        onCountsChange?.(getCounts(listRes.counts));
-      }
-
       setLoading(false);
     }, 300);
 
@@ -265,7 +236,7 @@ export default function ProposalTableList({
       mounted = false;
       clearTimeout(timer);
     };
-  }, [activeFilter, currentPage, onCountsChange, refreshTick, searchValue]);
+  }, [activeFilter, currentPage, refreshTick, searchValue]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -295,6 +266,7 @@ export default function ProposalTableList({
           : currentPage;
       setCurrentPage(nextPage);
       setRefreshTick((prev) => prev + 1);
+      onRefreshCounts?.();
     } finally {
       setDeletingId(null);
     }
@@ -352,6 +324,8 @@ export default function ProposalTableList({
           ),
         );
         toast.error(res.message || "Failed to update favorite.");
+      } else {
+        onRefreshCounts?.();
       }
     } finally {
       setFavoritingId(null);
