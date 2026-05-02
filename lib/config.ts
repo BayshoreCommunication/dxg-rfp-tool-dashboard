@@ -3,7 +3,7 @@ const PRODUCTION_FRONTEND_URL = "https://dxg-rfp-tool-dashboard.vercel.app";
 
 /**
  * Externally reachable backend URL.
- * Set BACKEND_URL in your environment for local dev (e.g. http://localhost:8000).
+ * Set BACKEND_URL in your environment for local dev (eg. http://localhost:8000).
  * On Vercel, set BACKEND_URL=https://dxg-rfp-tool-backend.vercel.app — or leave it
  * unset and the production URL is used as the safe default.
  */
