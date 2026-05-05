@@ -35,7 +35,7 @@ const TopHeader = () => {
       {/* Ambient glow behind header */}
       <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-purple-500/5 rounded-3xl blur-2xl pointer-events-none" />
 
-      <div className="relative flex items-center justify-between px-6">
+      <div className="relative flex items-center justify-between">
         {/* Left: Title block */}
         <div className="flex flex-col gap-1">
           {/* Pill badge */}

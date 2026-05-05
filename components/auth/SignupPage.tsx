@@ -1,7 +1,7 @@
 "use client";
 
 import { sendSignupOtpAction, signUpAction, verifySignupOtpAction } from "@/app/actions/auth";
-import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, Mail, Phone, Sparkles, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, CheckCircle2, KeyRound, Mail, Phone, Sparkles, User } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ const SignupPage = () => {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
@@ -70,7 +71,7 @@ const SignupPage = () => {
     setLoading(true);
     setError("");
 
-    const res = await signUpAction({ name, email, phone, password });
+    const res = await signUpAction({ name, email, phone, company, password });
     if (res.success) {
       // Auto login
       const signInRes = await signIn("credentials", {
@@ -210,6 +211,24 @@ const SignupPage = () => {
               className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+        </div>
+
+        {/* Company */}
+        <div className="group">
+          <label className="mb-2 block text-[13px] font-bold text-gray-700">Company (Optional)</label>
+          <div className="relative flex items-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/50 transition-all duration-300 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 hover:border-gray-300">
+            <div className="pl-4 pr-3 text-gray-400 group-focus-within:text-primary transition-colors">
+              <Building2 className="h-5 w-5" strokeWidth={2} />
+            </div>
+            <input
+              type="text"
+              placeholder="Acme Inc."
+              className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
               disabled={loading}
             />
           </div>

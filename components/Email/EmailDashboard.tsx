@@ -129,7 +129,7 @@ export default function EmailDashboard() {
 
   if (loading) {
     return (
-      <div className="space-y-6 px-6">
+      <div className="space-y-6">
         {[1, 2, 3, 4, 5, 6].map((key) => (
           <LoadingSkeletonCard key={key} />
         ))}
@@ -139,7 +139,7 @@ export default function EmailDashboard() {
 
   if (campaigns.length === 0) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
+      <div className="rounded-3xl border border-slate-200 bg-white  px-6 py-10 text-center shadow-sm">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500">
           <BarChart3 size={28} strokeWidth={1.8} />
         </div>
