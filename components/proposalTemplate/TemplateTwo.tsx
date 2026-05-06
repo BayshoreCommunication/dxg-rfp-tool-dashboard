@@ -320,7 +320,7 @@ export default function TemplateTwo({
 
   return (
     <div
-      className="proposal-print-root min-h-screen bg-slate-50 text-slate-900"
+      className="proposal-print-root bg-slate-50 text-slate-900"
       style={{
         fontFamily: `var(--proposal-font-family, "${fontFamily}", var(--font-sans))`,
       }}
@@ -374,7 +374,7 @@ export default function TemplateTwo({
         }
       `}</style>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <main className="mx-auto px-6 py-10" style={{ maxWidth: "var(--proposal-max-width, 72rem)" }}>
         <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           {(logoFile || brandName) && (
             <div className="mb-6 flex items-center gap-3">

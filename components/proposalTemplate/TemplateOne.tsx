@@ -134,6 +134,11 @@ export default function TemplateOne({
           ) !important;
         }
 
+        /* Controlled from ProposalView via --proposal-max-width (default 80rem / 1280px) */
+        .proposal-print-root .max-w-\\[1280px\\] {
+          max-width: var(--proposal-max-width, 80rem) !important;
+        }
+
         .proposal-print-root .signature-draw-text {
           font-family: var(
             --proposal-signature-font-family,
@@ -142,14 +147,8 @@ export default function TemplateOne({
         }
 
         @media print {
-          @page {
-            size: A4 portrait;
-            margin: 0mm;
-          }
-
           html, body {
-            width: 210mm !important;
-            max-width: 210mm !important;
+            width: 100% !important;
             background: #fff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -158,7 +157,6 @@ export default function TemplateOne({
           .proposal-print-root {
             width: 100% !important;
             max-width: 100% !important;
-            min-height: 297mm !important;
           }
 
           /* Force all max-width containers to fill the page */

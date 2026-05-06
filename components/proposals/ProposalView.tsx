@@ -624,14 +624,47 @@ export default function ProposalView({
 
     // ── Page dimensions ──
     const proposalRoot = document.querySelector(".proposal-print-root") as HTMLElement | null;
-
-    // Fixed width: 1400px matches the template container + gutters
-    // 1400px × 0.2646mm/px = 370mm
     const pageWidthMm = 406;
+    // 1 CSS px = 0.2646 mm at 96 dpi → 406mm ≈ 1535 CSS px
+    const printWidthPx = Math.round(pageWidthMm / 0.2646);
 
-    // Height: full content height so nothing is cut (single continuous page)
-    const contentHeightPx = proposalRoot?.scrollHeight ?? window.innerHeight;
-    const pageHeightMm = Math.ceil(contentHeightPx * 0.2646) + 10;
+    // ── Accurate height measurement ──
+    // Inject a temp stylesheet that mirrors the SAME layout constraints as the
+    // actual print CSS (outer width + all inner max-w overrides + no-print hidden).
+    // Without this, inner containers stay at their screen max-widths (e.g. 1280px),
+    // so text wraps more and scrollHeight is much larger than the real print height.
+    let contentHeightPx = window.innerHeight;
+    if (proposalRoot) {
+      const measureStyleEl = Object.assign(document.createElement("style"), {
+        id: "proposal-measure-style",
+      });
+      measureStyleEl.textContent = `
+        #${(proposalRoot.closest("[id]") as HTMLElement | null)?.id || "proposal-measure-target"},
+        .proposal-print-root {
+          width:      ${printWidthPx}px !important;
+          max-width:  ${printWidthPx}px !important;
+          overflow:   visible           !important;
+        }
+        .proposal-print-root .max-w-6xl,
+        .proposal-print-root .max-w-5xl,
+        .proposal-print-root .max-w-4xl,
+        .proposal-print-root .max-w-3xl,
+        .proposal-print-root .max-w-2xl,
+        .proposal-print-root .max-w-xl,
+        .proposal-print-root [class*="max-w-"] {
+          max-width: 100% !important;
+          width:     100% !important;
+        }
+        .no-print { display: none !important; }
+      `;
+      document.head.appendChild(measureStyleEl);
+      void proposalRoot.offsetHeight;           // force synchronous reflow
+      contentHeightPx = proposalRoot.scrollHeight;
+      measureStyleEl.remove();
+      void proposalRoot.offsetHeight;           // restore layout
+    }
+
+    const pageHeightMm = Math.ceil(contentHeightPx * 0.2646);
 
     const printStyleId = "proposal-a4-print-style";
     const existingStyle = document.getElementById(printStyleId);
@@ -641,7 +674,7 @@ export default function ProposalView({
 
     temporaryPrintStyle.textContent = `
       @media print {
-        /* Full-width single continuous page */
+        /* Single continuous page — sized to exact content height */
         @page {
           size: ${pageWidthMm}mm ${pageHeightMm}mm;
           margin: 0mm;
@@ -658,11 +691,12 @@ export default function ProposalView({
           print-color-adjust:         exact !important;
         }
 
-        /* Proposal root: fill the full page */
+        /* Proposal root: explicit height so browser renders all sections */
         .proposal-print-root {
           width:      100% !important;
           max-width:  100% !important;
           height:     ${pageHeightMm}mm !important;
+          min-height: unset !important;
           margin:  0  !important;
           padding: 0  !important;
           box-sizing: border-box !important;
@@ -782,6 +816,8 @@ export default function ProposalView({
     "--proposal-signature-color": normalizeHexColor(
       resolvedSettings.signatureColor,
     ),
+    // Adjust this one value to resize both templates' outer container width
+    "--proposal-max-width": "72rem",
   } as CSSProperties;
   const fontClassNames = `${inter.variable} ${poppins.variable} ${roboto.variable}`;
 
@@ -802,24 +838,22 @@ export default function ProposalView({
       className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[99] no-print"
       style={{ fontFamily: "var(--font-sans)" }}
     >
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-xl backdrop-blur-md">
-        {canDownloadPreview && (
-          <button
-            type="button"
-            onClick={handleDownloadProposal}
-            disabled={downloading}
-            className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-800 disabled:opacity-60 hover:bg-slate-50 transition"
-          >
-            {downloading
-              ? t(
-                  "Generating PDF...",
-                  "Generando PDF...",
-                  "Generation du PDF...",
-                )
-              : t("Download PDF", "Descargar PDF", "Telecharger le PDF")}
-          </button>
-        )}
-      </div>
+      {canDownloadPreview && (
+        <button
+          type="button"
+          onClick={handleDownloadProposal}
+          disabled={downloading}
+          className="rounded-2xl border border-slate-200 bg-white/90 px-6 py-2.5 text-sm font-bold text-slate-800 shadow-xl backdrop-blur-md disabled:opacity-60 hover:bg-white transition"
+        >
+          {downloading
+            ? t(
+                "Generating PDF...",
+                "Generando PDF...",
+                "Generation du PDF...",
+              )
+            : t("Download PDF", "Descargar PDF", "Telecharger le PDF")}
+        </button>
+      )}
     </div>
   ) : null;
 
