@@ -3,7 +3,7 @@
 import { RotateCcw, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { ProposalSettings, UploadsData } from "../AddNewProposal";
-import { PillRadio } from "./shared";
+import { InfoTooltip, PillRadio } from "./shared";
 import { uploadProposalFilesAction } from "@/app/actions/proposals";
 
 /* ─── Upload Box ─── */
@@ -34,7 +34,7 @@ const UploadBox = ({
         })
       );
       const unique = incoming.filter((f) => !existing.has(f.name));
-      
+
       if (unique.length === 0) return;
 
       setIsUploading(true);
@@ -162,6 +162,7 @@ const UploadsReferenceMaterials = ({
         <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.reviewExistingAvQuote.reviewExistingAvQuote ? "bg-red-50" : ""}`}>
           <label className="mb-3 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide">
             Review an existing AV Quote? <span className="text-red-500">*</span>
+            <InfoTooltip text="Upload a previous AV quote so our team can review, match, or improve upon the current pricing and scope." />
           </label>
           <div className="flex gap-3 mb-5">
             {(["YES", "NO"] as const).map((opt) => (

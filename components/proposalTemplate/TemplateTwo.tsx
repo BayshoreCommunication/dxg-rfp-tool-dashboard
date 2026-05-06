@@ -76,17 +76,8 @@ export default function TemplateTwo({
   
   const budgetValue = raw.budget?.budgetCustomAmount?.trim() || raw.budget?.estimatedAvBudget?.trim();
   
-  // Construct summary bullets internally from raw
-  const summaryBulletsRaw = [
-    raw.event?.venue ? `Venue: ${raw.event.venue}` : "",
-    raw.roomByRoom?.roomFunction ? `Room Function: ${raw.roomByRoom.roomFunction}` : "",
-    raw.event?.startDate ? `Start Date: ${raw.event.startDate}` : "",
-    raw.event?.endDate ? `End Date: ${raw.event.endDate}` : "",
-    !raw.event?.startDate && !raw.event?.endDate && raw.budget?.timelineForProposal ? `Timeline: ${raw.budget.timelineForProposal}` : "",
-    raw.production?.otherRolesNeeded ? `Additional roles: ${raw.production.otherRolesNeeded}` : "",
-  ].filter((item) => item.trim().length > 0);
-  
-  const hasScope = summaryBulletsRaw.length > 0;
+  // summaryBulletsRaw and additionalNotes are computed after `room` is resolved (see below)
+  // They are declared as `let` so they can be assigned after the room resolution block.
   
   // Format AV Needs Snapshot from Room By Room
   const formatAVValue = (field: any) => {
@@ -118,46 +109,97 @@ export default function TemplateTwo({
     return val;
   };
 
-  const room = raw.roomByRoom || {};
-  const avItems = [
-    { label: "Function", value: formatAVValue(room.roomFunction) },
-    { label: "Attendees", value: formatAVValue(room.estimatedAttendeesInRoom) },
-    { label: "Load In", value: formatDateTime(room.loadInDateTime) },
-    { label: "Rehearsal", value: formatDateTime(room.rehearsalDateTime) },
-    { label: "Show Start", value: formatDateTime(room.showStartDateTime) },
-    { label: "Show End", value: formatDateTime(room.showEndDateTime) },
-    { label: "Audio Sys for Ppl", value: formatAVValue(room.audioSystemForHowManyPpl) },
-    { label: "Podium Mic", value: formatAVValue(room.podiumMic) },
-    { label: "Wireless Mics", value: formatAVValue(room.wirelessMics) },
-    { label: "Large Monitors", value: formatAVValue(room.largeMonitorsOrScreenProjector) },
-    { label: "Client Laptops", value: formatAVValue(room.clientProvideOwnPresentationLaptop) },
-    { label: "Provided Laptops", value: formatAVValue(room.presentationLaptops) },
-    { label: "Video Playback", value: formatAVValue(room.videoPlayback) },
-    { label: "Audience Q&A", value: formatAVValue(room.audienceQa) },
-    { label: "Cameras", value: formatAVValue(room.cameras) },
-    { label: "Video Recording", value: formatAVValue(room.videoRecording) },
-    { label: "Audio Recording", value: formatAVValue(room.audioRecording) },
-    { label: "Stage Wash", value: formatAVValue(room.stageWashLighting) },
-    { label: "LED Wall", value: formatAVValue(room.ledWall) },
-    { label: "Video Format", value: formatAVValue(room.videoFormatAspectRatio) },
-    { label: "Backlighting", value: formatAVValue(room.backlightingFor) },
-    { label: "Scenic Uplighting", value: formatAVValue(room.drapeOrScenicUplighting) },
-    { label: "Audience Lighting", value: formatAVValue(room.audienceLighting) },
-    { label: "Prog Confidence", value: formatAVValue(room.programConfidenceMonitor) },
-    { label: "Notes Confidence", value: formatAVValue(room.notesConfidenceMonitor) },
-    { label: "Speaker Timer", value: formatAVValue(room.speakerTimer) },
-    { label: "Scenic Stage", value: formatAVValue(room.scenicStageDesign) },
+  // Normalise roomByRoom — DB stores an array; legacy data may be a single object
+  const allRooms: Record<string, unknown>[] = Array.isArray(raw.roomByRoom)
+    ? (raw.roomByRoom as Record<string, unknown>[]).filter(Boolean)
+    : raw.roomByRoom && typeof raw.roomByRoom === "object"
+      ? [raw.roomByRoom as Record<string, unknown>]
+      : [];
+
+  // Keep a reference to the first room for production/summary fallbacks
+  const room = allRooms[0] ?? {};
+
+  // Build AV items for a single room — only include fields that have a value
+  const buildRoomAvItems = (r: Record<string, unknown>) => [
+    { label: "Attendees",          value: formatAVValue(r.estimatedAttendeesInRoom) },
+    { label: "Load In",            value: formatDateTime(r.loadInDateTime as string) },
+    { label: "Rehearsal",          value: formatDateTime(r.rehearsalDateTime as string) },
+    { label: "Show Start",         value: formatDateTime(r.showStartDateTime as string) },
+    { label: "Show End",           value: formatDateTime(r.showEndDateTime as string) },
+    { label: "Audio Sys for Ppl",  value: formatAVValue(r.audioSystemForHowManyPpl) },
+    { label: "Podium Mic",         value: formatAVValue(r.podiumMic) },
+    { label: "Wireless Mics",      value: formatAVValue(r.wirelessMics) },
+    { label: "Large Monitors",     value: formatAVValue(r.largeMonitorsOrScreenProjector) },
+    { label: "Client Laptops",     value: formatAVValue(r.clientProvideOwnPresentationLaptop) },
+    { label: "Provided Laptops",   value: formatAVValue(r.presentationLaptops) },
+    { label: "Video Playback",     value: formatAVValue(r.videoPlayback) },
+    { label: "Audience Q&A",       value: formatAVValue(r.audienceQa) },
+    { label: "Cameras",            value: formatAVValue(r.cameras) },
+    { label: "Video Recording",    value: formatAVValue(r.videoRecording) },
+    { label: "Audio Recording",    value: formatAVValue(r.audioRecording) },
+    { label: "Stage Wash",         value: formatAVValue(r.stageWashLighting) },
+    { label: "LED Wall",           value: formatAVValue(r.ledWall) },
+    { label: "Video Format",       value: formatAVValue(r.videoFormatAspectRatio) },
+    { label: "Backlighting",       value: formatAVValue(r.backlightingFor) },
+    { label: "Scenic Uplighting",  value: formatAVValue(r.drapeOrScenicUplighting) },
+    { label: "Audience Lighting",  value: formatAVValue(r.audienceLighting) },
+    { label: "Prog Confidence",    value: formatAVValue(r.programConfidenceMonitor) },
+    { label: "Notes Confidence",   value: formatAVValue(r.notesConfidenceMonitor) },
+    { label: "Speaker Timer",      value: formatAVValue(r.speakerTimer) },
+    { label: "Scenic Stage",       value: formatAVValue(r.scenicStageDesign) },
   ].filter((i) => i.value);
 
-  const hasRoomSnapshot = avItems.length > 0;
+  // Per-room data: { roomName, avItems }
+  const roomSections = allRooms.map((r, idx) => ({
+    roomName: (r.roomFunction as string)?.trim() || `Room ${idx + 1}`,
+    avItems: buildRoomAvItems(r),
+  })).filter((rs) => rs.avItems.length > 0);
 
-  // Production
-  const production = raw.production || {};
+  const hasRoomSnapshot = roomSections.length > 0;
+
+  // Summary bullets for Scope & Requirements section
+  const summaryBulletsRaw = [
+    raw.event?.venue ? `Venue: ${raw.event.venue}` : "",
+    // For 1 room show its name; for multiple rooms list all names
+    allRooms.length === 1 && room.roomFunction
+      ? `Room Function: ${room.roomFunction}`
+      : allRooms.length > 1
+        ? `Rooms (${allRooms.length}): ${allRooms.map((r, i) => (r.roomFunction as string)?.trim() || `Room ${i + 1}`).join(", ")}`
+        : "",
+    raw.event?.startDate ? `Start Date: ${raw.event.startDate}` : "",
+    raw.event?.endDate ? `End Date: ${raw.event.endDate}` : "",
+    !raw.event?.startDate && !raw.event?.endDate && raw.budget?.timelineForProposal
+      ? `Timeline: ${raw.budget.timelineForProposal}`
+      : "",
+    room.otherRolesNeeded
+      ? `Additional roles: ${room.otherRolesNeeded}`
+      : raw.production?.otherRolesNeeded
+        ? `Additional roles: ${raw.production.otherRolesNeeded}`
+        : "",
+  ].filter((item: string) => item.trim().length > 0);
+
+  const hasScope = summaryBulletsRaw.length > 0;
+
+  // Production — fields now live inside roomByRoom[0]; fall back to legacy raw.production
+  const legacyProduction = raw.production || {};
+  const production = {
+    scenicStageDesign: room.scenicStageDesign ?? legacyProduction.scenicStageDesign,
+    contentVideoNeeds: (room.contentVideoNeeds as string) || "",
+    unionLabor: room.unionLabor ?? legacyProduction.unionLabor,
+    showCrewNeeded:
+      (Array.isArray(room.showCrewNeeded) && (room.showCrewNeeded as string[]).length > 0
+        ? room.showCrewNeeded
+        : legacyProduction.showCrewNeeded) as string[] | undefined,
+    otherRolesNeeded:
+      (room.otherRolesNeeded as string) || (legacyProduction.otherRolesNeeded as string) || "",
+  };
+  // All production model keys — only included if they have a value
   const productionItems = [
     { label: "Scenic Stage Design", value: formatAVValue(production.scenicStageDesign) },
+    { label: "Content / Video Needs", value: formatAVValue(production.contentVideoNeeds) },
     { label: "Union Labor", value: formatAVValue(production.unionLabor) },
-    { label: "Show Crew", value: formatAVValue(production.showCrewNeeded) },
-    { label: "Other Roles", value: formatAVValue(production.otherRolesNeeded) },
+    { label: "Show Crew Needed", value: formatAVValue(production.showCrewNeeded) },
+    { label: "Other Roles Needed", value: formatAVValue(production.otherRolesNeeded) },
   ].filter((i) => i.value);
   const hasProduction = productionItems.length > 0;
 
@@ -280,19 +322,42 @@ export default function TemplateTwo({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 0mm;
           }
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+          html, body {
+            width: 210mm !important;
+            max-width: 210mm !important;
+            background: #f8fafc !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .proposal-print-root {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 297mm !important;
+            background: #f8fafc !important;
+          }
+          .proposal-print-root main {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding-left: 14mm !important;
+            padding-right: 14mm !important;
+            padding-top: 12mm !important;
+            padding-bottom: 12mm !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
           }
           .no-print {
             display: none !important;
           }
+          .proposal-print-root section {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
         }
       `}</style>
 
-      <main className="mx-auto max-w-6xl px-6 py-10 print:px-12 print:py-12">
+      <main className="mx-auto max-w-6xl px-6 py-10">
         <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           {(logoFile || brandName) && (
             <div className="mb-6 flex items-center gap-3">
@@ -371,39 +436,90 @@ export default function TemplateTwo({
           </section>
         )}
 
-        {hasRoomSnapshot && (
+        {(hasRoomSnapshot || hasProduction) && (
           <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-black text-slate-900">
-              {t("Room-by-Room Snapshot", "Resumen sala por sala", "Apercu salle par salle")}
-            </h2>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
-              {avItems.map((item, idx) => (
-                <div key={idx} className="rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    {item.label}
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">{item.value}</p>
+
+            {/* ── Room-by-Room AV Needs ── */}
+            {hasRoomSnapshot && (
+              <>
+                <h2 className="text-lg font-black text-slate-900">
+                  {t("Room-by-Room AV Needs", "Necesidades AV por sala", "Besoins AV salle par salle")}
+                </h2>
+
+                {roomSections.map((rs, roomIdx) => (
+                  <div key={roomIdx} className={roomIdx > 0 ? "mt-8 pt-6 border-t border-slate-100" : "mt-4"}>
+                    {/* Room name header */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-cyan-500 text-white text-[11px] font-black shrink-0">
+                        {roomIdx + 1}
+                      </span>
+                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                        {rs.roomName}
+                      </h3>
+                    </div>
+
+                    {/* AV items grid for this room */}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+                      {rs.avItems.map((item, idx) => (
+                        <div key={idx} className="rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            {item.label}
+                          </p>
+                          <p className="text-sm font-semibold text-slate-900">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* ── Production Support ── */}
+            {hasProduction && (
+              <div className={hasRoomSnapshot ? "mt-8 pt-6 border-t border-slate-100" : ""}>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="inline-block h-4 w-1 rounded-full bg-cyan-500" />
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-widest text-[13px]">
+                    {t("Production Support", "Soporte de producción", "Support de production")}
+                  </h3>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  {productionItems.map((item, idx) => {
+                    const isCrewList = item.label === "Show Crew Needed" && item.value.includes(",");
+                    return (
+                      <div
+                        key={idx}
+                        className={`rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors${
+                          isCrewList ? " sm:col-span-2 md:col-span-3" : ""
+                        }`}
+                      >
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                          {item.label}
+                        </p>
+                        {isCrewList ? (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {item.value.split(", ").map((crew: string, ci: number) => (
+                              <span
+                                key={ci}
+                                className="inline-flex items-center rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-[11px] font-bold text-cyan-800 uppercase tracking-wide"
+                              >
+                                {crew.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm font-semibold text-slate-900 leading-snug">{item.value}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
           </section>
         )}
 
-        {hasProduction && (
-          <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-black text-slate-900">
-              {t("Production & Labor", "Producción y mano de obra", "Production et main-d'œuvre")}
-            </h2>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
-              {productionItems.map((item, idx) => (
-                <div key={idx} className="rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">{item.label}</p>
-                  <p className="text-sm font-semibold text-slate-900">{item.value}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
         {hasVenue && (
           <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

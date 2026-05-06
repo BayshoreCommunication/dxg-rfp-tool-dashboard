@@ -101,7 +101,7 @@ export type TemplateOneData = {
     timelineForProposal?: string;
     callWithDxgProducer?: string;
   };
-  roomByRoom?: Record<string, unknown>;
+  roomByRoom?: Record<string, unknown> | Record<string, unknown>[];
   production?: Record<string, unknown>;
   venue?: Record<string, unknown>;
 };
@@ -144,31 +144,43 @@ export default function TemplateOne({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 0mm;
           }
 
-          html,
-          body {
+          html, body {
+            width: 210mm !important;
+            max-width: 210mm !important;
             background: #fff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
-          .proposal-print-root * {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+          .proposal-print-root {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 297mm !important;
           }
 
-          .no-print {
-            display: none !important;
+          /* Force all max-width containers to fill the page */
+          .proposal-print-root .max-w-\\[1280px\\],
+          .proposal-print-root [class*="max-w-5xl"],
+          .proposal-print-root [class*="max-w-4xl"],
+          .proposal-print-root [class*="max-w-3xl"] {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding-left: 14mm !important;
+            padding-right: 14mm !important;
+            box-sizing: border-box !important;
           }
 
           .proposal-print-root section {
             min-height: auto !important;
             height: auto !important;
-            padding-top: 24px !important;
-            padding-bottom: 24px !important;
+            padding-top: 16px !important;
+            padding-bottom: 16px !important;
             overflow: visible !important;
-            break-inside: auto !important;
-            page-break-inside: auto !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
 
           .proposal-print-root .pointer-events-none,
@@ -180,6 +192,10 @@ export default function TemplateOne({
           .proposal-print-root [class*="shadow"] {
             box-shadow: none !important;
           }
+
+          .no-print {
+            display: none !important;
+          }
         }
       `}</style>
       {/* --- STEP 1: EVENT OVERVIEW (HERO) --- */}
@@ -188,10 +204,32 @@ export default function TemplateOne({
 
       {/* --- STEP 2: ROOM-BY-ROOM AV NEEDS --- */}
 
-      <Step2RoombyRoomAVNeeds proposalData={rawProposal?.roomByRoom || proposalData?.roomByRoom} />
+      <Step2RoombyRoomAVNeeds proposalData={
+        // Pass the full array so Step2 can render each room with its own heading
+        rawProposal?.roomByRoom
+          ? (Array.isArray(rawProposal.roomByRoom)
+              ? rawProposal.roomByRoom
+              : [rawProposal.roomByRoom])
+          : (Array.isArray(proposalData?.roomByRoom)
+              ? proposalData?.roomByRoom
+              : proposalData?.roomByRoom
+                ? [proposalData?.roomByRoom]
+                : undefined)
+      } />
 
       {/* --- STEP 3: PRODUCTION & CREW (NEW PRIMARY BG SECTION) --- */}
-      <Step3ProductionSupportCrew proposalData={rawProposal?.production || proposalData?.production} />
+      <Step3ProductionSupportCrew proposalData={
+        (() => {
+          const rawRoom = rawProposal?.roomByRoom
+            ? (Array.isArray(rawProposal.roomByRoom) ? rawProposal.roomByRoom[0] : rawProposal.roomByRoom)
+            : null;
+          // Production fields live in roomByRoom[0]; fall back to legacy raw.production
+          if (rawRoom && (rawRoom.scenicStageDesign || rawRoom.unionLabor || rawRoom.showCrewNeeded)) {
+            return rawRoom;
+          }
+          return rawProposal?.production || proposalData?.production;
+        })()
+      } />
 
       {/* --- STEP 4: RIGGING & POWER --- */}
 

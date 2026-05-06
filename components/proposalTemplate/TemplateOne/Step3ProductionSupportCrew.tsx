@@ -13,12 +13,14 @@ export default function Step3ProductionSupportCrew({
   const scenicStageDesign = data?.scenicStageDesign?.trim();
   const unionLabor = data?.unionLabor?.trim();
   const otherRoles = data?.otherRolesNeeded?.trim();
+  const contentVideoNeeds = (data?.contentVideoNeeds as string)?.trim();
   
   const hasCrewSection = Boolean(
     (scenicStageDesign && scenicStageDesign !== "No") ||
       (unionLabor && unionLabor !== "No") ||
       crewRoles.length > 0 ||
-      otherRoles
+      otherRoles ||
+      contentVideoNeeds
   );
 
   if (!hasCrewSection) return null;
@@ -71,6 +73,16 @@ export default function Step3ProductionSupportCrew({
             </div>
           )}
         </div>
+
+        {/* Content / Video Needs */}
+        {contentVideoNeeds && (
+          <div className="w-full max-w-5xl mb-8 p-6 rounded-2xl bg-white/10 backdrop-blur-md border border-white/25">
+            <p className="text-xs uppercase tracking-[0.08em] text-white/60 mb-2 font-bold">
+              Content / Video Needs
+            </p>
+            <p className="text-white/95 text-lg leading-relaxed">{contentVideoNeeds}</p>
+          </div>
+        )}
 
         {(crewRoles.length > 0 || otherRoles) && (
           <div className="w-full max-w-5xl p-8 md:p-10 rounded-[2.5rem] bg-white/5 backdrop-blur-xl border border-white/25 shadow-2xl">

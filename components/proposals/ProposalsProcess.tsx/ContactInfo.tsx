@@ -2,6 +2,7 @@
 
 import { RotateCcw } from "lucide-react";
 import type { ContactData, ProposalSettings } from "../AddNewProposal";
+import { InfoTooltip } from "./shared";
 
 /* ─── Shared style constants ─── */
 const labelClass = "mb-1.5 block text-xs font-bold text-[#1f2d5d] uppercase tracking-wide";
@@ -52,7 +53,10 @@ const ContactInfo = ({
 
         {/* First Name */}
         <div>
-          <label htmlFor="contactFirstName" className={labelClass}>First Name <span className="text-red-500">*</span></label>
+          <label htmlFor="contactFirstName" className={labelClass}>
+            First Name <span className="text-red-500">*</span>
+            <InfoTooltip text="Your legal first name for the proposal contact and any follow-up correspondence." />
+          </label>
           <input
             id="contactFirstName"
             className={`${inputClass} ${showErrors && !data.contactFirstName.trim() ? "border-red-500 ring-1 ring-red-500/20" : ""}`}
@@ -67,7 +71,10 @@ const ContactInfo = ({
 
         {/* Last Name */}
         <div>
-          <label htmlFor="contactLastName" className={labelClass}>Last Name <span className="text-red-500">*</span></label>
+          <label htmlFor="contactLastName" className={labelClass}>
+            Last Name <span className="text-red-500">*</span>
+            <InfoTooltip text="Your legal last name for correspondence and proposal documentation." />
+          </label>
           <input
             id="contactLastName"
             className={`${inputClass} ${showErrors && !data.contactLastName.trim() ? "border-red-500 ring-1 ring-red-500/20" : ""}`}
@@ -82,7 +89,10 @@ const ContactInfo = ({
 
         {/* Title */}
         <div>
-          <label htmlFor="contactTitle" className={labelClass}>Title</label>
+          <label htmlFor="contactTitle" className={labelClass}>
+            Title
+            <InfoTooltip text="Your professional title or role — e.g. Event Director, VP of Marketing, Meeting Planner." />
+          </label>
           <input
             id="contactTitle"
             className={inputClass}
@@ -94,7 +104,10 @@ const ContactInfo = ({
 
         {/* Organization */}
         <div>
-          <label htmlFor="contactOrganization" className={labelClass}>Organization</label>
+          <label htmlFor="contactOrganization" className={labelClass}>
+            Organization
+            <InfoTooltip text="The company or organization hosting the event. Appears on the proposal cover." />
+          </label>
           <input
             id="contactOrganization"
             className={inputClass}
@@ -106,7 +119,10 @@ const ContactInfo = ({
 
         {/* Email */}
         <div>
-          <label htmlFor="contactEmail" className={labelClass}>Email <span className="text-red-500">*</span></label>
+          <label htmlFor="contactEmail" className={labelClass}>
+            Email <span className="text-red-500">*</span>
+            <InfoTooltip text="Your preferred email address for receiving the proposal and follow-up communications." />
+          </label>
           <input
             id="contactEmail"
             type="email"
@@ -122,7 +138,10 @@ const ContactInfo = ({
 
         {/* Phone */}
         <div>
-          <label htmlFor="contactPhone" className={labelClass}>Phone <span className="text-red-500">*</span></label>
+          <label htmlFor="contactPhone" className={labelClass}>
+            Phone <span className="text-red-500">*</span>
+            <InfoTooltip text="Best phone number to reach you for questions or to schedule a producer discovery call." />
+          </label>
           <input
             id="contactPhone"
             type="tel"
@@ -138,7 +157,10 @@ const ContactInfo = ({
 
         {/* Anything else to share */}
         <div>
-          <label htmlFor="anythingElse" className={labelClass}>Anything else to share?</label>
+          <label htmlFor="anythingElse" className={labelClass}>
+            Anything else to share?
+            <InfoTooltip text="Any additional context, special requirements, or notes the production team should know before building your proposal." />
+          </label>
           <textarea
             id="anythingElse"
             rows={5}

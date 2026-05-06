@@ -5,13 +5,12 @@ interface Step {
 
 const steps: Step[] = [
   { id: 1, label: "Event Overview" },
-  { id: 2, label: "Room-by-Room AV Needs" },
-  { id: 3, label: "Production Support & Crew" },
-  { id: 4, label: "Venue & Technical Requirements" },
-  { id: 5, label: "Uploads & Reference Materials" },
-  { id: 6, label: "Budget & Proposal Preferences" },
-  { id: 7, label: "Contact Info" },
-  { id: 8, label: "Template Selection" },
+  { id: 2, label: "Room-by-Room AV & Production" },
+  { id: 3, label: "Venue & Technical Requirements" },
+  { id: 4, label: "Uploads & Reference Materials" },
+  { id: 5, label: "Budget & Proposal Preferences" },
+  { id: 6, label: "Contact Info" },
+  { id: 7, label: "Template Selection" },
 ];
 
 /* ─── Checkmark SVG for completed steps ─── */

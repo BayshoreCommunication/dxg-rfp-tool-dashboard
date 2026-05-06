@@ -4,7 +4,7 @@ import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import { ChevronDown, RotateCcw } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
-import { useClickOutside } from "./shared";
+import { InfoTooltip, useClickOutside } from "./shared";
 
 /* ─── Shared style constants ─── */
 const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
@@ -155,8 +155,6 @@ const EventForm = ({
     });
   };
 
-  
-
   return (
     <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
       {/* Header */}
@@ -172,6 +170,7 @@ const EventForm = ({
         <div>
           <label htmlFor="eventName" className={labelClass}>
             EVENT <span className="text-red-500">*</span>
+            <InfoTooltip text="The official name or internal title used to identify this event." />
           </label>
           <input
             id="eventName"
@@ -189,6 +188,7 @@ const EventForm = ({
         <div>
           <label htmlFor="startDate" className={labelClass}>
             EVENT START DATE <span className="text-red-500">*</span>
+            <InfoTooltip text="The first day your event begins. Used to schedule AV crew and equipment delivery." />
           </label>
           <GlobalDateInput
             id="startDate"
@@ -218,6 +218,7 @@ const EventForm = ({
         <div>
           <label htmlFor="endDate" className={labelClass}>
             EVENT END DATE <span className="text-red-500">*</span>
+            <InfoTooltip text="The last day of your event. Helps determine total equipment rental duration." />
           </label>
           <GlobalDateInput
             id="endDate"
@@ -248,6 +249,7 @@ const EventForm = ({
         <div>
           <label htmlFor="venue" className={labelClass}>
             EVENT VENUE / HOTEL NAME <span className="text-red-500">*</span>
+            <InfoTooltip text="The venue or hotel where the event takes place. Affects load-in logistics and venue technical requirements." />
           </label>
           <input
             id="venue"
@@ -263,7 +265,10 @@ const EventForm = ({
 
         {/* Number of Attendees */}
         <div>
-          <label className={labelClass}>NUMBER OF ATTENDEES</label>
+          <label className={labelClass}>
+            NUMBER OF ATTENDEES
+            <InfoTooltip text="Approximate total guest count. Helps size the audio system, seating layout, and screen placement." />
+          </label>
           <div className="relative" ref={attendeesRef}>
             <button
               type="button"
@@ -308,7 +313,10 @@ const EventForm = ({
 
         {/* Event Format */}
         <div>
-          <label className={labelClass}>EVENT FORMAT</label>
+          <label className={labelClass}>
+            EVENT FORMAT
+            <InfoTooltip text="Whether your event is fully in-person, live-streamed (hybrid), or entirely virtual." />
+          </label>
           <div className="flex items-center gap-6">
             {formatOptions.map((fmt) => (
               <label
@@ -330,7 +338,10 @@ const EventForm = ({
 
         {/* Type of Event */}
         <div>
-          <label className={labelClass}>TYPE OF EVENT</label>
+          <label className={labelClass}>
+            TYPE OF EVENT
+            <InfoTooltip text="The category of your event. Helps tailor the AV setup and proposal format." />
+          </label>
           <div className="relative" ref={typeRef}>
             <button
               type="button"

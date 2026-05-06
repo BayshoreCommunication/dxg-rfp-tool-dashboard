@@ -759,7 +759,7 @@ const RoombyRoomAvForm = ({
           <YesNoField
             name="scenicStageDesign"
             value={data.scenicStageDesign}
-            onChange={(v) => onChange({ scenicStageDesign: v })}
+            onChange={(v) => onChange({ scenicStageDesign: v as "Yes" | "No" | "" })}
           />
         </div>
 

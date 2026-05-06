@@ -14,8 +14,7 @@ import BudgetProposalPreferences from "./ProposalsProcess.tsx/BudgetProposalPref
 import ContactInfo from "./ProposalsProcess.tsx/ContactInfo";
 import EventForm from "./ProposalsProcess.tsx/EventForm";
 import ProcessList from "./ProposalsProcess.tsx/ProcessList";
-import ProductionSupportCrew from "./ProposalsProcess.tsx/ProductionSupportCrew";
-import RoombyRoomAvForm from "./ProposalsProcess.tsx/RoombyRoomAvForm";
+import RoomAndProductionStep, { defaultRoom } from "./ProposalsProcess.tsx/RoomAndProductionStep";
 import TemplateSelection from "./ProposalsProcess.tsx/TemplateSelection";
 import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMaterials";
 import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalRequirements";
@@ -99,16 +98,17 @@ export type RoomByRoomData = {
     notesConfidenceMonitorQty: string;
   };
   speakerTimer: string;
-  scenicStageDesign: string;
-  contentVideoNeeds: string;
-};
-
-export type ProductionSupportData = {
   scenicStageDesign: "Yes" | "No" | "";
+  contentVideoNeeds: string;
   unionLabor: "Yes" | "No" | "Not Sure" | "";
   showCrewNeeded: string[];
   otherRolesNeeded: string;
 };
+
+export type ProductionSupportData = Pick<
+  RoomByRoomData,
+  "scenicStageDesign" | "unionLabor" | "showCrewNeeded" | "otherRolesNeeded"
+>;
 
 export type VenueTechnicalData = {
   needRiggingForFlown: {
@@ -120,6 +120,15 @@ export type VenueTechnicalData = {
     standardAmpWall: string;
   };
   powerDropsHowMany: string;
+  hardlineInternet: {
+    hardlineInternet: "YES" | "NO" | "";
+    hardlineInternetPurpose: string;
+  };
+  livestreamVirtual: {
+    livestreamVirtual: "YES" | "NO" | "";
+    livestreamPlatform: string;
+  };
+  wirelessInternetAttendees: "YES" | "NO" | "";
 };
 
 export type UploadsData = {
@@ -178,8 +187,7 @@ export interface ProposalData {
     dateFormat: string;
   };
   event: EventData;
-  roomByRoom: RoomByRoomData;
-  production: ProductionSupportData;
+  roomByRoom: RoomByRoomData[];
   venue: VenueTechnicalData;
   uploads: UploadsData;
   budget: BudgetData;
@@ -219,79 +227,7 @@ const defaultProposalData: ProposalData = {
       eventTypeOther: "",
     },
   },
-  roomByRoom: {
-    roomFunction: "",
-    estimatedAttendeesInRoom: "",
-    loadInDateTime: "",
-    rehearsalDateTime: "",
-    showStartDateTime: "",
-    showEndDateTime: "",
-    audioSystemForHowManyPpl: "",
-    podiumMic: {
-      podiumMic: "",
-      podiumMicQty: "",
-    },
-    wirelessMics: {
-      wirelessMics: "",
-      wirelessMicsQty: "",
-      wirelessMicsType: "",
-    },
-    audioRecording: "",
-    largeMonitorsOrScreenProjector: {
-      largeMonitorsOrScreenProjector: "",
-      largeMonitorsQty: "",
-    },
-    ledWall: "",
-    clientProvideOwnPresentationLaptop: {
-      clientProvideOwnPresentationLaptop: "",
-      clientLaptopQty: "",
-    },
-    presentationLaptops: {
-      presentationLaptops: "",
-      presentationLaptopQty: "",
-    },
-    videoPlayback: {
-      videoPlayback: "",
-      videoPlaybackCount: "",
-    },
-    videoFormatAspectRatio: "",
-    audienceQa: {
-      audienceQa: "",
-      audienceQaMethod: "",
-    },
-    cameras: {
-      cameras: "",
-      camerasQty: "",
-    },
-    videoRecording: {
-      videoRecording: "",
-      videoRecordingType: "",
-    },
-    stageWashLighting: {
-      stageWashLighting: "",
-      stageWashLightingStageSize: "",
-    },
-    backlightingFor: "",
-    drapeOrScenicUplighting: "",
-    audienceLighting: "",
-    programConfidenceMonitor: {
-      programConfidenceMonitor: "",
-      programConfidenceMonitorQty: "",
-    },
-    notesConfidenceMonitor: {
-      notesConfidenceMonitor: "",
-      notesConfidenceMonitorQty: "",
-    },
-    speakerTimer: "",
-    scenicStageDesign: "",
-    contentVideoNeeds: "",
-  },
-  production: {
-    scenicStageDesign: "",
-    unionLabor: "",
-    showCrewNeeded: [],
-    otherRolesNeeded: "",
-  },
+  roomByRoom: [],
   venue: {
     needRiggingForFlown: {
       needRiggingForFlown: "",
@@ -302,6 +238,15 @@ const defaultProposalData: ProposalData = {
       standardAmpWall: "",
     },
     powerDropsHowMany: "",
+    hardlineInternet: {
+      hardlineInternet: "",
+      hardlineInternetPurpose: "",
+    },
+    livestreamVirtual: {
+      livestreamVirtual: "",
+      livestreamPlatform: "",
+    },
+    wirelessInternetAttendees: "",
   },
   uploads: {
     supportDocuments: [],
@@ -396,7 +341,10 @@ const matchOptionsArray = (
 };
 
 const normalizeExtracted = (
-  raw: Partial<ProposalData>,
+  raw: Omit<Partial<ProposalData>, "roomByRoom"> & {
+    roomByRoom?: Partial<RoomByRoomData> | Partial<RoomByRoomData>[];
+    production?: Partial<ProductionSupportData>;
+  },
 ): Partial<ProposalData> => ({
   event: raw.event
     ? {
@@ -435,152 +383,73 @@ const normalizeExtracted = (
         },
       }
     : undefined,
-  roomByRoom: raw.roomByRoom
-    ? {
-        ...raw.roomByRoom,
-        audioRecording: matchOption(raw.roomByRoom.audioRecording, [
-          "Yes",
-          "No",
-        ]) as RoomByRoomData["audioRecording"],
-        videoFormatAspectRatio:
-          matchOption(raw.roomByRoom.videoFormatAspectRatio, [
-            "16:9 format",
-            "Unique Aspect Ratio",
-            "Both",
-          ]) || raw.roomByRoom.videoFormatAspectRatio,
-        audienceQa: ((): RoomByRoomData["audienceQa"] => {
-          const raw_n = raw.roomByRoom!.audienceQa;
-          if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as {
-              audienceQa?: string;
-              audienceQaMethod?: string;
-            };
-            return {
-              audienceQa: matchOption(v.audienceQa ?? "", ["Yes", "No"]),
-              audienceQaMethod: matchOption(v.audienceQaMethod ?? "", [
-                "Via an App",
-                "Passing a Microphone",
-                "Both",
-              ]),
-            };
-          }
-          const qa = raw.roomByRoom as Record<string, unknown>;
+  roomByRoom: ((): RoomByRoomData[] | undefined => {
+    // AI extraction returns a single flat room object; resolve from array or object
+    const rbr = Array.isArray(raw.roomByRoom) ? raw.roomByRoom[0] : raw.roomByRoom;
+    if (!rbr && !raw.production) return undefined;
+    const r = rbr as Partial<RoomByRoomData> | undefined;
+    const rRec = (rbr ?? {}) as Record<string, unknown>;
+    return [{
+      ...defaultRoom(),
+      ...(r ?? {}),
+      audioRecording: matchOption(r?.audioRecording, ["Yes", "No"]) as RoomByRoomData["audioRecording"],
+      videoFormatAspectRatio:
+        matchOption(r?.videoFormatAspectRatio, ["16:9 format", "Unique Aspect Ratio", "Both"]) ||
+        r?.videoFormatAspectRatio ||
+        "",
+      audienceQa: ((): RoomByRoomData["audienceQa"] => {
+        const raw_n = r?.audienceQa;
+        if (raw_n && typeof raw_n === "object") {
+          const v = raw_n as { audienceQa?: string; audienceQaMethod?: string };
           return {
-            audienceQa: matchOption((raw_n as unknown as string) ?? "", [
-              "Yes",
-              "No",
-            ]),
-            audienceQaMethod: matchOption(
-              (qa.audienceQaMethod as string) ?? "",
-              ["Via an App", "Passing a Microphone", "Both"],
-            ),
+            audienceQa: matchOption(v.audienceQa ?? "", ["Yes", "No"]),
+            audienceQaMethod: matchOption(v.audienceQaMethod ?? "", ["Via an App", "Passing a Microphone", "Both"]),
           };
-        })(),
-        videoRecording: ((): RoomByRoomData["videoRecording"] => {
-          const raw_n = raw.roomByRoom!.videoRecording;
-          if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as {
-              videoRecording?: string;
-              videoRecordingType?: string;
-            };
-            return {
-              videoRecording: matchOption(v.videoRecording ?? "", [
-                "Yes",
-                "No",
-              ]),
-              videoRecordingType: matchOption(v.videoRecordingType ?? "", [
-                "Camera Feed Only",
-                "Presentation Only",
-                "Side by Side (Camera and Presentation)",
-                "All The Above",
-              ]),
-            };
-          }
-          const vr = raw.roomByRoom as Record<string, unknown>;
+        }
+        return {
+          audienceQa: matchOption((raw_n as unknown as string) ?? "", ["Yes", "No"]),
+          audienceQaMethod: matchOption((rRec.audienceQaMethod as string) ?? "", ["Via an App", "Passing a Microphone", "Both"]),
+        };
+      })(),
+      videoRecording: ((): RoomByRoomData["videoRecording"] => {
+        const raw_n = r?.videoRecording;
+        if (raw_n && typeof raw_n === "object") {
+          const v = raw_n as { videoRecording?: string; videoRecordingType?: string };
           return {
-            videoRecording: matchOption((raw_n as unknown as string) ?? "", [
-              "Yes",
-              "No",
-            ]),
-            videoRecordingType: matchOption(
-              (vr.videoRecordingType as string) ?? "",
-              [
-                "Camera Feed Only",
-                "Presentation Only",
-                "Side by Side (Camera and Presentation)",
-                "All The Above",
-              ],
-            ),
+            videoRecording: matchOption(v.videoRecording ?? "", ["Yes", "No"]),
+            videoRecordingType: matchOption(v.videoRecordingType ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]),
           };
-        })(),
-        stageWashLighting: ((): RoomByRoomData["stageWashLighting"] => {
-          const raw_n = raw.roomByRoom!.stageWashLighting;
-          if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as {
-              stageWashLighting?: string;
-              stageWashLightingStageSize?: string;
-            };
-            return {
-              stageWashLighting: matchOption(v.stageWashLighting ?? "", [
-                "Yes",
-                "No",
-              ]),
-              stageWashLightingStageSize: v.stageWashLightingStageSize ?? "",
-            };
-          }
-          const sw = raw.roomByRoom as Record<string, unknown>;
+        }
+        return {
+          videoRecording: matchOption((raw_n as unknown as string) ?? "", ["Yes", "No"]),
+          videoRecordingType: matchOption((rRec.videoRecordingType as string) ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]),
+        };
+      })(),
+      stageWashLighting: ((): RoomByRoomData["stageWashLighting"] => {
+        const raw_n = r?.stageWashLighting;
+        if (raw_n && typeof raw_n === "object") {
+          const v = raw_n as { stageWashLighting?: string; stageWashLightingStageSize?: string };
           return {
-            stageWashLighting: matchOption((raw_n as unknown as string) ?? "", [
-              "Yes",
-              "No",
-            ]),
-            stageWashLightingStageSize:
-              (sw.stageWashLightingStageSize as string) ?? "",
+            stageWashLighting: matchOption(v.stageWashLighting ?? "", ["Yes", "No"]),
+            stageWashLightingStageSize: v.stageWashLightingStageSize ?? "",
           };
-        })(),
-        programConfidenceMonitor: normalizeProgramConfidenceMonitor(
-          (raw.roomByRoom as Record<string, unknown>).programConfidenceMonitor,
-          (raw.roomByRoom as Record<string, unknown>)
-            .programConfidenceMonitorQty,
-        ),
-        notesConfidenceMonitor: normalizeNotesConfidenceMonitor(
-          (raw.roomByRoom as Record<string, unknown>).notesConfidenceMonitor,
-          (raw.roomByRoom as Record<string, unknown>).notesConfidenceMonitorQty,
-        ),
-      }
-    : undefined,
-  production: raw.production
-    ? {
-        ...raw.production,
-        scenicStageDesign: matchOption(raw.production.scenicStageDesign, [
-          "Yes",
-          "No",
-        ]) as ProductionSupportData["scenicStageDesign"],
-        unionLabor: matchOption(raw.production.unionLabor, [
-          "Yes",
-          "No",
-          "Not Sure",
-        ]) as ProductionSupportData["unionLabor"],
-        showCrewNeeded: matchOptionsArray(raw.production.showCrewNeeded, [
-          "A1 (AUDIO)",
-          "A2 (AUDIO ASSIST)",
-          "V1 (VIDEO)",
-          "V2 (VIDEO ASSIST)",
-          "TD (TECHNICAL DIRECTOR)",
-          "L1 (LIGHTING)",
-          "L2 (LIGHTING ASSIST)",
-          "GRAPHICS OP",
-          "CAMERA OPERATOR",
-          "SHOWCALLER",
-          "STAGE MANAGER",
-          "PRODUCER",
-          "TELEPROMPTER OP",
-          "RIGGER",
-          "STAGEHAND",
-          "OTHER",
-        ]),
-      }
-    : undefined,
+        }
+        return {
+          stageWashLighting: matchOption((raw_n as unknown as string) ?? "", ["Yes", "No"]),
+          stageWashLightingStageSize: (rRec.stageWashLightingStageSize as string) ?? "",
+        };
+      })(),
+      programConfidenceMonitor: normalizeProgramConfidenceMonitor(rRec.programConfidenceMonitor, rRec.programConfidenceMonitorQty),
+      notesConfidenceMonitor: normalizeNotesConfidenceMonitor(rRec.notesConfidenceMonitor, rRec.notesConfidenceMonitorQty),
+      scenicStageDesign: matchOption(r?.scenicStageDesign || raw.production?.scenicStageDesign, ["Yes", "No"]) as RoomByRoomData["scenicStageDesign"],
+      unionLabor: matchOption(r?.unionLabor || raw.production?.unionLabor, ["Yes", "No", "Not Sure"]) as RoomByRoomData["unionLabor"],
+      showCrewNeeded: matchOptionsArray(
+        (r?.showCrewNeeded?.length ? r.showCrewNeeded : raw.production?.showCrewNeeded) ?? [],
+        ["A1 (AUDIO)", "A2 (AUDIO ASSIST)", "V1 (VIDEO)", "V2 (VIDEO ASSIST)", "TD (TECHNICAL DIRECTOR)", "L1 (LIGHTING)", "L2 (LIGHTING ASSIST)", "GRAPHICS OP", "CAMERA OPERATOR", "SHOWCALLER", "STAGE MANAGER", "PRODUCER", "TELEPROMPTER OP", "RIGGER", "STAGEHAND", "OTHER"],
+      ),
+      otherRolesNeeded: r?.otherRolesNeeded || raw.production?.otherRolesNeeded || "",
+    }];
+  })(),
   venue: raw.venue
     ? {
         powerDropsHowMany: raw.venue.powerDropsHowMany ?? "",
@@ -657,6 +526,44 @@ const normalizeExtracted = (
               standardAmpWall: amp,
             };
           })(),
+        hardlineInternet: ((): VenueTechnicalData["hardlineInternet"] => {
+          const raw_n = raw.venue!.hardlineInternet;
+          if (raw_n && typeof raw_n === "object") {
+            const v = raw_n as {
+              hardlineInternet?: string;
+              hardlineInternetPurpose?: string;
+            };
+            return {
+              hardlineInternet: (matchOption(v.hardlineInternet ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
+              hardlineInternetPurpose: v.hardlineInternetPurpose ?? "",
+            };
+          }
+          return {
+            hardlineInternet: (matchOption((raw_n as unknown as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
+            hardlineInternetPurpose: ((raw.venue as Record<string, unknown>).hardlineInternetPurpose as string) ?? "",
+          };
+        })(),
+        livestreamVirtual: ((): VenueTechnicalData["livestreamVirtual"] => {
+          const raw_n = raw.venue!.livestreamVirtual;
+          if (raw_n && typeof raw_n === "object") {
+            const v = raw_n as {
+              livestreamVirtual?: string;
+              livestreamPlatform?: string;
+            };
+            return {
+              livestreamVirtual: (matchOption(v.livestreamVirtual ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
+              livestreamPlatform: matchOption(v.livestreamPlatform ?? "", ["Zoom", "Teams", "Vimeo", "YouTube", "Other"]) || v.livestreamPlatform || "",
+            };
+          }
+          return {
+            livestreamVirtual: (matchOption((raw_n as unknown as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
+            livestreamPlatform: matchOption(((raw.venue as Record<string, unknown>).livestreamPlatform as string) ?? "", ["Zoom", "Teams", "Vimeo", "YouTube", "Other"]) || ((raw.venue as Record<string, unknown>).livestreamPlatform as string) || "",
+          };
+        })(),
+        wirelessInternetAttendees: (matchOption(
+          (raw.venue!.wirelessInternetAttendees as unknown as string) ?? "",
+          ["YES", "NO"],
+        ).toUpperCase() || "") as "YES" | "NO" | "",
       }
     : undefined,
   budget: raw.budget
@@ -752,12 +659,7 @@ type EditableProposalApiResponse = {
   templateId?: ProposalData["templateId"];
   proposalSettings?: Partial<ProposalData["proposalSettings"]>;
   event?: Partial<EventData>;
-  roomByRoom?: Partial<RoomByRoomData> & {
-    programConfidenceMonitor?: unknown;
-    programConfidenceMonitorQty?: string;
-    notesConfidenceMonitor?: unknown;
-    notesConfidenceMonitorQty?: string;
-  };
+  roomByRoom?: unknown; // array (new) or single object (legacy)
   production?: Partial<ProductionSupportData>;
   venue?: Partial<VenueTechnicalData>;
   uploads?: Partial<UploadsData>;
@@ -846,22 +748,34 @@ const mapApiProposalToFormData = (
     ...defaultProposalData.event,
     ...(raw.event || {}),
   },
-  roomByRoom: {
-    ...defaultProposalData.roomByRoom,
-    ...(raw.roomByRoom || {}),
-    programConfidenceMonitor: normalizeProgramConfidenceMonitor(
-      raw.roomByRoom?.programConfidenceMonitor,
-      raw.roomByRoom?.programConfidenceMonitorQty,
-    ),
-    notesConfidenceMonitor: normalizeNotesConfidenceMonitor(
-      raw.roomByRoom?.notesConfidenceMonitor,
-      raw.roomByRoom?.notesConfidenceMonitorQty,
-    ),
-  },
-  production: {
-    ...defaultProposalData.production,
-    ...(raw.production || {}),
-  },
+  roomByRoom: ((): RoomByRoomData[] => {
+    // Handle both legacy single-object and new array format from the API
+    const rawRooms: unknown[] = Array.isArray(raw.roomByRoom)
+      ? raw.roomByRoom
+      : raw.roomByRoom && typeof raw.roomByRoom === "object"
+        ? [raw.roomByRoom]
+        : [];
+
+    if (rawRooms.length === 0) return [];
+
+    return rawRooms.map((rawRoom, idx) => {
+      const r = (rawRoom ?? {}) as Record<string, unknown>;
+      // Merge legacy production fields only on the first room
+      const isFirst = idx === 0;
+      return {
+        ...defaultRoom(),
+        ...r,
+        scenicStageDesign: ((r.scenicStageDesign || (isFirst ? raw.production?.scenicStageDesign : "")) ?? "") as RoomByRoomData["scenicStageDesign"],
+        unionLabor: ((r.unionLabor || (isFirst ? raw.production?.unionLabor : "")) ?? "") as RoomByRoomData["unionLabor"],
+        showCrewNeeded: Array.isArray(r.showCrewNeeded) && (r.showCrewNeeded as string[]).length > 0
+          ? (r.showCrewNeeded as string[])
+          : (isFirst ? (raw.production?.showCrewNeeded ?? []) : []),
+        otherRolesNeeded: (r.otherRolesNeeded as string) || (isFirst ? (raw.production?.otherRolesNeeded ?? "") : "") || "",
+        programConfidenceMonitor: normalizeProgramConfidenceMonitor(r.programConfidenceMonitor, r.programConfidenceMonitorQty),
+        notesConfidenceMonitor: normalizeNotesConfidenceMonitor(r.notesConfidenceMonitor, r.notesConfidenceMonitorQty),
+      } as RoomByRoomData;
+    });
+  })(),
   venue: {
     ...defaultProposalData.venue,
     needRiggingForFlown: {
@@ -902,6 +816,33 @@ const mapApiProposalToFormData = (
     } as VenueTechnicalData["needDedicatedPowerDrops"],
     powerDropsHowMany:
       (raw.venue as unknown as Record<string, string>)?.powerDropsHowMany ?? "",
+    hardlineInternet: {
+      hardlineInternet: (
+        (raw.venue?.hardlineInternet as unknown as { hardlineInternet?: string })?.hardlineInternet ??
+        (raw.venue?.hardlineInternet as unknown as string) ??
+        ""
+      ) as "YES" | "NO" | "",
+      hardlineInternetPurpose: (
+        (raw.venue?.hardlineInternet as unknown as { hardlineInternetPurpose?: string })?.hardlineInternetPurpose ??
+        (raw.venue as unknown as Record<string, string>)?.hardlineInternetPurpose ??
+        ""
+      ),
+    },
+    livestreamVirtual: {
+      livestreamVirtual: (
+        (raw.venue?.livestreamVirtual as unknown as { livestreamVirtual?: string })?.livestreamVirtual ??
+        (raw.venue?.livestreamVirtual as unknown as string) ??
+        ""
+      ) as "YES" | "NO" | "",
+      livestreamPlatform: (
+        (raw.venue?.livestreamVirtual as unknown as { livestreamPlatform?: string })?.livestreamPlatform ??
+        (raw.venue as unknown as Record<string, string>)?.livestreamPlatform ??
+        ""
+      ),
+    },
+    wirelessInternetAttendees: (
+      (raw.venue as unknown as Record<string, string>)?.wirelessInternetAttendees ?? ""
+    ) as "YES" | "NO" | "",
   },
   uploads: {
     ...defaultProposalData.uploads,
@@ -963,6 +904,7 @@ const AddNewProposal = ({
   const [isExtracting, setIsExtracting] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEditMode);
   const [showErrors, setShowErrors] = useState(false);
+  const [rooms, setRooms] = useState<RoomByRoomData[]>([defaultRoom()]);
   const [createdProposal, setCreatedProposal] = useState<{
     id: string;
     title: string;
@@ -1107,6 +1049,14 @@ const AddNewProposal = ({
   const [proposalData, setProposalData] =
     useState<ProposalData>(defaultProposalData);
 
+  // Sync rooms from loaded proposal data when edit mode finishes loading
+  useEffect(() => {
+    if (!loadingExisting && proposalData.roomByRoom.length > 0) {
+      setRooms(proposalData.roomByRoom.map((r) => ({ ...defaultRoom(), ...r })));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingExisting]);
+
   const updateProposalSection = <K extends ProposalSectionKey>(
     section: K,
     updates: Partial<ProposalData[K]>,
@@ -1127,49 +1077,51 @@ const AddNewProposal = ({
     );
   };
 
-  const isRoomByRoomStepValid = () => {
-    const {
-      roomFunction,
-      estimatedAttendeesInRoom,
-      loadInDateTime,
-      rehearsalDateTime,
-      showStartDateTime,
-      showEndDateTime,
-    } = proposalData.roomByRoom;
-    return (
-      roomFunction.trim().length > 0 &&
-      estimatedAttendeesInRoom.trim().length > 0 &&
-      loadInDateTime.trim().length > 0 &&
-      rehearsalDateTime.trim().length > 0 &&
-      showStartDateTime.trim().length > 0 &&
-      showEndDateTime.trim().length > 0
-    );
-  };
-
-  const isProductionStepValid = () => {
-    const { scenicStageDesign, unionLabor, showCrewNeeded } =
-      proposalData.production;
-    return (
-      scenicStageDesign.trim().length > 0 &&
-      unionLabor.trim().length > 0 &&
-      showCrewNeeded.length > 0
+  const isRoomAndProductionStepValid = () => {
+    return rooms.every(
+      (r) =>
+        r.roomFunction.trim().length > 0 &&
+        r.estimatedAttendeesInRoom.trim().length > 0 &&
+        r.loadInDateTime.trim().length > 0 &&
+        r.rehearsalDateTime.trim().length > 0 &&
+        r.showStartDateTime.trim().length > 0 &&
+        r.showEndDateTime.trim().length > 0 &&
+        r.unionLabor.trim().length > 0 &&
+        r.showCrewNeeded.length > 0,
     );
   };
 
   const isVenueStepValid = () => {
-    const { needRiggingForFlown, needDedicatedPowerDrops, powerDropsHowMany } =
-      proposalData.venue;
+    const {
+      needRiggingForFlown,
+      needDedicatedPowerDrops,
+      powerDropsHowMany,
+      hardlineInternet,
+      livestreamVirtual,
+      wirelessInternetAttendees,
+    } = proposalData.venue;
     if (
       !needRiggingForFlown.needRiggingForFlown.trim() ||
-      !needDedicatedPowerDrops.needDedicatedPowerDrops.trim()
+      !needDedicatedPowerDrops.needDedicatedPowerDrops.trim() ||
+      !hardlineInternet.hardlineInternet.trim() ||
+      !livestreamVirtual.livestreamVirtual.trim() ||
+      !wirelessInternetAttendees.trim()
     ) {
       return false;
     }
     if (needDedicatedPowerDrops.needDedicatedPowerDrops === "YES") {
-      return (
-        needDedicatedPowerDrops.standardAmpWall.trim().length > 0 &&
-        powerDropsHowMany.trim().length > 0
-      );
+      if (
+        !needDedicatedPowerDrops.standardAmpWall.trim() ||
+        !powerDropsHowMany.trim()
+      ) {
+        return false;
+      }
+    }
+    if (hardlineInternet.hardlineInternet === "YES") {
+      if (!hardlineInternet.hardlineInternetPurpose.trim()) return false;
+    }
+    if (livestreamVirtual.livestreamVirtual === "YES") {
+      if (!livestreamVirtual.livestreamPlatform.trim()) return false;
     }
     return true;
   };
@@ -1315,7 +1267,9 @@ const AddNewProposal = ({
     // Mongoose expects arrays of strings (e.g. file URLs), but state holds File objects
     // Temporarily, we just strip them out or map them to their names so validation passes.
     // (If you want true file uploading, you'd send them to S3/Cloudinary first and pass the URLs here.)
-    const payload: ProposalData = {
+    const normalizedRooms = rooms.map((r) => normalizeRoomByRoomForSubmit(r));
+    const firstRoom = normalizedRooms[0] ?? normalizeRoomByRoomForSubmit(defaultRoom());
+    const payload: ProposalData & { production: ProductionSupportData } = {
       ...proposalData,
       proposalSettings: {
         linkPrefix: proposalSettings.branding.linkPrefix,
@@ -1326,7 +1280,13 @@ const AddNewProposal = ({
         decimalPrecision: proposalSettings.proposals.decimalPrecision,
         dateFormat: proposalSettings.proposals.dateFormat,
       },
-      roomByRoom: normalizeRoomByRoomForSubmit(proposalData.roomByRoom),
+      roomByRoom: normalizedRooms,
+      production: {
+        scenicStageDesign: firstRoom.scenicStageDesign,
+        unionLabor: firstRoom.unionLabor,
+        showCrewNeeded: firstRoom.showCrewNeeded,
+        otherRolesNeeded: firstRoom.otherRolesNeeded,
+      },
       uploads: {
         supportDocuments: [],
         reviewExistingAvQuote: {
@@ -1423,19 +1383,15 @@ const AddNewProposal = ({
           setProposalData((prev) => ({
             ...prev,
             event: { ...prev.event, ...(normalized.event ?? {}) },
-            roomByRoom: {
-              ...prev.roomByRoom,
-              ...(normalized.roomByRoom ?? {}),
-            },
-            production: {
-              ...prev.production,
-              ...(normalized.production ?? {}),
-            },
+            roomByRoom: normalized.roomByRoom ?? prev.roomByRoom,
             venue: { ...prev.venue, ...(normalized.venue ?? {}) },
             uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
             budget: { ...prev.budget, ...(normalized.budget ?? {}) },
             contact: { ...prev.contact, ...(normalized.contact ?? {}) },
           }));
+          if (normalized.roomByRoom && normalized.roomByRoom.length > 0) {
+            setRooms(normalized.roomByRoom.map((r) => ({ ...defaultRoom(), ...r })));
+          }
           toast.success("✅ Fields pre-filled from your document!");
         } else {
           toast.info(
@@ -1460,32 +1416,29 @@ const AddNewProposal = ({
     if (proposalProcessStep === 1 && !isEventStepValid()) {
       return;
     }
-    if (proposalProcessStep === 2 && !isRoomByRoomStepValid()) {
+    if (proposalProcessStep === 2 && !isRoomAndProductionStepValid()) {
       return;
     }
-    if (proposalProcessStep === 3 && !isProductionStepValid()) {
+    if (proposalProcessStep === 3 && !isVenueStepValid()) {
       return;
     }
-    if (proposalProcessStep === 4 && !isVenueStepValid()) {
+    if (proposalProcessStep === 4 && !isUploadsStepValid()) {
       return;
     }
-    if (proposalProcessStep === 5 && !isUploadsStepValid()) {
-      return;
-    }
-    if (proposalProcessStep === 6 && !isBudgetStepValid()) {
+    if (proposalProcessStep === 5 && !isBudgetStepValid()) {
       return;
     }
 
-    if (proposalProcessStep === 7) {
+    if (proposalProcessStep === 6) {
       if (!isContactStepValid()) {
         return;
       }
-      setProposalProcessStep(8);
+      setProposalProcessStep(7);
       setShowErrors(false);
       return;
     }
 
-    if (proposalProcessStep === 8) return;
+    if (proposalProcessStep === 7) return;
 
     setProposalProcessStep((s) => s + 1);
     setShowErrors(false);
@@ -1509,15 +1462,14 @@ const AddNewProposal = ({
             ...prev.roomByRoom,
             ...(normalized.roomByRoom ?? {}),
           },
-          production: {
-            ...prev.production,
-            ...(normalized.production ?? {}),
-          },
           venue: { ...prev.venue, ...(normalized.venue ?? {}) },
           uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
           budget: { ...prev.budget, ...(normalized.budget ?? {}) },
           contact: { ...prev.contact, ...(normalized.contact ?? {}) },
         }));
+        if (normalized.roomByRoom) {
+          setRooms([{ ...defaultRoom(), ...normalized.roomByRoom }]);
+        }
         toast.success("Fields pre-filled from your document.");
       } else {
         toast.info("No matching fields found. You can continue manually.");
@@ -1631,13 +1583,10 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {/* Add Step 2â€“7 components here as you build them */}
             {proposalProcessStep === 2 && (
-              <RoombyRoomAvForm
-                data={proposalData.roomByRoom}
-                onChange={(updates) =>
-                  updateProposalSection("roomByRoom", updates)
-                }
+              <RoomAndProductionStep
+                rooms={rooms}
+                onRoomsChange={setRooms}
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
@@ -1645,18 +1594,6 @@ const AddNewProposal = ({
               />
             )}
             {proposalProcessStep === 3 && (
-              <ProductionSupportCrew
-                data={proposalData.production}
-                onChange={(updates) =>
-                  updateProposalSection("production", updates)
-                }
-                onContinue={continueHandler}
-                onBack={backHandler}
-                showErrors={showErrors}
-                proposalSettings={proposalSettings}
-              />
-            )}
-            {proposalProcessStep === 4 && (
               <VenueTechnicalRequirements
                 data={proposalData.venue}
                 onChange={(updates) => updateProposalSection("venue", updates)}
@@ -1666,7 +1603,7 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {proposalProcessStep === 5 && (
+            {proposalProcessStep === 4 && (
               <UploadsReferenceMaterials
                 data={proposalData.uploads}
                 onChange={(updates) =>
@@ -1678,7 +1615,7 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {proposalProcessStep === 6 && (
+            {proposalProcessStep === 5 && (
               <BudgetProposalPreferences
                 data={proposalData.budget}
                 onChange={(updates) => updateProposalSection("budget", updates)}
@@ -1688,7 +1625,7 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {proposalProcessStep === 7 && (
+            {proposalProcessStep === 6 && (
               <ContactInfo
                 data={proposalData.contact}
                 onChange={(updates) =>
@@ -1700,7 +1637,7 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {proposalProcessStep === 8 && (
+            {proposalProcessStep === 7 && (
               <TemplateSelection
                 templateId={proposalData.templateId}
                 onSelect={(templateId) =>

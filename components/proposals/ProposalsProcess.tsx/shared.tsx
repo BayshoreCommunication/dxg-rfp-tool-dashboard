@@ -1,4 +1,6 @@
-import { useEffect, RefObject } from "react";
+import { Info } from "lucide-react";
+import { useEffect, useState, useRef, RefObject } from "react";
+import { createPortal } from "react-dom";
 
 export const PillRadio = ({
   name,
@@ -83,4 +85,68 @@ export function useClickOutside<T extends HTMLElement>(
     return () => document.removeEventListener("mousedown", listener);
   }, [ref, handler]);
 }
+
+export const InfoTooltip = ({ text }: { text: string }) => {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const iconRef = useRef<SVGSVGElement>(null);
+
+  const show = () => {
+    if (!iconRef.current) return;
+    const r = iconRef.current.getBoundingClientRect();
+    setPos({ top: r.top - 8, left: r.left + r.width / 2 });
+  };
+
+  return (
+    <span
+      style={{ display: "inline-flex", alignItems: "center", marginLeft: "6px", verticalAlign: "middle" }}
+      onMouseEnter={show}
+      onMouseLeave={() => setPos(null)}
+    >
+      <Info
+        ref={iconRef}
+        size={13}
+        style={{ cursor: "help", flexShrink: 0, color: pos ? "#35bdf2" : "#b0b9d1", transition: "color 0.15s" }}
+      />
+      {pos && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
+            transform: "translate(-50%, -100%)",
+            zIndex: 9999,
+            width: "220px",
+            backgroundColor: "#1f2d5d",
+            color: "#ffffff",
+            borderRadius: "8px",
+            padding: "8px 12px",
+            fontSize: "12px",
+            fontWeight: 400,
+            lineHeight: 1.6,
+            letterSpacing: "normal",
+            textTransform: "none",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.25)",
+            pointerEvents: "none",
+          }}
+        >
+          {text}
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "100%",
+              transform: "translateX(-50%)",
+              width: 0,
+              height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+              borderTop: "5px solid #1f2d5d",
+            }}
+          />
+        </div>,
+        document.body
+      )}
+    </span>
+  );
+};
 

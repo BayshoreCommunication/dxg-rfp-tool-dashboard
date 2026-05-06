@@ -3,7 +3,7 @@
 import { ChevronDown, ExternalLink, RotateCcw } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import type { BudgetData, ProposalSettings } from "../AddNewProposal";
-import { PillRadio, toggleItem, useClickOutside } from "./shared";
+import { InfoTooltip, PillRadio, toggleItem, useClickOutside } from "./shared";
 
 /* ─── Shared constants ─── */
 const labelClass = "mb-3 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
@@ -162,11 +162,13 @@ const BudgetProposalPreferences = ({
 
       {/* Form Body */}
       <div className="flex-1 px-8 py-8 space-y-8">
-  
 
         {/* Estimated AV Budget */}
         <div>
-          <label className={labelClass}>Estimated AV Budget <span className="text-red-500">*</span></label>
+          <label className={labelClass}>
+            Estimated AV Budget <span className="text-red-500">*</span>
+            <InfoTooltip text="Your approximate budget for audio/visual equipment and labor. Helps us tailor the scope and detail of the proposal." />
+          </label>
           <InlineDropdown
             options={budgetOptions}
             selected={data.estimatedAvBudget}
@@ -195,7 +197,10 @@ const BudgetProposalPreferences = ({
 
         {/* Proposal Format Preferences */}
         <div>
-          <label className={labelClass}>Proposal Format Preferences</label>
+          <label className={labelClass}>
+            Proposal Format Preferences
+            <InfoTooltip text="Choose how you'd like the proposal broken down — itemized gear list, labor costs, or an all-inclusive estimate." />
+          </label>
           <div className="flex flex-wrap gap-2">
             {formatOptions.map((opt) => (
               <FormatPill
@@ -210,7 +215,10 @@ const BudgetProposalPreferences = ({
 
         {/* Timeline for Proposal */}
         <div>
-          <label className={labelClass}>Timeline for Proposal <span className="text-red-500">*</span></label>
+          <label className={labelClass}>
+            Timeline for Proposal <span className="text-red-500">*</span>
+            <InfoTooltip text="How soon do you need the proposal delivered? This helps us prioritize our turnaround time." />
+          </label>
           <InlineDropdown
             options={timelineOptions}
             selected={data.timelineForProposal}
@@ -228,7 +236,10 @@ const BudgetProposalPreferences = ({
 
         {/* Call with DXG Producer */}
         <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.callWithDxgProducer ? "bg-red-50" : ""}`}>
-          <label className={labelClass}>Call with DXG Producer? <span className="text-red-500">*</span></label>
+          <label className={labelClass}>
+            Call with DXG Producer? <span className="text-red-500">*</span>
+            <InfoTooltip text="A brief discovery call with your DXG producer helps clarify requirements and speeds up the proposal process." />
+          </label>
           <div className="flex gap-3 mb-3">
             {(["YES", "NO"] as const).map((opt) => (
               <PillRadio
@@ -256,7 +267,10 @@ const BudgetProposalPreferences = ({
 
         {/* How did you hear about this tool? */}
         <div>
-          <label className={labelClass}>How did you hear about this tool? <span className="text-red-500">*</span></label>
+          <label className={labelClass}>
+            How did you hear about this tool? <span className="text-red-500">*</span>
+            <InfoTooltip text="Helps us understand where our clients are coming from so we can improve our outreach and support." />
+          </label>
           <InlineDropdown
             options={hearOptions}
             selected={data.howDidYouHear}

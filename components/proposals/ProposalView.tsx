@@ -96,65 +96,7 @@ type ProposalData = {
     eventFormat?: string;
     eventType?: { eventType?: string; eventTypeOther?: string } | string;
   };
-  roomByRoom?: {
-    roomFunction?: string;
-    estimatedAttendeesInRoom?: string;
-    loadInDateTime?: string;
-    rehearsalDateTime?: string;
-    showStartDateTime?: string;
-    showEndDateTime?: string;
-    audioSystemForHowManyPpl?: string;
-    podiumMic?: any;
-    podiumMicQty?: string;
-    wirelessMics?: any;
-    wirelessMicsQty?: string;
-    wirelessMicsType?: string;
-    audioRecording?: string;
-    largeMonitorsOrScreenProjector?: any;
-    largeMonitorsQty?: string;
-    ledWall?: string;
-    clientProvideOwnPresentationLaptop?: any;
-    clientLaptopQty?: string;
-    presentationLaptops?: any;
-    presentationLaptopQty?: string;
-    videoPlayback?: any;
-    videoPlaybackCount?: string;
-    videoFormatAspectRatio?: string;
-    audienceQa?: any;
-    audienceQaMethod?: string;
-    cameras?: any;
-    camerasQty?: string;
-    videoRecording?: any;
-    videoRecordingType?: string;
-    stageWashLighting?: any;
-    stageWashLightingStageSize?: string;
-    backlightingFor?: string;
-    drapeOrScenicUplighting?: string;
-    audienceLighting?: string;
-    programConfidenceMonitor?: any;
-    programConfidenceMonitorQty?: string;
-
-    notesConfidenceMonitor?:
-      | string
-      | {
-          notesConfidenceMonitor?: string;
-          notesConfidenceMonitorQty?: string;
-        };
-    notesConfidenceMonitorQty?: string;
-    speakerTimer?: string;
-    scenicStageDesign?: string;
-    numberOfRooms?: string;
-    ceilingHeight?: string;
-    roomSetup?: string;
-    rigPowerSize?: string;
-    preferredRigging?: string[];
-    avSpec?: string;
-    mainSound?: string;
-    hearingImpaired?: string;
-    recordAudio?: string;
-    chairs?: string;
-    contentVideoNeeds?: string;
-  };
+  roomByRoom?: Record<string, unknown>[] | Record<string, unknown>;
   production?: {
     scenicStageDesign?: string;
     unionLabor?: string;
@@ -169,9 +111,12 @@ type ProposalData = {
   };
   budget?: {
     estimatedAvBudget?: string;
+    budgetCustomAmount?: string;
     timelineForProposal?: string;
     proposalFormatPreferences?: string[];
     callWithDxgProducer?: string;
+    howDidYouHear?: string;
+    howDidYouHearOther?: string;
   };
   contact?: {
     contactFirstName?: string;
@@ -293,6 +238,7 @@ const normalizeProposalSettings = (proposal?: ProposalData) => {
       "",
     downloadPreview: snapshot?.proposals?.downloadPreview?.trim() || "Yes",
     brandName: snapshot?.branding?.brandName?.trim() || "",
+    logoFile: snapshot?.branding?.logoFile || null,
     signatureColor: snapshot?.branding?.signatureColor?.trim() || "#2DC6F5",
     contacts: {
       emailEnabled: snapshot?.proposals?.contacts?.email?.enabled,
@@ -427,19 +373,26 @@ const mapProposalToTemplate = (
     ? `${t("Timeline", "Cronograma")}: ${pick(proposal.budget?.timelineForProposal)}`
     : "";
 
+  // Resolve the first room from array (current format) or direct object (legacy)
+  const firstRoom: Record<string, unknown> | undefined = Array.isArray(proposal.roomByRoom)
+    ? (proposal.roomByRoom[0] as Record<string, unknown> | undefined)
+    : (proposal.roomByRoom as Record<string, unknown> | undefined);
+
   const summaryBullets = [
     proposal.event?.venue
       ? `${t("Venue", "Lugar")}: ${proposal.event.venue}`
       : "",
-    proposal.roomByRoom?.roomFunction
-      ? `${t("Room Function", "Función de sala")}: ${proposal.roomByRoom.roomFunction}`
+    firstRoom?.roomFunction
+      ? `${t("Room Function", "Función de sala")}: ${firstRoom.roomFunction}`
       : "",
     startDateLabel,
     endDateLabel,
     !startDateLabel && !endDateLabel ? fallbackTimelineLabel : "",
     proposal.production?.otherRolesNeeded
       ? `${t("Additional roles", "Roles adicionales")}: ${proposal.production.otherRolesNeeded}`
-      : "",
+      : (firstRoom?.otherRolesNeeded as string | undefined)
+        ? `${t("Additional roles", "Roles adicionales")}: ${firstRoom!.otherRolesNeeded}`
+        : "",
   ].filter((item) => item.trim().length > 0);
 
   const aboutParts = [dateRange, pick(proposal.event?.venue)].filter(Boolean);
@@ -455,7 +408,7 @@ const mapProposalToTemplate = (
 
   const additionalNotes =
     pick(proposal.contact?.anythingElse) ||
-    pick(proposal.roomByRoom?.contentVideoNeeds);
+    pick(firstRoom?.contentVideoNeeds as string | undefined);
 
   const eventTypeRaw = proposal.event?.eventType;
   const eventTypeString =
@@ -520,9 +473,9 @@ const mapProposalToTemplate = (
       ? { signatureStyle: options.signature.style }
       : {}),
     ledTags: [
-      pick(proposal.roomByRoom?.videoFormatAspectRatio),
-      pick(proposal.roomByRoom?.videoRecordingType),
-      pick(proposal.roomByRoom?.audienceQaMethod),
+      pick(firstRoom?.videoFormatAspectRatio as string | undefined),
+      pick(firstRoom?.videoRecordingType as string | undefined),
+      pick(firstRoom?.audienceQaMethod as string | undefined),
     ].filter(Boolean),
   };
 };
@@ -668,35 +621,94 @@ export default function ProposalView({
       proposal.contact?.contactOrganization?.trim() ||
       "proposal";
     document.title = `${printableTitle}-proposal`;
+
+    // ── Page dimensions ──
+    const proposalRoot = document.querySelector(".proposal-print-root") as HTMLElement | null;
+
+    // Fixed width: 1400px matches the template container + gutters
+    // 1400px × 0.2646mm/px = 370mm
+    const pageWidthMm = 406;
+
+    // Height: full content height so nothing is cut (single continuous page)
+    const contentHeightPx = proposalRoot?.scrollHeight ?? window.innerHeight;
+    const pageHeightMm = Math.ceil(contentHeightPx * 0.2646) + 10;
+
     const printStyleId = "proposal-a4-print-style";
     const existingStyle = document.getElementById(printStyleId);
     const temporaryPrintStyle =
       existingStyle ||
       Object.assign(document.createElement("style"), { id: printStyleId });
+
     temporaryPrintStyle.textContent = `
       @media print {
+        /* Full-width single continuous page */
         @page {
-          size: A4 portrait;
-          margin: 0;
+          size: ${pageWidthMm}mm ${pageHeightMm}mm;
+          margin: 0mm;
         }
+
         html, body {
-          width: 210mm;
-          min-height: 297mm;
+          width:      ${pageWidthMm}mm  !important;
+          max-width:  ${pageWidthMm}mm  !important;
+          height:     ${pageHeightMm}mm !important;
+          margin:  0  !important;
+          padding: 0  !important;
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust:         exact !important;
+        }
+
+        /* Proposal root: fill the full page */
+        .proposal-print-root {
+          width:      100% !important;
+          max-width:  100% !important;
+          height:     ${pageHeightMm}mm !important;
+          margin:  0  !important;
+          padding: 0  !important;
+          box-sizing: border-box !important;
+          overflow: visible !important;
+        }
+
+        /* Remove Tailwind max-width caps from every inner container */
+        .proposal-print-root .max-w-6xl,
+        .proposal-print-root .max-w-5xl,
+        .proposal-print-root .max-w-4xl,
+        .proposal-print-root .max-w-3xl,
+        .proposal-print-root .max-w-2xl,
+        .proposal-print-root .max-w-xl,
+        .proposal-print-root [class*="max-w-"] {
+          max-width: 100% !important;
+          width:     100% !important;
+        }
+
+        /* No page splits — single continuous page */
+        .proposal-print-root *  {
+          page-break-inside: auto !important;
+          break-inside:      auto !important;
+        }
+
+        /* Hide UI-only floating elements */
+        .no-print {
+          display: none !important;
         }
       }
     `;
+
     if (!existingStyle) {
       document.head.appendChild(temporaryPrintStyle);
     }
 
+    // Double rAF: first to apply styles, second to let layout reflow before print dialog
     requestAnimationFrame(() => {
-      try {
-        window.print();
-      } finally {
-        document.title = originalTitle;
-        temporaryPrintStyle.remove();
-        setDownloading(false);
-      }
+      requestAnimationFrame(() => {
+        try {
+          window.print();
+        } finally {
+          document.title = originalTitle;
+          temporaryPrintStyle.remove();
+          setDownloading(false);
+        }
+      });
     });
   };
 
@@ -819,7 +831,36 @@ export default function ProposalView({
       {proposal.templateId === "template-two" ? (
         <TemplateTwo
           proposalData={proposal as unknown as Partial<TemplateOneData>}
-          rawProposal={proposal}
+          rawProposal={{
+            ...proposal,
+            // Inject resolved branding so logo + brandName are always available
+            // even when proposalSetting was not stored on the proposal document
+            proposalSetting: {
+              ...(proposal.proposalSetting || {}),
+              branding: {
+                ...(proposal.proposalSetting?.branding || {}),
+                logoFile:
+                  proposal.proposalSetting?.branding?.logoFile ??
+                  resolvedSettings.logoFile ??
+                  null,
+                brandName:
+                  proposal.proposalSetting?.branding?.brandName?.trim() ||
+                  resolvedSettings.brandName ||
+                  "",
+                signatureColor:
+                  proposal.proposalSetting?.branding?.signatureColor?.trim() ||
+                  resolvedSettings.signatureColor ||
+                  "#2DC6F5",
+              },
+              signatures: {
+                ...(proposal.proposalSetting?.signatures || {}),
+                signatureType: resolvedSettings.signatures.signatureType,
+                signatureImageUrl: resolvedSettings.signatures.signatureImageUrl,
+                signatureText: resolvedSettings.signatures.signatureText,
+                signatureStyle: resolvedSettings.signatures.signatureStyle,
+              },
+            },
+          }}
           proposalLanguage={proposalLanguage}
           fontFamily={templateFont}
         />
