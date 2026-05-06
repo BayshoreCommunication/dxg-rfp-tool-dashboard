@@ -10,25 +10,26 @@ export default function Step2RoombyRoomAVNeeds({
   const data = proposalData || {};
 
   // Formatter to extract a clean string from either a flat string or a nested object
-  const formatValue = (field: any, prefix?: string): string => {
-    if (!field) return "";
-    
-    // If string
+  const formatValue = (field: any): string => {
+    if (!field && field !== 0) return "";
+
+    // Flat string — return as-is (or empty if "No")
     if (typeof field === "string") {
       return field === "No" ? "" : field;
     }
 
-    // If array
+    // Array — join truthy items
     if (Array.isArray(field)) {
       return field.filter(Boolean).join(", ");
     }
-    
-    // If object (e.g. { wirelessMics: "Yes", wirelessMicsQty: "141", wirelessMicsType: "Headset Mics" })
+
+    // Plain object only — guard prevents iterating string chars
+    if (typeof field !== "object" || field === null) return "";
+
     let isYes = false;
     const details: string[] = [];
-    
-    // Scan inner keys
-    for (const [key, val] of Object.entries(field)) {
+
+    for (const [, val] of Object.entries(field)) {
       if (typeof val === "string") {
         if (val.toLowerCase() === "yes") {
           isYes = true;
@@ -37,16 +38,11 @@ export default function Step2RoombyRoomAVNeeds({
         }
       }
     }
-    
+
     if (!isYes && details.length === 0) return "";
-    
-    if (isYes && details.length > 0) {
-      return `Yes (${details.join(", ")})`;
-    } else if (details.length > 0) {
-      return details.join(", ");
-    }
-    
-    return isYes ? "Yes" : "";
+    if (isYes && details.length > 0) return `Yes (${details.join(", ")})`;
+    if (details.length > 0) return details.join(", ");
+    return "Yes";
   };
 
   const avItems = [

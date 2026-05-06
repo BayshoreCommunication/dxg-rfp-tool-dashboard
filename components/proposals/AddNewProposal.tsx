@@ -1458,17 +1458,16 @@ const AddNewProposal = ({
         setProposalData((prev) => ({
           ...prev,
           event: { ...prev.event, ...(normalized.event ?? {}) },
-          roomByRoom: {
-            ...prev.roomByRoom,
-            ...(normalized.roomByRoom ?? {}),
-          },
+          // roomByRoom is an array — replace entirely with extracted data
+          roomByRoom: normalized.roomByRoom ?? prev.roomByRoom,
           venue: { ...prev.venue, ...(normalized.venue ?? {}) },
           uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
           budget: { ...prev.budget, ...(normalized.budget ?? {}) },
           contact: { ...prev.contact, ...(normalized.contact ?? {}) },
         }));
-        if (normalized.roomByRoom) {
-          setRooms([{ ...defaultRoom(), ...normalized.roomByRoom }]);
+        // Populate the rooms accordion state so the form fields render correctly
+        if (normalized.roomByRoom && normalized.roomByRoom.length > 0) {
+          setRooms(normalized.roomByRoom.map((r) => ({ ...defaultRoom(), ...r })));
         }
         toast.success("Fields pre-filled from your document.");
       } else {

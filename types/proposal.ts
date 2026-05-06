@@ -86,6 +86,15 @@ export type VenueTechnicalData = {
     standardAmpWall: string;
   };
   powerDropsHowMany: string;
+  hardlineInternet: {
+    hardlineInternet: "YES" | "NO" | "";
+    hardlineInternetPurpose: string;
+  };
+  livestreamVirtual: {
+    livestreamVirtual: "YES" | "NO" | "";
+    livestreamPlatform: string;
+  };
+  wirelessInternetAttendees: "YES" | "NO" | "";
 };
 
 export type UploadsData = {

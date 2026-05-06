@@ -80,13 +80,17 @@ export default function TemplateTwo({
   // They are declared as `let` so they can be assigned after the room resolution block.
   
   // Format AV Needs Snapshot from Room By Room
-  const formatAVValue = (field: any) => {
-    if (!field) return "";
+  const formatAVValue = (field: any): string => {
+    if (!field && field !== 0) return "";
     if (typeof field === "string") return field === "No" ? "" : field;
     if (Array.isArray(field)) return field.filter(Boolean).join(", ");
+    // Guard: only process plain objects (prevents string chars being iterated)
+    if (typeof field !== "object" || field === null) return "";
     let isYes = false;
-    const details = [];
-    for (const val of Object.values(field)) {
+    const details: string[] = [];
+    for (const [key, val] of Object.entries(field)) {
+      // Skip numeric-string index keys (artefact of corrupted string spread e.g. {"0":"Y","1":"e"})
+      if (/^\d+$/.test(key)) continue;
       if (typeof val === "string") {
         if (val.toLowerCase() === "yes") isYes = true;
         else if (val && val.toLowerCase() !== "no") details.push(val);
@@ -180,35 +184,48 @@ export default function TemplateTwo({
 
   const hasScope = summaryBulletsRaw.length > 0;
 
-  // Production — fields now live inside roomByRoom[0]; fall back to legacy raw.production
+  // Per-room production items builder
   const legacyProduction = raw.production || {};
-  const production = {
-    scenicStageDesign: room.scenicStageDesign ?? legacyProduction.scenicStageDesign,
-    contentVideoNeeds: (room.contentVideoNeeds as string) || "",
-    unionLabor: room.unionLabor ?? legacyProduction.unionLabor,
-    showCrewNeeded:
-      (Array.isArray(room.showCrewNeeded) && (room.showCrewNeeded as string[]).length > 0
-        ? room.showCrewNeeded
-        : legacyProduction.showCrewNeeded) as string[] | undefined,
-    otherRolesNeeded:
-      (room.otherRolesNeeded as string) || (legacyProduction.otherRolesNeeded as string) || "",
-  };
-  // All production model keys — only included if they have a value
-  const productionItems = [
-    { label: "Scenic Stage Design", value: formatAVValue(production.scenicStageDesign) },
-    { label: "Content / Video Needs", value: formatAVValue(production.contentVideoNeeds) },
-    { label: "Union Labor", value: formatAVValue(production.unionLabor) },
-    { label: "Show Crew Needed", value: formatAVValue(production.showCrewNeeded) },
-    { label: "Other Roles Needed", value: formatAVValue(production.otherRolesNeeded) },
+  const buildRoomProductionItems = (r: Record<string, unknown>) => [
+    { label: "Scenic Stage Design",   value: formatAVValue(r.scenicStageDesign ?? legacyProduction.scenicStageDesign) },
+    { label: "Union Labor",           value: formatAVValue(r.unionLabor ?? legacyProduction.unionLabor) },
+    { label: "Content / Video Needs", value: formatAVValue((r.contentVideoNeeds as string) || "") },
+    {
+      label: "Show Crew Needed",
+      value: formatAVValue(
+        (Array.isArray(r.showCrewNeeded) && (r.showCrewNeeded as string[]).length > 0
+          ? r.showCrewNeeded
+          : legacyProduction.showCrewNeeded) as string[] | undefined,
+      ),
+    },
+    { label: "Other Roles", value: formatAVValue((r.otherRolesNeeded as string) || (legacyProduction.otherRolesNeeded as string) || "") },
   ].filter((i) => i.value);
-  const hasProduction = productionItems.length > 0;
+
 
   // Venue
   const venue = raw.venue || {};
+
+  // Helper: extract nested YES/NO field value and detail sub-field
+  const getNestedVenueVal = (field: any, detailKey?: string): string => {
+    if (!field) return "";
+    if (typeof field === "string") return field === "NO" || field === "No" ? "" : field;
+    if (typeof field === "object" && !Array.isArray(field)) {
+      const entries = Object.entries(field as Record<string, unknown>);
+      const yesEntry = entries.find(([, v]) => typeof v === "string" && (v as string).toUpperCase() === "YES");
+      const detailEntry = detailKey ? (field as Record<string, unknown>)[detailKey] : undefined;
+      if (!yesEntry) return "";
+      return detailEntry && typeof detailEntry === "string" ? `YES — ${detailEntry}` : "YES";
+    }
+    return "";
+  };
+
   const venueItems = [
-    { label: "Rigging Request", value: formatAVValue(venue.needRiggingForFlown) },
-    { label: "Power Drops Request", value: formatAVValue(venue.needDedicatedPowerDrops) },
-    { label: "Power Drops Qty", value: formatAVValue(venue.powerDropsHowMany) },
+    { label: "Rigging",              value: getNestedVenueVal(venue.needRiggingForFlown, "riggingPlotOrSpecs") },
+    { label: "Power Drops",          value: getNestedVenueVal(venue.needDedicatedPowerDrops, "standardAmpWall") },
+    { label: "Power Drops Qty",      value: formatAVValue(venue.powerDropsHowMany) },
+    { label: "Hardline Internet",    value: getNestedVenueVal(venue.hardlineInternet, "hardlineInternetPurpose") },
+    { label: "Livestream / Virtual", value: getNestedVenueVal(venue.livestreamVirtual, "livestreamPlatform") },
+    { label: "Wireless Internet",    value: formatAVValue(venue.wirelessInternetAttendees) },
   ].filter((i) => i.value);
   const hasVenue = venueItems.length > 0;
 
@@ -281,7 +298,7 @@ export default function TemplateTwo({
   const closingSubtitle = [raw.contact?.contactTitle, raw.contact?.contactOrganization].filter(Boolean).join(" - ").trim();
   const brandEmail = raw.contact?.contactEmail || raw.proposalSetting?.proposals?.contacts?.email?.value || "";
   const contactPhone = raw.contact?.contactPhone || raw.proposalSetting?.proposals?.contacts?.call?.value || "";
-  const additionalNotes = raw.contact?.anythingElse || room.contentVideoNeeds || "";
+  const additionalNotes = raw.contact?.anythingElse || "";
   
   const hasContact = Boolean(contactName || closingSubtitle || brandEmail || contactPhone || additionalNotes);
 
@@ -387,152 +404,176 @@ export default function TemplateTwo({
           )}
         </section>
 
-        {(hasScope || budgetValue || hasBudgetOptions) && (
-          <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {hasScope && (
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-                <h2 className="text-lg font-black text-slate-900">
-                  {t("Scope & Requirements", "Alcance y requisitos", "Portee et exigences")}
-                </h2>
-                <div className="mt-4 space-y-3">
-                  {summaryBulletsRaw.map((bullet: string, idx: number) => {
-                    const colonIndex = bullet.indexOf(":");
-                    const title = colonIndex !== -1 ? bullet.substring(0, colonIndex).trim() : "Detail";
-                    const text = colonIndex !== -1 ? bullet.substring(colonIndex + 1).trim() : bullet;
-                    return (
-                      <div key={idx} className="rounded-xl border border-slate-200 p-4 bg-slate-50">
-                        <p className="text-sm font-bold text-slate-900 uppercase tracking-widest text-[10px] mb-1">{title}</p>
-                        <p className="text-sm font-semibold text-slate-700">{text}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {(budgetValue || hasBudgetOptions) && (
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
-                <h2 className="text-lg font-black text-slate-900 mb-4">
-                  {t("Estimated Budget", "Presupuesto", "Budget")}
-                </h2>
-                {budgetValue && (
-                  <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-8 text-center flex-1 flex flex-col items-center justify-center mb-4">
-                    <p className="text-sm font-bold text-cyan-700 uppercase tracking-widest mb-2">Total Estimate</p>
-                    <p className="text-5xl font-black italic text-cyan-900 hover:scale-105 transition-transform cursor-default">{budgetValue}</p>
+        {hasScope && (
+          <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-black text-slate-900">
+              {t("Scope & Requirements", "Alcance y requisitos", "Portee et exigences")}
+            </h2>
+            <div className="mt-4 space-y-3">
+              {summaryBulletsRaw.map((bullet: string, idx: number) => {
+                const colonIndex = bullet.indexOf(":");
+                const title = colonIndex !== -1 ? bullet.substring(0, colonIndex).trim() : "Detail";
+                const text = colonIndex !== -1 ? bullet.substring(colonIndex + 1).trim() : bullet;
+                return (
+                  <div key={idx} className="rounded-xl border border-slate-200 p-4 bg-slate-50">
+                    <p className="text-sm font-bold text-slate-900 uppercase tracking-widest text-[10px] mb-1">{title}</p>
+                    <p className="text-sm font-semibold text-slate-700">{text}</p>
                   </div>
-                )}
-                {hasBudgetOptions && (
-                  <div className="grid grid-cols-1 gap-2 mt-auto">
-                    {budgetItems.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-start rounded-lg border border-slate-100 bg-slate-50 p-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 w-1/3 pr-2">{item.label}</span>
-                        <span className="text-xs font-semibold text-slate-900 text-right w-2/3 leading-tight">{item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </section>
         )}
 
-        {(hasRoomSnapshot || hasProduction) && (
+        {(budgetValue || hasBudgetOptions) && (
           <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-black text-slate-900 mb-5">
+              {t("Budget & Proposal Preferences", "Presupuesto y preferencias", "Budget et préférences")}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {budgetValue && (
+                <div className="sm:col-span-2 lg:col-span-1 bg-cyan-50 border border-cyan-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                  <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest mb-2">
+                    {t("Estimated AV Budget", "Presupuesto estimado", "Budget estimé")}
+                  </p>
+                  <p className="text-4xl font-black italic text-cyan-900">{budgetValue}</p>
+                </div>
+              )}
+              {budgetItems.map((item, idx) => (
+                <div key={idx} className="rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">{item.label}</p>
+                  <p className="text-sm font-semibold text-slate-900 leading-snug">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
-            {/* ── Room-by-Room AV Needs ── */}
-            {hasRoomSnapshot && (
-              <>
-                <h2 className="text-lg font-black text-slate-900">
-                  {t("Room-by-Room AV Needs", "Necesidades AV por sala", "Besoins AV salle par salle")}
-                </h2>
 
-                {roomSections.map((rs, roomIdx) => (
-                  <div key={roomIdx} className={roomIdx > 0 ? "mt-8 pt-6 border-t border-slate-100" : "mt-4"}>
-                    {/* Room name header */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-cyan-500 text-white text-[11px] font-black shrink-0">
-                        {roomIdx + 1}
-                      </span>
-                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+        {/* ── Per-room: AV Needs + Production Support paired ── */}
+        {hasRoomSnapshot && (
+          <>
+            {allRooms.map((r, roomIdx) => {
+              const rs = roomSections[roomIdx];
+              if (!rs) return null;
+              const prodItems = buildRoomProductionItems(r as Record<string, unknown>);
+              const hasProd = prodItems.length > 0;
+              return (
+                <section
+                  key={roomIdx}
+                  className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  {/* Room heading */}
+                  <div className="flex items-center gap-3 mb-5">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-full bg-cyan-500 text-white text-[12px] font-black shrink-0">
+                      {roomIdx + 1}
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-600 mb-0.5">
+                        {roomSections.length === 1
+                          ? t("Room AV & Production", "AV y producción", "AV et production")
+                          : `${t("Room", "Sala", "Salle")} ${roomIdx + 1} ${t("of", "de", "sur")} ${roomSections.length}`}
+                      </p>
+                      <h2 className="text-lg font-black text-slate-900 leading-tight">
                         {rs.roomName}
-                      </h3>
-                    </div>
-
-                    {/* AV items grid for this room */}
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
-                      {rs.avItems.map((item, idx) => (
-                        <div key={idx} className="rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors">
-                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                            {item.label}
-                          </p>
-                          <p className="text-sm font-semibold text-slate-900">{item.value}</p>
-                        </div>
-                      ))}
+                      </h2>
                     </div>
                   </div>
-                ))}
-              </>
-            )}
 
-            {/* ── Production Support ── */}
-            {hasProduction && (
-              <div className={hasRoomSnapshot ? "mt-8 pt-6 border-t border-slate-100" : ""}>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="inline-block h-4 w-1 rounded-full bg-cyan-500" />
-                  <h3 className="text-base font-black text-slate-900 uppercase tracking-widest text-[13px]">
-                    {t("Production Support", "Soporte de producción", "Support de production")}
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-                  {productionItems.map((item, idx) => {
-                    const isCrewList = item.label === "Show Crew Needed" && item.value.includes(",");
-                    return (
-                      <div
-                        key={idx}
-                        className={`rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors${
-                          isCrewList ? " sm:col-span-2 md:col-span-3" : ""
-                        }`}
-                      >
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                          {item.label}
-                        </p>
-                        {isCrewList ? (
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {item.value.split(", ").map((crew: string, ci: number) => (
-                              <span
-                                key={ci}
-                                className="inline-flex items-center rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-[11px] font-bold text-cyan-800 uppercase tracking-wide"
-                              >
-                                {crew.trim()}
-                              </span>
-                            ))}
+                  {/* AV Items */}
+                  {rs.avItems.length > 0 && (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-3 flex items-center gap-2">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                        {t("Technical AV Specifications", "Especificaciones AV", "Spécifications AV")}
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+                        {rs.avItems.map((item, idx) => (
+                          <div key={idx} className="rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">{item.label}</p>
+                            <p className="text-sm font-semibold text-slate-900">{item.value}</p>
                           </div>
-                        ) : (
-                          <p className="text-sm font-semibold text-slate-900 leading-snug">{item.value}</p>
-                        )}
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                    </>
+                  )}
 
-          </section>
+                  {/* Production Support for this room */}
+                  {hasProd && (
+                    <div className={rs.avItems.length > 0 ? "mt-6 pt-5 border-t border-slate-100" : ""}>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-3 flex items-center gap-2">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                        {t("Production & Crew", "Producción y equipo", "Production et équipe")}
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                        {prodItems.map((item, idx) => {
+                          const isCrewList = item.label === "Show Crew Needed" && item.value.includes(",");
+                          return (
+                            <div
+                              key={idx}
+                              className={`rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors${
+                                isCrewList ? " sm:col-span-2 md:col-span-3" : ""
+                              }`}
+                            >
+                              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                                {item.label}
+                              </p>
+                              {isCrewList ? (
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  {item.value.split(", ").map((crew: string, ci: number) => (
+                                    <span
+                                      key={ci}
+                                      className="inline-flex items-center rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-[11px] font-bold text-cyan-800 uppercase tracking-wide"
+                                    >
+                                      {crew.trim()}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm font-semibold text-slate-900 leading-snug">{item.value}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </>
         )}
 
 
         {hasVenue && (
           <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-black text-slate-900">
+            <h2 className="text-lg font-black text-slate-900 mb-5">
               {t("Venue & Technical", "Sede y técnico", "Lieu et technique")}
             </h2>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-              {venueItems.map((item, idx) => (
-                <div key={idx} className="rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">{item.label}</p>
-                  <p className="text-sm font-semibold text-slate-900">{item.value}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+              {venueItems.map((item, idx) => {
+                // Split "YES — detail" into badge + detail line
+                const dashIdx = item.value.indexOf(" — ");
+                const badge   = dashIdx !== -1 ? item.value.slice(0, dashIdx) : item.value;
+                const detail  = dashIdx !== -1 ? item.value.slice(dashIdx + 3) : "";
+                const isFull  = detail.length > 60; // long detail spans full width
+                return (
+                  <div
+                    key={idx}
+                    className={`rounded-xl border border-slate-100 hover:border-cyan-200 bg-slate-50 p-4 transition-colors${
+                      isFull ? " sm:col-span-2 md:col-span-3" : ""
+                    }`}
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">{item.label}</p>
+                    <span className="inline-flex items-center rounded-full bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 text-[11px] font-black text-cyan-800 uppercase tracking-wide mb-1">
+                      {badge}
+                    </span>
+                    {detail && (
+                      <p className="mt-1 text-xs font-semibold text-slate-600 leading-snug break-words">{detail}</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
