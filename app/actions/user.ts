@@ -40,7 +40,7 @@ export async function getUserData(): Promise<UserDataResponse> {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
-      next: { tags: ["userDataUpdate"], revalidate: 360 },
+      cache: "no-store",
     });
 
     const payload = await response.json().catch(() => null);

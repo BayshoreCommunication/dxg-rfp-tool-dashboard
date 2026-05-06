@@ -298,6 +298,7 @@ export async function updateProposalStatusAction(
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ status }),
+      cache: "no-store",
     });
     const data = await res.json();
     return {
@@ -333,6 +334,7 @@ export async function updateProposalMetaAction(
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updates),
+      cache: "no-store",
     });
     const data = await res.json();
     return {
@@ -380,6 +382,7 @@ export async function deleteProposalAction(id: string): Promise<ApiResponse> {
     const res = await fetch(`${API_URL}/api/proposals/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
     });
     const data = await res.json();
     return {

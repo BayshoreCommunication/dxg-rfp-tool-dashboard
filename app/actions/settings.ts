@@ -65,6 +65,7 @@ export async function updateSettingsAction(
       method: "PUT",
       headers,
       body: form,
+      cache: "no-store",
     });
     const data = await res.json();
     return {
@@ -87,6 +88,7 @@ export async function deleteSettingsAction(): Promise<SettingsResponse> {
     const res = await fetch(`${API_URL}/api/settings`, {
       method: "DELETE",
       headers,
+      cache: "no-store",
     });
     const data = await res.json();
     return {
