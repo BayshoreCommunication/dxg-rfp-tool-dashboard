@@ -403,7 +403,7 @@ function GuideModal({ onClose }: { onClose: () => void }) {
           >
             <p className="text-sm text-amber-800">
               <span className="font-bold">💡 Tip:</span> The more detail your
-              document contains, the more fields we can pre-fill — saving you
+              document contains, the more fields we can pre-fill — saving your
               time on the form.
             </p>
           </div>
