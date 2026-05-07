@@ -1,4 +1,4 @@
-import ProposalView from "../../../../components/proposals/ProposalView";
+import ProposalUserView from "@/components/proposals/ProposalUserView";
 
 const Page = async ({
   params,
@@ -10,12 +10,9 @@ const Page = async ({
   const { slug } = await params;
   const { source } = await searchParams;
 
-
-  
-
   return (
     <div className="">
-      <ProposalView slug={slug} source={source} />
+      <ProposalUserView slug={slug} source={source} />
     </div>
   );
 };

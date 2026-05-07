@@ -3,8 +3,11 @@
 
 import { auth } from "@/auth";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
-
 import { BACKEND_URL as API_URL, FRONTEND_URL } from "@/lib/config";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
 
 export type ProposalCounts = {
   all: number;
@@ -22,6 +25,11 @@ type ApiResponse = {
   counts?: ProposalCounts;
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Reads the session access token; returns null when the user is not signed in. */
 const getAccessToken = async (): Promise<string | null> => {
   const session = await auth();
   return (session?.user as any)?.accessToken || null;
@@ -34,6 +42,7 @@ const toSlug = (value: string): string =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+/** Derives proposalSlug, proposalLink, and publicProposalLink from a raw proposal object. */
 const buildProposalMeta = (proposal: any) => {
   const proposalId = proposal?._id ? String(proposal._id) : "";
   const title = proposal?.event?.eventName || "proposal";
@@ -53,6 +62,7 @@ const buildProposalMeta = (proposal: any) => {
   };
 };
 
+/** Applies buildProposalMeta to a single object or every item in an array. */
 const withProposalMeta = (payload: unknown) => {
   if (Array.isArray(payload)) {
     return payload.map((proposal) => buildProposalMeta(proposal));
@@ -63,6 +73,59 @@ const withProposalMeta = (payload: unknown) => {
   return payload;
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Public actions — no authentication required
+// Used for public proposal preview links (email / share links)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Fetch a proposal by ID without a token — used by public share/preview links. */
+export async function getProposalByIdPublicAction(
+  id: string,
+): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${API_URL}/api/proposals/${id}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "Proposal fetched" : "Fetch failed"),
+      data: withProposalMeta(data.data),
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error" };
+  }
+}
+
+/** Increment view count without a token — called when a public link is opened. */
+export async function incrementProposalViewsPublicAction(
+  id: string,
+): Promise<ApiResponse> {
+  try {
+    const res = await fetch(`${API_URL}/api/proposals/${id}/views`, {
+      method: "PATCH",
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message:
+        data.message || (res.ok ? "Proposal views updated" : "Update failed"),
+      data: withProposalMeta(data.data),
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error" };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Authenticated actions — require a valid session token
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Proposal CRUD ─────────────────────────────────────────────────────────────
+
+/** Create a new proposal (draft or submitted). */
 export async function createProposalAction(
   payload: ProposalData & {
     status?: "draft" | "submitted" | "reviewed" | "approved" | "rejected";
@@ -98,42 +161,7 @@ export async function createProposalAction(
   }
 }
 
-/**
- * Send a document file to the backend AI extraction endpoint.
- * Returns a partial ProposalData object with only the fields found in the document.
- */
-export async function extractProposalFromFile(file: File): Promise<{
-  success: boolean;
-  data?: Partial<ProposalData>;
-  message?: string;
-}> {
-  try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch(`${API_URL}/api/extract-proposal`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-      cache: "no-store",
-    });
-
-    const json = await res.json();
-    return {
-      success: res.ok && json.success,
-      data: json.data as Partial<ProposalData>,
-      message: json.message,
-    };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
-  }
-}
-
+/** Fetch a paginated list of proposals for the signed-in user. */
 export async function getProposalsAction(params?: {
   status?: string;
   favorite?: boolean;
@@ -186,6 +214,7 @@ export async function getProposalsAction(params?: {
   }
 }
 
+/** Fetch only the status counts (all / draft / live / favorite / expired). */
 export async function getProposalCountsAction(search?: string): Promise<{
   success: boolean;
   message?: string;
@@ -229,16 +258,19 @@ export async function getProposalCountsAction(search?: string): Promise<{
   }
 }
 
+/**
+ * Fetch a single proposal by ID for the signed-in user.
+ * Sends the session token so the backend returns owner-scoped data.
+ */
 export async function getProposalByIdAction(id: string): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   try {
+    const token = await getAccessToken();
+
     const res = await fetch(`${API_URL}/api/proposals/${id}`, {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       cache: "no-store",
     });
     const data = await res.json();
@@ -252,6 +284,7 @@ export async function getProposalByIdAction(id: string): Promise<ApiResponse> {
   }
 }
 
+/** Replace all editable fields of a proposal (full update). */
 export async function updateProposalAction(
   id: string,
   updates: Partial<ProposalData>,
@@ -281,6 +314,33 @@ export async function updateProposalAction(
   }
 }
 
+/** Delete a proposal permanently. */
+export async function deleteProposalAction(id: string): Promise<ApiResponse> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, message: "User is not authenticated." };
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/proposals/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "Proposal deleted" : "Delete failed"),
+      data: data.data,
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error" };
+  }
+}
+
+// ── Status, meta & views ──────────────────────────────────────────────────────
+
+/** Change the workflow status (draft → submitted → reviewed → approved / rejected). */
 export async function updateProposalStatusAction(
   id: string,
   status: "draft" | "submitted" | "reviewed" | "approved" | "rejected",
@@ -311,6 +371,7 @@ export async function updateProposalStatusAction(
   }
 }
 
+/** Update boolean flags and viewsCount (isActive, isFavorite, isAccepted, isOpen). */
 export async function updateProposalMetaAction(
   id: string,
   updates: {
@@ -347,17 +408,18 @@ export async function updateProposalMetaAction(
   }
 }
 
+/** Increment view count for an authenticated user session. */
 export async function incrementProposalViewsAction(
   id: string,
 ): Promise<ApiResponse> {
   try {
     const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
+
     const res = await fetch(`${API_URL}/api/proposals/${id}/views`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       cache: "no-store",
     });
     const data = await res.json();
@@ -372,36 +434,12 @@ export async function incrementProposalViewsAction(
   }
 }
 
-export async function deleteProposalAction(id: string): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
-  try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    const data = await res.json();
-    return {
-      success: res.ok,
-      message: data.message || (res.ok ? "Proposal deleted" : "Delete failed"),
-      data: data.data,
-    };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
-  }
-}
+// ── File uploads ──────────────────────────────────────────────────────────────
 
 /**
- * Upload proposal support documents or AV quote files to DigitalOcean Spaces.
- * Returns the CDN URLs grouped by field name.
- *
- * Usage:
- *   const result = await uploadProposalFilesAction(formData);
- *   // formData fields: "supportDocuments" and/or "avQuoteFiles"
+ * Upload support documents or AV quote files to DigitalOcean Spaces.
+ * FormData fields: "supportDocuments" and/or "avQuoteFiles".
+ * Returns CDN URLs grouped by field name.
  */
 export async function uploadProposalFilesAction(formData: FormData): Promise<{
   success: boolean;
@@ -461,5 +499,43 @@ export async function uploadProposalFilesAction(formData: FormData): Promise<{
       supportDocumentUrls: [],
       avQuoteFileUrls: [],
     };
+  }
+}
+
+// ── AI extraction ─────────────────────────────────────────────────────────────
+
+/**
+ * Send a document file to the backend AI extraction endpoint.
+ * Returns a partial ProposalData object with only the fields found in the document.
+ */
+export async function extractProposalFromFile(file: File): Promise<{
+  success: boolean;
+  data?: Partial<ProposalData>;
+  message?: string;
+}> {
+  try {
+    const token = await getAccessToken();
+    if (!token) {
+      return { success: false, message: "User is not authenticated." };
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${API_URL}/api/extract-proposal`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+      cache: "no-store",
+    });
+
+    const json = await res.json();
+    return {
+      success: res.ok && json.success,
+      data: json.data as Partial<ProposalData>,
+      message: json.message,
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error" };
   }
 }

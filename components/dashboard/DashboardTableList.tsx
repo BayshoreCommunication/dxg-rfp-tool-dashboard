@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Check,
   ChevronRight,
   Clock,
   Copy,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
+import { toast } from "react-toastify";
 
 type ProposalStatus =
   | "draft"
@@ -100,13 +102,17 @@ function toSlug(title: string) {
 function IconButton({
   icon,
   tooltip,
+  onClick,
 }: {
   icon: React.ReactNode;
   tooltip?: string;
+  onClick?: () => void;
 }) {
   return (
     <button
+      type="button"
       title={tooltip}
+      onClick={onClick}
       className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300 transition-all duration-150 hover:scale-105 active:scale-95"
     >
       {icon}
@@ -126,6 +132,25 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
     proposal.contact?.contactLastName || ""
   }`.trim();
   const slug = `${toSlug(title) || "proposal"}-${proposal._id}`;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyProposalUrl = async () => {
+    if (!slug) return;
+    const proposalUrl = `${window.location.origin}/proposal-view/${slug}`;
+    try {
+      await navigator.clipboard.writeText(proposalUrl);
+    } catch {
+      const input = document.createElement("input");
+      input.value = proposalUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+    }
+    setCopied(true);
+    toast.success("Proposal link copied to clipboard.");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <tr className="group transition-colors duration-150 hover:bg-slate-50/80 border-b border-slate-100 last:border-0">
@@ -179,7 +204,11 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
 
       <td className="px-5 py-4">
         <div className="flex items-center gap-1.5">
-          <IconButton icon={<Copy size={14} />} tooltip="Copy ID" />
+          <IconButton
+            icon={copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+            tooltip={copied ? "Copied!" : "Copy Link"}
+            onClick={handleCopyProposalUrl}
+          />
           <Link href={`/proposal/${slug}`} target="_blank">
             <IconButton icon={<Eye size={14} />} tooltip="Preview" />
           </Link>
@@ -225,7 +254,8 @@ export default function DashboardTableList({
           (filter === "draft" && status === "draft") ||
           (filter === "live" && status === "submitted") ||
           (filter === "favorite" && Boolean(p.isFavorite)) ||
-          (filter === "expired" && (p.isActive === false || status === "rejected"));
+          (filter === "expired" &&
+            (p.isActive === false || status === "rejected"));
 
         return matchSearch && matchStatus;
       }),
@@ -238,7 +268,9 @@ export default function DashboardTableList({
       draft: proposals.filter((p) => toStatus(p.status) === "draft").length,
       live: proposals.filter((p) => toStatus(p.status) === "submitted").length,
       favorite: proposals.filter((p) => Boolean(p.isFavorite)).length,
-      expired: proposals.filter((p) => p.isActive === false || toStatus(p.status) === "rejected").length,
+      expired: proposals.filter(
+        (p) => p.isActive === false || toStatus(p.status) === "rejected",
+      ).length,
     }),
     [proposals],
   );

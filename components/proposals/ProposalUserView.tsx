@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  getProposalByIdAction,
-  incrementProposalViewsAction,
-} from "@/app/actions/proposals";
+import { getProposalByIdAction } from "@/app/actions/proposals";
 import TemplateOne, {
   type TemplateOneData,
 } from "@/components/proposalTemplate/TemplateOne";
@@ -12,7 +9,6 @@ import { Inter, Poppins, Roboto } from "next/font/google";
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
 } from "react";
@@ -374,7 +370,9 @@ const mapProposalToTemplate = (
     : "";
 
   // Resolve the first room from array (current format) or direct object (legacy)
-  const firstRoom: Record<string, unknown> | undefined = Array.isArray(proposal.roomByRoom)
+  const firstRoom: Record<string, unknown> | undefined = Array.isArray(
+    proposal.roomByRoom,
+  )
     ? (proposal.roomByRoom[0] as Record<string, unknown> | undefined)
     : (proposal.roomByRoom as Record<string, unknown> | undefined);
 
@@ -480,7 +478,7 @@ const mapProposalToTemplate = (
   };
 };
 
-export default function ProposalView({
+export default function ProposalUserView({
   slug,
   source,
 }: {
@@ -491,7 +489,6 @@ export default function ProposalView({
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
-  const incrementedRef = useRef(false);
   const resolvedSettings = useMemo(
     () => normalizeProposalSettings(proposal || undefined),
     [proposal],
@@ -535,23 +532,6 @@ export default function ProposalView({
       const current = res.data as ProposalData;
       setProposal(current);
       setLoading(false);
-
-      const canTrackView =
-        !isPublicAccess ||
-        (current?.status === "submitted" && current?.isActive !== false);
-
-      if (!incrementedRef.current && canTrackView) {
-        incrementedRef.current = true;
-        const viewsRes = await incrementProposalViewsAction(proposalId);
-        if (!mounted) return;
-        if (
-          viewsRes.success &&
-          viewsRes.data &&
-          typeof viewsRes.data === "object"
-        ) {
-          setProposal(viewsRes.data as ProposalData);
-        }
-      }
     };
 
     void loadProposal();
@@ -622,35 +602,29 @@ export default function ProposalView({
       "proposal";
     document.title = `${printableTitle}-proposal`;
 
-    // ── Page dimensions ──
-    const proposalRoot = document.querySelector(".proposal-print-root") as HTMLElement | null;
-    const pageWidthMm = 406;
-    // 1 CSS px = 0.2646 mm at 96 dpi → 406mm ≈ 1535 CSS px
-    const printWidthPx = Math.round(pageWidthMm / 0.2646);
+    const proposalRoot = document.querySelector(
+      ".proposal-print-root",
+    ) as HTMLElement | null;
+    // Exact: 1 CSS px = 25.4 / 96 mm at 96 dpi
+    const MM_PER_PX = 25.4 / 96;
 
-    // ── Accurate height measurement ──
-    // Inject a temp stylesheet that mirrors the SAME layout constraints as the
-    // actual print CSS (outer width + all inner max-w overrides + no-print hidden).
-    // Without this, inner containers stay at their screen max-widths (e.g. 1280px),
-    // so text wraps more and scrollHeight is much larger than the real print height.
+    // Measure actual rendered dimensions dynamically from the DOM
+    let contentWidthPx = window.innerWidth;
     let contentHeightPx = window.innerHeight;
+
     if (proposalRoot) {
+      // Capture rendered width before any style injection
+      contentWidthPx = proposalRoot.offsetWidth;
+
       const measureStyleEl = Object.assign(document.createElement("style"), {
         id: "proposal-measure-style",
       });
       measureStyleEl.textContent = `
-        #${(proposalRoot.closest("[id]") as HTMLElement | null)?.id || "proposal-measure-target"},
         .proposal-print-root {
-          width:      ${printWidthPx}px !important;
-          max-width:  ${printWidthPx}px !important;
-          overflow:   visible           !important;
+          width:     ${contentWidthPx}px !important;
+          max-width: ${contentWidthPx}px !important;
+          overflow:  visible !important;
         }
-        .proposal-print-root .max-w-6xl,
-        .proposal-print-root .max-w-5xl,
-        .proposal-print-root .max-w-4xl,
-        .proposal-print-root .max-w-3xl,
-        .proposal-print-root .max-w-2xl,
-        .proposal-print-root .max-w-xl,
         .proposal-print-root [class*="max-w-"] {
           max-width: 100% !important;
           width:     100% !important;
@@ -658,13 +632,14 @@ export default function ProposalView({
         .no-print { display: none !important; }
       `;
       document.head.appendChild(measureStyleEl);
-      void proposalRoot.offsetHeight;           // force synchronous reflow
+      void proposalRoot.offsetHeight;
       contentHeightPx = proposalRoot.scrollHeight;
       measureStyleEl.remove();
-      void proposalRoot.offsetHeight;           // restore layout
+      void proposalRoot.offsetHeight;
     }
 
-    const pageHeightMm = Math.ceil(contentHeightPx * 0.2646);
+    const pageWidthMm = Math.round(contentWidthPx * MM_PER_PX);
+    const pageHeightMm = Math.round(contentHeightPx * MM_PER_PX);
 
     const printStyleId = "proposal-a4-print-style";
     const existingStyle = document.getElementById(printStyleId);
@@ -674,54 +649,38 @@ export default function ProposalView({
 
     temporaryPrintStyle.textContent = `
       @media print {
-        /* Single continuous page — sized to exact content height */
         @page {
           size: ${pageWidthMm}mm ${pageHeightMm}mm;
           margin: 0mm;
         }
 
         html, body {
-          width:      ${pageWidthMm}mm  !important;
-          max-width:  ${pageWidthMm}mm  !important;
-          height:     ${pageHeightMm}mm !important;
-          margin:  0  !important;
-          padding: 0  !important;
+          width:     ${pageWidthMm}mm !important;
+          max-width: ${pageWidthMm}mm !important;
+          height:    ${pageHeightMm}mm !important;
+          margin:  0 !important;
+          padding: 0 !important;
           overflow: visible !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust:         exact !important;
         }
 
-        /* Proposal root: explicit height so browser renders all sections */
         .proposal-print-root {
-          width:      100% !important;
-          max-width:  100% !important;
-          height:     ${pageHeightMm}mm !important;
-          min-height: unset !important;
-          margin:  0  !important;
-          padding: 0  !important;
-          box-sizing: border-box !important;
-          overflow: visible !important;
+          width:     100% !important;
+          max-width: 100% !important;
+          overflow:  visible !important;
         }
 
-        /* Remove Tailwind max-width caps from every inner container */
-        .proposal-print-root .max-w-6xl,
-        .proposal-print-root .max-w-5xl,
-        .proposal-print-root .max-w-4xl,
-        .proposal-print-root .max-w-3xl,
-        .proposal-print-root .max-w-2xl,
-        .proposal-print-root .max-w-xl,
         .proposal-print-root [class*="max-w-"] {
           max-width: 100% !important;
           width:     100% !important;
         }
 
-        /* No page splits — single continuous page */
-        .proposal-print-root *  {
+        .proposal-print-root * {
           page-break-inside: auto !important;
           break-inside:      auto !important;
         }
 
-        /* Hide UI-only floating elements */
         .no-print {
           display: none !important;
         }
@@ -732,7 +691,6 @@ export default function ProposalView({
       document.head.appendChild(temporaryPrintStyle);
     }
 
-    // Double rAF: first to apply styles, second to let layout reflow before print dialog
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         try {
@@ -846,11 +804,7 @@ export default function ProposalView({
           className="rounded-2xl border border-slate-200 bg-white/90 px-6 py-2.5 text-sm font-bold text-slate-800 shadow-xl backdrop-blur-md disabled:opacity-60 hover:bg-white transition"
         >
           {downloading
-            ? t(
-                "Generating PDF...",
-                "Generando PDF...",
-                "Generation du PDF...",
-              )
+            ? t("Generating PDF...", "Generando PDF...", "Generation du PDF...")
             : t("Download PDF", "Descargar PDF", "Telecharger le PDF")}
         </button>
       )}
@@ -889,7 +843,8 @@ export default function ProposalView({
               signatures: {
                 ...(proposal.proposalSetting?.signatures || {}),
                 signatureType: resolvedSettings.signatures.signatureType,
-                signatureImageUrl: resolvedSettings.signatures.signatureImageUrl,
+                signatureImageUrl:
+                  resolvedSettings.signatures.signatureImageUrl,
                 signatureText: resolvedSettings.signatures.signatureText,
                 signatureStyle: resolvedSettings.signatures.signatureStyle,
               },

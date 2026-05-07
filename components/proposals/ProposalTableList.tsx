@@ -280,7 +280,7 @@ export default function ProposalTableList({
   const handleCopyProposalUrl = async (proposalSlug: string) => {
     if (!proposalSlug) return;
 
-    const proposalUrl = `${window.location.origin}/proposal/${proposalSlug}`;
+    const proposalUrl = `${window.location.origin}/proposal-view/${proposalSlug}`;
 
     try {
       await navigator.clipboard.writeText(proposalUrl);
@@ -485,9 +485,7 @@ export default function ProposalTableList({
                             <Clock
                               size={11}
                               className={
-                                isExpired
-                                  ? "text-rose-400"
-                                  : "text-slate-400"
+                                isExpired ? "text-rose-400" : "text-slate-400"
                               }
                             />
                             Expiry:{" "}

@@ -6,8 +6,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. PUBLIC PATHS: Accessible to everyone (Guests + Users)
-  // Only auth-related pages are public, root "/" is blocked
-  const publicPaths = ["/sign-in", "/sign-up", "/forgot-password"];
+  // Auth pages + public proposal preview links are open without sign-in
+  const publicPaths = [
+    "/sign-in",
+    "/sign-up",
+    "/forgot-password",
+    "/proposal-view",
+  ];
 
   // 2. STATIC ASSETS: Always allow
   const excludedPaths = [
@@ -16,6 +21,7 @@ export async function middleware(request: NextRequest) {
     "/opengraph-image.jpg",
     "/opengraph-image.png",
     "/assets/",
+    "/fonts/",
   ];
 
   // 3. NEXTAUTH API ROUTES: Let NextAuth handle these
@@ -83,7 +89,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/|favicon.ico|opengraph-image.jpg|opengraph-image.png|assets/).*)"],
+  matcher: [
+    "/((?!_next/|favicon.ico|opengraph-image.jpg|opengraph-image.png|assets/|fonts/).*)",
+  ],
 };
 
 export default middleware;
