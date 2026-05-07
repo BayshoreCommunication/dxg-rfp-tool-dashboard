@@ -5,17 +5,13 @@ import { auth } from "./auth";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. PUBLIC PATHS: Accessible to everyone (Guests + Users)
-  // Auth pages + public proposal preview links are open without sign-in
-  const publicPaths = [
-    "/sign-in",
-    "/sign-up",
-    "/forgot-password",
-    "/proposal-view",
-  ];
+  // 1. NEXTAUTH API ROUTES: Let NextAuth handle these (no session check needed)
+  if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
 
-  // 2. STATIC ASSETS: Always allow
-  const excludedPaths = [
+  // 2. STATIC ASSETS: Always allow without a session check
+  const excludedPrefixes = [
     "/_next/",
     "/favicon.ico",
     "/opengraph-image.jpg",
@@ -23,68 +19,52 @@ export async function middleware(request: NextRequest) {
     "/assets/",
     "/fonts/",
   ];
-
-  // 3. NEXTAUTH API ROUTES: Let NextAuth handle these
-  if (pathname.startsWith("/api/auth/")) {
+  if (excludedPrefixes.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Check for static assets
-  if (excludedPaths.some((path) => pathname.startsWith(path))) {
+  // 3. FULLY PUBLIC PATHS: Skip auth() entirely — no session needed
+  // These routes must be accessible to unauthenticated visitors (email links, share links, etc.)
+  const publicPrefixes = [
+    "/sign-in",
+    "/sign-up",
+    "/forgot-password",
+    "/proposal-view",
+  ];
+  if (publicPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
   }
 
-  // Get session using NextAuth auth function
+  // 4. All remaining routes require a valid session
   const session = await auth();
 
   // --- OAUTH CALLBACK HANDLING ---
   if (pathname === "/auth/callback") {
-    if (!session || !session.user) {
+    if (!session?.user) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
-
-    console.log(
-      "✅ [Middleware] OAuth login successful, redirecting to dashboard",
-    );
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // --- ROOT PATH REDIRECT ---
-  // Block "/" and redirect based on authentication status
   if (pathname === "/") {
-    if (session?.user) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    } else {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
-    }
+    return NextResponse.redirect(
+      new URL(session?.user ? "/dashboard" : "/sign-in", request.url),
+    );
   }
 
-  // --- AUTH PAGE REDIRECT (UX Improvement) ---
-  // If user is already logged in, don't let them see Sign-In/Up pages
+  // --- AUTHENTICATED USER ON AUTH PAGES ---
   if (session?.user && (pathname === "/sign-in" || pathname === "/sign-up")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Allow other public paths
-  if (
-    publicPaths.some(
-      (path) => pathname === path || pathname.startsWith(path + "/"),
-    )
-  ) {
-    return NextResponse.next();
-  }
-
-  // --- PROTECTED ROUTES ---
-
-  // Require Authentication for all non-public routes
-  if (!session || !session.user) {
-    // Redirect to sign-in, but remember where they wanted to go
+  // --- UNAUTHENTICATED USER ON PROTECTED ROUTES ---
+  if (!session?.user) {
     const url = new URL("/sign-in", request.url);
     url.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(url);
   }
 
-  // User is authenticated, allow access to all routes
   return NextResponse.next();
 }
 
