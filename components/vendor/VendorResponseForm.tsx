@@ -9,6 +9,7 @@ type Props = {
   proposalId: string;
   proposalTitle: string;
   initialEmail?: string;
+  initialTrackingId?: string;
 };
 
 type FileEntry = {
@@ -20,6 +21,7 @@ export default function VendorResponseForm({
   proposalId,
   proposalTitle,
   initialEmail = "",
+  initialTrackingId = "",
 }: Props) {
   const [vendorName, setVendorName] = useState("");
   const [submittedBy, setSubmittedBy] = useState("");
@@ -35,12 +37,14 @@ export default function VendorResponseForm({
 
   const checkEmailExists = async (emailValue: string) => {
     const trimmed = emailValue.trim().toLowerCase();
-    if (!trimmed || !proposalId) return;
+    if (!trimmed && !initialTrackingId) return;
+    if (!proposalId) return;
     setCheckingEmail(true);
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/vendor-responses/check?proposalId=${encodeURIComponent(proposalId)}&email=${encodeURIComponent(trimmed)}`,
-      );
+      const params = new URLSearchParams({ proposalId });
+      if (trimmed) params.set("email", trimmed);
+      if (initialTrackingId) params.set("tid", initialTrackingId);
+      const res = await fetch(`${BACKEND_URL}/api/vendor-responses/check?${params.toString()}`);
       const json = await res.json();
       if (json.alreadySubmitted) setAlreadySubmitted(true);
     } catch {
@@ -51,7 +55,7 @@ export default function VendorResponseForm({
   };
 
   useEffect(() => {
-    if (initialEmail && proposalId) {
+    if ((initialEmail || initialTrackingId) && proposalId) {
       void checkEmailExists(initialEmail);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -88,6 +92,7 @@ export default function VendorResponseForm({
       formData.append("submittedBy", submittedBy.trim());
       formData.append("email", email.trim());
       formData.append("message", message.trim());
+      if (initialTrackingId) formData.append("emailTrackingId", initialTrackingId);
       files.forEach(({ file }) => formData.append("documents", file));
 
       const res = await fetch(`${BACKEND_URL}/api/vendor-responses`, {
