@@ -170,6 +170,7 @@ export async function getProposalsAction(params?: {
   isActive?: boolean;
   archived?: boolean;
   isCopy?: boolean;
+  isDraft?: boolean;
   search?: string;
   page?: number;
   limit?: number;
@@ -189,6 +190,9 @@ export async function getProposalsAction(params?: {
   }
   if (typeof params?.isCopy === "boolean") {
     query.set("isCopy", String(params.isCopy));
+  }
+  if (typeof params?.isDraft === "boolean") {
+    query.set("isDraft", String(params.isDraft));
   }
   if (typeof params?.isActive === "boolean") {
     query.set("isActive", String(params.isActive));
@@ -438,7 +442,7 @@ export async function permanentlyDeleteProposalAction(id: string): Promise<ApiRe
 /** Change the workflow status (draft → submitted → reviewed → approved / rejected). */
 export async function updateProposalStatusAction(
   id: string,
-  status: "draft" | "submitted" | "reviewed" | "approved" | "rejected",
+  status: "unsubmitted" | "submitted" | "reviewed" | "approved" | "rejected",
 ): Promise<ApiResponse> {
   const token = await getAccessToken();
   if (!token) {

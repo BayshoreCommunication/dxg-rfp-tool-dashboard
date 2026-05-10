@@ -1397,10 +1397,9 @@ const AddNewProposal = ({
         startDate: overrides.startDate,
         endDate: overrides.endDate,
         templateId: overrides.templateId as "template-one" | "template-two",
-        status: "draft",
       });
       if (result.success) {
-        toast.success("Copy saved as draft successfully!");
+        toast.success("Copy saved successfully!");
         setShowCopyModal(false);
       } else {
         toast.error(result.message || "Failed to save copy.");

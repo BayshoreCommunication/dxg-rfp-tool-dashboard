@@ -35,7 +35,8 @@ import type { ProposalFilterType } from "./ProposalFilters";
 
 type ProposalListItem = {
   _id: string;
-  status?: string;
+  status?: "unsubmitted" | "submitted" | "reviewed" | "approved" | "rejected";
+  isDraft?: boolean;
   isAccepted?: boolean;
   isOpen?: boolean;
   isActive?: boolean;
@@ -205,6 +206,7 @@ export default function ProposalTableList({
         isActive?: boolean;
         archived?: boolean;
         isCopy?: boolean;
+        isDraft?: boolean;
       } = {
         page: currentPage,
         limit: PER_PAGE,
@@ -216,7 +218,7 @@ export default function ProposalTableList({
       }
 
       if (activeFilter === "draft") {
-        params.status = "draft";
+        params.isDraft = true;
       } else if (activeFilter === "live") {
         params.status = "submitted";
       } else if (activeFilter === "favorite") {
@@ -381,10 +383,9 @@ export default function ProposalTableList({
         ...(overrides.startDate ? { startDate: overrides.startDate } : {}),
         ...(overrides.endDate ? { endDate: overrides.endDate } : {}),
         templateId: overrides.templateId as "template-one" | "template-two",
-        status: "draft",
       });
       if (result.success) {
-        toast.success("Copy saved as draft successfully!");
+        toast.success("Copy saved successfully!");
         setCopyModalProposal(null);
         setRefreshTick((prev) => prev + 1);
         onRefreshCounts?.();
@@ -502,26 +503,43 @@ export default function ProposalTableList({
                 .join(" ");
               const createdAt = formatDisplayDate(proposal?.createdAt);
               const views = proposal?.viewsCount ?? 0;
-              const isDraft = (proposal?.status || "draft") === "draft";
-              const isSaved = isDraft && (proposal?.isCopy === true || activeFilter === "saved");
+              const isDraft = proposal?.isDraft === true;
+              const isSaved = proposal?.isCopy === true;  // copy = Saved tab
+              const status = proposal?.status ?? "unsubmitted";
+              const submittedLabel =
+                status === "submitted" ? "Submitted"
+                : status === "reviewed" ? "Reviewed"
+                : status === "approved" ? "Approved"
+                : status === "rejected" ? "Rejected"
+                : "Not Submitted";
               const expiryMeta = getExpiryMeta(
                 proposal?.createdAt,
                 proposal?.proposalSetting?.proposals?.expiryDate,
               );
+              // Copies are always offline; regular proposals can expire
               const isExpired =
                 !isSaved && (proposal?.isActive === false || expiryMeta.isExpiredByDate);
-              const liveOrExpiredLabel = isSaved ? "Offline" : isExpired ? "Expired" : "Live";
+              const liveOrExpiredLabel = isSaved
+                ? "Offline"
+                : isExpired
+                ? "Expired"
+                : proposal?.isActive !== false
+                ? "Live"
+                : "Offline";
               const statusBadgeClass = isSaved
-                ? "bg-slate-100 text-slate-500 border-slate-200"
+                ? "bg-violet-50 text-violet-600 border-violet-200"
                 : isExpired
                 ? "bg-rose-50 border-rose-200 text-rose-600"
-                : "bg-emerald-50 text-emerald-600 border-emerald-200";
+                : proposal?.isActive !== false
+                ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                : "bg-slate-100 text-slate-500 border-slate-200";
               const statusDotClass = isSaved
-                ? "bg-slate-400"
+                ? "bg-violet-400"
                 : isExpired
                 ? "bg-rose-400"
-                : "bg-emerald-400 animate-pulse";
-              const submittedLabel = isDraft ? "Not Submitted" : "Submitted";
+                : proposal?.isActive !== false
+                ? "bg-emerald-400 animate-pulse"
+                : "bg-slate-400";
               const isArchiveView = activeFilter === "archive";
               const archivedDate = proposal?.archivedAt ? new Date(proposal.archivedAt) : null;
               const daysUntilPurge = archivedDate
@@ -569,7 +587,7 @@ export default function ProposalTableList({
                         <>
                           {isSaved ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-violet-50 text-violet-700 border-violet-200">
-                              Saved
+                              Saved Copy
                             </span>
                           ) : isDraft ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
@@ -595,30 +613,20 @@ export default function ProposalTableList({
                         </>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    {/* Favorite button — hidden for copies (copies cannot be favourited) */}
+                    {!isSaved && (
                       <button
-                        title={
-                          proposal?.isFavorite
-                            ? "Remove favorite"
-                            : "Mark as favorite"
-                        }
+                        title={proposal?.isFavorite ? "Remove favorite" : "Mark as favorite"}
                         disabled={favoritingId === proposal._id}
                         onClick={() => void handleToggleFavorite(proposal)}
                         className={`text-slate-400 transition-colors duration-150 p-1 rounded-lg border hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed ${proposal?.isFavorite ? "text-rose-500 border-rose-200 bg-rose-50 hover:text-rose-600" : "border-transparent hover:border-slate-200 hover:text-slate-600"}`}
                       >
                         <Heart
                           size={18}
-                          className={
-                            proposal?.isFavorite
-                              ? "fill-current text-rose-500"
-                              : ""
-                          }
+                          className={proposal?.isFavorite ? "fill-current text-rose-500" : ""}
                         />
                       </button>
-                      {/* <button className="text-slate-400 hover:text-slate-600 transition-colors duration-150 p-1 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200">
-                        <MoreHorizontal size={18} />
-                      </button> */}
-                    </div>
+                    )}
                   </div>
 
                   <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
