@@ -8,7 +8,7 @@ import type { ProposalFilterType } from "./ProposalFilters";
 import ProposalsTableList from "./ProposalTableList";
 import TopHeader from "./TopHeader";
 
-const EMPTY_COUNTS: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0 };
+const EMPTY_COUNTS: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0, archive: 0 };
 
 const ProposalsDetials = () => {
   const [searchValue, setSearchValue] = useState("");

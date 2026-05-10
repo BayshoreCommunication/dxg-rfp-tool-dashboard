@@ -4,6 +4,7 @@ import {
   deleteEmailCampaignAction,
   getEmailCampaignsAction,
 } from "@/app/actions/email";
+import { cn } from "@/lib/utils";
 import { BarChart3, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -18,6 +19,8 @@ type EmailCampaign = {
   sentCount?: number;
   openedCount?: number;
   clickedCount?: number;
+  vendorResponseClickCount?: number;
+  vendorResponseCount?: number;
   createdAt: string;
 };
 
@@ -202,8 +205,9 @@ export default function EmailDashboard() {
               {/* Center */}
               <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-center lg:gap-6">
                 <MetricCard label="Sent" value={campaign.sentCount || 0} />
-                {/* <MetricCard label="Views" value={campaign.openedCount || 0} /> */}
-                <MetricCard label="Click" value={campaign.clickedCount || 0} />
+                <MetricCard label="View Clicks" value={campaign.clickedCount || 0} />
+                <MetricCard label="Submit Clicks" value={campaign.vendorResponseClickCount || 0} />
+                <MetricCard label="Responses" value={campaign.vendorResponseCount || 0} highlight={!!campaign.vendorResponseCount} />
               </div>
 
               {/* Right side */}
@@ -313,14 +317,33 @@ function LoadingSkeletonCard() {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
+function MetricCard({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <div className="w-126px rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 px-3 py-3 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+    <div
+      className={cn(
+        "w-126px rounded-2xl border px-3 py-3 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        highlight ? "border-emerald-200" : "border-slate-200",
+      )}
+      style={{
+        background: highlight
+          ? "linear-gradient(to bottom, #ecfdf5, #ffffff)"
+          : "linear-gradient(to bottom, #ffffff, #f8fafc)",
+      }}
+    >
+      <p
+        className={cn(
+          "text-[10px] font-bold uppercase tracking-[0.18em]",
+          highlight ? "text-emerald-600" : "text-slate-500",
+        )}
+      >
         {label}
       </p>
-
-      <p className="mt-1 text-[20px] font-black text-slate-900 leading-none">
+      <p
+        className={cn(
+          "mt-1 text-[20px] font-black leading-none",
+          highlight ? "text-emerald-700" : "text-slate-900",
+        )}
+      >
         {value}
       </p>
     </div>

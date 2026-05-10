@@ -15,6 +15,7 @@ export type ProposalCounts = {
   live: number;
   favorite: number;
   expired: number;
+  archive: number;
 };
 
 type ApiResponse = {
@@ -166,6 +167,7 @@ export async function getProposalsAction(params?: {
   status?: string;
   favorite?: boolean;
   isActive?: boolean;
+  archived?: boolean;
   search?: string;
   page?: number;
   limit?: number;
@@ -185,6 +187,9 @@ export async function getProposalsAction(params?: {
   }
   if (typeof params?.isActive === "boolean") {
     query.set("isActive", String(params.isActive));
+  }
+  if (typeof params?.archived === "boolean") {
+    query.set("archived", String(params.archived));
   }
   if (params?.search) query.set("search", params.search);
   if (params?.page) query.set("page", String(params.page));
@@ -220,7 +225,7 @@ export async function getProposalCountsAction(search?: string): Promise<{
   message?: string;
   counts: ProposalCounts;
 }> {
-  const empty: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0 };
+  const empty: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0, archive: 0 };
 
   const token = await getAccessToken();
   if (!token) {
@@ -251,6 +256,7 @@ export async function getProposalCountsAction(search?: string): Promise<{
         live: raw.live ?? 0,
         favorite: raw.favorite ?? 0,
         expired: raw.expired ?? 0,
+        archive: (raw as any).archive ?? 0,
       },
     };
   } catch (error: any) {
@@ -314,7 +320,7 @@ export async function updateProposalAction(
   }
 }
 
-/** Delete a proposal permanently. */
+/** Archive a proposal (soft delete — recoverable for 30 days). */
 export async function deleteProposalAction(id: string): Promise<ApiResponse> {
   const token = await getAccessToken();
   if (!token) {
@@ -330,8 +336,54 @@ export async function deleteProposalAction(id: string): Promise<ApiResponse> {
     const data = await res.json();
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Proposal deleted" : "Delete failed"),
+      message: data.message || (res.ok ? "Proposal archived" : "Archive failed"),
       data: data.data,
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error" };
+  }
+}
+
+/** Restore an archived proposal back to active. */
+export async function restoreProposalAction(id: string): Promise<ApiResponse> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, message: "User is not authenticated." };
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/proposals/${id}/restore`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "Proposal restored" : "Restore failed"),
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error" };
+  }
+}
+
+/** Permanently delete an archived proposal — cannot be undone. */
+export async function permanentlyDeleteProposalAction(id: string): Promise<ApiResponse> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, message: "User is not authenticated." };
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/proposals/${id}/permanent`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "Proposal permanently deleted" : "Delete failed"),
     };
   } catch (error: any) {
     return { success: false, message: error.message || "Network error" };

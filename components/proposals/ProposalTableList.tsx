@@ -3,19 +3,26 @@
 import {
   deleteProposalAction,
   getProposalsAction,
+  permanentlyDeleteProposalAction,
+  restoreProposalAction,
   updateProposalMetaAction,
 } from "@/app/actions/proposals";
 import {
+  Archive,
+  ArchiveRestore,
   ChevronLeft,
   ChevronRight,
   Clock,
   Copy,
+  Delete,
+  DeleteIcon,
   Edit3,
   Eye,
   FileText,
   Heart,
   Plus,
   Share2,
+  Trash,
   Trash2,
   TrendingUp,
   Users,
@@ -32,6 +39,8 @@ type ProposalListItem = {
   isOpen?: boolean;
   isActive?: boolean;
   isFavorite?: boolean;
+  isArchived?: boolean;
+  archivedAt?: string;
   viewsCount?: number;
   createdAt?: string;
   proposalSetting?: {
@@ -102,6 +111,8 @@ export default function ProposalTableList({
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [permanentDeletingId, setPermanentDeletingId] = useState<string | null>(null);
   const [favoritingId, setFavoritingId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -188,6 +199,7 @@ export default function ProposalTableList({
         status?: string;
         favorite?: boolean;
         isActive?: boolean;
+        archived?: boolean;
       } = {
         page: currentPage,
         limit: PER_PAGE,
@@ -206,6 +218,8 @@ export default function ProposalTableList({
         params.favorite = true;
       } else if (activeFilter === "expired") {
         params.isActive = false;
+      } else if (activeFilter === "archive") {
+        params.archived = true;
       }
 
       const listRes = await getProposalsAction(params);
@@ -248,7 +262,7 @@ export default function ProposalTableList({
 
     const proposalName = proposal?.event?.eventName || "this proposal";
     const confirmed = window.confirm(
-      `Delete "${proposalName}"? This action cannot be undone.`,
+      `Archive "${proposalName}"? It will be permanently deleted after 30 days, but you can restore it from the Archive tab.`,
     );
     if (!confirmed) return;
 
@@ -256,10 +270,10 @@ export default function ProposalTableList({
     try {
       const res = await deleteProposalAction(proposalId);
       if (!res.success) {
-        toast.error(res.message || "Failed to delete proposal.");
+        toast.error(res.message || "Failed to archive proposal.");
         return;
       }
-      toast.success("Proposal deleted successfully.");
+      toast.success("Proposal moved to archive.");
       const nextPage =
         proposals.length === 1 && currentPage > 1
           ? currentPage - 1
@@ -269,6 +283,56 @@ export default function ProposalTableList({
       onRefreshCounts?.();
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleRestoreProposal = async (proposal: ProposalListItem) => {
+    const proposalId = proposal._id;
+    if (!proposalId || restoringId) return;
+
+    setRestoringId(proposalId);
+    try {
+      const res = await restoreProposalAction(proposalId);
+      if (!res.success) {
+        toast.error(res.message || "Failed to restore proposal.");
+        return;
+      }
+      toast.success("Proposal restored successfully.");
+      const nextPage =
+        proposals.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+      setCurrentPage(nextPage);
+      setRefreshTick((prev) => prev + 1);
+      onRefreshCounts?.();
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
+  const handlePermanentDelete = async (proposal: ProposalListItem) => {
+    const proposalId = proposal._id;
+    if (!proposalId || permanentDeletingId) return;
+
+    const proposalName = proposal?.event?.eventName || "this proposal";
+    const confirmed = window.confirm(
+      `Permanently delete "${proposalName}"? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setPermanentDeletingId(proposalId);
+    try {
+      const res = await permanentlyDeleteProposalAction(proposalId);
+      if (!res.success) {
+        toast.error(res.message || "Failed to delete proposal.");
+        return;
+      }
+      toast.success("Proposal permanently deleted.");
+      const nextPage =
+        proposals.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+      setCurrentPage(nextPage);
+      setRefreshTick((prev) => prev + 1);
+      onRefreshCounts?.();
+    } finally {
+      setPermanentDeletingId(null);
     }
   };
 
@@ -408,6 +472,11 @@ export default function ProposalTableList({
                 proposal?.isActive === false || expiryMeta.isExpiredByDate;
               const liveOrExpiredLabel = isExpired ? "Expired" : "Live";
               const submittedLabel = isDraft ? "Not Submitted" : "Submitted";
+              const isArchiveView = activeFilter === "archive";
+              const archivedDate = proposal?.archivedAt ? new Date(proposal.archivedAt) : null;
+              const daysUntilPurge = archivedDate
+                ? Math.max(0, Math.ceil((archivedDate.getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (24 * 60 * 60 * 1000)))
+                : null;
 
               return (
                 <div
@@ -419,27 +488,58 @@ export default function ProposalTableList({
 
                   <div className="relative z-10 flex items-start justify-between mb-6">
                     <div className="flex items-center gap-2 flex-wrap">
-                      {isDraft && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
-                          Draft
-                        </span>
+                      {isArchiveView ? (
+                        <>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-slate-100 text-slate-600 border-slate-300">
+                            <Archive size={10} />
+                            Archived
+                          </span>
+                          {archivedDate && (
+                            <span className="text-slate-400 text-[11px] font-medium flex items-center gap-1">
+                              <Clock size={10} />
+                              Archived:{" "}
+                              <b className="text-slate-700 ml-1">
+                                {formatDisplayDate(proposal.archivedAt)}
+                              </b>
+                            </span>
+                          )}
+                          {daysUntilPurge !== null && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                              style={daysUntilPurge <= 7
+                                ? { background: "#fff1f2", color: "#e11d48", borderColor: "#fecdd3" }
+                                : { background: "#fffbeb", color: "#d97706", borderColor: "#fde68a" }
+                              }
+                            >
+                              {daysUntilPurge}d until deletion
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {isDraft && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
+                              Draft
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
+                            {submittedLabel}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${isExpired ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-emerald-50 text-emerald-600 border-emerald-200"}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${isExpired ? "bg-rose-400" : "bg-emerald-400 animate-pulse"}`}
+                            />
+                            {liveOrExpiredLabel}
+                          </span>
+                          <span className="text-slate-400 text-[11px] ml-1 font-medium flex items-center gap-1">
+                            <Clock size={10} />
+                            Created:{" "}
+                            <b className="text-slate-700 ml-1">{createdAt}</b>
+                          </span>
+                        </>
                       )}
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
-                        {submittedLabel}
-                      </span>
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${isExpired ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-emerald-50 text-emerald-600 border-emerald-200"}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${isExpired ? "bg-rose-400" : "bg-emerald-400 animate-pulse"}`}
-                        />
-                        {liveOrExpiredLabel}
-                      </span>
-                      <span className="text-slate-400 text-[11px] ml-1 font-medium flex items-center gap-1">
-                        <Clock size={10} />
-                        Created:{" "}
-                        <b className="text-slate-700 ml-1">{createdAt}</b>
-                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -519,51 +619,58 @@ export default function ProposalTableList({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <IconButton
-                          icon={<Copy size={16} />}
-                          tooltip="Copy URL"
-                          onClick={() =>
-                            void handleCopyProposalUrl(proposalSlug)
-                          }
-                        />
-
-                        <Link
-                          href={`/proposal/${proposalSlug}`}
-                          className="cursor-pointer"
-                          target="_blank"
-                        >
+                      {isArchiveView ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void handleRestoreProposal(proposal)}
+                            disabled={restoringId === proposal._id}
+                            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            <ArchiveRestore size={15} />
+                            {restoringId === proposal._id ? "Restoring..." : "Restore"}
+                          </button>
                           <IconButton
-                            icon={<Eye size={16} />}
-                            tooltip="Preview"
+                            icon={<Trash2 size={16} />}
+                            tooltip={permanentDeletingId === proposal._id ? "Deleting..." : "Delete Forever"}
+                            onClick={() => void handlePermanentDelete(proposal)}
+                            disabled={permanentDeletingId === proposal._id}
                           />
-                        </Link>
-                        <Link
-                          href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`}
-                          className="cursor-pointer"
-                        >
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
                           <IconButton
-                            icon={<Edit3 size={16} />}
-                            tooltip="Edit"
+                            icon={<Copy size={16} />}
+                            tooltip="Copy URL"
+                            onClick={() => void handleCopyProposalUrl(proposalSlug)}
                           />
-                        </Link>
-                        <IconButton
-                          icon={<Trash2 size={16} />}
-                          tooltip={
-                            deletingId === proposal._id
-                              ? "Deleting..."
-                              : "Delete"
-                          }
-                          onClick={() => void handleDeleteProposal(proposal)}
-                          disabled={deletingId === proposal._id}
-                        />
-                        <Link
-                          href={`/email/send-email?proposalId=${proposal._id}`}
-                          className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-0.5 transition-all duration-200"
-                        >
-                          <Share2 size={15} /> Share
-                        </Link>
-                      </div>
+                          <Link
+                            href={`/proposal/${proposalSlug}`}
+                            className="cursor-pointer"
+                            target="_blank"
+                          >
+                            <IconButton icon={<Eye size={16} />} tooltip="Preview" />
+                          </Link>
+                          <Link
+                            href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`}
+                            className="cursor-pointer"
+                          >
+                            <IconButton icon={<Edit3 size={16} />} tooltip="Edit" />
+                          </Link>
+                          <IconButton
+                            icon={<Trash size={16} />}
+                            tooltip={deletingId === proposal._id ? "Deleting..." : "Delete"}
+                            onClick={() => void handleDeleteProposal(proposal)}
+                            disabled={deletingId === proposal._id}
+                          />
+                          <Link
+                            href={`/email/send-email?proposalId=${proposal._id}`}
+                            className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-0.5 transition-all duration-200"
+                          >
+                            <Share2 size={15} /> Share
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

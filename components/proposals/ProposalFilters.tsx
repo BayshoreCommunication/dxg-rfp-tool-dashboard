@@ -3,7 +3,7 @@
 import type { ProposalCounts } from "@/app/actions/proposals";
 import { Search, SlidersHorizontal } from "lucide-react";
 
-export type ProposalFilterType = "all" | "draft" | "live" | "favorite" | "expired";
+export type ProposalFilterType = "all" | "draft" | "live" | "favorite" | "expired" | "archive";
 
 const TAB_CONFIG: Array<{
   key: ProposalFilterType;
@@ -39,6 +39,12 @@ const TAB_CONFIG: Array<{
     key: "expired",
     label: "EXPIRED",
     activeClass: "bg-red-600 text-white border-transparent shadow-md shadow-red-200",
+    badgeClass: "bg-white/25 text-white",
+  },
+  {
+    key: "archive",
+    label: "ARCHIVE",
+    activeClass: "bg-slate-500 text-white border-transparent shadow-md shadow-slate-200",
     badgeClass: "bg-white/25 text-white",
   },
 ];

@@ -30,6 +30,7 @@ export async function middleware(request: NextRequest) {
     "/sign-up",
     "/forgot-password",
     "/proposal-view",
+    "/vendor-response",
   ];
   if (publicPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
