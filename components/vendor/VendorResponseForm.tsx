@@ -1,6 +1,5 @@
 "use client";
 
-import { BACKEND_URL } from "@/lib/config";
 import { CheckCircle, Info, Loader2, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -41,7 +40,7 @@ export default function VendorResponseForm({
     setCheckingEmail(true);
     try {
       const params = new URLSearchParams({ proposalId, email: trimmed });
-      const res = await fetch(`${BACKEND_URL}/api/vendor-responses/check?${params.toString()}`);
+      const res = await fetch(`/api/vendor-responses/check?${params.toString()}`);
       const json = await res.json();
       if (json.alreadySubmitted) setAlreadySubmitted(true);
     } catch {
@@ -92,7 +91,7 @@ export default function VendorResponseForm({
       if (initialTrackingId) formData.append("emailTrackingId", initialTrackingId);
       files.forEach(({ file }) => formData.append("documents", file));
 
-      const res = await fetch(`${BACKEND_URL}/api/vendor-responses`, {
+      const res = await fetch(`/api/vendor-responses`, {
         method: "POST",
         body: formData,
       });
