@@ -4,6 +4,7 @@ import {
   deleteEmailCampaignAction,
   getEmailCampaignsAction,
 } from "@/app/actions/email";
+import CampaignResponsesModal from "@/components/vendor/CampaignResponsesModal";
 import { cn } from "@/lib/utils";
 import { BarChart3, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -81,6 +82,10 @@ export default function EmailDashboard() {
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(
     null,
   );
+  const [responsesModal, setResponsesModal] = useState<{
+    proposalId: string;
+    title: string;
+  } | null>(null);
 
   const loadData = useCallback(async (page = 1) => {
     setLoading(true);
@@ -158,6 +163,14 @@ export default function EmailDashboard() {
   }
 
   return (
+    <>
+    {responsesModal && (
+      <CampaignResponsesModal
+        proposalId={responsesModal.proposalId}
+        campaignTitle={responsesModal.title}
+        onClose={() => setResponsesModal(null)}
+      />
+    )}
     <div className="space-y-6 px-6">
       {campaigns.map((campaign) => {
         const title = campaign.subject?.trim() || FALLBACK_TITLE;
@@ -207,7 +220,20 @@ export default function EmailDashboard() {
                 <MetricCard label="Sent" value={campaign.sentCount || 0} />
                 <MetricCard label="View Clicks" value={campaign.clickedCount || 0} />
                 <MetricCard label="Submit Clicks" value={campaign.vendorResponseClickCount || 0} />
-                <MetricCard label="Responses" value={campaign.vendorResponseCount || 0} highlight={!!campaign.vendorResponseCount} />
+                <MetricCard
+                  label="Responses"
+                  value={campaign.vendorResponseCount || 0}
+                  highlight={!!campaign.vendorResponseCount}
+                  onClick={
+                    campaign.vendorResponseCount && campaign.proposalId
+                      ? () =>
+                          setResponsesModal({
+                            proposalId: campaign.proposalId!,
+                            title: campaign.subject?.trim() || campaign.proposalTitle,
+                          })
+                      : undefined
+                  }
+                />
               </div>
 
               {/* Right side */}
@@ -288,6 +314,7 @@ export default function EmailDashboard() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -317,19 +344,29 @@ function LoadingSkeletonCard() {
   );
 }
 
-function MetricCard({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
-  return (
-    <div
-      className={cn(
-        "w-126px rounded-2xl border px-3 py-3 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
-        highlight ? "border-emerald-200" : "border-slate-200",
-      )}
-      style={{
-        background: highlight
-          ? "linear-gradient(to bottom, #ecfdf5, #ffffff)"
-          : "linear-gradient(to bottom, #ffffff, #f8fafc)",
-      }}
-    >
+function MetricCard({
+  label,
+  value,
+  highlight = false,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  highlight?: boolean;
+  onClick?: () => void;
+}) {
+  const baseClass = cn(
+    "w-126px rounded-2xl border px-3 py-3 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+    highlight ? "border-emerald-200" : "border-slate-200",
+    onClick ? "cursor-pointer" : "",
+  );
+  const style = {
+    background: highlight
+      ? "linear-gradient(to bottom, #ecfdf5, #ffffff)"
+      : "linear-gradient(to bottom, #ffffff, #f8fafc)",
+  };
+  const content = (
+    <>
       <p
         className={cn(
           "text-[10px] font-bold uppercase tracking-[0.18em]",
@@ -346,6 +383,20 @@ function MetricCard({ label, value, highlight = false }: { label: string; value:
       >
         {value}
       </p>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={baseClass} style={style}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={baseClass} style={style}>
+      {content}
     </div>
   );
 }

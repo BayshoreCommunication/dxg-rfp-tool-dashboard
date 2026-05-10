@@ -6,6 +6,7 @@ import {
   getUnreadNotificationCountAction,
 } from "@/app/actions/notification";
 import { getSettingsAction } from "@/app/actions/settings";
+import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { BellDot, LogOut } from "lucide-react";
@@ -37,6 +38,7 @@ const Sidebar = () => {
   const [userData, setUserData] = useState<SidebarSettings | null>(null);
   const [showSignOut, setShowSignOut] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [vendorUnreadCount, setVendorUnreadCount] = useState(0);
   const [socketUrl, setSocketUrl] = useState("");
 
   const isItemActive = (item: NavItem) => pathname === item.href;
@@ -90,6 +92,16 @@ const Sidebar = () => {
 
   useEffect(() => {
     let mounted = true;
+    const load = async () => {
+      const count = await getVendorUnreadCountAction();
+      if (mounted) setVendorUnreadCount(count);
+    };
+    void load();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
 
     const loadSocketUrl = async () => {
       const res = await getNotificationSocketConfigAction();
@@ -122,6 +134,8 @@ const Sidebar = () => {
 
         if (payload.event === "notification:new") {
           setUnreadCount((current) => current + 1);
+          // Refresh vendor response unread count on any new notification
+          void getVendorUnreadCountAction().then(setVendorUnreadCount);
           if (pathname !== "/notification") {
             toast.info(
               <div>
@@ -178,6 +192,9 @@ const Sidebar = () => {
       <nav className="flex flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto px-3 py-4">
         {navigationConfig.map((item) => {
           const isActive = isItemActive(item);
+          const badge = item.id === "vendor-responses" && vendorUnreadCount > 0
+            ? vendorUnreadCount
+            : null;
 
           return (
             <Link key={item.id} href={item.href} className="block w-full">
@@ -195,13 +212,18 @@ const Sidebar = () => {
 
                 <div
                   className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+                    "relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
                     isActive
                       ? "bg-primary/15 text-primary"
                       : "text-gray-400 group-hover:bg-primary/10 group-hover:text-primary",
                   )}
                 >
                   {item.icon}
+                  {badge !== null && (
+                    <span className="pointer-events-none absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-cyan-500 px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
                 </div>
 
                 <span

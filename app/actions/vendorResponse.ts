@@ -34,10 +34,12 @@ export const getVendorResponsesAction = async ({
   page = 1,
   limit = 20,
   unreadOnly = false,
+  proposalId,
 }: {
   page?: number;
   limit?: number;
   unreadOnly?: boolean;
+  proposalId?: string;
 } = {}) => {
   try {
     const token = await getAccessToken();
@@ -48,6 +50,7 @@ export const getVendorResponsesAction = async ({
       limit: String(limit),
       unreadOnly: String(unreadOnly),
     });
+    if (proposalId) params.set("proposalId", proposalId);
 
     const res = await fetch(`${BACKEND_URL}/api/vendor-responses?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -58,6 +61,23 @@ export const getVendorResponsesAction = async ({
     return json;
   } catch {
     return { success: false, message: "Error fetching vendor responses", data: [] };
+  }
+};
+
+export const getVendorUnreadCountAction = async (): Promise<number> => {
+  try {
+    const token = await getAccessToken();
+    if (!token) return 0;
+
+    const res = await fetch(`${BACKEND_URL}/api/vendor-responses?page=1&limit=1`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+
+    const json = await res.json();
+    return typeof json?.unreadCount === "number" ? json.unreadCount : 0;
+  } catch {
+    return 0;
   }
 };
 

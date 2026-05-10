@@ -1,7 +1,7 @@
 "use client";
 
 import { BACKEND_URL } from "@/lib/config";
-import { CheckCircle, Loader2, Paperclip, X } from "lucide-react";
+import { CheckCircle, Info, Loader2, Paperclip, X } from "lucide-react";
 import { useRef, useState } from "react";
 
 type Props = {
@@ -26,6 +26,7 @@ export default function VendorResponseForm({
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,6 +68,10 @@ export default function VendorResponseForm({
 
       const json = await res.json();
       if (!json.success) {
+        if (json.alreadySubmitted) {
+          setAlreadySubmitted(true);
+          return;
+        }
         setError(json.message || "Submission failed. Please try again.");
         return;
       }
@@ -77,6 +82,22 @@ export default function VendorResponseForm({
       setSubmitting(false);
     }
   };
+
+  if (alreadySubmitted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-10 text-center shadow-sm border border-slate-100">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
+            <Info size={32} className="text-amber-500" />
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-slate-900">Already Submitted</h2>
+          <p className="text-sm text-slate-500">
+            You have already submitted a response for this proposal. Only one response per email address is allowed.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
