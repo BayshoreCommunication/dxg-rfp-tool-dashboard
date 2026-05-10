@@ -1,12 +1,13 @@
 "use client";
 
-import { CheckCircle2, Eye, List, Mail } from "lucide-react";
+import { CheckCircle2, Copy, Eye, List, Mail } from "lucide-react";
 
 type ProposalSuccessfullyCreateProps = {
   proposalTitle: string;
   onBackToList: () => void;
   onSendEmail: () => void;
   onViewProposal: () => void;
+  onSaveCopy?: () => void;
 };
 
 const ProposalSuccessfullyCreate = ({
@@ -14,6 +15,7 @@ const ProposalSuccessfullyCreate = ({
   onBackToList,
   onSendEmail,
   onViewProposal,
+  onSaveCopy,
 }: ProposalSuccessfullyCreateProps) => {
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col items-center rounded-3xl border border-emerald-200 bg-white p-6 text-center shadow-sm sm:p-10">
@@ -32,7 +34,7 @@ const ProposalSuccessfullyCreate = ({
         </p>
       </div>
 
-      <div className="mt-8 grid w-full max-w-4xl grid-cols-1 justify-center gap-3 sm:grid-cols-3">
+      <div className="mt-8 grid w-full max-w-4xl grid-cols-1 justify-center gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={onBackToList}
@@ -51,10 +53,21 @@ const ProposalSuccessfullyCreate = ({
           View Proposal
         </button>
 
+        {onSaveCopy && (
+          <button
+            type="button"
+            onClick={onSaveCopy}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-bold text-violet-700 transition-colors hover:bg-violet-100"
+          >
+            <Copy size={16} />
+            Save a Copy
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onSendEmail}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95"
+          className={`inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95 ${onSaveCopy ? "" : "sm:col-span-2"}`}
         >
           <Mail size={16} />
           Send This Proposal By Email

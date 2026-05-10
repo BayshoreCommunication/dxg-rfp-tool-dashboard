@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  copyProposalAction,
   deleteProposalAction,
   getProposalsAction,
   permanentlyDeleteProposalAction,
@@ -14,8 +15,7 @@ import {
   ChevronRight,
   Clock,
   Copy,
-  Delete,
-  DeleteIcon,
+  CopyPlus,
   Edit3,
   Eye,
   FileText,
@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import SaveCopyModal from "./SaveCopyModal";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -41,6 +42,7 @@ type ProposalListItem = {
   isFavorite?: boolean;
   isArchived?: boolean;
   archivedAt?: string;
+  isCopy?: boolean;
   viewsCount?: number;
   createdAt?: string;
   proposalSetting?: {
@@ -114,6 +116,8 @@ export default function ProposalTableList({
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [permanentDeletingId, setPermanentDeletingId] = useState<string | null>(null);
   const [favoritingId, setFavoritingId] = useState<string | null>(null);
+  const [copyModalProposal, setCopyModalProposal] = useState<ProposalListItem | null>(null);
+  const [copyingSaving, setCopyingSaving] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState<ProposalPagination>({
@@ -200,6 +204,7 @@ export default function ProposalTableList({
         favorite?: boolean;
         isActive?: boolean;
         archived?: boolean;
+        isCopy?: boolean;
       } = {
         page: currentPage,
         limit: PER_PAGE,
@@ -220,6 +225,8 @@ export default function ProposalTableList({
         params.isActive = false;
       } else if (activeFilter === "archive") {
         params.archived = true;
+      } else if (activeFilter === "saved") {
+        params.isCopy = true;
       }
 
       const listRes = await getProposalsAction(params);
@@ -360,6 +367,37 @@ export default function ProposalTableList({
     }
   };
 
+  const handleSaveCopy = async (overrides: {
+    eventName: string;
+    startDate: string;
+    endDate: string;
+    templateId: "template-one" | "template-two" | "";
+  }) => {
+    if (!copyModalProposal?._id) return;
+    setCopyingSaving(true);
+    try {
+      const result = await copyProposalAction(copyModalProposal._id, {
+        eventName: overrides.eventName,
+        ...(overrides.startDate ? { startDate: overrides.startDate } : {}),
+        ...(overrides.endDate ? { endDate: overrides.endDate } : {}),
+        templateId: overrides.templateId as "template-one" | "template-two",
+        status: "draft",
+      });
+      if (result.success) {
+        toast.success("Copy saved as draft successfully!");
+        setCopyModalProposal(null);
+        setRefreshTick((prev) => prev + 1);
+        onRefreshCounts?.();
+      } else {
+        toast.error(result.message || "Failed to save copy.");
+      }
+    } catch {
+      toast.error("An error occurred while saving the copy.");
+    } finally {
+      setCopyingSaving(false);
+    }
+  };
+
   const handleToggleFavorite = async (proposal: ProposalListItem) => {
     if (!proposal?._id || favoritingId) return;
 
@@ -397,6 +435,7 @@ export default function ProposalTableList({
   };
 
   return (
+    <>
     <div className="min-h-screen py-6 font-sans text-slate-800 -mt-6 px-6">
       <div className="space-y-6">
         {loading ? (
@@ -464,13 +503,24 @@ export default function ProposalTableList({
               const createdAt = formatDisplayDate(proposal?.createdAt);
               const views = proposal?.viewsCount ?? 0;
               const isDraft = (proposal?.status || "draft") === "draft";
+              const isSaved = isDraft && (proposal?.isCopy === true || activeFilter === "saved");
               const expiryMeta = getExpiryMeta(
                 proposal?.createdAt,
                 proposal?.proposalSetting?.proposals?.expiryDate,
               );
               const isExpired =
-                proposal?.isActive === false || expiryMeta.isExpiredByDate;
-              const liveOrExpiredLabel = isExpired ? "Expired" : "Live";
+                !isSaved && (proposal?.isActive === false || expiryMeta.isExpiredByDate);
+              const liveOrExpiredLabel = isSaved ? "Offline" : isExpired ? "Expired" : "Live";
+              const statusBadgeClass = isSaved
+                ? "bg-slate-100 text-slate-500 border-slate-200"
+                : isExpired
+                ? "bg-rose-50 border-rose-200 text-rose-600"
+                : "bg-emerald-50 text-emerald-600 border-emerald-200";
+              const statusDotClass = isSaved
+                ? "bg-slate-400"
+                : isExpired
+                ? "bg-rose-400"
+                : "bg-emerald-400 animate-pulse";
               const submittedLabel = isDraft ? "Not Submitted" : "Submitted";
               const isArchiveView = activeFilter === "archive";
               const archivedDate = proposal?.archivedAt ? new Date(proposal.archivedAt) : null;
@@ -517,19 +567,23 @@ export default function ProposalTableList({
                         </>
                       ) : (
                         <>
-                          {isDraft && (
+                          {isSaved ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-violet-50 text-violet-700 border-violet-200">
+                              Saved
+                            </span>
+                          ) : isDraft ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
                               Draft
                             </span>
-                          )}
+                          ) : null}
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
                             {submittedLabel}
                           </span>
                           <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${isExpired ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-emerald-50 text-emerald-600 border-emerald-200"}`}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${statusBadgeClass}`}
                           >
                             <span
-                              className={`w-1.5 h-1.5 rounded-full ${isExpired ? "bg-rose-400" : "bg-emerald-400 animate-pulse"}`}
+                              className={`w-1.5 h-1.5 rounded-full ${statusDotClass}`}
                             />
                             {liveOrExpiredLabel}
                           </span>
@@ -658,6 +712,11 @@ export default function ProposalTableList({
                             <IconButton icon={<Edit3 size={16} />} tooltip="Edit" />
                           </Link>
                           <IconButton
+                            icon={<CopyPlus size={16} />}
+                            tooltip="Save a Copy"
+                            onClick={() => setCopyModalProposal(proposal)}
+                          />
+                          <IconButton
                             icon={<Trash size={16} />}
                             tooltip={deletingId === proposal._id ? "Deleting..." : "Delete"}
                             onClick={() => void handleDeleteProposal(proposal)}
@@ -746,6 +805,16 @@ export default function ProposalTableList({
         )}
       </div>
     </div>
+
+    <SaveCopyModal
+      isOpen={!!copyModalProposal}
+      onClose={() => setCopyModalProposal(null)}
+      onConfirm={(overrides) => void handleSaveCopy(overrides)}
+      saving={copyingSaving}
+      defaultEventName={copyModalProposal?.event?.eventName ?? ""}
+      defaultTemplateId=""
+    />
+    </>
   );
 }
 

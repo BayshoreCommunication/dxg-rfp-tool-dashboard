@@ -16,6 +16,7 @@ export type ProposalCounts = {
   favorite: number;
   expired: number;
   archive: number;
+  saved: number;
 };
 
 type ApiResponse = {
@@ -168,6 +169,7 @@ export async function getProposalsAction(params?: {
   favorite?: boolean;
   isActive?: boolean;
   archived?: boolean;
+  isCopy?: boolean;
   search?: string;
   page?: number;
   limit?: number;
@@ -184,6 +186,9 @@ export async function getProposalsAction(params?: {
   if (params?.status) query.set("status", params.status);
   if (typeof params?.favorite === "boolean") {
     query.set("favorite", String(params.favorite));
+  }
+  if (typeof params?.isCopy === "boolean") {
+    query.set("isCopy", String(params.isCopy));
   }
   if (typeof params?.isActive === "boolean") {
     query.set("isActive", String(params.isActive));
@@ -225,7 +230,7 @@ export async function getProposalCountsAction(search?: string): Promise<{
   message?: string;
   counts: ProposalCounts;
 }> {
-  const empty: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0, archive: 0 };
+  const empty: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0, archive: 0, saved: 0 };
 
   const token = await getAccessToken();
   if (!token) {
@@ -256,7 +261,8 @@ export async function getProposalCountsAction(search?: string): Promise<{
         live: raw.live ?? 0,
         favorite: raw.favorite ?? 0,
         expired: raw.expired ?? 0,
-        archive: (raw as any).archive ?? 0,
+        archive: raw.archive ?? 0,
+        saved: raw.saved ?? 0,
       },
     };
   } catch (error: any) {
@@ -283,6 +289,43 @@ export async function getProposalByIdAction(id: string): Promise<ApiResponse> {
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Proposal fetched" : "Fetch failed"),
+      data: withProposalMeta(data.data),
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error" };
+  }
+}
+
+/** Create a copy of an existing proposal with optional field overrides. */
+export async function copyProposalAction(
+  sourceId: string,
+  overrides?: {
+    eventName?: string;
+    startDate?: string;
+    endDate?: string;
+    templateId?: "template-one" | "template-two";
+    status?: "draft" | "submitted";
+  },
+): Promise<ApiResponse> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, message: "User is not authenticated." };
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/proposals/${sourceId}/copy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(overrides ?? {}),
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "Proposal copied" : "Copy failed"),
       data: withProposalMeta(data.data),
     };
   } catch (error: any) {

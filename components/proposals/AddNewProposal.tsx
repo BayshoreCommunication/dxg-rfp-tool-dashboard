@@ -1,5 +1,6 @@
 "use client";
 import {
+  copyProposalAction,
   createProposalAction,
   extractProposalFromFile,
   getProposalByIdAction,
@@ -19,6 +20,7 @@ import TemplateSelection from "./ProposalsProcess.tsx/TemplateSelection";
 import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMaterials";
 import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalRequirements";
 import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
+import SaveCopyModal from "./SaveCopyModal";
 
 /* â”€â”€â”€ Proposal data by step â”€â”€â”€ */
 export type EventData = {
@@ -912,6 +914,8 @@ const AddNewProposal = ({
   const [updatedProposalTitle, setUpdatedProposalTitle] = useState<
     string | null
   >(null);
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copyingSaving, setCopyingSaving] = useState(false);
 
   const [proposalSettings, setProposalSettings] = useState<ProposalSettings>(
     defaultProposalSettings,
@@ -1365,6 +1369,49 @@ const AddNewProposal = ({
     }
   };
 
+  /** Convert a stored date string (MM/DD/YYYY or similar) to YYYY-MM-DD for HTML date inputs */
+  const toIsoDate = (raw: string): string => {
+    if (!raw) return "";
+    const v = raw.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    const sep = v.includes("/") ? "/" : "-";
+    const parts = v.split(sep);
+    if (parts.length !== 3) return "";
+    const [a, b, c] = parts;
+    if (c.length === 4) return `${c}-${b.padStart(2, "0")}-${a.padStart(2, "0")}`;
+    if (a.length === 4) return `${a}-${b.padStart(2, "0")}-${c.padStart(2, "0")}`;
+    return "";
+  };
+
+  const handleSaveCopy = async (overrides: {
+    eventName: string;
+    startDate: string;
+    endDate: string;
+    templateId: "template-one" | "template-two" | "";
+  }) => {
+    if (!createdProposal?.id) return;
+    setCopyingSaving(true);
+    try {
+      const result = await copyProposalAction(createdProposal.id, {
+        eventName: overrides.eventName,
+        startDate: overrides.startDate,
+        endDate: overrides.endDate,
+        templateId: overrides.templateId as "template-one" | "template-two",
+        status: "draft",
+      });
+      if (result.success) {
+        toast.success("Copy saved as draft successfully!");
+        setShowCopyModal(false);
+      } else {
+        toast.error(result.message || "Failed to save copy.");
+      }
+    } catch {
+      toast.error("An error occurred while saving the copy.");
+    } finally {
+      setCopyingSaving(false);
+    }
+  };
+
   const continueHandler = async () => {
     /* ── Step 0: extract fields from uploaded doc before advancing ── */
     if (proposalProcessStep === 0) {
@@ -1486,20 +1533,34 @@ const AddNewProposal = ({
 
   if (createdProposal) {
     return (
-      <ProposalSuccessfullyCreate
-        proposalTitle={createdProposal.title}
-        onBackToList={() => router.push("/proposals")}
-        onViewProposal={() =>
-          router.push(
-            `/proposal/${toProposalSlug(createdProposal.title, createdProposal.id)}`,
-          )
-        }
-        onSendEmail={() =>
-          router.push(
-            `/email/send-email?proposalId=${encodeURIComponent(createdProposal.id)}`,
-          )
-        }
-      />
+      <>
+        <ProposalSuccessfullyCreate
+          proposalTitle={createdProposal.title}
+          onBackToList={() => router.push("/proposals")}
+          onViewProposal={() =>
+            router.push(
+              `/proposal/${toProposalSlug(createdProposal.title, createdProposal.id)}`,
+            )
+          }
+          onSendEmail={() =>
+            router.push(
+              `/email/send-email?proposalId=${encodeURIComponent(createdProposal.id)}`,
+            )
+          }
+          onSaveCopy={() => setShowCopyModal(true)}
+        />
+        <SaveCopyModal
+          isOpen={showCopyModal}
+          onClose={() => setShowCopyModal(false)}
+          onConfirm={(overrides) => void handleSaveCopy(overrides)}
+          saving={copyingSaving}
+          defaultEventName={proposalData.event.eventName}
+          defaultStartDate={toIsoDate(proposalData.event.startDate)}
+          defaultEndDate={toIsoDate(proposalData.event.endDate)}
+          defaultTemplateId={proposalData.templateId}
+          proposalSettings={proposalSettings}
+        />
+      </>
     );
   }
 
