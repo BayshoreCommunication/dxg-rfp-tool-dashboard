@@ -27,8 +27,26 @@ export default function VendorResponseForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleEmailBlur = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !proposalId) return;
+    setCheckingEmail(true);
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/vendor-responses/check?proposalId=${encodeURIComponent(proposalId)}&email=${encodeURIComponent(trimmed)}`,
+      );
+      const json = await res.json();
+      if (json.alreadySubmitted) setAlreadySubmitted(true);
+    } catch {
+      // silently ignore — submit will catch it if needed
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
 
   const addFiles = (incoming: FileList | null) => {
     if (!incoming) return;
@@ -169,14 +187,22 @@ export default function VendorResponseForm({
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">
               Email Address <span className="text-rose-500">*</span>
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@company.com"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-100"
-            />
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => void handleEmailBlur()}
+                required
+                placeholder="you@company.com"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-100"
+              />
+              {checkingEmail && (
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 size={14} className="animate-spin text-slate-400" />
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
