@@ -6,8 +6,17 @@ import {
 } from "@/app/actions/email";
 import CampaignResponsesModal from "@/components/vendor/CampaignResponsesModal";
 import { cn } from "@/lib/utils";
-import { BarChart3, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  MessageSquare,
+  MousePointerClick,
+  Send,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 type EmailCampaign = {
@@ -22,6 +31,7 @@ type EmailCampaign = {
   clickedCount?: number;
   vendorResponseClickCount?: number;
   vendorResponseCount?: number;
+  unreadResponseCount?: number;
   createdAt: string;
 };
 
@@ -216,14 +226,32 @@ export default function EmailDashboard() {
               </div>
 
               {/* Center */}
-              <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-center lg:gap-6">
-                <MetricCard label="Sent" value={campaign.sentCount || 0} />
-                <MetricCard label="View Clicks" value={campaign.clickedCount || 0} />
-                <MetricCard label="Submit Clicks" value={campaign.vendorResponseClickCount || 0} />
+              <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-center lg:gap-4">
+                <MetricCard
+                  label="Sent"
+                  value={campaign.sentCount || 0}
+                  icon={<Send size={16} />}
+                  tooltip="Total emails sent to recipients"
+                />
+                <MetricCard
+                  label="View Clicks"
+                  value={campaign.clickedCount || 0}
+                  icon={<Eye size={16} />}
+                  tooltip="Number of times recipients clicked to view the proposal"
+                />
+                <MetricCard
+                  label="Submit Clicks"
+                  value={campaign.vendorResponseClickCount || 0}
+                  icon={<MousePointerClick size={16} />}
+                  tooltip="Number of times recipients clicked the submit button"
+                />
                 <MetricCard
                   label="Responses"
                   value={campaign.vendorResponseCount || 0}
+                  icon={<MessageSquare size={16} />}
+                  tooltip="Total vendor responses received — click to view"
                   highlight={!!campaign.vendorResponseCount}
+                  unreadCount={campaign.unreadResponseCount || 0}
                   onClick={
                     campaign.vendorResponseCount && campaign.proposalId
                       ? () =>
@@ -348,15 +376,32 @@ function MetricCard({
   label,
   value,
   highlight = false,
+  icon,
+  tooltip,
+  unreadCount,
   onClick,
 }: {
   label: string;
   value: number;
   highlight?: boolean;
+  icon?: React.ReactNode;
+  tooltip?: string;
+  unreadCount?: number;
   onClick?: () => void;
 }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    timeoutRef.current = setTimeout(() => setShowTooltip(true), 300);
+  };
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setShowTooltip(false);
+  };
+
   const baseClass = cn(
-    "w-126px rounded-2xl border px-3 py-3 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+    "relative flex flex-col items-center justify-center w-[76px] h-[76px] rounded-xl border text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md select-none",
     highlight ? "border-emerald-200" : "border-slate-200",
     onClick ? "cursor-pointer" : "",
   );
@@ -365,37 +410,69 @@ function MetricCard({
       ? "linear-gradient(to bottom, #ecfdf5, #ffffff)"
       : "linear-gradient(to bottom, #ffffff, #f8fafc)",
   };
+
   const content = (
     <>
+      {/* Unread badge */}
+      {unreadCount && unreadCount > 0 ? (
+        <span className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-md z-10">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      ) : null}
+
+
+      {/* Value — middle */}
       <p
         className={cn(
-          "text-[10px] font-bold uppercase tracking-[0.18em]",
-          highlight ? "text-emerald-600" : "text-slate-500",
-        )}
-      >
-        {label}
-      </p>
-      <p
-        className={cn(
-          "mt-1 text-[20px] font-black leading-none",
+          "text-[16px] font-black leading-none",
           highlight ? "text-emerald-700" : "text-slate-900",
         )}
       >
         {value}
       </p>
+
+      {/* Label — bottom */}
+      <p
+        className={cn(
+          "mt-0.5 text-[8px] font-bold uppercase tracking-[0.12em] leading-tight",
+          highlight ? "text-emerald-600" : "text-slate-500",
+        )}
+      >
+        {label}
+      </p>
+
+      {/* Tooltip */}
+      {tooltip && showTooltip && (
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg">
+          {tooltip}
+          <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+        </div>
+      )}
     </>
   );
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={baseClass} style={style}>
+      <button
+        type="button"
+        onClick={onClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={baseClass}
+        style={style}
+      >
         {content}
       </button>
     );
   }
 
   return (
-    <div className={baseClass} style={style}>
+    <div
+      className={baseClass}
+      style={style}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {content}
     </div>
   );

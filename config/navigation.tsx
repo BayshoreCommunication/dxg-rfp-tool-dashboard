@@ -27,12 +27,12 @@ export const navigationConfig: NavItem[] = [
     href: "/email",
     icon: <Mail size={22} />,
   },
-  {
-    id: "vendor-responses",
-    title: "Responses",
-    href: "/vendor-responses",
-    icon: <Inbox size={22} />,
-  },
+  // {
+  //   id: "vendor-responses",
+  //   title: "Responses",
+  //   href: "/vendor-responses",
+  //   icon: <Inbox size={22} />,
+  // },
   {
     id: "settings",
     title: "Setting",
