@@ -2,12 +2,13 @@
 
 import { BACKEND_URL } from "@/lib/config";
 import { CheckCircle, Info, Loader2, Paperclip, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   slug: string;
   proposalId: string;
   proposalTitle: string;
+  initialEmail?: string;
 };
 
 type FileEntry = {
@@ -18,10 +19,11 @@ type FileEntry = {
 export default function VendorResponseForm({
   proposalId,
   proposalTitle,
+  initialEmail = "",
 }: Props) {
   const [vendorName, setVendorName] = useState("");
   const [submittedBy, setSubmittedBy] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -31,8 +33,8 @@ export default function VendorResponseForm({
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleEmailBlur = async () => {
-    const trimmed = email.trim().toLowerCase();
+  const checkEmailExists = async (emailValue: string) => {
+    const trimmed = emailValue.trim().toLowerCase();
     if (!trimmed || !proposalId) return;
     setCheckingEmail(true);
     try {
@@ -47,6 +49,15 @@ export default function VendorResponseForm({
       setCheckingEmail(false);
     }
   };
+
+  useEffect(() => {
+    if (initialEmail && proposalId) {
+      void checkEmailExists(initialEmail);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleEmailBlur = () => void checkEmailExists(email);
 
   const addFiles = (incoming: FileList | null) => {
     if (!incoming) return;

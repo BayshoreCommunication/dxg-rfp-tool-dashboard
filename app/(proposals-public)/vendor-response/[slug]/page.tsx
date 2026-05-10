@@ -3,7 +3,7 @@ import { BACKEND_URL } from "@/lib/config";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ source?: string }>;
+  searchParams: Promise<{ source?: string; email?: string }>;
 };
 
 const fetchProposalInfo = async (
@@ -28,8 +28,10 @@ const fetchProposalInfo = async (
 
 export default async function VendorResponsePage({
   params,
+  searchParams,
 }: PageProps) {
   const { slug } = await params;
+  const { email } = await searchParams;
   const info = await fetchProposalInfo(slug);
 
   return (
@@ -37,6 +39,7 @@ export default async function VendorResponsePage({
       slug={slug}
       proposalId={info?.proposalId ?? ""}
       proposalTitle={info?.title ?? ""}
+      initialEmail={email ?? ""}
     />
   );
 }
