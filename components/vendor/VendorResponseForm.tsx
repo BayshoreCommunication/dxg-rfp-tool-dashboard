@@ -37,13 +37,10 @@ export default function VendorResponseForm({
 
   const checkEmailExists = async (emailValue: string) => {
     const trimmed = emailValue.trim().toLowerCase();
-    if (!trimmed && !initialTrackingId) return;
-    if (!proposalId) return;
+    if (!trimmed || !proposalId) return;
     setCheckingEmail(true);
     try {
-      const params = new URLSearchParams({ proposalId });
-      if (trimmed) params.set("email", trimmed);
-      if (initialTrackingId) params.set("tid", initialTrackingId);
+      const params = new URLSearchParams({ proposalId, email: trimmed });
       const res = await fetch(`${BACKEND_URL}/api/vendor-responses/check?${params.toString()}`);
       const json = await res.json();
       if (json.alreadySubmitted) setAlreadySubmitted(true);
@@ -55,7 +52,7 @@ export default function VendorResponseForm({
   };
 
   useEffect(() => {
-    if ((initialEmail || initialTrackingId) && proposalId) {
+    if (initialEmail && proposalId) {
       void checkEmailExists(initialEmail);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

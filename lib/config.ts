@@ -1,5 +1,5 @@
-const PRODUCTION_BACKEND_URL = "https://api.dxg-agency.com";
-const PRODUCTION_FRONTEND_URL = "https://dxg-rfp-tool-dashboard.vercel.app";
+const PRODUCTION_BACKEND_URL = "http://localhost:8000";
+const PRODUCTION_FRONTEND_URL = "http://localhost:3000";
 
 /**
  * Externally reachable backend URL.
