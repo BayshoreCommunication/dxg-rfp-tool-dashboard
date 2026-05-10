@@ -130,7 +130,7 @@ export async function incrementProposalViewsPublicAction(
 /** Create a new proposal (draft or submitted). */
 export async function createProposalAction(
   payload: ProposalData & {
-    status?: "draft" | "submitted" | "reviewed" | "approved" | "rejected";
+    status?: "unsubmitted" | "submitted" | "reviewed" | "approved" | "rejected";
   },
 ): Promise<ApiResponse> {
   try {
@@ -308,7 +308,7 @@ export async function copyProposalAction(
     startDate?: string;
     endDate?: string;
     templateId?: "template-one" | "template-two";
-    status?: "draft" | "submitted";
+    status?: "unsubmitted" | "submitted";
   },
 ): Promise<ApiResponse> {
   const token = await getAccessToken();

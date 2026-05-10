@@ -516,10 +516,12 @@ export default function ProposalTableList({
                 proposal?.createdAt,
                 proposal?.proposalSetting?.proposals?.expiryDate,
               );
-              // Copies are always offline; regular proposals can expire
+              // Drafts and copies are just "Offline". Only submitted proposals can expire.
               const isExpired =
-                !isSaved && (proposal?.isActive === false || expiryMeta.isExpiredByDate);
+                !isSaved && !isDraft && expiryMeta.isExpiredByDate;
               const liveOrExpiredLabel = isSaved
+                ? "Offline"
+                : isDraft
                 ? "Offline"
                 : isExpired
                 ? "Expired"

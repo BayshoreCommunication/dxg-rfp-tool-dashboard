@@ -15,7 +15,7 @@ import React, { useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 type ProposalStatus =
-  | "draft"
+  | "unsubmitted"
   | "submitted"
   | "reviewed"
   | "approved"
@@ -24,6 +24,7 @@ type ProposalStatus =
 type ProposalItem = {
   _id: string;
   status?: string;
+  isDraft?: boolean;
   isActive?: boolean;
   isFavorite?: boolean;
   viewsCount?: number;
@@ -40,7 +41,7 @@ const STATUS_CONFIG: Record<
   ProposalStatus,
   { label: string; dot: string; pill: string }
 > = {
-  draft: {
+  unsubmitted: {
     label: "Draft",
     dot: "bg-slate-400",
     pill: "bg-slate-100 text-slate-600 border-slate-200",
@@ -68,17 +69,17 @@ const STATUS_CONFIG: Record<
 };
 
 function toStatus(value?: string): ProposalStatus {
-  const normalized = (value || "draft").toLowerCase();
+  const normalized = (value || "unsubmitted").toLowerCase();
   if (
-    normalized === "draft" ||
+    normalized === "unsubmitted" ||
     normalized === "submitted" ||
     normalized === "reviewed" ||
     normalized === "approved" ||
     normalized === "rejected"
   ) {
-    return normalized;
+    return normalized as ProposalStatus;
   }
-  return "draft";
+  return "unsubmitted";
 }
 
 type DashboardFilterType = "all" | "draft" | "live" | "favorite" | "expired";
@@ -251,10 +252,11 @@ export default function DashboardTableList({
         const status = toStatus(p.status);
         const matchStatus =
           filter === "all" ||
-          (filter === "draft" && status === "draft") ||
+          (filter === "draft" && p.isDraft) ||
           (filter === "live" && status === "submitted") ||
           (filter === "favorite" && Boolean(p.isFavorite)) ||
           (filter === "expired" &&
+            !p.isDraft &&
             (p.isActive === false || status === "rejected"));
 
         return matchSearch && matchStatus;
@@ -265,11 +267,13 @@ export default function DashboardTableList({
   const tabCounts = useMemo(
     () => ({
       all: proposals.length,
-      draft: proposals.filter((p) => toStatus(p.status) === "draft").length,
+      draft: proposals.filter((p) => p.isDraft).length,
       live: proposals.filter((p) => toStatus(p.status) === "submitted").length,
       favorite: proposals.filter((p) => Boolean(p.isFavorite)).length,
       expired: proposals.filter(
-        (p) => p.isActive === false || toStatus(p.status) === "rejected",
+        (p) =>
+          !p.isDraft &&
+          (p.isActive === false || toStatus(p.status) === "rejected"),
       ).length,
     }),
     [proposals],

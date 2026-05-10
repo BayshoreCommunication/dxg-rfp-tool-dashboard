@@ -6,7 +6,7 @@ import type { ProposalSettings } from "../AddNewProposal";
 type TemplateSelectionProps = {
   templateId: string;
   onSelect: (templateId: "template-one" | "template-two") => void;
-  onCreate: (status: "draft" | "submitted") => void;
+  onCreate: (status: "unsubmitted" | "submitted") => void;
   onBack: () => void;
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
@@ -116,7 +116,7 @@ export default function TemplateSelection({
         </button>
         <button
           type="button"
-          onClick={() => onCreate("draft")}
+          onClick={() => onCreate("unsubmitted")}
           className="h-10 px-6 rounded-md border border-[#d7dce3] bg-white hover:bg-gray-50 text-sm font-bold text-[#1f2d5d] transition-colors"
         >
           {draftActionLabel}

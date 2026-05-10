@@ -178,7 +178,7 @@ export type ProposalSettings = {
 
 export interface ProposalData {
   templateId: "template-one" | "template-two" | "";
-  proposalStatus: "draft" | "submitted";
+  proposalStatus: "unsubmitted" | "submitted";
   proposalSettings: {
     linkPrefix: string;
     defaultFont: "Inter" | "Poppins" | "Roboto";
@@ -735,7 +735,7 @@ const mapApiProposalToFormData = (
   ...defaultProposalData,
   templateId: raw.templateId || defaultProposalData.templateId,
   proposalStatus:
-    raw.status === "draft" || raw.status === "submitted"
+    raw.status === "unsubmitted" || raw.status === "submitted"
       ? raw.status
       : defaultProposalData.proposalStatus,
   proposalSettings: {
@@ -1259,7 +1259,7 @@ const AddNewProposal = ({
     return normalized;
   };
 
-  const handleSubmit = async (statusOverride?: "draft" | "submitted") => {
+  const handleSubmit = async (statusOverride?: "unsubmitted" | "submitted") => {
     setShowErrors(true);
     if (!isContactStepValid()) {
       toast.error("Please complete all required contact fields.");
