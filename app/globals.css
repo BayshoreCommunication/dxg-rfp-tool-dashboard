@@ -31,8 +31,8 @@
   --color-primary-end: #6366f1;
   --font-sans:
     "Proxima Nova", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui,
-    sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
 }
 
 .bg-primary-gradient {

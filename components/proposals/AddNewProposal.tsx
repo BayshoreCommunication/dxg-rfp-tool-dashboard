@@ -16,6 +16,10 @@ import ContactInfo from "./ProposalsProcess.tsx/ContactInfo";
 import EventForm from "./ProposalsProcess.tsx/EventForm";
 import ProcessList from "./ProposalsProcess.tsx/ProcessList";
 import RoomAndProductionStep, { defaultRoom } from "./ProposalsProcess.tsx/RoomAndProductionStep";
+import HybridVirtualStep from "./ProposalsProcess.tsx/HybridVirtualStep";
+import VenueScheduleStep, { defaultVenueSchedule, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
+import ContentCreativeStep, { defaultContentCreative, type ContentCreativeData } from "./ProposalsProcess.tsx/ContentCreativeStep";
+import VideoRecordingStep, { defaultVideoRecording, type VideoRecordingData } from "./ProposalsProcess.tsx/VideoRecordingStep";
 import TemplateSelection from "./ProposalsProcess.tsx/TemplateSelection";
 import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMaterials";
 import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalRequirements";
@@ -25,15 +29,22 @@ import SaveCopyModal from "./SaveCopyModal";
 /* â”€â”€â”€ Proposal data by step â”€â”€â”€ */
 export type EventData = {
   eventName: string;
+  editionYear?: string;
+  eventTheme?: string;
   startDate: string;
   endDate: string;
   venue: string;
+  venueCity?: string;
   attendees: string;
   eventFormat: "In-Person" | "Hybrid" | "Virtual";
   eventType: {
     eventType: string;
     eventTypeOther: string;
   };
+  primaryAudience?: string[];
+  eventObjectives?: string;
+  toneDirection?: string[];
+  sacredConstraints?: string;
 };
 
 export type RoomByRoomData = {
@@ -105,6 +116,23 @@ export type RoomByRoomData = {
   unionLabor: "Yes" | "No" | "Not Sure" | "";
   showCrewNeeded: string[];
   otherRolesNeeded: string;
+  /* ── new fields matching HTML page 2B ── */
+  stageDimensions: string;
+  audioSystemRequired: "Yes" | "No" | "";
+  ledWallSpecs: string;
+  ledWallWidth: string;
+  ledWallHeight: string;
+  ledWallShape: string;
+  ledWallPixelPitch: string;
+  ledWallSwitcher: string;
+  ledWallNotes: string;
+  scenicStageDesignNotes: string;
+  lightingRequirements: string[];
+  teleprompterRequired: "Yes" | "No" | "";
+  teleprompterBilingual: "Yes" | "No" | "";
+  teleprompterLanguages: string[];
+  confidenceMonitorsRequired: "Yes" | "No" | "";
+  showCrewQty: Record<string, string>;
 };
 
 export type ProductionSupportData = Pick<
@@ -113,24 +141,45 @@ export type ProductionSupportData = Pick<
 >;
 
 export type VenueTechnicalData = {
+  /* Rigging */
   needRiggingForFlown: {
     needRiggingForFlown: "YES" | "NO" | "";
     riggingPlotOrSpecs: string;
   };
+  riggingTypes: string[];
+  pointLoadLimitKnown: "YES" | "NO" | "";
+  /* Power */
   needDedicatedPowerDrops: {
     needDedicatedPowerDrops: "YES" | "NO" | "";
     standardAmpWall: string;
   };
   powerDropsHowMany: string;
+  generatorBackup: "YES" | "NO" | "";
+  /* Internet & Connectivity */
   hardlineInternet: {
     hardlineInternet: "YES" | "NO" | "";
     hardlineInternetPurpose: string;
   };
+  wirelessInternetAttendees: "YES" | "NO" | "";
+  streamingBandwidthRequired: "YES" | "NO" | "";
+  streamingMbpsNeeded: string;
+  /* Livestream */
   livestreamVirtual: {
     livestreamVirtual: "YES" | "NO" | "";
     livestreamPlatform: string;
   };
-  wirelessInternetAttendees: "YES" | "NO" | "";
+  /* COI */
+  coiRequiredByVenue: "YES" | "NO" | "";
+  coiCoverageTypes: string[];
+  additionalInsured: "YES" | "NO" | "";
+  coiSubmissionDeadline: string;
+  /* Venue Access */
+  venueContactName: string;
+  loadingDockAccess: "YES" | "NO" | "";
+  freightElevatorAvailable: "YES" | "NO" | "";
+  ceilingHeight: string;
+  inHouseAvExclusivity: "YES" | "NO" | "";
+  inHouseAvCompanyName: string;
 };
 
 export type UploadsData = {
@@ -139,6 +188,10 @@ export type UploadsData = {
     reviewExistingAvQuote: "YES" | "NO" | "";
     avQuoteFiles: Array<File | string>;
   };
+  hasCoVendors: "YES" | "NO" | "";
+  coVendorDetails: string;
+  vendorConflicts: "YES" | "NO" | "";
+  vendorConflictDetails: string;
 };
 
 export type BudgetData = {
@@ -146,10 +199,44 @@ export type BudgetData = {
   budgetCustomAmount: string;
   proposalFormatPreferences: string[];
   timelineForProposal: string;
+  decisionDate: string;
+  competitiveBid: "YES" | "NO" | "";
+  numberOfProposals: string;
+  scoringPriorities: string[];
+  scoringNotes: string;
   callWithDxgProducer: "YES" | "NO" | "";
   howDidYouHear: string;
   howDidYouHearOther: string;
 };
+
+export type HybridVirtualData = {
+  virtualAttendeeEstimate: string;
+  streamingPlatform: string;
+  streamingPlatformOther: string;
+  platformIntegrationWithAv: "YES" | "NO" | "";
+  streamOwnership: string;
+  remoteSpeakers: {
+    remoteSpeakers: "YES" | "NO" | "";
+    howManyRemoteSpeakers: string;
+    remoteFeedPlatform: string;
+    techRehearsalOwner: string;
+  };
+  liveVirtualQa: "YES" | "NO" | "";
+  virtualOnlyBreakouts: "YES" | "NO" | "";
+  dedicatedVirtualProducer: "YES" | "NO" | "";
+  closedCaptions: {
+    closedCaptions: "YES" | "NO" | "";
+    captionLanguages: string[];
+    captionType: string;
+  };
+  onDemandRecording: "YES" | "NO" | "";
+  sponsorOverlays: "YES" | "NO" | "";
+  virtualNetworking: "YES" | "NO" | "";
+};
+
+export type { VenueScheduleData };
+export type { ContentCreativeData };
+export type { VideoRecordingData };
 
 export type ContactData = {
   contactFirstName: string;
@@ -158,6 +245,8 @@ export type ContactData = {
   contactOrganization: string;
   contactEmail: string;
   contactPhone: string;
+  preferredContactMethod: "Email" | "Phone" | "Either" | "";
+  bestTimeToReach: string;
   anythingElse: string;
 };
 
@@ -189,7 +278,11 @@ export interface ProposalData {
     dateFormat: string;
   };
   event: EventData;
+  venueSchedule: VenueScheduleData;
   roomByRoom: RoomByRoomData[];
+  hybridVirtual: HybridVirtualData;
+  contentCreative: ContentCreativeData;
+  videoRecordingStep: VideoRecordingData;
   venue: VenueTechnicalData;
   uploads: UploadsData;
   budget: BudgetData;
@@ -229,26 +322,56 @@ const defaultProposalData: ProposalData = {
       eventTypeOther: "",
     },
   },
+  venueSchedule: defaultVenueSchedule(),
   roomByRoom: [],
+  contentCreative: defaultContentCreative(),
+  videoRecordingStep: defaultVideoRecording(),
+  hybridVirtual: {
+    virtualAttendeeEstimate: "",
+    streamingPlatform: "",
+    streamingPlatformOther: "",
+    platformIntegrationWithAv: "",
+    streamOwnership: "",
+    remoteSpeakers: {
+      remoteSpeakers: "",
+      howManyRemoteSpeakers: "",
+      remoteFeedPlatform: "",
+      techRehearsalOwner: "",
+    },
+    liveVirtualQa: "",
+    virtualOnlyBreakouts: "",
+    dedicatedVirtualProducer: "",
+    closedCaptions: {
+      closedCaptions: "",
+      captionLanguages: [],
+      captionType: "",
+    },
+    onDemandRecording: "",
+    sponsorOverlays: "",
+    virtualNetworking: "",
+  },
   venue: {
-    needRiggingForFlown: {
-      needRiggingForFlown: "",
-      riggingPlotOrSpecs: "",
-    },
-    needDedicatedPowerDrops: {
-      needDedicatedPowerDrops: "",
-      standardAmpWall: "",
-    },
+    needRiggingForFlown: { needRiggingForFlown: "", riggingPlotOrSpecs: "" },
+    riggingTypes: [],
+    pointLoadLimitKnown: "",
+    needDedicatedPowerDrops: { needDedicatedPowerDrops: "", standardAmpWall: "" },
     powerDropsHowMany: "",
-    hardlineInternet: {
-      hardlineInternet: "",
-      hardlineInternetPurpose: "",
-    },
-    livestreamVirtual: {
-      livestreamVirtual: "",
-      livestreamPlatform: "",
-    },
+    generatorBackup: "",
+    hardlineInternet: { hardlineInternet: "", hardlineInternetPurpose: "" },
     wirelessInternetAttendees: "",
+    streamingBandwidthRequired: "",
+    streamingMbpsNeeded: "",
+    livestreamVirtual: { livestreamVirtual: "", livestreamPlatform: "" },
+    coiRequiredByVenue: "",
+    coiCoverageTypes: [],
+    additionalInsured: "",
+    coiSubmissionDeadline: "",
+    venueContactName: "",
+    loadingDockAccess: "",
+    freightElevatorAvailable: "",
+    ceilingHeight: "",
+    inHouseAvExclusivity: "",
+    inHouseAvCompanyName: "",
   },
   uploads: {
     supportDocuments: [],
@@ -256,12 +379,21 @@ const defaultProposalData: ProposalData = {
       reviewExistingAvQuote: "",
       avQuoteFiles: [],
     },
+    hasCoVendors: "",
+    coVendorDetails: "",
+    vendorConflicts: "",
+    vendorConflictDetails: "",
   },
   budget: {
     estimatedAvBudget: "",
     budgetCustomAmount: "",
     proposalFormatPreferences: [],
     timelineForProposal: "",
+    decisionDate: "",
+    competitiveBid: "",
+    numberOfProposals: "",
+    scoringPriorities: [],
+    scoringNotes: "",
     callWithDxgProducer: "",
     howDidYouHear: "",
     howDidYouHearOther: "",
@@ -273,6 +405,8 @@ const defaultProposalData: ProposalData = {
     contactOrganization: "",
     contactEmail: "",
     contactPhone: "",
+    preferredContactMethod: "",
+    bestTimeToReach: "",
     anythingElse: "",
   },
 };
@@ -661,8 +795,12 @@ type EditableProposalApiResponse = {
   templateId?: ProposalData["templateId"];
   proposalSettings?: Partial<ProposalData["proposalSettings"]>;
   event?: Partial<EventData>;
+  venueSchedule?: Partial<VenueScheduleData>;
+  contentCreative?: Partial<ContentCreativeData>;
+  videoRecordingStep?: Partial<VideoRecordingData>;
   roomByRoom?: unknown; // array (new) or single object (legacy)
   production?: Partial<ProductionSupportData>;
+  hybridVirtual?: Partial<HybridVirtualData>;
   venue?: Partial<VenueTechnicalData>;
   uploads?: Partial<UploadsData>;
   budget?: Partial<BudgetData>;
@@ -750,6 +888,10 @@ const mapApiProposalToFormData = (
     ...defaultProposalData.event,
     ...(raw.event || {}),
   },
+  venueSchedule: {
+    ...defaultProposalData.venueSchedule,
+    ...(raw.venueSchedule || {}),
+  },
   roomByRoom: ((): RoomByRoomData[] => {
     // Handle both legacy single-object and new array format from the API
     const rawRooms: unknown[] = Array.isArray(raw.roomByRoom)
@@ -778,6 +920,18 @@ const mapApiProposalToFormData = (
       } as RoomByRoomData;
     });
   })(),
+  hybridVirtual: {
+    ...defaultProposalData.hybridVirtual,
+    ...(raw.hybridVirtual || {}),
+  },
+  contentCreative: {
+    ...defaultProposalData.contentCreative,
+    ...(raw.contentCreative || {}),
+  },
+  videoRecordingStep: {
+    ...defaultProposalData.videoRecordingStep,
+    ...(raw.videoRecordingStep || {}),
+  },
   venue: {
     ...defaultProposalData.venue,
     needRiggingForFlown: {
@@ -1061,6 +1215,20 @@ const AddNewProposal = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingExisting]);
 
+  // Sync rooms array length when numberOfEventRooms stepper changes
+  useEffect(() => {
+    if (loadingExisting) return;
+    const count = Math.min(20, Math.max(1, Number(proposalData.venueSchedule.numberOfEventRooms) || 1));
+    setRooms((prev) => {
+      if (prev.length === count) return prev;
+      if (prev.length < count) {
+        return [...prev, ...Array.from({ length: count - prev.length }, () => defaultRoom())];
+      }
+      return prev.slice(0, count);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposalData.venueSchedule.numberOfEventRooms]);
+
   const updateProposalSection = <K extends ProposalSectionKey>(
     section: K,
     updates: Partial<ProposalData[K]>,
@@ -1086,10 +1254,6 @@ const AddNewProposal = ({
       (r) =>
         r.roomFunction.trim().length > 0 &&
         r.estimatedAttendeesInRoom.trim().length > 0 &&
-        r.loadInDateTime.trim().length > 0 &&
-        r.rehearsalDateTime.trim().length > 0 &&
-        r.showStartDateTime.trim().length > 0 &&
-        r.showEndDateTime.trim().length > 0 &&
         r.unionLabor.trim().length > 0 &&
         r.showCrewNeeded.length > 0,
     );
@@ -1144,6 +1308,7 @@ const AddNewProposal = ({
   const isBudgetStepValid = () => {
     const {
       estimatedAvBudget,
+      budgetCustomAmount,
       timelineForProposal,
       callWithDxgProducer,
       howDidYouHear,
@@ -1159,9 +1324,8 @@ const AddNewProposal = ({
       return false;
     }
 
-    if (howDidYouHear === "Other") {
-      return howDidYouHearOther.trim().length > 0;
-    }
+    if (estimatedAvBudget === "Other" && !budgetCustomAmount.trim()) return false;
+    if (howDidYouHear === "Other" && !howDidYouHearOther.trim()) return false;
 
     return true;
   };
@@ -1411,6 +1575,8 @@ const AddNewProposal = ({
     }
   };
 
+  const isInPersonOnly = proposalData.event.eventFormat === "In-Person";
+
   const continueHandler = async () => {
     /* ── Step 0: extract fields from uploaded doc before advancing ── */
     if (proposalProcessStep === 0) {
@@ -1462,31 +1628,36 @@ const AddNewProposal = ({
     if (proposalProcessStep === 1 && !isEventStepValid()) {
       return;
     }
-    if (proposalProcessStep === 2 && !isRoomAndProductionStepValid()) {
+    // Step 2 = Venue & Schedule — no required validation blocking
+    if (proposalProcessStep === 3 && !isRoomAndProductionStepValid()) {
       return;
     }
-    if (proposalProcessStep === 3 && !isVenueStepValid()) {
+    // Steps 4 (Hybrid & Virtual), 5 (Content & Creative), 6 (Video Recording) — no required validation
+    if (proposalProcessStep === 7 && !isVenueStepValid()) {
       return;
     }
-    if (proposalProcessStep === 4 && !isUploadsStepValid()) {
+    if (proposalProcessStep === 8 && !isBudgetStepValid()) {
       return;
     }
-    if (proposalProcessStep === 5 && !isBudgetStepValid()) {
+    if (proposalProcessStep === 9 && !isUploadsStepValid()) {
       return;
     }
 
-    if (proposalProcessStep === 6) {
+    if (proposalProcessStep === 10) {
       if (!isContactStepValid()) {
         return;
       }
-      setProposalProcessStep(7);
+      setProposalProcessStep(11);
       setShowErrors(false);
       return;
     }
 
-    if (proposalProcessStep === 7) return;
+    if (proposalProcessStep === 11) return;
 
-    setProposalProcessStep((s) => s + 1);
+    setProposalProcessStep((s) => {
+      const next = s + 1;
+      return isInPersonOnly && next === 4 ? 5 : next;
+    });
     setShowErrors(false);
   };
   const handleUploadAndContinue = async () => {
@@ -1528,7 +1699,11 @@ const AddNewProposal = ({
     setProposalProcessStep(1);
     setShowErrors(false);
   };
-  const backHandler = () => setProposalProcessStep((s) => Math.max(0, s - 1));
+  const backHandler = () =>
+    setProposalProcessStep((s) => {
+      const prev = Math.max(0, s - 1);
+      return isInPersonOnly && prev === 4 ? 3 : prev;
+    });
 
   if (createdProposal) {
     return (
@@ -1643,6 +1818,16 @@ const AddNewProposal = ({
               />
             )}
             {proposalProcessStep === 2 && (
+              <VenueScheduleStep
+                data={proposalData.venueSchedule ?? defaultVenueSchedule()}
+                onChange={(updates) => updateProposalSection("venueSchedule", updates)}
+                onContinue={continueHandler}
+                onBack={backHandler}
+                showErrors={showErrors}
+                proposalSettings={proposalSettings}
+              />
+            )}
+            {proposalProcessStep === 3 && (
               <RoomAndProductionStep
                 rooms={rooms}
                 onRoomsChange={setRooms}
@@ -1652,7 +1837,46 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {proposalProcessStep === 3 && (
+            {proposalProcessStep === 4 && (
+              <HybridVirtualStep
+                data={proposalData.hybridVirtual}
+                onChange={(updates) =>
+                  updateProposalSection("hybridVirtual", updates)
+                }
+                onContinue={continueHandler}
+                onBack={backHandler}
+                showErrors={showErrors}
+                proposalSettings={proposalSettings}
+                eventFormat={proposalData.event.eventFormat}
+              />
+            )}
+            {proposalProcessStep === 5 && (
+              <ContentCreativeStep
+                data={proposalData.contentCreative ?? defaultContentCreative()}
+                onChange={(updates) =>
+                  updateProposalSection("contentCreative", updates)
+                }
+                onContinue={continueHandler}
+                onBack={backHandler}
+                showErrors={showErrors}
+                proposalSettings={proposalSettings}
+                eventFormat={proposalData.event.eventFormat}
+                sponsorOverlays={proposalData.hybridVirtual.sponsorOverlays}
+              />
+            )}
+            {proposalProcessStep === 6 && (
+              <VideoRecordingStep
+                data={proposalData.videoRecordingStep ?? defaultVideoRecording()}
+                onChange={(updates) =>
+                  updateProposalSection("videoRecordingStep", updates)
+                }
+                onContinue={continueHandler}
+                onBack={backHandler}
+                showErrors={showErrors}
+                proposalSettings={proposalSettings}
+              />
+            )}
+            {proposalProcessStep === 7 && (
               <VenueTechnicalRequirements
                 data={proposalData.venue}
                 onChange={(updates) => updateProposalSection("venue", updates)}
@@ -1662,7 +1886,17 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {proposalProcessStep === 4 && (
+            {proposalProcessStep === 8 && (
+              <BudgetProposalPreferences
+                data={proposalData.budget}
+                onChange={(updates) => updateProposalSection("budget", updates)}
+                onContinue={continueHandler}
+                onBack={backHandler}
+                showErrors={showErrors}
+                proposalSettings={proposalSettings}
+              />
+            )}
+            {proposalProcessStep === 9 && (
               <UploadsReferenceMaterials
                 data={proposalData.uploads}
                 onChange={(updates) =>
@@ -1674,17 +1908,7 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {proposalProcessStep === 5 && (
-              <BudgetProposalPreferences
-                data={proposalData.budget}
-                onChange={(updates) => updateProposalSection("budget", updates)}
-                onContinue={continueHandler}
-                onBack={backHandler}
-                showErrors={showErrors}
-                proposalSettings={proposalSettings}
-              />
-            )}
-            {proposalProcessStep === 6 && (
+            {proposalProcessStep === 10 && (
               <ContactInfo
                 data={proposalData.contact}
                 onChange={(updates) =>
@@ -1696,7 +1920,7 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
               />
             )}
-            {proposalProcessStep === 7 && (
+            {proposalProcessStep === 11 && (
               <TemplateSelection
                 templateId={proposalData.templateId}
                 onSelect={(templateId) =>
@@ -1721,7 +1945,10 @@ const AddNewProposal = ({
           </div>
           {/* Sidebar — 20% */}
           <div className="w-[20%] sticky top-0 self-start">
-            <ProcessList activeStep={proposalProcessStep} />
+            <ProcessList
+              activeStep={proposalProcessStep}
+              hideStepIds={isInPersonOnly ? [4] : []}
+            />
           </div>
         </div>
       )}

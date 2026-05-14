@@ -1,38 +1,96 @@
 "use client";
 
 import GlobalDateInput from "@/components/shared/GlobalDateInput";
-import { ChevronDown, RotateCcw } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
-import { InfoTooltip, useClickOutside } from "./shared";
+import { InfoTooltip, PillCheckbox, toggleItem, useClickOutside } from "./shared";
 
 /* ─── Shared style constants ─── */
-const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
+const labelClass =
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
   "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
-const selectClass = inputClass + " appearance-none pr-8";
+const groupLabelClass =
+  "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf] border-b border-[#d7dce3] pb-2";
 
-const attendeesOptions = [
-  "< 100",
-  "100 - 150",
-  "200 - 500",
-  "500 - 1,000",
-  "1,000+",
-];
 const eventTypeOptions = [
-  "Conference",
-  "Meeting",
-  "Gala",
-  "Trade Show",
-  "Awards Show",
+  "Corporate Conference",
+  "User / Customer Summit",
+  "Sales Kickoff (SKO)",
+  "Annual Meeting / Shareholder Event",
+  "Product Launch",
+  "Awards Show / Gala",
+  "Trade Show / Exhibition",
+  "Internal Town Hall",
+  "Training / Certification Event",
+  "Association / Member Conference",
+  "Industry Symposium",
+  "Hybrid Broadcast / Studio Production",
   "Other",
 ];
-const formatOptions = ["In-Person", "Hybrid", "Virtual"] as const;
+
+const formatOptions = [
+  { value: "In-Person", label: "In-Person Only" },
+  { value: "Hybrid", label: "Hybrid (In-Person + Virtual)" },
+  { value: "Virtual", label: "Virtual Only" },
+] as const;
+
+const audienceOptions = [
+  "C-Suite Executives",
+  "Senior Leadership / VPs",
+  "Sales Team / Field Reps",
+  "Customers / End Users",
+  "Prospects / Leads",
+  "Partners / Channel / Resellers",
+  "Employees (All-Hands)",
+  "Investors / Shareholders",
+  "Press / Media / Analysts",
+  "Industry Professionals",
+  "Developers / Technical",
+  "Members (Association)",
+  "Students / Academic",
+  "General Public",
+];
+
+const toneGroups = [
+  {
+    label: "Energy",
+    options: ["High-Energy", "Polished & Refined", "Intimate", "Celebratory"],
+  },
+  {
+    label: "Style",
+    options: [
+      "Bold & Cinematic",
+      "Editorial & Minimal",
+      "Tech-Forward",
+      "Classic Corporate",
+      "Premium Luxury",
+    ],
+  },
+  {
+    label: "Mood",
+    options: [
+      "Inspirational",
+      "Authoritative",
+      "Conversational",
+      "Innovative",
+      "Heritage / Legacy",
+    ],
+  },
+  {
+    label: "Color Direction",
+    options: [
+      "Dark / Cinematic",
+      "Light / Bright",
+      "Brand-Forward",
+      "Neutral / Editorial",
+    ],
+  },
+];
 
 const normalizeDateFormat = (format: string) =>
   (format || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
 
-/** Convert a settings display format string → date-fns format token */
 type DatePickerFormat = "dd-MM-yyyy" | "yyyy-MM-dd" | "MM-dd-yyyy";
 
 const toPickerFormat = (displayFormat: string): DatePickerFormat => {
@@ -46,30 +104,13 @@ const toIsoDateValue = (raw: string | undefined) => {
   if (!raw) return "";
   const value = raw.trim();
   if (!value) return "";
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
-  }
-
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const delimiter = value.includes("/") ? "/" : "-";
   const parts = value.split(delimiter);
-  if (parts.length !== 3) {
-    return "";
-  }
-
+  if (parts.length !== 3) return "";
   const [a, b, c] = parts;
-  if (c.length === 4) {
-    const day = a.padStart(2, "0");
-    const month = b.padStart(2, "0");
-    return `${c}-${month}-${day}`;
-  }
-
-  if (a.length === 4) {
-    const month = b.padStart(2, "0");
-    const day = c.padStart(2, "0");
-    return `${a}-${month}-${day}`;
-  }
-
+  if (c.length === 4) return `${c}-${b.padStart(2, "0")}-${a.padStart(2, "0")}`;
+  if (a.length === 4) return `${a}-${b.padStart(2, "0")}-${c.padStart(2, "0")}`;
   return "";
 };
 
@@ -113,319 +154,514 @@ const EventForm = ({
   const normalizedEndDate = toIsoDateValue(data.endDate);
   const startDateValue = fromIsoToDate(data.startDate);
   const endDateValue = fromIsoToDate(data.endDate);
-  const [attendeesOpen, setAttendeesOpen] = useState(false);
-  const [typeOpen, setTypeOpen] = useState(false);
 
-  const attendeesRef = useRef<HTMLDivElement>(null);
   const typeRef = useRef<HTMLDivElement>(null);
+  useClickOutside(typeRef, useCallback(() => {}, []));
 
-  useClickOutside(
-    attendeesRef,
-    useCallback(() => setAttendeesOpen(false), []),
-  );
-  useClickOutside(
-    typeRef,
-    useCallback(() => setTypeOpen(false), []),
-  );
-
-  const handleClear = () => {
-    onChange({
-      eventName: "",
-      startDate: "",
-      endDate: "",
-      venue: "",
-      attendees: "",
-      eventFormat: "In-Person",
-      eventType: {
-        eventType: "",
-        eventTypeOther: "",
-      },
-    });
-  };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startIso = toIsoDateValue(data.startDate);
+  const isStartInPast = startIso ? new Date(startIso) < today : false;
 
   const handleStartDateChange = (value: Date | null) => {
     const normalizedNextStart = fromDateToIso(value);
     const shouldAutoSetEndDate =
       !normalizedEndDate ||
       (normalizedNextStart && normalizedEndDate < normalizedNextStart);
-
     onChange({
       startDate: normalizedNextStart,
       ...(shouldAutoSetEndDate ? { endDate: normalizedNextStart } : {}),
     });
   };
 
+  const objectives = data.eventObjectives ?? "";
+  const objLen = objectives.length;
+  const toneSelected = data.toneDirection ?? [];
+  const audienceSelected = data.primaryAudience ?? [];
+  const constraintsLen = (data.sacredConstraints ?? "").length;
+
   return (
     <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-[#d7dce3]">
-        <h2 className="text-[20px] font-semibold text-[#0f1b57]">
-          Event Overview
+      <div className="px-8 py-6 border-b border-[#d7dce3]">
+        <div className="flex items-center gap-3 mb-1">
+          <span className="inline-flex items-center rounded-full bg-[#35bdf2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#35bdf2]">
+            Page 1 of 9
+          </span>
+        </div>
+        <h2 className="text-[22px] font-bold text-[#0f1b57]">
+          Event Overview &amp; Narrative
         </h2>
+        <p className="mt-1 text-sm text-[#8f98bf]">
+          These fields power the auto-generated narrative on your RFP cover page
+          and set the tone for every section that follows.
+        </p>
       </div>
 
       {/* Form Body */}
-      <div className="flex-1 px-6 py-6 space-y-6">
-        {/* Event Name */}
-        <div>
-          <label htmlFor="eventName" className={labelClass}>
-            EVENT <span className="text-red-500">*</span>
-            <InfoTooltip text="The official name or internal title used to identify this event." />
-          </label>
-          <input
-            id="eventName"
-            className={`${inputClass} ${showErrors && !data.eventName.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-            placeholder="What's the official name or internal title for this event?"
-            value={data.eventName}
-            onChange={(e) => onChange({ eventName: e.target.value })}
-          />
-          {showErrors && !data.eventName.trim() && (
-            <p className="mt-1 text-sm text-red-500">Event name is required.</p>
-          )}
-        </div>
+      <div className="flex-1 px-8 py-8 space-y-10">
 
-        {/* Start Date */}
+        {/* ── Group: Core Identity ── */}
         <div>
-          <label htmlFor="startDate" className={labelClass}>
-            EVENT START DATE <span className="text-red-500">*</span>
-            <InfoTooltip text="The first day your event begins. Used to schedule AV crew and equipment delivery." />
-          </label>
-          <GlobalDateInput
-            id="startDate"
-            label="Start Date"
-            hideLabel
-            showFormatInLabel={false}
-            showErrorMessage={false}
-            value={startDateValue}
-            onChange={handleStartDateChange}
-            format={pickerFormat}
-            inputClassName={`${inputClass} pr-10 ${
-              showErrors && !data.startDate.trim()
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                : ""
-            }`}
-            buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f98bf] hover:text-primary"
-          />
-          <p className="mt-1 text-xs text-[#8f98bf] normal-case">
-            Date format preference: {currentDateFormat}
-          </p>
-          {showErrors && !data.startDate.trim() && (
-            <p className="mt-1 text-sm text-red-500">Start date is required.</p>
-          )}
-        </div>
+          <p className={groupLabelClass}>Core Identity</p>
+          <div className="space-y-5">
 
-        {/* End Date */}
-        <div>
-          <label htmlFor="endDate" className={labelClass}>
-            EVENT END DATE <span className="text-red-500">*</span>
-            <InfoTooltip text="The last day of your event. Helps determine total equipment rental duration." />
-          </label>
-          <GlobalDateInput
-            id="endDate"
-            label="End Date"
-            hideLabel
-            showFormatInLabel={false}
-            showErrorMessage={false}
-            value={endDateValue}
-            onChange={(value) => onChange({ endDate: fromDateToIso(value) })}
-            minDate={startDateValue || undefined}
-            format={pickerFormat}
-            inputClassName={`${inputClass} pr-10 ${
-              showErrors && !data.endDate.trim()
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                : ""
-            }`}
-            buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f98bf] hover:text-primary"
-          />
-          <p className="mt-1 text-xs text-[#8f98bf] normal-case">
-            Date format preference: {currentDateFormat}
-          </p>
-          {showErrors && !data.endDate.trim() && (
-            <p className="mt-1 text-sm text-red-500">End date is required.</p>
-          )}
-        </div>
-
-        {/* Venue */}
-        <div>
-          <label htmlFor="venue" className={labelClass}>
-            EVENT VENUE / HOTEL NAME <span className="text-red-500">*</span>
-            <InfoTooltip text="The venue or hotel where the event takes place. Affects load-in logistics and venue technical requirements." />
-          </label>
-          <input
-            id="venue"
-            className={`${inputClass} ${showErrors && !data.venue.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-            placeholder="Where will this take place?"
-            value={data.venue}
-            onChange={(e) => onChange({ venue: e.target.value })}
-          />
-          {showErrors && !data.venue.trim() && (
-            <p className="mt-1 text-sm text-red-500">Venue is required.</p>
-          )}
-        </div>
-
-        {/* Number of Attendees */}
-        <div>
-          <label className={labelClass}>
-            NUMBER OF ATTENDEES
-            <InfoTooltip text="Approximate total guest count. Helps size the audio system, seating layout, and screen placement." />
-          </label>
-          <div className="relative" ref={attendeesRef}>
-            <button
-              type="button"
-              onClick={() => setAttendeesOpen((p) => !p)}
-              className={
-                selectClass +
-                " flex items-center justify-between cursor-pointer"
-              }
-            >
-              <span
-                className={data.attendees ? "text-[#1f2d5d]" : "text-gray-400"}
-              >
-                {data.attendees || "Select number of Attendees"}
-              </span>
-              <ChevronDown size={16} className="text-primary flex-shrink-0" />
-            </button>
-
-            {attendeesOpen && (
-              <div className="absolute z-10 w-full mt-1 rounded-md border border-[#d7dce3] bg-white shadow-md overflow-hidden">
-                {attendeesOptions.map((opt) => (
-                  <label
-                    key={opt}
-                    className="flex items-center justify-between px-4 py-2.5 text-sm text-[#1f2d5d] hover:bg-sky-50 cursor-pointer"
-                  >
-                    <span>{opt}</span>
-                    <input
-                      type="radio"
-                      name="attendees"
-                      checked={data.attendees === opt}
-                      onChange={() => {
-                        onChange({ attendees: opt });
-                        setAttendeesOpen(false);
-                      }}
-                      className="accent-[#6366f1]"
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Event Format */}
-        <div>
-          <label className={labelClass}>
-            EVENT FORMAT
-            <InfoTooltip text="Whether your event is fully in-person, live-streamed (hybrid), or entirely virtual." />
-          </label>
-          <div className="flex items-center gap-6">
-            {formatOptions.map((fmt) => (
-              <label
-                key={fmt}
-                className="flex items-center gap-2 cursor-pointer text-sm text-[#1f2d5d]"
-              >
+            {/* Row 1: Event Name + Edition/Year */}
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className={labelClass}>
+                  Event Name <span className="text-red-500">*</span>
+                  <InfoTooltip text="Enter the full official name of your event as it should appear on all RFP documents. Appears on the cover headline and every interior running header." />
+                </label>
                 <input
-                  type="radio"
-                  name="eventFormat"
-                  checked={data.eventFormat === fmt}
-                  onChange={() => onChange({ eventFormat: fmt })}
-                  className="accent-[#35bdf2] h-4 w-4"
+                  className={`${inputClass} ${showErrors && !data.eventName.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
+                  placeholder="e.g. Apex Dynamics Global Summit 2026"
+                  maxLength={120}
+                  value={data.eventName}
+                  onChange={(e) => onChange({ eventName: e.target.value })}
                 />
-                {fmt}
-              </label>
-            ))}
-          </div>
-        </div>
+                <div className="mt-1 flex justify-between items-start">
+                  {showErrors && !data.eventName.trim() ? (
+                    <p className="text-sm text-red-500 normal-case">Event name is required.</p>
+                  ) : <span />}
+                  <span className="text-xs text-[#8f98bf] shrink-0 ml-2">
+                    {data.eventName.length}/120
+                  </span>
+                </div>
+              </div>
 
-        {/* Type of Event */}
-        <div>
-          <label className={labelClass}>
-            TYPE OF EVENT
-            <InfoTooltip text="The category of your event. Helps tailor the AV setup and proposal format." />
-          </label>
-          <div className="relative" ref={typeRef}>
-            <button
-              type="button"
-              onClick={() => setTypeOpen((p) => !p)}
-              className={
-                selectClass +
-                " flex items-center justify-between cursor-pointer"
-              }
-            >
-              <span
-                className={data.eventType.eventType ? "text-[#1f2d5d]" : "text-gray-400"}
-              >
-                {data.eventType.eventType || "Select type of event"}
-              </span>
-              <ChevronDown size={16} className="text-primary flex-shrink-0" />
-            </button>
+              <div>
+                <label className={labelClass}>
+                  Edition / Year
+                  <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <InfoTooltip text="If this is a recurring event, indicate which edition (e.g. '12th Annual' or 'Year 5'). Leave blank if this is a one-time event. Helps contextualize event maturity in the AI-generated narrative." />
+                </label>
+                <input
+                  className={inputClass}
+                  placeholder="e.g. 12th Annual or Inaugural 2026"
+                  maxLength={60}
+                  value={data.editionYear ?? ""}
+                  onChange={(e) => onChange({ editionYear: e.target.value })}
+                />
+              </div>
+            </div>
 
-            {typeOpen && (
-              <div className="absolute z-10 w-full mt-1 rounded-md border border-[#d7dce3] bg-white shadow-md overflow-hidden">
-                {eventTypeOptions.map((opt) => (
-                  <label
-                    key={opt}
-                    className="flex items-center justify-between px-4 py-2.5 text-sm text-[#1f2d5d] hover:bg-sky-50 cursor-pointer"
+            {/* Row 2: Event Type + Theme/Tagline */}
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className={labelClass}>
+                  Event Type <span className="text-red-500">*</span>
+                  <InfoTooltip text="Choose the category that best describes your event. Helps vendors gauge scope and tone required and feeds the AI narrative paragraph 1 and Section 8 references." />
+                </label>
+                <div ref={typeRef}>
+                  <select
+                    className={`${inputClass} appearance-none ${
+                      showErrors && !data.eventType.eventType
+                        ? "border-red-500 focus:border-red-500"
+                        : ""
+                    }`}
+                    value={data.eventType.eventType}
+                    onChange={(e) =>
+                      onChange({
+                        eventType: {
+                          eventType: e.target.value,
+                          eventTypeOther:
+                            e.target.value !== "Other"
+                              ? ""
+                              : data.eventType.eventTypeOther,
+                        },
+                      })
+                    }
                   >
-                    <span>{opt}</span>
-                    <input
-                      type="radio"
-                      name="eventType"
-                      checked={data.eventType.eventType === opt}
-                      onChange={() => {
-                        onChange({ eventType: { eventType: opt, eventTypeOther: opt !== "Other" ? "" : data.eventType.eventTypeOther } });
-                        if (opt !== "Other") setTypeOpen(false);
-                      }}
-                      className="accent-[#6366f1]"
-                    />
-                  </label>
-                ))}
-
+                    <option value="">Select event type...</option>
+                    {eventTypeOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {data.eventType.eventType === "Other" && (
-                  <div className="px-4 pb-3">
-                    <textarea
-                      rows={2}
-                      value={data.eventType.eventTypeOther}
-                      onChange={(e) =>
-                        onChange({ eventType: { ...data.eventType, eventTypeOther: e.target.value } })
-                      }
-                      placeholder="Write here..."
-                      className="w-full rounded-md border border-[#d7dce3] px-3 py-2 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
-                    />
-                  </div>
+                  <input
+                    className={`${inputClass} mt-2`}
+                    placeholder="Please specify..."
+                    value={data.eventType.eventTypeOther}
+                    onChange={(e) =>
+                      onChange({
+                        eventType: {
+                          ...data.eventType,
+                          eventTypeOther: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                )}
+                {showErrors && !data.eventType.eventType && (
+                  <p className="mt-1 text-sm text-red-500 normal-case">
+                    Event type is required.
+                  </p>
                 )}
               </div>
-            )}
+
+              <div>
+                <label className={labelClass}>
+                  Event Theme / Tagline
+                  <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <InfoTooltip text="If your event has an official theme, tagline, or campaign line, enter it here. Leave blank if not yet finalized. Feeds AI narrative paragraph 2." />
+                </label>
+                <input
+                  className={inputClass}
+                  placeholder='e.g. "Velocity" or "Built for What&apos;s Next"'
+                  maxLength={100}
+                  value={data.eventTheme ?? ""}
+                  onChange={(e) => onChange({ eventTheme: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Group: Format & Audience ── */}
+        <div>
+          <p className={groupLabelClass}>Format &amp; Audience</p>
+          <div className="space-y-6">
+
+            {/* Event Format */}
+            <div>
+              <label className={labelClass}>
+                Event Format <span className="text-red-500">*</span>
+                <InfoTooltip text="Select your event delivery format. Hybrid and Virtual unlock additional streaming and platform specifications on Page 3." />
+              </label>
+              <p className="mb-3 text-xs text-slate-500 normal-case">
+                Your selection unlocks Step 3 — Hybrid &amp; Virtual Production if applicable.
+              </p>
+              <div className="flex flex-col gap-3">
+                {formatOptions.map((fmt) => (
+                  <label
+                    key={fmt.value}
+                    className="flex items-center gap-3 cursor-pointer text-sm text-[#1f2d5d]"
+                  >
+                    <input
+                      type="radio"
+                      name="eventFormat"
+                      checked={data.eventFormat === fmt.value}
+                      onChange={() => onChange({ eventFormat: fmt.value })}
+                      className="accent-[#35bdf2] h-4 w-4"
+                    />
+                    {fmt.label}
+                  </label>
+                ))}
+              </div>
+              {(data.eventFormat === "Hybrid" || data.eventFormat === "Virtual") && (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-800">
+                  <span className="font-bold">⚡</span>
+                  <span>
+                    <strong>Step 3 Unlocked:</strong> Hybrid &amp; Virtual Production fields are now active.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Primary Audience */}
+            <div>
+              <label className={labelClass}>
+                Primary Audience <span className="text-red-500">*</span>
+                <InfoTooltip text="Select up to 4 primary audience groups. Helps vendors understand the production tone and gravitas required, and feeds the AI narrative paragraph 1." />
+              </label>
+              <p className="mb-3 text-xs text-slate-500 normal-case">
+                Select up to 4 audience types.
+                {audienceSelected.length > 0 && ` ${audienceSelected.length}/4 selected.`}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {audienceOptions.map((opt) => {
+                  const checked = audienceSelected.includes(opt);
+                  const maxReached = audienceSelected.length >= 4 && !checked;
+                  return (
+                    <PillCheckbox
+                      key={opt}
+                      label={opt}
+                      checked={checked}
+                      onChange={() => {
+                        if (!maxReached) {
+                          onChange({
+                            primaryAudience: toggleItem(audienceSelected, opt),
+                          });
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              {audienceSelected.length >= 4 && (
+                <p className="mt-2 text-xs text-amber-600 normal-case">
+                  Maximum 4 audience types selected.
+                </p>
+              )}
+              {showErrors && audienceSelected.length === 0 && (
+                <p className="mt-2 text-sm text-red-500 normal-case">
+                  Please select at least one audience type.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Group: Dates & Scale ── */}
+        <div>
+          <p className={groupLabelClass}>Dates &amp; Scale</p>
+          <div className="grid grid-cols-3 gap-5">
+
+            {/* Start Date */}
+            <div>
+              <label className={labelClass}>
+                Start Date <span className="text-red-500">*</span>
+                <InfoTooltip text="First day of the event (not load-in date). Populates the cover meta bar and is used to calculate total event days in the Scope Overview." />
+              </label>
+              <GlobalDateInput
+                id="startDate"
+                label="Start Date"
+                hideLabel
+                showFormatInLabel={false}
+                showErrorMessage={false}
+                value={startDateValue}
+                onChange={handleStartDateChange}
+                format={pickerFormat}
+                inputClassName={`${inputClass} pr-10 ${
+                  showErrors && !data.startDate.trim()
+                    ? "border-red-500 focus:border-red-500"
+                    : ""
+                }`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f98bf] hover:text-primary"
+              />
+              {isStartInPast && data.startDate && (
+                <p className="mt-1 text-xs text-amber-600 normal-case">
+                  Warning: Start date is in the past.
+                </p>
+              )}
+              {showErrors && !data.startDate.trim() && (
+                <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+              )}
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label className={labelClass}>
+                End Date <span className="text-red-500">*</span>
+                <InfoTooltip text="Last day of the event (not strike date). Used with Start Date to calculate event duration on the cover meta bar and the Event Days stat card." />
+              </label>
+              <GlobalDateInput
+                id="endDate"
+                label="End Date"
+                hideLabel
+                showFormatInLabel={false}
+                showErrorMessage={false}
+                value={endDateValue}
+                onChange={(value) => onChange({ endDate: fromDateToIso(value) })}
+                minDate={startDateValue || undefined}
+                format={pickerFormat}
+                inputClassName={`${inputClass} pr-10 ${
+                  showErrors && !data.endDate.trim()
+                    ? "border-red-500 focus:border-red-500"
+                    : ""
+                }`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f98bf] hover:text-primary"
+              />
+              {showErrors && !data.endDate.trim() && (
+                <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+              )}
+            </div>
+
+            {/* Total Attendance */}
+            <div>
+              <label className={labelClass}>
+                Total Attendance <span className="text-red-500">*</span>
+                <InfoTooltip text="Estimated total in-person headcount across all days. Drives the Attendees stat card on the cover and informs crew count, audio system size, and screen placement recommendations." />
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={100000}
+                className={`${inputClass} ${
+                  showErrors && !data.attendees.trim()
+                    ? "border-red-500 focus:border-red-500"
+                    : ""
+                }`}
+                placeholder="e.g. 1500"
+                value={data.attendees}
+                onChange={(e) => onChange({ attendees: e.target.value })}
+              />
+              {showErrors && !data.attendees.trim() && (
+                <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Group: Venue Details ── */}
+        <div>
+          <p className={groupLabelClass}>Venue Details</p>
+          <div className="grid grid-cols-2 gap-5">
+
+            <div>
+              <label className={labelClass}>
+                Venue Name <span className="text-red-500">*</span>
+                <InfoTooltip text="Appears in the cover subtitle, Section 6 Venue row, and is checked against known union jurisdictions to auto-flag IATSE/union requirements." />
+              </label>
+              <input
+                className={`${inputClass} ${
+                  showErrors && !data.venue.trim()
+                    ? "border-red-500 focus:border-red-500"
+                    : ""
+                }`}
+                placeholder="e.g. Las Vegas Convention Center"
+                value={data.venue}
+                onChange={(e) => onChange({ venue: e.target.value })}
+              />
+              {showErrors && !data.venue.trim() && (
+                <p className="mt-1 text-sm text-red-500 normal-case">
+                  Venue is required.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className={labelClass}>
+                City &amp; State
+                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <InfoTooltip text="Used for jurisdiction context in Section 6 and to auto-detect known union markets (e.g. Las Vegas, Chicago, NYC) and surface a union labor flag." />
+              </label>
+              <input
+                className={inputClass}
+                placeholder="e.g. Las Vegas, NV"
+                value={data.venueCity ?? ""}
+                onChange={(e) => onChange({ venueCity: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Group: Narrative Inputs — AI Generated ── */}
+        <div>
+          <p className={groupLabelClass}>Narrative Inputs — AI Generated</p>
+          <div className="space-y-6">
+
+            {/* Event Objectives */}
+            <div>
+              <label className={labelClass}>
+                Event Objectives
+                <InfoTooltip text="In 2–4 sentences, describe what you're trying to accomplish. This feeds the AI narrative — the more specific, the better. Used verbatim as context for AI narrative generation." />
+              </label>
+              <p className="mb-2 text-xs text-slate-500 normal-case">
+                In 2–4 sentences: describe what success looks like. What outcomes are you driving?
+              </p>
+              <textarea
+                rows={3}
+                maxLength={800}
+                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                placeholder='Describe what success looks like for this event. Examples: "Drive pipeline through 30 customer meetings," "Launch our Q2 product to 1,200 partners," "Celebrate our 25th anniversary with brand-defining moments."'
+                value={objectives}
+                onChange={(e) => onChange({ eventObjectives: e.target.value })}
+              />
+              <div className="mt-1 flex justify-between items-start gap-2">
+                {!objectives.trim() ? (
+                  <p className="text-xs text-amber-600 normal-case">
+                    Leaving this blank will limit the quality of your auto-generated Event Overview narrative.
+                  </p>
+                ) : <span />}
+                <span className={`text-xs shrink-0 ${objLen > 720 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                  {objLen}/800
+                </span>
+              </div>
+            </div>
+
+            {/* Tone / Brand Direction */}
+            <div>
+              <label className={labelClass}>
+                Tone / Brand Direction
+                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <InfoTooltip text="Pick up to 5 tags that capture the feel of this event. Vendors will use this to gauge creative direction. Feeds AI narrative paragraph 2 (creative context)." />
+              </label>
+              <p className="mb-3 text-xs text-slate-500 normal-case">
+                Select up to 5 tags.
+                {toneSelected.length > 0 && ` ${toneSelected.length}/5 selected.`}
+              </p>
+              <div className="space-y-4">
+                {toneGroups.map((group) => (
+                  <div key={group.label}>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#8f98bf]">
+                      {group.label}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {group.options.map((opt) => {
+                        const checked = toneSelected.includes(opt);
+                        const maxReached = toneSelected.length >= 5 && !checked;
+                        return (
+                          <PillCheckbox
+                            key={opt}
+                            label={opt}
+                            checked={checked}
+                            onChange={() => {
+                              if (!maxReached) {
+                                onChange({
+                                  toneDirection: toggleItem(toneSelected, opt),
+                                });
+                              }
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {toneSelected.length >= 5 && (
+                <p className="mt-2 text-xs text-amber-600 normal-case">
+                  Maximum 5 tone tags selected.
+                </p>
+              )}
+            </div>
+
+            {/* Sacred Constraints */}
+            <div>
+              <label className={labelClass}>
+                Sacred Constraints / Special Considerations
+                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <InfoTooltip text="List any non-negotiable requirements vendors absolutely must honor — timing rules, brand restrictions, cultural sensitivities, executive preferences, or anything that has caused friction at past events. Appears verbatim in the Scope Overview special notes row." />
+              </label>
+              <textarea
+                rows={3}
+                maxLength={500}
+                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                placeholder="e.g. CEO keynote must run exactly 22 minutes. No standing ovations during memorial segment. Sponsor logos cannot appear on main stage screens."
+                value={data.sacredConstraints ?? ""}
+                onChange={(e) => onChange({ sacredConstraints: e.target.value })}
+              />
+              <div className="mt-1 flex justify-end">
+                <span className={`text-xs ${constraintsLen > 450 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                  {constraintsLen}/500
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="flex items-center justify-between px-6 py-4 border-t border-[#d7dce3]">
+      {/* ── Footer Nav ── */}
+      <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
-          onClick={handleClear}
-          className="flex items-center gap-2 text-sm font-semibold text-[#8f98bf] hover:text-red-400 transition-colors"
+          onClick={onBack}
+          className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
         >
-          <RotateCcw size={15} />
-          CLEAR
+          ← Back
         </button>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="h-10 px-6 rounded-md border border-[#d7dce3] text-sm font-semibold text-[#1f2d5d] hover:bg-gray-50 transition-colors"
-          >
-            BACK
-          </button>
-          <button
-            type="button"
-            onClick={onContinue}
-            className="h-10 px-8 rounded-md bg-[#35bdf2] hover:bg-[#20A4D5] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(56,189,248,0.39)] transition-transform active:scale-95"
-          >
-            CONTINUE
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="flex items-center gap-2 rounded-lg bg-[#35bdf2] px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(53,189,242,0.35)] hover:bg-[#20a9de] transition-colors active:scale-95"
+        >
+          Venue &amp; Schedule →
+        </button>
       </div>
     </section>
   );
