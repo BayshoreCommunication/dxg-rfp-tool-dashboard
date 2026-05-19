@@ -29,21 +29,39 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "AV",
+    label: "Venue Schedule",
+    color: "border-teal-400 bg-teal-50 text-teal-700",
+    fields: [
+      "Load-in, rehearsal & strike dates",
+      "Number of event rooms",
+      "Union venue status",
+    ],
+  },
+  {
+    label: "AV & Crew",
     color: "border-sky-400 bg-sky-50 text-sky-700",
     fields: [
       "Microphones, monitors, LED wall",
       "Cameras & recording",
-      "Stage lighting",
+      "Production crew roles",
     ],
   },
   {
-    label: "Crew & Venue",
-    color: "border-violet-400 bg-violet-50 text-violet-700",
+    label: "Hybrid & Virtual",
+    color: "border-purple-400 bg-purple-50 text-purple-700",
     fields: [
-      "Production crew roles",
-      "Union labor preference",
-      "Rigging & power drops",
+      "Streaming platform",
+      "Remote speakers & virtual Q&A",
+      "Closed captions & on-demand recording",
+    ],
+  },
+  {
+    label: "Content & Video",
+    color: "border-rose-400 bg-rose-50 text-rose-700",
+    fields: [
+      "Content services needed",
+      "Video recording required",
+      "Camera plan & deliverables",
     ],
   },
   {
@@ -212,8 +230,66 @@ async function downloadSamplePdf() {
   );
 
   renderSection(
-    "4 — VENUE TECHNICAL",
+    "4 — VENUE SCHEDULE",
+    [236, 253, 245],
+    [4, 120, 87],
+    [
+      { label: "Venue Name", hint: "e.g. Marriott Marquis" },
+      { label: "Venue City & State", hint: "e.g. New York, NY" },
+      { label: "Union Venue", hint: "Yes / No / Not Sure" },
+      { label: "Load-In Date", hint: "MM/DD/YYYY" },
+      { label: "Rehearsal Date", hint: "MM/DD/YYYY" },
+      { label: "Strike Date", hint: "MM/DD/YYYY" },
+      { label: "Number of Event Rooms", hint: "e.g. 2" },
+    ],
+  );
+
+  renderSection(
+    "5 — HYBRID & VIRTUAL (Hybrid / Virtual events only)",
+    [245, 243, 255],
+    [91, 33, 182],
+    [
+      { label: "Virtual Attendee Estimate", hint: "e.g. 500" },
+      { label: "Streaming Platform", hint: "Zoom / Teams / Hopin / vMix / StreamYard / Other" },
+      { label: "Platform Integration with AV", hint: "Yes / No" },
+      { label: "Remote Speakers", hint: "Yes / No — How Many: [#]" },
+      { label: "Live Virtual Q&A", hint: "Yes / No" },
+      { label: "Closed Captions", hint: "Yes / No — Language(s): [e.g. English, French]" },
+      { label: "On-Demand Recording", hint: "Yes / No" },
+    ],
+  );
+
+  renderSection(
+    "6 — CONTENT & CREATIVE",
+    [255, 241, 242],
+    [159, 18, 57],
+    [
+      { label: "Content Services Needed", hint: "Yes / No" },
+      { label: "Presentation Template Design", hint: "Client / AV Vendor / TBD / N/A" },
+      { label: "Motion Graphics / Opener Video", hint: "Client / AV Vendor / TBD / N/A" },
+      { label: "Lower Thirds / Name Supers", hint: "Client / AV Vendor / TBD / N/A" },
+      { label: "Sizzle / Recap Video", hint: "Client / AV Vendor / TBD / N/A" },
+      { label: "Creative Direction Notes", hint: "Any style, brand, or theme guidance" },
+    ],
+  );
+
+  renderSection(
+    "7 — VIDEO RECORDING",
     [255, 247, 237],
+    [154, 52, 18],
+    [
+      { label: "Video Recording Required", hint: "Yes / No" },
+      { label: "Number of Cameras", hint: "e.g. 3" },
+      { label: "Camera Positions", hint: "Stage Wide / Speaker Close-Up / Audience Reaction / etc." },
+      { label: "Recording Resolution", hint: "e.g. 4K / 1080p" },
+      { label: "Edited Deliverable Needed", hint: "Yes / No — Type: Highlight Reel / Full Edit / etc." },
+      { label: "Raw Footage Turnover", hint: "Yes / No" },
+    ],
+  );
+
+  renderSection(
+    "8 — VENUE TECHNICAL",
+    [255, 251, 235],
     [194, 65, 12],
     [
       {
@@ -228,7 +304,7 @@ async function downloadSamplePdf() {
   );
 
   renderSection(
-    "5 — BUDGET & PREFERENCES",
+    "9 — BUDGET & PREFERENCES",
     [254, 252, 232],
     [161, 98, 7],
     [
@@ -253,7 +329,7 @@ async function downloadSamplePdf() {
   );
 
   renderSection(
-    "6 — CONTACT INFORMATION",
+    "10 — CONTACT INFORMATION",
     [253, 242, 248],
     [157, 23, 77],
     [

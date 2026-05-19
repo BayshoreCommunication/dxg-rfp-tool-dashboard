@@ -373,7 +373,6 @@ export default function ProposalTableList({
     eventName: string;
     startDate: string;
     endDate: string;
-    templateId: "template-one" | "template-two" | "";
   }) => {
     if (!copyModalProposal?._id) return;
     setCopyingSaving(true);
@@ -382,7 +381,6 @@ export default function ProposalTableList({
         eventName: overrides.eventName,
         ...(overrides.startDate ? { startDate: overrides.startDate } : {}),
         ...(overrides.endDate ? { endDate: overrides.endDate } : {}),
-        templateId: overrides.templateId as "template-one" | "template-two",
       });
       if (result.success) {
         toast.success("Copy saved successfully!");
@@ -822,7 +820,6 @@ export default function ProposalTableList({
       onConfirm={(overrides) => void handleSaveCopy(overrides)}
       saving={copyingSaving}
       defaultEventName={copyModalProposal?.event?.eventName ?? ""}
-      defaultTemplateId=""
     />
     </>
   );

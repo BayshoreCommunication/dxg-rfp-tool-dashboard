@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { ProposalSettings } from "./AddNewProposal";
 
@@ -8,7 +7,6 @@ export type CopyOverrides = {
   eventName: string;
   startDate: string;
   endDate: string;
-  templateId: "template-one" | "template-two" | "";
 };
 
 const defaultSettings: ProposalSettings = {
@@ -31,14 +29,8 @@ type SaveCopyModalProps = {
   defaultEventName: string;
   defaultStartDate?: string;
   defaultEndDate?: string;
-  defaultTemplateId?: "template-one" | "template-two" | "";
   proposalSettings?: ProposalSettings;
 };
-
-const selectedCard =
-  "border-cyan-500 bg-cyan-50 shadow-[0_0_0_2px_rgba(6,182,212,0.2)]";
-const unselectedCard =
-  "border-slate-200 bg-white hover:border-cyan-300";
 
 export default function SaveCopyModal({
   isOpen,
@@ -48,7 +40,6 @@ export default function SaveCopyModal({
   defaultEventName,
   defaultStartDate = "",
   defaultEndDate = "",
-  defaultTemplateId = "",
   proposalSettings,
 }: SaveCopyModalProps) {
   const settings = proposalSettings ?? defaultSettings;
@@ -56,9 +47,6 @@ export default function SaveCopyModal({
   const [eventName, setEventName] = useState(defaultEventName);
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
-  const [templateId, setTemplateId] = useState<"template-one" | "template-two" | "">(
-    defaultTemplateId as "template-one" | "template-two" | "",
-  );
   const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
@@ -66,17 +54,16 @@ export default function SaveCopyModal({
       setEventName(defaultEventName);
       setStartDate(defaultStartDate);
       setEndDate(defaultEndDate);
-      setTemplateId(defaultTemplateId as "template-one" | "template-two" | "");
       setShowErrors(false);
     }
-  }, [isOpen, defaultEventName, defaultStartDate, defaultEndDate, defaultTemplateId]);
+  }, [isOpen, defaultEventName, defaultStartDate, defaultEndDate]);
 
   if (!isOpen) return null;
 
   const handleConfirm = () => {
     setShowErrors(true);
-    if (!eventName.trim() || !templateId) return;
-    onConfirm({ eventName, startDate, endDate, templateId });
+    if (!eventName.trim()) return;
+    onConfirm({ eventName, startDate, endDate });
   };
 
   return (
@@ -162,55 +149,6 @@ export default function SaveCopyModal({
           <p className="text-[11px] text-slate-400 -mt-2">
             Leave blank to keep the original proposal dates.
           </p>
-
-          {/* Template selection */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              Template <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setTemplateId("template-one")}
-                className={`cursor-pointer rounded-xl border p-3 transition-all duration-200 hover:-translate-y-0.5 text-left ${
-                  templateId === "template-one" ? selectedCard : unselectedCard
-                }`}
-              >
-                <div className="relative h-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                  <Image
-                    src="/assets/template-modern-preview.svg"
-                    alt="Modern"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <p className="mt-2 text-xs font-bold text-slate-900">Modern</p>
-                <p className="text-[11px] text-slate-500">Bold, sectioned layout</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTemplateId("template-two")}
-                className={`cursor-pointer rounded-xl border p-3 transition-all duration-200 hover:-translate-y-0.5 text-left ${
-                  templateId === "template-two" ? selectedCard : unselectedCard
-                }`}
-              >
-                <div className="relative h-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                  <Image
-                    src="/assets/template-classic-preview.svg"
-                    alt="Classic"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <p className="mt-2 text-xs font-bold text-slate-900">Classic</p>
-                <p className="text-[11px] text-slate-500">Executive summary style</p>
-              </button>
-            </div>
-            {showErrors && !templateId && (
-              <p className="mt-2 text-xs text-red-500">Please select a template.</p>
-            )}
-          </div>
         </div>
 
         {/* Footer */}

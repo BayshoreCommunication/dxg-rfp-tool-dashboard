@@ -1,0 +1,1164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RFP - Global Innovation Summit 2026</title>
+
+    <style>
+      @page {
+        size: A4;
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 11px;
+        color: #1a1a2e;
+        line-height: 1.45;
+        background: #e5e7eb;
+      }
+
+      :root {
+        --primary: #0f1b57;
+        --accent:  #35bdf2;
+        --gray:    #64748b;
+        --border:  #e2e8f0;
+        --light:   #f8fafc;
+        --orange:  #f97316;
+        --amber:   #fffbeb;
+      }
+
+      /* ── PAGE ── */
+      .page {
+        width: 210mm;
+        min-height: 297mm;
+        padding: 18mm 16mm 14mm;
+        margin: 0 auto 8px;
+        background: #fff;
+        position: relative;
+        page-break-after: always;
+      }
+
+      @media print {
+        body { background: #fff; }
+        .page {
+          margin: 0;
+          padding: 14mm 15mm 12mm;
+          page-break-after: always;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .page:last-child { page-break-after: auto; }
+      }
+
+      /* ── INTERIOR HEADER ── */
+      .int-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .int-header-left {
+        font-size: 9.5px;
+        font-weight: 700;
+        color: var(--primary);
+        letter-spacing: 0.2px;
+      }
+      .int-header-right {
+        font-size: 9.5px;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 0.2px;
+      }
+
+      /* ── DIVIDER ── */
+      .divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 0 0 14px;
+      }
+      .divider-thick {
+        border: none;
+        border-top: 4px solid var(--accent);
+        margin: 14px 0 18px;
+        border-radius: 2px;
+      }
+
+      /* ── FOOTER ── */
+      .footer {
+        position: absolute;
+        bottom: 10mm;
+        left: 16mm;
+        right: 16mm;
+        display: flex;
+        justify-content: space-between;
+        font-size: 9px;
+        color: var(--gray);
+        border-top: 1px solid var(--border);
+        padding-top: 5px;
+      }
+
+      /* ═══════════════════════════
+         COVER PAGE
+      ═══════════════════════════ */
+      .cover-header {
+        background: linear-gradient(135deg, #05131f 0%, #0d2647 100%);
+        border-radius: 14px;
+        padding: 20px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0;
+      }
+      .cover-header-left {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .dxg-brand {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+      }
+      .dxg-logo {
+        font-size: 22px;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: -0.5px;
+        line-height: 1;
+      }
+      .dxg-name {
+        font-size: 11px;
+        font-weight: 600;
+        color: #c5d9f4;
+      }
+      .badge-confidential {
+        display: inline-flex;
+        align-items: center;
+        background: #ef4444;
+        color: #fff;
+        font-size: 9px;
+        font-weight: 800;
+        padding: 3px 9px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        width: fit-content;
+      }
+      .badge-rfpilot {
+        display: inline-flex;
+        align-items: center;
+        background: var(--accent);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 6px 14px;
+        border-radius: 8px;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+      }
+
+      /* Cover title block */
+      .cover-title-block {
+        margin-top: 4px;
+        margin-bottom: 14px;
+      }
+      .rfp-label {
+        display: inline-flex;
+        align-items: center;
+        background: #fef2f2;
+        color: #b91c1c;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 4px 10px;
+        border-radius: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+        border: 1px solid #fecaca;
+      }
+      .event-name {
+        font-size: 26px;
+        font-weight: 900;
+        color: var(--primary);
+        line-height: 1.15;
+        margin-bottom: 5px;
+        letter-spacing: -0.3px;
+      }
+      .event-client {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--gray);
+        margin-bottom: 12px;
+      }
+
+      /* Date bar */
+      .date-bar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        overflow: hidden;
+        margin-bottom: 16px;
+      }
+      .date-cell {
+        padding: 9px 13px;
+        font-size: 11px;
+        background: var(--light);
+        border-right: 1px solid var(--border);
+      }
+      .date-cell:last-child { border-right: none; }
+      .date-cell b { color: var(--primary); }
+
+      /* Stats grid */
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .stat-card {
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 10px 10px 9px;
+        background: #fff;
+        text-align: center;
+      }
+      .stat-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--gray);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
+      }
+      .stat-value {
+        font-size: 15px;
+        font-weight: 900;
+        color: var(--primary);
+        line-height: 1;
+      }
+
+      /* Event flags */
+      .flags-section {
+        margin-bottom: 14px;
+      }
+      .flags-label {
+        font-size: 9px;
+        font-weight: 800;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 7px;
+      }
+      .flags-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .flag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 9.5px;
+        font-weight: 800;
+        padding: 4px 10px;
+        border-radius: 20px;
+        letter-spacing: 0.2px;
+        white-space: nowrap;
+      }
+      .flag::before { content: "●"; font-size: 8px; }
+      .flag.teal     { background: #0e7490; color: #fff; }
+      .flag.charcoal { background: #1e293b; color: #fff; }
+      .flag.orange   { background: #c2410c; color: #fff; }
+      .flag.dteal    { background: #0f766e; color: #fff; }
+      .flag.purple   { background: #6d28d9; color: #fff; }
+      .flag.violet   { background: #9333ea; color: #fff; }
+
+      /* Overview box */
+      .overview-box {
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 14px 16px;
+        background: #fff;
+        margin-bottom: 12px;
+      }
+      .overview-heading {
+        font-size: 10px;
+        font-weight: 800;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 9px;
+      }
+      .overview-box p {
+        font-size: 11px;
+        color: #2d3748;
+        line-height: 1.6;
+        margin-bottom: 8px;
+      }
+      .overview-box p:last-of-type { margin-bottom: 0; }
+
+      /* Contact bar */
+      .contact-bar {
+        display: grid;
+        grid-template-columns: 90px 1fr 1fr 1fr;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        overflow: hidden;
+        margin-top: 14px;
+      }
+      .contact-label-cell {
+        background: var(--primary);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 10px 8px;
+        line-height: 1.4;
+      }
+      .contact-data-cell {
+        padding: 10px 13px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--primary);
+        border-left: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        background: var(--light);
+      }
+
+      /* ═══════════════════════════
+         SECTION LAYOUT
+      ═══════════════════════════ */
+      .section { margin-bottom: 14px; }
+
+      .section-title {
+        background: var(--primary);
+        color: #fff;
+        padding: 9px 14px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 13px;
+        font-size: 12.5px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+      .sec-num {
+        background: var(--accent);
+        color: #fff;
+        min-width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 900;
+        flex-shrink: 0;
+      }
+
+      .section-subtitle {
+        font-size: 9.5px;
+        font-weight: 800;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.9px;
+        margin: 12px 0 7px;
+      }
+
+      /* ═══════════════════════════
+         TABLES
+      ═══════════════════════════ */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10.5px;
+      }
+      th {
+        background: var(--primary);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 8px 10px;
+        text-align: left;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+      td {
+        border: 1px solid var(--border);
+        padding: 7px 10px;
+        vertical-align: top;
+        line-height: 1.45;
+        color: #1e293b;
+      }
+      tr:nth-child(even) td { background: #fafbfd; }
+      tr:first-child td { border-top: none; }
+
+      /* 2-col layout */
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      /* Info card */
+      .info-card {
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 12px 14px;
+        background: #fff;
+      }
+      .info-card h3 {
+        font-size: 11.5px;
+        font-weight: 800;
+        color: var(--primary);
+        margin-bottom: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 5px 0;
+        border-bottom: 1px dashed #e5e7eb;
+        gap: 8px;
+      }
+      .info-row:last-of-type { border-bottom: none; }
+      .info-label {
+        font-weight: 700;
+        color: var(--gray);
+        font-size: 10.5px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .info-value {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 10.5px;
+        text-align: right;
+      }
+
+      /* Show Crew box */
+      .crew-box {
+        margin-top: 10px;
+        padding: 8px 11px;
+        background: rgba(53, 189, 242, 0.07);
+        border-left: 3px solid var(--accent);
+        border-radius: 4px;
+      }
+      .crew-title {
+        font-size: 9px;
+        font-weight: 800;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        margin-bottom: 4px;
+      }
+      .crew-list {
+        font-size: 10px;
+        color: #374151;
+        line-height: 1.5;
+      }
+
+      /* Special note box */
+      .note-box {
+        margin-top: 8px;
+        padding: 8px 11px;
+        background: var(--amber);
+        border-left: 3px solid var(--orange);
+        border-radius: 4px;
+      }
+      .note-title {
+        font-size: 9px;
+        font-weight: 800;
+        color: var(--orange);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+      .note-text {
+        font-size: 10px;
+        color: #78350f;
+        line-height: 1.5;
+      }
+
+      /* Callout / teal note */
+      .callout {
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--accent);
+        border-radius: 6px;
+        padding: 12px 14px;
+        background: #f0faff;
+        margin-top: 12px;
+      }
+      .callout p { font-size: 10.5px; color: #1e293b; line-height: 1.55; }
+      .callout .callout-heading {
+        font-size: 10px;
+        font-weight: 800;
+        color: var(--primary);
+        text-transform: uppercase;
+        margin-bottom: 5px;
+        letter-spacing: 0.3px;
+      }
+
+      /* Orange note (union, creative direction) */
+      .orange-callout {
+        border: 1px solid #fed7aa;
+        border-left: 4px solid var(--orange);
+        border-radius: 6px;
+        padding: 11px 14px;
+        background: #fff7ed;
+        margin-top: 12px;
+        font-size: 10.5px;
+        color: #7c2d12;
+        line-height: 1.55;
+        font-style: italic;
+      }
+      .orange-callout b { color: #9a3412; font-style: normal; }
+
+      /* CTA box (last page) */
+      .cta-box {
+        display: flex;
+        margin-top: 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .cta-side {
+        background: var(--primary);
+        color: var(--accent);
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 14px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        min-width: 80px;
+        line-height: 1.5;
+        writing-mode: vertical-lr;
+        transform: rotate(180deg);
+      }
+      .cta-body {
+        padding: 14px 16px;
+        background: #f0faff;
+        flex: 1;
+      }
+      .cta-body p { font-size: 10.5px; color: #1e293b; line-height: 1.6; }
+      .cta-link {
+        margin-top: 7px;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--accent);
+      }
+
+      .disclaimer-box {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-top: 10px;
+        background: var(--light);
+      }
+      .disclaimer-box p { font-size: 10px; color: var(--gray); line-height: 1.6; text-align: center; }
+    </style>
+  </head>
+
+  <body>
+    <!-- ═══════════════════════════════════
+         PAGE 1 — COVER
+    ════════════════════════════════════ -->
+    <div class="page">
+
+      <!-- Cover header -->
+      <div class="cover-header">
+        <div class="cover-header-left">
+          <div class="dxg-brand">
+            <span class="dxg-logo">DXG</span>
+            <span class="dxg-name">Digital Xperience Group</span>
+          </div>
+          <div class="badge-confidential">Confidential</div>
+        </div>
+        <div class="badge-rfpilot">Powered by RFPilot</div>
+      </div>
+
+      <div class="divider-thick"></div>
+
+      <!-- Title block -->
+      <div class="cover-title-block">
+        <div class="rfp-label">Request for Proposal</div>
+        <div class="event-name">Global Innovation Summit 2026</div>
+        <div class="event-client">Apex Dynamics | Las Vegas Convention Center</div>
+
+        <div class="date-bar">
+          <div class="date-cell"><b>RFP Issued:</b> May 7, 2026</div>
+          <div class="date-cell"><b>Response Due:</b> May 21, 2026</div>
+          <div class="date-cell"><b>Event Dates:</b> March 10–12, 2026</div>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Attendees</div>
+          <div class="stat-value">1,000+</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Event Days</div>
+          <div class="stat-value">3 Days</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Show Rooms</div>
+          <div class="stat-value">2 Rooms</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Format</div>
+          <div class="stat-value">Hybrid</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Budget Tier</div>
+          <div class="stat-value">$250K–500K</div>
+        </div>
+      </div>
+
+      <!-- Event flags -->
+      <div class="flags-section">
+        <div class="flags-label">Event Flags</div>
+        <div class="flags-row">
+          <span class="flag teal">HYBRID PRODUCTION</span>
+          <span class="flag charcoal">UNION VENUE (IATSE)</span>
+          <span class="flag orange">LED WALL — 120FT CURVED</span>
+          <span class="flag dteal">BILINGUAL TELEPROMPTING</span>
+          <span class="flag purple">VIDEO RECORDING</span>
+          <span class="flag violet">SCENIC DESIGN</span>
+        </div>
+      </div>
+
+      <!-- Event overview -->
+      <div class="overview-box">
+        <div class="overview-heading">Event Overview</div>
+        <p>
+          The Global Innovation Summit 2026 is Apex Dynamics' flagship annual
+          conference, bringing together more than 1,000 senior executives,
+          technology leaders, and industry innovators for three days of
+          keynotes, interactive sessions, and high-level networking.
+        </p>
+        <p>
+          This year's event marks the debut of a full hybrid format, extending
+          the Summit's reach to a global virtual audience for the first time.
+          The production must deliver an immersive, broadcast-quality experience
+          both in the room and on screen — with a cinematic 120-foot curved LED
+          wall as the visual centerpiece of the general session stage.
+        </p>
+        <p>
+          Apex Dynamics is seeking an AV and production partner who can match
+          the ambition of this event: technically flawless, creatively sharp,
+          and operationally dependable from load-in through strike.
+        </p>
+      </div>
+
+      <!-- Primary contact -->
+      <div class="contact-bar">
+        <div class="contact-label-cell">Primary<br>Contact</div>
+        <div class="contact-data-cell">Sarah Jennings</div>
+        <div class="contact-data-cell">s.jennings@apexdynamics.com</div>
+        <div class="contact-data-cell">+1 (415) 555-8821</div>
+      </div>
+
+      <div class="footer">
+        <div>© 2026 Digital Xperience Group | rfpilot.dxg.com | info@dxg.com</div>
+        <div>Page 1</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 2 — SCOPE AT A GLANCE
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">1</span>
+        Scope at a Glance
+      </div>
+
+      <div class="section-subtitle">Production Timeline</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Load-In</th><th>Rehearsal</th><th>Show Day 1</th>
+            <th>Show Day 2</th><th>Show Day 3</th><th>Strike</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Mar 9 — 8:00 AM</td>
+            <td>Mar 9 — 4:00 PM</td>
+            <td>Mar 10 — 9:00 AM</td>
+            <td>Mar 11 — 9:00 AM</td>
+            <td>Mar 12 — 9:00 AM</td>
+            <td>Mar 12 — 6:00 PM</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="section-subtitle">Scope Overview</div>
+      <div class="info-card">
+        <div class="info-row"><span class="info-label">Venue</span><span class="info-value">Las Vegas Convention Center — Union Jurisdiction (IATSE)</span></div>
+        <div class="info-row"><span class="info-label">Event Format</span><span class="info-value">Hybrid — In-Person (1,000+) + Virtual Broadcast</span></div>
+        <div class="info-row"><span class="info-label">Production Rooms</span><span class="info-value">2 Keynote Pavilion Rooms (Identical Spec)</span></div>
+        <div class="info-row"><span class="info-label">Stage Dimensions</span><span class="info-value">120ft × 40ft per room</span></div>
+        <div class="info-row"><span class="info-label">LED Configuration</span><span class="info-value">Full 120ft Curved LED Wall — Native 4K via Barco E2</span></div>
+        <div class="info-row"><span class="info-label">Show Crew (Per Room)</span><span class="info-value">A1, A2, V1, V2, TD, L1, Graphics Op, Camera Op, Showcaller</span></div>
+        <div class="info-row"><span class="info-label">Additional Roles</span><span class="info-value">Bilingual Teleprompter Ops (EN/ES), 4 Breakout Managers</span></div>
+        <div class="info-row"><span class="info-label">Power Requirements</span><span class="info-value">12 × 400A Power Drops</span></div>
+        <div class="info-row"><span class="info-label">Rigging</span><span class="info-value">High Steel — Max 1,500 lbs. per point</span></div>
+        <div class="info-row"><span class="info-label">Budget Tier</span><span class="info-value">$250,000 – $500,000 (Enterprise Tier)</span></div>
+      </div>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 2</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 3 — ROOM-BY-ROOM SPECS
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">2</span>
+        Room-by-Room Technical Specifications
+      </div>
+
+      <div class="two-col">
+        <!-- Room 1 -->
+        <div class="info-card">
+          <h3>Room 1 of 2 — Keynote Pavilion</h3>
+          <div class="info-row"><span class="info-label">Attendees</span><span class="info-value">1,000</span></div>
+          <div class="info-row"><span class="info-label">Load In</span><span class="info-value">March 9, 8:00 AM</span></div>
+          <div class="info-row"><span class="info-label">Rehearsal</span><span class="info-value">March 9, 4:00 PM</span></div>
+          <div class="info-row"><span class="info-label">Show Start</span><span class="info-value">March 10, 9:00 AM</span></div>
+          <div class="info-row"><span class="info-label">Show End</span><span class="info-value">March 12, 6:00 PM</span></div>
+          <div class="info-row"><span class="info-label">Audio System</span><span class="info-value">1,000-person distributed array</span></div>
+          <div class="info-row"><span class="info-label">Podium Mic</span><span class="info-value">Yes</span></div>
+          <div class="info-row"><span class="info-label">Audience Q&A</span><span class="info-value">Yes — Passed microphone</span></div>
+          <div class="info-row"><span class="info-label">Stage Wash</span><span class="info-value">Yes — 120ft × 40ft</span></div>
+          <div class="info-row"><span class="info-label">LED Wall</span><span class="info-value">Yes — 120ft Curved</span></div>
+          <div class="info-row"><span class="info-label">Video Format</span><span class="info-value">16:9 Native 4K</span></div>
+          <div class="info-row"><span class="info-label">Backlighting</span><span class="info-value">Yes</span></div>
+          <div class="info-row"><span class="info-label">Scenic Uplighting</span><span class="info-value">Yes</span></div>
+          <div class="info-row"><span class="info-label">Audience Lighting</span><span class="info-value">Yes</span></div>
+          <div class="info-row"><span class="info-label">Prog. Confidence</span><span class="info-value">Yes — 2 Monitors</span></div>
+          <div class="info-row"><span class="info-label">Notes Confidence</span><span class="info-value">Yes — 2 Monitors</span></div>
+          <div class="crew-box">
+            <div class="crew-title">Show Crew</div>
+            <div class="crew-list">A1 · A2 · V1 · V2 · TD · L1 · Graphics Op · Camera Op · Showcaller</div>
+          </div>
+          <div class="note-box">
+            <div class="note-title">★ Special Note</div>
+            <div class="note-text">Full 120ft curved LED wall, native 4K switching via Barco E2. Bilingual teleprompter operators required (English / Spanish).</div>
+          </div>
+        </div>
+
+        <!-- Room 2 -->
+        <div class="info-card">
+          <h3>Room 2 of 2 — Keynote Pavilion</h3>
+          <div class="info-row"><span class="info-label">Attendees</span><span class="info-value">1,000</span></div>
+          <div class="info-row"><span class="info-label">Load In</span><span class="info-value">March 9, 8:00 AM</span></div>
+          <div class="info-row"><span class="info-label">Rehearsal</span><span class="info-value">March 9, 4:00 PM</span></div>
+          <div class="info-row"><span class="info-label">Show Start</span><span class="info-value">March 10, 9:00 AM</span></div>
+          <div class="info-row"><span class="info-label">Show End</span><span class="info-value">March 12, 6:00 PM</span></div>
+          <div class="info-row"><span class="info-label">Audio System</span><span class="info-value">1,000-person distributed array</span></div>
+          <div class="info-row"><span class="info-label">Podium Mic</span><span class="info-value">Yes</span></div>
+          <div class="info-row"><span class="info-label">Audience Q&A</span><span class="info-value">Yes — Passed microphone</span></div>
+          <div class="info-row"><span class="info-label">Stage Wash</span><span class="info-value">Yes — 120ft × 40ft</span></div>
+          <div class="info-row"><span class="info-label">LED Wall</span><span class="info-value">Yes — 120ft Curved</span></div>
+          <div class="info-row"><span class="info-label">Video Format</span><span class="info-value">16:9 Native 4K</span></div>
+          <div class="info-row"><span class="info-label">Backlighting</span><span class="info-value">Yes</span></div>
+          <div class="info-row"><span class="info-label">Scenic Uplighting</span><span class="info-value">Yes</span></div>
+          <div class="info-row"><span class="info-label">Audience Lighting</span><span class="info-value">Yes</span></div>
+          <div class="info-row"><span class="info-label">Prog. Confidence</span><span class="info-value">Yes — 2 Monitors</span></div>
+          <div class="info-row"><span class="info-label">Notes Confidence</span><span class="info-value">Yes — 2 Monitors</span></div>
+          <div class="crew-box">
+            <div class="crew-title">Show Crew</div>
+            <div class="crew-list">A1 · A2 · V1 · V2 · TD · L1 · Graphics Op · Camera Op · Showcaller</div>
+          </div>
+          <div class="note-box">
+            <div class="note-title">★ Special Note</div>
+            <div class="note-text">Full 120ft curved LED wall, native 4K switching via Barco E2. Bilingual teleprompter operators required (English / Spanish).</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 3</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 4 — HYBRID & VIRTUAL
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">3</span>
+        Hybrid &amp; Virtual Production
+      </div>
+
+      <p style="font-size:10.5px;color:var(--gray);line-height:1.6;margin-bottom:12px;">
+        This event is formatted as a hybrid production. The specifications below govern the virtual audience experience and streaming infrastructure. Vendors must address each element in their proposal response and clearly identify scope they own vs. scope requiring client or third-party coordination.
+      </p>
+
+      <table>
+        <tbody>
+          <tr><td style="width:38%;"><b>Virtual Attendees (Est.)</b></td><td>2,500 — 5,000</td></tr>
+          <tr><td><b>Streaming Platform</b></td><td>Client-owned (Attendee Hub) — Vendor integration required</td></tr>
+          <tr><td><b>Platform Integration</b></td><td>In-room AV feed into platform encoder required</td></tr>
+          <tr><td><b>Remote Speakers</b></td><td>Yes — Remote presenters presenting into the live room</td></tr>
+          <tr><td><b>Virtual Q&amp;A</b></td><td>Yes — Live integration with in-room Q&amp;A flow</td></tr>
+          <tr><td><b>Virtual-Only Sessions</b></td><td>No</td></tr>
+          <tr><td><b>Stream Ownership</b></td><td>DXG owns in-room feed; client owns platform</td></tr>
+          <tr><td><b>Virtual Producer / Host</b></td><td>Required — Dedicated virtual audience producer</td></tr>
+          <tr><td><b>Closed Captions</b></td><td>Required — English; Spanish preferred</td></tr>
+          <tr><td><b>On-Demand Recording</b></td><td>Yes — Full session library post-event</td></tr>
+          <tr><td><b>Sponsor Overlays</b></td><td>Yes — Lower thirds and sponsored segment slates</td></tr>
+          <tr><td><b>Virtual Networking</b></td><td>No</td></tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 4</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 5 — CONTENT & CREATIVE
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">4</span>
+        Content &amp; Creative Scope
+      </div>
+
+      <p style="font-size:10.5px;color:var(--gray);line-height:1.6;margin-bottom:12px;">
+        The table below defines content ownership responsibilities. Vendors must confirm their ability to deliver all items marked as DXG responsibility and flag any items requiring clarification.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:38%;">Content Element</th>
+            <th style="width:10%;text-align:center;">Client</th>
+            <th style="width:13%;text-align:center;">DXG / Vendor</th>
+            <th style="width:8%;text-align:center;">TBD</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Presentation Template Design</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td>DXG to create master template</td></tr>
+          <tr><td>Speaker Slide Collection &amp; Formatting</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:var(--gray);">—</td><td>Client delivers; DXG formats</td></tr>
+          <tr><td>Motion Graphics / Opener Video</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td>Full open + bumpers</td></tr>
+          <tr><td>Lower Thirds &amp; Name Supers</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td>Live switching</td></tr>
+          <tr><td>Event Logo &amp; Brand Standards</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:var(--gray);">—</td><td>Client provides brand guide</td></tr>
+          <tr><td>Sizzle / Recap Video</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td>Same-day or post-event</td></tr>
+          <tr><td>Live Data Feeds / Real-Time Displays</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:#d97706;font-weight:800;">✓</td><td>Scope TBD</td></tr>
+          <tr><td>Sponsor Recognition Content</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:var(--gray);">—</td><td>Client provides assets</td></tr>
+          <tr><td>Social Media Content Capture</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td>BTS + highlight clips</td></tr>
+          <tr><td>Virtual Background Design</td><td style="text-align:center;color:var(--gray);">—</td><td style="text-align:center;color:#16a34a;font-weight:800;">✓</td><td style="text-align:center;color:var(--gray);">—</td><td>Remote speaker backgrounds</td></tr>
+        </tbody>
+      </table>
+
+      <div class="orange-callout">
+        <b>Creative Direction Note:</b> The Summit visual identity uses a dark navy and electric teal palette with bold, kinetic typography. The 2026 theme is "Velocity" — conveying speed, momentum, and forward motion in enterprise technology. All content and scenic design should reinforce this direction. Brand standards guide will be shared under NDA prior to proposal submission.
+      </div>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 5</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 6 — VIDEO RECORDING
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">5</span>
+        Video Recording &amp; Broadcast
+      </div>
+
+      <div class="section-subtitle">Camera Plan</div>
+      <table>
+        <tbody>
+          <tr><td style="width:38%;"><b>Total Cameras Required</b></td><td>5 per room (minimum)</td></tr>
+          <tr><td><b>Camera Positions</b></td><td>Stage wide / Speaker close-up / Audience reaction / Presenter POV / Roaming handheld</td></tr>
+          <tr><td><b>IMAG</b></td><td>Yes — Cameras feed live IMAG to LED wall simultaneously with recording</td></tr>
+          <tr><td><b>Camera Operators</b></td><td>Dedicated operator per camera — no robotics</td></tr>
+          <tr><td><b>ISO Recordings</b></td><td>Yes — ISO per camera + switched program cut</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-subtitle">Recording &amp; Deliverables</div>
+      <table>
+        <tbody>
+          <tr><td style="width:38%;"><b>Resolution</b></td><td>4K preferred; 1080p acceptable</td></tr>
+          <tr><td><b>Recording Media</b></td><td>Vendor-managed with redundant cloud backup</td></tr>
+          <tr><td><b>Program Cut</b></td><td>Yes — Live switched program cut per session</td></tr>
+          <tr><td><b>Edited Deliverable</b></td><td>Yes — 3–5 min highlight reel per show day (48-hr turnaround)</td></tr>
+          <tr><td><b>Raw Footage</b></td><td>Yes — Full turnover of all ISO files</td></tr>
+          <tr><td><b>Deliverable Format</b></td><td>MP4 (H.264) + ProRes for raw files</td></tr>
+          <tr><td><b>Delivery Method</b></td><td>Hard drive (on-site) + cloud upload (client-provided link)</td></tr>
+          <tr><td><b>Session Breakouts</b></td><td>Yes — Each breakout captured as standalone recording</td></tr>
+          <tr><td><b>Stream Encoder</b></td><td>Vendor manages encoder; feeds client's Attendee Hub platform</td></tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 6</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 7 — VENUE & INFRASTRUCTURE
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">6</span>
+        Venue &amp; Infrastructure
+      </div>
+
+      <table>
+        <tbody>
+          <tr><td style="width:38%;"><b>Venue</b></td><td>Las Vegas Convention Center (LVCC)</td></tr>
+          <tr><td><b>Venue AV Contact</b></td><td>TBD — Vendor to coordinate directly</td></tr>
+          <tr><td><b>Union Jurisdiction</b></td><td>IATSE — All labor subject to union rules</td></tr>
+          <tr><td><b>Union Questions</b></td><td>Vendor must confirm jurisdictional experience at LVCC</td></tr>
+          <tr><td><b>Rigging</b></td><td>High steel required — Maximum 1,500 lbs. per rigging point</td></tr>
+          <tr><td><b>Power Drops</b></td><td>12 × 400A drops required</td></tr>
+          <tr><td><b>Power Coordination</b></td><td>Vendor responsible for layout drawing and venue coordination</td></tr>
+          <tr><td><b>Wireless Internet</b></td><td>Required — Venue-provided; vendor to specify bandwidth needs</td></tr>
+          <tr><td><b>Load-In Access</b></td><td>March 9 from 8:00 AM — Confirm dock assignments with venue</td></tr>
+          <tr><td><b>Strike</b></td><td>March 12 from 6:00 PM — Full strike same evening</td></tr>
+          <tr><td><b>Credential Requirements</b></td><td>All crew must have valid LVCC credentials</td></tr>
+          <tr><td><b>Certificate of Insurance</b></td><td>Minimum $5M general liability required</td></tr>
+        </tbody>
+      </table>
+
+      <div class="orange-callout">
+        <b>Union Note:</b> The Las Vegas Convention Center operates under IATSE jurisdiction. Vendors must have established working relationships with the local and demonstrate experience managing IATSE labor calls at LVCC specifically. Please identify your lead steward contact in your proposal response.
+      </div>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 7</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 8 — VENDOR COORDINATION
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">7</span>
+        Vendor Coordination
+      </div>
+
+      <p style="font-size:10.5px;color:var(--gray);line-height:1.6;margin-bottom:12px;">
+        The following co-vendors are confirmed or anticipated for the Summit. The selected AV vendor is expected to coordinate directly with each and participate in at least two pre-event production calls.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:25%;">Vendor Category</th>
+            <th style="width:22%;">Company</th>
+            <th style="width:15%;">Contact</th>
+            <th>Coordination Scope</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Event Decorator / Scenic</td><td><b>Steelman Events</b></td><td>TBD</td><td>Stage build, furniture, signage coordination</td></tr>
+          <tr><td>Registration / Event Tech</td><td><b>Cvent / Attendee Hub</b></td><td>TBD</td><td>Badge, app, virtual platform integration</td></tr>
+          <tr><td>In-House Venue AV</td><td><b>LVCC In-House</b></td><td>TBD</td><td>Power, rigging, venue infrastructure sign-off</td></tr>
+          <tr><td>Agency of Record</td><td><b>Momentum Agency</b></td><td>TBD</td><td>Brand approvals, content sign-off chain</td></tr>
+          <tr><td>Photography</td><td><b>Client-Contracted</b></td><td>TBD</td><td>Coordinate stage access windows</td></tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 8</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 9 — PROPOSAL REQUIREMENTS
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">8</span>
+        Proposal Requirements &amp; Evaluation
+      </div>
+
+      <div class="section-subtitle">Required Response Format</div>
+      <p style="font-size:10.5px;color:var(--gray);margin-bottom:8px;">All vendor proposals must include the following components. Incomplete submissions will be removed from evaluation.</p>
+
+      <table>
+        <thead>
+          <tr><th style="width:6%;">#</th><th style="width:28%;">Requirement</th><th>Details</th></tr>
+        </thead>
+        <tbody>
+          <tr><td style="text-align:center;font-weight:800;background:var(--primary);color:var(--accent);">1</td><td><b>Itemized Gear List</b></td><td>Line-item equipment list with quantities, make/model, and daily rates. LED wall must be line-itemed separately.</td></tr>
+          <tr><td style="text-align:center;font-weight:800;background:var(--primary);color:var(--accent);">2</td><td><b>Labor Breakdown</b></td><td>All crew positions by day with call times, rates, and overtime assumptions clearly stated.</td></tr>
+          <tr><td style="text-align:center;font-weight:800;background:var(--primary);color:var(--accent);">3</td><td><b>All-In Estimate</b></td><td>Single consolidated total inclusive of gear, labor, freight, expendables, and any other costs.</td></tr>
+          <tr><td style="text-align:center;font-weight:800;background:var(--primary);color:var(--accent);">4</td><td><b>Hybrid Production Plan</b></td><td>Narrative describing your approach to broadcast, platform integration, and virtual audience experience.</td></tr>
+          <tr><td style="text-align:center;font-weight:800;background:var(--primary);color:var(--accent);">5</td><td><b>Scenic / LED Approach</b></td><td>Describe experience with large-format curved LED at LVCC or comparable venues.</td></tr>
+          <tr><td style="text-align:center;font-weight:800;background:var(--primary);color:var(--accent);">6</td><td><b>Crew Bios</b></td><td>Lead crew bios for TD, A1, L1, and Showcaller. LVCC experience preferred.</td></tr>
+          <tr><td style="text-align:center;font-weight:800;background:var(--primary);color:var(--accent);">7</td><td><b>References</b></td><td>Minimum two references from comparable hybrid events at union venues in the last 24 months.</td></tr>
+          <tr><td style="text-align:center;font-weight:800;background:var(--primary);color:var(--accent);">8</td><td><b>Alternates</b></td><td>Provide at least one alternate/value-engineered option with scope tradeoffs clearly explained.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-subtitle">Weighted Evaluation Matrix</div>
+      <p style="font-size:10.5px;color:var(--gray);margin-bottom:8px;">Proposals will be scored against the criteria below. Weights reflect client priorities for this specific event. Total must equal 100%.</p>
+
+      <table>
+        <thead>
+          <tr><th>Evaluation Criterion</th><th style="width:12%;text-align:center;">Weight</th><th>Scoring Guide</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Technical Approach &amp; Equipment Quality</td><td style="text-align:center;font-weight:800;color:var(--primary);">25%</td><td>Spec compliance, gear quality, E2/LED experience</td></tr>
+          <tr><td>Crew Experience &amp; References</td><td style="text-align:center;font-weight:800;color:var(--primary);">20%</td><td>Bios, LVCC history, comparable event record</td></tr>
+          <tr><td>Hybrid / Virtual Production Capability</td><td style="text-align:center;font-weight:800;color:var(--primary);">20%</td><td>Platform integration, virtual producer, stream quality</td></tr>
+          <tr><td>Pricing &amp; Value</td><td style="text-align:center;font-weight:800;color:var(--primary);">15%</td><td>Competitiveness, transparency, alternate options</td></tr>
+          <tr><td>Creative &amp; Scenic Design Capability</td><td style="text-align:center;font-weight:800;color:var(--primary);">10%</td><td>Portfolio, LED aesthetic, scenic vision</td></tr>
+          <tr><td>Responsiveness &amp; Communication</td><td style="text-align:center;font-weight:800;color:var(--primary);">7%</td><td>RFP quality, questions asked, proposal clarity</td></tr>
+          <tr><td>Sustainability &amp; DEI Practices</td><td style="text-align:center;font-weight:800;color:var(--primary);">3%</td><td>Vendor policy documentation</td></tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 9</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE 10 — SUBMISSION TERMS
+    ════════════════════════════════════ -->
+    <div class="page">
+      <div class="int-header">
+        <span class="int-header-left">DXG | RFPilot</span>
+        <span class="int-header-right">Global Innovation Summit 2026 — CONFIDENTIAL</span>
+      </div>
+      <hr class="divider" />
+
+      <div class="section-title">
+        <span class="sec-num">9</span>
+        Submission Terms &amp; Next Steps
+      </div>
+
+      <table>
+        <tbody>
+          <tr><td style="width:38%;"><b>Proposal Deadline</b></td><td>May 21, 2026 by 5:00 PM PT</td></tr>
+          <tr><td><b>Submission Method</b></td><td>Via RFPilot vendor portal — rfpilot.dxg.com/submit</td></tr>
+          <tr><td><b>Vendor Q&amp;A Deadline</b></td><td>May 14, 2026 — Submit questions through portal</td></tr>
+          <tr><td><b>Q&amp;A Responses Issued</b></td><td>May 16, 2026 — Issued to all vendors simultaneously</td></tr>
+          <tr><td><b>Shortlist Notification</b></td><td>May 23, 2026</td></tr>
+          <tr><td><b>Finalist Presentations</b></td><td>Week of May 27, 2026 (virtual, 45 minutes per vendor)</td></tr>
+          <tr><td><b>Award Decision</b></td><td>June 3, 2026</td></tr>
+          <tr><td><b>Contract Execution</b></td><td>June 10, 2026</td></tr>
+          <tr><td><b>Proposal Validity</b></td><td>Proposals must remain valid for 60 days from submission</td></tr>
+          <tr><td><b>NDA Requirement</b></td><td>NDA must be executed before receiving brand standards materials</td></tr>
+          <tr><td><b>COI Requirement</b></td><td>Certificate of Insurance ($5M GL) required at contract execution</td></tr>
+          <tr><td><b>Questions &amp; Contact</b></td><td>Sarah Jennings | s.jennings@apexdynamics.com</td></tr>
+        </tbody>
+      </table>
+
+      <div class="cta-box">
+        <div class="cta-side">Book a Producer Insight Call</div>
+        <div class="cta-body">
+          <p>Your event includes a curved LED wall, hybrid broadcast, and bilingual teleprompting — elements that benefit from a conversation before your RFP goes out.</p>
+          <div class="cta-link">→ rfpilot.dxg.com/producer-call</div>
+        </div>
+      </div>
+
+      <div class="disclaimer-box">
+        <p>This RFP was generated by RFPilot, a platform by Digital Xperience Group. All specifications reflect information provided by the event planner. DXG is available to answer vendor questions and facilitate the proposal process. This document is confidential and intended solely for invited vendors.</p>
+      </div>
+
+      <div class="footer">
+        <div>DXG | RFPilot — Global Innovation Summit 2026 — CONFIDENTIAL</div>
+        <div>Page 10</div>
+      </div>
+    </div>
+  </body>
+</html>
+

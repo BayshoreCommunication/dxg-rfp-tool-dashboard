@@ -1,0 +1,986 @@
+"use client";
+
+/* ─── CSS matching ProposalTemplate.html design ─── */
+const TEMPLATE_CSS = `
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
+  .rfp-root { --primary: #0f1b57; --accent: #35bdf2; --gray: #64748b; --border: #e2e8f0; --light: #f8fafc; --orange: #f97316; --amber: #fffbeb; font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
+  .rfp-root .page { width: 210mm; min-height: 297mm; padding: 18mm 16mm 14mm; margin: 0 auto 8px; background: #fff; position: relative; page-break-after: always; }
+  @media print { body { background: #fff; } .rfp-root .page { margin: 0; padding: 14mm 15mm 12mm; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rfp-root .page:last-child { page-break-after: auto; } .no-print { display: none !important; } }
+  .rfp-root .int-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .rfp-root .int-header-left { font-size: 9.5px; font-weight: 700; color: #0f1b57; letter-spacing: 0.2px; }
+  .rfp-root .int-header-right { font-size: 9.5px; font-weight: 700; color: #35bdf2; letter-spacing: 0.2px; }
+  .rfp-root .divider { border: none; border-top: 1px solid #e2e8f0; margin: 0 0 14px; }
+  .rfp-root .divider-thick { border: none; border-top: 4px solid #35bdf2; margin: 14px 0 18px; border-radius: 2px; }
+  .rfp-root .footer { position: absolute; bottom: 10mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; font-size: 9px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 5px; }
+  .rfp-root .cover-header { background: linear-gradient(135deg, #05131f 0%, #0d2647 100%); border-radius: 14px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .rfp-root .cover-header-left { display: flex; flex-direction: column; gap: 6px; }
+  .rfp-root .dxg-brand { display: flex; align-items: baseline; gap: 4px; }
+  .rfp-root .dxg-logo { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: -0.5px; line-height: 1; }
+  .rfp-root .dxg-name { font-size: 11px; font-weight: 600; color: #c5d9f4; }
+  .rfp-root .badge-confidential { display: inline-flex; align-items: center; background: #ef4444; color: #fff; font-size: 9px; font-weight: 800; padding: 3px 9px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.6px; width: fit-content; }
+  .rfp-root .badge-rfpilot { display: inline-flex; align-items: center; background: #35bdf2; color: #fff; font-size: 10px; font-weight: 800; padding: 6px 14px; border-radius: 8px; letter-spacing: 0.3px; white-space: nowrap; }
+  .rfp-root .cover-title-block { margin-top: 4px; margin-bottom: 14px; }
+  .rfp-root .rfp-label { display: inline-flex; align-items: center; background: #fef2f2; color: #b91c1c; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; border: 1px solid #fecaca; }
+  .rfp-root .event-name { font-size: 26px; font-weight: 900; color: #0f1b57; line-height: 1.15; margin-bottom: 5px; letter-spacing: -0.3px; }
+  .rfp-root .event-client { font-size: 13px; font-weight: 700; color: #64748b; margin-bottom: 12px; }
+  .rfp-root .date-bar { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #e2e8f0; border-radius: 7px; overflow: hidden; margin-bottom: 16px; }
+  .rfp-root .date-cell { padding: 9px 13px; font-size: 11px; background: #f8fafc; border-right: 1px solid #e2e8f0; }
+  .rfp-root .date-cell:last-child { border-right: none; }
+  .rfp-root .date-cell b { color: #0f1b57; }
+  .rfp-root .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
+  .rfp-root .stat-card { border: 1px solid #e2e8f0; border-radius: 7px; padding: 10px 10px 9px; background: #fff; text-align: center; }
+  .rfp-root .stat-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .rfp-root .stat-value { font-size: 15px; font-weight: 900; color: #0f1b57; line-height: 1; }
+  .rfp-root .flags-section { margin-bottom: 14px; }
+  .rfp-root .flags-label { font-size: 9px; font-weight: 800; color: #35bdf2; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
+  .rfp-root .flags-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rfp-root .flag { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.2px; white-space: nowrap; }
+  .rfp-root .flag::before { content: "●"; font-size: 8px; }
+  .rfp-root .flag.teal { background: #0e7490; color: #fff; }
+  .rfp-root .flag.charcoal { background: #1e293b; color: #fff; }
+  .rfp-root .flag.orange { background: #c2410c; color: #fff; }
+  .rfp-root .flag.dteal { background: #0f766e; color: #fff; }
+  .rfp-root .flag.purple { background: #6d28d9; color: #fff; }
+  .rfp-root .flag.violet { background: #9333ea; color: #fff; }
+  .rfp-root .flag.green { background: #166534; color: #fff; }
+  .rfp-root .overview-box { border: 1px solid #e2e8f0; border-radius: 7px; padding: 14px 16px; background: #fff; margin-bottom: 12px; }
+  .rfp-root .overview-heading { font-size: 10px; font-weight: 800; color: #35bdf2; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 9px; }
+  .rfp-root .overview-box p { font-size: 11px; color: #2d3748; line-height: 1.6; margin-bottom: 8px; }
+  .rfp-root .overview-box p:last-of-type { margin-bottom: 0; }
+  .rfp-root .contact-bar { display: grid; grid-template-columns: 90px 1fr 1fr 1fr; border: 1px solid #e2e8f0; border-radius: 7px; overflow: hidden; margin-top: 14px; }
+  .rfp-root .contact-label-cell { background: #0f1b57; color: #fff; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px 8px; line-height: 1.4; }
+  .rfp-root .contact-data-cell { padding: 10px 13px; font-size: 11px; font-weight: 700; color: #0f1b57; border-left: 1px solid #e2e8f0; display: flex; align-items: center; background: #f8fafc; }
+  .rfp-root .section { margin-bottom: 14px; }
+  .rfp-root .section-title { background: #0f1b57; color: #fff; padding: 9px 14px; border-radius: 9px; display: flex; align-items: center; gap: 11px; margin-bottom: 13px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; }
+  .rfp-root .sec-num { background: #35bdf2; color: #fff; min-width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; flex-shrink: 0; }
+  .rfp-root .section-subtitle { font-size: 9.5px; font-weight: 800; color: #35bdf2; text-transform: uppercase; letter-spacing: 0.9px; margin: 12px 0 7px; }
+  .rfp-root table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .rfp-root th { background: #0f1b57; color: #fff; font-size: 10px; font-weight: 700; padding: 8px 10px; text-align: left; letter-spacing: 0.3px; text-transform: uppercase; }
+  .rfp-root td { border: 1px solid #e2e8f0; padding: 7px 10px; vertical-align: top; line-height: 1.45; color: #1e293b; }
+  .rfp-root tr:nth-child(even) td { background: #fafbfd; }
+  .rfp-root tr:first-child td { border-top: none; }
+  .rfp-root .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rfp-root .info-card { border: 1px solid #e2e8f0; border-radius: 7px; padding: 12px 14px; background: #fff; }
+  .rfp-root .info-card h3 { font-size: 11.5px; font-weight: 800; color: #0f1b57; margin-bottom: 9px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .rfp-root .info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 5px 0; border-bottom: 1px dashed #e5e7eb; gap: 8px; }
+  .rfp-root .info-row:last-of-type { border-bottom: none; }
+  .rfp-root .info-label { font-weight: 700; color: #64748b; font-size: 10.5px; white-space: nowrap; flex-shrink: 0; }
+  .rfp-root .info-value { font-weight: 600; color: #1e293b; font-size: 10.5px; text-align: right; }
+  .rfp-root .crew-box { margin-top: 10px; padding: 8px 11px; background: rgba(53,189,242,0.07); border-left: 3px solid #35bdf2; border-radius: 4px; }
+  .rfp-root .crew-title { font-size: 9px; font-weight: 800; color: #35bdf2; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 4px; }
+  .rfp-root .crew-list { font-size: 10px; color: #374151; line-height: 1.5; }
+  .rfp-root .note-box { margin-top: 8px; padding: 8px 11px; background: #fffbeb; border-left: 3px solid #f97316; border-radius: 4px; }
+  .rfp-root .note-title { font-size: 9px; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .rfp-root .note-text { font-size: 10px; color: #78350f; line-height: 1.5; }
+  .rfp-root .callout { border: 1px solid #e2e8f0; border-left: 4px solid #35bdf2; border-radius: 6px; padding: 12px 14px; background: #f0faff; margin-top: 12px; }
+  .rfp-root .callout p { font-size: 10.5px; color: #1e293b; line-height: 1.55; }
+  .rfp-root .callout-heading { font-size: 10px; font-weight: 800; color: #0f1b57; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.3px; }
+  .rfp-root .orange-callout { border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 6px; padding: 11px 14px; background: #fff7ed; margin-top: 12px; font-size: 10.5px; color: #7c2d12; line-height: 1.55; font-style: italic; }
+  .rfp-root .orange-callout b { color: #9a3412; font-style: normal; }
+  .rfp-root .cta-box { display: flex; margin-top: 14px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+  .rfp-root .cta-side { background: #0f1b57; color: #35bdf2; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 14px 12px; display: flex; align-items: center; justify-content: center; text-align: center; min-width: 80px; line-height: 1.5; writing-mode: vertical-lr; transform: rotate(180deg); }
+  .rfp-root .cta-body { padding: 14px 16px; background: #f0faff; flex: 1; }
+  .rfp-root .cta-body p { font-size: 10.5px; color: #1e293b; line-height: 1.6; }
+  .rfp-root .cta-link { margin-top: 7px; font-size: 11px; font-weight: 800; color: #35bdf2; }
+  .rfp-root .disclaimer-box { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-top: 10px; background: #f8fafc; }
+  .rfp-root .disclaimer-box p { font-size: 10px; color: #64748b; line-height: 1.6; text-align: center; }
+  .rfp-root .matrix-bar { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 3px; }
+  .rfp-root .matrix-fill { height: 6px; background: #35bdf2; border-radius: 3px; }
+`;
+
+/* ─── Data types ─── */
+type RD = Record<string, unknown>;
+
+export type RfpProposalData = {
+  _id?: string;
+  createdAt?: string;
+  status?: string;
+  proposalSetting?: {
+    branding?: {
+      brandName?: string;
+      linkPrefix?: string;
+      signatureColor?: string;
+      logoFile?: string | null;
+    };
+    proposals?: {
+      proposalLanguage?: string;
+      defaultCurrency?: string;
+    };
+  };
+  proposalSettings?: {
+    linkPrefix?: string;
+    defaultFont?: string;
+    proposalLanguage?: string;
+    defaultCurrency?: string;
+  };
+  event?: {
+    eventName?: string;
+    editionYear?: string;
+    eventTheme?: string;
+    startDate?: string;
+    endDate?: string;
+    venue?: string;
+    venueCity?: string;
+    attendees?: string;
+    eventFormat?: string;
+    eventType?: { eventType?: string; eventTypeOther?: string } | string;
+    primaryAudience?: string[];
+    eventObjectives?: string;
+    toneDirection?: string[];
+    sacredConstraints?: string;
+  };
+  venueSchedule?: RD;
+  roomByRoom?: RD[] | RD;
+  production?: RD;
+  hybridVirtual?: RD;
+  contentCreative?: RD;
+  videoRecordingStep?: RD;
+  venue?: RD;
+  uploads?: RD;
+  budget?: RD;
+  contact?: {
+    contactFirstName?: string;
+    contactLastName?: string;
+    contactTitle?: string;
+    contactOrganization?: string;
+    organizationLegalName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    anythingElse?: string;
+  };
+};
+
+/* ─── Helpers ─── */
+const p = (v: unknown): string =>
+  typeof v === "string" && v.trim() ? v.trim() : "";
+
+const arr = (v: unknown): string[] =>
+  Array.isArray(v) ? (v as unknown[]).map((x) => p(x)).filter(Boolean) : [];
+
+const fmtDate = (v?: string): string => {
+  if (!v) return "";
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+};
+
+const yn = (v: unknown): string => {
+  const s = p(v);
+  if (s === "YES") return "Yes";
+  if (s === "NO") return "No";
+  return s;
+};
+
+/* ─── Sub-components ─── */
+function IntHeader({ brand, title }: { brand: string; title: string }) {
+  return (
+    <>
+      <div className="int-header">
+        <span className="int-header-left">{brand} | RFPilot</span>
+        <span className="int-header-right">{title} — CONFIDENTIAL</span>
+      </div>
+      <hr className="divider" />
+    </>
+  );
+}
+
+function Footer({ left, page }: { left: string; page: number }) {
+  return (
+    <div className="footer">
+      <div>{left}</div>
+      <div>Page {page}</div>
+    </div>
+  );
+}
+
+function SectionTitle({ num, children }: { num: number | string; children: React.ReactNode }) {
+  return (
+    <div className="section-title">
+      <span className="sec-num">{num}</span>
+      {children}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  if (!value) return null;
+  return (
+    <div className="info-row">
+      <span className="info-label">{label}</span>
+      <span className="info-value">{value}</span>
+    </div>
+  );
+}
+
+/* ─── Main component ─── */
+export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposalData }) {
+  const ev = proposal.event || {};
+  const ct = proposal.contact || {};
+  const vs = (proposal.venueSchedule || {}) as RD;
+  const rooms: RD[] = Array.isArray(proposal.roomByRoom)
+    ? (proposal.roomByRoom as RD[])
+    : proposal.roomByRoom
+    ? [proposal.roomByRoom as RD]
+    : [];
+  const hv = (proposal.hybridVirtual || {}) as RD;
+  const cc = (proposal.contentCreative || {}) as RD;
+  const vr = (proposal.videoRecordingStep || {}) as RD;
+  const ven = (proposal.venue || {}) as RD;
+  const up = (proposal.uploads || {}) as RD;
+  const bud = (proposal.budget || {}) as RD;
+
+  const brandName =
+    p(proposal.proposalSetting?.branding?.brandName) ||
+    p(proposal.proposalSettings?.linkPrefix) ||
+    "DXG";
+  const currency =
+    p(proposal.proposalSetting?.proposals?.defaultCurrency) ||
+    p(proposal.proposalSettings?.defaultCurrency) || "$";
+
+  const eventName = p(ev.eventName) || "Event Proposal";
+  const isHybrid = ev.eventFormat === "Hybrid" || ev.eventFormat === "Virtual";
+  const fullName = [p(ct.contactFirstName), p(ct.contactLastName)].filter(Boolean).join(" ");
+  const org = p(ct.contactOrganization);
+
+  /* Flags */
+  const hasLedWall = rooms.some((r) => p(r.ledWall).toUpperCase() === "YES");
+  const hasUnion = rooms.some((r) => p(r.unionLabor) === "Yes" || p(r.isUnionVenue) === "YES");
+  const hasVideo = rooms.some((r) => {
+    const rv = r.videoRecording;
+    if (rv && typeof rv === "object") return p((rv as RD).videoRecording).toLowerCase() === "yes";
+    return p(rv as string).toLowerCase() === "yes";
+  });
+  const hasScenic = rooms.some((r) => p(r.scenicStageDesign).toLowerCase() === "yes");
+  const hasPrompt = rooms.some(
+    (r) => p(r.teleprompterRequired).toUpperCase() === "YES" || p(r.teleprompterBilingual).toUpperCase() === "YES",
+  );
+  const hasContent = p(cc.contentServicesNeeded) === "YES";
+
+  const flags: { label: string; cls: string }[] = [
+    ...(isHybrid ? [{ label: `${ev.eventFormat?.toUpperCase()} PRODUCTION`, cls: "teal" }] : [{ label: "IN-PERSON EVENT", cls: "charcoal" }]),
+    ...(hasUnion ? [{ label: "UNION VENUE", cls: "charcoal" }] : []),
+    ...(hasLedWall ? [{ label: "LED WALL", cls: "orange" }] : []),
+    ...(hasPrompt ? [{ label: "TELEPROMPTING", cls: "dteal" }] : []),
+    ...(hasVideo ? [{ label: "VIDEO RECORDING", cls: "purple" }] : []),
+    ...(hasScenic ? [{ label: "SCENIC DESIGN", cls: "violet" }] : []),
+    ...(hasContent ? [{ label: "CONTENT & CREATIVE", cls: "green" }] : []),
+  ];
+
+  const footerLeft = `${brandName} | RFPilot — ${eventName} — CONFIDENTIAL`;
+  const headerTitle = `${eventName}`;
+
+  /* Covendors */
+  const cvs = (up.coVendors || {}) as RD;
+  const coVendorList: { cat: string; company: string; contact: string; scope: string }[] = [
+    { cat: "In-House Venue AV", company: p((cvs.inHouseVenueAv as RD)?.companyName), contact: p((cvs.inHouseVenueAv as RD)?.contactName), scope: "Power, rigging, venue infrastructure" },
+    { cat: "Event Decorator / Scenic", company: p((cvs.eventDecorator as RD)?.companyName), contact: p((cvs.eventDecorator as RD)?.contactName), scope: "Stage build, furniture, signage" },
+    { cat: "Registration / Event Tech", company: p((cvs.registrationTech as RD)?.companyName), contact: p((cvs.registrationTech as RD)?.contactName), scope: "Badge, app, virtual platform integration" },
+    { cat: "Agency of Record", company: p((cvs.agencyOfRecord as RD)?.companyName), contact: p((cvs.agencyOfRecord as RD)?.contactName), scope: "Brand approvals, content sign-off" },
+    { cat: "Photography", company: p((cvs.photographer as RD)?.companyName), contact: p((cvs.photographer as RD)?.contactName), scope: "Coordinate stage access windows" },
+  ].filter((v) => v.company || v.contact);
+
+  /* Eval matrix */
+  const em = (bud.evaluationMatrix || {}) as RD;
+  const matrixRows: { label: string; weight: number; guide: string }[] = [
+    { label: "Technical Approach & Equipment Quality", weight: Number(em.technicalApproach) || 25, guide: "Spec compliance, gear quality, LED experience" },
+    { label: "Crew Experience & References", weight: Number(em.crewExperience) || 20, guide: "Bios, venue history, comparable event record" },
+    ...(isHybrid ? [{ label: "Hybrid / Virtual Production Capability", weight: Number(em.hybridVirtual) || 20, guide: "Platform integration, virtual producer, stream quality" }] : []),
+    { label: "Pricing & Value", weight: Number(em.pricing) || 15, guide: "Competitiveness, transparency, alternate options" },
+    ...(hasScenic || hasContent ? [{ label: "Creative & Scenic Design Capability", weight: Number(em.creativeScenic) || 10, guide: "Portfolio, LED aesthetic, scenic vision" }] : []),
+    { label: "Responsiveness & Communication", weight: Number(em.responsiveness) || 7, guide: "RFP quality, questions asked, proposal clarity" },
+    { label: "Sustainability & DEI Practices", weight: Number(em.sustainabilityDei) || 3, guide: "Vendor policy documentation" },
+  ];
+
+  /* Room renderer */
+  const renderRoom = (room: RD, idx: number, total: number) => {
+    const crew = arr(room.showCrewNeeded);
+    const notes: string[] = [];
+    if (p(room.ledWallSpecs)) notes.push(p(room.ledWallSpecs));
+    if (p(room.teleprompterBilingual).toUpperCase() === "YES") {
+      const langs = arr(room.teleprompterLanguages);
+      notes.push(`Bilingual teleprompter operators required${langs.length ? ` (${langs.join(" / ")})` : ""}.`);
+    }
+    if (p(room.scenicStageDesign).toLowerCase() === "yes" && p(room.scenicStageDesignNotes)) {
+      notes.push(p(room.scenicStageDesignNotes));
+    }
+    if (p(room.contentVideoNeeds)) notes.push(p(room.contentVideoNeeds));
+
+    const aqRaw = room.audienceQa;
+    const aqMethod =
+      aqRaw && typeof aqRaw === "object"
+        ? p((aqRaw as RD).audienceQaMethod)
+        : "";
+    const aqVal =
+      aqRaw && typeof aqRaw === "object"
+        ? p((aqRaw as RD).audienceQa)
+        : p(aqRaw as string);
+
+    const vrRaw = room.videoRecording;
+    const vrVal =
+      vrRaw && typeof vrRaw === "object"
+        ? p((vrRaw as RD).videoRecording)
+        : p(vrRaw as string);
+    const vrType =
+      vrRaw && typeof vrRaw === "object"
+        ? p((vrRaw as RD).videoRecordingType)
+        : "";
+
+    const swRaw = room.stageWashLighting;
+    const swVal =
+      swRaw && typeof swRaw === "object"
+        ? p((swRaw as RD).stageWashLighting)
+        : p(swRaw as string);
+    const swSize =
+      swRaw && typeof swRaw === "object"
+        ? p((swRaw as RD).stageWashLightingStageSize)
+        : "";
+
+    const pmRaw = room.programConfidenceMonitor;
+    const pmVal =
+      pmRaw && typeof pmRaw === "object"
+        ? p((pmRaw as RD).programConfidenceMonitor)
+        : p(pmRaw as string);
+    const pmQty =
+      pmRaw && typeof pmRaw === "object"
+        ? p((pmRaw as RD).programConfidenceMonitorQty)
+        : "";
+
+    const nmRaw = room.notesConfidenceMonitor;
+    const nmVal =
+      nmRaw && typeof nmRaw === "object"
+        ? p((nmRaw as RD).notesConfidenceMonitor)
+        : p(nmRaw as string);
+    const nmQty =
+      nmRaw && typeof nmRaw === "object"
+        ? p((nmRaw as RD).notesConfidenceMonitorQty)
+        : "";
+
+    const wmRaw = room.wirelessMics;
+    const wmVal =
+      wmRaw && typeof wmRaw === "object"
+        ? p((wmRaw as RD).wirelessMics)
+        : p(wmRaw as string);
+    const wmQty =
+      wmRaw && typeof wmRaw === "object"
+        ? p((wmRaw as RD).wirelessMicsQty)
+        : "";
+    const wmType =
+      wmRaw && typeof wmRaw === "object"
+        ? p((wmRaw as RD).wirelessMicsType)
+        : "";
+
+    const camRaw = room.cameras;
+    const camVal =
+      camRaw && typeof camRaw === "object"
+        ? p((camRaw as RD).cameras)
+        : p(camRaw as string);
+    const camQty =
+      camRaw && typeof camRaw === "object"
+        ? p((camRaw as RD).camerasQty)
+        : "";
+
+    return (
+      <div key={idx} className="info-card">
+        <h3>
+          Room {idx + 1} of {total}
+          {p(room.roomFunction) ? ` — ${p(room.roomFunction)}` : ""}
+        </h3>
+        <InfoRow label="Attendees" value={p(room.estimatedAttendeesInRoom)} />
+        <InfoRow label="Load In" value={[p(room.loadInDateTime), fmtDate(p(room.loadInDateTime))].filter(Boolean)[0] || ""} />
+        <InfoRow label="Rehearsal" value={p(room.rehearsalDateTime)} />
+        <InfoRow label="Show Start" value={p(room.showStartDateTime)} />
+        <InfoRow label="Show End" value={p(room.showEndDateTime)} />
+        <InfoRow label="Stage Dimensions" value={p(room.stageDimensions)} />
+        <InfoRow label="Audio System" value={p(room.audioSystemForHowManyPpl) ? `${p(room.audioSystemForHowManyPpl)}-person system` : ""} />
+        <InfoRow label="Wireless Mics" value={wmVal === "Yes" && wmQty ? `Yes (${wmQty}${wmType ? `, ${wmType}` : ""})` : wmVal} />
+        <InfoRow label="Audience Q&A" value={aqVal === "Yes" && aqMethod ? `Yes — ${aqMethod}` : aqVal} />
+        <InfoRow label="LED Wall" value={p(room.ledWall).toLowerCase() === "yes" ? (p(room.ledWallSpecs) || "Yes") : p(room.ledWall)} />
+        <InfoRow label="Video Format" value={p(room.videoFormatAspectRatio)} />
+        <InfoRow label="Video Recording" value={vrVal === "Yes" && vrType ? `Yes — ${vrType}` : vrVal} />
+        <InfoRow label="Cameras" value={camVal === "Yes" && camQty ? `Yes (${camQty})` : camVal} />
+        <InfoRow label="Stage Wash Lighting" value={swVal === "Yes" && swSize ? `Yes — ${swSize}` : swVal} />
+        <InfoRow label="Backlighting" value={p(room.backlightingFor)} />
+        <InfoRow label="Scenic Uplighting" value={p(room.drapeOrScenicUplighting)} />
+        <InfoRow label="Audience Lighting" value={p(room.audienceLighting)} />
+        <InfoRow label="Prog. Confidence" value={pmVal === "Yes" && pmQty ? `Yes — ${pmQty} Monitors` : pmVal} />
+        <InfoRow label="Notes Confidence" value={nmVal === "Yes" && nmQty ? `Yes — ${nmQty} Monitors` : nmVal} />
+        <InfoRow label="Scenic / Stage Design" value={p(room.scenicStageDesign)} />
+        <InfoRow label="Union Labor" value={p(room.unionLabor)} />
+        {crew.length > 0 && (
+          <div className="crew-box">
+            <div className="crew-title">Show Crew</div>
+            <div className="crew-list">{crew.join(" · ")}</div>
+          </div>
+        )}
+        {notes.length > 0 && (
+          <div className="note-box">
+            <div className="note-title">★ Special Notes</div>
+            <div className="note-text">{notes.join(" ")}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  let sectionNum = 0;
+  const nextSec = () => ++sectionNum;
+
+  return (
+    <div className="rfp-root proposal-print-root">
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: TEMPLATE_CSS }} />
+
+      {/* ══════════════ PAGE 1: COVER ══════════════ */}
+      <div className="page">
+        <div className="cover-header">
+          <div className="cover-header-left">
+            <div className="dxg-brand">
+              <span className="dxg-logo">{brandName}</span>
+            </div>
+            <div className="badge-confidential">Confidential</div>
+          </div>
+          <div className="badge-rfpilot">Powered by RFPilot</div>
+        </div>
+
+        <div className="divider-thick" />
+
+        <div className="cover-title-block">
+          <div className="rfp-label">Request for Proposal</div>
+          <div className="event-name">{eventName}</div>
+          {(org || p(ev.venue)) && (
+            <div className="event-client">
+              {[org, p(ev.venue)].filter(Boolean).join(" | ")}
+            </div>
+          )}
+          <div className="date-bar">
+            <div className="date-cell">
+              <b>RFP Issued:</b> {fmtDate(proposal.createdAt) || "—"}
+            </div>
+            <div className="date-cell">
+              <b>Response Due:</b>{" "}
+              {p(bud.timelineForProposal) || p(bud.decisionDate) || "—"}
+            </div>
+            <div className="date-cell">
+              <b>Event Dates:</b>{" "}
+              {[fmtDate(p(ev.startDate)), fmtDate(p(ev.endDate))].filter(Boolean).join(" – ") || "—"}
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-row">
+          <div className="stat-card">
+            <div className="stat-label">Attendees</div>
+            <div className="stat-value">{p(ev.attendees) || "—"}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Show Rooms</div>
+            <div className="stat-value">{p(vs.numberOfEventRooms) || rooms.length || "—"}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Format</div>
+            <div className="stat-value">{p(ev.eventFormat) || "—"}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Union Venue</div>
+            <div className="stat-value">{p(vs.isUnionVenue) === "YES" ? "Yes" : p(vs.isUnionVenue) === "NO" ? "No" : "—"}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Budget Tier</div>
+            <div className="stat-value">{p(bud.estimatedAvBudget) || "—"}</div>
+          </div>
+        </div>
+
+        {flags.length > 0 && (
+          <div className="flags-section">
+            <div className="flags-label">Event Flags</div>
+            <div className="flags-row">
+              {flags.map((f, i) => (
+                <span key={i} className={`flag ${f.cls}`}>
+                  {f.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="overview-box">
+          <div className="overview-heading">Event Overview</div>
+          {p(ev.eventObjectives) ? (
+            <p>{p(ev.eventObjectives)}</p>
+          ) : (
+            <p>
+              {eventName} is a {p(ev.eventFormat) || "live"} event
+              {org ? ` for ${org}` : ""}
+              {p(ev.venue) ? ` at ${p(ev.venue)}` : ""}
+              {p(ev.venueCity) ? `, ${p(ev.venueCity)}` : ""}.
+              {" "}This RFP outlines AV and production requirements for vendor review and proposal.
+            </p>
+          )}
+          {p(ev.eventTheme) && <p>Theme: {p(ev.eventTheme)}</p>}
+          {arr(ev.toneDirection).length > 0 && (
+            <p>Tone & Direction: {arr(ev.toneDirection).join(", ")}.</p>
+          )}
+          {p(ev.sacredConstraints) && (
+            <p>Constraints: {p(ev.sacredConstraints)}</p>
+          )}
+        </div>
+
+        {(fullName || p(ct.contactEmail) || p(ct.contactPhone)) && (
+          <div className="contact-bar">
+            <div className="contact-label-cell">Primary<br />Contact</div>
+            {fullName && <div className="contact-data-cell">{fullName}</div>}
+            {p(ct.contactEmail) && <div className="contact-data-cell">{p(ct.contactEmail)}</div>}
+            {p(ct.contactPhone) && <div className="contact-data-cell">{p(ct.contactPhone)}</div>}
+          </div>
+        )}
+
+        <Footer left={`© ${new Date().getFullYear()} ${brandName} | RFPilot`} page={1} />
+      </div>
+
+      {/* ══════════════ PAGE 2: SCOPE AT A GLANCE ══════════════ */}
+      <div className="page">
+        <IntHeader brand={brandName} title={headerTitle} />
+        <SectionTitle num={nextSec()}>Scope at a Glance</SectionTitle>
+
+        {(p(vs.loadInDate) || p(vs.rehearsalDate) || p(ev.startDate)) && (
+          <>
+            <div className="section-subtitle">Production Timeline</div>
+            <table>
+              <thead>
+                <tr>
+                  {p(vs.loadInDate) && <th>Load-In</th>}
+                  {p(vs.rehearsalDate) && <th>Rehearsal</th>}
+                  {p(ev.startDate) && <th>Show Start</th>}
+                  {p(ev.endDate) && <th>Show End</th>}
+                  {p(vs.strikeDate) && <th>Strike</th>}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {p(vs.loadInDate) && <td>{fmtDate(p(vs.loadInDate))}{p(vs.loadInTime) ? ` — ${p(vs.loadInTime)}` : ""}</td>}
+                  {p(vs.rehearsalDate) && <td>{fmtDate(p(vs.rehearsalDate))}{p(vs.rehearsalTime) ? ` — ${p(vs.rehearsalTime)}` : ""}</td>}
+                  {p(ev.startDate) && <td>{fmtDate(p(ev.startDate))}</td>}
+                  {p(ev.endDate) && <td>{fmtDate(p(ev.endDate))}</td>}
+                  {p(vs.strikeDate) && <td>{fmtDate(p(vs.strikeDate))}{p(vs.strikeTime) ? ` — ${p(vs.strikeTime)}` : ""}</td>}
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
+
+        <div className="section-subtitle">Scope Overview</div>
+        <div className="info-card">
+          <InfoRow label="Venue" value={[p(vs.venueName) || p(ev.venue), p(vs.venueCity) || p(ev.venueCity), p(vs.venueState)].filter(Boolean).join(", ")} />
+          <InfoRow label="Venue Type" value={p(vs.venueType)} />
+          <InfoRow label="Union Jurisdiction" value={p(vs.isUnionVenue) === "YES" ? arr(vs.unionJurisdictions).join(", ") || "Yes" : p(vs.isUnionVenue) === "NO" ? "No" : ""} />
+          <InfoRow label="Event Format" value={p(ev.eventFormat)} />
+          <InfoRow label="Attendees" value={p(ev.attendees)} />
+          <InfoRow label="Production Rooms" value={p(vs.numberOfEventRooms) || String(rooms.length) || ""} />
+          <InfoRow label="Time Zone" value={p(vs.timeZone)} />
+          <InfoRow label="Budget Tier" value={p(bud.estimatedAvBudget) ? `${currency} ${p(bud.estimatedAvBudget)}` : ""} />
+          {arr(bud.proposalFormatPreferences as unknown).length > 0 && (
+            <InfoRow label="Proposal Format" value={arr(bud.proposalFormatPreferences as unknown).join(", ")} />
+          )}
+          {p(ven.riggingRequired) === "YES" && (
+            <InfoRow
+              label="Rigging"
+              value={`Required${p(ven.maxWeightPerRiggingPoint) ? ` — Max ${p(ven.maxWeightPerRiggingPoint)} lbs/point` : ""}${p(ven.numberOfRiggingPoints) ? `, ${p(ven.numberOfRiggingPoints)} points` : ""}`}
+            />
+          )}
+          {p(ven.powerDropsRequired) === "YES" && (
+            <InfoRow
+              label="Power Drops"
+              value={`${p(ven.numberOfPowerDrops) || ""}${p(ven.powerDropAmperage) ? ` × ${p(ven.powerDropAmperage)}A` : ""} drops required`}
+            />
+          )}
+          <InfoRow label="COI Requirements" value={p(ven.coiRequirements)} />
+          <InfoRow label="Venue Access" value={p(ven.venueAccessRequirements)} />
+        </div>
+
+        <Footer left={footerLeft} page={2} />
+      </div>
+
+      {/* ══════════════ PAGE 3+: ROOM-BY-ROOM ══════════════ */}
+      {rooms.length > 0 && (
+        <div className="page">
+          <IntHeader brand={brandName} title={headerTitle} />
+          <SectionTitle num={nextSec()}>Room-by-Room Technical Specifications</SectionTitle>
+
+          {rooms.length === 1 ? (
+            renderRoom(rooms[0], 0, 1)
+          ) : (
+            <div className="two-col">
+              {rooms.slice(0, 2).map((r, i) => renderRoom(r, i, rooms.length))}
+            </div>
+          )}
+
+          {rooms.length > 2 && (
+            <div className="two-col" style={{ marginTop: 12 }}>
+              {rooms.slice(2, 4).map((r, i) => renderRoom(r, i + 2, rooms.length))}
+            </div>
+          )}
+
+          <Footer left={footerLeft} page={3} />
+        </div>
+      )}
+
+      {/* ══════════════ HYBRID & VIRTUAL ══════════════ */}
+      {isHybrid && (
+        <div className="page">
+          <IntHeader brand={brandName} title={headerTitle} />
+          <SectionTitle num={nextSec()}>Hybrid &amp; Virtual Production</SectionTitle>
+
+          <p style={{ fontSize: "10.5px", color: "#64748b", lineHeight: 1.6, marginBottom: 12 }}>
+            This event is formatted as a {ev.eventFormat?.toLowerCase()} production. The specifications below govern the virtual audience experience and streaming infrastructure.
+          </p>
+
+          <table>
+            <tbody>
+              <InfoTd label="Virtual Attendees (Est.)" value={p(hv.virtualAttendeeEstimate)} />
+              <InfoTd label="Streaming Platform" value={p(hv.streamingPlatform) === "Other" ? p(hv.streamingPlatformOther) : p(hv.streamingPlatform)} />
+              <InfoTd label="Platform Integration" value={yn(hv.platformIntegrationWithAv)} />
+              <InfoTd label="Stream Ownership" value={p(hv.streamOwnership)} />
+              <InfoTd label="Remote Speakers" value={(() => {
+                const rs = hv.remoteSpeakers as RD | undefined;
+                if (!rs) return "";
+                const v = p(rs.remoteSpeakers);
+                const qty = p(rs.howManyRemoteSpeakers);
+                return v === "YES" ? `Yes${qty ? ` (${qty})` : ""}` : yn(v);
+              })()} />
+              <InfoTd label="Live Virtual Q&A" value={yn(hv.liveVirtualQa)} />
+              <InfoTd label="Virtual-Only Breakouts" value={yn(hv.virtualOnlyBreakouts)} />
+              <InfoTd label="Dedicated Virtual Producer" value={yn(hv.dedicatedVirtualProducer)} />
+              <InfoTd label="Closed Captions" value={(() => {
+                const caps = hv.closedCaptions as RD | undefined;
+                if (!caps) return "";
+                const v = p(caps.closedCaptions);
+                const langs = arr(caps.captionLanguages);
+                return v === "YES" ? `Yes${langs.length ? ` — ${langs.join(", ")}` : ""}` : yn(v);
+              })()} />
+              <InfoTd label="On-Demand Recording" value={yn(hv.onDemandRecording)} />
+              <InfoTd label="Sponsor Overlays" value={yn(hv.sponsorOverlays)} />
+              <InfoTd label="Virtual Networking" value={yn(hv.virtualNetworking)} />
+            </tbody>
+          </table>
+
+          <Footer left={footerLeft} page={4} />
+        </div>
+      )}
+
+      {/* ══════════════ CONTENT & CREATIVE ══════════════ */}
+      {hasContent && (
+        <div className="page">
+          <IntHeader brand={brandName} title={headerTitle} />
+          <SectionTitle num={nextSec()}>Content &amp; Creative Scope</SectionTitle>
+
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: "40%" }}>Content Element</th>
+                <th style={{ width: "15%", textAlign: "center" }}>Client</th>
+                <th style={{ width: "18%", textAlign: "center" }}>AV Vendor</th>
+                <th style={{ width: "8%", textAlign: "center" }}>TBD</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(
+                [
+                  { label: "Presentation Template Design", field: "presentationTemplateDesign" },
+                  { label: "Speaker Slide Collection & Formatting", field: "speakerSlideCollection" },
+                  { label: "Motion Graphics / Opener Video", field: "motionGraphicsOpenerVideo" },
+                  { label: "Lower Thirds & Name Supers", field: "lowerThirdsNameSupers" },
+                  { label: "Event Logo & Brand Standards", field: "eventLogoBrandStandards" },
+                  { label: "Sizzle / Recap Video", field: "sizzleRecapVideo" },
+                  { label: "Sponsor Recognition Content", field: "sponsorRecognitionContent" },
+                  { label: "Social Media Content Capture", field: "socialMediaContentCapture" },
+                  { label: "Virtual Background Design", field: "virtualBackgroundDesign" },
+                ] as { label: string; field: string }[]
+              ).map(({ label, field }) => {
+                const val = p(cc[field]);
+                if (!val) return null;
+                const isClient = val === "Client / Internal Team";
+                const isVendor = val === "AV Vendor";
+                const isTbd = val === "TBD";
+                return (
+                  <tr key={field}>
+                    <td>{label}</td>
+                    <td style={{ textAlign: "center", color: isClient ? "#16a34a" : "#64748b", fontWeight: isClient ? 800 : 400 }}>{isClient ? "✓" : "—"}</td>
+                    <td style={{ textAlign: "center", color: isVendor ? "#16a34a" : "#64748b", fontWeight: isVendor ? 800 : 400 }}>{isVendor ? "✓" : "—"}</td>
+                    <td style={{ textAlign: "center", color: isTbd ? "#d97706" : "#64748b", fontWeight: isTbd ? 800 : 400 }}>{isTbd ? "✓" : "—"}</td>
+                    <td>{val === "N/A" ? "Not applicable" : ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {p(cc.creativeDirectionNotes) && (
+            <div className="orange-callout">
+              <b>Creative Direction Note:</b> {p(cc.creativeDirectionNotes)}
+            </div>
+          )}
+
+          <Footer left={footerLeft} page={5} />
+        </div>
+      )}
+
+      {/* ══════════════ VIDEO RECORDING ══════════════ */}
+      {p(vr.videoRecordingRequired) === "YES" && (
+        <div className="page">
+          <IntHeader brand={brandName} title={headerTitle} />
+          <SectionTitle num={nextSec()}>Video Recording &amp; Broadcast</SectionTitle>
+
+          <div className="section-subtitle">Camera Plan</div>
+          <table>
+            <tbody>
+              <InfoTd label="Total Cameras Required" value={p(vr.numberOfCameras)} />
+              <InfoTd label="Camera Positions" value={arr(vr.cameraPositions).join(", ")} />
+              <InfoTd label="IMAG" value={yn(vr.imagRequired)} />
+              <InfoTd label="Camera Operators" value={p(vr.cameraOperators)} />
+              <InfoTd label="ISO Recordings" value={p(vr.isoRecordings)} />
+            </tbody>
+          </table>
+
+          <div className="section-subtitle">Recording &amp; Deliverables</div>
+          <table>
+            <tbody>
+              <InfoTd label="Resolution" value={p(vr.recordingResolution)} />
+              <InfoTd label="Recording Media" value={p(vr.recordingMedia)} />
+              <InfoTd label="Raw Footage Turnover" value={yn(vr.rawFootageTurnover)} />
+              <InfoTd label="Deliverable Format" value={arr(vr.deliverableFormat).join(", ")} />
+              <InfoTd label="Delivery Method" value={arr(vr.deliveryMethod).join(", ")} />
+              {(() => {
+                const ed = vr.editedDeliverable as RD | undefined;
+                if (!ed || p(ed.needed) !== "YES") return null;
+                return (
+                  <>
+                    <InfoTd label="Edited Deliverable" value={`Yes — ${arr(ed.deliverableType).join(", ") || ""}`} />
+                    <InfoTd label="Turnaround Time" value={p(ed.turnaroundTime)} />
+                    <InfoTd label="Reel Length" value={p(ed.reelLengthPreference)} />
+                  </>
+                );
+              })()}
+            </tbody>
+          </table>
+
+          <Footer left={footerLeft} page={6} />
+        </div>
+      )}
+
+      {/* ══════════════ VENUE & INFRASTRUCTURE ══════════════ */}
+      <div className="page">
+        <IntHeader brand={brandName} title={headerTitle} />
+        <SectionTitle num={nextSec()}>Venue &amp; Infrastructure</SectionTitle>
+
+        <table>
+          <tbody>
+            <InfoTd label="Venue" value={p(vs.venueName) || p(ev.venue) || ""} />
+            <InfoTd label="Venue AV Contact" value={p(ven.venueAvContactName)} />
+            <InfoTd label="AV Contact Phone" value={p(ven.venueAvContactPhone)} />
+            <InfoTd label="AV Contact Email" value={p(ven.venueAvContactEmail)} />
+            <InfoTd label="In-House AV Company" value={p(ven.inHouseAvCompanyName)} />
+            <InfoTd label="Union Jurisdiction" value={p(vs.isUnionVenue) === "YES" ? arr(vs.unionJurisdictions).join(", ") || "Yes" : ""} />
+            <InfoTd
+              label="Rigging"
+              value={p(ven.riggingRequired) === "YES"
+                ? `Required${p(ven.numberOfRiggingPoints) ? ` — ${p(ven.numberOfRiggingPoints)} points` : ""}${p(ven.maxWeightPerRiggingPoint) ? `, max ${p(ven.maxWeightPerRiggingPoint)} lbs/point` : ""}`
+                : p(ven.riggingRequired) === "NO" ? "Not Required" : ""}
+            />
+            <InfoTd
+              label="Power Drops"
+              value={p(ven.powerDropsRequired) === "YES"
+                ? `${p(ven.numberOfPowerDrops) || "Required"}${p(ven.powerDropAmperage) ? ` × ${p(ven.powerDropAmperage)}A` : ""}`
+                : p(ven.powerDropsRequired) === "NO" ? "Not Required" : ""}
+            />
+            <InfoTd label="Wireless Internet" value={p(ven.wirelessInternetRequired) === "YES" ? `Required — ${arr(ven.internetUseCases).join(", ") || ""}` : p(ven.wirelessInternetRequired) === "NO" ? "Not Required" : ""} />
+            <InfoTd label="Load-In Access" value={p(vs.loadInDate) ? `${fmtDate(p(vs.loadInDate))}${p(vs.loadInTime) ? ` from ${p(vs.loadInTime)}` : ""}` : ""} />
+            <InfoTd label="Strike" value={p(vs.strikeDate) ? `${fmtDate(p(vs.strikeDate))}${p(vs.strikeTime) ? ` from ${p(vs.strikeTime)}` : ""}` : ""} />
+            <InfoTd label="COI Requirements" value={p(ven.coiRequirements)} />
+            <InfoTd label="Venue Access Notes" value={p(ven.venueAccessRequirements)} />
+          </tbody>
+        </table>
+
+        {p(vs.isUnionVenue) === "YES" && (
+          <div className="orange-callout">
+            <b>Union Note:</b> This venue operates under{" "}
+            {arr(vs.unionJurisdictions).join(", ") || "union"} jurisdiction. Vendors must demonstrate established experience managing union labor calls at this venue specifically.
+          </div>
+        )}
+
+        <Footer left={footerLeft} page={7} />
+      </div>
+
+      {/* ══════════════ VENDOR COORDINATION ══════════════ */}
+      {coVendorList.length > 0 && (
+        <div className="page">
+          <IntHeader brand={brandName} title={headerTitle} />
+          <SectionTitle num={nextSec()}>Vendor Coordination</SectionTitle>
+
+          <p style={{ fontSize: "10.5px", color: "#64748b", lineHeight: 1.6, marginBottom: 12 }}>
+            The following co-vendors are confirmed or anticipated. The selected AV vendor is expected to coordinate directly with each.
+          </p>
+
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: "25%" }}>Vendor Category</th>
+                <th style={{ width: "25%" }}>Company</th>
+                <th style={{ width: "20%" }}>Contact</th>
+                <th>Coordination Scope</th>
+              </tr>
+            </thead>
+            <tbody>
+              {coVendorList.map((v, i) => (
+                <tr key={i}>
+                  <td>{v.cat}</td>
+                  <td><b>{v.company || "TBD"}</b></td>
+                  <td>{v.contact || "TBD"}</td>
+                  <td>{v.scope}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {p(up.ndaRequired) === "YES" && (
+            <div className="callout" style={{ marginTop: 14 }}>
+              <div className="callout-heading">NDA Required</div>
+              <p>An NDA must be executed before receiving sensitive materials. Type: {p(up.ndaType) || "Standard NDA"}.</p>
+            </div>
+          )}
+
+          <Footer left={footerLeft} page={8} />
+        </div>
+      )}
+
+      {/* ══════════════ EVALUATION ══════════════ */}
+      <div className="page">
+        <IntHeader brand={brandName} title={headerTitle} />
+        <SectionTitle num={nextSec()}>Proposal Requirements &amp; Evaluation</SectionTitle>
+
+        <div className="section-subtitle">Required Response Format</div>
+        <p style={{ fontSize: "10.5px", color: "#64748b", marginBottom: 8 }}>All vendor proposals must include the following components. Incomplete submissions will be removed from evaluation.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th style={{ width: "6%" }}>#</th>
+              <th style={{ width: "28%" }}>Requirement</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { label: "Itemized Gear List", detail: "Line-item equipment list with quantities, make/model, and daily rates." },
+              { label: "Labor Breakdown", detail: "All crew positions by day with call times, rates, and overtime assumptions." },
+              { label: "All-In Estimate", detail: "Single consolidated total inclusive of gear, labor, freight, and other costs." },
+              ...(isHybrid ? [{ label: "Hybrid Production Plan", detail: "Narrative describing your approach to broadcast, platform integration, and virtual audience experience." }] : []),
+              { label: "Crew Bios", detail: "Lead crew bios for TD, A1, L1, and Showcaller." },
+              { label: "References", detail: "Minimum two references from comparable events in the last 24 months." },
+              { label: "Alternates", detail: "At least one alternate/value-engineered option with scope tradeoffs explained." },
+            ].map((req, i) => (
+              <tr key={i}>
+                <td style={{ textAlign: "center", fontWeight: 800, background: "#0f1b57", color: "#35bdf2" }}>{i + 1}</td>
+                <td><b>{req.label}</b></td>
+                <td>{req.detail}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="section-subtitle">Weighted Evaluation Matrix</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Evaluation Criterion</th>
+              <th style={{ width: "10%", textAlign: "center" }}>Weight</th>
+              <th>Scoring Guide</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matrixRows.map((row, i) => (
+              <tr key={i}>
+                <td>{row.label}</td>
+                <td style={{ textAlign: "center", fontWeight: 800, color: "#0f1b57" }}>{row.weight}%</td>
+                <td>{row.guide}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <Footer left={footerLeft} page={9} />
+      </div>
+
+      {/* ══════════════ SUBMISSION TERMS ══════════════ */}
+      <div className="page">
+        <IntHeader brand={brandName} title={headerTitle} />
+        <SectionTitle num={nextSec()}>Submission Terms &amp; Next Steps</SectionTitle>
+
+        <table>
+          <tbody>
+            <InfoTd label="Proposal Deadline" value={p(bud.timelineForProposal)} />
+            <InfoTd label="Decision Date" value={fmtDate(p(bud.decisionDate))} />
+            <InfoTd label="Submission Method" value="Via RFPilot vendor portal" />
+            <InfoTd label="Competitive Bid" value={yn(bud.competitiveBid)} />
+            <InfoTd label="Number of Proposals" value={p(bud.numberOfProposals)} />
+            <InfoTd label="Proposal Validity" value="Proposals must remain valid for 60 days from submission" />
+            {p(up.ndaRequired) === "YES" && (
+              <InfoTd label="NDA Requirement" value={`NDA required — ${p(up.ndaType) || "Standard"}`} />
+            )}
+            {p(ven.coiRequirements) && (
+              <InfoTd label="COI Requirement" value={p(ven.coiRequirements)} />
+            )}
+            <InfoTd label="Questions & Contact" value={[fullName, p(ct.contactEmail)].filter(Boolean).join(" | ")} />
+          </tbody>
+        </table>
+
+        {p(bud.callWithDxgProducer) === "YES" && (
+          <div className="cta-box">
+            <div className="cta-side">Book a Producer Insight Call</div>
+            <div className="cta-body">
+              <p>Your event includes specialized production requirements that benefit from a conversation before your RFP goes out. Our producers are available to walk through your scope.</p>
+              <div className="cta-link">→ Contact {fullName || brandName} to schedule</div>
+            </div>
+          </div>
+        )}
+
+        {p(ct.anythingElse) && (
+          <div className="callout" style={{ marginTop: 14 }}>
+            <div className="callout-heading">Additional Notes</div>
+            <p>{p(ct.anythingElse)}</p>
+          </div>
+        )}
+
+        {p(bud.scoringNotes) && (
+          <div className="callout" style={{ marginTop: 10 }}>
+            <div className="callout-heading">Scoring Notes</div>
+            <p>{p(bud.scoringNotes)}</p>
+          </div>
+        )}
+
+        <div className="disclaimer-box">
+          <p>
+            This RFP was generated by RFPilot, a platform by {brandName}. All specifications reflect information provided by the event planner. This document is confidential and intended solely for invited vendors.
+          </p>
+        </div>
+
+        <Footer left={footerLeft} page={10} />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Table row helper (only renders if value is non-empty) ─── */
+function InfoTd({ label, value }: { label: string; value: string }) {
+  if (!value) return null;
+  return (
+    <tr>
+      <td style={{ width: "38%" }}>
+        <b>{label}</b>
+      </td>
+      <td>{value}</td>
+    </tr>
+  );
+}

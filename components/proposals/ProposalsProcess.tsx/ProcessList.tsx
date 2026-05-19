@@ -64,6 +64,16 @@ const ProcessList = ({
   hideStepIds?: number[];
 }) => {
   const visibleSteps = steps.filter((s) => !hideStepIds.includes(s.id));
+
+  let counter = 2;
+  const badgedSteps = visibleSteps.map((step) => {
+    if (step.id === 1) return { ...step, badge: "1" };
+    if (step.id === 2) return { ...step, badge: "2" };
+    if (step.id === 3) return { ...step, badge: "2B" };
+    counter++;
+    return { ...step, badge: String(counter) };
+  });
+
   return (
     <div className="w-full min-h-screen bg-[#0F1113] px-6 py-8 font-sans">
       {/* Intake Form label */}
@@ -72,10 +82,10 @@ const ProcessList = ({
       </p>
 
       <div className="relative flex flex-col gap-0">
-        {visibleSteps.map((step, index) => {
+        {badgedSteps.map((step, index) => {
           const isActive    = activeStep === step.id;
           const isCompleted = activeStep > step.id;
-          const isLast      = index === visibleSteps.length - 1;
+          const isLast      = index === badgedSteps.length - 1;
 
           return (
             <div key={step.id} className="relative flex items-start gap-4 pb-8">

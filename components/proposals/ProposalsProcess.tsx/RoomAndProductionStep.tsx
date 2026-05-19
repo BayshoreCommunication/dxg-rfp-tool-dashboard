@@ -1116,6 +1116,7 @@ interface Props {
   onBack: () => void;
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
+  isInPersonOnly?: boolean;
 }
 
 const RoomAndProductionStep = ({
@@ -1125,6 +1126,7 @@ const RoomAndProductionStep = ({
   onBack,
   showErrors = false,
   proposalSettings,
+  isInPersonOnly = false,
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
 
@@ -1190,7 +1192,7 @@ const RoomAndProductionStep = ({
           onClick={onContinue}
           className="flex items-center gap-2 rounded-lg bg-[#35bdf2] px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(53,189,242,0.35)] hover:bg-[#20a9de] transition-colors active:scale-95"
         >
-          Hybrid &amp; Virtual →
+          {isInPersonOnly ? "Content & Creative" : "Hybrid & Virtual"} →
         </button>
       </div>
     </section>

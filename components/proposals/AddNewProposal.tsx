@@ -20,7 +20,6 @@ import HybridVirtualStep from "./ProposalsProcess.tsx/HybridVirtualStep";
 import VenueScheduleStep, { defaultVenueSchedule, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
 import ContentCreativeStep, { defaultContentCreative, type ContentCreativeData } from "./ProposalsProcess.tsx/ContentCreativeStep";
 import VideoRecordingStep, { defaultVideoRecording, type VideoRecordingData } from "./ProposalsProcess.tsx/VideoRecordingStep";
-import TemplateSelection from "./ProposalsProcess.tsx/TemplateSelection";
 import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMaterials";
 import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalRequirements";
 import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
@@ -141,68 +140,78 @@ export type ProductionSupportData = Pick<
 >;
 
 export type VenueTechnicalData = {
-  /* Rigging */
-  needRiggingForFlown: {
-    needRiggingForFlown: "YES" | "NO" | "";
-    riggingPlotOrSpecs: string;
-  };
-  riggingTypes: string[];
-  pointLoadLimitKnown: "YES" | "NO" | "";
-  /* Power */
-  needDedicatedPowerDrops: {
-    needDedicatedPowerDrops: "YES" | "NO" | "";
-    standardAmpWall: string;
-  };
-  powerDropsHowMany: string;
-  generatorBackup: "YES" | "NO" | "";
-  /* Internet & Connectivity */
-  hardlineInternet: {
-    hardlineInternet: "YES" | "NO" | "";
-    hardlineInternetPurpose: string;
-  };
-  wirelessInternetAttendees: "YES" | "NO" | "";
-  streamingBandwidthRequired: "YES" | "NO" | "";
-  streamingMbpsNeeded: string;
-  /* Livestream */
-  livestreamVirtual: {
-    livestreamVirtual: "YES" | "NO" | "";
-    livestreamPlatform: string;
-  };
-  /* COI */
-  coiRequiredByVenue: "YES" | "NO" | "";
-  coiCoverageTypes: string[];
-  additionalInsured: "YES" | "NO" | "";
-  coiSubmissionDeadline: string;
-  /* Venue Access */
-  venueContactName: string;
-  loadingDockAccess: "YES" | "NO" | "";
-  freightElevatorAvailable: "YES" | "NO" | "";
-  ceilingHeight: string;
-  inHouseAvExclusivity: "YES" | "NO" | "";
+  /* Venue AV Contact */
+  venueAvContactName: string;
+  venueAvContactPhone: string;
+  venueAvContactEmail: string;
+  /* In-House AV */
   inHouseAvCompanyName: string;
+  /* Rigging */
+  riggingRequired: "YES" | "NO" | "";
+  maxWeightPerRiggingPoint: string;
+  numberOfRiggingPoints: string;
+  /* Power Drops */
+  powerDropsRequired: "YES" | "NO" | "";
+  powerDropAmperage: string;
+  numberOfPowerDrops: string;
+  /* Wireless Internet */
+  wirelessInternetRequired: "YES" | "NO" | "";
+  internetUseCases: string[];
+  /* Compliance & Access */
+  coiRequirements: string;
+  venueAccessRequirements: string;
+};
+
+export type CoVendorEntry = {
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  status: string;
+  notes: string;
+};
+
+export type ReferenceUrl = {
+  url: string;
+  label: string;
 };
 
 export type UploadsData = {
-  supportDocuments: Array<File | string>;
-  reviewExistingAvQuote: {
-    reviewExistingAvQuote: "YES" | "NO" | "";
-    avQuoteFiles: Array<File | string>;
+  brandGuideFiles: string[];
+  brandGuideUrl: string;
+  eventLogoFiles: string[];
+  referenceFiles: string[];
+  referenceUrls: ReferenceUrl[];
+  venueDocs: string[];
+  coVendors: {
+    inHouseVenueAv: CoVendorEntry;
+    eventDecorator: CoVendorEntry;
+    registrationTech: CoVendorEntry;
+    agencyOfRecord: CoVendorEntry;
+    photographer: CoVendorEntry;
   };
-  hasCoVendors: "YES" | "NO" | "";
-  coVendorDetails: string;
-  vendorConflicts: "YES" | "NO" | "";
-  vendorConflictDetails: string;
+  ndaRequired: "YES" | "NO" | "";
+  ndaType: string;
+  ndaDocumentFiles: string[];
 };
 
 export type BudgetData = {
   estimatedAvBudget: string;
-  budgetCustomAmount: string;
+  budgetFlexibility: string;
   proposalFormatPreferences: string[];
+  evaluationMatrix: {
+    technicalApproach: number;
+    crewExperience: number;
+    hybridVirtual: number;
+    pricing: number;
+    creativeScenic: number;
+    responsiveness: number;
+    sustainabilityDei: number;
+  };
   timelineForProposal: string;
   decisionDate: string;
   competitiveBid: "YES" | "NO" | "";
   numberOfProposals: string;
-  scoringPriorities: string[];
   scoringNotes: string;
   callWithDxgProducer: "YES" | "NO" | "";
   howDidYouHear: string;
@@ -238,13 +247,25 @@ export type { VenueScheduleData };
 export type { ContentCreativeData };
 export type { VideoRecordingData };
 
+export type AdditionalContact = {
+  fullName: string;
+  titleAndRole: string;
+  email: string;
+  phone: string;
+  role: string;
+};
+
 export type ContactData = {
   contactFirstName: string;
   contactLastName: string;
   contactTitle: string;
-  contactOrganization: string;
+  contactOrganization: string;        // display name ("Apex Dynamics")
   contactEmail: string;
   contactPhone: string;
+  contactPhoneExt: string;
+  contactPhoneType: string;           // "mobile" | "direct_office" | "office_main" | ""
+  organizationLegalName: string;      // full legal name for formal documents
+  additionalContacts: AdditionalContact[];
   preferredContactMethod: "Email" | "Phone" | "Either" | "";
   bestTimeToReach: string;
   anythingElse: string;
@@ -266,7 +287,6 @@ export type ProposalSettings = {
 };
 
 export interface ProposalData {
-  templateId: "template-one" | "template-two" | "";
   proposalStatus: "unsubmitted" | "submitted";
   proposalSettings: {
     linkPrefix: string;
@@ -299,7 +319,6 @@ type ProposalSectionKey = {
 }[keyof ProposalData];
 
 const defaultProposalData: ProposalData = {
-  templateId: "",
   proposalStatus: "submitted",
   proposalSettings: {
     linkPrefix: "abuco",
@@ -351,48 +370,56 @@ const defaultProposalData: ProposalData = {
     virtualNetworking: "",
   },
   venue: {
-    needRiggingForFlown: { needRiggingForFlown: "", riggingPlotOrSpecs: "" },
-    riggingTypes: [],
-    pointLoadLimitKnown: "",
-    needDedicatedPowerDrops: { needDedicatedPowerDrops: "", standardAmpWall: "" },
-    powerDropsHowMany: "",
-    generatorBackup: "",
-    hardlineInternet: { hardlineInternet: "", hardlineInternetPurpose: "" },
-    wirelessInternetAttendees: "",
-    streamingBandwidthRequired: "",
-    streamingMbpsNeeded: "",
-    livestreamVirtual: { livestreamVirtual: "", livestreamPlatform: "" },
-    coiRequiredByVenue: "",
-    coiCoverageTypes: [],
-    additionalInsured: "",
-    coiSubmissionDeadline: "",
-    venueContactName: "",
-    loadingDockAccess: "",
-    freightElevatorAvailable: "",
-    ceilingHeight: "",
-    inHouseAvExclusivity: "",
+    venueAvContactName: "",
+    venueAvContactPhone: "",
+    venueAvContactEmail: "",
     inHouseAvCompanyName: "",
+    riggingRequired: "",
+    maxWeightPerRiggingPoint: "",
+    numberOfRiggingPoints: "",
+    powerDropsRequired: "",
+    powerDropAmperage: "",
+    numberOfPowerDrops: "",
+    wirelessInternetRequired: "",
+    internetUseCases: [],
+    coiRequirements: "",
+    venueAccessRequirements: "",
   },
   uploads: {
-    supportDocuments: [],
-    reviewExistingAvQuote: {
-      reviewExistingAvQuote: "",
-      avQuoteFiles: [],
+    brandGuideFiles: [],
+    brandGuideUrl: "",
+    eventLogoFiles: [],
+    referenceFiles: [],
+    referenceUrls: [],
+    venueDocs: [],
+    coVendors: {
+      inHouseVenueAv:  { companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
+      eventDecorator:  { companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
+      registrationTech:{ companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
+      agencyOfRecord:  { companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
+      photographer:    { companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
     },
-    hasCoVendors: "",
-    coVendorDetails: "",
-    vendorConflicts: "",
-    vendorConflictDetails: "",
+    ndaRequired: "",
+    ndaType: "",
+    ndaDocumentFiles: [],
   },
   budget: {
     estimatedAvBudget: "",
-    budgetCustomAmount: "",
+    budgetFlexibility: "",
     proposalFormatPreferences: [],
+    evaluationMatrix: {
+      technicalApproach: 25,
+      crewExperience: 20,
+      hybridVirtual: 20,
+      pricing: 15,
+      creativeScenic: 10,
+      responsiveness: 7,
+      sustainabilityDei: 3,
+    },
     timelineForProposal: "",
     decisionDate: "",
     competitiveBid: "",
     numberOfProposals: "",
-    scoringPriorities: [],
     scoringNotes: "",
     callWithDxgProducer: "",
     howDidYouHear: "",
@@ -405,6 +432,10 @@ const defaultProposalData: ProposalData = {
     contactOrganization: "",
     contactEmail: "",
     contactPhone: "",
+    contactPhoneExt: "",
+    contactPhoneType: "mobile",
+    organizationLegalName: "",
+    additionalContacts: [],
     preferredContactMethod: "",
     bestTimeToReach: "",
     anythingElse: "",
@@ -481,7 +512,11 @@ const normalizeExtracted = (
     roomByRoom?: Partial<RoomByRoomData> | Partial<RoomByRoomData>[];
     production?: Partial<ProductionSupportData>;
   },
-): Partial<ProposalData> => ({
+): Partial<ProposalData> => {
+  const yn = (v: unknown): "YES" | "NO" | "" =>
+    (matchOption((v as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "";
+
+  return {
   event: raw.event
     ? {
         ...raw.event,
@@ -587,212 +622,224 @@ const normalizeExtracted = (
     }];
   })(),
   venue: raw.venue
-    ? {
-        powerDropsHowMany: raw.venue.powerDropsHowMany ?? "",
-        needRiggingForFlown: ((): VenueTechnicalData["needRiggingForFlown"] => {
-          const raw_n = raw.venue!.needRiggingForFlown;
-          if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as {
-              needRiggingForFlown?: string;
-              riggingPlotOrSpecs?: string;
-            };
-            const matched = matchOption(v.needRiggingForFlown ?? "", [
-              "YES",
-              "NO",
-            ]).toUpperCase();
-            return {
-              needRiggingForFlown: (matched || "") as "YES" | "NO" | "",
-              riggingPlotOrSpecs: v.riggingPlotOrSpecs ?? "",
-            };
-          }
-          const matched = matchOption((raw_n as unknown as string) ?? "", [
-            "YES",
-            "NO",
-          ]).toUpperCase();
-          return {
-            needRiggingForFlown: (matched || "") as "YES" | "NO" | "",
-            riggingPlotOrSpecs:
-              ((raw.venue as Record<string, unknown>)
-                .riggingPlotOrSpecs as string) ?? "",
-          };
-        })(),
-        needDedicatedPowerDrops:
-          ((): VenueTechnicalData["needDedicatedPowerDrops"] => {
-            const raw_n = raw.venue!.needDedicatedPowerDrops;
-            if (raw_n && typeof raw_n === "object") {
-              const v = raw_n as {
-                needDedicatedPowerDrops?: string;
-                standardAmpWall?: string;
-              };
-              const amp =
-                matchOption(v.standardAmpWall ?? "", [
-                  "15amp",
-                  "20amp",
-                  "30amp",
-                  "100A",
-                  "200A",
-                  "400A",
-                ]) ||
-                v.standardAmpWall ||
-                "";
-              const matched = matchOption(v.needDedicatedPowerDrops ?? "", [
-                "YES",
-                "NO",
-              ]).toUpperCase();
-              return {
-                needDedicatedPowerDrops: (matched || "") as "YES" | "NO" | "",
-                standardAmpWall: amp,
-              };
-            }
-            const matched = matchOption((raw_n as unknown as string) ?? "", [
-              "YES",
-              "NO",
-            ]).toUpperCase();
-            const amp =
-              matchOption(
-                ((raw.venue as Record<string, unknown>)
-                  .standardAmpWall as string) ?? "",
-                ["15amp", "20amp", "30amp", "100A", "200A", "400A"],
-              ) ||
-              ((raw.venue as Record<string, unknown>)
-                .standardAmpWall as string) ||
-              "";
-            return {
-              needDedicatedPowerDrops: (matched || "") as "YES" | "NO" | "",
-              standardAmpWall: amp,
-            };
-          })(),
-        hardlineInternet: ((): VenueTechnicalData["hardlineInternet"] => {
-          const raw_n = raw.venue!.hardlineInternet;
-          if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as {
-              hardlineInternet?: string;
-              hardlineInternetPurpose?: string;
-            };
-            return {
-              hardlineInternet: (matchOption(v.hardlineInternet ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
-              hardlineInternetPurpose: v.hardlineInternetPurpose ?? "",
-            };
-          }
-          return {
-            hardlineInternet: (matchOption((raw_n as unknown as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
-            hardlineInternetPurpose: ((raw.venue as Record<string, unknown>).hardlineInternetPurpose as string) ?? "",
-          };
-        })(),
-        livestreamVirtual: ((): VenueTechnicalData["livestreamVirtual"] => {
-          const raw_n = raw.venue!.livestreamVirtual;
-          if (raw_n && typeof raw_n === "object") {
-            const v = raw_n as {
-              livestreamVirtual?: string;
-              livestreamPlatform?: string;
-            };
-            return {
-              livestreamVirtual: (matchOption(v.livestreamVirtual ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
-              livestreamPlatform: matchOption(v.livestreamPlatform ?? "", ["Zoom", "Teams", "Vimeo", "YouTube", "Other"]) || v.livestreamPlatform || "",
-            };
-          }
-          return {
-            livestreamVirtual: (matchOption((raw_n as unknown as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
-            livestreamPlatform: matchOption(((raw.venue as Record<string, unknown>).livestreamPlatform as string) ?? "", ["Zoom", "Teams", "Vimeo", "YouTube", "Other"]) || ((raw.venue as Record<string, unknown>).livestreamPlatform as string) || "",
-          };
-        })(),
-        wirelessInternetAttendees: (matchOption(
-          (raw.venue!.wirelessInternetAttendees as unknown as string) ?? "",
-          ["YES", "NO"],
-        ).toUpperCase() || "") as "YES" | "NO" | "",
-      }
+    ? (() => {
+        const rv = raw.venue as Record<string, unknown>;
+        const yn = (v: unknown): "YES" | "NO" | "" =>
+          (matchOption((v as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "";
+        return {
+          venueAvContactName: (rv.venueAvContactName as string) ?? "",
+          venueAvContactPhone: (rv.venueAvContactPhone as string) ?? "",
+          venueAvContactEmail: (rv.venueAvContactEmail as string) ?? "",
+          inHouseAvCompanyName: (rv.inHouseAvCompanyName as string) ?? "",
+          riggingRequired: yn(rv.riggingRequired),
+          maxWeightPerRiggingPoint: (rv.maxWeightPerRiggingPoint as string) ?? "",
+          numberOfRiggingPoints: (rv.numberOfRiggingPoints as string) ?? "",
+          powerDropsRequired: yn(rv.powerDropsRequired),
+          powerDropAmperage: (rv.powerDropAmperage as string) ?? "",
+          numberOfPowerDrops: (rv.numberOfPowerDrops as string) ?? "",
+          wirelessInternetRequired: yn(rv.wirelessInternetRequired),
+          internetUseCases: Array.isArray(rv.internetUseCases) ? rv.internetUseCases as string[] : [],
+          coiRequirements: (rv.coiRequirements as string) ?? "",
+          venueAccessRequirements: (rv.venueAccessRequirements as string) ?? "",
+        } as VenueTechnicalData;
+      })()
     : undefined,
   budget: raw.budget
-    ? {
-        ...raw.budget,
-        estimatedAvBudget: matchOption(raw.budget.estimatedAvBudget, [
-          "<$10K",
-          "$10-25K",
-          "$25-50K",
-          "$50-100K",
-          "$100K+",
-          "Other",
-        ]),
-        proposalFormatPreferences: matchOptionsArray(
-          raw.budget.proposalFormatPreferences,
-          [
-            "GEAR ITEMIZATION",
-            "LABOR BREAKDOWN",
-            "ALL-IN ESTIMATE",
-            "ADD-ON OPTIONS",
-          ],
-        ),
-        timelineForProposal: matchOption(raw.budget.timelineForProposal, [
-          "Within 3 Business Days",
-          "1 Week",
-          "2 Weeks",
-          "Flexible",
-        ]),
-        callWithDxgProducer: matchOption(raw.budget.callWithDxgProducer, [
-          "YES",
-          "NO",
-        ]).toUpperCase() as BudgetData["callWithDxgProducer"],
-        howDidYouHear:
-          matchOption(raw.budget.howDidYouHear, [
-            "Referral",
-            "Venue",
-            "Google",
-            "Social Media",
-            "LinkedIn",
-            "Other",
-          ]) || raw.budget.howDidYouHear,
-      }
+    ? (() => {
+        const rb = raw.budget as Record<string, unknown>;
+        const rm = rb.evaluationMatrix as Record<string, unknown> | undefined;
+        const defM = { technicalApproach: 25, crewExperience: 20, hybridVirtual: 20, pricing: 15, creativeScenic: 10, responsiveness: 7, sustainabilityDei: 3 };
+        return {
+          estimatedAvBudget: matchOption((rb.estimatedAvBudget as string) ?? "", ["Essential", "Standard", "Production", "Premium", "Enterprise", "Signature", "Not Yet Determined"]) || (rb.estimatedAvBudget as string) || "",
+          budgetFlexibility: (rb.budgetFlexibility as string) ?? "",
+          proposalFormatPreferences: Array.isArray(rb.proposalFormatPreferences) ? rb.proposalFormatPreferences as string[] : [],
+          evaluationMatrix: rm && typeof rm === "object"
+            ? {
+                technicalApproach: Number(rm.technicalApproach) || defM.technicalApproach,
+                crewExperience: Number(rm.crewExperience) || defM.crewExperience,
+                hybridVirtual: Number(rm.hybridVirtual) || defM.hybridVirtual,
+                pricing: Number(rm.pricing) || defM.pricing,
+                creativeScenic: Number(rm.creativeScenic) || defM.creativeScenic,
+                responsiveness: Number(rm.responsiveness) || defM.responsiveness,
+                sustainabilityDei: Number(rm.sustainabilityDei ?? 0),
+              }
+            : defM,
+          timelineForProposal: matchOption((rb.timelineForProposal as string) ?? "", ["Within 24 Hours", "Within 3 Business Days", "1 Week", "2 Weeks", "Flexible"]) || (rb.timelineForProposal as string) || "",
+          decisionDate: (rb.decisionDate as string) ?? "",
+          competitiveBid: (matchOption((rb.competitiveBid as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
+          numberOfProposals: (rb.numberOfProposals as string) ?? "",
+          scoringNotes: (rb.scoringNotes as string) ?? "",
+          callWithDxgProducer: (matchOption((rb.callWithDxgProducer as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
+          howDidYouHear: matchOption((rb.howDidYouHear as string) ?? "", ["Referral", "Venue", "Google", "Social Media", "LinkedIn", "Other"]) || (rb.howDidYouHear as string) || "",
+          howDidYouHearOther: (rb.howDidYouHearOther as string) ?? "",
+        } as BudgetData;
+      })()
     : undefined,
   uploads: raw.uploads
-    ? {
-        supportDocuments: Array.isArray(raw.uploads.supportDocuments)
-          ? raw.uploads.supportDocuments
-          : [],
-        reviewExistingAvQuote: ((): UploadsData["reviewExistingAvQuote"] => {
-          const rv = raw.uploads!.reviewExistingAvQuote;
-          if (rv && typeof rv === "object") {
-            const v = rv as {
-              reviewExistingAvQuote?: string;
-              avQuoteFiles?: Array<File | string>;
-            };
-            const matched = matchOption(v.reviewExistingAvQuote ?? "", [
-              "YES",
-              "NO",
-            ]).toUpperCase();
-            return {
-              reviewExistingAvQuote: (matched || "") as "YES" | "NO" | "",
-              avQuoteFiles: Array.isArray(v.avQuoteFiles) ? v.avQuoteFiles : [],
-            };
-          }
-          const matched = matchOption((rv as unknown as string) ?? "", [
-            "YES",
-            "NO",
-          ]).toUpperCase();
-          const avFiles = Array.isArray(
-            (raw.uploads as Record<string, unknown>).avQuoteFiles,
-          )
-            ? ((raw.uploads as Record<string, unknown>).avQuoteFiles as Array<
-                File | string
-              >)
+    ? (() => {
+        const ru = raw.uploads as Record<string, unknown>;
+        const strArr = (v: unknown): string[] =>
+          Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === "string") : [];
+        const refUrls = (v: unknown): ReferenceUrl[] =>
+          Array.isArray(v)
+            ? (v as unknown[]).filter(
+                (x): x is ReferenceUrl =>
+                  !!x && typeof x === "object" && "url" in (x as object),
+              )
             : [];
+        const coV = (v: unknown): CoVendorEntry => {
+          const e = ((v ?? {}) as Record<string, unknown>);
           return {
-            reviewExistingAvQuote: (matched || "") as "YES" | "NO" | "",
-            avQuoteFiles: avFiles,
+            companyName:  (e.companyName  as string) ?? "",
+            contactName:  (e.contactName  as string) ?? "",
+            contactEmail: (e.contactEmail as string) ?? "",
+            contactPhone: (e.contactPhone as string) ?? "",
+            status:       (e.status       as string) ?? "",
+            notes:        (e.notes        as string) ?? "",
           };
-        })(),
-      }
+        };
+        const cv = (ru.coVendors ?? {}) as Record<string, unknown>;
+        const yn = (v: unknown): "YES" | "NO" | "" =>
+          v === "YES" ? "YES" : v === "NO" ? "NO" : "";
+        return {
+          brandGuideFiles:  strArr(ru.brandGuideFiles),
+          brandGuideUrl:    (ru.brandGuideUrl  as string) ?? "",
+          eventLogoFiles:   strArr(ru.eventLogoFiles),
+          referenceFiles:   strArr(ru.referenceFiles),
+          referenceUrls:    refUrls(ru.referenceUrls),
+          venueDocs:        strArr(ru.venueDocs),
+          coVendors: {
+            inHouseVenueAv:   coV(cv.inHouseVenueAv),
+            eventDecorator:   coV(cv.eventDecorator),
+            registrationTech: coV(cv.registrationTech),
+            agencyOfRecord:   coV(cv.agencyOfRecord),
+            photographer:     coV(cv.photographer),
+          },
+          ndaRequired:      yn(ru.ndaRequired),
+          ndaType:          (ru.ndaType as string) ?? "",
+          ndaDocumentFiles: strArr(ru.ndaDocumentFiles),
+        } as UploadsData;
+      })()
+    : undefined,
+  venueSchedule: raw.venueSchedule
+    ? (() => {
+        const rv = raw.venueSchedule as Record<string, unknown>;
+        return {
+          venueName: (rv.venueName as string) ?? "",
+          venueCity: (rv.venueCity as string) ?? "",
+          venueState: (rv.venueState as string) ?? "",
+          venueAddress: (rv.venueAddress as string) ?? "",
+          venueType: (rv.venueType as string) ?? "",
+          venueConfirmedStatus: (rv.venueConfirmedStatus as string) ?? "",
+          isUnionVenue: (matchOption((rv.isUnionVenue as string) ?? "", ["YES", "NO", "NOT_SURE"]).toUpperCase() || "") as VenueScheduleData["isUnionVenue"],
+          unionJurisdictions: Array.isArray(rv.unionJurisdictions) ? rv.unionJurisdictions as string[] : [],
+          unionJurisdictionOther: (rv.unionJurisdictionOther as string) ?? "",
+          loadInDate: (rv.loadInDate as string) ?? "",
+          loadInTime: (rv.loadInTime as string) ?? "",
+          rehearsalDate: (rv.rehearsalDate as string) ?? "",
+          rehearsalTime: (rv.rehearsalTime as string) ?? "",
+          strikeDate: (rv.strikeDate as string) ?? "",
+          strikeTime: (rv.strikeTime as string) ?? "",
+          numberOfEventRooms: (rv.numberOfEventRooms as string) ?? "1",
+          timeZone: (rv.timeZone as string) ?? "",
+        } as VenueScheduleData;
+      })()
+    : undefined,
+  hybridVirtual: raw.hybridVirtual
+    ? (() => {
+        const rh = raw.hybridVirtual as Record<string, unknown>;
+        const rs = (rh.remoteSpeakers ?? {}) as Record<string, unknown>;
+        const cc = (rh.closedCaptions ?? {}) as Record<string, unknown>;
+        const platformOpts = ["Zoom", "Teams", "Hopin", "vMix", "StreamYard", "Webex", "Other"];
+        return {
+          virtualAttendeeEstimate: (rh.virtualAttendeeEstimate as string) ?? "",
+          streamingPlatform: matchOption((rh.streamingPlatform as string) ?? "", platformOpts) || (rh.streamingPlatform as string) || "",
+          streamingPlatformOther: (rh.streamingPlatformOther as string) ?? "",
+          platformIntegrationWithAv: yn(rh.platformIntegrationWithAv),
+          streamOwnership: (rh.streamOwnership as string) ?? "",
+          remoteSpeakers: {
+            remoteSpeakers: yn(rs.remoteSpeakers),
+            howManyRemoteSpeakers: (rs.howManyRemoteSpeakers as string) ?? "",
+            remoteFeedPlatform: (rs.remoteFeedPlatform as string) ?? "",
+            techRehearsalOwner: (rs.techRehearsalOwner as string) ?? "",
+          },
+          liveVirtualQa: yn(rh.liveVirtualQa),
+          virtualOnlyBreakouts: yn(rh.virtualOnlyBreakouts),
+          dedicatedVirtualProducer: yn(rh.dedicatedVirtualProducer),
+          closedCaptions: {
+            closedCaptions: yn(cc.closedCaptions),
+            captionLanguages: Array.isArray(cc.captionLanguages) ? cc.captionLanguages as string[] : [],
+            captionType: (cc.captionType as string) ?? "",
+          },
+          onDemandRecording: yn(rh.onDemandRecording),
+          sponsorOverlays: yn(rh.sponsorOverlays),
+          virtualNetworking: yn(rh.virtualNetworking),
+        } as HybridVirtualData;
+      })()
+    : undefined,
+  contentCreative: raw.contentCreative
+    ? (() => {
+        const rc = raw.contentCreative as Record<string, unknown>;
+        const ownerOpts = ["Client / Internal Team", "AV Vendor", "TBD", "N/A"];
+        const own = (v: unknown): string => matchOption((v as string) ?? "", ownerOpts) || (v as string) || "";
+        const ld = (rc.liveDataFeeds ?? {}) as Record<string, unknown>;
+        return {
+          contentServicesNeeded: yn(rc.contentServicesNeeded),
+          presentationTemplateDesign: own(rc.presentationTemplateDesign),
+          speakerSlideCollection: own(rc.speakerSlideCollection),
+          motionGraphicsOpenerVideo: own(rc.motionGraphicsOpenerVideo),
+          lowerThirdsNameSupers: own(rc.lowerThirdsNameSupers),
+          eventLogoBrandStandards: own(rc.eventLogoBrandStandards),
+          sizzleRecapVideo: own(rc.sizzleRecapVideo),
+          liveDataFeeds: {
+            needed: yn(ld.needed),
+            ownership: own(ld.ownership),
+          },
+          sponsorRecognitionContent: own(rc.sponsorRecognitionContent),
+          socialMediaContentCapture: own(rc.socialMediaContentCapture),
+          virtualBackgroundDesign: own(rc.virtualBackgroundDesign),
+          creativeDirectionNotes: (rc.creativeDirectionNotes as string) ?? "",
+        } as ContentCreativeData;
+      })()
+    : undefined,
+  videoRecordingStep: raw.videoRecordingStep
+    ? (() => {
+        const rvr = raw.videoRecordingStep as Record<string, unknown>;
+        const strArr = (v: unknown): string[] =>
+          Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === "string") : [];
+        const ed = (rvr.editedDeliverable ?? {}) as Record<string, unknown>;
+        return {
+          videoRecordingRequired: yn(rvr.videoRecordingRequired),
+          numberOfCameras: (rvr.numberOfCameras as string) ?? "",
+          cameraPositions: strArr(rvr.cameraPositions),
+          imagRequired: yn(rvr.imagRequired),
+          cameraOperators: (rvr.cameraOperators as string) ?? "",
+          isoRecordings: (rvr.isoRecordings as string) ?? "",
+          recordingResolution: (rvr.recordingResolution as string) ?? "",
+          recordingMedia: (rvr.recordingMedia as string) ?? "",
+          editedDeliverable: {
+            needed: yn(ed.needed),
+            deliverableType: strArr(ed.deliverableType),
+            turnaroundTime: (ed.turnaroundTime as string) ?? "",
+            reelLengthPreference: (ed.reelLengthPreference as string) ?? "",
+          },
+          rawFootageTurnover: yn(rvr.rawFootageTurnover),
+          deliverableFormat: strArr(rvr.deliverableFormat),
+          deliveryMethod: strArr(rvr.deliveryMethod),
+        } as VideoRecordingData;
+      })()
     : undefined,
   contact: raw.contact
     ? {
         ...raw.contact,
       }
     : undefined,
-});
+  };
+};
 
 type EditableProposalApiResponse = {
   _id?: string;
   status?: string;
-  templateId?: ProposalData["templateId"];
   proposalSettings?: Partial<ProposalData["proposalSettings"]>;
   event?: Partial<EventData>;
   venueSchedule?: Partial<VenueScheduleData>;
@@ -871,7 +918,6 @@ const mapApiProposalToFormData = (
   raw: EditableProposalApiResponse,
 ): ProposalData => ({
   ...defaultProposalData,
-  templateId: raw.templateId || defaultProposalData.templateId,
   proposalStatus:
     raw.status === "unsubmitted" || raw.status === "submitted"
       ? raw.status
@@ -932,110 +978,74 @@ const mapApiProposalToFormData = (
     ...defaultProposalData.videoRecordingStep,
     ...(raw.videoRecordingStep || {}),
   },
-  venue: {
-    ...defaultProposalData.venue,
-    needRiggingForFlown: {
-      needRiggingForFlown:
-        (
-          raw.venue?.needRiggingForFlown as unknown as {
-            needRiggingForFlown?: string;
-          }
-        )?.needRiggingForFlown ??
-        (raw.venue?.needRiggingForFlown as unknown as string) ??
-        "",
-      riggingPlotOrSpecs:
-        (
-          raw.venue?.needRiggingForFlown as unknown as {
-            riggingPlotOrSpecs?: string;
-          }
-        )?.riggingPlotOrSpecs ??
-        (raw.venue as unknown as Record<string, string>)?.riggingPlotOrSpecs ??
-        "",
-    } as VenueTechnicalData["needRiggingForFlown"],
-    needDedicatedPowerDrops: {
-      needDedicatedPowerDrops:
-        (
-          raw.venue?.needDedicatedPowerDrops as unknown as {
-            needDedicatedPowerDrops?: string;
-          }
-        )?.needDedicatedPowerDrops ??
-        (raw.venue?.needDedicatedPowerDrops as unknown as string) ??
-        "",
-      standardAmpWall:
-        (
-          raw.venue?.needDedicatedPowerDrops as unknown as {
-            standardAmpWall?: string;
-          }
-        )?.standardAmpWall ??
-        (raw.venue as unknown as Record<string, string>)?.standardAmpWall ??
-        "",
-    } as VenueTechnicalData["needDedicatedPowerDrops"],
-    powerDropsHowMany:
-      (raw.venue as unknown as Record<string, string>)?.powerDropsHowMany ?? "",
-    hardlineInternet: {
-      hardlineInternet: (
-        (raw.venue?.hardlineInternet as unknown as { hardlineInternet?: string })?.hardlineInternet ??
-        (raw.venue?.hardlineInternet as unknown as string) ??
-        ""
-      ) as "YES" | "NO" | "",
-      hardlineInternetPurpose: (
-        (raw.venue?.hardlineInternet as unknown as { hardlineInternetPurpose?: string })?.hardlineInternetPurpose ??
-        (raw.venue as unknown as Record<string, string>)?.hardlineInternetPurpose ??
-        ""
-      ),
-    },
-    livestreamVirtual: {
-      livestreamVirtual: (
-        (raw.venue?.livestreamVirtual as unknown as { livestreamVirtual?: string })?.livestreamVirtual ??
-        (raw.venue?.livestreamVirtual as unknown as string) ??
-        ""
-      ) as "YES" | "NO" | "",
-      livestreamPlatform: (
-        (raw.venue?.livestreamVirtual as unknown as { livestreamPlatform?: string })?.livestreamPlatform ??
-        (raw.venue as unknown as Record<string, string>)?.livestreamPlatform ??
-        ""
-      ),
-    },
-    wirelessInternetAttendees: (
-      (raw.venue as unknown as Record<string, string>)?.wirelessInternetAttendees ?? ""
-    ) as "YES" | "NO" | "",
-  },
-  uploads: {
-    ...defaultProposalData.uploads,
-    supportDocuments: Array.isArray(raw.uploads?.supportDocuments)
-      ? raw.uploads!.supportDocuments!
-      : defaultProposalData.uploads.supportDocuments,
-    reviewExistingAvQuote: ((): UploadsData["reviewExistingAvQuote"] => {
-      const rv = raw.uploads?.reviewExistingAvQuote;
-      if (rv && typeof rv === "object") {
-        const v = rv as {
-          reviewExistingAvQuote?: string;
-          avQuoteFiles?: Array<File | string>;
-        };
-        return {
-          reviewExistingAvQuote: (v.reviewExistingAvQuote ?? "") as
-            | "YES"
-            | "NO"
-            | "",
-          avQuoteFiles: Array.isArray(v.avQuoteFiles) ? v.avQuoteFiles : [],
-        };
-      }
-      const avFiles = Array.isArray(
-        (raw.uploads as Record<string, unknown>)?.avQuoteFiles,
-      )
-        ? ((raw.uploads as Record<string, unknown>).avQuoteFiles as Array<
-            File | string
-          >)
+  venue: (() => {
+    const rv = (raw.venue ?? {}) as Record<string, unknown>;
+    const yn = (v: unknown): "YES" | "NO" | "" =>
+      v === "YES" ? "YES" : v === "NO" ? "NO" : "";
+    return {
+      ...defaultProposalData.venue,
+      venueAvContactName:      (rv.venueAvContactName      as string) ?? "",
+      venueAvContactPhone:     (rv.venueAvContactPhone     as string) ?? "",
+      venueAvContactEmail:     (rv.venueAvContactEmail     as string) ?? "",
+      inHouseAvCompanyName:    (rv.inHouseAvCompanyName    as string) ?? "",
+      riggingRequired:         yn(rv.riggingRequired),
+      maxWeightPerRiggingPoint:(rv.maxWeightPerRiggingPoint as string) ?? "",
+      numberOfRiggingPoints:   (rv.numberOfRiggingPoints   as string) ?? "",
+      powerDropsRequired:      yn(rv.powerDropsRequired),
+      powerDropAmperage:       (rv.powerDropAmperage       as string) ?? "",
+      numberOfPowerDrops:      (rv.numberOfPowerDrops      as string) ?? "",
+      wirelessInternetRequired: yn(rv.wirelessInternetRequired),
+      internetUseCases: Array.isArray(rv.internetUseCases)
+        ? (rv.internetUseCases as string[])
+        : [],
+      coiRequirements:         (rv.coiRequirements         as string) ?? "",
+      venueAccessRequirements: (rv.venueAccessRequirements as string) ?? "",
+    } as VenueTechnicalData;
+  })(),
+  uploads: (() => {
+    const def = defaultProposalData.uploads;
+    const ru = (raw.uploads ?? {}) as Record<string, unknown>;
+    const strArr = (v: unknown): string[] =>
+      Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === "string") : [];
+    const refUrls = (v: unknown): ReferenceUrl[] =>
+      Array.isArray(v)
+        ? (v as unknown[]).filter(
+            (x): x is ReferenceUrl => !!x && typeof x === "object" && "url" in (x as object),
+          )
         : [];
+    const coV = (v: unknown): CoVendorEntry => {
+      const e = ((v ?? {}) as Record<string, unknown>);
       return {
-        reviewExistingAvQuote: ((rv as unknown as string) ?? "") as
-          | "YES"
-          | "NO"
-          | "",
-        avQuoteFiles: avFiles,
+        companyName:  (e.companyName  as string) ?? "",
+        contactName:  (e.contactName  as string) ?? "",
+        contactEmail: (e.contactEmail as string) ?? "",
+        contactPhone: (e.contactPhone as string) ?? "",
+        status:       (e.status       as string) ?? "",
+        notes:        (e.notes        as string) ?? "",
       };
-    })(),
-  },
+    };
+    const cv = (ru.coVendors ?? {}) as Record<string, unknown>;
+    const yn = (v: unknown): "YES" | "NO" | "" =>
+      v === "YES" ? "YES" : v === "NO" ? "NO" : "";
+    return {
+      brandGuideFiles:  strArr(ru.brandGuideFiles).length  ? strArr(ru.brandGuideFiles)  : def.brandGuideFiles,
+      brandGuideUrl:    (ru.brandGuideUrl  as string) ?? def.brandGuideUrl,
+      eventLogoFiles:   strArr(ru.eventLogoFiles).length   ? strArr(ru.eventLogoFiles)   : def.eventLogoFiles,
+      referenceFiles:   strArr(ru.referenceFiles).length   ? strArr(ru.referenceFiles)   : def.referenceFiles,
+      referenceUrls:    refUrls(ru.referenceUrls),
+      venueDocs:        strArr(ru.venueDocs).length        ? strArr(ru.venueDocs)        : def.venueDocs,
+      coVendors: {
+        inHouseVenueAv:   coV(cv.inHouseVenueAv),
+        eventDecorator:   coV(cv.eventDecorator),
+        registrationTech: coV(cv.registrationTech),
+        agencyOfRecord:   coV(cv.agencyOfRecord),
+        photographer:     coV(cv.photographer),
+      },
+      ndaRequired:      yn(ru.ndaRequired),
+      ndaType:          (ru.ndaType as string) ?? "",
+      ndaDocumentFiles: strArr(ru.ndaDocumentFiles),
+    } as UploadsData;
+  })(),
   budget: {
     ...defaultProposalData.budget,
     ...(raw.budget || {}),
@@ -1056,7 +1066,6 @@ const AddNewProposal = ({
   const [proposalProcessStep, setProposalProcessStep] = useState(
     isEditMode ? 1 : 0,
   );
-  const [saving, setSaving] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEditMode);
   const [showErrors, setShowErrors] = useState(false);
@@ -1260,55 +1269,23 @@ const AddNewProposal = ({
   };
 
   const isVenueStepValid = () => {
-    const {
-      needRiggingForFlown,
-      needDedicatedPowerDrops,
-      powerDropsHowMany,
-      hardlineInternet,
-      livestreamVirtual,
-      wirelessInternetAttendees,
-    } = proposalData.venue;
-    if (
-      !needRiggingForFlown.needRiggingForFlown.trim() ||
-      !needDedicatedPowerDrops.needDedicatedPowerDrops.trim() ||
-      !hardlineInternet.hardlineInternet.trim() ||
-      !livestreamVirtual.livestreamVirtual.trim() ||
-      !wirelessInternetAttendees.trim()
-    ) {
-      return false;
-    }
-    if (needDedicatedPowerDrops.needDedicatedPowerDrops === "YES") {
-      if (
-        !needDedicatedPowerDrops.standardAmpWall.trim() ||
-        !powerDropsHowMany.trim()
-      ) {
-        return false;
-      }
-    }
-    if (hardlineInternet.hardlineInternet === "YES") {
-      if (!hardlineInternet.hardlineInternetPurpose.trim()) return false;
-    }
-    if (livestreamVirtual.livestreamVirtual === "YES") {
-      if (!livestreamVirtual.livestreamPlatform.trim()) return false;
-    }
-    return true;
+    const { riggingRequired, powerDropsRequired, wirelessInternetRequired } =
+      proposalData.venue;
+    return !!riggingRequired && !!powerDropsRequired && !!wirelessInternetRequired;
   };
 
   const isUploadsStepValid = () => {
-    const { reviewExistingAvQuote } = proposalData.uploads;
-    if (!reviewExistingAvQuote.reviewExistingAvQuote.trim()) {
-      return false;
-    }
-    if (reviewExistingAvQuote.reviewExistingAvQuote === "YES") {
-      return reviewExistingAvQuote.avQuoteFiles.length > 0;
-    }
+    const { ndaRequired, ndaType } = proposalData.uploads;
+    if (!ndaRequired) return false;
+    if (ndaRequired === "YES" && !ndaType) return false;
     return true;
   };
 
   const isBudgetStepValid = () => {
     const {
       estimatedAvBudget,
-      budgetCustomAmount,
+      proposalFormatPreferences,
+      evaluationMatrix,
       timelineForProposal,
       callWithDxgProducer,
       howDidYouHear,
@@ -1323,21 +1300,40 @@ const AddNewProposal = ({
     ) {
       return false;
     }
-
-    if (estimatedAvBudget === "Other" && !budgetCustomAmount.trim()) return false;
     if (howDidYouHear === "Other" && !howDidYouHearOther.trim()) return false;
+    if (!proposalFormatPreferences || proposalFormatPreferences.length === 0) return false;
+
+    const hybridActive = proposalData.event.eventFormat !== "In-Person";
+    const scenicActive =
+      proposalData.roomByRoom.some((r) => r.scenicStageDesign === "Yes") ||
+      proposalData.contentCreative?.contentServicesNeeded === "YES";
+    const matrixSum =
+      evaluationMatrix.technicalApproach +
+      evaluationMatrix.crewExperience +
+      (hybridActive ? evaluationMatrix.hybridVirtual : 0) +
+      evaluationMatrix.pricing +
+      (scenicActive ? evaluationMatrix.creativeScenic : 0) +
+      evaluationMatrix.responsiveness +
+      evaluationMatrix.sustainabilityDei;
+    if (matrixSum !== 100) return false;
 
     return true;
   };
 
   const isContactStepValid = () => {
-    const { contactFirstName, contactLastName, contactEmail, contactPhone } =
-      proposalData.contact;
+    const {
+      contactFirstName, contactLastName, contactTitle,
+      contactOrganization, contactEmail, contactPhone,
+      organizationLegalName,
+    } = proposalData.contact;
     return (
       contactFirstName.trim().length > 0 &&
       contactLastName.trim().length > 0 &&
+      contactTitle.trim().length > 0 &&
+      contactOrganization.trim().length > 0 &&
       contactEmail.trim().length > 0 &&
-      contactPhone.trim().length > 0
+      contactPhone.trim().length > 0 &&
+      organizationLegalName.trim().length > 0
     );
   };
 
@@ -1430,11 +1426,6 @@ const AddNewProposal = ({
       return;
     }
 
-    setSaving(true);
-
-    // Mongoose expects arrays of strings (e.g. file URLs), but state holds File objects
-    // Temporarily, we just strip them out or map them to their names so validation passes.
-    // (If you want true file uploading, you'd send them to S3/Cloudinary first and pass the URLs here.)
     const normalizedRooms = rooms.map((r) => normalizeRoomByRoomForSubmit(r));
     const firstRoom = normalizedRooms[0] ?? normalizeRoomByRoomForSubmit(defaultRoom());
     const payload: ProposalData & { production: ProductionSupportData } = {
@@ -1454,22 +1445,6 @@ const AddNewProposal = ({
         unionLabor: firstRoom.unionLabor,
         showCrewNeeded: firstRoom.showCrewNeeded,
         otherRolesNeeded: firstRoom.otherRolesNeeded,
-      },
-      uploads: {
-        supportDocuments: [],
-        reviewExistingAvQuote: {
-          reviewExistingAvQuote:
-            proposalData.uploads.reviewExistingAvQuote.reviewExistingAvQuote,
-          avQuoteFiles: proposalData.uploads.reviewExistingAvQuote.avQuoteFiles
-            .map((f) => (typeof f === "string" ? f : f?.name || ""))
-            .filter(
-              (f) =>
-                typeof f === "string" &&
-                f.trim() !== "" &&
-                f !== "[ {} ]" &&
-                f !== "[object Object]",
-            ),
-        },
       },
     };
 
@@ -1528,8 +1503,6 @@ const AddNewProposal = ({
           ? "An error occurred while updating the proposal."
           : "An error occurred while creating the proposal.",
       );
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -1551,7 +1524,6 @@ const AddNewProposal = ({
     eventName: string;
     startDate: string;
     endDate: string;
-    templateId: "template-one" | "template-two" | "";
   }) => {
     if (!createdProposal?.id) return;
     setCopyingSaving(true);
@@ -1560,7 +1532,6 @@ const AddNewProposal = ({
         eventName: overrides.eventName,
         startDate: overrides.startDate,
         endDate: overrides.endDate,
-        templateId: overrides.templateId as "template-one" | "template-two",
       });
       if (result.success) {
         toast.success("Copy saved successfully!");
@@ -1595,7 +1566,11 @@ const AddNewProposal = ({
           setProposalData((prev) => ({
             ...prev,
             event: { ...prev.event, ...(normalized.event ?? {}) },
+            venueSchedule: { ...prev.venueSchedule, ...(normalized.venueSchedule ?? {}) },
             roomByRoom: normalized.roomByRoom ?? prev.roomByRoom,
+            hybridVirtual: { ...prev.hybridVirtual, ...(normalized.hybridVirtual ?? {}) },
+            contentCreative: { ...prev.contentCreative, ...(normalized.contentCreative ?? {}) },
+            videoRecordingStep: { ...prev.videoRecordingStep, ...(normalized.videoRecordingStep ?? {}) },
             venue: { ...prev.venue, ...(normalized.venue ?? {}) },
             uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
             budget: { ...prev.budget, ...(normalized.budget ?? {}) },
@@ -1647,12 +1622,9 @@ const AddNewProposal = ({
       if (!isContactStepValid()) {
         return;
       }
-      setProposalProcessStep(11);
-      setShowErrors(false);
+      void handleSubmit();
       return;
     }
-
-    if (proposalProcessStep === 11) return;
 
     setProposalProcessStep((s) => {
       const next = s + 1;
@@ -1675,14 +1647,16 @@ const AddNewProposal = ({
         setProposalData((prev) => ({
           ...prev,
           event: { ...prev.event, ...(normalized.event ?? {}) },
-          // roomByRoom is an array — replace entirely with extracted data
+          venueSchedule: { ...prev.venueSchedule, ...(normalized.venueSchedule ?? {}) },
           roomByRoom: normalized.roomByRoom ?? prev.roomByRoom,
+          hybridVirtual: { ...prev.hybridVirtual, ...(normalized.hybridVirtual ?? {}) },
+          contentCreative: { ...prev.contentCreative, ...(normalized.contentCreative ?? {}) },
+          videoRecordingStep: { ...prev.videoRecordingStep, ...(normalized.videoRecordingStep ?? {}) },
           venue: { ...prev.venue, ...(normalized.venue ?? {}) },
           uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
           budget: { ...prev.budget, ...(normalized.budget ?? {}) },
           contact: { ...prev.contact, ...(normalized.contact ?? {}) },
         }));
-        // Populate the rooms accordion state so the form fields render correctly
         if (normalized.roomByRoom && normalized.roomByRoom.length > 0) {
           setRooms(normalized.roomByRoom.map((r) => ({ ...defaultRoom(), ...r })));
         }
@@ -1731,7 +1705,6 @@ const AddNewProposal = ({
           defaultEventName={proposalData.event.eventName}
           defaultStartDate={toIsoDate(proposalData.event.startDate)}
           defaultEndDate={toIsoDate(proposalData.event.endDate)}
-          defaultTemplateId={proposalData.templateId}
           proposalSettings={proposalSettings}
         />
       </>
@@ -1835,6 +1808,7 @@ const AddNewProposal = ({
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                isInPersonOnly={isInPersonOnly}
               />
             )}
             {proposalProcessStep === 4 && (
@@ -1874,6 +1848,8 @@ const AddNewProposal = ({
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                onDemandRecording={proposalData.hybridVirtual.onDemandRecording}
+                sizzleRecapOwner={proposalData.contentCreative?.sizzleRecapVideo}
               />
             )}
             {proposalProcessStep === 7 && (
@@ -1884,6 +1860,16 @@ const AddNewProposal = ({
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                isUnionVenue={proposalData.venueSchedule.isUnionVenue}
+                loadInDate={proposalData.venueSchedule.loadInDate}
+                strikeDate={proposalData.venueSchedule.strikeDate}
+                numberOfEventRooms={proposalData.venueSchedule.numberOfEventRooms}
+                ledWallMaxWidth={(() => {
+                  const widths = proposalData.roomByRoom
+                    .map((r) => parseFloat(r.ledWallWidth ?? "0"))
+                    .filter((w) => !isNaN(w) && w > 0);
+                  return widths.length ? Math.max(...widths) : undefined;
+                })()}
               />
             )}
             {proposalProcessStep === 8 && (
@@ -1894,18 +1880,38 @@ const AddNewProposal = ({
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                eventFormat={proposalData.event.eventFormat}
+                hasScenicOnAnyRoom={proposalData.roomByRoom.some(
+                  (r) => r.scenicStageDesign === "Yes",
+                )}
+                hasLedWallOnAnyRoom={proposalData.roomByRoom.some(
+                  (r) => !!(r.ledWall && r.ledWall.toUpperCase() === "YES"),
+                )}
+                contentServicesNeeded={
+                  proposalData.contentCreative?.contentServicesNeeded
+                }
+                venueName={proposalData.venueSchedule.venueName}
               />
             )}
             {proposalProcessStep === 9 && (
               <UploadsReferenceMaterials
                 data={proposalData.uploads}
-                onChange={(updates) =>
-                  updateProposalSection("uploads", updates)
-                }
+                onChange={(updates) => updateProposalSection("uploads", updates)}
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                venueAvContactName={proposalData.venue.venueAvContactName}
+                venueAvContactEmail={proposalData.venue.venueAvContactEmail}
+                venueAvContactPhone={proposalData.venue.venueAvContactPhone}
+                inHouseAvCompanyName={proposalData.venue.inHouseAvCompanyName}
+                riggingRequired={proposalData.venue.riggingRequired}
+                isUnionVenue={proposalData.venueSchedule.isUnionVenue}
+                hasScenicOnAnyRoom={proposalData.roomByRoom.some(
+                  (r) => r.scenicStageDesign === "Yes",
+                )}
+                eventFormat={proposalData.event.eventFormat}
+                contentServicesNeeded={proposalData.contentCreative?.contentServicesNeeded}
               />
             )}
             {proposalProcessStep === 10 && (
@@ -1918,28 +1924,6 @@ const AddNewProposal = ({
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
-              />
-            )}
-            {proposalProcessStep === 11 && (
-              <TemplateSelection
-                templateId={proposalData.templateId}
-                onSelect={(templateId) =>
-                  setProposalData((prev) => ({ ...prev, templateId }))
-                }
-                onCreate={(status) => {
-                  setShowErrors(true);
-                  if (!proposalData.templateId) return;
-                  if (!saving) {
-                    void handleSubmit(status);
-                  }
-                }}
-                onBack={backHandler}
-                showErrors={showErrors}
-                proposalSettings={proposalSettings}
-                draftActionLabel={
-                  isEditMode ? "UPDATE AS DRAFT" : "SAVE AS DRAFT"
-                }
-                liveActionLabel={isEditMode ? "UPDATE LIVE" : "CREATE LIVE"}
               />
             )}
           </div>
