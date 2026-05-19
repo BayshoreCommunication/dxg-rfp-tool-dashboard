@@ -78,7 +78,7 @@ export default function ProposalFilters({
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search
               size={18}
-              className="text-slate-400 group-focus-within:text-cyan-500 transition-colors duration-200"
+              className="text-slate-400 group-focus-within:text-[#00c2c9] transition-colors duration-200"
             />
           </div>
           <input
@@ -86,13 +86,13 @@ export default function ProposalFilters({
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search proposals by name, client, or ID..."
-            className="w-full h-12 pl-11 pr-5 bg-white border border-slate-200 rounded-xl shadow-sm text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-400 transition-all"
+            className="w-full h-12 pl-11 pr-5 bg-white border border-slate-200 rounded-xl shadow-sm text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:ring-4 focus:ring-[#00c2c9]/10 focus:border-[#00c2c9] transition-all"
           />
         </div>
 
         <button
           type="button"
-          className="flex items-center justify-center gap-2 h-12 px-5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[13px] font-bold shadow-sm hover:bg-slate-50 hover:text-cyan-600 hover:border-cyan-200 transition-all duration-200 shrink-0"
+          className="flex items-center justify-center gap-2 h-12 px-5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[13px] font-bold shadow-sm hover:bg-slate-50 hover:text-[#00c2c9] hover:border-[#00c2c9]/30 transition-all duration-200 shrink-0"
         >
           <SlidersHorizontal size={16} />
           Filters

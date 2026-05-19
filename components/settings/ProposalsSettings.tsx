@@ -178,7 +178,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
                       },
                     })
                   }
-                  className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#6366f1] focus:ring-1 focus:ring-[#6366f1]/30"
+                  className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#00c2c9] focus:ring-1 focus:ring-[#00c2c9]/30"
                 />
                 Email
               </label>
@@ -219,7 +219,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
                         },
                       })
                     }
-                    className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#6366f1] focus:ring-1 focus:ring-[#6366f1]/30"
+                    className="h-3.5 w-3.5 rounded border-[#cfd4dd] text-[#00c2c9] focus:ring-1 focus:ring-[#00c2c9]/30"
                   />
                   Call
                 </span>
@@ -287,7 +287,7 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
               />
               <button
                 type="button"
-                className="w-11 border-l border-[#d7dce3] text-xs font-semibold text-[#6366f1] hover:bg-[#f2f4f8]"
+                className="w-11 border-l border-[#d7dce3] text-xs font-semibold text-[#00c2c9] hover:bg-[#f2f4f8]"
               >
                 Add
               </button>

@@ -473,7 +473,8 @@ export default function ProposalTableList({
             <div className="mt-7 mx-auto max-w-[180px]">
               <Link
                 href="/proposals/add-new-proposal"
-                className="group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-primary-gradient px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_24px_rgba(45,198,245,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(45,198,245,0.55)] active:translate-y-0"
+                className="group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+                style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
               >
                 <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
                 <Plus size={15} strokeWidth={3} className="shrink-0" />
@@ -551,8 +552,8 @@ export default function ProposalTableList({
                   key={proposal._id || `proposal-${index}`}
                   className="relative overflow-hidden rounded-2xl bg-white p-6 border border-slate-200 shadow-sm transition-shadow hover:shadow-md"
                 >
-                  <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-cyan-50 blur-3xl pointer-events-none" />
-                  <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-blue-50 blur-3xl pointer-events-none" />
+                  <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#00c2c9]/5 blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-[#2563eb]/5 blur-3xl pointer-events-none" />
 
                   <div className="relative z-10 flex items-start justify-between mb-6">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -732,7 +733,8 @@ export default function ProposalTableList({
                           />
                           <Link
                             href={`/email/send-email?proposalId=${proposal._id}`}
-                            className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-0.5 transition-all duration-200"
+                            className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-[#0ea5e9]/20 hover:-translate-y-0.5 transition-all duration-200"
+                            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
                           >
                             <Share2 size={15} /> Share
                           </Link>

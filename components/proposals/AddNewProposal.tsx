@@ -1748,8 +1748,51 @@ const AddNewProposal = ({
       className="space-y-6 px-6"
     >
       {loadingExisting && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-sm">
-          Loading proposal for editing...
+        <div className="flex w-full gap-4">
+          {/* Form card skeleton — 80% */}
+          <div className="w-[80%] space-y-6">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #00c2c9, #2563eb)" }} />
+              <div className="space-y-6 p-8">
+                <div className="space-y-1">
+                  <div className="h-6 w-48 animate-pulse rounded-lg bg-slate-200" />
+                  <div className="h-3 w-80 animate-pulse rounded bg-slate-100" />
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-3 w-28 animate-pulse rounded bg-slate-200" />
+                      <div className="h-10 w-full animate-pulse rounded-lg bg-slate-100" />
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 w-32 animate-pulse rounded bg-slate-200" />
+                  <div className="h-24 w-full animate-pulse rounded-lg bg-slate-100" />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-between border-t border-slate-100 px-8 py-4">
+                <div className="h-9 w-24 animate-pulse rounded-xl bg-slate-100" />
+                <div className="h-9 w-28 animate-pulse rounded-xl bg-[#00c2c9]/20" />
+              </div>
+            </div>
+          </div>
+          {/* Step sidebar skeleton — 20% */}
+          <div className="w-[20%] space-y-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 py-2.5">
+                  <div className="h-6 w-6 shrink-0 animate-pulse rounded-full bg-slate-200" />
+                  <div className="h-3 w-full animate-pulse rounded bg-slate-100" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
       {/* â”€â”€ Step 0: Upload screen â”€â”€ */}

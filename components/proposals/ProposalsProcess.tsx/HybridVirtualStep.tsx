@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import type { HybridVirtualData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip } from "./shared";
 
-/* ─── Shared style constants ─── */
+/* â”€â”€â”€ Shared style constants â”€â”€â”€ */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
@@ -58,7 +58,7 @@ const captionLanguageOptions = [
   "Other",
 ];
 
-/* ─── Yes/No button pair ─── */
+/* â”€â”€â”€ Yes/No button pair â”€â”€â”€ */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-18 cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
@@ -87,17 +87,17 @@ const YesNo = ({
           onChange={() => onChange(opt)}
           className="sr-only"
         />
-        {opt === "YES" ? "✓ Yes" : "✗ No"}
+        {opt === "YES" ? "âœ“ Yes" : "âœ— No"}
       </label>
     ))}
   </div>
 );
 
-/* ─── Conditional sub-panel wrapper ─── */
+/* â”€â”€â”€ Conditional sub-panel wrapper â”€â”€â”€ */
 const SubPanel = ({ children }: { children: React.ReactNode }) => (
   <div className="mt-3 rounded-md border border-[#d7dce3] bg-slate-50 p-4 space-y-4">
     <p className="text-xs font-bold uppercase tracking-wide text-[#8f98bf]">
-      Sub-Questions — Triggered
+      Sub-Questions â€” Triggered
     </p>
     {children}
   </div>
@@ -166,7 +166,7 @@ const HybridVirtualStep = ({
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#35bdf2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#35bdf2]">
+          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
             Page 3 of 9
           </span>
         </div>
@@ -174,7 +174,7 @@ const HybridVirtualStep = ({
           {isVirtualOnly ? "Virtual" : "Hybrid"} &amp; Virtual Production
         </h2>
         <p className="mt-1 text-sm text-[#8f98bf]">
-          Conditional {isVirtualOnly ? "virtual" : "hybrid"} production requirements — active because you selected{" "}
+          Conditional {isVirtualOnly ? "virtual" : "hybrid"} production requirements â€” active because you selected{" "}
           {isVirtualOnly ? "Virtual Only" : "Hybrid or Virtual"} format.
         </p>
       </div>
@@ -182,7 +182,7 @@ const HybridVirtualStep = ({
       {/* Form Body */}
       <div className="flex-1 px-8 py-8 space-y-10">
 
-        {/* ── Group: Virtual Audience ── */}
+        {/* â”€â”€ Group: Virtual Audience â”€â”€ */}
         <div>
           <p className={groupLabelClass}>Virtual Audience</p>
           <div className="space-y-6">
@@ -192,7 +192,7 @@ const HybridVirtualStep = ({
               <div>
                 <label className={labelClass}>
                   Virtual Attendee Estimate
-                  <InfoTooltip text="Expected number of remote viewers. Helps vendors size streaming infrastructure — CDN, encoding bandwidth, and platform licensing tiers." />
+                  <InfoTooltip text="Expected number of remote viewers. Helps vendors size streaming infrastructure â€” CDN, encoding bandwidth, and platform licensing tiers." />
                 </label>
                 <input
                   type="number"
@@ -208,7 +208,7 @@ const HybridVirtualStep = ({
               <div>
                 <label className={labelClass}>
                   Streaming Platform
-                  <InfoTooltip text="The platform delivering the virtual experience to remote attendees. If unsure, select 'Vendor Recommendation Needed' — DXG will suggest the best fit based on your scope." />
+                  <InfoTooltip text="The platform delivering the virtual experience to remote attendees. If unsure, select 'Vendor Recommendation Needed' â€” DXG will suggest the best fit based on your scope." />
                 </label>
                 <select
                   className={`${inputClass} appearance-none`}
@@ -248,7 +248,7 @@ const HybridVirtualStep = ({
               <div>
                 <label className={labelClass}>
                   Platform Integration with In-Room AV?
-                  <InfoTooltip text="Whether the streaming platform connects directly with the in-room video signal chain. Deep integration requires additional switching and encoding gear — affects technical scope and crew count." />
+                  <InfoTooltip text="Whether the streaming platform connects directly with the in-room video signal chain. Deep integration requires additional switching and encoding gear â€” affects technical scope and crew count." />
                 </label>
                 <YesNo
                   name="platformIntegrationWithAv"
@@ -281,7 +281,7 @@ const HybridVirtualStep = ({
           </div>
         </div>
 
-        {/* ── Group: Remote Speakers & Q&A ── */}
+        {/* â”€â”€ Group: Remote Speakers & Q&A â”€â”€ */}
         <div>
           <p className={groupLabelClass}>Remote Speakers &amp; Q&amp;A</p>
           <div className="space-y-6">
@@ -419,7 +419,7 @@ const HybridVirtualStep = ({
           </div>
         </div>
 
-        {/* ── Group: Captions & Deliverables ── */}
+        {/* â”€â”€ Group: Captions & Deliverables â”€â”€ */}
         <div>
           <p className={groupLabelClass}>Captions &amp; Deliverables</p>
           <div className="space-y-6">
@@ -429,7 +429,7 @@ const HybridVirtualStep = ({
               <div>
                 <label className={labelClass}>
                   Dedicated Virtual Producer?
-                  <InfoTooltip text="A DXG producer whose sole focus is managing the virtual side of the show — monitoring stream health, managing remote speaker handoffs, moderating virtual Q&A, and troubleshooting platform issues in real time. Strongly recommended for events with 500+ virtual attendees or multiple remote speakers." />
+                  <InfoTooltip text="A DXG producer whose sole focus is managing the virtual side of the show â€” monitoring stream health, managing remote speaker handoffs, moderating virtual Q&A, and troubleshooting platform issues in real time. Strongly recommended for events with 500+ virtual attendees or multiple remote speakers." />
                 </label>
                 <YesNo
                   name="dedicatedVirtualProducer"
@@ -465,7 +465,7 @@ const HybridVirtualStep = ({
                       <div>
                         <label className={labelClass}>
                           Languages
-                          <InfoTooltip text="Each language that needs to be captioned. Each additional language typically requires a separate captioner or AI processing stream — select all that apply." />
+                          <InfoTooltip text="Each language that needs to be captioned. Each additional language typically requires a separate captioner or AI processing stream â€” select all that apply." />
                         </label>
                         <div className="flex flex-col gap-2 mt-1">
                           {captionLanguageOptions.map((lang) => (
@@ -490,7 +490,7 @@ const HybridVirtualStep = ({
                                     },
                                   });
                                 }}
-                                className="accent-[#35bdf2] h-4 w-4"
+                                className="accent-[#00c2c9] h-4 w-4"
                               />
                               {lang}
                             </label>
@@ -500,7 +500,7 @@ const HybridVirtualStep = ({
                       <div>
                         <label className={labelClass}>
                           Caption Source
-                          <InfoTooltip text="AI auto-captions are fast and affordable but have accuracy limitations. 'AI with Human Review' balances cost and accuracy. Human CART captioners provide near-perfect accuracy — required for legal, medical, or government events." />
+                          <InfoTooltip text="AI auto-captions are fast and affordable but have accuracy limitations. 'AI with Human Review' balances cost and accuracy. Human CART captioners provide near-perfect accuracy â€” required for legal, medical, or government events." />
                         </label>
                         <select
                           className={`${inputClass} appearance-none`}
@@ -568,21 +568,21 @@ const HybridVirtualStep = ({
         </div>
       </div>
 
-      {/* ── Footer Nav ── */}
+      {/* â”€â”€ Footer Nav â”€â”€ */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
           onClick={onBack}
           className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
         >
-          ← Room Specifications
+          â† Room Specifications
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#35bdf2]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(53,189,242,0.35)] hover:bg-[#20a9de] transition-colors active:scale-95"
+          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] hover:bg-[#009198] transition-colors active:scale-95"
         >
-          Content &amp; Creative →
+          Content &amp; Creative â†’
         </button>
       </div>
     </section>

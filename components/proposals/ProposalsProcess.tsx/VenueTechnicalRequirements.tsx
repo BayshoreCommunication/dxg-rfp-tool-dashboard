@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 
 import type { ProposalSettings, VenueTechnicalData } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 
-/* ─── Style constants ─── */
+/* â”€â”€â”€ Style constants â”€â”€â”€ */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#35bdf2] focus:outline-none focus:ring-2 focus:ring-[#35bdf2]/20";
+  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
 const subPanelClass =
@@ -15,7 +15,7 @@ const subPanelClass =
 const subPanelHeader =
   "mb-3 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
 
-/* ─── Yes/No buttons ─── */
+/* â”€â”€â”€ Yes/No buttons â”€â”€â”€ */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
@@ -38,14 +38,14 @@ const YesNo = ({
       className={yesNoCls("YES", value)}
       onClick={() => onChange("YES")}
     >
-      ✓ Yes
+      âœ“ Yes
     </button>
     <button
       type="button"
       className={yesNoCls("NO", value)}
       onClick={() => onChange("NO")}
     >
-      ✗ No
+      âœ— No
     </button>
   </div>
 );
@@ -56,7 +56,7 @@ const Group = ({ label }: { label: string }) => (
   </div>
 );
 
-/* ─── Options ─── */
+/* â”€â”€â”€ Options â”€â”€â”€ */
 const POWER_AMPERAGE_OPTIONS = [
   "100A",
   "200A",
@@ -71,7 +71,7 @@ const amperagePillCls = (opt: string, selected: string): string => {
   const base =
     "rounded-full border px-4 py-1.5 text-xs font-semibold transition-all";
   if (selected === opt)
-    return `${base} border-[#35bdf2] bg-[#35bdf2]/10 text-[#0f1b57]`;
+    return `${base} border-[#00c2c9] bg-[#00c2c9]/10 text-[#0f1b57]`;
   return `${base} border-[#d7dce3] bg-white text-slate-500 hover:border-slate-300`;
 };
 
@@ -85,7 +85,7 @@ const INTERNET_USE_CASES = [
   "Backstage / Production Crew",
 ];
 
-/* ─── Number stepper ─── */
+/* â”€â”€â”€ Number stepper â”€â”€â”€ */
 const Stepper = ({
   value,
   onChange,
@@ -105,7 +105,7 @@ const Stepper = ({
         onClick={() => onChange(String(Math.max(min, num - 1)))}
         className="flex h-10 w-10 items-center justify-center bg-[#f5f7ff] text-lg font-bold text-[#1f2d5d] hover:bg-[#e0e7ff] transition-colors"
       >
-        −
+        âˆ’
       </button>
       <span className="flex h-10 w-14 items-center justify-center text-sm font-bold text-slate-800">
         {num}
@@ -121,15 +121,15 @@ const Stepper = ({
   );
 };
 
-/* ─── Ref panel row ─── */
+/* â”€â”€â”€ Ref panel row â”€â”€â”€ */
 const RefRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-0.5">
     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
-    <span className="text-sm font-semibold text-slate-700">{value || "—"}</span>
+    <span className="text-sm font-semibold text-slate-700">{value || "â€”"}</span>
   </div>
 );
 
-/* ─── Props ─── */
+/* â”€â”€â”€ Props â”€â”€â”€ */
 interface Props {
   data: VenueTechnicalData;
   onChange: (updates: Partial<VenueTechnicalData>) => void;
@@ -193,10 +193,10 @@ const VenueTechnicalRequirements = ({
       className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#35bdf2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#35bdf2]">
+          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
             Page 6 of 9
           </span>
         </div>
@@ -204,13 +204,13 @@ const VenueTechnicalRequirements = ({
           Venue &amp; Technical Infrastructure
         </h2>
         <p className="mt-1 text-sm text-[#8f98bf]">
-          Rigging, power, internet, COI, and venue access details — used to scope labor and logistics.
+          Rigging, power, internet, COI, and venue access details â€” used to scope labor and logistics.
         </p>
       </div>
 
       <div className="flex-1 px-8 py-8 space-y-0">
 
-        {/* ── Reference Panel (read-only) ── */}
+        {/* â”€â”€ Reference Panel (read-only) â”€â”€ */}
         {(loadInDate || strikeDate || numberOfEventRooms || ledWallMaxWidth) && (
           <div className="mb-6 rounded-xl border border-[#d7dce3] bg-[#f8faff] px-5 py-4">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
@@ -229,10 +229,10 @@ const VenueTechnicalRequirements = ({
           </div>
         )}
 
-        {/* ── Union Advisory Banner ── */}
+        {/* â”€â”€ Union Advisory Banner â”€â”€ */}
         {showUnionBanner && (
           <div className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-            <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
+            <span className="mt-0.5 shrink-0 text-amber-500">âš </span>
             <div>
               <p className="text-sm font-bold text-amber-800">
                 {isUnionVenue === "YES" ? "Union Venue Detected" : "Union Status Not Confirmed"}
@@ -244,9 +244,9 @@ const VenueTechnicalRequirements = ({
           </div>
         )}
 
-        {/* ─────────────────────────────────────────
-            Block 1 — Venue AV Contact
-        ───────────────────────────────────────── */}
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            Block 1 â€” Venue AV Contact
+        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Group label="Venue AV Contact" />
 
         <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -287,9 +287,9 @@ const VenueTechnicalRequirements = ({
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────
-            Block 2 — In-House AV Company
-        ───────────────────────────────────────── */}
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            Block 2 â€” In-House AV Company
+        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="mb-6">
           <label className={labelClass}>
             In-House AV Company Name
@@ -297,15 +297,15 @@ const VenueTechnicalRequirements = ({
           </label>
           <input
             className={inputClass}
-            placeholder="e.g. PSAV, Encore, Freeman AV — or leave blank if none"
+            placeholder="e.g. PSAV, Encore, Freeman AV â€” or leave blank if none"
             value={data.inHouseAvCompanyName}
             onChange={(e) => onChange({ inHouseAvCompanyName: e.target.value })}
           />
         </div>
 
-        {/* ─────────────────────────────────────────
-            Block 3 — Rigging
-        ───────────────────────────────────────── */}
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            Block 3 â€” Rigging
+        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Group label="Rigging" />
 
         <div className="mb-6">
@@ -368,17 +368,17 @@ const VenueTechnicalRequirements = ({
           )}
         </div>
 
-        {/* ─────────────────────────────────────────
-            Block 4 — Power & Connectivity
-        ───────────────────────────────────────── */}
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            Block 4 â€” Power & Connectivity
+        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Group label="Power &amp; Connectivity" />
 
         {/* Smart power suggestion */}
         {suggestHighPower && (
           <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
-            <span className="shrink-0 text-amber-500">⚡</span>
+            <span className="shrink-0 text-amber-500">âš¡</span>
             <p className="text-xs text-amber-700">
-              Your LED wall exceeds 60 ft wide — a 400A minimum power drop is strongly recommended. Select 400A or higher below.
+              Your LED wall exceeds 60 ft wide â€” a 400A minimum power drop is strongly recommended. Select 400A or higher below.
             </p>
           </div>
         )}
@@ -409,7 +409,7 @@ const VenueTechnicalRequirements = ({
               <div className="mb-4">
                 <label className={labelClass}>
                   Amperage per Drop
-                  <InfoTooltip text="The amperage of each dedicated circuit. Large LED walls and audio systems typically require 200–400A. The AV company will confirm exact requirements." />
+                  <InfoTooltip text="The amperage of each dedicated circuit. Large LED walls and audio systems typically require 200â€“400A. The AV company will confirm exact requirements." />
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {POWER_AMPERAGE_OPTIONS.map((opt) => (
@@ -419,7 +419,7 @@ const VenueTechnicalRequirements = ({
                       onClick={() => onChange({ powerDropAmperage: opt })}
                       className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
                         data.powerDropAmperage === opt
-                          ? "border-[#35bdf2] bg-[#35bdf2]/10 text-[#0f1b57]"
+                          ? "border-[#00c2c9] bg-[#00c2c9]/10 text-[#0f1b57]"
                           : "border-[#d7dce3] bg-white text-slate-500 hover:border-slate-300"
                       }`}
                     >
@@ -432,7 +432,7 @@ const VenueTechnicalRequirements = ({
               <div>
                 <label className={labelClass}>
                   Number of Power Drops
-                  <InfoTooltip text="Total number of dedicated circuits needed. Common breakdowns: 1–2 at stage, 1 at FOH mix position, 1 at video village." />
+                  <InfoTooltip text="Total number of dedicated circuits needed. Common breakdowns: 1â€“2 at stage, 1 at FOH mix position, 1 at video village." />
                 </label>
                 <Stepper
                   value={data.numberOfPowerDrops || "1"}
@@ -467,7 +467,7 @@ const VenueTechnicalRequirements = ({
             <div className={subPanelClass}>
               <p className={subPanelHeader}>Internet Use Cases</p>
               <p className="mb-3 text-xs text-slate-500">
-                Select all that apply — DXG uses this to specify bandwidth requirements per use case.
+                Select all that apply â€” DXG uses this to specify bandwidth requirements per use case.
               </p>
               <div className="flex flex-wrap gap-3">
                 {INTERNET_USE_CASES.map((opt) => (
@@ -487,9 +487,9 @@ const VenueTechnicalRequirements = ({
           )}
         </div>
 
-        {/* ─────────────────────────────────────────
-            Block 5 — Compliance & Access
-        ───────────────────────────────────────── */}
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            Block 5 â€” Compliance & Access
+        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Group label="Compliance &amp; Access" />
 
         <div className="mb-6">
@@ -500,8 +500,8 @@ const VenueTechnicalRequirements = ({
           <textarea
             rows={4}
             maxLength={500}
-            className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#35bdf2] focus:outline-none focus:ring-2 focus:ring-[#35bdf2]/20"
-            placeholder="Paste the venue's COI requirements, additional insured language, or submission deadline…"
+            className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+            placeholder="Paste the venue's COI requirements, additional insured language, or submission deadlineâ€¦"
             value={data.coiRequirements}
             onChange={(e) => onChange({ coiRequirements: e.target.value })}
           />
@@ -518,8 +518,8 @@ const VenueTechnicalRequirements = ({
           <textarea
             rows={3}
             maxLength={400}
-            className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#35bdf2] focus:outline-none focus:ring-2 focus:ring-[#35bdf2]/20"
-            placeholder="e.g. Load-in after 6am only, freight elevator reservations required 48hrs in advance, all crew must badge in at security…"
+            className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+            placeholder="e.g. Load-in after 6am only, freight elevator reservations required 48hrs in advance, all crew must badge in at securityâ€¦"
             value={data.venueAccessRequirements}
             onChange={(e) =>
               onChange({ venueAccessRequirements: e.target.value })
@@ -532,21 +532,21 @@ const VenueTechnicalRequirements = ({
 
       </div>
 
-      {/* ── Footer ── */}
+      {/* â”€â”€ Footer â”€â”€ */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
           onClick={onBack}
           className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
         >
-          ← Video Recording
+          â† Video Recording
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#35bdf2]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(53,189,242,0.35)] hover:bg-[#20a9de] transition-colors active:scale-95"
+          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] hover:bg-[#009198] transition-colors active:scale-95"
         >
-          Budget &amp; Proposal →
+          Budget &amp; Proposal â†’
         </button>
       </div>
     </section>

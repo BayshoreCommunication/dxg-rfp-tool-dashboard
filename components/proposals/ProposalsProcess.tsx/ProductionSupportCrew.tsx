@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { RotateCcw } from "lucide-react";
 import type { ProductionSupportData, ProposalSettings } from "../AddNewProposal";
 import { PillRadio, PillCheckbox, toggleItem } from "./shared";
 
-/* ─── Shared style constants ─── */
+/* â”€â”€â”€ Shared style constants â”€â”€â”€ */
 const labelClass = "mb-3 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 
 const crewRoles = [
@@ -166,7 +166,7 @@ const ProductionSupportCrew = ({
           <button
             type="button"
             onClick={onContinue}
-            className="h-10 px-8 rounded-md bg-[#35bdf2] hover:bg-[#20A4D5] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(56,189,248,0.39)] transition-transform active:scale-95"
+            className="h-10 px-8 rounded-md bg-[#00c2c9] hover:bg-[#009198] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(0,194,201,0.39)] transition-transform active:scale-95"
           >
             CONTINUE
           </button>

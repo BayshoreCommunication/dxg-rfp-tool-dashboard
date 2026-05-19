@@ -4,39 +4,39 @@
 const TEMPLATE_CSS = `
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
-  .rfp-root { --primary: #0f1b57; --accent: #35bdf2; --gray: #64748b; --border: #e2e8f0; --light: #f8fafc; --orange: #f97316; --amber: #fffbeb; font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
-  .rfp-root .page { width: 210mm; min-height: 297mm; padding: 18mm 16mm 14mm; margin: 0 auto 8px; background: #fff; position: relative; page-break-after: always; }
-  @media print { body { background: #fff; } .rfp-root .page { margin: 0; padding: 14mm 15mm 12mm; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rfp-root .page:last-child { page-break-after: auto; } .no-print { display: none !important; } }
-  .rfp-root .int-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .rfp-root .int-header-left { font-size: 9.5px; font-weight: 700; color: #0f1b57; letter-spacing: 0.2px; }
-  .rfp-root .int-header-right { font-size: 9.5px; font-weight: 700; color: #35bdf2; letter-spacing: 0.2px; }
-  .rfp-root .divider { border: none; border-top: 1px solid #e2e8f0; margin: 0 0 14px; }
-  .rfp-root .divider-thick { border: none; border-top: 4px solid #35bdf2; margin: 14px 0 18px; border-radius: 2px; }
-  .rfp-root .footer { position: absolute; bottom: 10mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; font-size: 9px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 5px; }
-  .rfp-root .cover-header { background: linear-gradient(135deg, #05131f 0%, #0d2647 100%); border-radius: 14px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .rfp-root .cover-header-left { display: flex; flex-direction: column; gap: 6px; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
+  .rfp-root { --primary: #0f1b57; --accent: #00c2c9; --gray: #64748b; --border: #e2e8f0; --light: #f8fafc; --orange: #f97316; --amber: #fffbeb; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
+  .rfp-root .page { width: 210mm; min-height: 297mm; padding: 11mm 13mm 10mm; margin: 0 auto 8px; background: #fff; position: relative; page-break-after: always; }
+  @media print { body { background: #fff; } .rfp-root .page { margin: 0; padding: 9mm 11mm 8mm; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rfp-root .page:last-child { page-break-after: auto; } .no-print { display: none !important; } .rfp-root .cover-header { margin: -9mm -11mm 14px; padding: 24px 11mm; } }
+  .rfp-root .int-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .rfp-root .int-header-left { font-size: 10.5px; font-weight: 700; color: #0f1b57; letter-spacing: 0.2px; }
+  .rfp-root .int-header-right { font-size: 10.5px; font-weight: 700; color: #00c2c9; letter-spacing: 0.2px; }
+  .rfp-root .divider { border: none; border-top: 1px solid #e2e8f0; margin: 0 0 8px; }
+  .rfp-root .divider-thick { border: none; border-top: 4px solid #00c2c9; margin: 10px 0 13px; border-radius: 2px; }
+  .rfp-root .footer { position: absolute; bottom: 7mm; left: 13mm; right: 13mm; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px; }
+  .rfp-root .cover-header { background: #0f1b57; margin: -11mm -13mm 14px; padding: 26px 13mm; display: flex; justify-content: space-between; align-items: center; }
+  .rfp-root .cover-header-left { display: flex; flex-direction: column; gap: 5px; }
   .rfp-root .dxg-brand { display: flex; align-items: baseline; gap: 4px; }
-  .rfp-root .dxg-logo { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: -0.5px; line-height: 1; }
-  .rfp-root .dxg-name { font-size: 11px; font-weight: 600; color: #c5d9f4; }
-  .rfp-root .badge-confidential { display: inline-flex; align-items: center; background: #ef4444; color: #fff; font-size: 9px; font-weight: 800; padding: 3px 9px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.6px; width: fit-content; }
-  .rfp-root .badge-rfpilot { display: inline-flex; align-items: center; background: #35bdf2; color: #fff; font-size: 10px; font-weight: 800; padding: 6px 14px; border-radius: 8px; letter-spacing: 0.3px; white-space: nowrap; }
-  .rfp-root .cover-title-block { margin-top: 4px; margin-bottom: 14px; }
-  .rfp-root .rfp-label { display: inline-flex; align-items: center; background: #fef2f2; color: #b91c1c; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; border: 1px solid #fecaca; }
-  .rfp-root .event-name { font-size: 26px; font-weight: 900; color: #0f1b57; line-height: 1.15; margin-bottom: 5px; letter-spacing: -0.3px; }
-  .rfp-root .event-client { font-size: 13px; font-weight: 700; color: #64748b; margin-bottom: 12px; }
-  .rfp-root .date-bar { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #e2e8f0; border-radius: 7px; overflow: hidden; margin-bottom: 16px; }
-  .rfp-root .date-cell { padding: 9px 13px; font-size: 11px; background: #f8fafc; border-right: 1px solid #e2e8f0; }
+  .rfp-root .dxg-logo { font-size: 24px; font-weight: 900; color: #fff; letter-spacing: -0.5px; line-height: 1; }
+  .rfp-root .dxg-name { font-size: 12px; font-weight: 600; color: #c5d9f4; }
+  .rfp-root .badge-confidential { display: inline-flex; align-items: center; background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.6px; width: fit-content; }
+  .rfp-root .badge-rfpilot { display: inline-flex; align-items: center; background: #00c2c9; color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; border-radius: 8px; letter-spacing: 0.3px; white-space: nowrap; }
+  .rfp-root .cover-title-block { margin-top: 4px; margin-bottom: 10px; }
+  .rfp-root .rfp-label { display: inline-flex; align-items: center; background: #fef2f2; color: #b91c1c; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border: 1px solid #fecaca; }
+  .rfp-root .event-name { font-size: 28px; font-weight: 900; color: #0f1b57; line-height: 1.15; margin-bottom: 4px; letter-spacing: -0.3px; }
+  .rfp-root .event-client { font-size: 14px; font-weight: 700; color: #64748b; margin-bottom: 10px; }
+  .rfp-root .date-bar { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #e2e8f0; border-radius: 7px; overflow: hidden; margin-bottom: 10px; }
+  .rfp-root .date-cell { padding: 8px 12px; font-size: 12px; background: #f8fafc; border-right: 1px solid #e2e8f0; }
   .rfp-root .date-cell:last-child { border-right: none; }
   .rfp-root .date-cell b { color: #0f1b57; }
-  .rfp-root .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
-  .rfp-root .stat-card { border: 1px solid #e2e8f0; border-radius: 7px; padding: 10px 10px 9px; background: #fff; text-align: center; }
-  .rfp-root .stat-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-  .rfp-root .stat-value { font-size: 15px; font-weight: 900; color: #0f1b57; line-height: 1; }
-  .rfp-root .flags-section { margin-bottom: 14px; }
-  .rfp-root .flags-label { font-size: 9px; font-weight: 800; color: #35bdf2; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
-  .rfp-root .flags-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .rfp-root .flag { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.2px; white-space: nowrap; }
+  .rfp-root .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 9px; }
+  .rfp-root .stat-card { border: 1px solid #e2e8f0; border-top: 3px solid #00c2c9; border-radius: 7px; padding: 9px 9px 8px; background: rgba(0,194,201,0.03); text-align: center; }
+  .rfp-root .stat-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .rfp-root .stat-value { font-size: 17px; font-weight: 900; color: #00c2c9; line-height: 1; }
+  .rfp-root .flags-section { margin-bottom: 9px; }
+  .rfp-root .flags-label { font-size: 10px; font-weight: 800; color: #00c2c9; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+  .rfp-root .flags-row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .rfp-root .flag { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.2px; white-space: nowrap; }
   .rfp-root .flag::before { content: "●"; font-size: 8px; }
   .rfp-root .flag.teal { background: #0e7490; color: #fff; }
   .rfp-root .flag.charcoal { background: #1e293b; color: #fff; }
@@ -45,49 +45,49 @@ const TEMPLATE_CSS = `
   .rfp-root .flag.purple { background: #6d28d9; color: #fff; }
   .rfp-root .flag.violet { background: #9333ea; color: #fff; }
   .rfp-root .flag.green { background: #166534; color: #fff; }
-  .rfp-root .overview-box { border: 1px solid #e2e8f0; border-radius: 7px; padding: 14px 16px; background: #fff; margin-bottom: 12px; }
-  .rfp-root .overview-heading { font-size: 10px; font-weight: 800; color: #35bdf2; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 9px; }
-  .rfp-root .overview-box p { font-size: 11px; color: #2d3748; line-height: 1.6; margin-bottom: 8px; }
+  .rfp-root .overview-box { border: 1px solid #e2e8f0; border-radius: 7px; padding: 10px 13px; background: #fff; margin-bottom: 8px; }
+  .rfp-root .overview-heading { font-size: 11px; font-weight: 800; color: #00c2c9; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
+  .rfp-root .overview-box p { font-size: 12px; color: #2d3748; line-height: 1.6; margin-bottom: 6px; }
   .rfp-root .overview-box p:last-of-type { margin-bottom: 0; }
-  .rfp-root .contact-bar { display: grid; grid-template-columns: 90px 1fr 1fr 1fr; border: 1px solid #e2e8f0; border-radius: 7px; overflow: hidden; margin-top: 14px; }
-  .rfp-root .contact-label-cell { background: #0f1b57; color: #fff; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px 8px; line-height: 1.4; }
-  .rfp-root .contact-data-cell { padding: 10px 13px; font-size: 11px; font-weight: 700; color: #0f1b57; border-left: 1px solid #e2e8f0; display: flex; align-items: center; background: #f8fafc; }
-  .rfp-root .section { margin-bottom: 14px; }
-  .rfp-root .section-title { background: #0f1b57; color: #fff; padding: 9px 14px; border-radius: 9px; display: flex; align-items: center; gap: 11px; margin-bottom: 13px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; }
-  .rfp-root .sec-num { background: #35bdf2; color: #fff; min-width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; flex-shrink: 0; }
-  .rfp-root .section-subtitle { font-size: 9.5px; font-weight: 800; color: #35bdf2; text-transform: uppercase; letter-spacing: 0.9px; margin: 12px 0 7px; }
-  .rfp-root table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
-  .rfp-root th { background: #0f1b57; color: #fff; font-size: 10px; font-weight: 700; padding: 8px 10px; text-align: left; letter-spacing: 0.3px; text-transform: uppercase; }
-  .rfp-root td { border: 1px solid #e2e8f0; padding: 7px 10px; vertical-align: top; line-height: 1.45; color: #1e293b; }
+  .rfp-root .contact-bar { display: grid; grid-template-columns: 90px 1fr 1fr 1fr; border: 1px solid #e2e8f0; border-radius: 7px; overflow: hidden; margin-top: 9px; }
+  .rfp-root .contact-label-cell { background: #0f1b57; color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px 6px; line-height: 1.4; }
+  .rfp-root .contact-data-cell { padding: 8px 11px; font-size: 12px; font-weight: 700; color: #0f1b57; border-left: 1px solid #e2e8f0; display: flex; align-items: center; background: #f8fafc; }
+  .rfp-root .section { margin-bottom: 9px; }
+  .rfp-root .section-title { background: #0f1b57; color: #fff; padding: 8px 13px; border-radius: 9px; display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 13px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; }
+  .rfp-root .sec-num { background: #00c2c9; color: #fff; min-width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; flex-shrink: 0; }
+  .rfp-root .section-subtitle { font-size: 10.5px; font-weight: 800; color: #00c2c9; text-transform: uppercase; letter-spacing: 0.9px; margin: 8px 0 5px; }
+  .rfp-root table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .rfp-root th { background: #0f1b57; color: #fff; font-size: 11px; font-weight: 700; padding: 7px 9px; text-align: left; letter-spacing: 0.3px; text-transform: uppercase; }
+  .rfp-root td { border: 1px solid #e2e8f0; padding: 6px 9px; vertical-align: top; line-height: 1.45; color: #1e293b; }
   .rfp-root tr:nth-child(even) td { background: #fafbfd; }
   .rfp-root tr:first-child td { border-top: none; }
-  .rfp-root .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .rfp-root .info-card { border: 1px solid #e2e8f0; border-radius: 7px; padding: 12px 14px; background: #fff; }
-  .rfp-root .info-card h3 { font-size: 11.5px; font-weight: 800; color: #0f1b57; margin-bottom: 9px; text-transform: uppercase; letter-spacing: 0.3px; }
-  .rfp-root .info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 5px 0; border-bottom: 1px dashed #e5e7eb; gap: 8px; }
+  .rfp-root .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rfp-root .info-card { border: 1px solid #e2e8f0; border-radius: 7px; padding: 9px 12px; background: #fff; }
+  .rfp-root .info-card h3 { font-size: 12.5px; font-weight: 800; color: #0f1b57; margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .rfp-root .info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 0; border-bottom: 1px dashed #e5e7eb; gap: 8px; }
   .rfp-root .info-row:last-of-type { border-bottom: none; }
-  .rfp-root .info-label { font-weight: 700; color: #64748b; font-size: 10.5px; white-space: nowrap; flex-shrink: 0; }
-  .rfp-root .info-value { font-weight: 600; color: #1e293b; font-size: 10.5px; text-align: right; }
-  .rfp-root .crew-box { margin-top: 10px; padding: 8px 11px; background: rgba(53,189,242,0.07); border-left: 3px solid #35bdf2; border-radius: 4px; }
-  .rfp-root .crew-title { font-size: 9px; font-weight: 800; color: #35bdf2; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 4px; }
-  .rfp-root .crew-list { font-size: 10px; color: #374151; line-height: 1.5; }
-  .rfp-root .note-box { margin-top: 8px; padding: 8px 11px; background: #fffbeb; border-left: 3px solid #f97316; border-radius: 4px; }
-  .rfp-root .note-title { font-size: 9px; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .rfp-root .note-text { font-size: 10px; color: #78350f; line-height: 1.5; }
-  .rfp-root .callout { border: 1px solid #e2e8f0; border-left: 4px solid #35bdf2; border-radius: 6px; padding: 12px 14px; background: #f0faff; margin-top: 12px; }
-  .rfp-root .callout p { font-size: 10.5px; color: #1e293b; line-height: 1.55; }
-  .rfp-root .callout-heading { font-size: 10px; font-weight: 800; color: #0f1b57; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.3px; }
-  .rfp-root .orange-callout { border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 6px; padding: 11px 14px; background: #fff7ed; margin-top: 12px; font-size: 10.5px; color: #7c2d12; line-height: 1.55; font-style: italic; }
+  .rfp-root .info-label { font-weight: 700; color: #64748b; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+  .rfp-root .info-value { font-weight: 600; color: #1e293b; font-size: 11px; text-align: right; }
+  .rfp-root .crew-box { margin-top: 7px; padding: 6px 10px; background: rgba(0,194,201,0.07); border-left: 3px solid #00c2c9; border-radius: 4px; }
+  .rfp-root .crew-title { font-size: 10px; font-weight: 800; color: #00c2c9; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
+  .rfp-root .crew-list { font-size: 11px; color: #374151; line-height: 1.5; }
+  .rfp-root .note-box { margin-top: 6px; padding: 6px 10px; background: #fffbeb; border-left: 3px solid #f97316; border-radius: 4px; }
+  .rfp-root .note-title { font-size: 10px; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .rfp-root .note-text { font-size: 11px; color: #78350f; line-height: 1.5; }
+  .rfp-root .callout { border: 1px solid #e2e8f0; border-left: 4px solid #00c2c9; border-radius: 6px; padding: 9px 12px; background: rgba(0,194,201,0.04); margin-top: 8px; }
+  .rfp-root .callout p { font-size: 11.5px; color: #1e293b; line-height: 1.55; }
+  .rfp-root .callout-heading { font-size: 11px; font-weight: 800; color: #0f1b57; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.3px; }
+  .rfp-root .orange-callout { border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 6px; padding: 9px 12px; background: #fff7ed; margin-top: 8px; font-size: 11.5px; color: #7c2d12; line-height: 1.55; font-style: italic; }
   .rfp-root .orange-callout b { color: #9a3412; font-style: normal; }
-  .rfp-root .cta-box { display: flex; margin-top: 14px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-  .rfp-root .cta-side { background: #0f1b57; color: #35bdf2; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 14px 12px; display: flex; align-items: center; justify-content: center; text-align: center; min-width: 80px; line-height: 1.5; writing-mode: vertical-lr; transform: rotate(180deg); }
-  .rfp-root .cta-body { padding: 14px 16px; background: #f0faff; flex: 1; }
-  .rfp-root .cta-body p { font-size: 10.5px; color: #1e293b; line-height: 1.6; }
-  .rfp-root .cta-link { margin-top: 7px; font-size: 11px; font-weight: 800; color: #35bdf2; }
-  .rfp-root .disclaimer-box { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-top: 10px; background: #f8fafc; }
-  .rfp-root .disclaimer-box p { font-size: 10px; color: #64748b; line-height: 1.6; text-align: center; }
+  .rfp-root .cta-box { display: flex; margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+  .rfp-root .cta-side { background: #0f1b57; color: #00c2c9; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 10px; display: flex; align-items: center; justify-content: center; text-align: center; min-width: 80px; line-height: 1.5; writing-mode: vertical-lr; transform: rotate(180deg); }
+  .rfp-root .cta-body { padding: 12px 15px; background: rgba(0,194,201,0.04); flex: 1; }
+  .rfp-root .cta-body p { font-size: 11.5px; color: #1e293b; line-height: 1.6; }
+  .rfp-root .cta-link { margin-top: 6px; font-size: 12px; font-weight: 800; color: #00c2c9; }
+  .rfp-root .disclaimer-box { border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-top: 8px; background: #f8fafc; }
+  .rfp-root .disclaimer-box p { font-size: 11px; color: #64748b; line-height: 1.6; text-align: center; }
   .rfp-root .matrix-bar { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 3px; }
-  .rfp-root .matrix-fill { height: 6px; background: #35bdf2; border-radius: 3px; }
+  .rfp-root .matrix-fill { height: 6px; background: #00c2c9; border-radius: 3px; }
 `;
 
 /* ─── Data types ─── */
@@ -470,25 +470,25 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         </div>
 
         <div className="stats-row">
-          <div className="stat-card">
+          <div className="stat-card" style={{ borderTopColor: "#00c2c9", background: "rgba(0,194,201,0.04)" }}>
             <div className="stat-label">Attendees</div>
-            <div className="stat-value">{p(ev.attendees) || "—"}</div>
+            <div className="stat-value" style={{ color: "#00c2c9" }}>{p(ev.attendees) || "—"}</div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card" style={{ borderTopColor: "#0ea5e9", background: "rgba(14,165,233,0.04)" }}>
             <div className="stat-label">Show Rooms</div>
-            <div className="stat-value">{p(vs.numberOfEventRooms) || rooms.length || "—"}</div>
+            <div className="stat-value" style={{ color: "#0ea5e9" }}>{p(vs.numberOfEventRooms) || rooms.length || "—"}</div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card" style={{ borderTopColor: "#8b5cf6", background: "rgba(139,92,246,0.04)" }}>
             <div className="stat-label">Format</div>
-            <div className="stat-value">{p(ev.eventFormat) || "—"}</div>
+            <div className="stat-value" style={{ color: "#8b5cf6" }}>{p(ev.eventFormat) || "—"}</div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card" style={{ borderTopColor: "#f97316", background: "rgba(249,115,22,0.04)" }}>
             <div className="stat-label">Union Venue</div>
-            <div className="stat-value">{p(vs.isUnionVenue) === "YES" ? "Yes" : p(vs.isUnionVenue) === "NO" ? "No" : "—"}</div>
+            <div className="stat-value" style={{ color: "#f97316" }}>{p(vs.isUnionVenue) === "YES" ? "Yes" : p(vs.isUnionVenue) === "NO" ? "No" : "—"}</div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card" style={{ borderTopColor: "#10b981", background: "rgba(16,185,129,0.04)" }}>
             <div className="stat-label">Budget Tier</div>
-            <div className="stat-value">{p(bud.estimatedAvBudget) || "—"}</div>
+            <div className="stat-value" style={{ color: "#10b981" }}>{p(bud.estimatedAvBudget) || "—"}</div>
           </div>
         </div>
 
@@ -550,20 +550,20 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             <table>
               <thead>
                 <tr>
-                  {p(vs.loadInDate) && <th>Load-In</th>}
-                  {p(vs.rehearsalDate) && <th>Rehearsal</th>}
-                  {p(ev.startDate) && <th>Show Start</th>}
-                  {p(ev.endDate) && <th>Show End</th>}
-                  {p(vs.strikeDate) && <th>Strike</th>}
+                  {p(vs.loadInDate) && <th style={{ background: "#00c2c9" }}>Load-In</th>}
+                  {p(vs.rehearsalDate) && <th style={{ background: "#0ea5e9" }}>Rehearsal</th>}
+                  {p(ev.startDate) && <th style={{ background: "#10b981" }}>Show Start</th>}
+                  {p(ev.endDate) && <th style={{ background: "#8b5cf6" }}>Show End</th>}
+                  {p(vs.strikeDate) && <th style={{ background: "#f97316" }}>Strike</th>}
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  {p(vs.loadInDate) && <td>{fmtDate(p(vs.loadInDate))}{p(vs.loadInTime) ? ` — ${p(vs.loadInTime)}` : ""}</td>}
-                  {p(vs.rehearsalDate) && <td>{fmtDate(p(vs.rehearsalDate))}{p(vs.rehearsalTime) ? ` — ${p(vs.rehearsalTime)}` : ""}</td>}
-                  {p(ev.startDate) && <td>{fmtDate(p(ev.startDate))}</td>}
-                  {p(ev.endDate) && <td>{fmtDate(p(ev.endDate))}</td>}
-                  {p(vs.strikeDate) && <td>{fmtDate(p(vs.strikeDate))}{p(vs.strikeTime) ? ` — ${p(vs.strikeTime)}` : ""}</td>}
+                  {p(vs.loadInDate) && <td style={{ background: "rgba(0,194,201,0.06)", color: "#00c2c9", fontWeight: 700 }}>{fmtDate(p(vs.loadInDate))}{p(vs.loadInTime) ? ` — ${p(vs.loadInTime)}` : ""}</td>}
+                  {p(vs.rehearsalDate) && <td style={{ background: "rgba(14,165,233,0.06)", color: "#0ea5e9", fontWeight: 700 }}>{fmtDate(p(vs.rehearsalDate))}{p(vs.rehearsalTime) ? ` — ${p(vs.rehearsalTime)}` : ""}</td>}
+                  {p(ev.startDate) && <td style={{ background: "rgba(16,185,129,0.06)", color: "#10b981", fontWeight: 700 }}>{fmtDate(p(ev.startDate))}</td>}
+                  {p(ev.endDate) && <td style={{ background: "rgba(139,92,246,0.06)", color: "#8b5cf6", fontWeight: 700 }}>{fmtDate(p(ev.endDate))}</td>}
+                  {p(vs.strikeDate) && <td style={{ background: "rgba(249,115,22,0.06)", color: "#f97316", fontWeight: 700 }}>{fmtDate(p(vs.strikeDate))}{p(vs.strikeTime) ? ` — ${p(vs.strikeTime)}` : ""}</td>}
                 </tr>
               </tbody>
             </table>
@@ -882,7 +882,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
               { label: "Alternates", detail: "At least one alternate/value-engineered option with scope tradeoffs explained." },
             ].map((req, i) => (
               <tr key={i}>
-                <td style={{ textAlign: "center", fontWeight: 800, background: "#0f1b57", color: "#35bdf2" }}>{i + 1}</td>
+                <td style={{ textAlign: "center", fontWeight: 900, background: i % 2 === 0 ? "#0f1b57" : "#00c2c9", color: i % 2 === 0 ? "#00c2c9" : "#fff" }}>{i + 1}</td>
                 <td><b>{req.label}</b></td>
                 <td>{req.detail}</td>
               </tr>

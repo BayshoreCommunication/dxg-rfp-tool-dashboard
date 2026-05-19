@@ -25,24 +25,50 @@
 }
 
 @theme {
-  --color-primary: #0ea5e9;
-  --color-secondary: #6366f1;
-  --color-primary-start: #22d3ee;
-  --color-primary-end: #6366f1;
+  /* ── RFPilot Brand ─────────────────────────────────── */
+
+  /* Primary teal */
+  --color-brand:        #00c2c9;
+  --color-brand-light:  #33ced4;
+  --color-brand-dark:   #009198;
+  --color-brand-muted:  #e0f9fa;
+
+  /* Secondary navy */
+  --color-navy:         #0e1b2b;
+  --color-navy-light:   #1c3047;
+  --color-navy-muted:   #e8edf3;
+
+  /* Semantic aliases (used by Tailwind utilities & components) */
+  --color-primary:       var(--color-brand);
+  --color-secondary:     var(--color-navy);
+
+  /* Gradient endpoints */
+  --color-primary-start: var(--color-brand);
+  --color-primary-end:   var(--color-navy);
+
+  /* ── Typography ────────────────────────────────────── */
   --font-sans:
     "Proxima Nova", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui,
     sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
     "Noto Color Emoji";
 }
 
+/* Brand gradient — teal → navy */
 .bg-primary-gradient {
   background: linear-gradient(
     135deg,
-    var(--color-primary-start) 0%,
-    var(--color-primary) 50%,
-    var(--color-primary-end) 100%
+    var(--color-brand) 0%,
+    var(--color-navy) 100%
   );
 }
+
+/* Utility shorthands */
+.text-brand   { color: var(--color-brand); }
+.text-navy    { color: var(--color-navy); }
+.bg-brand     { background-color: var(--color-brand); }
+.bg-navy      { background-color: var(--color-navy); }
+.border-brand { border-color: var(--color-brand); }
+.border-navy  { border-color: var(--color-navy); }
 
 body {
   /* background-color: #f4f4f4; */

@@ -32,14 +32,14 @@ const TopHeader = () => {
   return (
     <div className="relative">
       {/* Ambient glow behind header */}
-      <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-purple-500/5 rounded-3xl blur-2xl pointer-events-none" />
+      <div className="absolute -inset-4 bg-gradient-to-r from-[#00c2c9]/5 via-[#0ea5e9]/3 to-[#2563eb]/5 rounded-3xl blur-2xl pointer-events-none" />
 
       <div className="relative flex items-center justify-between">
         {/* Left: Title block */}
         <div className="flex flex-col gap-1">
           {/* Pill badge */}
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-cyan-500 mb-1">
-            <Sparkles size={10} className="fill-cyan-400" />
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-[#00c2c9] mb-1">
+            <Sparkles size={10} className="fill-[#00c2c9]" />
             Overview
           </span>
 

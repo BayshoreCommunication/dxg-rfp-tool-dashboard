@@ -33,14 +33,14 @@ const TopHeader = () => {
   return (
     <div className="relative">
       {/* Ambient glow behind header */}
-      <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-purple-500/5 rounded-3xl blur-2xl pointer-events-none" />
+      <div className="absolute -inset-4 bg-gradient-to-r from-[#00c2c9]/5 via-[#0ea5e9]/3 to-[#2563eb]/5 rounded-3xl blur-2xl pointer-events-none" />
 
       <div className="relative flex items-center justify-between">
         {/* Left: Title block */}
         <div className="flex flex-col gap-1">
           {/* Pill badge */}
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-cyan-500 mb-1">
-            <Sparkles size={10} className="fill-cyan-400" />
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-[#00c2c9] mb-1">
+            <Sparkles size={10} className="fill-[#00c2c9]" />
             Overview
           </span>
 
@@ -79,10 +79,10 @@ const TopHeader = () => {
           {/* CTA Button */}
           <Link
             href="/email/send-email"
-            className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_24px_rgba(45,198,245,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(45,198,245,0.55)] active:translate-y-0 cursor-pointer"
+            className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0 cursor-pointer"
             style={{
               background:
-                "linear-gradient(135deg, #22d3ee 0%, #0ea5e9 50%, #6366f1 100%)",
+                "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)",
             }}
           >
             {/* Shine sweep */}

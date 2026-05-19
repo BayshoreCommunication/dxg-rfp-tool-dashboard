@@ -207,7 +207,7 @@ const Sidebar = () => {
                 )}
               >
                 {isActive && (
-                  <div className="absolute -left-3 top-1/2 h-7 w-[4px] -translate-y-1/2 rounded-r-full bg-primary shadow-[2px_0_8px_rgba(45,198,245,0.4)]" />
+                  <div className="absolute -left-3 top-1/2 h-7 w-[4px] -translate-y-1/2 rounded-r-full bg-primary shadow-[2px_0_8px_rgba(0,194,201,0.4)]" />
                 )}
 
                 <div
@@ -220,7 +220,7 @@ const Sidebar = () => {
                 >
                   {item.icon}
                   {badge !== null && (
-                    <span className="pointer-events-none absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-cyan-500 px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+                    <span className="pointer-events-none absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#00c2c9] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
@@ -251,7 +251,7 @@ const Sidebar = () => {
           className={cn(
             "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200",
             pathname === "/notification"
-              ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(45,198,245,0.95)]"
+              ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(0,194,201,0.95)]"
               : "border-slate-200 bg-white text-slate-500 hover:border-primary/10 hover:bg-primary/5 hover:text-primary",
           )}
         >
@@ -274,7 +274,7 @@ const Sidebar = () => {
             className="block cursor-pointer"
           >
             <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-primary/20 transition-all duration-200 hover:scale-105 hover:ring-primary/40">
-              <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-primary to-blue-500 text-sm font-black text-white">
+              <div className="flex h-full w-full items-center justify-center text-sm font-black text-white" style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}>
                 {brandInitial}
               </div>
             </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { RotateCcw } from "lucide-react";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
@@ -71,7 +71,7 @@ const YesNoField = ({
           name={name}
           checked={value === opt}
           onChange={() => onChange(opt)}
-          className="accent-[#35bdf2] h-4 w-4"
+          className="accent-[#00c2c9] h-4 w-4"
         />
         {opt}
       </label>
@@ -127,7 +127,7 @@ const RadioOptionsField = ({
           name={name}
           checked={value === opt}
           onChange={() => onChange(opt)}
-          className="accent-[#35bdf2] h-4 w-4"
+          className="accent-[#00c2c9] h-4 w-4"
         />
         {opt}
       </label>
@@ -798,7 +798,7 @@ const RoombyRoomAvForm = ({
           <button
             type="button"
             onClick={onContinue}
-            className="h-10 px-8 rounded-md bg-[#35bdf2] hover:bg-[#20A4D5] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(56,189,248,0.39)] transition-transform active:scale-95"
+            className="h-10 px-8 rounded-md bg-[#00c2c9] hover:bg-[#009198] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(0,194,201,0.39)] transition-transform active:scale-95"
           >
             CONTINUE
           </button>

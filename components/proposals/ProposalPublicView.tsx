@@ -79,9 +79,77 @@ export default function ProposalPublicView({
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
-        <div className="h-12 w-60 animate-pulse rounded bg-slate-200" />
-        <div className="mt-4 h-[420px] animate-pulse rounded-2xl bg-slate-100" />
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+        {/* Top action bar */}
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 animate-pulse rounded-xl bg-slate-200" />
+            <div className="h-5 w-48 animate-pulse rounded-lg bg-slate-200" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-28 animate-pulse rounded-xl bg-slate-200" />
+            <div className="h-9 w-32 animate-pulse rounded-xl bg-[#00c2c9]/20" />
+          </div>
+        </div>
+        {/* Page 1 skeleton */}
+        <div className="mx-auto w-full max-w-[900px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {/* Cover header */}
+          <div className="h-[140px] animate-pulse" style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 40%, #0ea5e9 70%, #2563eb 100%)" }}>
+            <div className="flex h-full flex-col items-center justify-center gap-3 px-10">
+              <div className="h-5 w-48 rounded-lg bg-white/20" />
+              <div className="h-8 w-80 rounded-xl bg-white/20" />
+              <div className="h-4 w-56 rounded-lg bg-white/20" />
+            </div>
+          </div>
+          {/* Content lines */}
+          <div className="space-y-4 p-8">
+            <div className="flex gap-4">
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-24 animate-pulse rounded bg-slate-200" />
+                <div className="h-5 w-40 animate-pulse rounded-lg bg-slate-100" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-24 animate-pulse rounded bg-slate-200" />
+                <div className="h-5 w-40 animate-pulse rounded-lg bg-slate-100" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-24 animate-pulse rounded bg-slate-200" />
+                <div className="h-5 w-40 animate-pulse rounded-lg bg-slate-100" />
+              </div>
+            </div>
+            <div className="h-px bg-slate-100" />
+            <div className="space-y-2">
+              <div className="h-4 w-36 animate-pulse rounded bg-slate-200" />
+              <div className="h-3 w-full animate-pulse rounded bg-slate-100" />
+              <div className="h-3 w-5/6 animate-pulse rounded bg-slate-100" />
+              <div className="h-3 w-4/6 animate-pulse rounded bg-slate-100" />
+            </div>
+            <div className="space-y-2 pt-2">
+              <div className="h-4 w-36 animate-pulse rounded bg-slate-200" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+                <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+                <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+                <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Page 2 skeleton (partial) */}
+        <div className="mx-auto mt-4 w-full max-w-[900px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="h-2 w-full" style={{ background: "linear-gradient(90deg, #00c2c9, #2563eb)" }} />
+          <div className="space-y-3 p-8">
+            <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+            <div className="h-3 w-full animate-pulse rounded bg-slate-100" />
+            <div className="h-3 w-5/6 animate-pulse rounded bg-slate-100" />
+            <div className="h-3 w-3/4 animate-pulse rounded bg-slate-100" />
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+              <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+              <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

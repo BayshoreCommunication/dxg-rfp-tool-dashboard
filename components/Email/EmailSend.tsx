@@ -238,7 +238,7 @@ export default function EmailSend() {
     <div className="space-y-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2 text-slate-800">
-          <Mail size={16} className="text-cyan-600" />
+          <Mail size={16} className="text-[#00c2c9]" />
           <h3 className="text-[14px] font-black tracking-wide uppercase">
             Compose & Send
           </h3>
@@ -253,7 +253,7 @@ export default function EmailSend() {
             <select
               value={proposalId}
               onChange={(event) => handleProposalChange(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-cyan-400"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#00c2c9]"
             >
               {proposals.length === 0 && (
                 <option value="">
@@ -267,7 +267,7 @@ export default function EmailSend() {
               ))}
             </select>
             {selectedProposalLink ? (
-              <div className="rounded-lg border border-cyan-100 bg-cyan-50/70 px-3 py-2 text-[12px] text-cyan-700">
+              <div className="rounded-lg border border-[#00c2c9]/20 bg-[#00c2c9]/5 px-3 py-2 text-[12px] text-brand-dark">
                 Proposal link:{" "}
                 <a
                   href={selectedProposalLink}
@@ -296,18 +296,18 @@ export default function EmailSend() {
               </span>
             </label>
 
-            <div className="flex w-full min-h-[46px] flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] transition-colors focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400">
+            <div className="flex w-full min-h-[46px] flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] transition-colors focus-within:border-[#00c2c9] focus-within:ring-1 focus-within:ring-[#00c2c9]/30">
               {/* Chips */}
               {recipientEmails.map((email) => (
                 <span
                   key={email}
-                  className="flex items-center gap-1.5 rounded-md border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[12px] font-medium text-cyan-800"
+                  className="flex items-center gap-1.5 rounded-md border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-2.5 py-1 text-[12px] font-medium text-brand-dark"
                 >
                   {email}
                   <button
                     type="button"
                     onClick={() => removeRecipient(email)}
-                    className="flex h-4 w-4 items-center justify-center rounded-full text-cyan-600 hover:bg-cyan-200 hover:text-cyan-900"
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-[#00c2c9] hover:bg-[#00c2c9]/20 hover:text-brand-dark"
                     aria-label={`Remove ${email}`}
                   >
                     <X size={12} strokeWidth={3} />
@@ -347,7 +347,7 @@ export default function EmailSend() {
           <input
             value={subject}
             onChange={(event) => setSubject(event.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-cyan-400"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#00c2c9]"
           />
         </div>
 
@@ -359,7 +359,7 @@ export default function EmailSend() {
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             rows={6}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-cyan-400"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#00c2c9]"
           />
         </div>
 
@@ -368,7 +368,8 @@ export default function EmailSend() {
             type="button"
             onClick={handleSend}
             disabled={sending || loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-5 py-2.5 text-[12px] font-bold uppercase tracking-wider text-white shadow-sm transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[12px] font-bold uppercase tracking-wider text-white shadow-sm transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
           >
             <Send size={14} />
             {sending ? "Sending..." : "Send Campaign"}

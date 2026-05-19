@@ -181,7 +181,8 @@ const SettingsDetials = () => {
         <button
           onClick={handleUpdate}
           disabled={saving || loading}
-          className="group relative flex items-center gap-2 overflow-hidden rounded-md bg-gradient-to-br from-[#2dc6f5] to-[#0ea5e9] px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(45,198,245,0.40)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(45,198,245,0.50)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-md px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.40)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(14,165,233,0.50)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/15 skew-x-[-20deg] transition-transform duration-500 group-hover:translate-x-full" />
           {saving ? "Updating..." : "Update Settings"}

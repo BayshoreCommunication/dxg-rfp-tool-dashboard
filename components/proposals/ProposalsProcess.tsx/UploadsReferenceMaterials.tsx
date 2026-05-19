@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ChevronDown, ChevronUp, Loader2, PlusCircle, X } from "lucide-react";
 import { useRef, useState } from "react";
@@ -11,16 +11,16 @@ import type {
 import { InfoTooltip } from "./shared";
 import { uploadProposalFilesAction } from "@/app/actions/proposals";
 
-/* ─── Style constants ─── */
+/* â”€â”€â”€ Style constants â”€â”€â”€ */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#35bdf2] focus:outline-none focus:ring-2 focus:ring-[#35bdf2]/20";
+  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20";
 const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
 const subPanelClass = "mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4";
 const errorClass = "mt-1 text-sm text-red-500 normal-case";
 
-/* ─── Yes/No ─── */
+/* â”€â”€â”€ Yes/No â”€â”€â”€ */
 const yesNoCls = (opt: "YES" | "NO", val: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
@@ -39,10 +39,10 @@ const YesNo = ({
 }) => (
   <div className="flex gap-3">
     <button type="button" className={yesNoCls("YES", value)} onClick={() => onChange("YES")}>
-      ✓ Yes
+      âœ“ Yes
     </button>
     <button type="button" className={yesNoCls("NO", value)} onClick={() => onChange("NO")}>
-      ✗ No
+      âœ— No
     </button>
   </div>
 );
@@ -53,7 +53,7 @@ const Group = ({ label }: { label: string }) => (
   </div>
 );
 
-/* ─── Upload Box ─── */
+/* â”€â”€â”€ Upload Box â”€â”€â”€ */
 const UploadBox = ({
   files,
   onFiles,
@@ -121,12 +121,12 @@ const UploadBox = ({
         </p>
       ) : (
         <label
-          className={`flex cursor-pointer items-center gap-2 rounded-lg bg-[#35bdf2] px-7 py-2.5 text-xs font-bold tracking-wide text-white transition-colors hover:bg-[#20a9de] ${
+          className={`flex cursor-pointer items-center gap-2 rounded-lg bg-[#00c2c9] px-7 py-2.5 text-xs font-bold tracking-wide text-white transition-colors hover:bg-[#009198] ${
             busy ? "pointer-events-none opacity-70" : ""
           }`}
         >
           {busy && <Loader2 size={13} className="animate-spin" />}
-          <span>{busy ? "UPLOADING…" : "BROWSE FILES"}</span>
+          <span>{busy ? "UPLOADINGâ€¦" : "BROWSE FILES"}</span>
           <input
             ref={ref}
             type="file"
@@ -151,7 +151,7 @@ const UploadBox = ({
                 onClick={() => onFiles(files.filter((_, j) => j !== i))}
                 className="ml-1 text-gray-400 hover:text-red-400"
               >
-                ✕
+                âœ•
               </button>
             </span>
           ))}
@@ -161,12 +161,12 @@ const UploadBox = ({
   );
 };
 
-/* ─── Co-vendor status option lists ─── */
+/* â”€â”€â”€ Co-vendor status option lists â”€â”€â”€ */
 const IN_HOUSE_AV_STATUSES = [
-  { value: "confirmed", label: "Confirmed — In-house AV partner known" },
-  { value: "in_discussion", label: "In Discussion — Confirming exclusivity terms" },
-  { value: "tbd", label: "TBD — Not yet identified" },
-  { value: "not_applicable", label: "Not Applicable — No in-house AV at this venue" },
+  { value: "confirmed", label: "Confirmed â€” In-house AV partner known" },
+  { value: "in_discussion", label: "In Discussion â€” Confirming exclusivity terms" },
+  { value: "tbd", label: "TBD â€” Not yet identified" },
+  { value: "not_applicable", label: "Not Applicable â€” No in-house AV at this venue" },
 ];
 const DECORATOR_STATUSES = [
   { value: "confirmed", label: "Confirmed" },
@@ -183,7 +183,7 @@ const BASE_STATUSES = [
 ];
 const AGENCY_STATUSES = [
   { value: "confirmed", label: "Confirmed" },
-  { value: "internal_team", label: "Internal Team — No external agency" },
+  { value: "internal_team", label: "Internal Team â€” No external agency" },
   { value: "in_discussion", label: "In Discussion" },
   { value: "tbd", label: "TBD" },
   { value: "not_applicable", label: "Not Applicable" },
@@ -192,11 +192,11 @@ const PHOTOGRAPHER_STATUSES = [
   { value: "confirmed", label: "Confirmed" },
   { value: "in_discussion", label: "In Discussion" },
   { value: "tbd", label: "TBD" },
-  { value: "client_handles", label: "Client Handles — No AV coordination needed" },
+  { value: "client_handles", label: "Client Handles â€” No AV coordination needed" },
   { value: "not_applicable", label: "Not Applicable" },
 ];
 
-/* ─── CoVendorCard ─── */
+/* â”€â”€â”€ CoVendorCard â”€â”€â”€ */
 const CoVendorCard = ({
   icon,
   title,
@@ -262,7 +262,7 @@ const CoVendorCard = ({
           {topBanner}
           {advisory && (
             <div className="mb-4 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-              <span className="shrink-0 text-amber-500">⚠</span>
+              <span className="shrink-0 text-amber-500">âš </span>
               <p className="text-xs text-amber-700">{advisory}</p>
             </div>
           )}
@@ -316,7 +316,7 @@ const CoVendorCard = ({
               onChange={(e) => up({ status: e.target.value })}
               className={inputClass}
             >
-              <option value="">Select status…</option>
+              <option value="">Select statusâ€¦</option>
               {statuses.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
@@ -329,7 +329,7 @@ const CoVendorCard = ({
             <label className={labelClass}>Notes</label>
             <input
               className={inputClass}
-              placeholder="Optional coordination notes…"
+              placeholder="Optional coordination notesâ€¦"
               value={value.notes}
               onChange={(e) => up({ notes: e.target.value })}
             />
@@ -342,12 +342,12 @@ const CoVendorCard = ({
             </p>
             <p className="text-xs text-slate-600">
               <span className="font-semibold">{title}</span>
-              {" · "}
-              {value.companyName || "—"}
-              {" · "}
+              {" Â· "}
+              {value.companyName || "â€”"}
+              {" Â· "}
               {value.contactName || "TBD"}
               {value.contactEmail ? ` (${value.contactEmail})` : ""}
-              {" · "}
+              {" Â· "}
               {coordinationScope}
             </p>
           </div>
@@ -357,13 +357,13 @@ const CoVendorCard = ({
   );
 };
 
-/* ─── NDA type card style ─── */
+/* â”€â”€â”€ NDA type card style â”€â”€â”€ */
 const ndaTypeCls = (opt: string, selected: string): string =>
   selected === opt
-    ? "flex items-start gap-3 rounded-lg border border-[#35bdf2] bg-[#35bdf2]/5 px-4 py-3 cursor-pointer"
+    ? "flex items-start gap-3 rounded-lg border border-[#00c2c9] bg-[#00c2c9]/5 px-4 py-3 cursor-pointer"
     : "flex items-start gap-3 rounded-lg border border-[#d7dce3] bg-white px-4 py-3 cursor-pointer hover:border-slate-300";
 
-/* ─── Props ─── */
+/* â”€â”€â”€ Props â”€â”€â”€ */
 interface Props {
   data: UploadsData;
   onChange: (updates: Partial<UploadsData>) => void;
@@ -382,7 +382,7 @@ interface Props {
   contentServicesNeeded?: string;
 }
 
-/* ─── Helpers ─── */
+/* â”€â”€â”€ Helpers â”€â”€â”€ */
 const emptyCoVendor = (): CoVendorEntry => ({
   companyName: "",
   contactName: "",
@@ -402,7 +402,7 @@ const emptyCoVendors = (): UploadsData["coVendors"] => ({
 
 type CardKey = keyof UploadsData["coVendors"];
 
-/* ─── Main component ─── */
+/* â”€â”€â”€ Main component â”€â”€â”€ */
 const UploadsReferenceMaterials = ({
   data,
   onChange,
@@ -420,7 +420,7 @@ const UploadsReferenceMaterials = ({
   eventFormat,
   contentServicesNeeded,
 }: Props) => {
-  /* ─── Safe data ─── */
+  /* â”€â”€â”€ Safe data â”€â”€â”€ */
   const safeData: UploadsData = {
     ...data,
     brandGuideFiles: data?.brandGuideFiles ?? [],
@@ -432,7 +432,7 @@ const UploadsReferenceMaterials = ({
     coVendors: { ...emptyCoVendors(), ...(data?.coVendors ?? {}) },
   };
 
-  /* ─── Card open state ─── */
+  /* â”€â”€â”€ Card open state â”€â”€â”€ */
   const [openCards, setOpenCards] = useState<Record<CardKey, boolean>>({
     inHouseVenueAv: false,
     eventDecorator: false,
@@ -446,7 +446,7 @@ const UploadsReferenceMaterials = ({
   const updateCoVendor = (key: CardKey, val: CoVendorEntry) =>
     onChange({ coVendors: { ...safeData.coVendors, [key]: val } });
 
-  /* ─── Pre-fill from Page 6 ─── */
+  /* â”€â”€â”€ Pre-fill from Page 6 â”€â”€â”€ */
   const prefillAvailable =
     !!(inHouseAvCompanyName || venueAvContactName) &&
     !safeData.coVendors.inHouseVenueAv.companyName &&
@@ -464,7 +464,7 @@ const UploadsReferenceMaterials = ({
     setOpenCards((p) => ({ ...p, inHouseVenueAv: true }));
   };
 
-  /* ─── Advisory logic ─── */
+  /* â”€â”€â”€ Advisory logic â”€â”€â”€ */
   const brandGuideAdvisory =
     contentServicesNeeded === "YES" &&
     !safeData.brandGuideFiles.length &&
@@ -496,7 +496,7 @@ const UploadsReferenceMaterials = ({
       ? "A hybrid event typically requires an event technology platform for virtual audience management. Confirm this is not applicable."
       : undefined;
 
-  /* ─── Reference URL helpers ─── */
+  /* â”€â”€â”€ Reference URL helpers â”€â”€â”€ */
   const updateRefUrl = (idx: number, patch: Partial<ReferenceUrl>) =>
     onChange({
       referenceUrls: safeData.referenceUrls.map((u, i) =>
@@ -508,7 +508,7 @@ const UploadsReferenceMaterials = ({
   const removeRefUrl = (idx: number) =>
     onChange({ referenceUrls: safeData.referenceUrls.filter((_, i) => i !== idx) });
 
-  /* ─── PDF table rows (exclude "not_applicable") ─── */
+  /* â”€â”€â”€ PDF table rows (exclude "not_applicable") â”€â”€â”€ */
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const pdfRows: { category: string; entry: CoVendorEntry; scope: string }[] = [
     {
@@ -543,10 +543,10 @@ const UploadsReferenceMaterials = ({
       className="flex min-h-screen flex-col rounded-md border border-[#d7dce3] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div className="border-b border-[#d7dce3] px-8 py-6">
         <div className="mb-1 flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#35bdf2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#35bdf2]">
+          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
             Page 8 of 9
           </span>
         </div>
@@ -558,12 +558,12 @@ const UploadsReferenceMaterials = ({
 
       <div className="flex-1 px-8 py-8">
 
-        {/* ══════════════════════════════════════════
-            BLOCK A — File Uploads
-        ══════════════════════════════════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+            BLOCK A â€” File Uploads
+        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <Group label="Reference Materials" />
 
-        {/* Field 1 — Brand Guide */}
+        {/* Field 1 â€” Brand Guide */}
         <div className="mb-6">
           <label className={labelClass}>
             Brand Guide / Style Guide
@@ -571,7 +571,7 @@ const UploadsReferenceMaterials = ({
           </label>
           {brandGuideAdvisory && (
             <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-              <span className="shrink-0 text-amber-500">⚠</span>
+              <span className="shrink-0 text-amber-500">âš </span>
               <p className="text-xs text-amber-700">{brandGuideAdvisory}</p>
             </div>
           )}
@@ -579,7 +579,7 @@ const UploadsReferenceMaterials = ({
             files={safeData.brandGuideFiles}
             onFiles={(f) => onChange({ brandGuideFiles: f })}
             accept=".pdf,.zip,.ai,.eps,.png,.jpg,.jpeg"
-            hint="PDF, ZIP, AI, EPS, PNG, JPG — max 50 MB · 1 file"
+            hint="PDF, ZIP, AI, EPS, PNG, JPG â€” max 50 MB Â· 1 file"
             maxFiles={1}
           />
           <div className="mt-3">
@@ -596,7 +596,7 @@ const UploadsReferenceMaterials = ({
           </div>
         </div>
 
-        {/* Field 2 — Event Logo Files */}
+        {/* Field 2 â€” Event Logo Files */}
         <div className="mb-6">
           <label className={labelClass}>
             Event Logo Files
@@ -606,12 +606,12 @@ const UploadsReferenceMaterials = ({
             files={safeData.eventLogoFiles}
             onFiles={(f) => onChange({ eventLogoFiles: f })}
             accept=".ai,.eps,.svg,.png,.pdf"
-            hint="AI, EPS, SVG, PNG (with transparency), PDF — up to 5 files"
+            hint="AI, EPS, SVG, PNG (with transparency), PDF â€” up to 5 files"
             maxFiles={5}
           />
         </div>
 
-        {/* Field 3 — Reference / Inspiration Materials */}
+        {/* Field 3 â€” Reference / Inspiration Materials */}
         <div className="mb-6">
           <label className={labelClass}>
             Reference / Inspiration Materials
@@ -621,7 +621,7 @@ const UploadsReferenceMaterials = ({
             files={safeData.referenceFiles}
             onFiles={(f) => onChange({ referenceFiles: f })}
             accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,.pptx,.key"
-            hint="PDF, JPG, PNG, MP4, PPTX — up to 10 files"
+            hint="PDF, JPG, PNG, MP4, PPTX â€” up to 10 files"
             maxFiles={10}
           />
           {/* Reference URLs */}
@@ -639,7 +639,7 @@ const UploadsReferenceMaterials = ({
                   onChange={(e) => updateRefUrl(i, { url: e.target.value })}
                 />
                 <input
-                  className="w-44 rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#35bdf2] focus:outline-none focus:ring-2 focus:ring-[#35bdf2]/20"
+                  className="w-44 rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
                   placeholder="Label (optional)"
                   value={u.label}
                   onChange={(e) => updateRefUrl(i, { label: e.target.value })}
@@ -657,7 +657,7 @@ const UploadsReferenceMaterials = ({
               <button
                 type="button"
                 onClick={addRefUrl}
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#35bdf2] hover:underline"
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#00c2c9] hover:underline"
               >
                 <PlusCircle size={14} /> Add reference URL
               </button>
@@ -665,7 +665,7 @@ const UploadsReferenceMaterials = ({
           </div>
         </div>
 
-        {/* Field 4 — Venue Documents */}
+        {/* Field 4 â€” Venue Documents */}
         <div className="mb-6">
           <label className={labelClass}>
             Venue Documents
@@ -673,7 +673,7 @@ const UploadsReferenceMaterials = ({
           </label>
           {venuDocsAdvisory && (
             <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-              <span className="shrink-0 text-amber-500">⚠</span>
+              <span className="shrink-0 text-amber-500">âš </span>
               <p className="text-xs text-amber-700">{venuDocsAdvisory}</p>
             </div>
           )}
@@ -681,14 +681,14 @@ const UploadsReferenceMaterials = ({
             files={safeData.venueDocs}
             onFiles={(f) => onChange({ venueDocs: f })}
             accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png"
-            hint="PDF, DWG, DXF, JPG, PNG — up to 5 files"
+            hint="PDF, DWG, DXF, JPG, PNG â€” up to 5 files"
             maxFiles={5}
           />
         </div>
 
-        {/* ══════════════════════════════════════════
-            BLOCK B — Co-Vendor Coordination
-        ══════════════════════════════════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+            BLOCK B â€” Co-Vendor Coordination
+        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <Group label="Co-Vendor Coordination" />
 
         <p className="mb-5 text-xs text-slate-500">
@@ -699,33 +699,33 @@ const UploadsReferenceMaterials = ({
 
         {/* Pre-fill banner for In-House AV */}
         {prefillAvailable && (
-          <div className="mb-4 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-            <span className="mt-0.5 shrink-0 text-blue-500">🏛</span>
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-4 py-3">
+            <span className="mt-0.5 shrink-0">ðŸ›</span>
             <div className="flex-1">
-              <p className="text-sm font-bold text-blue-800">
+              <p className="text-sm font-bold text-brand-dark">
                 Venue AV contact available from Page 6
               </p>
-              <p className="mt-0.5 text-xs text-blue-700">
+              <p className="mt-0.5 text-xs text-[#009198]">
                 {inHouseAvCompanyName && (
                   <span className="font-semibold">{inHouseAvCompanyName}</span>
                 )}
-                {venueAvContactName && <span> · {venueAvContactName}</span>}
-                {venueAvContactEmail && <span> · {venueAvContactEmail}</span>}
+                {venueAvContactName && <span> Â· {venueAvContactName}</span>}
+                {venueAvContactEmail && <span> Â· {venueAvContactEmail}</span>}
               </p>
             </div>
             <button
               type="button"
               onClick={applyPrefill}
-              className="shrink-0 rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50"
+              className="shrink-0 rounded-lg border border-[#00c2c9]/30 bg-white px-3 py-1.5 text-xs font-bold text-brand-dark hover:bg-[#00c2c9]/5"
             >
-              Apply ✓
+              Apply âœ“
             </button>
           </div>
         )}
 
         <div className="space-y-3">
           <CoVendorCard
-            icon="🏢"
+            icon="ðŸ¢"
             title="In-House Venue AV"
             companyPlaceholder="e.g. Encore, Freeman AV, PSAV"
             contactPlaceholder="e.g. James Whitfield"
@@ -740,7 +740,7 @@ const UploadsReferenceMaterials = ({
           />
 
           <CoVendorCard
-            icon="🎨"
+            icon="ðŸŽ¨"
             title="Event Decorator / Scenic Company"
             companyPlaceholder="e.g. GES Events, Freeman Decorating, Becker Studios"
             contactPlaceholder="e.g. Maria Santos"
@@ -755,7 +755,7 @@ const UploadsReferenceMaterials = ({
           />
 
           <CoVendorCard
-            icon="📱"
+            icon="ðŸ“±"
             title="Registration / Event Technology"
             companyPlaceholder="e.g. Cvent, Bizzabo, EventMobi, Splash"
             contactPlaceholder="e.g. David Chen"
@@ -770,7 +770,7 @@ const UploadsReferenceMaterials = ({
           />
 
           <CoVendorCard
-            icon="🏛️"
+            icon="ðŸ›ï¸"
             title="Agency of Record"
             companyPlaceholder="e.g. Jack Morton, GPJ, MCI Group"
             contactPlaceholder="e.g. Rachel Kim"
@@ -784,11 +784,11 @@ const UploadsReferenceMaterials = ({
           />
 
           <CoVendorCard
-            icon="📷"
+            icon="ðŸ“·"
             title="Photographer"
             companyPlaceholder="e.g. Smith Event Photography, Lens & Light Studios"
             contactPlaceholder="e.g. Tom Bradley"
-            helpText="AV teams must coordinate stage access windows, lighting setups that work for both video and still photography, and cable management. Most photographers need 15–30 minute windows for key moments."
+            helpText="AV teams must coordinate stage access windows, lighting setups that work for both video and still photography, and cable management. Most photographers need 15â€“30 minute windows for key moments."
             statuses={PHOTOGRAPHER_STATUSES}
             coordinationScope="Stage access windows, lighting coordination, shot list review"
             value={safeData.coVendors.photographer}
@@ -806,7 +806,7 @@ const UploadsReferenceMaterials = ({
             className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#f8faff]"
           >
             <span className="text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
-              📄 Section 7 PDF Preview — Co-Vendor Table
+              ðŸ“„ Section 7 PDF Preview â€” Co-Vendor Table
             </span>
             {pdfPreviewOpen ? (
               <ChevronUp size={14} className="text-slate-400" />
@@ -830,7 +830,7 @@ const UploadsReferenceMaterials = ({
                   {pdfRows.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="py-3 text-center text-slate-400">
-                        No co-vendors specified — vendor to confirm with client.
+                        No co-vendors specified â€” vendor to confirm with client.
                       </td>
                     </tr>
                   ) : (
@@ -840,7 +840,7 @@ const UploadsReferenceMaterials = ({
                         <td className="py-2 pr-3 text-slate-600">{r.entry.companyName || "TBD"}</td>
                         <td className="py-2 pr-3 text-slate-600">
                           {r.entry.contactName || "TBD"}
-                          {r.entry.contactEmail ? ` · ${r.entry.contactEmail}` : ""}
+                          {r.entry.contactEmail ? ` Â· ${r.entry.contactEmail}` : ""}
                         </td>
                         <td className="py-2 text-slate-400">{r.scope}</td>
                       </tr>
@@ -852,9 +852,9 @@ const UploadsReferenceMaterials = ({
           )}
         </div>
 
-        {/* ══════════════════════════════════════════
-            BLOCK C — NDA & Compliance
-        ══════════════════════════════════════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+            BLOCK C â€” NDA & Compliance
+        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         <Group label="NDA &amp; Distribution" />
 
         <div className="mb-6">
@@ -879,15 +879,15 @@ const UploadsReferenceMaterials = ({
           {safeData.ndaRequired === "YES" && (
             <div className={subPanelClass}>
               {/* Vendor experience flow */}
-              <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-                <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-700">
+              <div className="mb-5 rounded-lg border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-4 py-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-widest text-brand-dark">
                   Vendor Experience
                 </p>
-                <ol className="space-y-1 text-xs text-blue-700">
+                <ol className="space-y-1 text-xs text-brand-dark">
                   <li>1. Vendor receives invitation email</li>
                   <li>2. Vendor clicks portal link</li>
                   <li>3. Portal shows NDA for electronic signature</li>
-                  <li>4. After signing → full RFP + attachments unlocked</li>
+                  <li>4. After signing â†’ full RFP + attachments unlocked</li>
                 </ol>
               </div>
 
@@ -938,7 +938,7 @@ const UploadsReferenceMaterials = ({
                 NDA Document Upload
                 {safeData.ndaType !== "custom" && (
                   <span className="ml-2 font-normal normal-case text-slate-400">
-                    (Optional — leave blank to use RFPilot standard NDA)
+                    (Optional â€” leave blank to use RFPilot standard NDA)
                   </span>
                 )}
               </p>
@@ -946,7 +946,7 @@ const UploadsReferenceMaterials = ({
                 files={safeData.ndaDocumentFiles}
                 onFiles={(f) => onChange({ ndaDocumentFiles: f })}
                 accept=".pdf,.docx"
-                hint="PDF or DOCX — max 1 file · 10 MB"
+                hint="PDF or DOCX â€” max 1 file Â· 10 MB"
                 maxFiles={1}
                 uploadField="avQuoteFiles"
               />
@@ -956,21 +956,21 @@ const UploadsReferenceMaterials = ({
 
       </div>
 
-      {/* ── Footer Nav ── */}
+      {/* â”€â”€ Footer Nav â”€â”€ */}
       <div className="flex items-center justify-between border-t border-[#d7dce3] px-8 py-5">
         <button
           type="button"
           onClick={onBack}
           className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] transition-colors hover:bg-[#f5f7ff]"
         >
-          ← Budget &amp; Proposal
+          â† Budget &amp; Proposal
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#35bdf2]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(53,189,242,0.35)] transition-colors hover:bg-[#20a9de] active:scale-95"
+          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] transition-colors hover:bg-[#009198] active:scale-95"
         >
-          Contact &amp; Submit →
+          Contact &amp; Submit â†’
         </button>
       </div>
     </section>

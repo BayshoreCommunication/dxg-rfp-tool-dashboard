@@ -108,7 +108,7 @@ export default function SaveCopyModal({
               value={eventName}
               onChange={(e) => setEventName(e.target.value)}
               placeholder="Enter event name for the copy"
-              className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-cyan-400 ${
+              className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#00c2c9]/40 ${
                 showErrors && !eventName.trim()
                   ? "border-red-400 bg-red-50"
                   : "border-[#d7dce3] bg-white"
@@ -130,7 +130,7 @@ export default function SaveCopyModal({
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-cyan-400"
+                className="w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#00c2c9]/40"
               />
             </div>
             <div>
@@ -142,7 +142,7 @@ export default function SaveCopyModal({
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-cyan-400"
+                className="w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#00c2c9]/40"
               />
             </div>
           </div>
@@ -165,7 +165,8 @@ export default function SaveCopyModal({
             type="button"
             onClick={handleConfirm}
             disabled={saving}
-            className="h-9 px-6 rounded-md bg-[#35bdf2] hover:bg-[#20A4D5] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(56,189,248,0.39)] transition-transform active:scale-95 disabled:opacity-50"
+            className="h-9 px-6 rounded-md text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(14,165,233,0.35)] transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
           >
             {saving ? "Saving..." : "Save Copy"}
           </button>
