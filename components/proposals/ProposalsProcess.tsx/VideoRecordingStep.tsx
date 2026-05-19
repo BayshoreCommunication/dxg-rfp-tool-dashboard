@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 type ProposalSettings = {
   branding: { linkPrefix: string; defaultFont: "Inter" | "Poppins" | "Roboto" };
@@ -52,7 +53,7 @@ export const defaultVideoRecording = (): VideoRecordingData => ({
   deliveryMethod: [],
 });
 
-/* â”€â”€â”€ Style constants â”€â”€â”€ */
+/* ─── Style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
@@ -62,7 +63,7 @@ const groupLabelClass =
 const subPanelClass =
   "mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4 space-y-4";
 
-/* â”€â”€â”€ Camera position options â”€â”€â”€ */
+/* ─── Camera position options ─── */
 const CAMERA_POSITIONS = [
   "Stage Wide Shot",
   "Speaker Close-Up",
@@ -75,7 +76,7 @@ const CAMERA_POSITIONS = [
 ];
 const REAL_POSITIONS = CAMERA_POSITIONS.slice(0, 6);
 
-/* â”€â”€â”€ Yes/No buttons â”€â”€â”€ */
+/* ─── Yes/No buttons ─── */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
@@ -96,15 +97,15 @@ const YesNo = ({
 }) => (
   <div className="flex gap-3">
     <button type="button" className={yesNoCls("YES", value)} onClick={() => onChange("YES")}>
-      âœ“ Yes
+      ✓ Yes
     </button>
     <button type="button" className={yesNoCls("NO", value)} onClick={() => onChange("NO")}>
-      âœ— No
+      ✗ No
     </button>
   </div>
 );
 
-/* â”€â”€â”€ Gateway card (same pattern as Page 4) â”€â”€â”€ */
+/* ─── Gateway card (same pattern as Page 4) ─── */
 const GatewayCard = ({
   isSelected,
   title,
@@ -143,7 +144,7 @@ const GatewayCard = ({
   </button>
 );
 
-/* â”€â”€â”€ Props â”€â”€â”€ */
+/* ─── Props ─── */
 interface Props {
   data: VideoRecordingData;
   onChange: (updates: Partial<VideoRecordingData>) => void;
@@ -193,12 +194,12 @@ const VideoRecordingStep = ({
       : camCount === 1
       ? "Single-camera setups are only adequate for small breakout archival."
       : camCount >= 5
-      ? "5+ cameras â€” suitable for broadcast-quality production."
+      ? "5+ cameras — suitable for broadcast-quality production."
       : camCount >= 3
-      ? "3â€“5 cameras â€” standard professional setup."
-      : "2 cameras â€” minimal; consider adding a 3rd for coverage flexibility.";
+      ? "3–5 cameras — standard professional setup."
+      : "2 cameras — minimal; consider adding a 3rd for coverage flexibility.";
 
-  /* Cross-page suggestion: sizzle/recap owned by AV Vendor â†’ suggest edited deliverable */
+  /* Cross-page suggestion: sizzle/recap owned by AV Vendor → suggest edited deliverable */
   const suggestEdited = sizzleRecapOwner === "AV Vendor" && safeData.editedDeliverable.needed !== "YES";
 
   /* Cross-page warning: on-demand recording selected on Page 3 */
@@ -210,7 +211,7 @@ const VideoRecordingStep = ({
       className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <div className="flex items-center gap-3 mb-1">
           <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
@@ -223,20 +224,20 @@ const VideoRecordingStep = ({
         </p>
       </div>
 
-      {/* â”€â”€ Body â”€â”€ */}
+      {/* ── Body ── */}
       <div className="flex-1 px-8 py-8 space-y-8">
 
         {/* Cross-page on-demand warning (shown before gateway) */}
         {onDemandWarning && (
           <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <span className="font-bold shrink-0">âš </span>
+            <span className="font-bold shrink-0">⚠</span>
             <span>
               You indicated on-demand recording of the stream is needed (Page 3). Recording must be enabled here as well.
             </span>
           </div>
         )}
 
-        {/* Field 1 â€” Gateway */}
+        {/* Field 1 — Gateway */}
         <div>
           <label className={labelClass}>
             Video Recording Required?{" "}
@@ -246,13 +247,13 @@ const VideoRecordingStep = ({
           <div className="grid grid-cols-2 gap-4 mt-2">
             <GatewayCard
               isSelected={safeData.videoRecordingRequired === "YES"}
-              title="Yes â€” Record sessions during the event"
+              title="Yes — Record sessions during the event"
               description="You'll specify camera positions, recording format, and deliverables. Most professional events record at minimum the keynote."
               onClick={() => onChange({ videoRecordingRequired: "YES" })}
             />
             <GatewayCard
               isSelected={safeData.videoRecordingRequired === "NO"}
-              title="No â€” No recording needed"
+              title="No — No recording needed"
               description="The AV vendor will only execute the live show. Section 5 will be omitted from your RFP."
               onClick={() => onChange({ videoRecordingRequired: "NO" })}
             />
@@ -272,16 +273,16 @@ const VideoRecordingStep = ({
         {/* YES: Full recording scope */}
         {needsRecording && (
           <>
-            {/* â”€â”€ Camera Plan â”€â”€ */}
+            {/* ── Camera Plan ── */}
             <div>
               <p className={groupLabelClass}>Camera Plan</p>
               <div className="space-y-6">
 
-                {/* Field 2 â€” Number of Cameras */}
+                {/* Field 2 — Number of Cameras */}
                 <div>
                   <label className={labelClass}>
                     Number of Cameras Required <span className="text-red-500">*</span>
-                    <InfoTooltip text="For a 1,000-person general session, 3â€“5 cameras is the standard minimum. For broadcast quality, plan for 5+. Single-camera setups are only adequate for archival recording of small breakouts. Each camera needs a position selection below." />
+                    <InfoTooltip text="For a 1,000-person general session, 3–5 cameras is the standard minimum. For broadcast quality, plan for 5+. Single-camera setups are only adequate for archival recording of small breakouts. Each camera needs a position selection below." />
                   </label>
                   <div className="flex items-center gap-2" style={{ maxWidth: 200 }}>
                     <button
@@ -289,7 +290,7 @@ const VideoRecordingStep = ({
                       onClick={() => onChange({ numberOfCameras: String(Math.max(1, camCount - 1)) })}
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
                     >
-                      âˆ’
+                      −
                     </button>
                     <input
                       type="number"
@@ -313,7 +314,7 @@ const VideoRecordingStep = ({
                   )}
                 </div>
 
-                {/* Field 3 â€” Camera Positions */}
+                {/* Field 3 — Camera Positions */}
                 <div>
                   <label className={labelClass}>
                     Camera Positions Needed <span className="text-red-500">*</span>
@@ -332,11 +333,11 @@ const VideoRecordingStep = ({
                     ))}
                   </div>
                   {positionWarning && (
-                    <p className="mt-2 text-xs font-medium text-amber-600">âš  {positionWarning}</p>
+                    <p className="mt-2 text-xs font-medium text-amber-600">⚠ {positionWarning}</p>
                   )}
                 </div>
 
-                {/* Field 4 â€” IMAG */}
+                {/* Field 4 — IMAG */}
                 <div>
                   <label className={labelClass}>
                     IMAG (Image Magnification to Screens)? <span className="text-red-500">*</span>
@@ -349,36 +350,36 @@ const VideoRecordingStep = ({
                   />
                 </div>
 
-                {/* Fields 5 + 6 â€” Operators + ISO */}
+                {/* Fields 5 + 6 — Operators + ISO */}
                 <div className="grid grid-cols-2 gap-5">
                   <div>
                     <label className={labelClass}>
                       Camera Operators <span className="text-red-500">*</span>
-                      <InfoTooltip text="Dedicated operators provide the highest production quality â€” they frame shots, follow speakers, and react to action. Robotic cameras (PTZ) are operated remotely by a single technician and cost less. Most professional broadcasts use dedicated operators for stage cameras and robotics for audience/wide shots." />
+                      <InfoTooltip text="Dedicated operators provide the highest production quality — they frame shots, follow speakers, and react to action. Robotic cameras (PTZ) are operated remotely by a single technician and cost less. Most professional broadcasts use dedicated operators for stage cameras and robotics for audience/wide shots." />
                     </label>
                     <select
                       className={`${inputClass} appearance-none`}
                       value={safeData.cameraOperators}
                       onChange={(e) => onChange({ cameraOperators: e.target.value })}
                     >
-                      <option value="">Select operator modelâ€¦</option>
+                      <option value="">Select operator model…</option>
                       <option>Dedicated Operator Per Camera</option>
                       <option>Robotic Cameras Acceptable</option>
-                      <option>Mixed â€” Operators on key cameras, robotic on auxiliary</option>
+                      <option>Mixed — Operators on key cameras, robotic on auxiliary</option>
                     </select>
                   </div>
 
                   <div>
                     <label className={labelClass}>
                       ISO Recordings Per Camera <span className="text-red-500">*</span>
-                      <InfoTooltip text="ISO (isolated) = individual recording per camera. Program cut = single switched live output. Most professional productions capture BOTH â€” ISO gives editing flexibility post-event; program cut gives you a ready-to-publish version immediately." />
+                      <InfoTooltip text="ISO (isolated) = individual recording per camera. Program cut = single switched live output. Most professional productions capture BOTH — ISO gives editing flexibility post-event; program cut gives you a ready-to-publish version immediately." />
                     </label>
                     <select
                       className={`${inputClass} appearance-none`}
                       value={safeData.isoRecordings}
                       onChange={(e) => onChange({ isoRecordings: e.target.value })}
                     >
-                      <option value="">Select ISO strategyâ€¦</option>
+                      <option value="">Select ISO strategy…</option>
                       <option>Switched Program Cut Only</option>
                       <option>ISO Per Camera Only</option>
                       <option>Both ISO + Switched Program Cut</option>
@@ -390,12 +391,12 @@ const VideoRecordingStep = ({
               </div>
             </div>
 
-            {/* â”€â”€ Recording & Deliverables â”€â”€ */}
+            {/* ── Recording & Deliverables ── */}
             <div>
               <p className={groupLabelClass}>Recording &amp; Deliverables</p>
               <div className="space-y-6">
 
-                {/* Fields 7 + 8 â€” Resolution + Media */}
+                {/* Fields 7 + 8 — Resolution + Media */}
                 <div className="grid grid-cols-2 gap-5">
                   <div>
                     <label className={labelClass}>
@@ -407,7 +408,7 @@ const VideoRecordingStep = ({
                       value={safeData.recordingResolution}
                       onChange={(e) => onChange({ recordingResolution: e.target.value })}
                     >
-                      <option value="">Select resolutionâ€¦</option>
+                      <option value="">Select resolution…</option>
                       <option>4K (Preferred)</option>
                       <option>1080p</option>
                       <option>Either Acceptable</option>
@@ -417,14 +418,14 @@ const VideoRecordingStep = ({
                   <div>
                     <label className={labelClass}>
                       Recording Media / Backup <span className="text-red-500">*</span>
-                      <InfoTooltip text="Who provides and manages recording media (SD cards, SSDs)? Cloud backup is strongly recommended â€” media failures happen, and losing a CEO keynote is unacceptable. Vendor-managed with cloud backup is the safest option but adds cost." />
+                      <InfoTooltip text="Who provides and manages recording media (SD cards, SSDs)? Cloud backup is strongly recommended — media failures happen, and losing a CEO keynote is unacceptable. Vendor-managed with cloud backup is the safest option but adds cost." />
                     </label>
                     <select
                       className={`${inputClass} appearance-none`}
                       value={safeData.recordingMedia}
                       onChange={(e) => onChange({ recordingMedia: e.target.value })}
                     >
-                      <option value="">Select media strategyâ€¦</option>
+                      <option value="">Select media strategy…</option>
                       <option>Vendor-Managed</option>
                       <option>Client-Provided Media</option>
                       <option>Vendor-Managed with Cloud Backup</option>
@@ -433,15 +434,15 @@ const VideoRecordingStep = ({
                   </div>
                 </div>
 
-                {/* Field 9 â€” Edited Deliverable */}
+                {/* Field 9 — Edited Deliverable */}
                 <div>
                   <label className={labelClass}>
                     Edited Deliverable Required? <span className="text-red-500">*</span>
-                    <InfoTooltip text="Do you need edited video deliverables â€” highlight reels or polished session edits â€” in addition to raw footage? Edited deliverables require a video editor, time, and an approval workflow." />
+                    <InfoTooltip text="Do you need edited video deliverables — highlight reels or polished session edits — in addition to raw footage? Edited deliverables require a video editor, time, and an approval workflow." />
                   </label>
                   {suggestEdited && (
                     <p className="mb-2 text-xs font-medium text-[#00c2c9]">
-                      âš¡ You assigned Sizzle/Recap Video to the AV vendor on Page 4 â€” enabling an edited deliverable here is recommended.
+                      ⚡ You assigned Sizzle/Recap Video to the AV vendor on Page 4 — enabling an edited deliverable here is recommended.
                     </p>
                   )}
                   <YesNo
@@ -468,11 +469,11 @@ const VideoRecordingStep = ({
                         Edited Deliverable Details
                       </p>
 
-                      {/* 9a â€” Deliverable Type */}
+                      {/* 9a — Deliverable Type */}
                       <div>
                         <label className={labelClass}>
                           Deliverable Type <span className="text-red-500">*</span>
-                          <InfoTooltip text="Highlight reels are 3â€“5 minute recap videos showing event energy and key moments. Full session edits are color-corrected, audio-mixed full presentations ready for on-demand viewing." />
+                          <InfoTooltip text="Highlight reels are 3–5 minute recap videos showing event energy and key moments. Full session edits are color-corrected, audio-mixed full presentations ready for on-demand viewing." />
                         </label>
                         <div className="flex flex-wrap gap-3">
                           {["Highlight Reel Per Day", "Full Session Edits", "Both"].map((opt) => (
@@ -496,12 +497,12 @@ const VideoRecordingStep = ({
                         </div>
                       </div>
 
-                      {/* 9b + 9c â€” Turnaround + Reel Length */}
+                      {/* 9b + 9c — Turnaround + Reel Length */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className={labelClass}>
                             Turnaround Time <span className="text-red-500">*</span>
-                            <InfoTooltip text="Same-day editing requires an on-site editor working in parallel with the live show â€” significantly increases cost. 48-hour turnaround is the sweet spot for fast-but-polished." />
+                            <InfoTooltip text="Same-day editing requires an on-site editor working in parallel with the live show — significantly increases cost. 48-hour turnaround is the sweet spot for fast-but-polished." />
                           </label>
                           <select
                             className={`${inputClass} appearance-none`}
@@ -515,15 +516,15 @@ const VideoRecordingStep = ({
                               })
                             }
                           >
-                            <option value="">Select turnaroundâ€¦</option>
+                            <option value="">Select turnaround…</option>
                             <option>Same-Day</option>
                             <option>48 Hours</option>
                             <option>1 Week</option>
-                            <option>Post-Event (2â€“4 weeks)</option>
+                            <option>Post-Event (2–4 weeks)</option>
                           </select>
                           {safeData.editedDeliverable.turnaroundTime === "Same-Day" && (
                             <p className="mt-1 text-xs font-medium text-amber-600">
-                              âš¡ Same-day editing requires an on-site editor â€” adds significant cost.
+                              ⚡ Same-day editing requires an on-site editor — adds significant cost.
                             </p>
                           )}
                         </div>
@@ -532,12 +533,12 @@ const VideoRecordingStep = ({
                           <label className={labelClass}>
                             Reel Length Preference
                             <span className="ml-2 text-xs font-normal normal-case tracking-normal text-slate-400">(Recommended)</span>
-                            <InfoTooltip text="Approximate length for highlight reels. Standard ranges: 60â€“90 seconds for social media, 3â€“5 minutes for closing sessions/internal share, 5â€“10 minutes for marketing recap videos." />
+                            <InfoTooltip text="Approximate length for highlight reels. Standard ranges: 60–90 seconds for social media, 3–5 minutes for closing sessions/internal share, 5–10 minutes for marketing recap videos." />
                           </label>
                           <input
                             type="text"
                             className={inputClass}
-                            placeholder="e.g. 3â€“5 min"
+                            placeholder="e.g. 3–5 min"
                             value={safeData.editedDeliverable.reelLengthPreference}
                             onChange={(e) =>
                               onChange({
@@ -554,11 +555,11 @@ const VideoRecordingStep = ({
                   )}
                 </div>
 
-                {/* Field 10 â€” Raw Footage Turnover */}
+                {/* Field 10 — Raw Footage Turnover */}
                 <div>
                   <label className={labelClass}>
                     Raw Footage Turnover? <span className="text-red-500">*</span>
-                    <InfoTooltip text="Do you want full turnover of all raw ISO files in addition to any edited deliverable? Raw turnover gives you complete editing flexibility. Files can be very large for multi-camera 4K events â€” confirm your storage and transfer capability." />
+                    <InfoTooltip text="Do you want full turnover of all raw ISO files in addition to any edited deliverable? Raw turnover gives you complete editing flexibility. Files can be very large for multi-camera 4K events — confirm your storage and transfer capability." />
                   </label>
                   <YesNo
                     name="rawFootageTurnover"
@@ -567,12 +568,12 @@ const VideoRecordingStep = ({
                   />
                 </div>
 
-                {/* Fields 11 + 12 â€” Format + Delivery Method */}
+                {/* Fields 11 + 12 — Format + Delivery Method */}
                 <div className="grid grid-cols-2 gap-5">
                   <div>
                     <label className={labelClass}>
                       Deliverable Format <span className="text-red-500">*</span>
-                      <InfoTooltip text="MP4 (H.264) is the universal format â€” plays everywhere, smaller files, good for distribution. ProRes is the broadcast editing standard â€” much larger files but preserves quality through editing. Most events need both: ProRes for archival, MP4 for distribution." />
+                      <InfoTooltip text="MP4 (H.264) is the universal format — plays everywhere, smaller files, good for distribution. ProRes is the broadcast editing standard — much larger files but preserves quality through editing. Most events need both: ProRes for archival, MP4 for distribution." />
                     </label>
                     <div className="flex flex-wrap gap-3">
                       {["MP4 (H.264)", "ProRes (Raw)", "Both", "Platform-Specific"].map((opt) => (
@@ -591,7 +592,7 @@ const VideoRecordingStep = ({
                   <div>
                     <label className={labelClass}>
                       Delivery Method <span className="text-red-500">*</span>
-                      <InfoTooltip text="Hard drive on-site is fastest for very large files (multi-camera 4K events can produce 1â€“5TB of footage) â€” you walk away with everything at strike. Cloud upload is more convenient but requires vendor time and bandwidth post-event." />
+                      <InfoTooltip text="Hard drive on-site is fastest for very large files (multi-camera 4K events can produce 1–5TB of footage) — you walk away with everything at strike. Cloud upload is more convenient but requires vendor time and bandwidth post-event." />
                     </label>
                     <div className="flex flex-wrap gap-3">
                       {["Hard Drive (On-Site)", "Cloud Upload (Client Link)", "Both"].map((opt) => (
@@ -615,21 +616,25 @@ const VideoRecordingStep = ({
 
       </div>
 
-      {/* â”€â”€ Footer Nav â”€â”€ */}
+      {/* ── Footer Nav ── */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
-          â† Content &amp; Creative
+          <ArrowLeft size={15} className="shrink-0" />
+          Content &amp; Creative
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] hover:bg-[#009198] transition-colors active:scale-95"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
-          Venue &amp; Technical â†’
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+          Venue &amp; Technical
+          <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>
     </section>

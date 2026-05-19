@@ -1,4 +1,4 @@
-interface Step {
+﻿interface Step {
   id: number;       // numeric id used for activeStep comparison
   badge: string;    // displayed in the circle: "1", "2", "2B", etc.
   label: string;
@@ -99,7 +99,7 @@ const ProcessList = ({
                 {isCompleted ? <CheckIcon /> : step.badge}
               </div>
 
-              {/* Step info — grows to fill space */}
+              {/* Step info � grows to fill space */}
               <div className="flex flex-1 flex-col">
                 <span className={labelClass(isActive, isCompleted)}>{step.label}</span>
                 <span className={subClass(isActive, isCompleted)}>{step.sub}</span>

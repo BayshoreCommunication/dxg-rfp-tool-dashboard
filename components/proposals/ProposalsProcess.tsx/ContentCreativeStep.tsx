@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { InfoTooltip } from "./shared";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 type ProposalSettings = {
   branding: { linkPrefix: string; defaultFont: "Inter" | "Poppins" | "Roboto" };
@@ -43,13 +44,13 @@ export const defaultContentCreative = (): ContentCreativeData => ({
   creativeDirectionNotes: "",
 });
 
-/* â”€â”€â”€ Style constants â”€â”€â”€ */
+/* ─── Style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf] border-b border-[#d7dce3] pb-2";
 
-/* â”€â”€â”€ Ownership options â”€â”€â”€ */
+/* ─── Ownership options ─── */
 const OWNERSHIP_OPTS = [
   { value: "Client / Internal Team", label: "Client" },
   { value: "AV Vendor",              label: "AV Vendor" },
@@ -71,7 +72,7 @@ const ownershipCls = (opt: string, value: string): string => {
   return `${base} border-slate-300 bg-slate-100 text-slate-500`;
 };
 
-/* â”€â”€â”€ Mini Yes/No (for live data feeds toggle) â”€â”€â”€ */
+/* ─── Mini Yes/No (for live data feeds toggle) ─── */
 const miniYesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-9 min-w-[56px] cursor-pointer items-center justify-center rounded-md border px-3 text-sm font-semibold transition-all";
@@ -81,7 +82,7 @@ const miniYesNoCls = (opt: "YES" | "NO", value: string): string => {
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
 
-/* â”€â”€â”€ Matrix row â”€â”€â”€ */
+/* ─── Matrix row ─── */
 interface MatrixRowProps {
   label: string;
   helpText: string;
@@ -111,12 +112,12 @@ const MatrixRow = ({ label, helpText, value, onChange, warning }: MatrixRowProps
       </div>
     </div>
     {warning && (
-      <p className="mt-2 text-xs font-medium text-amber-600">âš  {warning}</p>
+      <p className="mt-2 text-xs font-medium text-amber-600">⚠ {warning}</p>
     )}
   </div>
 );
 
-/* â”€â”€â”€ Gateway card â”€â”€â”€ */
+/* ─── Gateway card ─── */
 const GatewayCard = ({
   isSelected,
   title,
@@ -157,7 +158,7 @@ const GatewayCard = ({
   </button>
 );
 
-/* â”€â”€â”€ Props â”€â”€â”€ */
+/* ─── Props ─── */
 interface Props {
   data: ContentCreativeData;
   onChange: (updates: Partial<ContentCreativeData>) => void;
@@ -192,7 +193,7 @@ const ContentCreativeStep = ({
 
   const sponsorWarning =
     sponsorOverlays === "YES" && safeData.sponsorRecognitionContent === "N/A"
-      ? "You indicated sponsor overlays will appear on the stream. Sponsor content cannot be N/A â€” please assign ownership."
+      ? "You indicated sponsor overlays will appear on the stream. Sponsor content cannot be N/A — please assign ownership."
       : undefined;
 
   return (
@@ -200,7 +201,7 @@ const ContentCreativeStep = ({
       className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <div className="flex items-center gap-3 mb-1">
           <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
@@ -213,10 +214,10 @@ const ContentCreativeStep = ({
         </p>
       </div>
 
-      {/* â”€â”€ Body â”€â”€ */}
+      {/* ── Body ── */}
       <div className="flex-1 px-8 py-8 space-y-8">
 
-        {/* Field 1 â€” Gateway */}
+        {/* Field 1 — Gateway */}
         <div>
           <label className={labelClass}>
             Content / Creative Services Needed?{" "}
@@ -226,20 +227,20 @@ const ContentCreativeStep = ({
           <div className="grid grid-cols-2 gap-4 mt-2">
             <GatewayCard
               isSelected={safeData.contentServicesNeeded === "YES"}
-              title="Yes â€” I need creative/content services from the AV vendor"
+              title="Yes — I need creative/content services from the AV vendor"
               description="You'll specify which content elements the vendor will produce. Common when you don't have a separate creative agency."
               onClick={() => onChange({ contentServicesNeeded: "YES" })}
             />
             <GatewayCard
               isSelected={safeData.contentServicesNeeded === "NO"}
-              title="No â€” Content is handled separately by my agency or in-house team"
+              title="No — Content is handled separately by my agency or in-house team"
               description="The AV vendor will only execute the live show. Section 4 will be omitted from your RFP."
               onClick={() => onChange({ contentServicesNeeded: "NO" })}
             />
           </div>
         </div>
 
-        {/* â”€â”€ NO state info panel â”€â”€ */}
+        {/* ── NO state info panel ── */}
         {safeData.contentServicesNeeded === "NO" && (
           <div className="rounded-xl border border-[#d7dce3] bg-[#f5f7ff] px-6 py-5">
             <p className="text-sm font-semibold text-[#1f2d5d]">
@@ -251,7 +252,7 @@ const ContentCreativeStep = ({
           </div>
         )}
 
-        {/* â”€â”€ YES: Content Responsibility Matrix (Fields 2â€“11) â”€â”€ */}
+        {/* ── YES: Content Responsibility Matrix (Fields 2–11) ── */}
         {needsContent && (
           <>
             <div>
@@ -287,7 +288,7 @@ const ContentCreativeStep = ({
                   {/* Field 3 */}
                   <MatrixRow
                     label="Speaker Slide Collection & Formatting"
-                    helpText="Who collects slide decks from individual speakers and formats them to the master template? This involves chasing speakers for content (often last-minute), fixing fonts, applying branding, and queue management. Time-intensive â€” many planners outsource this."
+                    helpText="Who collects slide decks from individual speakers and formats them to the master template? This involves chasing speakers for content (often last-minute), fixing fonts, applying branding, and queue management. Time-intensive — many planners outsource this."
                     value={safeData.speakerSlideCollection}
                     onChange={(v) => onChange({ speakerSlideCollection: v })}
                   />
@@ -295,7 +296,7 @@ const ContentCreativeStep = ({
                   {/* Field 4 */}
                   <MatrixRow
                     label="Motion Graphics / Opener Video"
-                    helpText="Who produces the opening 'show open' video, session bumpers, and motion graphic elements? A great opener sets the tone for the entire event. Typical scope: 60â€“90 second main open + 6â€“10 bumpers."
+                    helpText="Who produces the opening 'show open' video, session bumpers, and motion graphic elements? A great opener sets the tone for the entire event. Typical scope: 60–90 second main open + 6–10 bumpers."
                     value={safeData.motionGraphicsOpenerVideo}
                     onChange={(v) => onChange({ motionGraphicsOpenerVideo: v })}
                   />
@@ -319,17 +320,17 @@ const ContentCreativeStep = ({
                   {/* Field 7 */}
                   <MatrixRow
                     label="Sizzle / Recap Video"
-                    helpText="Who produces event highlight reels â€” either same-day 'best of' videos to play during the closing session, or post-event recap videos for marketing use? Requires camera operators and a video editor on-site or post-event."
+                    helpText="Who produces event highlight reels — either same-day 'best of' videos to play during the closing session, or post-event recap videos for marketing use? Requires camera operators and a video editor on-site or post-event."
                     value={safeData.sizzleRecapVideo}
                     onChange={(v) => onChange({ sizzleRecapVideo: v })}
                   />
 
-                  {/* Field 8 â€” Live Data Feeds (two-step: Yes/No then ownership) */}
+                  {/* Field 8 — Live Data Feeds (two-step: Yes/No then ownership) */}
                   <div className="py-4 border-b border-[#f0f2f8]">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <span className="flex items-center gap-1 text-sm font-semibold text-[#1f2d5d]">
                         Live Data Feeds / Real-Time Displays
-                        <InfoTooltip text="Do you need live data, leaderboards, real-time polling results, or dynamic content displayed on screens during the event? Examples: sales contest leaderboards, live Twitter feeds, attendee polling. Complex scope â€” typically requires custom integrations." />
+                        <InfoTooltip text="Do you need live data, leaderboards, real-time polling results, or dynamic content displayed on screens during the event? Examples: sales contest leaderboards, live Twitter feeds, attendee polling. Complex scope — typically requires custom integrations." />
                       </span>
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex gap-2">
@@ -348,7 +349,7 @@ const ContentCreativeStep = ({
                                 })
                               }
                             >
-                              {opt === "YES" ? "âœ“ Yes" : "âœ— No"}
+                              {opt === "YES" ? "✓ Yes" : "✗ No"}
                             </button>
                           ))}
                         </div>
@@ -377,7 +378,7 @@ const ContentCreativeStep = ({
                     </div>
                     {safeData.liveDataFeeds.needed === "YES" && (
                       <p className="mt-2 text-xs font-medium text-amber-600">
-                        âš¡ Complex scope â€” a DXG producer call may be needed to confirm feasibility.
+                        ⚡ Complex scope — a DXG producer call may be needed to confirm feasibility.
                       </p>
                     )}
                   </div>
@@ -385,7 +386,7 @@ const ContentCreativeStep = ({
                   {/* Field 9 */}
                   <MatrixRow
                     label="Sponsor Recognition Content"
-                    helpText="Who provides and manages sponsor logo files, sponsored segment slates, and sponsor recognition assets? Often delivered late â€” requires careful version control. If stream sponsor overlays were selected on Page 3, this row needs an owner."
+                    helpText="Who provides and manages sponsor logo files, sponsored segment slates, and sponsor recognition assets? Often delivered late — requires careful version control. If stream sponsor overlays were selected on Page 3, this row needs an owner."
                     value={safeData.sponsorRecognitionContent}
                     onChange={(v) => onChange({ sponsorRecognitionContent: v })}
                     warning={sponsorWarning}
@@ -394,16 +395,16 @@ const ContentCreativeStep = ({
                   {/* Field 10 */}
                   <MatrixRow
                     label="Social Media Content Capture"
-                    helpText="Who captures behind-the-scenes content, short clips, and social-ready content during the event? This is separate from the main session recording â€” typically a roaming videographer with social-format (vertical/square) cameras."
+                    helpText="Who captures behind-the-scenes content, short clips, and social-ready content during the event? This is separate from the main session recording — typically a roaming videographer with social-format (vertical/square) cameras."
                     value={safeData.socialMediaContentCapture}
                     onChange={(v) => onChange({ socialMediaContentCapture: v })}
                   />
 
-                  {/* Field 11 â€” Doubly conditional (Hybrid or Virtual only) */}
+                  {/* Field 11 — Doubly conditional (Hybrid or Virtual only) */}
                   {isHybridOrVirtual && (
                     <MatrixRow
                       label="Virtual Background Design"
-                      helpText="Who designs branded virtual backgrounds for remote speakers presenting into the event? Custom virtual backgrounds reinforce event branding and present remote speakers professionally. Standard scope: 1â€“3 branded background variants."
+                      helpText="Who designs branded virtual backgrounds for remote speakers presenting into the event? Custom virtual backgrounds reinforce event branding and present remote speakers professionally. Standard scope: 1–3 branded background variants."
                       value={safeData.virtualBackgroundDesign}
                       onChange={(v) => onChange({ virtualBackgroundDesign: v })}
                     />
@@ -413,7 +414,7 @@ const ContentCreativeStep = ({
               </div>
             </div>
 
-            {/* Field 12 â€” Creative Direction Notes */}
+            {/* Field 12 — Creative Direction Notes */}
             <div>
               <p className={groupLabelClass}>Creative Direction</p>
               <label className={labelClass}>
@@ -427,7 +428,7 @@ const ContentCreativeStep = ({
                 rows={5}
                 maxLength={1000}
                 className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
-                placeholder={`e.g., "The Summit visual identity uses a dark navy and electric teal palette with bold, kinetic typography. The 2026 theme is 'Velocity' â€” content should feel forward-momentum, cinematic, with high-contrast graphics. Brand guide attached on Page 8."`}
+                placeholder={`e.g., "The Summit visual identity uses a dark navy and electric teal palette with bold, kinetic typography. The 2026 theme is 'Velocity' — content should feel forward-momentum, cinematic, with high-contrast graphics. Brand guide attached on Page 8."`}
                 value={safeData.creativeDirectionNotes}
                 onChange={(e) => onChange({ creativeDirectionNotes: e.target.value })}
               />
@@ -442,21 +443,25 @@ const ContentCreativeStep = ({
 
       </div>
 
-      {/* â”€â”€ Footer Nav â”€â”€ */}
+      {/* ── Footer Nav ── */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
-          {isInPersonOnly ? "â† Room Specifications" : "â† Hybrid & Virtual"}
+          <ArrowLeft size={15} className="shrink-0" />
+          {isInPersonOnly ? "Room Specifications" : "Hybrid & Virtual"}
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] hover:bg-[#009198] transition-colors active:scale-95"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
-          Video Recording â†’
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+          Video Recording
+          <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>
     </section>

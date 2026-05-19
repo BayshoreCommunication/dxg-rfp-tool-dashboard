@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import type { ProposalSettings } from "../AddNewProposal";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 type TemplateSelectionProps = {
   templateId: string;
@@ -110,9 +111,11 @@ export default function TemplateSelection({
         <button
           type="button"
           onClick={onBack}
-          className="h-10 px-6 rounded-md border border-[#d7dce3] text-sm font-semibold text-[#1f2d5d] hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
-          BACK
+          <ArrowLeft size={15} className="shrink-0" />
+          <ArrowLeft size={15} className="shrink-0" />
+          Back
         </button>
         <button
           type="button"
@@ -127,6 +130,7 @@ export default function TemplateSelection({
           className="h-10 px-8 rounded-md text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(14,165,233,0.35)] transition-all hover:opacity-90 active:scale-95"
           style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           {liveActionLabel}
         </button>
       </div>

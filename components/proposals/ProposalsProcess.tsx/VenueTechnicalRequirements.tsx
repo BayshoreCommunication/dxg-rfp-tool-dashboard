@@ -2,8 +2,9 @@
 
 import type { ProposalSettings, VenueTechnicalData } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
-/* â”€â”€â”€ Style constants â”€â”€â”€ */
+/* ─── Style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
@@ -15,7 +16,7 @@ const subPanelClass =
 const subPanelHeader =
   "mb-3 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
 
-/* â”€â”€â”€ Yes/No buttons â”€â”€â”€ */
+/* ─── Yes/No buttons ─── */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
@@ -38,14 +39,14 @@ const YesNo = ({
       className={yesNoCls("YES", value)}
       onClick={() => onChange("YES")}
     >
-      âœ“ Yes
+      ✓ Yes
     </button>
     <button
       type="button"
       className={yesNoCls("NO", value)}
       onClick={() => onChange("NO")}
     >
-      âœ— No
+      ✗ No
     </button>
   </div>
 );
@@ -56,7 +57,7 @@ const Group = ({ label }: { label: string }) => (
   </div>
 );
 
-/* â”€â”€â”€ Options â”€â”€â”€ */
+/* ─── Options ─── */
 const POWER_AMPERAGE_OPTIONS = [
   "100A",
   "200A",
@@ -85,7 +86,7 @@ const INTERNET_USE_CASES = [
   "Backstage / Production Crew",
 ];
 
-/* â”€â”€â”€ Number stepper â”€â”€â”€ */
+/* ─── Number stepper ─── */
 const Stepper = ({
   value,
   onChange,
@@ -105,7 +106,7 @@ const Stepper = ({
         onClick={() => onChange(String(Math.max(min, num - 1)))}
         className="flex h-10 w-10 items-center justify-center bg-[#f5f7ff] text-lg font-bold text-[#1f2d5d] hover:bg-[#e0e7ff] transition-colors"
       >
-        âˆ’
+        −
       </button>
       <span className="flex h-10 w-14 items-center justify-center text-sm font-bold text-slate-800">
         {num}
@@ -121,15 +122,15 @@ const Stepper = ({
   );
 };
 
-/* â”€â”€â”€ Ref panel row â”€â”€â”€ */
+/* ─── Ref panel row ─── */
 const RefRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-0.5">
     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
-    <span className="text-sm font-semibold text-slate-700">{value || "â€”"}</span>
+    <span className="text-sm font-semibold text-slate-700">{value || "—"}</span>
   </div>
 );
 
-/* â”€â”€â”€ Props â”€â”€â”€ */
+/* ─── Props ─── */
 interface Props {
   data: VenueTechnicalData;
   onChange: (updates: Partial<VenueTechnicalData>) => void;
@@ -193,7 +194,7 @@ const VenueTechnicalRequirements = ({
       className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <div className="flex items-center gap-3 mb-1">
           <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
@@ -204,13 +205,13 @@ const VenueTechnicalRequirements = ({
           Venue &amp; Technical Infrastructure
         </h2>
         <p className="mt-1 text-sm text-[#8f98bf]">
-          Rigging, power, internet, COI, and venue access details â€” used to scope labor and logistics.
+          Rigging, power, internet, COI, and venue access details — used to scope labor and logistics.
         </p>
       </div>
 
       <div className="flex-1 px-8 py-8 space-y-0">
 
-        {/* â”€â”€ Reference Panel (read-only) â”€â”€ */}
+        {/* ── Reference Panel (read-only) ── */}
         {(loadInDate || strikeDate || numberOfEventRooms || ledWallMaxWidth) && (
           <div className="mb-6 rounded-xl border border-[#d7dce3] bg-[#f8faff] px-5 py-4">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
@@ -229,10 +230,10 @@ const VenueTechnicalRequirements = ({
           </div>
         )}
 
-        {/* â”€â”€ Union Advisory Banner â”€â”€ */}
+        {/* ── Union Advisory Banner ── */}
         {showUnionBanner && (
           <div className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-            <span className="mt-0.5 shrink-0 text-amber-500">âš </span>
+            <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
             <div>
               <p className="text-sm font-bold text-amber-800">
                 {isUnionVenue === "YES" ? "Union Venue Detected" : "Union Status Not Confirmed"}
@@ -244,9 +245,9 @@ const VenueTechnicalRequirements = ({
           </div>
         )}
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            Block 1 â€” Venue AV Contact
-        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─────────────────────────────────────────
+            Block 1 — Venue AV Contact
+        ───────────────────────────────────────── */}
         <Group label="Venue AV Contact" />
 
         <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -287,9 +288,9 @@ const VenueTechnicalRequirements = ({
           </div>
         </div>
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            Block 2 â€” In-House AV Company
-        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─────────────────────────────────────────
+            Block 2 — In-House AV Company
+        ───────────────────────────────────────── */}
         <div className="mb-6">
           <label className={labelClass}>
             In-House AV Company Name
@@ -297,15 +298,15 @@ const VenueTechnicalRequirements = ({
           </label>
           <input
             className={inputClass}
-            placeholder="e.g. PSAV, Encore, Freeman AV â€” or leave blank if none"
+            placeholder="e.g. PSAV, Encore, Freeman AV — or leave blank if none"
             value={data.inHouseAvCompanyName}
             onChange={(e) => onChange({ inHouseAvCompanyName: e.target.value })}
           />
         </div>
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            Block 3 â€” Rigging
-        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─────────────────────────────────────────
+            Block 3 — Rigging
+        ───────────────────────────────────────── */}
         <Group label="Rigging" />
 
         <div className="mb-6">
@@ -368,17 +369,17 @@ const VenueTechnicalRequirements = ({
           )}
         </div>
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            Block 4 â€” Power & Connectivity
-        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─────────────────────────────────────────
+            Block 4 — Power & Connectivity
+        ───────────────────────────────────────── */}
         <Group label="Power &amp; Connectivity" />
 
         {/* Smart power suggestion */}
         {suggestHighPower && (
           <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
-            <span className="shrink-0 text-amber-500">âš¡</span>
+            <span className="shrink-0 text-amber-500">⚡</span>
             <p className="text-xs text-amber-700">
-              Your LED wall exceeds 60 ft wide â€” a 400A minimum power drop is strongly recommended. Select 400A or higher below.
+              Your LED wall exceeds 60 ft wide — a 400A minimum power drop is strongly recommended. Select 400A or higher below.
             </p>
           </div>
         )}
@@ -409,7 +410,7 @@ const VenueTechnicalRequirements = ({
               <div className="mb-4">
                 <label className={labelClass}>
                   Amperage per Drop
-                  <InfoTooltip text="The amperage of each dedicated circuit. Large LED walls and audio systems typically require 200â€“400A. The AV company will confirm exact requirements." />
+                  <InfoTooltip text="The amperage of each dedicated circuit. Large LED walls and audio systems typically require 200–400A. The AV company will confirm exact requirements." />
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {POWER_AMPERAGE_OPTIONS.map((opt) => (
@@ -432,7 +433,7 @@ const VenueTechnicalRequirements = ({
               <div>
                 <label className={labelClass}>
                   Number of Power Drops
-                  <InfoTooltip text="Total number of dedicated circuits needed. Common breakdowns: 1â€“2 at stage, 1 at FOH mix position, 1 at video village." />
+                  <InfoTooltip text="Total number of dedicated circuits needed. Common breakdowns: 1–2 at stage, 1 at FOH mix position, 1 at video village." />
                 </label>
                 <Stepper
                   value={data.numberOfPowerDrops || "1"}
@@ -467,7 +468,7 @@ const VenueTechnicalRequirements = ({
             <div className={subPanelClass}>
               <p className={subPanelHeader}>Internet Use Cases</p>
               <p className="mb-3 text-xs text-slate-500">
-                Select all that apply â€” DXG uses this to specify bandwidth requirements per use case.
+                Select all that apply — DXG uses this to specify bandwidth requirements per use case.
               </p>
               <div className="flex flex-wrap gap-3">
                 {INTERNET_USE_CASES.map((opt) => (
@@ -487,9 +488,9 @@ const VenueTechnicalRequirements = ({
           )}
         </div>
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            Block 5 â€” Compliance & Access
-        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ─────────────────────────────────────────
+            Block 5 — Compliance & Access
+        ───────────────────────────────────────── */}
         <Group label="Compliance &amp; Access" />
 
         <div className="mb-6">
@@ -501,7 +502,7 @@ const VenueTechnicalRequirements = ({
             rows={4}
             maxLength={500}
             className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
-            placeholder="Paste the venue's COI requirements, additional insured language, or submission deadlineâ€¦"
+            placeholder="Paste the venue's COI requirements, additional insured language, or submission deadline…"
             value={data.coiRequirements}
             onChange={(e) => onChange({ coiRequirements: e.target.value })}
           />
@@ -519,7 +520,7 @@ const VenueTechnicalRequirements = ({
             rows={3}
             maxLength={400}
             className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
-            placeholder="e.g. Load-in after 6am only, freight elevator reservations required 48hrs in advance, all crew must badge in at securityâ€¦"
+            placeholder="e.g. Load-in after 6am only, freight elevator reservations required 48hrs in advance, all crew must badge in at security…"
             value={data.venueAccessRequirements}
             onChange={(e) =>
               onChange({ venueAccessRequirements: e.target.value })
@@ -532,21 +533,25 @@ const VenueTechnicalRequirements = ({
 
       </div>
 
-      {/* â”€â”€ Footer â”€â”€ */}
+      {/* ── Footer ── */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
-          â† Video Recording
+          <ArrowLeft size={15} className="shrink-0" />
+          Video Recording
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] hover:bg-[#009198] transition-colors active:scale-95"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
-          Budget &amp; Proposal â†’
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+          Budget &amp; Proposal
+          <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>
     </section>

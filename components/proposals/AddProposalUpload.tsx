@@ -20,7 +20,7 @@ const ACCEPTED_TYPES = [
 
 const FIELD_GROUPS = [
   {
-    label: "1 Â· Event Overview",
+    label: "1 · Event Overview",
     color: "border-[#00c2c9] bg-[#00c2c9]/5 text-[#009198]",
     fields: [
       "Event name, theme & edition year",
@@ -31,7 +31,7 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "2 Â· Venue Schedule",
+    label: "2 · Venue Schedule",
     color: "border-teal-400 bg-teal-50 text-teal-700",
     fields: [
       "Venue name, address, city & state",
@@ -41,11 +41,11 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "3 Â· AV & Production Crew",
+    label: "3 · AV & Production Crew",
     color: "border-sky-400 bg-sky-50 text-sky-700",
     fields: [
       "Podium mic, wireless mics (qty & type)",
-      "Screens, LED wall (width Ã— height, pixel pitch)",
+      "Screens, LED wall (width × height, pixel pitch)",
       "Cameras, video recording type & playback",
       "Stage lighting, confidence monitors & speaker timer",
       "Teleprompter (bilingual, languages)",
@@ -53,7 +53,7 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "4 Â· Hybrid & Virtual",
+    label: "4 · Hybrid & Virtual",
     color: "border-[#2563eb] bg-[#2563eb]/5 text-[#1d4ed8]",
     fields: [
       "Virtual attendee estimate",
@@ -65,7 +65,7 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "5 Â· Content & Creative",
+    label: "5 · Content & Creative",
     color: "border-rose-400 bg-rose-50 text-rose-700",
     fields: [
       "Content services needed (Yes / No)",
@@ -76,7 +76,7 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "6 Â· Video Recording",
+    label: "6 · Video Recording",
     color: "border-orange-400 bg-orange-50 text-orange-700",
     fields: [
       "Video recording required (Yes / No)",
@@ -88,7 +88,7 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "7 Â· Venue Technical",
+    label: "7 · Venue Technical",
     color: "border-violet-400 bg-violet-50 text-violet-700",
     fields: [
       "Rigging: required, weight per point & number of points",
@@ -98,7 +98,7 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "8 Â· Budget & Preferences",
+    label: "8 · Budget & Preferences",
     color: "border-amber-400 bg-amber-50 text-amber-700",
     fields: [
       "Estimated AV budget tier",
@@ -109,7 +109,7 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    label: "9 Â· Contact Information",
+    label: "9 · Contact Information",
     color: "border-pink-400 bg-pink-50 text-pink-700",
     fields: [
       "First name, last name, title & organization",
@@ -146,7 +146,7 @@ async function downloadSamplePdf() {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
-  doc.text("DXG RFP â€” Sample Proposal Template", ml, 16);
+  doc.text("DXG RFP — Sample Proposal Template", ml, 16);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.text(
@@ -217,7 +217,7 @@ async function downloadSamplePdf() {
   };
 
   renderSection(
-    "1 â€” EVENT OVERVIEW",
+    "1 — EVENT OVERVIEW",
     [238, 242, 255],
     [67, 56, 202],
     [
@@ -233,44 +233,44 @@ async function downloadSamplePdf() {
   );
 
   renderSection(
-    "2 â€” VENUE SCHEDULE",
+    "2 — VENUE SCHEDULE",
     [236, 253, 245],
     [4, 120, 87],
     [
       { label: "Venue Name & Full Address", hint: "e.g. Las Vegas Convention Center, 3150 Paradise Rd" },
       { label: "Venue City & State", hint: "e.g. Las Vegas, NV" },
-      { label: "Union Venue", hint: "Yes / No / Not Sure â€” Union body: e.g. IATSE, Teamsters" },
-      { label: "Load-In Date & Time", hint: "MM/DD/YYYY â€” e.g. 07:00 AM" },
-      { label: "Rehearsal Date & Time", hint: "MM/DD/YYYY â€” e.g. 02:00 PM" },
-      { label: "Strike Date & Time", hint: "MM/DD/YYYY â€” e.g. 08:00 AM" },
+      { label: "Union Venue", hint: "Yes / No / Not Sure — Union body: e.g. IATSE, Teamsters" },
+      { label: "Load-In Date & Time", hint: "MM/DD/YYYY — e.g. 07:00 AM" },
+      { label: "Rehearsal Date & Time", hint: "MM/DD/YYYY — e.g. 02:00 PM" },
+      { label: "Strike Date & Time", hint: "MM/DD/YYYY — e.g. 08:00 AM" },
       { label: "Number of Event Rooms", hint: "e.g. 3" },
       { label: "Time Zone", hint: "e.g. Pacific Time (PT)" },
     ],
   );
 
   renderSection(
-    "3 â€” AV REQUIREMENTS & PRODUCTION CREW",
+    "3 — AV REQUIREMENTS & PRODUCTION CREW",
     [224, 242, 254],
     [3, 105, 161],
     [
-      { label: "Podium Microphone", hint: "Yes / No â€” Qty: [#]" },
-      { label: "Wireless Microphones", hint: "Yes / No â€” Qty: [#] â€” Type: Handheld / Lavalier / Headset" },
-      { label: "Large Monitors / Screens", hint: "Yes / No â€” Qty: [#]" },
-      { label: "LED Wall", hint: "Yes / No â€” Width: [ft] Ã— Height: [ft] â€” Pixel Pitch: [mm]" },
-      { label: "Presentation Laptops", hint: "Yes / No â€” Qty: [#]" },
-      { label: "Video Playback & Cameras", hint: "Yes / No â€” Camera Qty: [#]" },
+      { label: "Podium Microphone", hint: "Yes / No — Qty: [#]" },
+      { label: "Wireless Microphones", hint: "Yes / No — Qty: [#] — Type: Handheld / Lavalier / Headset" },
+      { label: "Large Monitors / Screens", hint: "Yes / No — Qty: [#]" },
+      { label: "LED Wall", hint: "Yes / No — Width: [ft] × Height: [ft] — Pixel Pitch: [mm]" },
+      { label: "Presentation Laptops", hint: "Yes / No — Qty: [#]" },
+      { label: "Video Playback & Cameras", hint: "Yes / No — Camera Qty: [#]" },
       { label: "Stage Lighting", hint: "Stage Wash / Uplighting / Audience / Follow Spots" },
-      { label: "Confidence Monitors & Speaker Timer", hint: "Yes / No â€” Qty: [#]" },
-      { label: "Teleprompter", hint: "Yes / No â€” Bilingual: Yes / No â€” Languages: [e.g. English, Spanish]" },
+      { label: "Confidence Monitors & Speaker Timer", hint: "Yes / No — Qty: [#]" },
+      { label: "Teleprompter", hint: "Yes / No — Bilingual: Yes / No — Languages: [e.g. English, Spanish]" },
       { label: "Audience Q&A Method", hint: "Via an App / Passing a Microphone / Both" },
-      { label: "Scenic / Stage Design", hint: "Yes / No â€” any notes on style or brand" },
+      { label: "Scenic / Stage Design", hint: "Yes / No — any notes on style or brand" },
       { label: "Union Labor", hint: "Yes / No / Not Sure" },
       { label: "Crew Roles Needed", hint: "A1 / A2 / V1 / V2 / TD / L1 / Graphics Op / Camera Op / Showcaller / Producer / etc." },
     ],
   );
 
   renderSection(
-    "4 â€” HYBRID & VIRTUAL  (Hybrid / Virtual events only)",
+    "4 — HYBRID & VIRTUAL  (Hybrid / Virtual events only)",
     [245, 243, 255],
     [91, 33, 182],
     [
@@ -278,18 +278,18 @@ async function downloadSamplePdf() {
       { label: "Streaming Platform", hint: "Zoom / Teams / Hopin / vMix / StreamYard / Webex / Other" },
       { label: "Platform Integration with AV", hint: "Yes / No" },
       { label: "Stream Ownership", hint: "Client / AV Vendor / TBD" },
-      { label: "Remote Speakers", hint: "Yes / No â€” How Many: [#] â€” Platform: [e.g. Zoom Webinar]" },
+      { label: "Remote Speakers", hint: "Yes / No — How Many: [#] — Platform: [e.g. Zoom Webinar]" },
       { label: "Tech Rehearsal Owner", hint: "Client / AV Vendor" },
       { label: "Live Virtual Q&A & Breakouts", hint: "Yes / No" },
       { label: "Dedicated Virtual Producer", hint: "Yes / No" },
-      { label: "Closed Captions", hint: "Yes / No â€” Languages: [e.g. English, French] â€” Type: AI / Human" },
+      { label: "Closed Captions", hint: "Yes / No — Languages: [e.g. English, French] — Type: AI / Human" },
       { label: "On-Demand Recording", hint: "Yes / No" },
       { label: "Sponsor Overlays & Virtual Networking", hint: "Yes / No" },
     ],
   );
 
   renderSection(
-    "5 â€” CONTENT & CREATIVE",
+    "5 — CONTENT & CREATIVE",
     [255, 241, 242],
     [159, 18, 57],
     [
@@ -300,13 +300,13 @@ async function downloadSamplePdf() {
       { label: "Lower Thirds & Name Supers", hint: "Client / AV Vendor / TBD / N/A" },
       { label: "Sizzle / Recap Video", hint: "Client / AV Vendor / TBD / N/A" },
       { label: "Sponsor Recognition & Social Content", hint: "Client / AV Vendor / TBD / N/A" },
-      { label: "Live Data Feeds", hint: "Yes / No â€” Ownership: Client / AV Vendor / TBD" },
+      { label: "Live Data Feeds", hint: "Yes / No — Ownership: Client / AV Vendor / TBD" },
       { label: "Creative Direction Notes", hint: "Theme, colour palette, style references, brand constraints" },
     ],
   );
 
   renderSection(
-    "6 â€” VIDEO RECORDING",
+    "6 — VIDEO RECORDING",
     [255, 247, 237],
     [154, 52, 18],
     [
@@ -314,32 +314,32 @@ async function downloadSamplePdf() {
       { label: "Number of Cameras", hint: "e.g. 4" },
       { label: "Camera Positions", hint: "Stage Wide / Speaker Close-Up / Audience Reaction / Roaming / etc." },
       { label: "IMAG Required", hint: "Yes / No" },
-      { label: "Camera Operators & ISO Recordings", hint: "e.g. 4 operators â€” All cameras ISO" },
-      { label: "Recording Resolution & Media", hint: "e.g. 4K â€” SSD / NVMe" },
-      { label: "Edited Deliverable", hint: "Yes / No â€” Type: Highlight Reel / Full Edit / Speaker Cuts" },
-      { label: "Turnaround Time & Reel Length", hint: "e.g. 5 Business Days â€” 2-3 min highlight" },
+      { label: "Camera Operators & ISO Recordings", hint: "e.g. 4 operators — All cameras ISO" },
+      { label: "Recording Resolution & Media", hint: "e.g. 4K — SSD / NVMe" },
+      { label: "Edited Deliverable", hint: "Yes / No — Type: Highlight Reel / Full Edit / Speaker Cuts" },
+      { label: "Turnaround Time & Reel Length", hint: "e.g. 5 Business Days — 2-3 min highlight" },
       { label: "Raw Footage Turnover", hint: "Yes / No" },
-      { label: "Deliverable Format & Delivery Method", hint: "e.g. H.264 MP4 â€” WeTransfer / Hard Drive" },
+      { label: "Deliverable Format & Delivery Method", hint: "e.g. H.264 MP4 — WeTransfer / Hard Drive" },
     ],
   );
 
   renderSection(
-    "7 â€” VENUE TECHNICAL",
+    "7 — VENUE TECHNICAL",
     [255, 251, 235],
     [194, 65, 12],
     [
       { label: "Venue AV Contact Name, Phone & Email", hint: "In-house AV contact at the venue" },
       { label: "In-House AV Company", hint: "e.g. PSAV / Encore" },
-      { label: "Rigging Required", hint: "Yes / No â€” Max weight/point: [lbs] â€” Points: [#]" },
-      { label: "Power Drops Required", hint: "Yes / No â€” Amperage: 100A / 200A / 400A â€” Qty: [#]" },
-      { label: "Wireless Internet & Use Cases", hint: "Yes / No â€” e.g. Livestream, Remote Speakers, Signage" },
+      { label: "Rigging Required", hint: "Yes / No — Max weight/point: [lbs] — Points: [#]" },
+      { label: "Power Drops Required", hint: "Yes / No — Amperage: 100A / 200A / 400A — Qty: [#]" },
+      { label: "Wireless Internet & Use Cases", hint: "Yes / No — e.g. Livestream, Remote Speakers, Signage" },
       { label: "COI / Insurance Requirements", hint: "e.g. $2M general liability, certificate 30 days prior" },
       { label: "Venue Access Requirements", hint: "e.g. Union dock, check-in procedure, access hours" },
     ],
   );
 
   renderSection(
-    "8 â€” BUDGET & PREFERENCES",
+    "8 — BUDGET & PREFERENCES",
     [254, 252, 232],
     [161, 98, 7],
     [
@@ -347,15 +347,15 @@ async function downloadSamplePdf() {
       { label: "Preferred Proposal Format", hint: "Gear Itemization / Labor Breakdown / Package Pricing / Summary Only" },
       { label: "Timeline for Proposal", hint: "Within 24 Hours / Within 3 Business Days / 1 Week / 2 Weeks / Flexible" },
       { label: "Decision Date", hint: "MM/DD/YYYY" },
-      { label: "Competitive Bid & Number of Proposals", hint: "Yes / No â€” e.g. 3 vendors" },
-      { label: "Evaluation Matrix Weights", hint: "Technical / Crew / Hybrid / Pricing / Creative / Responsiveness / DEI â€” must total 100%" },
+      { label: "Competitive Bid & Number of Proposals", hint: "Yes / No — e.g. 3 vendors" },
+      { label: "Evaluation Matrix Weights", hint: "Technical / Crew / Hybrid / Pricing / Creative / Responsiveness / DEI — must total 100%" },
       { label: "Call with DXG Producer", hint: "Yes / No" },
       { label: "How Did You Hear About Us", hint: "Referral / Venue / Google / Social Media / LinkedIn / Other" },
     ],
   );
 
   renderSection(
-    "9 â€” CONTACT INFORMATION",
+    "9 — CONTACT INFORMATION",
     [253, 242, 248],
     [157, 23, 77],
     [
@@ -365,7 +365,7 @@ async function downloadSamplePdf() {
       { label: "Organization Legal Name", hint: "e.g. Apex Dynamics International LLC" },
       { label: "Email Address", hint: "" },
       { label: "Phone & Extension", hint: "Type: Mobile / Direct / Office Main" },
-      { label: "Preferred Contact Method & Best Time", hint: "Email / Phone / Either â€” e.g. Weekdays 9-5 PT" },
+      { label: "Preferred Contact Method & Best Time", hint: "Email / Phone / Either — e.g. Weekdays 9-5 PT" },
       { label: "Additional Notes", hint: "Anything else the vendor should know" },
     ],
   );
@@ -379,7 +379,7 @@ async function downloadSamplePdf() {
     doc.setTextColor(148, 163, 184);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
-    doc.text("DXG RFP Sample Template â€” goprospero.com", ml, pageH - 4);
+    doc.text("DXG RFP Sample Template — goprospero.com", ml, pageH - 4);
     doc.text(`Page ${i} of ${total}`, mr, pageH - 4, { align: "right" });
   }
 
@@ -434,7 +434,7 @@ function GuideModal({ onClose }: { onClose: () => void }) {
                 </h2>
               </div>
               <p className="text-sm text-white/70">
-                Our AI reads your file and pre-fills all 9 form steps â€” the more detail you include, the more fields get filled.
+                Our AI reads your file and pre-fills all 9 form steps — the more detail you include, the more fields get filled.
               </p>
             </div>
             <button
@@ -505,8 +505,8 @@ function GuideModal({ onClose }: { onClose: () => void }) {
             }}
           >
             <p className="text-sm text-amber-800">
-              <span className="font-bold">ðŸ’¡ Tip:</span> The more detail your
-              document contains, the more fields we can pre-fill â€” saving your
+              <span className="font-bold">💡 Tip:</span> The more detail your
+              document contains, the more fields we can pre-fill — saving your
               time on the form.
             </p>
           </div>
@@ -574,7 +574,7 @@ export default function AddProposalUpload({
               <div>
                 <h3 className="text-lg font-bold text-white">Quick guide</h3>
                 <p className="mt-0.5 text-xs leading-5 text-white/80">
-                  Upload any file and our AI pre-fills all 9 steps â€” event, venue
+                  Upload any file and our AI pre-fills all 9 steps — event, venue
                   schedule, AV, hybrid/virtual, content, video recording,
                   technical, budget &amp; contact.
                 </p>

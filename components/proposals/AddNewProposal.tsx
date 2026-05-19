@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import {
   copyProposalAction,
   createProposalAction,
@@ -25,7 +25,7 @@ import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalReq
 import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
 import SaveCopyModal from "./SaveCopyModal";
 
-/* â”€â”€â”€ Proposal data by step â”€â”€â”€ */
+/* ─── Proposal data by step ─── */
 export type EventData = {
   eventName: string;
   editionYear?: string;
@@ -115,7 +115,7 @@ export type RoomByRoomData = {
   unionLabor: "Yes" | "No" | "Not Sure" | "";
   showCrewNeeded: string[];
   otherRolesNeeded: string;
-  /* ── new fields matching HTML page 2B ── */
+  /* ?? new fields matching HTML page 2B ?? */
   stageDimensions: string;
   audioSystemRequired: "Yes" | "No" | "";
   ledWallSpecs: string;
@@ -480,7 +480,7 @@ const toProposalSlug = (title: string, id: string): string => {
   return id ? `${slugTitle || "proposal"}-${id}` : slugTitle || "proposal";
 };
 
-/* ─── Normalize AI-extracted values to exactly match option strings ─── */
+/* ??? Normalize AI-extracted values to exactly match option strings ??? */
 const matchOption = (value: string | undefined, options: string[]): string => {
   if (!value) return "";
   const v = value.trim().toLowerCase();
@@ -1074,9 +1074,6 @@ const AddNewProposal = ({
     id: string;
     title: string;
   } | null>(null);
-  const [updatedProposalTitle, setUpdatedProposalTitle] = useState<
-    string | null
-  >(null);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [copyingSaving, setCopyingSaving] = useState(false);
 
@@ -1212,7 +1209,7 @@ const AddNewProposal = ({
     };
   }, [isEditMode, proposalId, router]);
 
-  /* ─── Single source of truth for all steps ─── */
+  /* ??? Single source of truth for all steps ??? */
   const [proposalData, setProposalData] =
     useState<ProposalData>(defaultProposalData);
 
@@ -1468,9 +1465,7 @@ const AddNewProposal = ({
             : "Proposal created successfully!",
         );
         if (isEditMode) {
-          const updatedTitle =
-            proposalData.event.eventName?.trim() || "Untitled Proposal";
-          setUpdatedProposalTitle(updatedTitle);
+          router.push("/proposals");
           return;
         }
         const data =
@@ -1549,7 +1544,7 @@ const AddNewProposal = ({
   const isInPersonOnly = proposalData.event.eventFormat === "In-Person";
 
   const continueHandler = async () => {
-    /* ── Step 0: extract fields from uploaded doc before advancing ── */
+    /* ?? Step 0: extract fields from uploaded doc before advancing ?? */
     if (proposalProcessStep === 0) {
       if (!selectedFile) return;
 
@@ -1579,15 +1574,15 @@ const AddNewProposal = ({
           if (normalized.roomByRoom && normalized.roomByRoom.length > 0) {
             setRooms(normalized.roomByRoom.map((r) => ({ ...defaultRoom(), ...r })));
           }
-          toast.success("✅ Fields pre-filled from your document!");
+          toast.success("? Fields pre-filled from your document!");
         } else {
           toast.info(
-            "No matching fields found — please fill the form manually.",
+            "No matching fields found � please fill the form manually.",
           );
         }
       } catch {
         toast.info(
-          "Couldn't read the document — please fill the form manually.",
+          "Couldn't read the document � please fill the form manually.",
         );
       } finally {
         setIsExtracting(false);
@@ -1603,11 +1598,11 @@ const AddNewProposal = ({
     if (proposalProcessStep === 1 && !isEventStepValid()) {
       return;
     }
-    // Step 2 = Venue & Schedule — no required validation blocking
+    // Step 2 = Venue & Schedule � no required validation blocking
     if (proposalProcessStep === 3 && !isRoomAndProductionStepValid()) {
       return;
     }
-    // Steps 4 (Hybrid & Virtual), 5 (Content & Creative), 6 (Video Recording) — no required validation
+    // Steps 4 (Hybrid & Virtual), 5 (Content & Creative), 6 (Video Recording) � no required validation
     if (proposalProcessStep === 7 && !isVenueStepValid()) {
       return;
     }
@@ -1711,35 +1706,6 @@ const AddNewProposal = ({
     );
   }
 
-  if (updatedProposalTitle) {
-    return (
-      <section className="mx-auto w-full max-w-3xl rounded-3xl border border-blue-200 bg-white p-6 shadow-sm sm:p-10">
-        <div className="mt-2 text-center">
-          <h2 className="text-2xl font-black text-slate-900 sm:text-3xl">
-            Proposal Updated Successfully
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:text-base">
-            Your proposal{" "}
-            <span className="font-semibold text-slate-800">
-              &quot;{updatedProposalTitle}&quot;
-            </span>{" "}
-            has been updated.
-          </p>
-        </div>
-
-        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-1">
-          <button
-            type="button"
-            onClick={() => router.push("/proposals")}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
-          >
-            Back To Proposal List
-          </button>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <div
       style={{
@@ -1749,11 +1715,11 @@ const AddNewProposal = ({
     >
       {loadingExisting && (
         <div className="flex w-full gap-4">
-          {/* Form card skeleton — 80% */}
+          {/* Form card skeleton � 80% */}
           <div className="w-[80%] space-y-6">
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex min-h-screen flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #00c2c9, #2563eb)" }} />
-              <div className="space-y-6 p-8">
+              <div className="flex-1 space-y-6 p-8">
                 <div className="space-y-1">
                   <div className="h-6 w-48 animate-pulse rounded-lg bg-slate-200" />
                   <div className="h-3 w-80 animate-pulse rounded bg-slate-100" />
@@ -1782,7 +1748,7 @@ const AddNewProposal = ({
               </div>
             </div>
           </div>
-          {/* Step sidebar skeleton — 20% */}
+          {/* Step sidebar skeleton � 20% */}
           <div className="w-[20%] space-y-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               {Array.from({ length: 9 }).map((_, i) => (
@@ -1795,7 +1761,7 @@ const AddNewProposal = ({
           </div>
         </div>
       )}
-      {/* â”€â”€ Step 0: Upload screen â”€â”€ */}
+      {/* ── Step 0: Upload screen ── */}
       {!loadingExisting && !isEditMode && proposalProcessStep === 0 && (
         <>
           <div className="flex items-center justify-between">
@@ -1818,10 +1784,10 @@ const AddNewProposal = ({
         </>
       )}
 
-      {/* â”€â”€ Steps 1â€“7: Multi-step form â”€â”€ */}
+      {/* ── Steps 1–7: Multi-step form ── */}
       {!loadingExisting && proposalProcessStep >= 1 && (
         <div className="flex w-full">
-          {/* Form area â€” 70% */}
+          {/* Form area — 70% */}
           <div className="w-[80%] mr-4">
             {proposalProcessStep === 1 && (
               <EventForm
@@ -1967,10 +1933,11 @@ const AddNewProposal = ({
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                isEditMode={isEditMode}
               />
             )}
           </div>
-          {/* Sidebar — 20% */}
+          {/* Sidebar � 20% */}
           <div className="w-[20%] sticky top-0 self-start">
             <ProcessList
               activeStep={proposalProcessStep}

@@ -16,7 +16,11 @@ const extractObjectId = (slugOrId?: string | null) => {
 };
 
 const resolveDownloadPreview = (proposal: RfpProposalData): boolean => {
-  const snap = (proposal as { proposalSetting?: { proposals?: { downloadPreview?: string } } }).proposalSetting;
+  const snap = (
+    proposal as {
+      proposalSetting?: { proposals?: { downloadPreview?: string } };
+    }
+  ).proposalSetting;
   return (snap?.proposals?.downloadPreview ?? "Yes") !== "No";
 };
 
@@ -62,19 +66,26 @@ export default function ProposalPublicView({
       const typedCurrent = current as { status?: string; isActive?: boolean };
       const canTrackView =
         !isPublicAccess ||
-        (typedCurrent.status === "submitted" && typedCurrent.isActive !== false);
+        (typedCurrent.status === "submitted" &&
+          typedCurrent.isActive !== false);
 
       if (!incrementedRef.current && canTrackView) {
         incrementedRef.current = true;
         const viewsRes = await incrementProposalViewsPublicAction(proposalId);
         if (!mounted) return;
-        if (viewsRes.success && viewsRes.data && typeof viewsRes.data === "object") {
+        if (
+          viewsRes.success &&
+          viewsRes.data &&
+          typeof viewsRes.data === "object"
+        ) {
           setProposal(viewsRes.data as RfpProposalData);
         }
       }
     };
     void load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [proposalId, isPublicAccess]);
 
   if (loading) {
@@ -94,7 +105,13 @@ export default function ProposalPublicView({
         {/* Page 1 skeleton */}
         <div className="mx-auto w-full max-w-[900px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {/* Cover header */}
-          <div className="h-[140px] animate-pulse" style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 40%, #0ea5e9 70%, #2563eb 100%)" }}>
+          <div
+            className="h-[140px] animate-pulse"
+            style={{
+              background:
+                "linear-gradient(135deg, #00c2c9 0%, #06b6d4 40%, #0ea5e9 70%, #2563eb 100%)",
+            }}
+          >
             <div className="flex h-full flex-col items-center justify-center gap-3 px-10">
               <div className="h-5 w-48 rounded-lg bg-white/20" />
               <div className="h-8 w-80 rounded-xl bg-white/20" />
@@ -137,7 +154,10 @@ export default function ProposalPublicView({
         </div>
         {/* Page 2 skeleton (partial) */}
         <div className="mx-auto mt-4 w-full max-w-[900px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-2 w-full" style={{ background: "linear-gradient(90deg, #00c2c9, #2563eb)" }} />
+          <div
+            className="h-2 w-full"
+            style={{ background: "linear-gradient(90deg, #00c2c9, #2563eb)" }}
+          />
           <div className="space-y-3 p-8">
             <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
             <div className="h-3 w-full animate-pulse rounded bg-slate-100" />
@@ -175,7 +195,8 @@ export default function ProposalPublicView({
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
           <h2 className="text-lg font-bold">Proposal is not available</h2>
           <p className="mt-2 text-sm">
-            This public proposal link is only available while the proposal is live.
+            This public proposal link is only available while the proposal is
+            live.
           </p>
         </div>
       </div>
@@ -195,8 +216,9 @@ export default function ProposalPublicView({
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        try { window.print(); }
-        finally {
+        try {
+          window.print();
+        } finally {
           document.title = originalTitle;
           setDownloading(false);
         }
@@ -214,7 +236,7 @@ export default function ProposalPublicView({
             type="button"
             onClick={handleDownloadProposal}
             disabled={downloading}
-            className="rounded-2xl border border-slate-200 bg-white/90 px-6 py-2.5 text-sm font-bold text-slate-800 shadow-xl backdrop-blur-md disabled:opacity-60 hover:bg-white transition"
+            className="rounded-2xl border border-slate-200 bg-white/90 !px-6 !py-2.5 text-sm font-bold text-slate-800 shadow-xl backdrop-blur-md disabled:opacity-60 hover:bg-white transition"
           >
             {downloading ? "Generating PDF..." : "Download PDF"}
           </button>

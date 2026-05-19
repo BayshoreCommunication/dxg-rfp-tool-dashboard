@@ -1,5 +1,6 @@
 ﻿"use client";
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 type ProposalSettings = {
   branding: { linkPrefix: string; defaultFont: "Inter" | "Poppins" | "Roboto" };
@@ -53,7 +54,7 @@ export const defaultVenueSchedule = (): VenueScheduleData => ({
   timeZone: "",
 });
 
-/* â”€â”€â”€ US states list â”€â”€â”€ */
+/* ─── US states list ─── */
 const US_STATES = [
   { value: "AL", label: "Alabama" },
   { value: "AK", label: "Alaska" },
@@ -109,7 +110,7 @@ const US_STATES = [
   { value: "OTHER", label: "Other / International" },
 ];
 
-/* â”€â”€â”€ State â†’ time zone auto-detect map â”€â”€â”€ */
+/* ─── State → time zone auto-detect map ─── */
 const STATE_TIMEZONES: Record<string, string> = {
   AK: "Alaska Time (AKT)",
   AL: "Central Time (CT)", AR: "Central Time (CT)",
@@ -140,7 +141,7 @@ const STATE_TIMEZONES: Record<string, string> = {
   WV: "Eastern Time (ET)", WY: "Mountain Time (MT)",
 };
 
-/* â”€â”€â”€ Known union markets for auto-detection â”€â”€â”€ */
+/* ─── Known union markets for auto-detection ─── */
 const UNION_MARKETS = [
   "las vegas", "new york", "los angeles", "chicago", "san francisco",
   "boston", "washington dc", "washington d.c.", "miami", "atlanta",
@@ -186,7 +187,7 @@ const TIME_ZONE_OPTIONS = [
   "Other / International",
 ];
 
-/* â”€â”€â”€ Tailwind-safe class helpers â”€â”€â”€ */
+/* ─── Tailwind-safe class helpers ─── */
 const unionVenueCls = (opt: "YES" | "NO" | "NOT_SURE", value: string): string => {
   const base =
     "flex h-10 cursor-pointer items-center justify-center rounded-md border px-4 text-sm font-semibold transition-all";
@@ -197,7 +198,7 @@ const unionVenueCls = (opt: "YES" | "NO" | "NOT_SURE", value: string): string =>
   return `${base} border-amber-400 bg-amber-50 text-amber-700`;
 };
 
-/* â”€â”€â”€ Shared style constants â”€â”€â”€ */
+/* ─── Shared style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
@@ -246,7 +247,7 @@ const VenueScheduleStep = ({
 
   return (
     <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <div className="flex items-center gap-3 mb-1">
           <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
@@ -263,7 +264,7 @@ const VenueScheduleStep = ({
 
       <div className="flex-1 px-8 py-8">
 
-        {/* â”€â”€ Group: Venue Details â”€â”€ */}
+        {/* ── Group: Venue Details ── */}
         <section className="mb-10">
           <p className={groupLabelClass}>Venue Details</p>
 
@@ -333,7 +334,7 @@ const VenueScheduleStep = ({
           {/* Union market detection banner */}
           {unionDetected && (safeData.venueCity || safeData.venueState) && (
             <div className="mb-5 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
-              <span className="mt-0.5 shrink-0">âš ï¸</span>
+              <span className="mt-0.5 shrink-0">⚠️</span>
               <span>
                 <strong>Union Market Detected:</strong>{" "}
                 {safeData.venueCity}
@@ -375,10 +376,10 @@ const VenueScheduleStep = ({
                 className={`${selectClass} ${showErrors && !safeData.venueConfirmedStatus ? "border-red-400 focus:border-red-400" : ""}`}
               >
                 <option value="">Select status...</option>
-                <option value="CONTRACT_SIGNED">Contract signed â€” fully confirmed</option>
-                <option value="VERBAL_CONFIRM">Verbally confirmed â€” contract pending</option>
-                <option value="STRONG_PREF">Strong preference â€” still finalizing</option>
-                <option value="NOT_SELECTED">Not yet selected â€” vendor recommendations welcome</option>
+                <option value="CONTRACT_SIGNED">Contract signed — fully confirmed</option>
+                <option value="VERBAL_CONFIRM">Verbally confirmed — contract pending</option>
+                <option value="STRONG_PREF">Strong preference — still finalizing</option>
+                <option value="NOT_SELECTED">Not yet selected — vendor recommendations welcome</option>
               </select>
               {showErrors && !safeData.venueConfirmedStatus && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
@@ -429,7 +430,7 @@ const VenueScheduleStep = ({
           </div>
         </section>
 
-        {/* â”€â”€ Group: Union Status â”€â”€ */}
+        {/* ── Group: Union Status ── */}
         <section className="mb-10">
           <p className={groupLabelClass}>Union Status</p>
 
@@ -444,14 +445,14 @@ const VenueScheduleStep = ({
                 className={unionVenueCls("YES", safeData.isUnionVenue)}
                 onClick={() => onChange({ isUnionVenue: "YES" })}
               >
-                âœ“ Yes â€” Union
+                ✓ Yes — Union
               </button>
               <button
                 type="button"
                 className={unionVenueCls("NO", safeData.isUnionVenue)}
                 onClick={() => onChange({ isUnionVenue: "NO" })}
               >
-                âœ— No â€” Non-union
+                ✗ No — Non-union
               </button>
               <button
                 type="button"
@@ -466,7 +467,7 @@ const VenueScheduleStep = ({
             )}
             {safeData.isUnionVenue === "NOT_SURE" && (
               <p className="mt-2 text-xs text-amber-700 normal-case">
-                Contact your venue&apos;s event services team â€” they will confirm jurisdiction before your RFP is sent.
+                Contact your venue&apos;s event services team — they will confirm jurisdiction before your RFP is sent.
               </p>
             )}
 
@@ -474,7 +475,7 @@ const VenueScheduleStep = ({
             {safeData.isUnionVenue === "YES" && (
               <div className="mt-4 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-5">
                 <p className="mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
-                  Union Jurisdictions â€” Select All That Apply
+                  Union Jurisdictions — Select All That Apply
                 </p>
 
                 <div className="mb-4">
@@ -502,7 +503,7 @@ const VenueScheduleStep = ({
                 {unionJurisdictions.includes("Other") && (
                   <div>
                     <label className={labelClass}>
-                      Other Union â€” Specify
+                      Other Union — Specify
                     </label>
                     <input
                       type="text"
@@ -520,11 +521,11 @@ const VenueScheduleStep = ({
           </div>
         </section>
 
-        {/* â”€â”€ Group: Production Schedule â”€â”€ */}
+        {/* ── Group: Production Schedule ── */}
         <section className="mb-8">
           <p className={groupLabelClass}>Production Schedule</p>
 
-          {/* Number of Event Rooms â€” stepper */}
+          {/* Number of Event Rooms — stepper */}
           <div className="mb-6">
             <label className={labelClass}>
               Number of Event Rooms <span className="text-red-500">*</span>
@@ -538,7 +539,7 @@ const VenueScheduleStep = ({
                 }
                 className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors select-none"
               >
-                âˆ’
+                −
               </button>
               <input
                 type="number"
@@ -567,7 +568,7 @@ const VenueScheduleStep = ({
             </div>
             {safeData.numberOfEventRooms && Number(safeData.numberOfEventRooms) > 0 && (
               <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#00c2c9]/30 bg-[#00c2c9]/5 p-3 text-xs text-brand-dark">
-                <span className="mt-0.5 shrink-0">âš™ï¸</span>
+                <span className="mt-0.5 shrink-0">⚙️</span>
                 <span>
                   <strong>System:</strong> This generates{" "}
                   <strong>{safeData.numberOfEventRooms}</strong> Room Specification module(s) on Page 2B.
@@ -584,7 +585,7 @@ const VenueScheduleStep = ({
             <div>
               <label className={labelClass}>
                 Load-In Date &amp; Time <span className="text-red-500">*</span>
-                <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue â€” this is the earliest you can start setup, not the show start. Typical load-in is 1â€“3 days before show day for large events." />
+                <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue — this is the earliest you can start setup, not the show start. Typical load-in is 1–3 days before show day for large events." />
               </label>
               <input
                 type="date"
@@ -603,7 +604,7 @@ const VenueScheduleStep = ({
             <div>
               <label className={labelClass}>
                 Rehearsal Date &amp; Time
-                <InfoTooltip text="When is your speaker/tech rehearsal scheduled? Most productions run a full tech rehearsal the day before show day. Leave blank if no formal rehearsal is planned â€” timeline column will display 'TBD'." />
+                <InfoTooltip text="When is your speaker/tech rehearsal scheduled? Most productions run a full tech rehearsal the day before show day. Leave blank if no formal rehearsal is planned — timeline column will display 'TBD'." />
               </label>
               <input
                 type="date"
@@ -619,7 +620,7 @@ const VenueScheduleStep = ({
               />
               {!safeData.rehearsalDate && (
                 <p className="mt-1 text-xs text-amber-600 normal-case">
-                  Leave blank if no formal rehearsal â€” timeline will show &quot;TBD&quot;.
+                  Leave blank if no formal rehearsal — timeline will show &quot;TBD&quot;.
                 </p>
               )}
             </div>
@@ -630,7 +631,7 @@ const VenueScheduleStep = ({
             <div>
               <label className={labelClass}>
                 Strike Date &amp; Time <span className="text-red-500">*</span>
-                <InfoTooltip text="When must all equipment be fully removed from the venue? This is your final load-out deadline per the venue contract â€” typically the same evening as final show day or early next morning. Union venues may have strict overtime rules after the contracted strike window." />
+                <InfoTooltip text="When must all equipment be fully removed from the venue? This is your final load-out deadline per the venue contract — typically the same evening as final show day or early next morning. Union venues may have strict overtime rules after the contracted strike window." />
               </label>
               <input
                 type="date"
@@ -649,21 +650,25 @@ const VenueScheduleStep = ({
         </section>
       </div>
 
-      {/* â”€â”€ Footer Nav â”€â”€ */}
+      {/* ── Footer Nav ── */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
-          â† Event Overview
+          <ArrowLeft size={15} className="shrink-0" />
+          Event Overview
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] hover:bg-[#009198] transition-colors active:scale-95"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
-          Room Specifications â†’
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+          Room Specifications
+          <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>
     </section>

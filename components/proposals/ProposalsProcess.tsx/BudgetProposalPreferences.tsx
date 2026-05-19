@@ -1,10 +1,10 @@
 ﻿"use client";
 
-import { ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import type { BudgetData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip, toggleItem } from "./shared";
 
-/* â”€â”€â”€ Style constants â”€â”€â”€ */
+/* ─── Style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
@@ -15,7 +15,7 @@ const subPanelClass =
   "mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4";
 const errorClass = "mt-1 text-sm text-red-500 normal-case";
 
-/* â”€â”€â”€ Yes/No buttons â”€â”€â”€ */
+/* ─── Yes/No buttons ─── */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
@@ -34,10 +34,10 @@ const YesNo = ({
 }) => (
   <div className="flex gap-3">
     <button type="button" className={yesNoCls("YES", value)} onClick={() => onChange("YES")}>
-      âœ“ Yes
+      ✓ Yes
     </button>
     <button type="button" className={yesNoCls("NO", value)} onClick={() => onChange("NO")}>
-      âœ— No
+      ✗ No
     </button>
   </div>
 );
@@ -48,7 +48,7 @@ const Group = ({ label }: { label: string }) => (
   </div>
 );
 
-/* â”€â”€â”€ Select field â”€â”€â”€ */
+/* ─── Select field ─── */
 const SelectField = ({
   value,
   onChange,
@@ -76,13 +76,13 @@ const SelectField = ({
   </select>
 );
 
-/* â”€â”€â”€ Budget tier cards â”€â”€â”€ */
+/* ─── Budget tier cards ─── */
 const BUDGET_TIERS = [
-  { value: "Essential",          range: "$10K â€“ $25K",   producerCall: false },
-  { value: "Standard",           range: "$25K â€“ $50K",   producerCall: false },
-  { value: "Production",         range: "$50K â€“ $100K",  producerCall: false },
-  { value: "Premium",            range: "$100K â€“ $250K", producerCall: false },
-  { value: "Enterprise",         range: "$250K â€“ $500K", producerCall: true  },
+  { value: "Essential",          range: "$10K – $25K",   producerCall: false },
+  { value: "Standard",           range: "$25K – $50K",   producerCall: false },
+  { value: "Production",         range: "$50K – $100K",  producerCall: false },
+  { value: "Premium",            range: "$100K – $250K", producerCall: false },
+  { value: "Enterprise",         range: "$250K – $500K", producerCall: true  },
   { value: "Signature",          range: "$500K+",        producerCall: true  },
   { value: "Not Yet Determined", range: "Need Guidance", producerCall: true  },
 ] as const;
@@ -94,7 +94,7 @@ const tierCardCls = (val: string, selected: string): string => {
   return `${base} border-[#d7dce3] bg-white hover:border-[#00c2c9]/40`;
 };
 
-/* â”€â”€â”€ Budget flexibility pills â”€â”€â”€ */
+/* ─── Budget flexibility pills ─── */
 const FLEXIBILITY_OPTIONS = [
   "Fixed",
   "Flexible",
@@ -110,7 +110,7 @@ const flexPillCls = (opt: string, selected: string): string => {
   return `${base} border-[#d7dce3] bg-white text-slate-500 hover:border-slate-300`;
 };
 
-/* â”€â”€â”€ Proposal format options â”€â”€â”€ */
+/* ─── Proposal format options ─── */
 type SuggestKey = "scenic" | "ledwall" | "enterprise";
 
 const FORMAT_OPTIONS: {
@@ -174,7 +174,7 @@ const formatCheckCls = (checked: boolean): string => {
   return `${base} border-[#d7dce3]`;
 };
 
-/* â”€â”€â”€ Evaluation matrix criteria â”€â”€â”€ */
+/* ─── Evaluation matrix criteria ─── */
 type MK = keyof BudgetData["evaluationMatrix"];
 
 const MATRIX_CRITERIA: {
@@ -224,7 +224,7 @@ const MATRIX_CRITERIA: {
   },
 ];
 
-/* â”€â”€â”€ Static options â”€â”€â”€ */
+/* ─── Static options ─── */
 const TIMELINE_OPTIONS = [
   "Within 24 Hours",
   "Within 3 Business Days",
@@ -234,7 +234,7 @@ const TIMELINE_OPTIONS = [
 ];
 const HEAR_OPTIONS = ["Referral", "Venue", "Google", "Social Media", "LinkedIn", "Other"];
 
-/* â”€â”€â”€ Props â”€â”€â”€ */
+/* ─── Props ─── */
 interface Props {
   data: BudgetData;
   onChange: (updates: Partial<BudgetData>) => void;
@@ -272,7 +272,7 @@ const BudgetProposalPreferences = ({
   contentServicesNeeded,
   venueName,
 }: Props) => {
-  /* â”€â”€â”€ Safe data â”€â”€â”€ */
+  /* ─── Safe data ─── */
   const defMatrix = defaultEvalMatrix();
   const safeData: BudgetData = {
     ...data,
@@ -290,7 +290,7 @@ const BudgetProposalPreferences = ({
     howDidYouHearOther: data.howDidYouHearOther ?? "",
   };
 
-  /* â”€â”€â”€ Matrix active state â”€â”€â”€ */
+  /* ─── Matrix active state ─── */
   const hybridVirtualActive =
     eventFormat === "Hybrid" || eventFormat === "Virtual";
   const creativeScenicActive =
@@ -313,7 +313,7 @@ const BudgetProposalPreferences = ({
   const matrixOk = activeSum === 100;
   const remaining = 100 - activeSum;
 
-  /* â”€â”€â”€ Quick-balance: proportionally scale active rows to sum to 100 â”€â”€â”€ */
+  /* ─── Quick-balance: proportionally scale active rows to sum to 100 ─── */
   const quickBalance = () => {
     const cur = safeData.evaluationMatrix;
     const total = activeKeys.reduce((s, k) => s + cur[k], 0);
@@ -343,7 +343,7 @@ const BudgetProposalPreferences = ({
     onChange({ evaluationMatrix: { ...safeData.evaluationMatrix, [key]: v } });
   };
 
-  /* â”€â”€â”€ Budget signals â”€â”€â”€ */
+  /* ─── Budget signals ─── */
   const isProducerCallTier = ["Enterprise", "Signature", "Not Yet Determined"].includes(
     safeData.estimatedAvBudget,
   );
@@ -358,13 +358,13 @@ const BudgetProposalPreferences = ({
     ((safeData.estimatedAvBudget === "Essential" && complexityCount >= 2) ||
       (safeData.estimatedAvBudget === "Standard" && complexityCount >= 3));
 
-  /* â”€â”€â”€ Matrix deactivation banners â”€â”€â”€ */
+  /* ─── Matrix deactivation banners ─── */
   const showHybridBanner =
     !hybridVirtualActive && safeData.evaluationMatrix.hybridVirtual > 0;
   const showScenicBanner =
     !creativeScenicActive && safeData.evaluationMatrix.creativeScenic > 0;
 
-  /* â”€â”€â”€ Format "Suggested" badge logic â”€â”€â”€ */
+  /* ─── Format "Suggested" badge logic ─── */
   const isEnterprise = ["Enterprise", "Signature"].includes(safeData.estimatedAvBudget);
   const isSuggested = (opt: (typeof FORMAT_OPTIONS)[number]): boolean => {
     if (safeData.proposalFormatPreferences.includes(opt.label)) return false;
@@ -375,7 +375,7 @@ const BudgetProposalPreferences = ({
     return false;
   };
 
-  /* â”€â”€â”€ Auto-added format items (generated, not selectable) â”€â”€â”€ */
+  /* ─── Auto-added format items (generated, not selectable) ─── */
   const autoAddedFormats: { label: string; desc: string }[] = [
     ...(hybridVirtualActive
       ? [
@@ -402,7 +402,7 @@ const BudgetProposalPreferences = ({
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
     >
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#d7dce3]">
         <div className="flex items-center gap-3 mb-1">
           <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
@@ -419,16 +419,16 @@ const BudgetProposalPreferences = ({
 
       <div className="flex-1 px-8 py-8">
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-            BLOCK A â€” Budget Selection
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ════════════════════════════════════════
+            BLOCK A — Budget Selection
+        ════════════════════════════════════════ */}
         <Group label="Budget Selection" />
 
-        {/* Field 1 â€” Budget Tier Cards */}
+        {/* Field 1 — Budget Tier Cards */}
         <div className="mb-6">
           <label className={labelClass}>
             Estimated AV Budget Range <span className="text-red-500">*</span>
-            <InfoTooltip text="Select the range that best represents your total AV and production budget across all rooms, all days â€” including gear, labor, freight, and expendables. If unsure, select 'Not Yet Determined' and we'll help establish a realistic range." />
+            <InfoTooltip text="Select the range that best represents your total AV and production budget across all rooms, all days — including gear, labor, freight, and expendables. If unsure, select 'Not Yet Determined' and we'll help establish a realistic range." />
           </label>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -441,7 +441,7 @@ const BudgetProposalPreferences = ({
               >
                 {tier.producerCall && (
                   <span className="mb-1.5 self-start rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-600">
-                    â˜… Producer Call
+                    ★ Producer Call
                   </span>
                 )}
                 <span className="text-sm font-bold leading-tight text-[#0f1b57]">
@@ -450,7 +450,7 @@ const BudgetProposalPreferences = ({
                 <span className="mt-0.5 text-xs text-slate-500">{tier.range}</span>
                 {safeData.estimatedAvBudget === tier.value && (
                   <span className="absolute right-2 top-2 text-xs font-bold text-[#00c2c9]">
-                    âœ“
+                    ✓
                   </span>
                 )}
               </button>
@@ -464,7 +464,7 @@ const BudgetProposalPreferences = ({
           {/* Budget Reality Engine warning */}
           {showRealityWarning && (
             <div className="mt-3 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <span className="mt-0.5 shrink-0 text-amber-500">âš </span>
+              <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
               <p className="text-xs text-amber-700">
                 <strong>Budget Reality Check:</strong> Your event includes multiple high-complexity
                 elements that typically exceed the{" "}
@@ -478,7 +478,7 @@ const BudgetProposalPreferences = ({
           {/* Producer Insight Call banner */}
           {isProducerCallTier && (
             <div className="mt-3 flex gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
-              <span className="mt-0.5 shrink-0 text-sm text-violet-500">â˜…</span>
+              <span className="mt-0.5 shrink-0 text-sm text-violet-500">★</span>
               <div>
                 <p className="text-sm font-bold text-violet-800">
                   Producer Insight Call Recommended
@@ -495,7 +495,7 @@ const BudgetProposalPreferences = ({
           )}
         </div>
 
-        {/* Field 2 â€” Budget Flexibility */}
+        {/* Field 2 — Budget Flexibility */}
         <div className="mb-6">
           <label className={labelClass}>
             Budget Flexibility
@@ -515,9 +515,9 @@ const BudgetProposalPreferences = ({
           </div>
         </div>
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-            BLOCK B â€” Proposal Format Requirements
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ════════════════════════════════════════
+            BLOCK B — Proposal Format Requirements
+        ════════════════════════════════════════ */}
         <Group label="Proposal Format Requirements" />
 
         <div className="mb-6">
@@ -546,7 +546,7 @@ const BudgetProposalPreferences = ({
                 >
                   <span className={formatCheckCls(checked)}>
                     {checked && (
-                      <span className="text-[10px] font-bold text-white">âœ“</span>
+                      <span className="text-[10px] font-bold text-white">✓</span>
                     )}
                   </span>
                   <span className="flex-1">
@@ -576,10 +576,10 @@ const BudgetProposalPreferences = ({
               <div className="space-y-2">
                 {autoAddedFormats.map((f) => (
                   <div key={f.label} className="flex items-start gap-2">
-                    <span className="mt-0.5 shrink-0 text-xs text-[#00c2c9]">âš¡</span>
+                    <span className="mt-0.5 shrink-0 text-xs text-[#00c2c9]">⚡</span>
                     <div>
                       <span className="text-xs font-semibold text-[#0f1b57]">{f.label}</span>
-                      <span className="ml-1 text-xs text-slate-500">â€” {f.desc}</span>
+                      <span className="ml-1 text-xs text-slate-500">— {f.desc}</span>
                     </div>
                   </div>
                 ))}
@@ -592,9 +592,9 @@ const BudgetProposalPreferences = ({
           )}
         </div>
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-            BLOCK C â€” Weighted Evaluation Matrix
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ════════════════════════════════════════
+            BLOCK C — Weighted Evaluation Matrix
+        ════════════════════════════════════════ */}
         <Group label="Weighted Evaluation Matrix" />
 
         <p className="mb-4 text-xs text-slate-500">
@@ -605,7 +605,7 @@ const BudgetProposalPreferences = ({
         {/* Deactivation banners */}
         {showHybridBanner && (
           <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <span className="mt-0.5 shrink-0 text-amber-500">âš </span>
+            <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
             <div>
               <p className="text-sm font-bold text-amber-800">
                 Hybrid / Virtual Capability Deactivated
@@ -620,7 +620,7 @@ const BudgetProposalPreferences = ({
         )}
         {showScenicBanner && (
           <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <span className="mt-0.5 shrink-0 text-amber-500">âš </span>
+            <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
             <div>
               <p className="text-sm font-bold text-amber-800">
                 Creative &amp; Scenic Design Deactivated
@@ -734,9 +734,9 @@ const BudgetProposalPreferences = ({
           )}
         </div>
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-            BLOCK D â€” Procurement Timeline
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ════════════════════════════════════════
+            BLOCK D — Procurement Timeline
+        ════════════════════════════════════════ */}
         <Group label="Procurement Timeline" />
 
         {/* Proposal Timeline */}
@@ -809,18 +809,18 @@ const BudgetProposalPreferences = ({
         <div className="mb-6">
           <label className={labelClass}>
             Scoring Notes / Evaluation Instructions
-            <InfoTooltip text="Any additional context about how proposals will be evaluated â€” scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
+            <InfoTooltip text="Any additional context about how proposals will be evaluated — scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
           </label>
           <textarea
             rows={3}
             value={safeData.scoringNotes}
             onChange={(e) => onChange({ scoringNotes: e.target.value })}
-            placeholder="e.g. Creative vision accounts for 30% because this is a brand-defining event â€” we want to see bold ideasâ€¦"
+            placeholder="e.g. Creative vision accounts for 30% because this is a brand-defining event — we want to see bold ideas…"
             className={`${inputClass} resize-none`}
           />
         </div>
 
-        {/* â”€â”€ Producer Consultation â”€â”€ */}
+        {/* ── Producer Consultation ── */}
         <Group label="Producer Consultation" />
 
         <div className="mb-6">
@@ -848,7 +848,7 @@ const BudgetProposalPreferences = ({
           )}
         </div>
 
-        {/* â”€â”€ Referral â”€â”€ */}
+        {/* ── Referral ── */}
         <Group label="Referral" />
 
         <div className="mb-6">
@@ -877,7 +877,7 @@ const BudgetProposalPreferences = ({
                 rows={2}
                 value={safeData.howDidYouHearOther}
                 onChange={(e) => onChange({ howDidYouHearOther: e.target.value })}
-                placeholder="Tell us moreâ€¦"
+                placeholder="Tell us more…"
                 className={`${inputClass} resize-none`}
               />
             </div>
@@ -894,21 +894,25 @@ const BudgetProposalPreferences = ({
 
       </div>
 
-      {/* â”€â”€ Footer Nav â”€â”€ */}
+      {/* ── Footer Nav ── */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] transition-colors hover:bg-[#f5f7ff]"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
-          â† Venue &amp; Technical
+          <ArrowLeft size={15} className="shrink-0" />
+          Venue &amp; Technical
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] transition-colors hover:bg-[#009198] active:scale-95"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
-          Uploads &amp; Co-Vendors â†’
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+          Uploads &amp; Co-Vendors
+          <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>
     </section>

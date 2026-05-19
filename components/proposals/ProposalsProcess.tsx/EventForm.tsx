@@ -4,8 +4,9 @@ import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import { useCallback, useRef } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, toggleItem, useClickOutside } from "./shared";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
-/* â”€â”€â”€ Shared style constants â”€â”€â”€ */
+/* ─── Shared style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
@@ -201,7 +202,7 @@ const EventForm = ({
       {/* Form Body */}
       <div className="flex-1 px-8 py-8 space-y-10">
 
-        {/* â”€â”€ Group: Core Identity â”€â”€ */}
+        {/* ── Group: Core Identity ── */}
         <div>
           <p className={groupLabelClass}>Core Identity</p>
           <div className="space-y-5">
@@ -321,7 +322,7 @@ const EventForm = ({
           </div>
         </div>
 
-        {/* â”€â”€ Group: Format & Audience â”€â”€ */}
+        {/* ── Group: Format & Audience ── */}
         <div>
           <p className={groupLabelClass}>Format &amp; Audience</p>
           <div className="space-y-6">
@@ -333,7 +334,7 @@ const EventForm = ({
                 <InfoTooltip text="Select your event delivery format. Hybrid and Virtual unlock additional streaming and platform specifications on Page 3." />
               </label>
               <p className="mb-3 text-xs text-slate-500 normal-case">
-                Your selection unlocks Step 3 â€” Hybrid &amp; Virtual Production if applicable.
+                Your selection unlocks Step 3 — Hybrid &amp; Virtual Production if applicable.
               </p>
               <div className="flex flex-col gap-3">
                 {formatOptions.map((fmt) => (
@@ -354,7 +355,7 @@ const EventForm = ({
               </div>
               {(data.eventFormat === "Hybrid" || data.eventFormat === "Virtual") && (
                 <div className="mt-3 flex items-start gap-2 rounded-md border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-4 py-3 text-sm text-brand-dark">
-                  <span className="font-bold">âš¡</span>
+                  <span className="font-bold">⚡</span>
                   <span>
                     <strong>Step 3 Unlocked:</strong> Hybrid &amp; Virtual Production fields are now active.
                   </span>
@@ -406,7 +407,7 @@ const EventForm = ({
           </div>
         </div>
 
-        {/* â”€â”€ Group: Dates & Scale â”€â”€ */}
+        {/* ── Group: Dates & Scale ── */}
         <div>
           <p className={groupLabelClass}>Dates &amp; Scale</p>
           <div className="grid grid-cols-3 gap-5">
@@ -497,7 +498,7 @@ const EventForm = ({
           </div>
         </div>
 
-        {/* â”€â”€ Group: Venue Details â”€â”€ */}
+        {/* ── Group: Venue Details ── */}
         <div>
           <p className={groupLabelClass}>Venue Details</p>
           <div className="grid grid-cols-2 gap-5">
@@ -540,19 +541,19 @@ const EventForm = ({
           </div>
         </div>
 
-        {/* â”€â”€ Group: Narrative Inputs â€” AI Generated â”€â”€ */}
+        {/* ── Group: Narrative Inputs — AI Generated ── */}
         <div>
-          <p className={groupLabelClass}>Narrative Inputs â€” AI Generated</p>
+          <p className={groupLabelClass}>Narrative Inputs — AI Generated</p>
           <div className="space-y-6">
 
             {/* Event Objectives */}
             <div>
               <label className={labelClass}>
                 Event Objectives
-                <InfoTooltip text="In 2â€“4 sentences, describe what you're trying to accomplish. This feeds the AI narrative â€” the more specific, the better. Used verbatim as context for AI narrative generation." />
+                <InfoTooltip text="In 2–4 sentences, describe what you're trying to accomplish. This feeds the AI narrative — the more specific, the better. Used verbatim as context for AI narrative generation." />
               </label>
               <p className="mb-2 text-xs text-slate-500 normal-case">
-                In 2â€“4 sentences: describe what success looks like. What outcomes are you driving?
+                In 2–4 sentences: describe what success looks like. What outcomes are you driving?
               </p>
               <textarea
                 rows={3}
@@ -626,7 +627,7 @@ const EventForm = ({
               <label className={labelClass}>
                 Sacred Constraints / Special Considerations
                 <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text="List any non-negotiable requirements vendors absolutely must honor â€” timing rules, brand restrictions, cultural sensitivities, executive preferences, or anything that has caused friction at past events. Appears verbatim in the Scope Overview special notes row." />
+                <InfoTooltip text="List any non-negotiable requirements vendors absolutely must honor — timing rules, brand restrictions, cultural sensitivities, executive preferences, or anything that has caused friction at past events. Appears verbatim in the Scope Overview special notes row." />
               </label>
               <textarea
                 rows={3}
@@ -646,21 +647,25 @@ const EventForm = ({
         </div>
       </div>
 
-      {/* â”€â”€ Footer Nav â”€â”€ */}
+      {/* ── Footer Nav ── */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
-          â† Back
+          <ArrowLeft size={15} className="shrink-0" />
+          Back
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#00c2c9] px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] hover:bg-[#009198] transition-colors active:scale-95"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
-          Venue &amp; Schedule â†’
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+          Venue &amp; Schedule
+          <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>
     </section>

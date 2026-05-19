@@ -1,11 +1,11 @@
 ﻿"use client";
 
-import { ChevronDown, ChevronUp, PlusCircle, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, PlusCircle, X } from "lucide-react";
 import { useState } from "react";
 import type { AdditionalContact, ContactData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip } from "./shared";
 
-/* â”€â”€â”€ Style constants â”€â”€â”€ */
+/* ─── Style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
 const inputClass =
@@ -19,12 +19,12 @@ const Group = ({ label }: { label: string }) => (
   </div>
 );
 
-/* â”€â”€â”€ Options â”€â”€â”€ */
+/* ─── Options ─── */
 const CONTACT_METHODS = ["Email", "Phone", "Either"] as const;
 const REACH_TIMES = [
-  "Morning (8amâ€“12pm)",
-  "Afternoon (12pmâ€“5pm)",
-  "Evening (5pmâ€“8pm)",
+  "Morning (8am–12pm)",
+  "Afternoon (12pm–5pm)",
+  "Evening (5pm–8pm)",
   "Anytime",
 ];
 const PHONE_TYPES = [
@@ -41,7 +41,7 @@ const ADDITIONAL_ROLES = [
   { value: "executive_sponsor", label: "Executive sponsor (FYI only)" },
 ];
 
-/* â”€â”€â”€ Shared mailbox advisory â”€â”€â”€ */
+/* ─── Shared mailbox advisory ─── */
 const SHARED_PREFIXES = [
   "info", "hello", "contact", "admin", "events", "support",
   "noreply", "noreplies", "enquiries", "enquiry", "team",
@@ -54,7 +54,7 @@ const isSharedMailbox = (email: string): boolean => {
   );
 };
 
-/* â”€â”€â”€ Style helpers â”€â”€â”€ */
+/* ─── Style helpers ─── */
 const pillCls = (active: boolean): string => {
   const base =
     "flex h-10 cursor-pointer items-center justify-center rounded-md border px-4 text-sm font-semibold transition-all";
@@ -75,7 +75,7 @@ const errInputCls = (val: string, showErrors: boolean): string =>
     ? `${inputClass} border-red-400 ring-1 ring-red-400/20 bg-red-50/30`
     : inputClass;
 
-/* â”€â”€â”€ Additional Contact Card â”€â”€â”€ */
+/* ─── Additional Contact Card ─── */
 const AdditionalContactCard = ({
   contact,
   index,
@@ -174,7 +174,7 @@ const AdditionalContactCard = ({
               onChange={(e) => up({ role: e.target.value })}
               className={inputClass}
             >
-              <option value="">Select roleâ€¦</option>
+              <option value="">Select role…</option>
               {ADDITIONAL_ROLES.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
@@ -198,7 +198,7 @@ const AdditionalContactCard = ({
   );
 };
 
-/* â”€â”€â”€ Props â”€â”€â”€ */
+/* ─── Props ─── */
 interface ContactInfoProps {
   data: ContactData;
   onChange: (updates: Partial<ContactData>) => void;
@@ -206,9 +206,10 @@ interface ContactInfoProps {
   onBack: () => void;
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
+  isEditMode?: boolean;
 }
 
-/* â”€â”€â”€ Main component â”€â”€â”€ */
+/* ─── Main component ─── */
 const ContactInfo = ({
   data,
   onChange,
@@ -216,14 +217,15 @@ const ContactInfo = ({
   onBack,
   showErrors = false,
   proposalSettings,
+  isEditMode = false,
 }: ContactInfoProps) => {
-  /* â”€â”€â”€ Safe data â”€â”€â”€ */
+  /* ─── Safe data ─── */
   const safeData: ContactData = {
     ...data,
     additionalContacts: data?.additionalContacts ?? [],
   };
 
-  /* â”€â”€â”€ Additional contacts open state â”€â”€â”€ */
+  /* ─── Additional contacts open state ─── */
   const [openAdditional, setOpenAdditional] = useState<boolean[]>([]);
 
   const toggleAdditional = (i: number) =>
@@ -257,7 +259,7 @@ const ContactInfo = ({
     setOpenAdditional((p) => p.filter((_, idx) => idx !== i));
   };
 
-  /* â”€â”€â”€ Derived state â”€â”€â”€ */
+  /* ─── Derived state ─── */
   const sharedMailboxAdvisory =
     safeData.contactEmail && isSharedMailbox(safeData.contactEmail);
 
@@ -273,7 +275,7 @@ const ContactInfo = ({
       className="flex min-h-screen flex-col rounded-md border border-[#d7dce3] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
-      {/* â”€â”€ Header â”€â”€ */}
+      {/* ── Header ── */}
       <div className="border-b border-[#d7dce3] px-8 py-6">
         <div className="mb-1 flex items-center gap-3">
           <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
@@ -288,12 +290,12 @@ const ContactInfo = ({
 
       <div className="flex-1 px-8 py-8">
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-            BLOCK A â€” Primary Contact
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ══════════════════════════════════════════
+            BLOCK A — Primary Contact
+        ══════════════════════════════════════════ */}
         <Group label="Primary Contact" />
 
-        {/* Field 1 â€” First + Last Name */}
+        {/* Field 1 — First + Last Name */}
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="contactFirstName" className={labelClass}>
@@ -331,7 +333,7 @@ const ContactInfo = ({
           </div>
         </div>
 
-        {/* Field 2 â€” Job Title + Organization Display */}
+        {/* Field 2 — Job Title + Organization Display */}
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="contactTitle" className={labelClass}>
@@ -353,7 +355,7 @@ const ContactInfo = ({
           <div>
             <label htmlFor="contactOrganization" className={labelClass}>
               Organization (Display Name) <span className="text-red-500">*</span>
-              <InfoTooltip text="Your organization's common display name for the contact box â€” e.g. 'Apex Dynamics'. For the full legal name used in document headers, see below." />
+              <InfoTooltip text="Your organization's common display name for the contact box — e.g. 'Apex Dynamics'. For the full legal name used in document headers, see below." />
             </label>
             <input
               id="contactOrganization"
@@ -369,11 +371,11 @@ const ContactInfo = ({
           </div>
         </div>
 
-        {/* Field 3 â€” Email */}
+        {/* Field 3 — Email */}
         <div className="mb-6">
           <label htmlFor="contactEmail" className={labelClass}>
             Email Address <span className="text-red-500">*</span>
-            <InfoTooltip text="All vendor questions, proposal notifications, and portal activity alerts will be sent here. Use your professional work email â€” not a personal address or unmonitored shared mailbox." />
+            <InfoTooltip text="All vendor questions, proposal notifications, and portal activity alerts will be sent here. Use your professional work email — not a personal address or unmonitored shared mailbox." />
           </label>
           <input
             id="contactEmail"
@@ -388,16 +390,16 @@ const ContactInfo = ({
           )}
           {sharedMailboxAdvisory && (
             <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-              <span className="shrink-0 text-amber-500">âš </span>
+              <span className="shrink-0 text-amber-500">⚠</span>
               <p className="text-xs text-amber-700">
                 This appears to be a shared mailbox. Vendor communications and portal notifications
-                will go to this address â€” confirm it is monitored regularly.
+                will go to this address — confirm it is monitored regularly.
               </p>
             </div>
           )}
         </div>
 
-        {/* Field 4 â€” Phone */}
+        {/* Field 4 — Phone */}
         <div className="mb-6">
           <label htmlFor="contactPhone" className={labelClass}>
             Phone Number <span className="text-red-500">*</span>
@@ -437,16 +439,16 @@ const ContactInfo = ({
           </div>
         </div>
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-            BLOCK B â€” Organization Identity
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ══════════════════════════════════════════
+            BLOCK B — Organization Identity
+        ══════════════════════════════════════════ */}
         <Group label="Organization Identity" />
 
-        {/* Field 5 â€” Legal Name */}
+        {/* Field 5 — Legal Name */}
         <div className="mb-6">
           <label htmlFor="organizationLegalName" className={labelClass}>
             Organization / Company Legal Name <span className="text-red-500">*</span>
-            <InfoTooltip text="Full legal name of your organization as it should appear on all official documents including vendor contracts, NDAs, and the RFP header. May differ from the display name â€” e.g. 'Apex Dynamics Corporation' vs 'Apex Dynamics'." />
+            <InfoTooltip text="Full legal name of your organization as it should appear on all official documents including vendor contracts, NDAs, and the RFP header. May differ from the display name — e.g. 'Apex Dynamics Corporation' vs 'Apex Dynamics'." />
           </label>
           <input
             id="organizationLegalName"
@@ -473,13 +475,13 @@ const ContactInfo = ({
           )}
         </div>
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-            BLOCK C â€” Additional Contacts
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ══════════════════════════════════════════
+            BLOCK C — Additional Contacts
+        ══════════════════════════════════════════ */}
         <Group label="Additional Contacts" />
 
         <p className="mb-5 text-xs text-slate-500">
-          Add team members who should receive vendor communications or portal notifications â€” AV
+          Add team members who should receive vendor communications or portal notifications — AV
           liaison, contracts manager, or on-site coordinator. Optional, up to 3.
         </p>
 
@@ -509,9 +511,9 @@ const ContactInfo = ({
           </button>
         )}
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-            BLOCK D â€” Contact Preferences
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        {/* ══════════════════════════════════════════
+            BLOCK D — Contact Preferences
+        ══════════════════════════════════════════ */}
         <Group label="Contact Preferences" />
 
         <div className="mb-6">
@@ -561,9 +563,9 @@ const ContactInfo = ({
           </div>
         </div>
 
-        {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        {/* ══════════════════════════════════════════
             Additional Notes
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+        ══════════════════════════════════════════ */}
         <Group label="Additional Notes" />
 
         <div className="mb-6">
@@ -576,16 +578,16 @@ const ContactInfo = ({
             rows={5}
             value={safeData.anythingElse}
             onChange={(e) => onChange({ anythingElse: e.target.value })}
-            placeholder="Budget constraints, sensitive topics, VIP considerations, accessibility needsâ€¦"
+            placeholder="Budget constraints, sensitive topics, VIP considerations, accessibility needs…"
             className={`${inputClass} resize-none`}
           />
         </div>
 
-        {/* â”€â”€ Cover page contact box preview â”€â”€ */}
+        {/* ── Cover page contact box preview ── */}
         {coverPreviewVisible && (
           <div className="mb-6 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4">
             <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">
-              Cover Page â€” Primary Contact Box Preview
+              Cover Page — Primary Contact Box Preview
             </p>
             <div className="space-y-0.5 text-xs text-slate-700">
               {(safeData.contactFirstName || safeData.contactLastName) && (
@@ -618,7 +620,7 @@ const ContactInfo = ({
                       <div key={i} className="mt-1">
                         <span className="font-semibold">{c.fullName}</span>
                         {c.titleAndRole && (
-                          <span className="text-slate-400"> â€” {c.titleAndRole}</span>
+                          <span className="text-slate-400"> — {c.titleAndRole}</span>
                         )}
                         {c.email && <span className="block text-slate-500">{c.email}</span>}
                       </div>
@@ -629,34 +631,40 @@ const ContactInfo = ({
           </div>
         )}
 
-        {/* â”€â”€ Submit banner â”€â”€ */}
+        {/* ── Submit banner ── */}
         <div className="rounded-xl border border-[#00c2c9]/30 bg-[#f0fbff] p-5">
           <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
-            Ready to generate your RFP?
+            {isEditMode ? "Ready to update your RFP?" : "Ready to generate your RFP?"}
           </p>
           <p className="text-sm text-[#4a5a8a]">
-            Once you click <strong>Generate RFP</strong>, you&apos;ll choose a proposal template and
-            your intake form will be packaged into a professional RFP document for your AV vendor.
+            Once you click <strong>{isEditMode ? "Update RFP" : "Generate RFP"}</strong>,{" "}
+            {isEditMode
+              ? "your changes will be saved and the proposal will be updated."
+              : "you�ll choose a proposal template and your intake form will be packaged into a professional RFP document for your AV vendor."}
           </p>
         </div>
 
       </div>
 
-      {/* â”€â”€ Footer Nav â”€â”€ */}
+      {/* ── Footer Nav ── */}
       <div className="flex items-center justify-between border-t border-[#d7dce3] px-8 py-5">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-lg border border-[#d7dce3] px-5 py-2.5 text-sm font-semibold text-[#1f2d5d] transition-colors hover:bg-[#f5f7ff]"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
-          â† Uploads &amp; Co-Vendors
+          <ArrowLeft size={15} className="shrink-0" />
+          Uploads &amp; Co-Vendors
         </button>
         <button
           type="button"
           onClick={onContinue}
-          className="flex items-center gap-2 rounded-lg bg-[#00c2c9]! px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(0,194,201,0.35)] transition-colors hover:bg-[#009198] active:scale-95"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
-          Generate RFP â†’
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+          {isEditMode ? "Update RFP" : "Generate RFP"}
+          <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>
     </section>

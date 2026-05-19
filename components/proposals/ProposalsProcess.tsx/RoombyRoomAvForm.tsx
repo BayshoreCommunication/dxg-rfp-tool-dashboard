@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import type { ProposalSettings, RoomByRoomData } from "../AddNewProposal";
 
@@ -791,16 +791,20 @@ const RoombyRoomAvForm = ({
           <button
             type="button"
             onClick={onBack}
-            className="h-10 px-6 rounded-md border border-[#d7dce3] text-sm font-semibold text-[#1f2d5d] hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
           >
-            BACK
+            <ArrowLeft size={15} className="shrink-0" />
+            Back
           </button>
           <button
             type="button"
             onClick={onContinue}
-            className="h-10 px-8 rounded-md bg-[#00c2c9] hover:bg-[#009198] text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(0,194,201,0.39)] transition-transform active:scale-95"
+            className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
+            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
           >
-            CONTINUE
+            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+            Continue
+            <ArrowRight size={15} className="shrink-0" />
           </button>
         </div>
       </div>
