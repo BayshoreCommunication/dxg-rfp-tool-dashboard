@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { CheckCircle, Download, FileText, HelpCircle, X } from "lucide-react";
-import React, { useState } from "react";
+import { CheckCircle, Download, FileText, HelpCircle, Loader2, X } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
 type AddProposalUploadProps = {
   selectedFile: File | null;
@@ -10,6 +10,15 @@ type AddProposalUploadProps = {
   onContinueWithUpload: () => void;
   onContinueWithoutUpload: () => void;
 };
+
+const EXTRACTION_STEPS = [
+  { label: "Parsing document", detail: "Reading file contents and structure..." },
+  { label: "Extracting event details", detail: "Finding event name, dates, format & audience..." },
+  { label: "Processing venue & schedule", detail: "Mapping venue, load-in, rehearsal & strike times..." },
+  { label: "Reading AV & production", detail: "Extracting audio, video, lighting & crew specs..." },
+  { label: "Scanning remaining sections", detail: "Budget, contact, hybrid/virtual & content..." },
+  { label: "Mapping to form", detail: "Pre-filling all 9 proposal steps..." },
+];
 
 const ACCEPTED_TYPES = [
   { ext: "PDF", color: "bg-rose-100 text-rose-700 border-rose-200" },
@@ -534,6 +543,107 @@ function GuideModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function ExtractionLoader({ fileName }: { fileName: string }) {
+  const [currentStep, setCurrentStep] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCurrentStep((s) => Math.min(s + 1, EXTRACTION_STEPS.length - 1));
+    }, 2200);
+    return () => clearInterval(id);
+  }, []);
+
+  const progress = Math.round(((currentStep + 1) / EXTRACTION_STEPS.length) * 100);
+
+  return (
+    <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      {/* Header */}
+      <div className="mb-8 text-center">
+        <div
+          className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg shadow-cyan-500/30"
+          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #2563eb 100%)" }}
+        >
+          <Loader2 className="h-7 w-7 animate-spin text-white" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">Extracting your proposal data</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          AI is scanning every section of your document
+        </p>
+        {fileName && (
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+            <FileText size={12} />
+            {fileName}
+          </div>
+        )}
+      </div>
+
+      {/* Steps */}
+      <div className="mb-6 space-y-2">
+        {EXTRACTION_STEPS.map((step, i) => {
+          const done = i < currentStep;
+          const active = i === currentStep;
+          return (
+            <div
+              key={i}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-500 ${
+                done
+                  ? "border border-emerald-100 bg-emerald-50"
+                  : active
+                    ? "border border-sky-200 bg-sky-50 shadow-sm"
+                    : "border border-slate-100 bg-slate-50 opacity-40"
+              }`}
+            >
+              <div
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                  done ? "bg-emerald-500" : active ? "bg-sky-500" : "bg-slate-200"
+                }`}
+              >
+                {done ? (
+                  <CheckCircle className="h-3.5 w-3.5 text-white" />
+                ) : active ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                ) : (
+                  <span className="text-[10px] font-bold text-slate-400">{i + 1}</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`text-sm font-semibold ${
+                    done ? "text-emerald-700" : active ? "text-sky-800" : "text-slate-400"
+                  }`}
+                >
+                  {step.label}
+                </p>
+                {active && (
+                  <p className="mt-0.5 truncate text-xs text-sky-600">{step.detail}</p>
+                )}
+              </div>
+              {done && <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-2 rounded-full transition-all duration-700 ease-out"
+          style={{
+            width: `${progress}%`,
+            background: "linear-gradient(90deg, #00c2c9 0%, #0ea5e9 60%, #2563eb 100%)",
+          }}
+        />
+      </div>
+      <div className="mt-2 flex items-center justify-between">
+        <p className="text-xs text-slate-400">
+          Step {currentStep + 1} of {EXTRACTION_STEPS.length}
+        </p>
+        <p className="text-xs font-semibold text-slate-500">{progress}%</p>
+      </div>
+    </div>
+  );
+}
+
 export default function AddProposalUpload({
   selectedFile,
   setSelectedFile,
@@ -591,77 +701,80 @@ export default function AddProposalUpload({
             </button>
           </div>
 
-          <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-slate-900">
-                Upload a file to start
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Upload is optional. You can also continue without a file.
-              </p>
-            </div>
-
-            <div className="mt-8 rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/40 px-6 py-24 text-center">
-              <p className="text-sm font-semibold text-slate-700">
-                PDF, DOC, DOCX, CSV
-              </p>
-              <label className="mt-5 inline-flex cursor-pointer rounded-xl bg-[#00c2c9] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#009198]">
-                Browse File
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  accept=".pdf,.doc,.docx,.csv"
-                />
-              </label>
-            </div>
-
-            {selectedFile && (
-              <div className="mx-auto mt-6 flex w-full max-w-xl items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
-                    <FileText size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-800">
-                      {selectedFile.name}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRemoveFile}
-                  className="rounded-full p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500"
-                >
-                  <X size={16} />
-                </button>
+          {isExtracting ? (
+            <ExtractionLoader fileName={selectedFile?.name ?? ""} />
+          ) : (
+            <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Upload a file to start
+                </h2>
+                <p className="mt-2 text-sm text-slate-500">
+                  Upload is optional. You can also continue without a file.
+                </p>
               </div>
-            )}
 
-            <div className="mx-auto mt-8 flex w-full max-w-xl flex-col gap-3">
-              {selectedFile ? (
-                <button
-                  type="button"
-                  onClick={onContinueWithUpload}
-                  disabled={isExtracting}
-                  className="mx-auto w-full max-w-[200px] rounded-xl bg-[#00c2c9] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#009198] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isExtracting ? "Reading document..." : "Continue"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onContinueWithoutUpload}
-                  className="mx-auto w-full max-w-[200px] rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                >
-                  Continue without upload
-                </button>
+              <div className="mt-8 rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/40 px-6 py-24 text-center">
+                <p className="text-sm font-semibold text-slate-700">
+                  PDF, DOC, DOCX, CSV
+                </p>
+                <label className="mt-5 inline-flex cursor-pointer rounded-xl bg-[#00c2c9] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#009198]">
+                  Browse File
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.csv"
+                  />
+                </label>
+              </div>
+
+              {selectedFile && (
+                <div className="mx-auto mt-6 flex w-full max-w-xl items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+                      <FileText size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-800">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveFile}
+                    className="rounded-full p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               )}
+
+              <div className="mx-auto mt-8 flex w-full max-w-xl flex-col gap-3">
+                {selectedFile ? (
+                  <button
+                    type="button"
+                    onClick={onContinueWithUpload}
+                    className="mx-auto w-full max-w-[200px] rounded-xl bg-[#00c2c9] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#009198]"
+                  >
+                    Continue
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onContinueWithoutUpload}
+                    className="mx-auto w-full max-w-[200px] rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    Continue without upload
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>

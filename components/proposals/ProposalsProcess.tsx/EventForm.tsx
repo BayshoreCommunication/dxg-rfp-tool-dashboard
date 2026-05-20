@@ -4,7 +4,7 @@ import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import { useCallback, useRef } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, toggleItem, useClickOutside } from "./shared";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 /* ─── Shared style constants ─── */
 const labelClass =
@@ -498,49 +498,6 @@ const EventForm = ({
           </div>
         </div>
 
-        {/* ── Group: Venue Details ── */}
-        <div>
-          <p className={groupLabelClass}>Venue Details</p>
-          <div className="grid grid-cols-2 gap-5">
-
-            <div>
-              <label className={labelClass}>
-                Venue Name <span className="text-red-500">*</span>
-                <InfoTooltip text="Appears in the cover subtitle, Section 6 Venue row, and is checked against known union jurisdictions to auto-flag IATSE/union requirements." />
-              </label>
-              <input
-                className={`${inputClass} ${
-                  showErrors && !data.venue.trim()
-                    ? "border-red-500 focus:border-red-500"
-                    : ""
-                }`}
-                placeholder="e.g. Las Vegas Convention Center"
-                value={data.venue}
-                onChange={(e) => onChange({ venue: e.target.value })}
-              />
-              {showErrors && !data.venue.trim() && (
-                <p className="mt-1 text-sm text-red-500 normal-case">
-                  Venue is required.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className={labelClass}>
-                City &amp; State
-                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text="Used for jurisdiction context in Section 6 and to auto-detect known union markets (e.g. Las Vegas, Chicago, NYC) and surface a union labor flag." />
-              </label>
-              <input
-                className={inputClass}
-                placeholder="e.g. Las Vegas, NV"
-                value={data.venueCity ?? ""}
-                onChange={(e) => onChange({ venueCity: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* ── Group: Narrative Inputs — AI Generated ── */}
         <div>
           <p className={groupLabelClass}>Narrative Inputs — AI Generated</p>
@@ -648,15 +605,15 @@ const EventForm = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
-        <button
+      <div className="flex items-center justify-end px-8 py-5 border-t border-[#d7dce3]">
+        {/* <button
           type="button"
           onClick={onBack}
           className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           Back
-        </button>
+        </button> */}
         <button
           type="button"
           onClick={onContinue}

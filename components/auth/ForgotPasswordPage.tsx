@@ -106,11 +106,12 @@ const ForgotPasswordPage = () => {
       <button
         type="submit"
         disabled={loading}
-        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-black py-4 text-[15px] font-bold text-white transition-all hover:bg-gray-900 active:scale-[0.98] disabled:opacity-70"
+        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(15,27,87,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(15,27,87,0.55)] active:translate-y-0 disabled:opacity-70"
+        style={{ background: "#0f1b57" }}
       >
         <span>{loading ? "Sending Code..." : "Send Reset Code"}</span>
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-        <div className="absolute inset-0 -translate-x-full bg-white/20 blur-md transition-transform duration-500 group-hover:translate-x-full"></div>
+        <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
       </button>
     </form>
   );
@@ -150,11 +151,12 @@ const ForgotPasswordPage = () => {
       <button
         type="submit"
         disabled={loading}
-        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-black py-4 text-[15px] font-bold text-white transition-all hover:bg-gray-900 active:scale-[0.98] disabled:opacity-70"
+        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(15,27,87,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(15,27,87,0.55)] active:translate-y-0 disabled:opacity-70"
+        style={{ background: "#0f1b57" }}
       >
         <span>{loading ? "Verifying..." : "Verify Code"}</span>
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-        <div className="absolute inset-0 -translate-x-full bg-white/20 blur-md transition-transform duration-500 group-hover:translate-x-full"></div>
+        <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
       </button>
     </form>
   );
@@ -186,11 +188,12 @@ const ForgotPasswordPage = () => {
       <button
         type="submit"
         disabled={loading}
-        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-black py-4 text-[15px] font-bold text-white transition-all hover:bg-gray-900 active:scale-[0.98] disabled:opacity-70"
+        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(15,27,87,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(15,27,87,0.55)] active:translate-y-0 disabled:opacity-70"
+        style={{ background: "#0f1b57" }}
       >
         <span>{loading ? "Resetting..." : "Reset Password"}</span>
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-        <div className="absolute inset-0 -translate-x-full bg-white/20 blur-md transition-transform duration-500 group-hover:translate-x-full"></div>
+        <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
       </button>
     </form>
   );

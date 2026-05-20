@@ -32,8 +32,6 @@ export type EventData = {
   eventTheme?: string;
   startDate: string;
   endDate: string;
-  venue: string;
-  venueCity?: string;
   attendees: string;
   eventFormat: "In-Person" | "Hybrid" | "Virtual";
   eventType: {
@@ -333,7 +331,6 @@ const defaultProposalData: ProposalData = {
     eventName: "",
     startDate: "",
     endDate: "",
-    venue: "",
     attendees: "",
     eventFormat: "In-Person",
     eventType: {
@@ -1246,12 +1243,11 @@ const AddNewProposal = ({
   };
 
   const isEventStepValid = () => {
-    const { eventName, startDate, endDate, venue } = proposalData.event;
+    const { eventName, startDate, endDate } = proposalData.event;
     return (
       eventName.trim().length > 0 &&
       startDate.trim().length > 0 &&
-      endDate.trim().length > 0 &&
-      venue.trim().length > 0
+      endDate.trim().length > 0
     );
   };
 

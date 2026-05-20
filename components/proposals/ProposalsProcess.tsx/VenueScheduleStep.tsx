@@ -1,6 +1,21 @@
 ﻿"use client";
+import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+
+const toDateObj = (dateStr: string, timeStr: string): Date | null => {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T${timeStr || "00:00"}`);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const fromDateObj = (date: Date | null): { date: string; time: string } => {
+  if (!date) return { date: "", time: "" };
+  return {
+    date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+    time: `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
+  };
+};
 
 type ProposalSettings = {
   branding: { linkPrefix: string; defaultFont: "Inter" | "Poppins" | "Roboto" };
@@ -587,17 +602,20 @@ const VenueScheduleStep = ({
                 Load-In Date &amp; Time <span className="text-red-500">*</span>
                 <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue — this is the earliest you can start setup, not the show start. Typical load-in is 1–3 days before show day for large events." />
               </label>
-              <input
-                type="date"
-                value={safeData.loadInDate}
-                onChange={(e) => onChange({ loadInDate: e.target.value })}
-                className={`${inputClass} ${err(safeData.loadInDate)}`}
-              />
-              <input
-                type="time"
-                value={safeData.loadInTime}
-                onChange={(e) => onChange({ loadInTime: e.target.value })}
-                className={`${inputClass} mt-2`}
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateObj(safeData.loadInDate, safeData.loadInTime)}
+                onChange={(d) => {
+                  const { date, time } = fromDateObj(d);
+                  onChange({ loadInDate: date, loadInTime: time });
+                }}
+                inputClassName={`${inputClass} pr-12${safeData.loadInDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time"
               />
             </div>
 
@@ -606,17 +624,20 @@ const VenueScheduleStep = ({
                 Rehearsal Date &amp; Time
                 <InfoTooltip text="When is your speaker/tech rehearsal scheduled? Most productions run a full tech rehearsal the day before show day. Leave blank if no formal rehearsal is planned — timeline column will display 'TBD'." />
               </label>
-              <input
-                type="date"
-                value={safeData.rehearsalDate}
-                onChange={(e) => onChange({ rehearsalDate: e.target.value })}
-                className={inputClass}
-              />
-              <input
-                type="time"
-                value={safeData.rehearsalTime}
-                onChange={(e) => onChange({ rehearsalTime: e.target.value })}
-                className={`${inputClass} mt-2`}
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateObj(safeData.rehearsalDate, safeData.rehearsalTime)}
+                onChange={(d) => {
+                  const { date, time } = fromDateObj(d);
+                  onChange({ rehearsalDate: date, rehearsalTime: time });
+                }}
+                inputClassName={`${inputClass} pr-12`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time (optional)"
               />
               {!safeData.rehearsalDate && (
                 <p className="mt-1 text-xs text-amber-600 normal-case">
@@ -633,17 +654,20 @@ const VenueScheduleStep = ({
                 Strike Date &amp; Time <span className="text-red-500">*</span>
                 <InfoTooltip text="When must all equipment be fully removed from the venue? This is your final load-out deadline per the venue contract — typically the same evening as final show day or early next morning. Union venues may have strict overtime rules after the contracted strike window." />
               </label>
-              <input
-                type="date"
-                value={safeData.strikeDate}
-                onChange={(e) => onChange({ strikeDate: e.target.value })}
-                className={`${inputClass} ${err(safeData.strikeDate)}`}
-              />
-              <input
-                type="time"
-                value={safeData.strikeTime}
-                onChange={(e) => onChange({ strikeTime: e.target.value })}
-                className={`${inputClass} mt-2`}
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateObj(safeData.strikeDate, safeData.strikeTime)}
+                onChange={(d) => {
+                  const { date, time } = fromDateObj(d);
+                  onChange({ strikeDate: date, strikeTime: time });
+                }}
+                inputClassName={`${inputClass} pr-12${safeData.strikeDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time"
               />
             </div>
           </div>
