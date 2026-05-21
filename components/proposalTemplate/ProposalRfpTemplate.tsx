@@ -121,8 +121,6 @@ export type RfpProposalData = {
     eventTheme?: string;
     startDate?: string;
     endDate?: string;
-    venue?: string;
-    venueCity?: string;
     attendees?: string;
     eventFormat?: string;
     eventType?: { eventType?: string; eventTypeOther?: string } | string;
@@ -148,6 +146,11 @@ export type RfpProposalData = {
     organizationLegalName?: string;
     contactEmail?: string;
     contactPhone?: string;
+    contactPhoneExt?: string;
+    contactPhoneType?: string;
+    additionalContacts?: Record<string, unknown>[];
+    preferredContactMethod?: string;
+    bestTimeToReach?: string;
     anythingElse?: string;
   };
 };
@@ -296,90 +299,73 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
   /* Room renderer */
   const renderRoom = (room: RD, idx: number, total: number) => {
     const crew = arr(room.showCrewNeeded);
+    const crewQty = (room.showCrewQty || {}) as RD;
     const notes: string[] = [];
-    if (p(room.ledWallSpecs)) notes.push(p(room.ledWallSpecs));
-    if (p(room.teleprompterBilingual).toUpperCase() === "YES") {
-      const langs = arr(room.teleprompterLanguages);
-      notes.push(`Bilingual teleprompter operators required${langs.length ? ` (${langs.join(" / ")})` : ""}.`);
-    }
     if (p(room.scenicStageDesign).toLowerCase() === "yes" && p(room.scenicStageDesignNotes)) {
       notes.push(p(room.scenicStageDesignNotes));
     }
     if (p(room.contentVideoNeeds)) notes.push(p(room.contentVideoNeeds));
+    if (p(room.ledWallNotes)) notes.push(p(room.ledWallNotes));
 
     const aqRaw = room.audienceQa;
-    const aqMethod =
-      aqRaw && typeof aqRaw === "object"
-        ? p((aqRaw as RD).audienceQaMethod)
-        : "";
-    const aqVal =
-      aqRaw && typeof aqRaw === "object"
-        ? p((aqRaw as RD).audienceQa)
-        : p(aqRaw as string);
+    const aqMethod = aqRaw && typeof aqRaw === "object" ? p((aqRaw as RD).audienceQaMethod) : "";
+    const aqVal = aqRaw && typeof aqRaw === "object" ? p((aqRaw as RD).audienceQa) : p(aqRaw as string);
 
     const vrRaw = room.videoRecording;
-    const vrVal =
-      vrRaw && typeof vrRaw === "object"
-        ? p((vrRaw as RD).videoRecording)
-        : p(vrRaw as string);
-    const vrType =
-      vrRaw && typeof vrRaw === "object"
-        ? p((vrRaw as RD).videoRecordingType)
-        : "";
+    const vrVal = vrRaw && typeof vrRaw === "object" ? p((vrRaw as RD).videoRecording) : p(vrRaw as string);
+    const vrType = vrRaw && typeof vrRaw === "object" ? p((vrRaw as RD).videoRecordingType) : "";
 
     const swRaw = room.stageWashLighting;
-    const swVal =
-      swRaw && typeof swRaw === "object"
-        ? p((swRaw as RD).stageWashLighting)
-        : p(swRaw as string);
-    const swSize =
-      swRaw && typeof swRaw === "object"
-        ? p((swRaw as RD).stageWashLightingStageSize)
-        : "";
+    const swVal = swRaw && typeof swRaw === "object" ? p((swRaw as RD).stageWashLighting) : p(swRaw as string);
+    const swSize = swRaw && typeof swRaw === "object" ? p((swRaw as RD).stageWashLightingStageSize) : "";
 
     const pmRaw = room.programConfidenceMonitor;
-    const pmVal =
-      pmRaw && typeof pmRaw === "object"
-        ? p((pmRaw as RD).programConfidenceMonitor)
-        : p(pmRaw as string);
-    const pmQty =
-      pmRaw && typeof pmRaw === "object"
-        ? p((pmRaw as RD).programConfidenceMonitorQty)
-        : "";
+    const pmVal = pmRaw && typeof pmRaw === "object" ? p((pmRaw as RD).programConfidenceMonitor) : p(pmRaw as string);
+    const pmQty = pmRaw && typeof pmRaw === "object" ? p((pmRaw as RD).programConfidenceMonitorQty) : "";
 
     const nmRaw = room.notesConfidenceMonitor;
-    const nmVal =
-      nmRaw && typeof nmRaw === "object"
-        ? p((nmRaw as RD).notesConfidenceMonitor)
-        : p(nmRaw as string);
-    const nmQty =
-      nmRaw && typeof nmRaw === "object"
-        ? p((nmRaw as RD).notesConfidenceMonitorQty)
-        : "";
+    const nmVal = nmRaw && typeof nmRaw === "object" ? p((nmRaw as RD).notesConfidenceMonitor) : p(nmRaw as string);
+    const nmQty = nmRaw && typeof nmRaw === "object" ? p((nmRaw as RD).notesConfidenceMonitorQty) : "";
 
     const wmRaw = room.wirelessMics;
-    const wmVal =
-      wmRaw && typeof wmRaw === "object"
-        ? p((wmRaw as RD).wirelessMics)
-        : p(wmRaw as string);
-    const wmQty =
-      wmRaw && typeof wmRaw === "object"
-        ? p((wmRaw as RD).wirelessMicsQty)
-        : "";
-    const wmType =
-      wmRaw && typeof wmRaw === "object"
-        ? p((wmRaw as RD).wirelessMicsType)
-        : "";
+    const wmVal = wmRaw && typeof wmRaw === "object" ? p((wmRaw as RD).wirelessMics) : p(wmRaw as string);
+    const wmQty = wmRaw && typeof wmRaw === "object" ? p((wmRaw as RD).wirelessMicsQty) : "";
+    const wmType = wmRaw && typeof wmRaw === "object" ? p((wmRaw as RD).wirelessMicsType) : "";
 
     const camRaw = room.cameras;
-    const camVal =
-      camRaw && typeof camRaw === "object"
-        ? p((camRaw as RD).cameras)
-        : p(camRaw as string);
-    const camQty =
-      camRaw && typeof camRaw === "object"
-        ? p((camRaw as RD).camerasQty)
-        : "";
+    const camVal = camRaw && typeof camRaw === "object" ? p((camRaw as RD).cameras) : p(camRaw as string);
+    const camQty = camRaw && typeof camRaw === "object" ? p((camRaw as RD).camerasQty) : "";
+
+    const pmicRaw = room.podiumMic;
+    const pmicVal = pmicRaw && typeof pmicRaw === "object" ? p((pmicRaw as RD).podiumMic) : p(pmicRaw as string);
+    const pmicQty = pmicRaw && typeof pmicRaw === "object" ? p((pmicRaw as RD).podiumMicQty) : "";
+
+    const lmRaw = room.largeMonitorsOrScreenProjector;
+    const lmVal = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).largeMonitorsOrScreenProjector) : p(lmRaw as string);
+    const lmQty = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).largeMonitorsQty) : "";
+
+    const clRaw = room.clientProvideOwnPresentationLaptop;
+    const clVal = clRaw && typeof clRaw === "object" ? p((clRaw as RD).clientProvideOwnPresentationLaptop) : p(clRaw as string);
+    const clQty = clRaw && typeof clRaw === "object" ? p((clRaw as RD).clientLaptopQty) : "";
+
+    const plRaw = room.presentationLaptops;
+    const plVal = plRaw && typeof plRaw === "object" ? p((plRaw as RD).presentationLaptops) : p(plRaw as string);
+    const plQty = plRaw && typeof plRaw === "object" ? p((plRaw as RD).presentationLaptopQty) : "";
+
+    const vpRaw = room.videoPlayback;
+    const vpVal = vpRaw && typeof vpRaw === "object" ? p((vpRaw as RD).videoPlayback) : p(vpRaw as string);
+    const vpCount = vpRaw && typeof vpRaw === "object" ? p((vpRaw as RD).videoPlaybackCount) : "";
+
+    const isLedWall = p(room.ledWall).toLowerCase() === "yes";
+    const ledSize = [p(room.ledWallWidth) ? `${p(room.ledWallWidth)}W` : "", p(room.ledWallHeight) ? `${p(room.ledWallHeight)}H` : ""].filter(Boolean).join(" × ");
+
+    const teleVal = p(room.teleprompterRequired);
+    const isBilingual = p(room.teleprompterBilingual).toUpperCase() === "YES";
+    const telepromptValue = teleVal
+      ? isBilingual
+        ? `Yes — Bilingual (${arr(room.teleprompterLanguages).join(" / ") || ""})`
+        : teleVal
+      : "";
 
     return (
       <div key={idx} className="info-card">
@@ -387,31 +373,69 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           Room {idx + 1} of {total}
           {p(room.roomFunction) ? ` — ${p(room.roomFunction)}` : ""}
         </h3>
+
+        {/* Scheduling */}
         <InfoRow label="Attendees" value={p(room.estimatedAttendeesInRoom)} />
-        <InfoRow label="Load In" value={[p(room.loadInDateTime), fmtDate(p(room.loadInDateTime))].filter(Boolean)[0] || ""} />
+        <InfoRow label="Load In" value={p(room.loadInDateTime)} />
         <InfoRow label="Rehearsal" value={p(room.rehearsalDateTime)} />
         <InfoRow label="Show Start" value={p(room.showStartDateTime)} />
         <InfoRow label="Show End" value={p(room.showEndDateTime)} />
         <InfoRow label="Stage Dimensions" value={p(room.stageDimensions)} />
-        <InfoRow label="Audio System" value={p(room.audioSystemForHowManyPpl) ? `${p(room.audioSystemForHowManyPpl)}-person system` : ""} />
+
+        {/* Audio */}
+        <InfoRow label="Audio System" value={p(room.audioSystemRequired) === "Yes" ? (p(room.audioSystemForHowManyPpl) ? `Yes — ${p(room.audioSystemForHowManyPpl)} ppl` : "Yes") : p(room.audioSystemRequired)} />
+        <InfoRow label="Podium Mic" value={pmicVal === "Yes" && pmicQty ? `Yes (${pmicQty})` : pmicVal} />
         <InfoRow label="Wireless Mics" value={wmVal === "Yes" && wmQty ? `Yes (${wmQty}${wmType ? `, ${wmType}` : ""})` : wmVal} />
+        <InfoRow label="Audio Recording" value={p(room.audioRecording)} />
         <InfoRow label="Audience Q&A" value={aqVal === "Yes" && aqMethod ? `Yes — ${aqMethod}` : aqVal} />
-        <InfoRow label="LED Wall" value={p(room.ledWall).toLowerCase() === "yes" ? (p(room.ledWallSpecs) || "Yes") : p(room.ledWall)} />
+
+        {/* Displays / LED */}
+        <InfoRow label="LED Wall" value={isLedWall ? "Yes" : p(room.ledWall)} />
+        {isLedWall && <InfoRow label="LED Size" value={ledSize} />}
+        {isLedWall && <InfoRow label="LED Shape" value={p(room.ledWallShape)} />}
+        {isLedWall && <InfoRow label="LED Pixel Pitch" value={p(room.ledWallPixelPitch)} />}
+        {isLedWall && <InfoRow label="LED Switcher" value={p(room.ledWallSwitcher)} />}
+        <InfoRow label="Large Monitors" value={lmVal === "Yes" && lmQty ? `Yes (${lmQty})` : lmVal} />
+
+        {/* Video */}
         <InfoRow label="Video Format" value={p(room.videoFormatAspectRatio)} />
+        <InfoRow label="Video Playback" value={vpVal === "Yes" && vpCount ? `Yes (${vpCount})` : vpVal} />
         <InfoRow label="Video Recording" value={vrVal === "Yes" && vrType ? `Yes — ${vrType}` : vrVal} />
         <InfoRow label="Cameras" value={camVal === "Yes" && camQty ? `Yes (${camQty})` : camVal} />
-        <InfoRow label="Stage Wash Lighting" value={swVal === "Yes" && swSize ? `Yes — ${swSize}` : swVal} />
+
+        {/* Presentation */}
+        <InfoRow label="Pres. Laptops" value={plVal === "Yes" && plQty ? `Yes (${plQty})` : plVal} />
+        <InfoRow label="Client Laptop" value={clVal === "Yes" && clQty ? `Yes (${clQty})` : clVal} />
+        <InfoRow label="Teleprompter" value={telepromptValue} />
+        <InfoRow label="Speaker Timer" value={p(room.speakerTimer)} />
+        <InfoRow label="Prog. Confidence" value={pmVal === "Yes" && pmQty ? `Yes — ${pmQty} Monitors` : pmVal} />
+        <InfoRow label="Notes Confidence" value={nmVal === "Yes" && nmQty ? `Yes — ${nmQty} Monitors` : nmVal} />
+
+        {/* Lighting */}
+        {arr(room.lightingRequirements).length > 0 && (
+          <InfoRow label="Lighting Req." value={arr(room.lightingRequirements).join(", ")} />
+        )}
+        <InfoRow label="Stage Wash" value={swVal === "Yes" && swSize ? `Yes — ${swSize}` : swVal} />
         <InfoRow label="Backlighting" value={p(room.backlightingFor)} />
         <InfoRow label="Scenic Uplighting" value={p(room.drapeOrScenicUplighting)} />
         <InfoRow label="Audience Lighting" value={p(room.audienceLighting)} />
-        <InfoRow label="Prog. Confidence" value={pmVal === "Yes" && pmQty ? `Yes — ${pmQty} Monitors` : pmVal} />
-        <InfoRow label="Notes Confidence" value={nmVal === "Yes" && nmQty ? `Yes — ${nmQty} Monitors` : nmVal} />
-        <InfoRow label="Scenic / Stage Design" value={p(room.scenicStageDesign)} />
+
+        {/* Production */}
+        <InfoRow label="Scenic Design" value={p(room.scenicStageDesign)} />
         <InfoRow label="Union Labor" value={p(room.unionLabor)} />
+
         {crew.length > 0 && (
           <div className="crew-box">
             <div className="crew-title">Show Crew</div>
-            <div className="crew-list">{crew.join(" · ")}</div>
+            <div className="crew-list">
+              {crew.map((role) => {
+                const qty = p(crewQty[role]);
+                return qty ? `${role} ×${qty}` : role;
+              }).join(" · ")}
+            </div>
+            {p(room.otherRolesNeeded) && (
+              <div className="crew-list" style={{ marginTop: 4, fontStyle: "italic" }}>Other: {p(room.otherRolesNeeded)}</div>
+            )}
           </div>
         )}
         {notes.length > 0 && (
@@ -449,9 +473,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         <div className="cover-title-block">
           <div className="rfp-label">Request for Proposal</div>
           <div className="event-name">{eventName}</div>
-          {(org || p(ev.venue)) && (
+          {(org || p(vs.venueName)) && (
             <div className="event-client">
-              {[org, p(ev.venue)].filter(Boolean).join(" | ")}
+              {[org, p(vs.venueName)].filter(Boolean).join(" | ")}
             </div>
           )}
           <div className="date-bar">
@@ -513,17 +537,34 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             <p>
               {eventName} is a {p(ev.eventFormat) || "live"} event
               {org ? ` for ${org}` : ""}
-              {p(ev.venue) ? ` at ${p(ev.venue)}` : ""}
-              {p(ev.venueCity) ? `, ${p(ev.venueCity)}` : ""}.
+              {p(vs.venueName) ? ` at ${p(vs.venueName)}` : ""}
+              {[p(vs.venueCity), p(vs.venueState)].filter(Boolean).length > 0 ? `, ${[p(vs.venueCity), p(vs.venueState)].filter(Boolean).join(", ")}` : ""}.
               {" "}This RFP outlines AV and production requirements for vendor review and proposal.
             </p>
           )}
           {p(ev.eventTheme) && <p>Theme: {p(ev.eventTheme)}</p>}
-          {arr(ev.toneDirection).length > 0 && (
-            <p>Tone & Direction: {arr(ev.toneDirection).join(", ")}.</p>
-          )}
           {p(ev.sacredConstraints) && (
             <p>Constraints: {p(ev.sacredConstraints)}</p>
+          )}
+          {arr(ev.primaryAudience).length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#00c2c9", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Primary Audience</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {arr(ev.primaryAudience).map((a, i) => (
+                  <span key={i} style={{ display: "inline-flex", alignItems: "center", background: "#0f1b57", color: "#fff", fontSize: 10.5, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{a}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {arr(ev.toneDirection).length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#00c2c9", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Tone &amp; Direction</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {arr(ev.toneDirection).map((t, i) => (
+                  <span key={i} style={{ display: "inline-flex", alignItems: "center", background: "rgba(0,194,201,0.1)", color: "#0e7490", fontSize: 10.5, fontWeight: 700, padding: "3px 10px", borderRadius: 20, border: "1px solid rgba(0,194,201,0.35)" }}>{t}</span>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
@@ -572,9 +613,11 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
         <div className="section-subtitle">Scope Overview</div>
         <div className="info-card">
-          <InfoRow label="Venue" value={[p(vs.venueName) || p(ev.venue), p(vs.venueCity) || p(ev.venueCity), p(vs.venueState)].filter(Boolean).join(", ")} />
+          <InfoRow label="Venue" value={[p(vs.venueName), p(vs.venueCity), p(vs.venueState)].filter(Boolean).join(", ")} />
+          <InfoRow label="Venue Address" value={p(vs.venueAddress)} />
+          <InfoRow label="Venue Status" value={p(vs.venueConfirmedStatus) ? p(vs.venueConfirmedStatus).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : ""} />
           <InfoRow label="Venue Type" value={p(vs.venueType)} />
-          <InfoRow label="Union Jurisdiction" value={p(vs.isUnionVenue) === "YES" ? arr(vs.unionJurisdictions).join(", ") || "Yes" : p(vs.isUnionVenue) === "NO" ? "No" : ""} />
+          <InfoRow label="Union Jurisdiction" value={p(vs.isUnionVenue) === "YES" ? [...arr(vs.unionJurisdictions), p(vs.unionJurisdictionOther)].filter(Boolean).join(", ") || "Yes" : p(vs.isUnionVenue) === "NO" ? "No" : ""} />
           <InfoRow label="Event Format" value={p(ev.eventFormat)} />
           <InfoRow label="Attendees" value={p(ev.attendees)} />
           <InfoRow label="Production Rooms" value={p(vs.numberOfEventRooms) || String(rooms.length) || ""} />
@@ -686,34 +729,37 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
               </tr>
             </thead>
             <tbody>
-              {(
-                [
-                  { label: "Presentation Template Design", field: "presentationTemplateDesign" },
-                  { label: "Speaker Slide Collection & Formatting", field: "speakerSlideCollection" },
-                  { label: "Motion Graphics / Opener Video", field: "motionGraphicsOpenerVideo" },
-                  { label: "Lower Thirds & Name Supers", field: "lowerThirdsNameSupers" },
-                  { label: "Event Logo & Brand Standards", field: "eventLogoBrandStandards" },
-                  { label: "Sizzle / Recap Video", field: "sizzleRecapVideo" },
-                  { label: "Sponsor Recognition Content", field: "sponsorRecognitionContent" },
-                  { label: "Social Media Content Capture", field: "socialMediaContentCapture" },
-                  { label: "Virtual Background Design", field: "virtualBackgroundDesign" },
-                ] as { label: string; field: string }[]
-              ).map(({ label, field }) => {
-                const val = p(cc[field]);
-                if (!val) return null;
-                const isClient = val === "Client / Internal Team";
-                const isVendor = val === "AV Vendor";
-                const isTbd = val === "TBD";
-                return (
-                  <tr key={field}>
-                    <td>{label}</td>
-                    <td style={{ textAlign: "center", color: isClient ? "#16a34a" : "#64748b", fontWeight: isClient ? 800 : 400 }}>{isClient ? "✓" : "—"}</td>
-                    <td style={{ textAlign: "center", color: isVendor ? "#16a34a" : "#64748b", fontWeight: isVendor ? 800 : 400 }}>{isVendor ? "✓" : "—"}</td>
-                    <td style={{ textAlign: "center", color: isTbd ? "#d97706" : "#64748b", fontWeight: isTbd ? 800 : 400 }}>{isTbd ? "✓" : "—"}</td>
-                    <td>{val === "N/A" ? "Not applicable" : ""}</td>
-                  </tr>
-                );
-              })}
+              {(() => {
+                const ldf = (cc.liveDataFeeds || {}) as RD;
+                const ldfOwnership = p(ldf.needed) === "YES" ? p(ldf.ownership) : "";
+                const rows = [
+                  { label: "Presentation Template Design", val: p(cc.presentationTemplateDesign) },
+                  { label: "Speaker Slide Collection & Formatting", val: p(cc.speakerSlideCollection) },
+                  { label: "Motion Graphics / Opener Video", val: p(cc.motionGraphicsOpenerVideo) },
+                  { label: "Lower Thirds & Name Supers", val: p(cc.lowerThirdsNameSupers) },
+                  { label: "Event Logo & Brand Standards", val: p(cc.eventLogoBrandStandards) },
+                  { label: "Sizzle / Recap Video", val: p(cc.sizzleRecapVideo) },
+                  { label: "Live Data Feeds", val: ldfOwnership },
+                  { label: "Sponsor Recognition Content", val: p(cc.sponsorRecognitionContent) },
+                  { label: "Social Media Content Capture", val: p(cc.socialMediaContentCapture) },
+                  { label: "Virtual Background Design", val: p(cc.virtualBackgroundDesign) },
+                ];
+                return rows.map(({ label, val }) => {
+                  if (!val) return null;
+                  const isClient = val === "Client / Internal Team";
+                  const isVendor = val === "AV Vendor";
+                  const isTbd = val === "TBD";
+                  return (
+                    <tr key={label}>
+                      <td>{label}</td>
+                      <td style={{ textAlign: "center", color: isClient ? "#16a34a" : "#64748b", fontWeight: isClient ? 800 : 400 }}>{isClient ? "✓" : "—"}</td>
+                      <td style={{ textAlign: "center", color: isVendor ? "#16a34a" : "#64748b", fontWeight: isVendor ? 800 : 400 }}>{isVendor ? "✓" : "—"}</td>
+                      <td style={{ textAlign: "center", color: isTbd ? "#d97706" : "#64748b", fontWeight: isTbd ? 800 : 400 }}>{isTbd ? "✓" : "—"}</td>
+                      <td>{val === "N/A" ? "Not applicable" : ""}</td>
+                    </tr>
+                  );
+                });
+              })()}
             </tbody>
           </table>
 
@@ -777,7 +823,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
         <table>
           <tbody>
-            <InfoTd label="Venue" value={p(vs.venueName) || p(ev.venue) || ""} />
+            <InfoTd label="Venue" value={p(vs.venueName)} />
             <InfoTd label="Venue AV Contact" value={p(ven.venueAvContactName)} />
             <InfoTd label="AV Contact Phone" value={p(ven.venueAvContactPhone)} />
             <InfoTd label="AV Contact Email" value={p(ven.venueAvContactEmail)} />
@@ -890,6 +936,16 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </tbody>
         </table>
 
+        <div className="section-subtitle">Bid Details</div>
+        <div className="info-card" style={{ marginBottom: 9 }}>
+          <InfoRow label="Budget Flexibility" value={p(bud.budgetFlexibility)} />
+          <InfoRow label="Competitive Bid" value={yn(bud.competitiveBid)} />
+          <InfoRow label="Vendors Invited" value={p(bud.numberOfProposals)} />
+          <InfoRow label="Response Timeline" value={p(bud.timelineForProposal)} />
+          <InfoRow label="Decision Date" value={fmtDate(p(bud.decisionDate))} />
+          <InfoRow label="Call with Producer" value={yn(bud.callWithDxgProducer)} />
+        </div>
+
         <div className="section-subtitle">Weighted Evaluation Matrix</div>
         <table>
           <thead>
@@ -910,8 +966,181 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </tbody>
         </table>
 
+        {p(bud.scoringNotes) && (
+          <div className="callout" style={{ marginTop: 9 }}>
+            <div className="callout-heading">Scoring Notes</div>
+            <p>{p(bud.scoringNotes)}</p>
+          </div>
+        )}
+
         <Footer left={footerLeft} page={9} />
       </div>
+
+      {/* ══════════════ UPLOADS & CO-VENDORS ══════════════ */}
+      {(() => {
+        const fname = (url: string): string => decodeURIComponent(url.split("/").pop() ?? url).replace(/^\d+-/, "");
+        const dlBtn = (url: string, name: string) => (
+          <td className="no-print" style={{ width: "12%", textAlign: "center", verticalAlign: "middle" }}>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(url, { mode: "cors" });
+                  if (!res.ok) throw new Error();
+                  const blob = await res.blob();
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = name;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(a.href);
+                } catch {
+                  window.open(url, "_blank");
+                }
+              }}
+              style={{ background: "#0f1b57", color: "#fff", border: "none", borderRadius: 5, padding: "4px 9px", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              ↓ Download
+            </button>
+          </td>
+        );
+        const openBtn = (url: string) => (
+          <td className="no-print" style={{ width: "12%", textAlign: "center", verticalAlign: "middle" }}>
+            <a href={url} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#00c2c9", color: "#fff", borderRadius: 5, padding: "4px 9px", fontSize: 10, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+              ↗ Open
+            </a>
+          </td>
+        );
+        const brandFiles = arr(up.brandGuideFiles);
+        const logoFiles = arr(up.eventLogoFiles);
+        const refFiles = arr(up.referenceFiles);
+        const refUrls = arr(up.referenceUrls);
+        const venueDocs = arr(up.venueDocs);
+        const ndaDocs = arr(up.ndaDocumentFiles);
+        const ndaRequired = p(up.ndaRequired) === "YES";
+        const cvEntries = [
+          { cat: "In-House Venue AV", raw: (cvs.inHouseVenueAv || {}) as RD },
+          { cat: "Event Decorator / Scenic", raw: (cvs.eventDecorator || {}) as RD },
+          { cat: "Registration / Event Tech", raw: (cvs.registrationTech || {}) as RD },
+          { cat: "Agency of Record", raw: (cvs.agencyOfRecord || {}) as RD },
+          { cat: "Photography", raw: (cvs.photographer || {}) as RD },
+        ].filter(({ raw }) => p(raw.companyName) || p(raw.contactName));
+
+        const hasFiles = brandFiles.length || logoFiles.length || refFiles.length || refUrls.length || venueDocs.length || ndaDocs.length || p(up.brandGuideUrl);
+        if (!hasFiles && !cvEntries.length && !ndaRequired) return null;
+
+        return (
+          <div className="page">
+            <IntHeader brand={brandName} title={headerTitle} />
+            <SectionTitle num={nextSec()}>Reference Materials &amp; Co-Vendor Coordination</SectionTitle>
+
+            {hasFiles && (
+              <>
+                <div className="section-subtitle">Attached Documents &amp; Files</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: "28%" }}>Category</th>
+                      <th>File / URL</th>
+                      <th className="no-print" style={{ width: "12%", textAlign: "center" }}>Download</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {brandFiles.map((f, i) => (
+                      <tr key={`bg-${i}`}>
+                        <td>{i === 0 ? <b>Brand Guide</b> : ""}</td>
+                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        {dlBtn(f, fname(f))}
+                      </tr>
+                    ))}
+                    {p(up.brandGuideUrl) && (
+                      <tr>
+                        <td><b>Brand Guide URL</b></td>
+                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{p(up.brandGuideUrl)}</td>
+                        {openBtn(p(up.brandGuideUrl))}
+                      </tr>
+                    )}
+                    {logoFiles.map((f, i) => (
+                      <tr key={`lo-${i}`}>
+                        <td>{i === 0 ? <b>Event Logo</b> : ""}</td>
+                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        {dlBtn(f, fname(f))}
+                      </tr>
+                    ))}
+                    {refFiles.map((f, i) => (
+                      <tr key={`rf-${i}`}>
+                        <td>{i === 0 ? <b>Reference Files</b> : ""}</td>
+                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        {dlBtn(f, fname(f))}
+                      </tr>
+                    ))}
+                    {refUrls.map((u, i) => (
+                      <tr key={`ru-${i}`}>
+                        <td>{i === 0 && !refFiles.length ? <b>Reference URLs</b> : ""}</td>
+                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{u}</td>
+                        {openBtn(u)}
+                      </tr>
+                    ))}
+                    {venueDocs.map((f, i) => (
+                      <tr key={`vd-${i}`}>
+                        <td>{i === 0 ? <b>Venue Documents</b> : ""}</td>
+                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        {dlBtn(f, fname(f))}
+                      </tr>
+                    ))}
+                    {ndaDocs.map((f, i) => (
+                      <tr key={`nd-${i}`}>
+                        <td>{i === 0 ? <b>NDA Document</b> : ""}</td>
+                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        {dlBtn(f, fname(f))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            {ndaRequired && (
+              <div className="orange-callout" style={{ marginTop: 8 }}>
+                <b>NDA Required:</b> Vendors must execute a{" "}
+                {p(up.ndaType) === "one_way" ? "one-way" : p(up.ndaType) === "mutual" ? "mutual" : p(up.ndaType) || "standard"}{" "}
+                Non-Disclosure Agreement before receiving full brief materials.
+                {ndaDocs.length > 0 && " See attached NDA document."}
+              </div>
+            )}
+
+            {cvEntries.length > 0 && (
+              <>
+                <div className="section-subtitle" style={{ marginTop: 9 }}>Co-Vendor Contacts</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: "22%" }}>Vendor Category</th>
+                      <th style={{ width: "22%" }}>Company</th>
+                      <th style={{ width: "20%" }}>Contact</th>
+                      <th style={{ width: "22%" }}>Email / Phone</th>
+                      <th>Status / Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cvEntries.map(({ cat, raw }) => (
+                      <tr key={cat}>
+                        <td><b>{cat}</b></td>
+                        <td>{p(raw.companyName)}</td>
+                        <td>{p(raw.contactName)}</td>
+                        <td style={{ fontSize: 10.5 }}>{[p(raw.contactEmail), p(raw.contactPhone)].filter(Boolean).join(" | ")}</td>
+                        <td style={{ fontSize: 10.5 }}>{[p(raw.status), p(raw.notes)].filter(Boolean).join(" — ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            <Footer left={footerLeft} page={10} />
+          </div>
+        );
+      })()}
 
       {/* ══════════════ SUBMISSION TERMS ══════════════ */}
       <div className="page">
@@ -932,9 +1161,48 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             {p(ven.coiRequirements) && (
               <InfoTd label="COI Requirement" value={p(ven.coiRequirements)} />
             )}
-            <InfoTd label="Questions & Contact" value={[fullName, p(ct.contactEmail)].filter(Boolean).join(" | ")} />
           </tbody>
         </table>
+
+        <div className="section-subtitle">Primary Contact</div>
+        <div className="info-card" style={{ marginBottom: 9 }}>
+          <InfoRow label="Name" value={[fullName, p(ct.contactTitle)].filter(Boolean).join(" — ")} />
+          <InfoRow label="Organization" value={p(ct.contactOrganization)} />
+          <InfoRow label="Legal Name" value={p(ct.organizationLegalName)} />
+          <InfoRow label="Email" value={p(ct.contactEmail)} />
+          <InfoRow label="Phone" value={[p(ct.contactPhone) + (p(ct.contactPhoneExt) ? ` ext. ${p(ct.contactPhoneExt)}` : ""), p(ct.contactPhoneType)].filter(Boolean).join(" · ")} />
+          <InfoRow label="Preferred Contact" value={p(ct.preferredContactMethod)} />
+          <InfoRow label="Best Time to Reach" value={p(ct.bestTimeToReach)} />
+        </div>
+
+        {Array.isArray(ct.additionalContacts) && ct.additionalContacts.length > 0 && (
+          <>
+            <div className="section-subtitle">Additional Contacts</div>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: "24%" }}>Name</th>
+                  <th style={{ width: "24%" }}>Title / Role</th>
+                  <th style={{ width: "28%" }}>Email</th>
+                  <th>Phone</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ct.additionalContacts.map((ac, i) => {
+                  const c = ac as RD;
+                  return (
+                    <tr key={i}>
+                      <td>{p(c.fullName)}</td>
+                      <td>{p(c.titleAndRole)}</td>
+                      <td>{p(c.email)}</td>
+                      <td>{p(c.phone)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
 
         {p(bud.callWithDxgProducer) === "YES" && (
           <div className="cta-box">
