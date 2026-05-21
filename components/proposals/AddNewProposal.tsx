@@ -1073,6 +1073,7 @@ const AddNewProposal = ({
   } | null>(null);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [copyingSaving, setCopyingSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [proposalSettings, setProposalSettings] = useState<ProposalSettings>(
     defaultProposalSettings,
@@ -1413,11 +1414,13 @@ const AddNewProposal = ({
   };
 
   const handleSubmit = async (statusOverride?: "unsubmitted" | "submitted") => {
+    if (isSubmitting) return;
     setShowErrors(true);
     if (!isContactStepValid()) {
       toast.error("Please complete all required contact fields.");
       return;
     }
+    setIsSubmitting(true);
 
     const normalizedRooms = rooms.map((r) => normalizeRoomByRoomForSubmit(r));
     const firstRoom = normalizedRooms[0] ?? normalizeRoomByRoomForSubmit(defaultRoom());
@@ -1494,6 +1497,8 @@ const AddNewProposal = ({
           ? "An error occurred while updating the proposal."
           : "An error occurred while creating the proposal.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1930,6 +1935,7 @@ const AddNewProposal = ({
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
                 isEditMode={isEditMode}
+                isSubmitting={isSubmitting}
               />
             )}
           </div>
