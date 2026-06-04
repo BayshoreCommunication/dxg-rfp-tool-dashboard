@@ -234,6 +234,7 @@ export type HybridVirtualData = {
   closedCaptions: {
     closedCaptions: "YES" | "NO" | "";
     captionLanguages: string[];
+    captionLanguageOther: string;
     captionType: string;
   };
   onDemandRecording: "YES" | "NO" | "";
@@ -360,6 +361,7 @@ const defaultProposalData: ProposalData = {
     closedCaptions: {
       closedCaptions: "",
       captionLanguages: [],
+      captionLanguageOther: "",
       captionType: "",
     },
     onDemandRecording: "",
@@ -766,6 +768,7 @@ const normalizeExtracted = (
           closedCaptions: {
             closedCaptions: yn(cc.closedCaptions),
             captionLanguages: Array.isArray(cc.captionLanguages) ? cc.captionLanguages as string[] : [],
+            captionLanguageOther: (cc.captionLanguageOther as string) ?? "",
             captionType: (cc.captionType as string) ?? "",
           },
           onDemandRecording: yn(rh.onDemandRecording),

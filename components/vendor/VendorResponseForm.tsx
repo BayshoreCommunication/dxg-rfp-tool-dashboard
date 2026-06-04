@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Info, Loader2, Paperclip, X } from "lucide-react";
+import { CheckCircle, ExternalLink, Loader2, Paperclip, RefreshCw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -16,6 +16,21 @@ type FileEntry = {
   id: string;
 };
 
+type ExistingDoc = {
+  name: string;
+  url: string;
+};
+
+type ExistingResponse = {
+  _id: string;
+  vendorName: string;
+  submittedBy: string;
+  email: string;
+  message: string;
+  documents: ExistingDoc[];
+  updatedAt: string;
+};
+
 export default function VendorResponseForm({
   proposalId,
   proposalTitle,
@@ -29,10 +44,22 @@ export default function VendorResponseForm({
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [wasUpdate, setWasUpdate] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [error, setError] = useState("");
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
+  const [existingDocs, setExistingDocs] = useState<ExistingDoc[]>([]);
+  const [existingUpdatedAt, setExistingUpdatedAt] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const applyExistingResponse = (existing: ExistingResponse) => {
+    setIsUpdateMode(true);
+    setVendorName(existing.vendorName);
+    setSubmittedBy(existing.submittedBy);
+    setMessage(existing.message);
+    setExistingDocs(existing.documents ?? []);
+    setExistingUpdatedAt(existing.updatedAt);
+  };
 
   const checkEmailExists = async (emailValue: string) => {
     const trimmed = emailValue.trim().toLowerCase();
@@ -42,9 +69,15 @@ export default function VendorResponseForm({
       const params = new URLSearchParams({ proposalId, email: trimmed });
       const res = await fetch(`/api/vendor-responses/check?${params.toString()}`);
       const json = await res.json();
-      if (json.alreadySubmitted) setAlreadySubmitted(true);
+      if (json.alreadySubmitted && json.existingResponse) {
+        applyExistingResponse(json.existingResponse as ExistingResponse);
+      } else {
+        setIsUpdateMode(false);
+        setExistingDocs([]);
+        setExistingUpdatedAt("");
+      }
     } catch {
-      // silently ignore — submit will catch it if needed
+      // silently ignore
     } finally {
       setCheckingEmail(false);
     }
@@ -98,13 +131,10 @@ export default function VendorResponseForm({
 
       const json = await res.json();
       if (!json.success) {
-        if (json.alreadySubmitted) {
-          setAlreadySubmitted(true);
-          return;
-        }
         setError(json.message || "Submission failed. Please try again.");
         return;
       }
+      setWasUpdate(!!json.isUpdate);
       setSubmitted(true);
     } catch {
       setError("Network error. Please check your connection and try again.");
@@ -113,22 +143,6 @@ export default function VendorResponseForm({
     }
   };
 
-  if (alreadySubmitted) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-10 text-center shadow-sm border border-slate-100">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
-            <Info size={32} className="text-amber-500" />
-          </div>
-          <h2 className="mb-2 text-xl font-bold text-slate-900">Already Submitted</h2>
-          <p className="text-sm text-slate-500">
-            You have already submitted a response for this proposal. Only one response per email address is allowed.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (submitted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
@@ -136,9 +150,13 @@ export default function VendorResponseForm({
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
             <CheckCircle size={32} className="text-emerald-500" />
           </div>
-          <h2 className="mb-2 text-xl font-bold text-slate-900">Response Submitted!</h2>
+          <h2 className="mb-2 text-xl font-bold text-slate-900">
+            {wasUpdate ? "Response Updated!" : "Response Submitted!"}
+          </h2>
           <p className="text-sm text-slate-500">
-            Your proposal response has been received. The planner will be in touch with you soon.
+            {wasUpdate
+              ? "Your response has been updated. A confirmation email has been sent to you."
+              : "Your proposal response has been received. A confirmation email has been sent to you."}
           </p>
         </div>
       </div>
@@ -153,7 +171,7 @@ export default function VendorResponseForm({
             Vendor Response
           </p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            Submit Your Proposal
+            {isUpdateMode ? "Update Your Response" : "Submit Your Proposal"}
           </h1>
           {proposalTitle && (
             <p className="mt-1 text-sm text-slate-500">
@@ -162,6 +180,26 @@ export default function VendorResponseForm({
             </p>
           )}
         </div>
+
+        {/* Update mode banner */}
+        {isUpdateMode && (
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <RefreshCw size={15} className="mt-0.5 shrink-0 text-amber-500" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                You have already submitted a response
+              </p>
+              <p className="mt-0.5 text-xs text-amber-700">
+                Your previous submission is shown below. You can update any details or attach additional documents, then click &ldquo;Update Response&rdquo;.
+                {existingUpdatedAt && (
+                  <span className="ml-1 text-amber-600">
+                    Last updated: {new Date(existingUpdatedAt).toLocaleString()}.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
 
         <form
           onSubmit={handleSubmit}
@@ -203,7 +241,14 @@ export default function VendorResponseForm({
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (isUpdateMode) {
+                    setIsUpdateMode(false);
+                    setExistingDocs([]);
+                    setExistingUpdatedAt("");
+                  }
+                }}
                 onBlur={() => void handleEmailBlur()}
                 required
                 placeholder="you@company.com"
@@ -235,13 +280,42 @@ export default function VendorResponseForm({
               Documents{" "}
               <span className="font-normal text-slate-400">(up to 10 files)</span>
             </label>
+
+            {/* Previously uploaded documents */}
+            {existingDocs.length > 0 && (
+              <div className="mb-3">
+                <p className="mb-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Previously uploaded
+                </p>
+                <ul className="space-y-1.5">
+                  {existingDocs.map((doc, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-700"
+                    >
+                      <span className="truncate max-w-[80%]">{doc.name}</span>
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-2 shrink-0 text-cyan-500 hover:text-cyan-700 transition-colors"
+                        title="Open file"
+                      >
+                        <ExternalLink size={13} />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm text-slate-500 hover:border-cyan-400 hover:text-cyan-600 transition-colors"
             >
               <Paperclip size={15} />
-              Attach files
+              {existingDocs.length > 0 ? "Attach additional files" : "Attach files"}
             </button>
             <input
               ref={fileInputRef}
@@ -256,7 +330,7 @@ export default function VendorResponseForm({
                 {files.map(({ file, id }) => (
                   <li
                     key={id}
-                    className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700"
+                    className="flex items-center justify-between rounded-lg bg-cyan-50 border border-cyan-100 px-3 py-2 text-xs text-slate-700"
                   >
                     <span className="truncate max-w-[80%]">{file.name}</span>
                     <button
@@ -286,7 +360,12 @@ export default function VendorResponseForm({
             {submitting ? (
               <>
                 <Loader2 size={15} className="animate-spin" />
-                Submitting…
+                {isUpdateMode ? "Updating…" : "Submitting…"}
+              </>
+            ) : isUpdateMode ? (
+              <>
+                <RefreshCw size={15} />
+                Update Response
               </>
             ) : (
               "Submit Response"

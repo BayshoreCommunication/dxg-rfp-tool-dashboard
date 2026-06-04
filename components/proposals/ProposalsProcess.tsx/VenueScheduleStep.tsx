@@ -255,7 +255,7 @@ const VenueScheduleStep = ({
     onChange({ venueState: state, ...(tz ? { timeZone: tz } : {}) });
   };
 
-  const roomCount = Math.min(20, Math.max(1, Number(safeData.numberOfEventRooms) || 1));
+  const roomCount = Math.max(1, Number(safeData.numberOfEventRooms) || 1);
   const unionJurisdictions = Array.isArray(safeData.unionJurisdictions)
     ? safeData.unionJurisdictions
     : [];
@@ -559,13 +559,10 @@ const VenueScheduleStep = ({
               <input
                 type="number"
                 min={1}
-                max={20}
                 value={safeData.numberOfEventRooms}
                 onChange={(e) =>
                   onChange({
-                    numberOfEventRooms: String(
-                      Math.min(20, Math.max(1, Number(e.target.value) || 1)),
-                    ),
+                    numberOfEventRooms: String(Math.max(1, Number(e.target.value) || 1)),
                   })
                 }
                 className="h-10 w-16 rounded-lg border border-[#d7dce3] bg-white text-center text-sm font-bold text-[#1f2d5d] outline-none focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/20"
@@ -573,13 +570,12 @@ const VenueScheduleStep = ({
               <button
                 type="button"
                 onClick={() =>
-                  onChange({ numberOfEventRooms: String(Math.min(20, roomCount + 1)) })
+                  onChange({ numberOfEventRooms: String(roomCount + 1) })
                 }
                 className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors select-none"
               >
                 +
               </button>
-              <span className="text-sm text-[#8f98bf] normal-case">rooms (max 20)</span>
             </div>
             {safeData.numberOfEventRooms && Number(safeData.numberOfEventRooms) > 0 && (
               <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#00c2c9]/30 bg-[#00c2c9]/5 p-3 text-xs text-brand-dark">
@@ -587,9 +583,6 @@ const VenueScheduleStep = ({
                 <span>
                   <strong>System:</strong> This generates{" "}
                   <strong>{safeData.numberOfEventRooms}</strong> Room Specification module(s) on Page 2B.
-                  {Number(safeData.numberOfEventRooms) > 3 && (
-                    <> Events with 4+ rooms may trigger a Producer Insight consultation recommendation.</>
-                  )}
                 </span>
               </div>
             )}

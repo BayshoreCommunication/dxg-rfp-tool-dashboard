@@ -144,6 +144,7 @@ const HybridVirtualStep = ({
     closedCaptions: {
       closedCaptions: "",
       captionLanguages: [],
+      captionLanguageOther: "",
       captionType: "",
     },
     onDemandRecording: "",
@@ -454,6 +455,7 @@ const HybridVirtualStep = ({
                         closedCaptions: v,
                         ...(v === "NO" && {
                           captionLanguages: [],
+                          captionLanguageOther: "",
                           captionType: "",
                         }),
                       },
@@ -488,6 +490,9 @@ const HybridVirtualStep = ({
                                       captionLanguages: langs.includes(lang)
                                         ? langs.filter((l) => l !== lang)
                                         : [...langs, lang],
+                                      ...(lang === "Other" && langs.includes("Other") && {
+                                        captionLanguageOther: "",
+                                      }),
                                     },
                                   });
                                 }}
@@ -496,6 +501,22 @@ const HybridVirtualStep = ({
                               {lang}
                             </label>
                           ))}
+                          {safeData.closedCaptions.captionLanguages.includes("Other") && (
+                            <input
+                              type="text"
+                              className={`${inputClass} mt-1`}
+                              placeholder="Specify other language..."
+                              value={safeData.closedCaptions.captionLanguageOther ?? ""}
+                              onChange={(e) =>
+                                onChange({
+                                  closedCaptions: {
+                                    ...safeData.closedCaptions,
+                                    captionLanguageOther: e.target.value,
+                                  },
+                                })
+                              }
+                            />
+                          )}
                         </div>
                       </div>
                       <div>
