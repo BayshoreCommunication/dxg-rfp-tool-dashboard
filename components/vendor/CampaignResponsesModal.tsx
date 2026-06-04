@@ -21,7 +21,7 @@ import {
 import { useEffect, useState } from "react";
 
 type Props = {
-  proposalId: string;
+  campaignId: string;
   campaignTitle: string;
   onClose: () => void;
 };
@@ -58,7 +58,7 @@ const getAvatarColor = (name: string) =>
   AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 
 export default function CampaignResponsesModal({
-  proposalId,
+  campaignId,
   campaignTitle,
   onClose,
 }: Props) {
@@ -74,7 +74,7 @@ export default function CampaignResponsesModal({
     const load = async () => {
       setLoading(true);
       const res = await getVendorResponsesAction({
-        proposalId,
+        campaignId,
         page,
         limit: PER_PAGE,
       });
@@ -92,7 +92,7 @@ export default function CampaignResponsesModal({
     return () => {
       mounted = false;
     };
-  }, [proposalId, page]);
+  }, [campaignId, page]);
 
   const openResponse = async (item: VendorResponseItem) => {
     setSelected(item);

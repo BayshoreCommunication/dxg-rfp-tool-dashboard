@@ -93,7 +93,7 @@ export default function EmailDashboard() {
     null,
   );
   const [responsesModal, setResponsesModal] = useState<{
-    proposalId: string;
+    campaignId: string;
     title: string;
   } | null>(null);
 
@@ -176,7 +176,7 @@ export default function EmailDashboard() {
     <>
     {responsesModal && (
       <CampaignResponsesModal
-        proposalId={responsesModal.proposalId}
+        campaignId={responsesModal.campaignId}
         campaignTitle={responsesModal.title}
         onClose={() => setResponsesModal(null)}
       />
@@ -253,10 +253,10 @@ export default function EmailDashboard() {
                   highlight={!!campaign.vendorResponseCount}
                   unreadCount={campaign.unreadResponseCount || 0}
                   onClick={
-                    campaign.vendorResponseCount && campaign.proposalId
+                    campaign.vendorResponseCount && campaign._id
                       ? () =>
                           setResponsesModal({
-                            proposalId: campaign.proposalId!,
+                            campaignId: campaign._id,
                             title: campaign.subject?.trim() || campaign.proposalTitle,
                           })
                       : undefined

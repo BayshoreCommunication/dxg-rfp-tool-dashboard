@@ -35,11 +35,13 @@ export const getVendorResponsesAction = async ({
   limit = 20,
   unreadOnly = false,
   proposalId,
+  campaignId,
 }: {
   page?: number;
   limit?: number;
   unreadOnly?: boolean;
   proposalId?: string;
+  campaignId?: string;
 } = {}) => {
   try {
     const token = await getAccessToken();
@@ -50,7 +52,8 @@ export const getVendorResponsesAction = async ({
       limit: String(limit),
       unreadOnly: String(unreadOnly),
     });
-    if (proposalId) params.set("proposalId", proposalId);
+    if (campaignId) params.set("campaignId", campaignId);
+    else if (proposalId) params.set("proposalId", proposalId);
 
     const res = await fetch(`${BACKEND_URL}/api/vendor-responses?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
