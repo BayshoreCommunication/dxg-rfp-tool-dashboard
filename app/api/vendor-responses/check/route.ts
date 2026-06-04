@@ -5,16 +5,23 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const proposalId = searchParams.get("proposalId");
   const email = searchParams.get("email");
+  const emailTrackingId = searchParams.get("emailTrackingId");
 
-  if (!proposalId || !email) {
+  // At least one identifier must be present
+  if (!emailTrackingId && (!proposalId || !email)) {
     return NextResponse.json(
-      { success: false, message: "Missing parameters" },
-      { status: 400 },
+      { alreadySubmitted: false, existingResponse: null },
+      { status: 200 },
     );
   }
 
   try {
-    const params = new URLSearchParams({ proposalId, email });
+    // Forward all params the frontend sent — backend decides which to use
+    const params = new URLSearchParams();
+    if (emailTrackingId) params.set("emailTrackingId", emailTrackingId);
+    if (proposalId) params.set("proposalId", proposalId);
+    if (email) params.set("email", email);
+
     const res = await fetch(
       `${BACKEND_URL}/api/vendor-responses/check?${params.toString()}`,
       { cache: "no-store" },
@@ -22,6 +29,6 @@ export async function GET(req: NextRequest) {
     const data = await res.json().catch(() => ({}));
     return NextResponse.json(data, { status: res.status });
   } catch {
-    return NextResponse.json({ success: false, message: "Network error" }, { status: 502 });
+    return NextResponse.json({ alreadySubmitted: false, existingResponse: null }, { status: 200 });
   }
 }

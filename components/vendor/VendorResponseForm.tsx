@@ -67,6 +67,9 @@ export default function VendorResponseForm({
     setCheckingEmail(true);
     try {
       const params = new URLSearchParams({ proposalId, email: trimmed });
+      // When arriving via an email link, pass the tracking ID so the backend
+      // only triggers update mode if THIS campaign's link was already responded to.
+      if (initialTrackingId) params.set("emailTrackingId", initialTrackingId);
       const res = await fetch(`/api/vendor-responses/check?${params.toString()}`);
       const json = await res.json();
       if (json.alreadySubmitted && json.existingResponse) {
