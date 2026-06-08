@@ -10,7 +10,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
+  Download,
   FileText,
   Inbox,
   Mail,
@@ -106,6 +106,38 @@ export default function CampaignResponsesModal({
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
+  };
+
+  const triggerDownload = async (url: string, name: string) => {
+    try {
+      const res = await fetch(url, { mode: "cors" });
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // CORS unavailable — fall back to forced download via anchor
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  const downloadDocs = async (docs: { name: string; url: string }[]) => {
+    for (let i = 0; i < docs.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 350));
+      await triggerDownload(docs[i].url, docs[i].name);
+    }
   };
 
   const unreadCount = responses.filter((r) => !r.isRead).length;
@@ -391,33 +423,39 @@ export default function CampaignResponsesModal({
                 {/* Documents */}
                 {selected.documents.length > 0 && (
                   <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-                    <div className="mb-3 flex items-center gap-2">
-                      <FileText size={13} className="text-slate-400" />
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                        Documents ({selected.documents.length})
-                      </span>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <FileText size={13} className="text-slate-400" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                          Documents ({selected.documents.length})
+                        </span>
+                      </div>
+                      {selected.documents.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => void downloadDocs(selected.documents)}
+                          className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-600 transition-colors hover:bg-slate-100"
+                        >
+                          <Download size={12} />
+                          Download all
+                        </button>
+                      )}
                     </div>
+
                     <ul className="flex flex-col gap-2">
                       {selected.documents.map((doc, i) => (
-                        <li key={i}>
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-700 transition-all hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                        <li key={i} className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-700 transition-all hover:border-cyan-300 hover:bg-cyan-50">
+                          <FileText size={15} className="shrink-0 text-slate-400 transition-colors group-hover:text-cyan-500" />
+                          <span className="flex-1 truncate font-semibold">{doc.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => void triggerDownload(doc.url, doc.name)}
+                            title="Download"
+                            className="shrink-0 flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-500 transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
                           >
-                            <FileText
-                              size={15}
-                              className="shrink-0 text-slate-400 transition-colors group-hover:text-cyan-500"
-                            />
-                            <span className="flex-1 truncate font-semibold">
-                              {doc.name}
-                            </span>
-                            <ExternalLink
-                              size={12}
-                              className="shrink-0 text-slate-400 transition-colors group-hover:text-cyan-500"
-                            />
-                          </a>
+                            <Download size={11} />
+                          
+                          </button>
                         </li>
                       ))}
                     </ul>

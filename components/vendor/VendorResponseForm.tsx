@@ -47,6 +47,7 @@ export default function VendorResponseForm({
   const [wasUpdate, setWasUpdate] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [error, setError] = useState("");
+  const [fileError, setFileError] = useState("");
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [existingDocs, setExistingDocs] = useState<ExistingDoc[]>([]);
   const [existingUpdatedAt, setExistingUpdatedAt] = useState<string>("");
@@ -95,13 +96,22 @@ export default function VendorResponseForm({
 
   const handleEmailBlur = () => void checkEmailExists(email);
 
+  const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+
   const addFiles = (incoming: FileList | null) => {
     if (!incoming) return;
-    const next: FileEntry[] = Array.from(incoming).map((file) => ({
-      file,
-      id: `${file.name}-${file.size}-${Date.now()}`,
-    }));
-    setFiles((prev) => [...prev, ...next].slice(0, 10));
+    setFileError("");
+    const all = Array.from(incoming);
+    const oversized = all.filter((f) => f.size > MAX_FILE_BYTES);
+    if (oversized.length > 0) {
+      setFileError(
+        `${oversized.map((f) => f.name).join(", ")} ${oversized.length === 1 ? "exceeds" : "exceed"} the 10 MB limit and ${oversized.length === 1 ? "was" : "were"} not added.`,
+      );
+    }
+    const valid: FileEntry[] = all
+      .filter((f) => f.size <= MAX_FILE_BYTES)
+      .map((file) => ({ file, id: `${file.name}-${file.size}-${Date.now()}` }));
+    setFiles((prev) => [...prev, ...valid].slice(0, 10));
   };
 
   const removeFile = (id: string) =>
@@ -281,7 +291,7 @@ export default function VendorResponseForm({
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">
               Documents{" "}
-              <span className="font-normal text-slate-400">(up to 10 files)</span>
+              <span className="font-normal text-slate-400">(any file type · up to 10 files · max 10 MB each)</span>
             </label>
 
             {/* Previously uploaded documents */}
@@ -324,10 +334,14 @@ export default function VendorResponseForm({
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov"
               className="hidden"
-              onChange={(e) => addFiles(e.target.files)}
+              onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
             />
+            {fileError && (
+              <p className="mt-2 rounded-lg bg-rose-50 border border-rose-100 px-3 py-2 text-xs text-rose-600">
+                {fileError}
+              </p>
+            )}
             {files.length > 0 && (
               <ul className="mt-3 space-y-1.5">
                 {files.map(({ file, id }) => (
