@@ -31,6 +31,10 @@ export async function middleware(request: NextRequest) {
     "/forgot-password",
     "/proposal-view",
     "/vendor-response",
+    // Public API routes — vendor form submission & check (backend handles its own auth)
+    "/api/vendor-responses",
+    "/api/metadata",
+    "/api/proposals",
   ];
   if (publicPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
