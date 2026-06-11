@@ -1077,6 +1077,7 @@ const AddNewProposal = ({
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [copyingSaving, setCopyingSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const [proposalSettings, setProposalSettings] = useState<ProposalSettings>(
     defaultProposalSettings,
@@ -1416,14 +1417,22 @@ const AddNewProposal = ({
     return normalized;
   };
 
-  const handleSubmit = async (statusOverride?: "unsubmitted" | "submitted") => {
-    if (isSubmitting) return;
-    setShowErrors(true);
-    if (!isContactStepValid()) {
-      toast.error("Please complete all required contact fields.");
-      return;
+  const handleSubmit = async (
+    statusOverride?: "unsubmitted" | "submitted",
+    asDraft = false,
+  ) => {
+    if (isSubmitting || isSavingDraft) return;
+
+    if (!asDraft) {
+      setShowErrors(true);
+      if (!isContactStepValid()) {
+        toast.error("Please complete all required contact fields.");
+        return;
+      }
     }
-    setIsSubmitting(true);
+
+    if (asDraft) setIsSavingDraft(true);
+    else setIsSubmitting(true);
 
     const normalizedRooms = rooms.map((r) => normalizeRoomByRoomForSubmit(r));
     const firstRoom = normalizedRooms[0] ?? normalizeRoomByRoomForSubmit(defaultRoom());
@@ -1447,20 +1456,34 @@ const AddNewProposal = ({
       },
     };
 
+    const resolvedStatus = asDraft ? "unsubmitted" : (statusOverride ?? proposalData.proposalStatus);
     const payloadWithStatus = {
       ...payload,
-      status: statusOverride ?? proposalData.proposalStatus,
+      status: resolvedStatus,
+      // Submitting: promote to a live regular proposal — clear draft/copy flags, activate.
+      ...(resolvedStatus === "submitted" && {
+        isDraft: false,
+        isActive: true,
+        isCopy: false,
+      }),
+      // Saving as draft: explicitly mark as draft and inactive.
+      ...(asDraft && {
+        isDraft: true,
+        isActive: false,
+      }),
     };
 
     try {
       const result =
         isEditMode && proposalId
-          ? await updateProposalAction(
-              proposalId,
-              payloadWithStatus as Partial<ProposalData>,
-            )
+          ? await updateProposalAction(proposalId, payloadWithStatus)
           : await createProposalAction(payloadWithStatus);
       if (result.success) {
+        if (asDraft) {
+          toast.success("Draft saved successfully!");
+          router.push("/proposals");
+          return;
+        }
         toast.success(
           isEditMode
             ? "Proposal updated successfully!"
@@ -1502,6 +1525,7 @@ const AddNewProposal = ({
       );
     } finally {
       setIsSubmitting(false);
+      setIsSavingDraft(false);
     }
   };
 
@@ -1934,11 +1958,13 @@ const AddNewProposal = ({
                   updateProposalSection("contact", updates)
                 }
                 onContinue={continueHandler}
+                onSaveAsDraft={() => void handleSubmit(undefined, true)}
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
                 isEditMode={isEditMode}
                 isSubmitting={isSubmitting}
+                isSavingDraft={isSavingDraft}
               />
             )}
           </div>

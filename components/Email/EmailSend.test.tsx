@@ -1,0 +1,274 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import EmailSend from './EmailSend'
+
+// ─── Module mocks ──────────────────────────────────────────────────────────────
+
+const mockRouterPush = jest.fn()
+const mockSearchParamsGet = jest.fn(() => null)
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockRouterPush }),
+  useSearchParams: () => ({ get: mockSearchParamsGet }),
+}))
+
+jest.mock('react-toastify', () => ({
+  toast: { success: jest.fn(), error: jest.fn(), warning: jest.fn() },
+}))
+
+const mockGetProposals = jest.fn()
+const mockSendEmail = jest.fn()
+
+jest.mock('@/app/actions/proposals', () => ({
+  getProposalsAction: (...a: unknown[]) => mockGetProposals(...a),
+}))
+
+jest.mock('@/app/actions/email', () => ({
+  sendProposalEmailAction: (...a: unknown[]) => mockSendEmail(...a),
+}))
+
+// ─── Fixtures ─────────────────────────────────────────────────────────────────
+
+const mockProposal = {
+  _id: 'prop-001',
+  event: { eventName: 'Bayshore Summit 2026' },
+  contact: { contactEmail: 'client@example.com' },
+  proposalLink: 'https://example.com/proposal/bayshore-summit-prop-001',
+  publicProposalLink: 'https://example.com/proposal/bayshore-summit-prop-001',
+}
+
+const LOAD_TIMEOUT = { timeout: 4000 }
+
+// Suppress jsdom "Not implemented: navigation" from the window.location.href fallback in EmailSend.
+// window.location is non-configurable in this jsdom version so we filter the warning instead.
+beforeAll(() => {
+  jest.spyOn(console, 'error').mockImplementation((...args) => {
+    const msg = args[0]
+    if (msg instanceof Error && msg.message.includes('Not implemented: navigation')) return
+    if (typeof msg === 'string' && msg.includes('Not implemented: navigation')) return
+  })
+})
+
+afterAll(() => jest.restoreAllMocks())
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  // Explicitly reset return values since clearAllMocks does not clear mockReturnValue
+  mockSearchParamsGet.mockReturnValue(null)
+  mockGetProposals.mockResolvedValue({ success: true, data: [mockProposal] })
+})
+
+// Wait until the Send Campaign button is enabled (loading=false)
+const waitForLoad = () =>
+  waitFor(
+    () => expect(screen.getByRole('button', { name: /send campaign/i })).not.toBeDisabled(),
+    LOAD_TIMEOUT,
+  )
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+describe('EmailSend — rendering', () => {
+  it('renders the "Compose & Send" heading', async () => {
+    render(<EmailSend />)
+    await waitFor(() => expect(screen.getByText('Compose & Send')).toBeInTheDocument(), LOAD_TIMEOUT)
+  })
+
+  it('renders the proposal select dropdown', async () => {
+    render(<EmailSend />)
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument(), LOAD_TIMEOUT)
+  })
+
+  it('lists loaded proposals in the dropdown', async () => {
+    render(<EmailSend />)
+    await waitFor(() => expect(screen.getByText('Bayshore Summit 2026')).toBeInTheDocument(), LOAD_TIMEOUT)
+  })
+
+  it('renders the Subject and Message labels', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    expect(screen.getByText('Subject')).toBeInTheDocument()
+    expect(screen.getByText('Message')).toBeInTheDocument()
+  })
+
+  it('renders the Send Campaign button', async () => {
+    render(<EmailSend />)
+    await waitFor(() => expect(screen.getByText('Send Campaign')).toBeInTheDocument(), LOAD_TIMEOUT)
+  })
+
+  it('auto-fills subject and pre-selects proposal when proposalId is in the URL', async () => {
+    mockSearchParamsGet.mockReturnValue('prop-001')
+    render(<EmailSend />)
+    await waitFor(() => {
+      expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('prop-001')
+      expect(screen.getByDisplayValue(/Proposal for Bayshore Summit/)).toBeInTheDocument()
+    }, LOAD_TIMEOUT)
+  })
+})
+
+describe('EmailSend — email chip input', () => {
+  it('adds a valid email chip when Enter is pressed', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'test@example.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.getByText('test@example.com')).toBeInTheDocument()
+  })
+
+  it('adds a valid email chip when comma is pressed', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'vendor@acme.com' } })
+    fireEvent.keyDown(input, { key: ',' })
+    expect(screen.getByText('vendor@acme.com')).toBeInTheDocument()
+  })
+
+  it('does not add an invalid email format', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'not-an-email' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.queryByText('not-an-email')).not.toBeInTheDocument()
+  })
+
+  it('removes a chip when the × button is clicked', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'remove@example.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.getByText('remove@example.com')).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Remove remove@example.com'))
+    expect(screen.queryByText('remove@example.com')).not.toBeInTheDocument()
+  })
+
+  it('does not add duplicate emails', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'dup@example.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.change(input, { target: { value: 'dup@example.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.getAllByText('dup@example.com')).toHaveLength(1)
+  })
+
+  it('removes the last chip when Backspace is pressed on an empty input', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'first@example.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.keyDown(input, { key: 'Backspace' })
+    expect(screen.queryByText('first@example.com')).not.toBeInTheDocument()
+  })
+})
+
+describe('EmailSend — send validation', () => {
+  it('shows error toast when no proposal is selected', async () => {
+    mockGetProposals.mockResolvedValue({ success: true, data: [] })
+    render(<EmailSend />)
+    await waitForLoad()
+    fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
+    const { toast } = require('react-toastify')
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Please select a proposal.'))
+  })
+
+  it('shows error toast when no recipient is added', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
+    const { toast } = require('react-toastify')
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Please add at least one valid recipient email.'),
+    )
+  })
+
+  it('shows error toast when subject is empty', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+
+    // Add a recipient chip
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'vendor@test.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    // Subject starts as "" in the default (non-URL-preselected) case
+    fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
+    const { toast } = require('react-toastify')
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Please enter an email subject.'))
+  })
+})
+
+describe('EmailSend — successful send', () => {
+  // Use URL preselection so subject is auto-filled
+  beforeEach(() => mockSearchParamsGet.mockReturnValue('prop-001'))
+
+  it('calls sendProposalEmailAction with correct payload', async () => {
+    mockSendEmail.mockResolvedValue({ success: true, message: 'Sent!' })
+    render(<EmailSend />)
+    await waitForLoad()
+
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'vendor@test.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
+
+    await waitFor(() => {
+      expect(mockSendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          proposalId: 'prop-001',
+          recipientEmails: expect.arrayContaining(['vendor@test.com']),
+          subject: expect.stringContaining('Bayshore Summit'),
+        }),
+      )
+    })
+  })
+
+  it('navigates to /email on successful send', async () => {
+    mockSendEmail.mockResolvedValue({ success: true, message: 'Sent!' })
+    render(<EmailSend />)
+    await waitForLoad()
+
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'vendor@test.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith('/email'))
+  })
+
+  it('shows error toast when send fails', async () => {
+    mockSendEmail.mockResolvedValue({ success: false, message: 'Server error' })
+    render(<EmailSend />)
+    await waitForLoad()
+
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'vendor@test.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
+    const { toast } = require('react-toastify')
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Server error'))
+  })
+})
+
+describe('EmailSend — proposal selection', () => {
+  it('pre-selects proposal from URL query param', async () => {
+    mockSearchParamsGet.mockReturnValue('prop-001')
+    render(<EmailSend />)
+    await waitFor(() => {
+      const select = screen.getByRole('combobox') as HTMLSelectElement
+      expect(select.value).toBe('prop-001')
+    }, LOAD_TIMEOUT)
+  })
+
+  it('shows "No active submitted proposals" when list is empty', async () => {
+    mockGetProposals.mockResolvedValue({ success: true, data: [] })
+    render(<EmailSend />)
+    await waitForLoad()
+    expect(screen.getByText(/No active submitted proposals/)).toBeInTheDocument()
+  })
+})

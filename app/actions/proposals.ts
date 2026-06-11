@@ -4,6 +4,7 @@
 import { auth } from "@/auth";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
 import { BACKEND_URL as API_URL, FRONTEND_URL } from "@/lib/config";
+import { revalidatePath } from "next/cache";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -138,11 +139,6 @@ export async function createProposalAction(
     if (!token) {
       return { success: false, message: "User is not authenticated." };
     }
-    console.log(
-      "PAYLOAD FROM FRONTEND ACTION:",
-      JSON.stringify(payload, null, 2),
-    );
-
     const res = await fetch(`${API_URL}/api/proposals`, {
       method: "POST",
       headers: {
@@ -153,6 +149,7 @@ export async function createProposalAction(
       cache: "no-store",
     });
     const data = await res.json();
+    if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Proposal created" : "Create failed"),
@@ -327,6 +324,7 @@ export async function copyProposalAction(
       cache: "no-store",
     });
     const data = await res.json();
+    if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Proposal copied" : "Copy failed"),
@@ -340,7 +338,12 @@ export async function copyProposalAction(
 /** Replace all editable fields of a proposal (full update). */
 export async function updateProposalAction(
   id: string,
-  updates: Partial<ProposalData>,
+  updates: Partial<ProposalData> & {
+    isDraft?: boolean;
+    isActive?: boolean;
+    isCopy?: boolean;
+    status?: string;
+  },
 ): Promise<ApiResponse> {
   const token = await getAccessToken();
   if (!token) {
@@ -355,8 +358,10 @@ export async function updateProposalAction(
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updates),
+      cache: "no-store",
     });
     const data = await res.json();
+    if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Proposal updated" : "Update failed"),
@@ -381,6 +386,7 @@ export async function deleteProposalAction(id: string): Promise<ApiResponse> {
       cache: "no-store",
     });
     const data = await res.json();
+    if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Proposal archived" : "Archive failed"),
@@ -405,6 +411,7 @@ export async function restoreProposalAction(id: string): Promise<ApiResponse> {
       cache: "no-store",
     });
     const data = await res.json();
+    if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Proposal restored" : "Restore failed"),
@@ -428,6 +435,7 @@ export async function permanentlyDeleteProposalAction(id: string): Promise<ApiRe
       cache: "no-store",
     });
     const data = await res.json();
+    if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Proposal permanently deleted" : "Delete failed"),
@@ -460,6 +468,7 @@ export async function updateProposalStatusAction(
       cache: "no-store",
     });
     const data = await res.json();
+    if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Status updated" : "Update failed"),
@@ -497,6 +506,7 @@ export async function updateProposalMetaAction(
       cache: "no-store",
     });
     const data = await res.json();
+    if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
       message: data.message || (res.ok ? "Proposal updated" : "Update failed"),

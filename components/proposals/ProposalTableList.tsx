@@ -503,8 +503,17 @@ export default function ProposalTableList({
               const createdAt = formatDisplayDate(proposal?.createdAt);
               const views = proposal?.viewsCount ?? 0;
               const isDraft = proposal?.isDraft === true;
-              const isSaved = proposal?.isCopy === true;  // copy = Saved tab
+              const isCopy = proposal?.isCopy === true;
               const status = proposal?.status ?? "unsubmitted";
+              // For copies the backend may not clear isDraft or set isActive when submitting,
+              // so use status as the authoritative signal for both draft and live state.
+              const effectiveDraft = isCopy ? status !== "submitted" : isDraft;
+              // isSavedDraft: copy that has NOT yet been submitted — shows violet "offline" colours
+              const isSavedDraft = isCopy && effectiveDraft;
+              // Backend may not set isActive:true when a copy is submitted; a submitted copy is live.
+              const isEffectivelyActive = isCopy
+                ? status === "submitted"
+                : proposal?.isActive !== false;
               const submittedLabel =
                 status === "submitted" ? "Submitted"
                 : status === "reviewed" ? "Reviewed"
@@ -515,30 +524,27 @@ export default function ProposalTableList({
                 proposal?.createdAt,
                 proposal?.proposalSetting?.proposals?.expiryDate,
               );
-              // Drafts and copies are just "Offline". Only submitted proposals can expire.
-              const isExpired =
-                !isSaved && !isDraft && expiryMeta.isExpiredByDate;
-              const liveOrExpiredLabel = isSaved
-                ? "Offline"
-                : isDraft
+              // Only submitted (non-draft) proposals can expire.
+              const isExpired = !effectiveDraft && expiryMeta.isExpiredByDate;
+              const liveOrExpiredLabel = effectiveDraft
                 ? "Offline"
                 : isExpired
                 ? "Expired"
-                : proposal?.isActive !== false
+                : isEffectivelyActive
                 ? "Live"
                 : "Offline";
-              const statusBadgeClass = isSaved
+              const statusBadgeClass = isSavedDraft
                 ? "bg-violet-50 text-violet-600 border-violet-200"
                 : isExpired
                 ? "bg-rose-50 border-rose-200 text-rose-600"
-                : proposal?.isActive !== false
+                : isEffectivelyActive
                 ? "bg-emerald-50 text-emerald-600 border-emerald-200"
                 : "bg-slate-100 text-slate-500 border-slate-200";
-              const statusDotClass = isSaved
+              const statusDotClass = isSavedDraft
                 ? "bg-violet-400"
                 : isExpired
                 ? "bg-rose-400"
-                : proposal?.isActive !== false
+                : isEffectivelyActive
                 ? "bg-emerald-400 animate-pulse"
                 : "bg-slate-400";
               const isArchiveView = activeFilter === "archive";
@@ -586,7 +592,7 @@ export default function ProposalTableList({
                         </>
                       ) : (
                         <>
-                          {isSaved ? (
+                          {isCopy ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-violet-50 text-violet-700 border-violet-200">
                               Saved Copy
                             </span>
@@ -615,7 +621,7 @@ export default function ProposalTableList({
                       )}
                     </div>
                     {/* Favorite button — hidden for copies (copies cannot be favourited) */}
-                    {!isSaved && (
+                    {!isCopy && (
                       <button
                         title={proposal?.isFavorite ? "Remove favorite" : "Mark as favorite"}
                         disabled={favoritingId === proposal._id}

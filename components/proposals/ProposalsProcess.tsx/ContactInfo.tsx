@@ -204,10 +204,12 @@ interface ContactInfoProps {
   onChange: (updates: Partial<ContactData>) => void;
   onContinue: () => void;
   onBack: () => void;
+  onSaveAsDraft?: () => void;
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
   isEditMode?: boolean;
   isSubmitting?: boolean;
+  isSavingDraft?: boolean;
 }
 
 /* ─── Main component ─── */
@@ -216,10 +218,12 @@ const ContactInfo = ({
   onChange,
   onContinue,
   onBack,
+  onSaveAsDraft,
   showErrors = false,
   proposalSettings,
   isEditMode = false,
   isSubmitting = false,
+  isSavingDraft = false,
 }: ContactInfoProps) => {
   /* ─── Safe data ─── */
   const safeData: ContactData = {
@@ -658,17 +662,30 @@ const ContactInfo = ({
           <ArrowLeft size={15} className="shrink-0" />
           Uploads &amp; Co-Vendors
         </button>
-        <button
-          type="button"
-          onClick={onContinue}
-          disabled={isSubmitting}
-          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
-        >
-          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-          {isSubmitting ? "Submitting…" : isEditMode ? "Update RFP" : "Generate RFP"}
-          {isSubmitting ? null : <ArrowRight size={15} className="shrink-0" />}
-        </button>
+
+        <div className="flex items-center gap-3">
+          {onSaveAsDraft && (
+            <button
+              type="button"
+              onClick={onSaveAsDraft}
+              disabled={isSubmitting || isSavingDraft}
+              className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            >
+              {isSavingDraft ? "Saving…" : "Save as Draft"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onContinue}
+            disabled={isSubmitting || isSavingDraft}
+            className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          >
+            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
+            {isSubmitting ? "Submitting…" : isEditMode ? "Update RFP" : "Generate RFP"}
+            {isSubmitting ? null : <ArrowRight size={15} className="shrink-0" />}
+          </button>
+        </div>
       </div>
     </section>
   );
