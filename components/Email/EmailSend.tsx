@@ -62,9 +62,9 @@ export default function EmailSend() {
     selectedProposal?.publicProposalLink ||
     selectedProposal?.proposalLink ||
     "";
-  // Used for the in-app "Open proposal" preview button — relative so it always works
+  // Used for the in-app "Open proposal" preview button — absolute URL so target="_blank" opens a new tab
   const previewProposalLink = selectedProposal?.proposalSlug
-    ? `/proposal/${selectedProposal.proposalSlug}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/proposal/${selectedProposal.proposalSlug}`
     : selectedProposalLink;
   const autoTeammateEmail = getTeammateEmail(selectedProposal);
   const preselectedProposalId = searchParams.get("proposalId")?.trim() || "";
