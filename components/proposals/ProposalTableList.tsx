@@ -381,6 +381,7 @@ export default function ProposalTableList({
         eventName: overrides.eventName,
         ...(overrides.startDate ? { startDate: overrides.startDate } : {}),
         ...(overrides.endDate ? { endDate: overrides.endDate } : {}),
+        isDraft: false,
       });
       if (result.success) {
         toast.success("Copy saved successfully!");
@@ -726,11 +727,13 @@ export default function ProposalTableList({
                           >
                             <IconButton icon={<Edit3 size={16} />} tooltip="Edit" />
                           </Link>
-                          <IconButton
-                            icon={<CopyPlus size={16} />}
-                            tooltip="Save a Copy"
-                            onClick={() => setCopyModalProposal(proposal)}
-                          />
+                          {!isCopy && (
+                            <IconButton
+                              icon={<CopyPlus size={16} />}
+                              tooltip="Save a Copy"
+                              onClick={() => setCopyModalProposal(proposal)}
+                            />
+                          )}
                           <IconButton
                             icon={<Trash size={16} />}
                             tooltip={deletingId === proposal._id ? "Deleting..." : "Delete"}

@@ -1645,7 +1645,7 @@ const AddNewProposal = ({
       if (!isContactStepValid()) {
         return;
       }
-      void handleSubmit();
+      void handleSubmit("submitted");
       return;
     }
 

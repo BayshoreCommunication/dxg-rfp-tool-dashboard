@@ -306,6 +306,7 @@ export async function copyProposalAction(
     endDate?: string;
     templateId?: "template-one" | "template-two";
     status?: "unsubmitted" | "submitted";
+    isDraft?: boolean;
   },
 ): Promise<ApiResponse> {
   const token = await getAccessToken();

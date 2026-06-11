@@ -4,7 +4,7 @@ import { sendProposalEmailAction } from "@/app/actions/email";
 import { getProposalsAction } from "@/app/actions/proposals";
 import { Mail, Send, Users, X } from "lucide-react"; // Replaced Plus and Trash2 with X
 import { useRouter, useSearchParams } from "next/navigation";
-import { KeyboardEvent, useCallback, useEffect, useState } from "react";
+import { KeyboardEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 
@@ -57,53 +57,66 @@ export default function EmailSend() {
 
   const selectedProposal =
     proposals.find((item) => item._id === proposalId) || null;
+  // Used in the email body — full public URL so recipients can open it
   const selectedProposalLink =
     selectedProposal?.publicProposalLink ||
     selectedProposal?.proposalLink ||
     "";
+  // Used for the in-app "Open proposal" preview button — relative so it always works
+  const previewProposalLink = selectedProposal?.proposalSlug
+    ? `/proposal/${selectedProposal.proposalSlug}`
+    : selectedProposalLink;
   const autoTeammateEmail = getTeammateEmail(selectedProposal);
   const preselectedProposalId = searchParams.get("proposalId")?.trim() || "";
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-
-    const proposalsRes = await getProposalsAction({
-      page: 1,
-      limit: 100,
-      status: "submitted",
-      isActive: true,
-    });
-
-    if (proposalsRes.success && Array.isArray(proposalsRes.data)) {
-      const proposalItems = proposalsRes.data as ProposalOption[];
-      setProposals(proposalItems);
-
-      const preferredProposal = preselectedProposalId
-        ? proposalItems.find((item) => item._id === preselectedProposalId)
-        : null;
-
-      if (preferredProposal) {
-        setProposalId(preferredProposal._id);
-        setSubject((prev) =>
-          prev.trim().length > 0
-            ? prev
-            : `Proposal for ${
-                preferredProposal.event?.eventName || "Untitled Proposal"
-              } - DXG RFP Tool`,
-        );
-      } else if (!proposalId && proposalItems[0]?._id) {
-        setProposalId(proposalItems[0]._id);
-      }
-    } else {
-      setProposals([]);
-    }
-
-    setLoading(false);
-  }, [preselectedProposalId, proposalId]);
-
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let cancelled = false;
+
+    const run = async () => {
+      setLoading(true);
+
+      const proposalsRes = await getProposalsAction({
+        page: 1,
+        limit: 100,
+        status: "submitted",
+        isActive: true,
+      });
+
+      if (cancelled) return;
+
+      if (proposalsRes.success && Array.isArray(proposalsRes.data)) {
+        const proposalItems = proposalsRes.data as ProposalOption[];
+        setProposals(proposalItems);
+
+        const preferredProposal = preselectedProposalId
+          ? proposalItems.find((item) => item._id === preselectedProposalId)
+          : null;
+
+        if (preferredProposal) {
+          setProposalId(preferredProposal._id);
+          setSubject((prev) =>
+            prev.trim().length > 0
+              ? prev
+              : `Proposal for ${preferredProposal.event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
+          );
+        } else if (proposalItems[0]?._id) {
+          setProposalId((prev) => prev || proposalItems[0]._id);
+          setSubject((prev) =>
+            prev.trim().length > 0
+              ? prev
+              : `Proposal for ${proposalItems[0].event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
+          );
+        }
+      } else {
+        setProposals([]);
+      }
+
+      setLoading(false);
+    };
+
+    void run();
+    return () => { cancelled = true; };
+  }, [preselectedProposalId]);
 
   // Gmail-style input handler
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -270,7 +283,7 @@ export default function EmailSend() {
               <div className="rounded-lg border border-[#00c2c9]/20 bg-[#00c2c9]/5 px-3 py-2 text-[12px] text-brand-dark">
                 Proposal link:{" "}
                 <a
-                  href={selectedProposalLink}
+                  href={previewProposalLink}
                   target="_blank"
                   rel="noreferrer"
                   className="font-semibold underline"

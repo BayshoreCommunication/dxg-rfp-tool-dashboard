@@ -189,12 +189,15 @@ describe('EmailSend — send validation', () => {
     render(<EmailSend />)
     await waitForLoad()
 
+    // Clear the auto-filled subject (single proposal now auto-fills it)
+    const subjectInput = screen.getByDisplayValue(/Proposal for/)
+    fireEvent.change(subjectInput, { target: { value: '' } })
+
     // Add a recipient chip
     const input = screen.getByPlaceholderText(/john@email.com/i)
     fireEvent.change(input, { target: { value: 'vendor@test.com' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 
-    // Subject starts as "" in the default (non-URL-preselected) case
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
     const { toast } = require('react-toastify')
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Please enter an email subject.'))
