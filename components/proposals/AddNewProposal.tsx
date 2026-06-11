@@ -537,11 +537,18 @@ const normalizeExtracted = (
               ? (raw.event.eventType as { eventType?: string }).eventType
               : (raw.event.eventType as unknown as string),
             [
-              "Conference",
-              "Meeting",
-              "Gala",
-              "Trade Show",
-              "Awards Show",
+              "Corporate Conference",
+              "User / Customer Summit",
+              "Sales Kickoff (SKO)",
+              "Annual Meeting / Shareholder Event",
+              "Product Launch",
+              "Awards Show / Gala",
+              "Trade Show / Exhibition",
+              "Internal Town Hall",
+              "Training / Certification Event",
+              "Association / Member Conference",
+              "Industry Symposium",
+              "Hybrid Broadcast / Studio Production",
               "Other",
             ],
           ),
@@ -562,10 +569,55 @@ const normalizeExtracted = (
     return [{
       ...defaultRoom(),
       ...(r ?? {}),
-      audioRecording: matchOption(r?.audioRecording, ["Yes", "No"]) as RoomByRoomData["audioRecording"],
+      // ── Nested object fields: LLM returns flat primitives, form expects objects ──
+      podiumMic: {
+        podiumMic: matchOption((rRec.podiumMic as string) ?? "", ["Yes", "No"]),
+        podiumMicQty: (rRec.podiumMicQty as string) ?? "",
+      },
+      wirelessMics: {
+        wirelessMics: matchOption((rRec.wirelessMics as string) ?? "", ["Yes", "No"]),
+        wirelessMicsQty: (rRec.wirelessMicsQty as string) ?? "",
+        wirelessMicsType: matchOption((rRec.wirelessMicsType as string) ?? "", ["Handhelds", "Headset Mics"]),
+      },
+      largeMonitorsOrScreenProjector: {
+        largeMonitorsOrScreenProjector: matchOption((rRec.largeMonitorsOrScreenProjector as string) ?? "", ["Yes", "No"]),
+        largeMonitorsQty: (rRec.largeMonitorsQty as string) ?? "",
+      },
+      presentationLaptops: {
+        presentationLaptops: matchOption((rRec.presentationLaptops as string) ?? "", ["Yes", "No"]),
+        presentationLaptopQty: (rRec.presentationLaptopQty as string) ?? "",
+      },
+      videoPlayback: {
+        videoPlayback: matchOption((rRec.videoPlayback as string) ?? "", ["Yes", "No"]),
+        videoPlaybackCount: (rRec.videoPlaybackCount as string) ?? "",
+      },
+      cameras: {
+        cameras: matchOption((rRec.cameras as string) ?? "", ["Yes", "No"]),
+        camerasQty: (rRec.camerasQty as string) ?? "",
+      },
+      // ── Flat Yes/No fields ──
+      audioRecording: matchOption((rRec.audioRecording as string) ?? "", ["Yes", "No"]) as RoomByRoomData["audioRecording"],
+      ledWall: matchOption((rRec.ledWall as string) ?? "", ["Yes", "No"]),
+      ledWallWidth: (rRec.ledWallWidth as string) ?? "",
+      ledWallHeight: (rRec.ledWallHeight as string) ?? "",
+      ledWallPixelPitch: (rRec.ledWallPixelPitch as string) ?? "",
+      backlightingFor: matchOption((rRec.backlightingFor as string) ?? "", ["Yes", "No"]),
+      drapeOrScenicUplighting: matchOption((rRec.drapeOrScenicUplighting as string) ?? "", ["Yes", "No"]),
+      audienceLighting: matchOption((rRec.audienceLighting as string) ?? "", ["Yes", "No"]),
+      speakerTimer: matchOption((rRec.speakerTimer as string) ?? "", ["Yes", "No"]),
+      // ── Field name mapping: LLM returns teleprompterNeeded, form uses teleprompterRequired ──
+      teleprompterRequired: matchOption(
+        ((rRec.teleprompterNeeded as string) || (rRec.teleprompterRequired as string)) ?? "",
+        ["Yes", "No"],
+      ) as RoomByRoomData["teleprompterRequired"],
+      teleprompterBilingual: matchOption(
+        (rRec.teleprompterBilingual as string) ?? "",
+        ["Yes", "No"],
+      ) as RoomByRoomData["teleprompterBilingual"],
+      teleprompterLanguages: Array.isArray(rRec.teleprompterLanguages) ? rRec.teleprompterLanguages as string[] : [],
       videoFormatAspectRatio:
-        matchOption(r?.videoFormatAspectRatio, ["16:9 format", "Unique Aspect Ratio", "Both"]) ||
-        r?.videoFormatAspectRatio ||
+        matchOption((rRec.videoFormatAspectRatio as string) ?? "", ["16:9 format", "Unique Aspect Ratio", "Both"]) ||
+        (rRec.videoFormatAspectRatio as string) ||
         "",
       audienceQa: ((): RoomByRoomData["audienceQa"] => {
         const raw_n = r?.audienceQa;
@@ -651,7 +703,10 @@ const normalizeExtracted = (
         return {
           estimatedAvBudget: matchOption((rb.estimatedAvBudget as string) ?? "", ["Essential", "Standard", "Production", "Premium", "Enterprise", "Signature", "Not Yet Determined"]) || (rb.estimatedAvBudget as string) || "",
           budgetFlexibility: (rb.budgetFlexibility as string) ?? "",
-          proposalFormatPreferences: Array.isArray(rb.proposalFormatPreferences) ? rb.proposalFormatPreferences as string[] : [],
+          proposalFormatPreferences: matchOptionsArray(
+            Array.isArray(rb.proposalFormatPreferences) ? rb.proposalFormatPreferences as string[] : [],
+            ["Itemized Gear List", "Labor Breakdown by Day", "All-In Total Estimate", "Alternate / Value-Engineered Option", "Creative / Scenic Approach Narrative", "Crew Bios", "References", "LED Wall Line-Itemed Separately"],
+          ),
           evaluationMatrix: rm && typeof rm === "object"
             ? {
                 technicalApproach: Number(rm.technicalApproach) || defM.technicalApproach,
