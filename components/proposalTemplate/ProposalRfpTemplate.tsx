@@ -119,6 +119,7 @@ export type RfpProposalData = {
     eventName?: string;
     editionYear?: string;
     eventTheme?: string;
+    eventWebsite?: string;
     startDate?: string;
     endDate?: string;
     attendees?: string;
@@ -128,6 +129,10 @@ export type RfpProposalData = {
     eventObjectives?: string;
     toneDirection?: string[];
     sacredConstraints?: string;
+    aboutOrganization?: string;
+    statementOfWork?: string;
+    eventProfile?: string;
+    rfpTimeline?: string;
   };
   venueSchedule?: RD;
   roomByRoom?: RD[] | RD;
@@ -287,8 +292,8 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
   /* Eval matrix */
   const em = (bud.evaluationMatrix || {}) as RD;
   const matrixRows: { label: string; weight: number; guide: string }[] = [
-    { label: "Technical Approach & Equipment Quality", weight: Number(em.technicalApproach) || 25, guide: "Spec compliance, gear quality, LED experience" },
-    { label: "Crew Experience & References", weight: Number(em.crewExperience) || 20, guide: "Bios, venue history, comparable event record" },
+    { label: "Technical Approach", weight: Number(em.technicalApproach) || 25, guide: "Spec compliance" },
+    { label: "Crew Experience & References", weight: Number(em.crewExperience) || 20, guide: "Bios and Experience with similar scale events" },
     ...(isHybrid ? [{ label: "Hybrid / Virtual Production Capability", weight: Number(em.hybridVirtual) || 20, guide: "Platform integration, virtual producer, stream quality" }] : []),
     { label: "Pricing & Value", weight: Number(em.pricing) || 15, guide: "Competitiveness, transparency, alternate options" },
     ...(hasScenic || hasContent ? [{ label: "Creative & Scenic Design Capability", weight: Number(em.creativeScenic) || 10, guide: "Portfolio, LED aesthetic, scenic vision" }] : []),
@@ -330,7 +335,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     const wmRaw = room.wirelessMics;
     const wmVal = wmRaw && typeof wmRaw === "object" ? p((wmRaw as RD).wirelessMics) : p(wmRaw as string);
     const wmQty = wmRaw && typeof wmRaw === "object" ? p((wmRaw as RD).wirelessMicsQty) : "";
-    const wmType = wmRaw && typeof wmRaw === "object" ? p((wmRaw as RD).wirelessMicsType) : "";
+    const wmTypeRaw = wmRaw && typeof wmRaw === "object" ? p((wmRaw as RD).wirelessMicsType) : "";
+    const wmTypeOther = wmRaw && typeof wmRaw === "object" ? p((wmRaw as RD).wirelessMicsTypeOther) : "";
+    const wmType = wmTypeRaw === "Other" && wmTypeOther ? wmTypeOther : wmTypeRaw;
 
     const camRaw = room.cameras;
     const camVal = camRaw && typeof camRaw === "object" ? p((camRaw as RD).cameras) : p(camRaw as string);
@@ -342,7 +349,12 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
     const lmRaw = room.largeMonitorsOrScreenProjector;
     const lmVal = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).largeMonitorsOrScreenProjector) : p(lmRaw as string);
-    const lmQty = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).largeMonitorsQty) : "";
+    const lmMonitors = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).numberOfMonitors) : "";
+    const lmScreens = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).numberOfScreens) : "";
+    const lmQty = [
+      lmMonitors ? `${lmMonitors} monitor${lmMonitors === "1" ? "" : "s"}` : "",
+      lmScreens ? `${lmScreens} screen${lmScreens === "1" ? "" : "s"}` : "",
+    ].filter(Boolean).join(", ");
 
     const clRaw = room.clientProvideOwnPresentationLaptop;
     const clVal = clRaw && typeof clRaw === "object" ? p((clRaw as RD).clientProvideOwnPresentationLaptop) : p(clRaw as string);
@@ -355,6 +367,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     const vpRaw = room.videoPlayback;
     const vpVal = vpRaw && typeof vpRaw === "object" ? p((vpRaw as RD).videoPlayback) : p(vpRaw as string);
     const vpCount = vpRaw && typeof vpRaw === "object" ? p((vpRaw as RD).videoPlaybackCount) : "";
+    const vpFormat = vpRaw && typeof vpRaw === "object" ? p((vpRaw as RD).videoPlaybackFormat) : "";
 
     const isLedWall = p(room.ledWall).toLowerCase() === "yes";
     const ledSize = [p(room.ledWallWidth) ? `${p(room.ledWallWidth)}W` : "", p(room.ledWallHeight) ? `${p(room.ledWallHeight)}H` : ""].filter(Boolean).join(" × ");
@@ -375,6 +388,12 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         </h3>
 
         {/* Scheduling */}
+        {p(room.roomLocation) && <InfoRow label="Room" value={p(room.roomLocation)} />}
+        <InfoRow label="Room Setup" value={p(room.roomSetup)} />
+        <InfoRow
+          label="Date"
+          value={[fmtDate(p(room.scheduleDate)), p(room.scheduleDay)].filter(Boolean).join(" — ")}
+        />
         <InfoRow label="Attendees" value={p(room.estimatedAttendeesInRoom)} />
         <InfoRow label="Load In" value={p(room.loadInDateTime)} />
         <InfoRow label="Rehearsal" value={p(room.rehearsalDateTime)} />
@@ -399,7 +418,10 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
         {/* Video */}
         <InfoRow label="Video Format" value={p(room.videoFormatAspectRatio)} />
-        <InfoRow label="Video Playback" value={vpVal === "Yes" && vpCount ? `Yes (${vpCount})` : vpVal} />
+        <InfoRow
+          label="Video Playback"
+          value={vpVal === "Yes" ? `Yes${vpCount ? ` (${vpCount})` : ""}${vpFormat ? ` — ${vpFormat}` : ""}` : vpVal}
+        />
         <InfoRow label="Video Recording" value={vrVal === "Yes" && vrType ? `Yes — ${vrType}` : vrVal} />
         <InfoRow label="Cameras" value={camVal === "Yes" && camQty ? `Yes (${camQty})` : camVal} />
 
@@ -422,7 +444,10 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
         {/* Production */}
         <InfoRow label="Scenic Design" value={p(room.scenicStageDesign)} />
-        <InfoRow label="Union Labor" value={p(room.unionLabor)} />
+        <InfoRow
+          label="Union Labor"
+          value={p(room.unionLabor) === "Yes" && p(room.unionLaborDetails) ? `Yes — ${p(room.unionLaborDetails)}` : p(room.unionLabor)}
+        />
 
         {crew.length > 0 && (
           <div className="crew-box">
@@ -484,7 +509,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             </div>
             <div className="date-cell">
               <b>Response Due:</b>{" "}
-              {p(bud.timelineForProposal) || p(bud.decisionDate) || "—"}
+              {fmtDate(p(bud.proposalSubmissionDueDate)) || fmtDate(p(bud.decisionDate)) || "—"}
             </div>
             <div className="date-cell">
               <b>Event Dates:</b>{" "}
@@ -585,31 +610,36 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         <IntHeader brand={brandName} title={headerTitle} />
         <SectionTitle num={nextSec()}>Scope at a Glance</SectionTitle>
 
-        {(p(vs.loadInDate) || p(vs.rehearsalDate) || p(ev.startDate)) && (
-          <>
-            <div className="section-subtitle">Production Timeline</div>
-            <table>
-              <thead>
-                <tr>
-                  {p(vs.loadInDate) && <th style={{ background: "#00c2c9" }}>Load-In</th>}
-                  {p(vs.rehearsalDate) && <th style={{ background: "#0ea5e9" }}>Rehearsal</th>}
-                  {p(ev.startDate) && <th style={{ background: "#10b981" }}>Show Start</th>}
-                  {p(ev.endDate) && <th style={{ background: "#8b5cf6" }}>Show End</th>}
-                  {p(vs.strikeDate) && <th style={{ background: "#f97316" }}>Strike</th>}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  {p(vs.loadInDate) && <td style={{ background: "rgba(0,194,201,0.06)", color: "#00c2c9", fontWeight: 700 }}>{fmtDate(p(vs.loadInDate))}{p(vs.loadInTime) ? ` — ${p(vs.loadInTime)}` : ""}</td>}
-                  {p(vs.rehearsalDate) && <td style={{ background: "rgba(14,165,233,0.06)", color: "#0ea5e9", fontWeight: 700 }}>{fmtDate(p(vs.rehearsalDate))}{p(vs.rehearsalTime) ? ` — ${p(vs.rehearsalTime)}` : ""}</td>}
-                  {p(ev.startDate) && <td style={{ background: "rgba(16,185,129,0.06)", color: "#10b981", fontWeight: 700 }}>{fmtDate(p(ev.startDate))}</td>}
-                  {p(ev.endDate) && <td style={{ background: "rgba(139,92,246,0.06)", color: "#8b5cf6", fontWeight: 700 }}>{fmtDate(p(ev.endDate))}</td>}
-                  {p(vs.strikeDate) && <td style={{ background: "rgba(249,115,22,0.06)", color: "#f97316", fontWeight: 700 }}>{fmtDate(p(vs.strikeDate))}{p(vs.strikeTime) ? ` — ${p(vs.strikeTime)}` : ""}</td>}
-                </tr>
-              </tbody>
-            </table>
-          </>
-        )}
+        {(() => {
+          const showStartDate = p(vs.showStartDate) || p(ev.startDate);
+          const showEndDate = p(vs.showEndDate) || p(ev.endDate);
+          if (!p(vs.loadInDate) && !p(vs.rehearsalDate) && !showStartDate) return null;
+          return (
+            <>
+              <div className="section-subtitle">Production Timeline</div>
+              <table>
+                <thead>
+                  <tr>
+                    {p(vs.loadInDate) && <th style={{ background: "#00c2c9" }}>Load-In</th>}
+                    {p(vs.rehearsalDate) && <th style={{ background: "#0ea5e9" }}>Rehearsal</th>}
+                    {showStartDate && <th style={{ background: "#10b981" }}>Show Start</th>}
+                    {showEndDate && <th style={{ background: "#8b5cf6" }}>Show End</th>}
+                    {p(vs.strikeDate) && <th style={{ background: "#f97316" }}>Strike</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {p(vs.loadInDate) && <td style={{ background: "rgba(0,194,201,0.06)", color: "#00c2c9", fontWeight: 700 }}>{fmtDate(p(vs.loadInDate))}{p(vs.loadInTime) ? ` — ${p(vs.loadInTime)}` : ""}</td>}
+                    {p(vs.rehearsalDate) && <td style={{ background: "rgba(14,165,233,0.06)", color: "#0ea5e9", fontWeight: 700 }}>{fmtDate(p(vs.rehearsalDate))}{p(vs.rehearsalTime) ? ` — ${p(vs.rehearsalTime)}` : ""}</td>}
+                    {showStartDate && <td style={{ background: "rgba(16,185,129,0.06)", color: "#10b981", fontWeight: 700 }}>{fmtDate(showStartDate)}{p(vs.showStartTime) ? ` — ${p(vs.showStartTime)}` : ""}</td>}
+                    {showEndDate && <td style={{ background: "rgba(139,92,246,0.06)", color: "#8b5cf6", fontWeight: 700 }}>{fmtDate(showEndDate)}{p(vs.showEndTime) ? ` — ${p(vs.showEndTime)}` : ""}</td>}
+                    {p(vs.strikeDate) && <td style={{ background: "rgba(249,115,22,0.06)", color: "#f97316", fontWeight: 700 }}>{fmtDate(p(vs.strikeDate))}{p(vs.strikeTime) ? ` — ${p(vs.strikeTime)}` : ""}</td>}
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          );
+        })()}
 
         <div className="section-subtitle">Scope Overview</div>
         <div className="info-card">
@@ -629,7 +659,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           {p(ven.riggingRequired) === "YES" && (
             <InfoRow
               label="Rigging"
-              value={`Required${p(ven.maxWeightPerRiggingPoint) ? ` — Max ${p(ven.maxWeightPerRiggingPoint)} lbs/point` : ""}${p(ven.numberOfRiggingPoints) ? `, ${p(ven.numberOfRiggingPoints)} points` : ""}`}
+              value={`Required${p(ven.trussAndMotorsProvidedByVenue) ? ` — Truss/Motors by Venue: ${p(ven.trussAndMotorsProvidedByVenue)}` : ""}${p(ven.liftsProvidedByVenue) ? `, Lifts by Venue: ${p(ven.liftsProvidedByVenue)}` : ""}`}
             />
           )}
           {p(ven.powerDropsRequired) === "YES" && (
@@ -640,7 +670,36 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           )}
           <InfoRow label="COI Requirements" value={p(ven.coiRequirements)} />
           <InfoRow label="Venue Access" value={p(ven.venueAccessRequirements)} />
+          {p(ev.eventWebsite) && <InfoRow label="Event Website" value={p(ev.eventWebsite)} />}
         </div>
+
+        {p(ev.aboutOrganization) && (
+          <div className="callout" style={{ marginTop: 9 }}>
+            <div className="callout-heading">About The Organization</div>
+            <p>{p(ev.aboutOrganization)}</p>
+          </div>
+        )}
+
+        {p(ev.statementOfWork) && (
+          <div className="callout" style={{ marginTop: 9 }}>
+            <div className="callout-heading">Statement of Work</div>
+            <p>{p(ev.statementOfWork)}</p>
+          </div>
+        )}
+
+        {p(ev.eventProfile) && (
+          <div className="callout" style={{ marginTop: 9 }}>
+            <div className="callout-heading">Event Profile</div>
+            <p>{p(ev.eventProfile)}</p>
+          </div>
+        )}
+
+        {p(ev.rfpTimeline) && (
+          <div className="callout" style={{ marginTop: 9 }}>
+            <div className="callout-heading">RFP Timeline</div>
+            <p>{p(ev.rfpTimeline)}</p>
+          </div>
+        )}
 
         <Footer left={footerLeft} page={2} />
       </div>
@@ -832,7 +891,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             <InfoTd
               label="Rigging"
               value={p(ven.riggingRequired) === "YES"
-                ? `Required${p(ven.numberOfRiggingPoints) ? ` — ${p(ven.numberOfRiggingPoints)} points` : ""}${p(ven.maxWeightPerRiggingPoint) ? `, max ${p(ven.maxWeightPerRiggingPoint)} lbs/point` : ""}`
+                ? `Required${p(ven.trussAndMotorsProvidedByVenue) ? ` — Truss/Motors by Venue: ${p(ven.trussAndMotorsProvidedByVenue)}` : ""}${p(ven.liftsProvidedByVenue) ? `, Lifts by Venue: ${p(ven.liftsProvidedByVenue)}` : ""}`
                 : p(ven.riggingRequired) === "NO" ? "Not Required" : ""}
             />
             <InfoTd
@@ -941,7 +1000,14 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           <InfoRow label="Budget Flexibility" value={p(bud.budgetFlexibility)} />
           <InfoRow label="Competitive Bid" value={yn(bud.competitiveBid)} />
           <InfoRow label="Vendors Invited" value={p(bud.numberOfProposals)} />
-          <InfoRow label="Response Timeline" value={p(bud.timelineForProposal)} />
+          <InfoRow label="Vendor Questions Due" value={fmtDate(p(bud.vendorQuestionsDueDate))} />
+          <InfoRow label="Response to Vendor Questions" value={fmtDate(p(bud.responseToVendorQuestionsDate))} />
+          <InfoRow label="Proposal Submission Due" value={fmtDate(p(bud.proposalSubmissionDueDate))} />
+          <InfoRow label="Shortlist Notification" value={fmtDate(p(bud.shortlistNotificationDate))} />
+          {p(bud.vendorPresentationOpportunity) === "YES" && (
+            <InfoRow label="Vendor Presentation Date" value={fmtDate(p(bud.vendorPresentationDate))} />
+          )}
+          <InfoRow label="Vendor Selection" value={fmtDate(p(bud.vendorSelectionDate))} />
           <InfoRow label="Decision Date" value={fmtDate(p(bud.decisionDate))} />
           <InfoRow label="Call with Producer" value={yn(bud.callWithDxgProducer)} />
         </div>
@@ -966,9 +1032,16 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </tbody>
         </table>
 
+        {p(bud.sustainabilityDeiNotes) && (
+          <div className="callout" style={{ marginTop: 9 }}>
+            <div className="callout-heading">Sustainability &amp; DEI Practices</div>
+            <p>{p(bud.sustainabilityDeiNotes)}</p>
+          </div>
+        )}
+
         {p(bud.scoringNotes) && (
           <div className="callout" style={{ marginTop: 9 }}>
-            <div className="callout-heading">Scoring Notes</div>
+            <div className="callout-heading">Scoring Notes / Key Decision Factors</div>
             <p>{p(bud.scoringNotes)}</p>
           </div>
         )}
@@ -1149,7 +1222,14 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
         <table>
           <tbody>
-            <InfoTd label="Proposal Deadline" value={p(bud.timelineForProposal)} />
+            <InfoTd label="Vendor Questions Due" value={fmtDate(p(bud.vendorQuestionsDueDate))} />
+            <InfoTd label="Response to Vendor Questions" value={fmtDate(p(bud.responseToVendorQuestionsDate))} />
+            <InfoTd label="Proposal Submission Due" value={fmtDate(p(bud.proposalSubmissionDueDate))} />
+            <InfoTd label="Shortlist Notification" value={fmtDate(p(bud.shortlistNotificationDate))} />
+            {p(bud.vendorPresentationOpportunity) === "YES" && (
+              <InfoTd label="Vendor Presentation Date" value={fmtDate(p(bud.vendorPresentationDate))} />
+            )}
+            <InfoTd label="Vendor Selection" value={fmtDate(p(bud.vendorSelectionDate))} />
             <InfoTd label="Decision Date" value={fmtDate(p(bud.decisionDate))} />
             <InfoTd label="Submission Method" value="Via RFPilot vendor portal" />
             <InfoTd label="Competitive Bid" value={yn(bud.competitiveBid)} />

@@ -81,7 +81,7 @@ const BUDGET_TIERS = [
   { value: "Essential",          range: "$10K – $25K",   producerCall: false },
   { value: "Standard",           range: "$25K – $50K",   producerCall: false },
   { value: "Production",         range: "$50K – $100K",  producerCall: false },
-  { value: "Premium",            range: "$100K – $250K", producerCall: false },
+  { value: "Premium",            range: "$100K – $250K", producerCall: true  },
   { value: "Enterprise",         range: "$250K – $500K", producerCall: true  },
   { value: "Signature",          range: "$500K+",        producerCall: true  },
   { value: "Not Yet Determined", range: "Need Guidance", producerCall: true  },
@@ -121,12 +121,12 @@ const FORMAT_OPTIONS: {
 }[] = [
   {
     label: "Itemized Gear List",
-    desc: "Line-item equipment list with quantities, make/model, and daily rates.",
+    desc: "Line-item equipment list with quantities.",
     alwaysDefault: true,
   },
   {
-    label: "Labor Breakdown by Day",
-    desc: "All crew positions by day with call times, rates, and overtime assumptions clearly stated.",
+    label: "Labor Breakdown",
+    desc: "All crew positions with call times and overtime assumptions clearly stated.",
     alwaysDefault: true,
   },
   {
@@ -145,12 +145,12 @@ const FORMAT_OPTIONS: {
   },
   {
     label: "Crew Bios",
-    desc: "Lead crew bios for TD, A1, L1, and Showcaller. Venue experience preferred.",
+    desc: "Leadership and management crew bios and venue experience preferred.",
     suggestIf: "enterprise",
   },
   {
     label: "References",
-    desc: "Minimum two references from comparable events at this venue type in the last 24 months.",
+    desc: "Minimum two references from comparable events at this venue type.",
     suggestIf: "enterprise",
   },
   {
@@ -186,13 +186,13 @@ const MATRIX_CRITERIA: {
 }[] = [
   {
     key: "technicalApproach",
-    label: "Technical Approach & Equipment Quality",
-    guide: "Spec compliance, gear quality, E2/LED experience",
+    label: "Technical Approach",
+    guide: "Spec compliance",
   },
   {
     key: "crewExperience",
     label: "Crew Experience & References",
-    guide: "Bios, venue history, comparable event record",
+    guide: "Bios and Experience with similar scale events",
   },
   {
     key: "hybridVirtual",
@@ -225,13 +225,6 @@ const MATRIX_CRITERIA: {
 ];
 
 /* ─── Static options ─── */
-const TIMELINE_OPTIONS = [
-  "Within 24 Hours",
-  "Within 3 Business Days",
-  "1 Week",
-  "2 Weeks",
-  "Flexible",
-];
 const HEAR_OPTIONS = ["Referral", "Venue", "Google", "Social Media", "LinkedIn", "Other"];
 
 /* ─── Props ─── */
@@ -280,7 +273,14 @@ const BudgetProposalPreferences = ({
     budgetFlexibility: data.budgetFlexibility ?? "",
     proposalFormatPreferences: data.proposalFormatPreferences ?? [],
     evaluationMatrix: { ...defMatrix, ...(data.evaluationMatrix ?? {}) },
-    timelineForProposal: data.timelineForProposal ?? "",
+    sustainabilityDeiNotes: data.sustainabilityDeiNotes ?? "",
+    vendorQuestionsDueDate: data.vendorQuestionsDueDate ?? "",
+    responseToVendorQuestionsDate: data.responseToVendorQuestionsDate ?? "",
+    proposalSubmissionDueDate: data.proposalSubmissionDueDate ?? "",
+    shortlistNotificationDate: data.shortlistNotificationDate ?? "",
+    vendorPresentationOpportunity: data.vendorPresentationOpportunity ?? "",
+    vendorPresentationDate: data.vendorPresentationDate ?? "",
+    vendorSelectionDate: data.vendorSelectionDate ?? "",
     decisionDate: data.decisionDate ?? "",
     competitiveBid: data.competitiveBid ?? "",
     numberOfProposals: data.numberOfProposals ?? "",
@@ -410,19 +410,19 @@ const BudgetProposalPreferences = ({
           </span>
         </div>
         <h2 className="text-[22px] font-bold text-[#0f1b57]">
-          Budget &amp; Proposal Preferences
+          Investment &amp; Evaluation
         </h2>
         <p className="mt-1 text-sm text-[#8f98bf]">
-          Budget tier, evaluation matrix, proposal format requirements, and procurement timeline.
+          Investment tier, evaluation matrix, proposal format requirements, and procurement timeline.
         </p>
       </div>
 
       <div className="flex-1 px-8 py-8">
 
         {/* ════════════════════════════════════════
-            BLOCK A — Budget Selection
+            BLOCK A — Investment Selection
         ════════════════════════════════════════ */}
-        <Group label="Budget Selection" />
+        <Group label="Investment Selection" />
 
         {/* Field 1 — Budget Tier Cards */}
         <div className="mb-6">
@@ -495,10 +495,10 @@ const BudgetProposalPreferences = ({
           )}
         </div>
 
-        {/* Field 2 — Budget Flexibility */}
+        {/* Field 2 — Investment Flexibility */}
         <div className="mb-6">
           <label className={labelClass}>
-            Budget Flexibility
+            Investment Flexibility
             <InfoTooltip text="How firm is this budget? This signals to vendors whether to submit their best scope or most cost-effective option. 'Value-Engineering Welcome' tells vendors you want creative alternatives that optimize cost without sacrificing impact." />
           </label>
           <div className="flex flex-wrap gap-2">
@@ -652,10 +652,7 @@ const BudgetProposalPreferences = ({
               (crit.condition === "scenic" && creativeScenicActive);
             if (!isActive) return null;
 
-            const guide =
-              crit.key === "crewExperience" && venueName
-                ? `Bios, ${venueName} history, comparable event record`
-                : crit.guide;
+            const guide = crit.guide;
 
             const w = safeData.evaluationMatrix[crit.key];
             const warnZero = !crit.allowZero && w === 0 && showErrors;
@@ -734,26 +731,163 @@ const BudgetProposalPreferences = ({
           )}
         </div>
 
+        {/* Sustainability & DEI Practices */}
+        <div className="mb-6">
+          <label className={labelClass}>
+            Sustainability &amp; DEI Practices
+            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
+            <InfoTooltip text="Describe any sustainability or DEI (diversity, equity, and inclusion) requirements or preferences vendors should address in their proposal." />
+          </label>
+          <textarea
+            rows={3}
+            value={safeData.sustainabilityDeiNotes}
+            onChange={(e) => onChange({ sustainabilityDeiNotes: e.target.value })}
+            placeholder="e.g. Preference for vendors with documented sustainability practices (equipment lifecycle, waste reduction) and a supplier diversity program…"
+            className={`${inputClass} resize-none`}
+          />
+        </div>
+
+        {/* Scoring Notes */}
+        <div className="mb-6">
+          <label className={labelClass}>
+            Scoring Notes / Key Decision Factors
+            <InfoTooltip text="Any additional context about how proposals will be evaluated — scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
+          </label>
+          <textarea
+            rows={3}
+            value={safeData.scoringNotes}
+            onChange={(e) => onChange({ scoringNotes: e.target.value })}
+            placeholder="e.g. Creative vision accounts for 30% because this is a brand-defining event — we want to see bold ideas…"
+            className={`${inputClass} resize-none`}
+          />
+        </div>
+
         {/* ════════════════════════════════════════
             BLOCK D — Procurement Timeline
         ════════════════════════════════════════ */}
         <Group label="Procurement Timeline" />
 
-        {/* Proposal Timeline */}
+        {/* Vendor Questions Due + Response to Vendor Questions */}
+        <div className="mb-6 grid grid-cols-2 gap-5">
+          <div>
+            <label className={labelClass}>
+              Vendor Questions Due <span className="text-red-500">*</span>
+              <InfoTooltip text="The deadline for vendors to submit clarifying questions about the RFP." />
+            </label>
+            <input
+              type="date"
+              value={safeData.vendorQuestionsDueDate}
+              onChange={(e) => onChange({ vendorQuestionsDueDate: e.target.value })}
+              className={`${inputClass} ${showErrors && !safeData.vendorQuestionsDueDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            />
+            {showErrors && !safeData.vendorQuestionsDueDate && (
+              <p className={errorClass}>Required.</p>
+            )}
+          </div>
+          <div>
+            <label className={labelClass}>
+              Response to Vendor Questions <span className="text-red-500">*</span>
+              <InfoTooltip text="The date by which you'll respond to vendor questions submitted above." />
+            </label>
+            <input
+              type="date"
+              value={safeData.responseToVendorQuestionsDate}
+              onChange={(e) => onChange({ responseToVendorQuestionsDate: e.target.value })}
+              className={`${inputClass} ${showErrors && !safeData.responseToVendorQuestionsDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            />
+            {showErrors && !safeData.responseToVendorQuestionsDate && (
+              <p className={errorClass}>Required.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Proposal Submission Due + Shortlist Notification */}
+        <div className="mb-6 grid grid-cols-2 gap-5">
+          <div>
+            <label className={labelClass}>
+              Proposal Submission Due <span className="text-red-500">*</span>
+              <InfoTooltip text="The deadline for vendors to submit their completed proposals." />
+            </label>
+            <input
+              type="date"
+              value={safeData.proposalSubmissionDueDate}
+              onChange={(e) => onChange({ proposalSubmissionDueDate: e.target.value })}
+              className={`${inputClass} ${showErrors && !safeData.proposalSubmissionDueDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            />
+            {showErrors && !safeData.proposalSubmissionDueDate && (
+              <p className={errorClass}>Required.</p>
+            )}
+          </div>
+          <div>
+            <label className={labelClass}>
+              Shortlist Notification <span className="text-red-500">*</span>
+              <InfoTooltip text="The date by which shortlisted vendors will be notified." />
+            </label>
+            <input
+              type="date"
+              value={safeData.shortlistNotificationDate}
+              onChange={(e) => onChange({ shortlistNotificationDate: e.target.value })}
+              className={`${inputClass} ${showErrors && !safeData.shortlistNotificationDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            />
+            {showErrors && !safeData.shortlistNotificationDate && (
+              <p className={errorClass}>Required.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Vendor Presentation Opportunity */}
         <div className="mb-6">
           <label className={labelClass}>
-            Proposal Turnaround Needed <span className="text-red-500">*</span>
-            <InfoTooltip text="How soon do you need the proposal delivered? This helps us prioritize turnaround and assign the right producer." />
+            Will Vendors Be Given an Opportunity to Present if Shortlisted?{" "}
+            <span className="text-red-500">*</span>
+            <InfoTooltip text="If yes, shortlisted vendors will be invited to present their proposal before final selection." />
           </label>
-          <SelectField
-            value={safeData.timelineForProposal}
-            onChange={(v) => onChange({ timelineForProposal: v })}
-            options={TIMELINE_OPTIONS}
-            placeholder="Select turnaround timeline"
-            hasError={showErrors}
+          <YesNo
+            value={safeData.vendorPresentationOpportunity}
+            onChange={(v) =>
+              onChange({
+                vendorPresentationOpportunity: v,
+                vendorPresentationDate: v !== "YES" ? "" : safeData.vendorPresentationDate,
+              })
+            }
           />
-          {showErrors && !safeData.timelineForProposal && (
-            <p className={errorClass}>Proposal timeline is required.</p>
+          {showErrors && !safeData.vendorPresentationOpportunity && (
+            <p className={errorClass}>Please indicate whether vendors will present.</p>
+          )}
+          {safeData.vendorPresentationOpportunity === "YES" && (
+            <div className={subPanelClass}>
+              <label className={`${labelClass} mt-0`}>
+                Presentation Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={safeData.vendorPresentationDate}
+                onChange={(e) => onChange({ vendorPresentationDate: e.target.value })}
+                className={`${inputClass} ${showErrors && !safeData.vendorPresentationDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+                style={{ maxWidth: 240 }}
+              />
+              {showErrors && !safeData.vendorPresentationDate && (
+                <p className={errorClass}>Required.</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Vendor Selection */}
+        <div className="mb-6">
+          <label className={labelClass}>
+            Vendor Selection <span className="text-red-500">*</span>
+            <InfoTooltip text="The date by which the vendor will be selected." />
+          </label>
+          <input
+            type="date"
+            value={safeData.vendorSelectionDate}
+            onChange={(e) => onChange({ vendorSelectionDate: e.target.value })}
+            className={inputClass}
+            style={{ maxWidth: 240 }}
+          />
+          {showErrors && !safeData.vendorSelectionDate && (
+            <p className={errorClass}>Required.</p>
           )}
         </div>
 
@@ -803,21 +937,6 @@ const BudgetProposalPreferences = ({
               />
             </div>
           )}
-        </div>
-
-        {/* Scoring Notes */}
-        <div className="mb-6">
-          <label className={labelClass}>
-            Scoring Notes / Evaluation Instructions
-            <InfoTooltip text="Any additional context about how proposals will be evaluated — scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
-          </label>
-          <textarea
-            rows={3}
-            value={safeData.scoringNotes}
-            onChange={(e) => onChange({ scoringNotes: e.target.value })}
-            placeholder="e.g. Creative vision accounts for 30% because this is a brand-defining event — we want to see bold ideas…"
-            className={`${inputClass} resize-none`}
-          />
         </div>
 
         {/* ── Producer Consultation ── */}

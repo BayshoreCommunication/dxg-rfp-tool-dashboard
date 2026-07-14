@@ -180,6 +180,10 @@ const EventForm = ({
   const toneSelected = data.toneDirection ?? [];
   const audienceSelected = data.primaryAudience ?? [];
   const constraintsLen = (data.sacredConstraints ?? "").length;
+  const aboutOrganizationLen = (data.aboutOrganization ?? "").length;
+  const statementOfWorkLen = (data.statementOfWork ?? "").length;
+  const eventProfileLen = (data.eventProfile ?? "").length;
+  const rfpTimelineLen = (data.rfpTimeline ?? "").length;
 
   return (
     <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
@@ -202,9 +206,9 @@ const EventForm = ({
       {/* Form Body */}
       <div className="flex-1 px-8 py-8 space-y-10">
 
-        {/* ── Group: Core Identity ── */}
+        {/* ── Group: Event Information ── */}
         <div>
-          <p className={groupLabelClass}>Core Identity</p>
+          <p className={groupLabelClass}>Event Information</p>
           <div className="space-y-5">
 
             {/* Row 1: Event Name + Edition/Year */}
@@ -316,6 +320,25 @@ const EventForm = ({
                   maxLength={100}
                   value={data.eventTheme ?? ""}
                   onChange={(e) => onChange({ eventTheme: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Event Website */}
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className={labelClass}>
+                  Event Website
+                  <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <InfoTooltip text="Link to the event's official website, if one exists. Gives vendors quick access to branding, past editions, and public-facing details." />
+                </label>
+                <input
+                  type="url"
+                  className={inputClass}
+                  placeholder="e.g. https://www.example.com/summit2026"
+                  maxLength={200}
+                  value={data.eventWebsite ?? ""}
+                  onChange={(e) => onChange({ eventWebsite: e.target.value })}
                 />
               </div>
             </div>
@@ -498,9 +521,9 @@ const EventForm = ({
           </div>
         </div>
 
-        {/* ── Group: Narrative Inputs — AI Generated ── */}
+        {/* ── Group: Company Information ── */}
         <div>
-          <p className={groupLabelClass}>Narrative Inputs — AI Generated</p>
+          <p className={groupLabelClass}>Company Information</p>
           <div className="space-y-6">
 
             {/* Event Objectives */}
@@ -597,6 +620,94 @@ const EventForm = ({
               <div className="mt-1 flex justify-end">
                 <span className={`text-xs ${constraintsLen > 450 ? "text-amber-600" : "text-[#8f98bf]"}`}>
                   {constraintsLen}/500
+                </span>
+              </div>
+            </div>
+
+            {/* About The Organization */}
+            <div>
+              <label className={labelClass}>
+                About The Organization
+                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <InfoTooltip text="Give vendors context on who the requesting organization is — mission, industry, size, and any background that helps them understand who they'd be working with." />
+              </label>
+              <textarea
+                rows={4}
+                maxLength={1500}
+                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                placeholder="Describe the organization: who you are, what you do, and any relevant background vendors should know."
+                value={data.aboutOrganization ?? ""}
+                onChange={(e) => onChange({ aboutOrganization: e.target.value })}
+              />
+              <div className="mt-1 flex justify-end">
+                <span className={`text-xs ${aboutOrganizationLen > 1350 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                  {aboutOrganizationLen}/1500
+                </span>
+              </div>
+            </div>
+
+            {/* Statement of Work */}
+            <div>
+              <label className={labelClass}>
+                Statement of Work
+                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <InfoTooltip text="Summarize the scope of work being requested from vendors — deliverables, responsibilities, and any boundaries on what's in or out of scope." />
+              </label>
+              <textarea
+                rows={4}
+                maxLength={1500}
+                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                placeholder="Describe the scope of work: what deliverables and responsibilities vendors are being asked to provide."
+                value={data.statementOfWork ?? ""}
+                onChange={(e) => onChange({ statementOfWork: e.target.value })}
+              />
+              <div className="mt-1 flex justify-end">
+                <span className={`text-xs ${statementOfWorkLen > 1350 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                  {statementOfWorkLen}/1500
+                </span>
+              </div>
+            </div>
+
+            {/* Event Profile */}
+            <div>
+              <label className={labelClass}>
+                Event Profile
+                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <InfoTooltip text="Describe the profile of the event itself — history, significance, past attendance, or anything that helps vendors understand its stature." />
+              </label>
+              <textarea
+                rows={4}
+                maxLength={1500}
+                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                placeholder="Describe the event's profile: history, significance, past editions, or stature."
+                value={data.eventProfile ?? ""}
+                onChange={(e) => onChange({ eventProfile: e.target.value })}
+              />
+              <div className="mt-1 flex justify-end">
+                <span className={`text-xs ${eventProfileLen > 1350 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                  {eventProfileLen}/1500
+                </span>
+              </div>
+            </div>
+
+            {/* RFP Timeline */}
+            <div>
+              <label className={labelClass}>
+                RFP Timeline
+                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <InfoTooltip text="Outline the key dates in the RFP process — submission deadline, vendor selection date, and any other milestones vendors need to plan around." />
+              </label>
+              <textarea
+                rows={4}
+                maxLength={1000}
+                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                placeholder="e.g. RFP issued July 1, questions due July 10, proposals due July 24, vendor selected August 5."
+                value={data.rfpTimeline ?? ""}
+                onChange={(e) => onChange({ rfpTimeline: e.target.value })}
+              />
+              <div className="mt-1 flex justify-end">
+                <span className={`text-xs ${rfpTimelineLen > 900 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                  {rfpTimelineLen}/1000
                 </span>
               </div>
             </div>

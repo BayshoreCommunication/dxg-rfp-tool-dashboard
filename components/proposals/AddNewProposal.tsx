@@ -30,6 +30,7 @@ export type EventData = {
   eventName: string;
   editionYear?: string;
   eventTheme?: string;
+  eventWebsite?: string;
   startDate: string;
   endDate: string;
   attendees: string;
@@ -42,10 +43,18 @@ export type EventData = {
   eventObjectives?: string;
   toneDirection?: string[];
   sacredConstraints?: string;
+  aboutOrganization?: string;
+  statementOfWork?: string;
+  eventProfile?: string;
+  rfpTimeline?: string;
 };
 
 export type RoomByRoomData = {
   roomFunction: string;
+  roomLocation: string;
+  roomSetup: string;
+  scheduleDate: string;
+  scheduleDay: string;
   estimatedAttendeesInRoom: string;
   loadInDateTime: string;
   rehearsalDateTime: string;
@@ -60,11 +69,15 @@ export type RoomByRoomData = {
     wirelessMics: string;
     wirelessMicsQty: string;
     wirelessMicsType: string;
+    wirelessMicsTypeOther: string;
   };
   audioRecording: string;
   largeMonitorsOrScreenProjector: {
     largeMonitorsOrScreenProjector: string;
-    largeMonitorsQty: string;
+    numberOfMonitors: string;
+    numberOfScreens: string;
+    monitorSize: string;
+    screenSize: string;
   };
   ledWall: string;
   clientProvideOwnPresentationLaptop: {
@@ -78,6 +91,7 @@ export type RoomByRoomData = {
   videoPlayback: {
     videoPlayback: string;
     videoPlaybackCount: string;
+    videoPlaybackFormat: string;
   };
   videoFormatAspectRatio: string;
   audienceQa: {
@@ -111,6 +125,7 @@ export type RoomByRoomData = {
   scenicStageDesign: "Yes" | "No" | "";
   contentVideoNeeds: string;
   unionLabor: "Yes" | "No" | "Not Sure" | "";
+  unionLaborDetails: string;
   showCrewNeeded: string[];
   otherRolesNeeded: string;
   /* ?? new fields matching HTML page 2B ?? */
@@ -146,8 +161,8 @@ export type VenueTechnicalData = {
   inHouseAvCompanyName: string;
   /* Rigging */
   riggingRequired: "YES" | "NO" | "";
-  maxWeightPerRiggingPoint: string;
-  numberOfRiggingPoints: string;
+  trussAndMotorsProvidedByVenue: "YES" | "NO" | "";
+  liftsProvidedByVenue: "YES" | "NO" | "";
   /* Power Drops */
   powerDropsRequired: "YES" | "NO" | "";
   powerDropAmperage: string;
@@ -206,7 +221,14 @@ export type BudgetData = {
     responsiveness: number;
     sustainabilityDei: number;
   };
-  timelineForProposal: string;
+  sustainabilityDeiNotes: string;
+  vendorQuestionsDueDate: string;
+  responseToVendorQuestionsDate: string;
+  proposalSubmissionDueDate: string;
+  shortlistNotificationDate: string;
+  vendorPresentationOpportunity: "YES" | "NO" | "";
+  vendorPresentationDate: string;
+  vendorSelectionDate: string;
   decisionDate: string;
   competitiveBid: "YES" | "NO" | "";
   numberOfProposals: string;
@@ -374,8 +396,8 @@ const defaultProposalData: ProposalData = {
     venueAvContactEmail: "",
     inHouseAvCompanyName: "",
     riggingRequired: "",
-    maxWeightPerRiggingPoint: "",
-    numberOfRiggingPoints: "",
+    trussAndMotorsProvidedByVenue: "",
+    liftsProvidedByVenue: "",
     powerDropsRequired: "",
     powerDropAmperage: "",
     numberOfPowerDrops: "",
@@ -415,7 +437,14 @@ const defaultProposalData: ProposalData = {
       responsiveness: 7,
       sustainabilityDei: 3,
     },
-    timelineForProposal: "",
+    sustainabilityDeiNotes: "",
+    vendorQuestionsDueDate: "",
+    responseToVendorQuestionsDate: "",
+    proposalSubmissionDueDate: "",
+    shortlistNotificationDate: "",
+    vendorPresentationOpportunity: "",
+    vendorPresentationDate: "",
+    vendorSelectionDate: "",
     decisionDate: "",
     competitiveBid: "",
     numberOfProposals: "",
@@ -577,11 +606,15 @@ const normalizeExtracted = (
       wirelessMics: {
         wirelessMics: matchOption((rRec.wirelessMics as string) ?? "", ["Yes", "No"]),
         wirelessMicsQty: (rRec.wirelessMicsQty as string) ?? "",
-        wirelessMicsType: matchOption((rRec.wirelessMicsType as string) ?? "", ["Handhelds", "Headset Mics"]),
+        wirelessMicsType: matchOption((rRec.wirelessMicsType as string) ?? "", ["Handhelds", "Headset Mics", "Both", "Other"]),
+        wirelessMicsTypeOther: (rRec.wirelessMicsTypeOther as string) ?? "",
       },
       largeMonitorsOrScreenProjector: {
         largeMonitorsOrScreenProjector: matchOption((rRec.largeMonitorsOrScreenProjector as string) ?? "", ["Yes", "No"]),
-        largeMonitorsQty: (rRec.largeMonitorsQty as string) ?? "",
+        numberOfMonitors: (rRec.numberOfMonitors as string) ?? "",
+        numberOfScreens: (rRec.numberOfScreens as string) ?? "",
+        monitorSize: (rRec.monitorSize as string) ?? "",
+        screenSize: (rRec.screenSize as string) ?? "",
       },
       presentationLaptops: {
         presentationLaptops: matchOption((rRec.presentationLaptops as string) ?? "", ["Yes", "No"]),
@@ -590,6 +623,7 @@ const normalizeExtracted = (
       videoPlayback: {
         videoPlayback: matchOption((rRec.videoPlayback as string) ?? "", ["Yes", "No"]),
         videoPlaybackCount: (rRec.videoPlaybackCount as string) ?? "",
+        videoPlaybackFormat: matchOption((rRec.videoPlaybackFormat as string) ?? "", ["4:3", "16:9", "Custom Wide Screen"]),
       },
       cameras: {
         cameras: matchOption((rRec.cameras as string) ?? "", ["Yes", "No"]),
@@ -683,8 +717,8 @@ const normalizeExtracted = (
           venueAvContactEmail: (rv.venueAvContactEmail as string) ?? "",
           inHouseAvCompanyName: (rv.inHouseAvCompanyName as string) ?? "",
           riggingRequired: yn(rv.riggingRequired),
-          maxWeightPerRiggingPoint: (rv.maxWeightPerRiggingPoint as string) ?? "",
-          numberOfRiggingPoints: (rv.numberOfRiggingPoints as string) ?? "",
+          trussAndMotorsProvidedByVenue: yn(rv.trussAndMotorsProvidedByVenue),
+          liftsProvidedByVenue: yn(rv.liftsProvidedByVenue),
           powerDropsRequired: yn(rv.powerDropsRequired),
           powerDropAmperage: (rv.powerDropAmperage as string) ?? "",
           numberOfPowerDrops: (rv.numberOfPowerDrops as string) ?? "",
@@ -705,7 +739,7 @@ const normalizeExtracted = (
           budgetFlexibility: (rb.budgetFlexibility as string) ?? "",
           proposalFormatPreferences: matchOptionsArray(
             Array.isArray(rb.proposalFormatPreferences) ? rb.proposalFormatPreferences as string[] : [],
-            ["Itemized Gear List", "Labor Breakdown by Day", "All-In Total Estimate", "Alternate / Value-Engineered Option", "Creative / Scenic Approach Narrative", "Crew Bios", "References", "LED Wall Line-Itemed Separately"],
+            ["Itemized Gear List", "Labor Breakdown", "All-In Total Estimate", "Alternate / Value-Engineered Option", "Creative / Scenic Approach Narrative", "Crew Bios", "References", "LED Wall Line-Itemed Separately"],
           ),
           evaluationMatrix: rm && typeof rm === "object"
             ? {
@@ -718,7 +752,14 @@ const normalizeExtracted = (
                 sustainabilityDei: Number(rm.sustainabilityDei ?? 0),
               }
             : defM,
-          timelineForProposal: matchOption((rb.timelineForProposal as string) ?? "", ["Within 24 Hours", "Within 3 Business Days", "1 Week", "2 Weeks", "Flexible"]) || (rb.timelineForProposal as string) || "",
+          sustainabilityDeiNotes: (rb.sustainabilityDeiNotes as string) ?? "",
+          vendorQuestionsDueDate: (rb.vendorQuestionsDueDate as string) ?? "",
+          responseToVendorQuestionsDate: (rb.responseToVendorQuestionsDate as string) ?? "",
+          proposalSubmissionDueDate: (rb.proposalSubmissionDueDate as string) ?? "",
+          shortlistNotificationDate: (rb.shortlistNotificationDate as string) ?? "",
+          vendorPresentationOpportunity: (matchOption((rb.vendorPresentationOpportunity as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
+          vendorPresentationDate: (rb.vendorPresentationDate as string) ?? "",
+          vendorSelectionDate: (rb.vendorSelectionDate as string) ?? "",
           decisionDate: (rb.decisionDate as string) ?? "",
           competitiveBid: (matchOption((rb.competitiveBid as string) ?? "", ["YES", "NO"]).toUpperCase() || "") as "YES" | "NO" | "",
           numberOfProposals: (rb.numberOfProposals as string) ?? "",
@@ -792,6 +833,10 @@ const normalizeExtracted = (
           loadInTime: (rv.loadInTime as string) ?? "",
           rehearsalDate: (rv.rehearsalDate as string) ?? "",
           rehearsalTime: (rv.rehearsalTime as string) ?? "",
+          showStartDate: (rv.showStartDate as string) ?? "",
+          showStartTime: (rv.showStartTime as string) ?? "",
+          showEndDate: (rv.showEndDate as string) ?? "",
+          showEndTime: (rv.showEndTime as string) ?? "",
           strikeDate: (rv.strikeDate as string) ?? "",
           strikeTime: (rv.strikeTime as string) ?? "",
           numberOfEventRooms: (rv.numberOfEventRooms as string) ?? "1",
@@ -1044,8 +1089,8 @@ const mapApiProposalToFormData = (
       venueAvContactEmail:     (rv.venueAvContactEmail     as string) ?? "",
       inHouseAvCompanyName:    (rv.inHouseAvCompanyName    as string) ?? "",
       riggingRequired:         yn(rv.riggingRequired),
-      maxWeightPerRiggingPoint:(rv.maxWeightPerRiggingPoint as string) ?? "",
-      numberOfRiggingPoints:   (rv.numberOfRiggingPoints   as string) ?? "",
+      trussAndMotorsProvidedByVenue: yn(rv.trussAndMotorsProvidedByVenue),
+      liftsProvidedByVenue:    yn(rv.liftsProvidedByVenue),
       powerDropsRequired:      yn(rv.powerDropsRequired),
       powerDropAmperage:       (rv.powerDropAmperage       as string) ?? "",
       numberOfPowerDrops:      (rv.numberOfPowerDrops      as string) ?? "",
@@ -1339,7 +1384,13 @@ const AddNewProposal = ({
       estimatedAvBudget,
       proposalFormatPreferences,
       evaluationMatrix,
-      timelineForProposal,
+      vendorQuestionsDueDate,
+      responseToVendorQuestionsDate,
+      proposalSubmissionDueDate,
+      shortlistNotificationDate,
+      vendorPresentationOpportunity,
+      vendorPresentationDate,
+      vendorSelectionDate,
       callWithDxgProducer,
       howDidYouHear,
       howDidYouHearOther,
@@ -1347,12 +1398,18 @@ const AddNewProposal = ({
 
     if (
       !estimatedAvBudget.trim() ||
-      !timelineForProposal.trim() ||
+      !vendorQuestionsDueDate.trim() ||
+      !responseToVendorQuestionsDate.trim() ||
+      !proposalSubmissionDueDate.trim() ||
+      !shortlistNotificationDate.trim() ||
+      !vendorPresentationOpportunity.trim() ||
+      !vendorSelectionDate.trim() ||
       !callWithDxgProducer.trim() ||
       !howDidYouHear.trim()
     ) {
       return false;
     }
+    if (vendorPresentationOpportunity === "YES" && !vendorPresentationDate.trim()) return false;
     if (howDidYouHear === "Other" && !howDidYouHearOther.trim()) return false;
     if (!proposalFormatPreferences || proposalFormatPreferences.length === 0) return false;
 
@@ -1401,6 +1458,12 @@ const AddNewProposal = ({
         ...normalized.wirelessMics,
         wirelessMicsQty: "",
         wirelessMicsType: "",
+        wirelessMicsTypeOther: "",
+      };
+    } else if (normalized.wirelessMics.wirelessMicsType !== "Other") {
+      normalized.wirelessMics = {
+        ...normalized.wirelessMics,
+        wirelessMicsTypeOther: "",
       };
     }
     if (
@@ -1409,7 +1472,20 @@ const AddNewProposal = ({
     ) {
       normalized.largeMonitorsOrScreenProjector = {
         ...normalized.largeMonitorsOrScreenProjector,
-        largeMonitorsQty: "",
+        numberOfMonitors: "",
+        numberOfScreens: "",
+        monitorSize: "",
+        screenSize: "",
+      };
+    } else {
+      normalized.largeMonitorsOrScreenProjector = {
+        ...normalized.largeMonitorsOrScreenProjector,
+        monitorSize: Number(normalized.largeMonitorsOrScreenProjector.numberOfMonitors) > 0
+          ? normalized.largeMonitorsOrScreenProjector.monitorSize
+          : "",
+        screenSize: Number(normalized.largeMonitorsOrScreenProjector.numberOfScreens) > 0
+          ? normalized.largeMonitorsOrScreenProjector.screenSize
+          : "",
       };
     }
     if (
@@ -1431,7 +1507,11 @@ const AddNewProposal = ({
       normalized.videoPlayback = {
         ...normalized.videoPlayback,
         videoPlaybackCount: "",
+        videoPlaybackFormat: "",
       };
+    }
+    if (normalized.unionLabor !== "Yes") {
+      normalized.unionLaborDetails = "";
     }
     if (normalized.cameras.cameras !== "Yes") {
       normalized.cameras = { ...normalized.cameras, camerasQty: "" };
@@ -1896,6 +1976,10 @@ const AddNewProposal = ({
               <RoomAndProductionStep
                 rooms={rooms}
                 onRoomsChange={setRooms}
+                numberOfEventRooms={proposalData.venueSchedule.numberOfEventRooms}
+                onNumberOfEventRoomsChange={(value) =>
+                  updateProposalSection("venueSchedule", { numberOfEventRooms: value })
+                }
                 onContinue={continueHandler}
                 onBack={backHandler}
                 showErrors={showErrors}

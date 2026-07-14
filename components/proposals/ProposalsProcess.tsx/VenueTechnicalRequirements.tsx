@@ -151,8 +151,8 @@ const defaultVT = (): VenueTechnicalData => ({
   venueAvContactEmail: "",
   inHouseAvCompanyName: "",
   riggingRequired: "",
-  maxWeightPerRiggingPoint: "",
-  numberOfRiggingPoints: "",
+  trussAndMotorsProvidedByVenue: "",
+  liftsProvidedByVenue: "",
   powerDropsRequired: "",
   powerDropAmperage: "",
   numberOfPowerDrops: "",
@@ -319,8 +319,8 @@ const VenueTechnicalRequirements = ({
             onChange={(v) =>
               onChange({
                 riggingRequired: v,
-                maxWeightPerRiggingPoint: v !== "YES" ? "" : data.maxWeightPerRiggingPoint,
-                numberOfRiggingPoints: v !== "YES" ? "" : data.numberOfRiggingPoints,
+                trussAndMotorsProvidedByVenue: v !== "YES" ? "" : data.trussAndMotorsProvidedByVenue,
+                liftsProvidedByVenue: v !== "YES" ? "" : data.liftsProvidedByVenue,
               })
             }
           />
@@ -334,34 +334,22 @@ const VenueTechnicalRequirements = ({
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>
-                    Max Weight Per Point (lbs)
-                    <InfoTooltip text="The maximum load per certified rigging point. Venue structural engineers typically provide this. If unknown, indicate 'TBD' in the notes field and DXG will coordinate with the venue." />
+                    Are Truss and Motors Exclusively Provided by the Venue?
+                    <InfoTooltip text="Some venues require that all flown truss and chain motors be sourced exclusively through their in-house rigging vendor. Knowing this upfront helps DXG scope coordination or exclusivity fees." />
                   </label>
-                  <input
-                    type="number"
-                    min={0}
-                    className={inputClass}
-                    placeholder="e.g. 1000"
-                    value={data.maxWeightPerRiggingPoint}
-                    onChange={(e) =>
-                      onChange({ maxWeightPerRiggingPoint: e.target.value })
-                    }
+                  <YesNo
+                    value={data.trussAndMotorsProvidedByVenue}
+                    onChange={(v) => onChange({ trussAndMotorsProvidedByVenue: v })}
                   />
                 </div>
                 <div>
                   <label className={labelClass}>
-                    Number of Rigging Points
-                    <InfoTooltip text="Total certified attachment points available in the ceiling structure for this event space." />
+                    Are Lifts Exclusively Provided by the Venue?
+                    <InfoTooltip text="Some venues require that all lifts (scissor lifts, genie lifts) used for rigging or installation be sourced exclusively through their in-house vendor." />
                   </label>
-                  <input
-                    type="number"
-                    min={0}
-                    className={inputClass}
-                    placeholder="e.g. 12"
-                    value={data.numberOfRiggingPoints}
-                    onChange={(e) =>
-                      onChange({ numberOfRiggingPoints: e.target.value })
-                    }
+                  <YesNo
+                    value={data.liftsProvidedByVenue}
+                    onChange={(v) => onChange({ liftsProvidedByVenue: v })}
                   />
                 </div>
               </div>
@@ -550,7 +538,7 @@ const VenueTechnicalRequirements = ({
           style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-          Budget &amp; Proposal
+          Investment &amp; Evaluation
           <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>

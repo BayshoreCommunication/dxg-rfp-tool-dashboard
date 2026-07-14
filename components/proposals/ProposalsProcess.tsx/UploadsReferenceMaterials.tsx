@@ -964,7 +964,7 @@ const UploadsReferenceMaterials = ({
           className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
-          Budget &amp; Proposal
+          Investment &amp; Evaluation
         </button>
         <button
           type="button"

@@ -43,6 +43,10 @@ export type VenueScheduleData = {
   loadInTime: string;
   rehearsalDate: string;
   rehearsalTime: string;
+  showStartDate: string;
+  showStartTime: string;
+  showEndDate: string;
+  showEndTime: string;
   strikeDate: string;
   strikeTime: string;
   numberOfEventRooms: string;
@@ -63,6 +67,10 @@ export const defaultVenueSchedule = (): VenueScheduleData => ({
   loadInTime: "",
   rehearsalDate: "",
   rehearsalTime: "",
+  showStartDate: "",
+  showStartTime: "",
+  showEndDate: "",
+  showEndTime: "",
   strikeDate: "",
   strikeTime: "",
   numberOfEventRooms: "1",
@@ -255,7 +263,6 @@ const VenueScheduleStep = ({
     onChange({ venueState: state, ...(tz ? { timeZone: tz } : {}) });
   };
 
-  const roomCount = Math.max(1, Number(safeData.numberOfEventRooms) || 1);
   const unionJurisdictions = Array.isArray(safeData.unionJurisdictions)
     ? safeData.unionJurisdictions
     : [];
@@ -270,10 +277,10 @@ const VenueScheduleStep = ({
           </span>
         </div>
         <h2 className="text-[22px] font-bold text-[#0f1b57]">
-          Venue &amp; Schedule
+          Venue and Overall Event Schedule
         </h2>
         <p className="mt-1 text-sm text-[#8f98bf]">
-          Venue details, union detection, production timeline, and room count.
+          Venue details, union detection, and production timeline.
         </p>
       </div>
 
@@ -540,54 +547,6 @@ const VenueScheduleStep = ({
         <section className="mb-8">
           <p className={groupLabelClass}>Production Schedule</p>
 
-          {/* Number of Event Rooms — stepper */}
-          <div className="mb-6">
-            <label className={labelClass}>
-              Number of Event Rooms <span className="text-red-500">*</span>
-              <InfoTooltip text="How many separate rooms require AV production? Each room gets its own specification module on the next page. Example: 1 General Session + 1 Breakout + 1 VIP Lounge = 3 rooms." />
-            </label>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  onChange({ numberOfEventRooms: String(Math.max(1, roomCount - 1)) })
-                }
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors select-none"
-              >
-                −
-              </button>
-              <input
-                type="number"
-                min={1}
-                value={safeData.numberOfEventRooms}
-                onChange={(e) =>
-                  onChange({
-                    numberOfEventRooms: String(Math.max(1, Number(e.target.value) || 1)),
-                  })
-                }
-                className="h-10 w-16 rounded-lg border border-[#d7dce3] bg-white text-center text-sm font-bold text-[#1f2d5d] outline-none focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/20"
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  onChange({ numberOfEventRooms: String(roomCount + 1) })
-                }
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors select-none"
-              >
-                +
-              </button>
-            </div>
-            {safeData.numberOfEventRooms && Number(safeData.numberOfEventRooms) > 0 && (
-              <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#00c2c9]/30 bg-[#00c2c9]/5 p-3 text-xs text-brand-dark">
-                <span className="mt-0.5 shrink-0">⚙️</span>
-                <span>
-                  <strong>System:</strong> This generates{" "}
-                  <strong>{safeData.numberOfEventRooms}</strong> Room Specification module(s) on Page 2B.
-                </span>
-              </div>
-            )}
-          </div>
-
           {/* Load-In + Rehearsal */}
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
@@ -636,6 +595,59 @@ const VenueScheduleStep = ({
                 <p className="mt-1 text-xs text-amber-600 normal-case">
                   Leave blank if no formal rehearsal — timeline will show &quot;TBD&quot;.
                 </p>
+              )}
+            </div>
+          </div>
+
+          {/* Show Start + Show End */}
+          <div className="mb-5 grid grid-cols-2 gap-5">
+            <div>
+              <label className={labelClass}>
+                Show Start Date &amp; Time <span className="text-red-500">*</span>
+                <InfoTooltip text="When does the show/general session officially begin? Populates the Section 1 timeline and is used to calculate overall production runtime alongside Show End." />
+              </label>
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateObj(safeData.showStartDate, safeData.showStartTime)}
+                onChange={(d) => {
+                  const { date, time } = fromDateObj(d);
+                  onChange({ showStartDate: date, showStartTime: time });
+                }}
+                inputClassName={`${inputClass} pr-12${safeData.showStartDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time"
+              />
+              {showErrors && !safeData.showStartDate.trim() && (
+                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+              )}
+            </div>
+
+            <div>
+              <label className={labelClass}>
+                Show End Date &amp; Time <span className="text-red-500">*</span>
+                <InfoTooltip text="When does the show/general session officially end? Must be on or after Show Start. Populates the Section 1 timeline and marks the end of live production." />
+              </label>
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateObj(safeData.showEndDate, safeData.showEndTime)}
+                onChange={(d) => {
+                  const { date, time } = fromDateObj(d);
+                  onChange({ showEndDate: date, showEndTime: time });
+                }}
+                inputClassName={`${inputClass} pr-12${safeData.showEndDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time"
+              />
+              {showErrors && !safeData.showEndDate.trim() && (
+                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
             </div>
           </div>

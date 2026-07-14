@@ -1,9 +1,99 @@
 ﻿"use client";
 
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Plus, Trash2, Upload } from "lucide-react";
+import { useRef, useState, type ChangeEvent } from "react";
+import { toast } from "react-toastify";
+import * as XLSX from "xlsx";
 import type { ProposalSettings, RoomByRoomData } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
+import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
+
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const dayOfWeekFromDate = (isoDate: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return "";
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return isNaN(date.getTime()) ? "" : WEEKDAY_NAMES[date.getDay()];
+};
+
+const toDateTime = (iso: string): Date | null => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+// ─── Schedule upload (Excel) helpers ──────────────────────────────────────────
+const excelCellToIsoDate = (val: unknown): string => {
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return "";
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, "0");
+    const d = String(val.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  if (typeof val === "number" && isFinite(val)) {
+    // Excel serial date: days since 1899-12-30
+    const epoch = Date.UTC(1899, 11, 30);
+    const date = new Date(epoch + val * 86400000);
+    return isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+  }
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    const mdY = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (mdY) {
+      const [, mm, dd, yyyy] = mdY;
+      return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  }
+  return "";
+};
+
+const findRowKey = (row: Record<string, unknown>, candidates: string[]): string | undefined =>
+  Object.keys(row).find((k) => candidates.includes(k.trim().toLowerCase()));
+
+const matchRoomSetup = (value: string): string => {
+  const v = value.trim().toLowerCase();
+  return ROOM_SETUP_OPTIONS.find((opt) => opt.toLowerCase() === v) || "";
+};
+
+const parseScheduleWorkbook = (buffer: ArrayBuffer): RoomByRoomData[] => {
+  const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) return [];
+  const sheet = workbook.Sheets[sheetName];
+  const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+
+  return json
+    .map((row): RoomByRoomData => {
+      const dateKey = findRowKey(row, ["date"]);
+      const dayKey = findRowKey(row, ["day"]);
+      const roomKey = findRowKey(row, ["room"]);
+      const functionKey = findRowKey(row, ["function name", "function"]);
+      const setupKey = findRowKey(row, ["room setup", "setup"]);
+      const attendeesKey = findRowKey(row, [
+        "# of attendees",
+        "number of attendees",
+        "attendees",
+        "room capacity",
+      ]);
+
+      const scheduleDate = dateKey ? excelCellToIsoDate(row[dateKey]) : "";
+      const dayRaw = dayKey ? String(row[dayKey] ?? "").trim() : "";
+
+      return {
+        ...defaultRoom(),
+        roomFunction: functionKey ? String(row[functionKey] ?? "").trim() : "",
+        roomLocation: roomKey ? String(row[roomKey] ?? "").trim() : "",
+        roomSetup: setupKey ? matchRoomSetup(String(row[setupKey] ?? "")) : "",
+        scheduleDate,
+        scheduleDay: dayRaw || dayOfWeekFromDate(scheduleDate),
+        estimatedAttendeesInRoom: attendeesKey ? String(row[attendeesKey] ?? "").trim() : "",
+      };
+    })
+    .filter((r) => r.roomFunction || r.roomLocation);
+};
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 const labelClass =
@@ -62,6 +152,7 @@ const CREW_ROLES: { label: string; hasQty: boolean }[] = [
   { label: "Graphics Operator", hasQty: true },
   { label: "Camera Operator", hasQty: true },
   { label: "Showcaller", hasQty: false },
+  { label: "Stage Manager", hasQty: false },
   { label: "Teleprompter Operator", hasQty: true },
   { label: "Breakout Room Manager", hasQty: true },
   { label: "Vendor Recommendation Requested", hasQty: false },
@@ -79,9 +170,42 @@ const TELEPROMPTER_LANGUAGES = [
   "Other",
 ];
 
+// ─── Room Setup options (schedule upload / manual entry) ─────────────────────
+const ROOM_SETUP_OPTIONS = ["Round of 8", "Rounds of 10", "Classroom", "Theater"];
+
+// ─── LED Wall switcher / processor options ────────────────────────────────────
+const LED_SWITCHER_OPTIONS = [
+  "Barco E2/E3",
+  "Spyder X80",
+  "Pixelhue P20/80/Q8",
+  "Millumin",
+  "Vendor Recommendation",
+];
+
+// ─── Monitor / screen size options ────────────────────────────────────────────
+const MONITOR_SIZE_OPTIONS = ["40\"", "43\"", "50\"", "55\"", "60\"", "65\"", "70\""];
+const SCREEN_SIZE_OPTIONS = [
+  "8' Tripod",
+  "10' Wide Fastfold",
+  "12' Wide Fastfold",
+  "14' Wide Fastfold",
+  "16' Wide Fastfold",
+  "18' Wide Fastfold",
+  "20' Wide Fastfold",
+  "24' Wide Fastfold",
+  "32' Wide Fastfold",
+];
+
+// ─── Video playback format options ────────────────────────────────────────────
+const VIDEO_PLAYBACK_FORMAT_OPTIONS = ["4:3", "16:9", "Custom Wide Screen"];
+
 // ─── Default room factory ─────────────────────────────────────────────────────
 export const defaultRoom = (): RoomByRoomData => ({
   roomFunction: "",
+  roomLocation: "",
+  roomSetup: "",
+  scheduleDate: "",
+  scheduleDay: "",
   estimatedAttendeesInRoom: "",
   stageDimensions: "",
   loadInDateTime: "",
@@ -91,7 +215,7 @@ export const defaultRoom = (): RoomByRoomData => ({
   audioSystemRequired: "",
   audioSystemForHowManyPpl: "",
   podiumMic: { podiumMic: "", podiumMicQty: "" },
-  wirelessMics: { wirelessMics: "", wirelessMicsQty: "", wirelessMicsType: "" },
+  wirelessMics: { wirelessMics: "", wirelessMicsQty: "", wirelessMicsType: "", wirelessMicsTypeOther: "" },
   audioRecording: "",
   audienceQa: { audienceQa: "", audienceQaMethod: "" },
   ledWall: "",
@@ -102,10 +226,16 @@ export const defaultRoom = (): RoomByRoomData => ({
   ledWallPixelPitch: "",
   ledWallSwitcher: "",
   ledWallNotes: "",
-  largeMonitorsOrScreenProjector: { largeMonitorsOrScreenProjector: "", largeMonitorsQty: "" },
+  largeMonitorsOrScreenProjector: {
+    largeMonitorsOrScreenProjector: "",
+    numberOfMonitors: "",
+    numberOfScreens: "",
+    monitorSize: "",
+    screenSize: "",
+  },
   clientProvideOwnPresentationLaptop: { clientProvideOwnPresentationLaptop: "", clientLaptopQty: "" },
   presentationLaptops: { presentationLaptops: "", presentationLaptopQty: "" },
-  videoPlayback: { videoPlayback: "", videoPlaybackCount: "" },
+  videoPlayback: { videoPlayback: "", videoPlaybackCount: "", videoPlaybackFormat: "" },
   videoFormatAspectRatio: "",
   cameras: { cameras: "", camerasQty: "" },
   videoRecording: { videoRecording: "", videoRecordingType: "" },
@@ -125,6 +255,7 @@ export const defaultRoom = (): RoomByRoomData => ({
   speakerTimer: "",
   contentVideoNeeds: "",
   unionLabor: "",
+  unionLaborDetails: "",
   showCrewNeeded: [],
   showCrewQty: {},
   otherRolesNeeded: "",
@@ -166,6 +297,12 @@ const RoomForm = ({
   if (lighting.includes("Moving Lights / Programmable Effects")) autoSuggest.push("L1 (Lighting Director)");
   const unaddedSuggestions = autoSuggest.filter((r) => !data.showCrewNeeded.includes(r));
 
+  const [showManualTimes, setShowManualTimes] = useState(
+    Boolean(
+      data.loadInDateTime || data.rehearsalDateTime || data.showStartDateTime || data.showEndDateTime,
+    ),
+  );
+
   return (
     <div className="space-y-5 px-6 py-6">
 
@@ -189,7 +326,7 @@ const RoomForm = ({
         </div>
         <div>
           <label className={labelClass}>
-            Room Attendee Capacity <span className="text-red-500">*</span>
+            # of Attendees <span className="text-red-500">*</span>
             <InfoTooltip text="Expected number of attendees in this specific room. Drives audio system sizing — vendors will spec a distributed array based on this number." />
           </label>
           <input
@@ -204,14 +341,152 @@ const RoomForm = ({
         </div>
       </div>
 
+      {/* ── Schedule ── */}
+      <Group label="Schedule" />
+
+      <div className="grid grid-cols-2 gap-5">
+        <div>
+          <label className={labelClass}>
+            Date
+            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
+            <InfoTooltip text="The date this room is in use. Can be filled in manually here or bulk-uploaded via the schedule Excel upload above." />
+          </label>
+          <input
+            type="date"
+            className={inputClass}
+            value={data.scheduleDate}
+            onChange={(e) =>
+              onChange({
+                scheduleDate: e.target.value,
+                scheduleDay: dayOfWeekFromDate(e.target.value),
+              })
+            }
+          />
+          {data.scheduleDay && (
+            <p className="mt-1 text-xs text-[#8f98bf] normal-case">{data.scheduleDay}</p>
+          )}
+        </div>
+        <div>
+          <label className={labelClass}>
+            Room
+            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
+            <InfoTooltip text="The physical room or space at the venue, if different from the function name above. Example: 'Grand Ballroom A'." />
+          </label>
+          <input
+            className={inputClass}
+            value={data.roomLocation}
+            onChange={(e) => onChange({ roomLocation: e.target.value })}
+            placeholder="e.g. Grand Ballroom A"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className={labelClass}>
+          Room Setup
+          <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
+          <InfoTooltip text="How seating/tables are arranged in this room." />
+        </label>
+        <select
+          className={inputClass}
+          value={data.roomSetup}
+          onChange={(e) => onChange({ roomSetup: e.target.value })}
+        >
+          <option value="">Select room setup…</option>
+          {ROOM_SETUP_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Manual room times */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowManualTimes((v) => !v)}
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#00c2c9] hover:text-[#009198] transition-colors"
+        >
+          <Plus size={14} className={`shrink-0 transition-transform ${showManualTimes ? "rotate-45" : ""}`} />
+          Add Date &amp; Times for This Room
+        </button>
+        <p className="mt-1 text-xs text-slate-400 normal-case">
+          Use this if load-in, rehearsal, and show times weren&apos;t included in a schedule upload.
+        </p>
+        {showManualTimes && (
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            <div>
+              <label className={`${labelClass} mt-0`}>Load-In</label>
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateTime(data.loadInDateTime)}
+                onChange={(d) => onChange({ loadInDateTime: d ? d.toISOString() : "" })}
+                inputClassName={`${inputClass} pr-12`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time"
+              />
+            </div>
+            <div>
+              <label className={`${labelClass} mt-0`}>Rehearsal</label>
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateTime(data.rehearsalDateTime)}
+                onChange={(d) => onChange({ rehearsalDateTime: d ? d.toISOString() : "" })}
+                inputClassName={`${inputClass} pr-12`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time"
+              />
+            </div>
+            <div>
+              <label className={`${labelClass} mt-0`}>Show Start</label>
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateTime(data.showStartDateTime)}
+                onChange={(d) => onChange({ showStartDateTime: d ? d.toISOString() : "" })}
+                inputClassName={`${inputClass} pr-12`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time"
+              />
+            </div>
+            <div>
+              <label className={`${labelClass} mt-0`}>Show End</label>
+              <GlobalDateTimeInput
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                use12Hours
+                timeIntervals={15}
+                value={toDateTime(data.showEndDateTime)}
+                onChange={(d) => onChange({ showEndDateTime: d ? d.toISOString() : "" })}
+                inputClassName={`${inputClass} pr-12`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                placeholder="Select date & time"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Stage Dimensions */}
       <div>
         <label className={labelClass}>
-          Stage Dimensions <span className="text-red-500">*</span>
+          Stage Dimensions
+          <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
           <InfoTooltip text="Stage dimensions in feet — Width × Depth × Height (optional). Standard general session stage is 60ft x 24ft; large keynote stages run 100–200ft wide. If no formal stage: enter 'Floor presentation — no stage.'" />
         </label>
         <input
-          className={`${inputClass} ${errCls(data.stageDimensions)}`}
+          className={inputClass}
           value={data.stageDimensions}
           onChange={(e) => onChange({ stageDimensions: e.target.value })}
           placeholder="e.g. 120ft × 40ft × 3ft"
@@ -291,6 +566,7 @@ const RoomForm = ({
                       wirelessMics: v,
                       wirelessMicsQty: v !== "Yes" ? "" : data.wirelessMics.wirelessMicsQty,
                       wirelessMicsType: v !== "Yes" ? "" : data.wirelessMics.wirelessMicsType,
+                      wirelessMicsTypeOther: v !== "Yes" ? "" : data.wirelessMics.wirelessMicsTypeOther,
                     },
                   })
                 }
@@ -318,7 +594,11 @@ const RoomForm = ({
                       value={data.wirelessMics.wirelessMicsType}
                       onChange={(e) =>
                         onChange({
-                          wirelessMics: { ...data.wirelessMics, wirelessMicsType: e.target.value },
+                          wirelessMics: {
+                            ...data.wirelessMics,
+                            wirelessMicsType: e.target.value,
+                            wirelessMicsTypeOther: e.target.value !== "Other" ? "" : data.wirelessMics.wirelessMicsTypeOther,
+                          },
                         })
                       }
                     >
@@ -326,7 +606,21 @@ const RoomForm = ({
                       <option>Handhelds</option>
                       <option>Headset Mics</option>
                       <option>Lavalier (Lav) Mics</option>
+                      <option>Both</option>
+                      <option value="Other">Other — Specify</option>
                     </select>
+                    {data.wirelessMics.wirelessMicsType === "Other" && (
+                      <input
+                        className={`${inputClass} mt-2`}
+                        placeholder="Please specify..."
+                        value={data.wirelessMics.wirelessMicsTypeOther}
+                        onChange={(e) =>
+                          onChange({
+                            wirelessMics: { ...data.wirelessMics, wirelessMicsTypeOther: e.target.value },
+                          })
+                        }
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -448,7 +742,7 @@ const RoomForm = ({
             <div className="mb-4">
               <label className={labelClass}>
                 Switcher / Processor Requirement
-                <InfoTooltip text="The video processor that drives the LED wall. Barco E2 is the industry standard for large-format LED. Specify preference or defer to vendor." />
+                <InfoTooltip text="The video processor that drives the LED wall. Specify preference or defer to vendor." />
               </label>
               <select
                 className={inputClass}
@@ -456,10 +750,9 @@ const RoomForm = ({
                 onChange={(e) => onChange({ ledWallSwitcher: e.target.value })}
               >
                 <option value="">Select preference…</option>
-                <option>Barco E2 (Preferred)</option>
-                <option>Barco S3</option>
-                <option>Roland / Other</option>
-                <option>Vendor Recommendation</option>
+                {LED_SWITCHER_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
               </select>
             </div>
 
@@ -502,25 +795,99 @@ const RoomForm = ({
             onChange({
               largeMonitorsOrScreenProjector: {
                 largeMonitorsOrScreenProjector: v,
-                largeMonitorsQty: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.largeMonitorsQty,
+                numberOfMonitors: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.numberOfMonitors,
+                numberOfScreens: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.numberOfScreens,
+                monitorSize: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.monitorSize,
+                screenSize: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.screenSize,
               },
             })
           }
         />
         {data.largeMonitorsOrScreenProjector.largeMonitorsOrScreenProjector === "Yes" && (
-          <input
-            className={`${inputClass} mt-3`}
-            placeholder="Quantity?"
-            value={data.largeMonitorsOrScreenProjector.largeMonitorsQty}
-            onChange={(e) =>
-              onChange({
-                largeMonitorsOrScreenProjector: {
-                  ...data.largeMonitorsOrScreenProjector,
-                  largeMonitorsQty: e.target.value,
-                },
-              })
-            }
-          />
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            <div>
+              <label className={`${labelClass} mt-0`}># of Monitors</label>
+              <input
+                type="number"
+                min={0}
+                className={inputClass}
+                placeholder="Quantity?"
+                value={data.largeMonitorsOrScreenProjector.numberOfMonitors}
+                onChange={(e) =>
+                  onChange({
+                    largeMonitorsOrScreenProjector: {
+                      ...data.largeMonitorsOrScreenProjector,
+                      numberOfMonitors: e.target.value,
+                      monitorSize: Number(e.target.value) > 0 ? data.largeMonitorsOrScreenProjector.monitorSize : "",
+                    },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label className={`${labelClass} mt-0`}># of Screens</label>
+              <input
+                type="number"
+                min={0}
+                className={inputClass}
+                placeholder="Quantity?"
+                value={data.largeMonitorsOrScreenProjector.numberOfScreens}
+                onChange={(e) =>
+                  onChange({
+                    largeMonitorsOrScreenProjector: {
+                      ...data.largeMonitorsOrScreenProjector,
+                      numberOfScreens: e.target.value,
+                      screenSize: Number(e.target.value) > 0 ? data.largeMonitorsOrScreenProjector.screenSize : "",
+                    },
+                  })
+                }
+              />
+            </div>
+            {Number(data.largeMonitorsOrScreenProjector.numberOfMonitors) > 0 && (
+              <div>
+                <label className={`${labelClass} mt-0`}>Monitor Size</label>
+                <select
+                  className={inputClass}
+                  value={data.largeMonitorsOrScreenProjector.monitorSize}
+                  onChange={(e) =>
+                    onChange({
+                      largeMonitorsOrScreenProjector: {
+                        ...data.largeMonitorsOrScreenProjector,
+                        monitorSize: e.target.value,
+                      },
+                    })
+                  }
+                >
+                  <option value="">Select size…</option>
+                  {MONITOR_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {Number(data.largeMonitorsOrScreenProjector.numberOfScreens) > 0 && (
+              <div>
+                <label className={`${labelClass} mt-0`}>Screen Size</label>
+                <select
+                  className={inputClass}
+                  value={data.largeMonitorsOrScreenProjector.screenSize}
+                  onChange={(e) =>
+                    onChange({
+                      largeMonitorsOrScreenProjector: {
+                        ...data.largeMonitorsOrScreenProjector,
+                        screenSize: e.target.value,
+                      },
+                    })
+                  }
+                >
+                  <option value="">Select size…</option>
+                  {SCREEN_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -606,21 +973,45 @@ const RoomForm = ({
               videoPlayback: {
                 videoPlayback: v,
                 videoPlaybackCount: v !== "Yes" ? "" : data.videoPlayback.videoPlaybackCount,
+                videoPlaybackFormat: v !== "Yes" ? "" : data.videoPlayback.videoPlaybackFormat,
               },
             })
           }
         />
         {data.videoPlayback.videoPlayback === "Yes" && (
-          <input
-            className={`${inputClass} mt-3`}
-            placeholder="How many clips?"
-            value={data.videoPlayback.videoPlaybackCount}
-            onChange={(e) =>
-              onChange({
-                videoPlayback: { ...data.videoPlayback, videoPlaybackCount: e.target.value },
-              })
-            }
-          />
+          <div className="mt-3 space-y-3">
+            <input
+              className={inputClass}
+              placeholder="How many clips?"
+              value={data.videoPlayback.videoPlaybackCount}
+              onChange={(e) =>
+                onChange({
+                  videoPlayback: { ...data.videoPlayback, videoPlaybackCount: e.target.value },
+                })
+              }
+            />
+            <div>
+              <label className={`${labelClass} mt-0`}>
+                Video Format / Aspect Ratio
+                <InfoTooltip text="The aspect ratio the playback video content is produced in." />
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {VIDEO_PLAYBACK_FORMAT_OPTIONS.map((opt) => (
+                  <PillRadio
+                    key={opt}
+                    name={`${uid}-videoPlaybackFormat`}
+                    value={opt}
+                    checked={data.videoPlayback.videoPlaybackFormat === opt}
+                    onChange={() =>
+                      onChange({
+                        videoPlayback: { ...data.videoPlayback, videoPlaybackFormat: opt },
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
@@ -1021,8 +1412,9 @@ const RoomForm = ({
         }`}
       >
         <label className={labelClass}>
-          Will this room require union labor? <span className="text-red-500">*</span>
-          <InfoTooltip text="Some venues mandate certified union AV technicians (IATSE, IBEW). This affects crew costs, call times, and scheduling lead time — all flagged in Section 6 of the RFP." />
+          Does your contract with the venue require you to use Union, Teamster, or In-House Labor?{" "}
+          <span className="text-red-500">*</span>
+          <InfoTooltip text="Some venues mandate certified union AV technicians (IATSE, IBEW), Teamsters, or in-house labor. This affects crew costs, call times, and scheduling lead time — all flagged in Section 6 of the RFP." />
         </label>
         <div className="flex flex-wrap gap-3">
           {(["Yes", "No", "Not Sure"] as const).map((opt) => (
@@ -1031,12 +1423,33 @@ const RoomForm = ({
               name={`${uid}-union`}
               value={opt}
               checked={data.unionLabor === opt}
-              onChange={() => onChange({ unionLabor: opt })}
+              onChange={() =>
+                onChange({
+                  unionLabor: opt,
+                  unionLaborDetails: opt !== "Yes" ? "" : data.unionLaborDetails,
+                })
+              }
             />
           ))}
         </div>
         {showErrors && !data.unionLabor && (
           <p className="mt-2 text-sm normal-case text-red-500">Please select an option.</p>
+        )}
+        {data.unionLabor === "Yes" && (
+          <div className="mt-3">
+            <label className={`${labelClass} mt-0`}>
+              Details or Contract Language
+              <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
+              <InfoTooltip text="Add any specific details, jurisdictions, or contract language vendors should be aware of." />
+            </label>
+            <textarea
+              rows={3}
+              className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+              placeholder="e.g. IATSE Local 720 required for all rigging and electrical work per venue contract."
+              value={data.unionLaborDetails}
+              onChange={(e) => onChange({ unionLaborDetails: e.target.value })}
+            />
+          </div>
         )}
       </div>
     </div>
@@ -1051,6 +1464,9 @@ const RoomCard = ({
   isExpanded,
   onToggle,
   onChange,
+  onDuplicate,
+  onDelete,
+  canDelete,
   showErrors,
 }: {
   room: RoomByRoomData;
@@ -1059,6 +1475,9 @@ const RoomCard = ({
   isExpanded: boolean;
   onToggle: () => void;
   onChange: (u: Partial<RoomByRoomData>) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  canDelete: boolean;
   showErrors: boolean;
 }) => {
   const roomLabel = room.roomFunction.trim() || `Room ${index + 1}`;
@@ -1089,7 +1508,27 @@ const RoomCard = ({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={onDuplicate}
+            title="Copy this room's details to start a new room"
+            className="flex items-center gap-1.5 rounded-full border border-[#d7dce3] bg-white px-3 py-1 text-xs font-semibold text-[#1f2d5d] hover:border-[#00c2c9] hover:text-[#00c2c9] transition-colors"
+          >
+            <Copy size={13} className="shrink-0" />
+            Copy Room
+          </button>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              title="Remove this room"
+              className="flex items-center gap-1.5 rounded-full border border-[#d7dce3] bg-white px-3 py-1 text-xs font-semibold text-[#1f2d5d] hover:border-red-400 hover:text-red-500 transition-colors"
+            >
+              <Trash2 size={13} className="shrink-0" />
+              Remove
+            </button>
+          )}
           <div className="ml-1 text-[#8f98bf]">
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </div>
@@ -1112,6 +1551,8 @@ const RoomCard = ({
 interface Props {
   rooms: RoomByRoomData[];
   onRoomsChange: (rooms: RoomByRoomData[]) => void;
+  numberOfEventRooms: string;
+  onNumberOfEventRoomsChange: (value: string) => void;
   onContinue: () => void;
   onBack: () => void;
   showErrors?: boolean;
@@ -1122,6 +1563,8 @@ interface Props {
 const RoomAndProductionStep = ({
   rooms,
   onRoomsChange,
+  numberOfEventRooms,
+  onNumberOfEventRoomsChange,
   onContinue,
   onBack,
   showErrors = false,
@@ -1129,6 +1572,9 @@ const RoomAndProductionStep = ({
   isInPersonOnly = false,
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
+  const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const roomCount = Math.max(1, Number(numberOfEventRooms) || 1);
 
   const toggleRoom = (i: number) =>
     setExpandedRooms((prev) => {
@@ -1139,6 +1585,72 @@ const RoomAndProductionStep = ({
 
   const updateRoom = (i: number, updates: Partial<RoomByRoomData>) =>
     onRoomsChange(rooms.map((r, idx) => (idx === i ? { ...r, ...updates } : r)));
+
+  const duplicateRoom = (i: number) => {
+    const source = rooms[i];
+    if (!source) return;
+    const copy: RoomByRoomData = {
+      ...source,
+      roomFunction: source.roomFunction ? `${source.roomFunction} (Copy)` : "",
+    };
+    const nextRooms = [...rooms, copy];
+    onRoomsChange(nextRooms);
+    onNumberOfEventRoomsChange(String(nextRooms.length));
+    setExpandedRooms(new Set([nextRooms.length - 1]));
+  };
+
+  const deleteRoom = (i: number) => {
+    if (rooms.length <= 1) return;
+    const room = rooms[i];
+    const label = room?.roomFunction.trim() || `Room ${i + 1}`;
+    if (!window.confirm(`Remove "${label}"? This can't be undone.`)) return;
+
+    const nextRooms = rooms.filter((_, idx) => idx !== i);
+    onRoomsChange(nextRooms);
+    onNumberOfEventRoomsChange(String(nextRooms.length));
+    setExpandedRooms((prev) => {
+      const next = new Set<number>();
+      prev.forEach((idx) => {
+        if (idx < i) next.add(idx);
+        else if (idx > i) next.add(idx - 1);
+      });
+      return next;
+    });
+  };
+
+  const handleScheduleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const hasExistingData = rooms.some((r) => r.roomFunction.trim());
+    if (
+      hasExistingData &&
+      !window.confirm(
+        "This will replace all current room modules with the rooms from this schedule. Continue?",
+      )
+    ) {
+      return;
+    }
+
+    setIsUploadingSchedule(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const parsedRooms = parseScheduleWorkbook(buffer);
+      if (parsedRooms.length === 0) {
+        toast.error("No rooms could be read from that file. Check the column headers and try again.");
+        return;
+      }
+      onRoomsChange(parsedRooms);
+      onNumberOfEventRoomsChange(String(parsedRooms.length));
+      setExpandedRooms(new Set([0]));
+      toast.success(`Loaded ${parsedRooms.length} room${parsedRooms.length === 1 ? "" : "s"} from schedule.`);
+    } catch {
+      toast.error("Couldn't read that file — please upload a valid Excel schedule.");
+    } finally {
+      setIsUploadingSchedule(false);
+    }
+  };
 
   return (
     <section
@@ -1155,14 +1667,90 @@ const RoomAndProductionStep = ({
             Repeating Module
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">Room Specifications</h2>
+        <h2 className="text-[22px] font-bold text-[#0f1b57]">Room Specifications &amp; Schedule</h2>
         <p className="mt-1 text-sm text-[#8f98bf]">
           One module per room — each room generates its own section in the RFP.
         </p>
       </div>
 
+      {/* Number of Event Rooms — stepper */}
+      <div className="px-6 pt-6">
+        <div className="mb-6 rounded-md border border-[#d7dce3] p-5">
+          <label className={labelClass}>
+            Number of Event Rooms <span className="text-red-500">*</span>
+            <InfoTooltip text="How many separate rooms require AV production? Each room gets its own specification module below. Example: 1 General Session + 1 Breakout + 1 VIP Lounge = 3 rooms." />
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                onNumberOfEventRoomsChange(String(Math.max(1, roomCount - 1)))
+              }
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors select-none"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min={1}
+              value={numberOfEventRooms}
+              onChange={(e) =>
+                onNumberOfEventRoomsChange(
+                  String(Math.max(1, Number(e.target.value) || 1)),
+                )
+              }
+              className="h-10 w-16 rounded-lg border border-[#d7dce3] bg-white text-center text-sm font-bold text-[#1f2d5d] outline-none focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/20"
+            />
+            <button
+              type="button"
+              onClick={() => onNumberOfEventRoomsChange(String(roomCount + 1))}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors select-none"
+            >
+              +
+            </button>
+          </div>
+          {numberOfEventRooms && Number(numberOfEventRooms) > 0 && (
+            <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#00c2c9]/30 bg-[#00c2c9]/5 p-3 text-xs text-brand-dark">
+              <span className="mt-0.5 shrink-0">⚙️</span>
+              <span>
+                <strong>System:</strong> This generates{" "}
+                <strong>{numberOfEventRooms}</strong> Room Specification module(s) below.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Schedule upload */}
+        <div className="mb-6 rounded-md border border-[#d7dce3] p-5">
+          <label className={labelClass}>
+            Upload Room Schedule
+            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
+            <InfoTooltip text="Upload an Excel (.xlsx) schedule to bulk-create room modules. Expected columns: Date, Day, Room, Function Name, Room Setup, # of Attendees. This replaces the current room list." />
+          </label>
+          <p className="mb-3 text-xs text-slate-500 normal-case">
+            Columns: Date, Day, Room, Function Name, Room Setup, # of Attendees. Each row becomes a room module below.
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleScheduleFileChange}
+          />
+          <button
+            type="button"
+            disabled={isUploadingSchedule}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 rounded-lg border border-[#d7dce3] bg-white px-4 py-2 text-sm font-semibold text-[#1f2d5d] hover:border-[#00c2c9] hover:text-[#00c2c9] transition-colors disabled:opacity-50"
+          >
+            <Upload size={15} className="shrink-0" />
+            {isUploadingSchedule ? "Reading file…" : "Upload Schedule (Excel)"}
+          </button>
+        </div>
+      </div>
+
       {/* Rooms */}
-      <div className="flex-1 space-y-3 px-6 py-6">
+      <div className="flex-1 space-y-3 px-6 pb-6">
         {rooms.map((room, i) => (
           <div key={i}>
             <RoomCard
@@ -1172,6 +1760,9 @@ const RoomAndProductionStep = ({
               isExpanded={expandedRooms.has(i)}
               onToggle={() => toggleRoom(i)}
               onChange={(u) => updateRoom(i, u)}
+              onDuplicate={() => duplicateRoom(i)}
+              onDelete={() => deleteRoom(i)}
+              canDelete={rooms.length > 1}
               showErrors={showErrors}
             />
           </div>
