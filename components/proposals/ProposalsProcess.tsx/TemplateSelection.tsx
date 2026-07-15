@@ -32,13 +32,13 @@ export default function TemplateSelection({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
     >
-      <div className="px-6 py-5 border-b border-[#d7dce3]">
-        <h2 className="text-[20px] font-semibold text-[#0f1b57]">
+      <div className="px-6 py-5 border-b border-[#e4e4e4]">
+        <h2 className="text-[20px] font-semibold text-[#222628]">
           Choose Proposal Template
         </h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -54,8 +54,8 @@ export default function TemplateSelection({
             onClick={() => onSelect("template-one")}
             className={`${cardBaseClass} ${
               templateId === "template-one"
-                ? "border-[#00c2c9] bg-[#00c2c9]/5 shadow-[0_0_0_2px_rgba(0,194,201,0.2)]"
-                : "border-slate-200 bg-white hover:border-[#00c2c9]/50"
+                ? "border-[#008ad2] bg-[#008ad2]/5 shadow-[0_0_0_2px_rgba(0,138,210,0.2)]"
+                : "border-slate-200 bg-white hover:border-[#008ad2]/50"
             }`}
           >
             <div className="relative h-40 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -79,8 +79,8 @@ export default function TemplateSelection({
             onClick={() => onSelect("template-two")}
             className={`${cardBaseClass} ${
               templateId === "template-two"
-                ? "border-[#00c2c9] bg-[#00c2c9]/5 shadow-[0_0_0_2px_rgba(0,194,201,0.2)]"
-                : "border-slate-200 bg-white hover:border-[#00c2c9]/50"
+                ? "border-[#008ad2] bg-[#008ad2]/5 shadow-[0_0_0_2px_rgba(0,138,210,0.2)]"
+                : "border-slate-200 bg-white hover:border-[#008ad2]/50"
             }`}
           >
             <div className="relative h-40 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -107,7 +107,7 @@ export default function TemplateSelection({
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#d7dce3]">
+      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e4e4e4]">
         <button
           type="button"
           onClick={onBack}
@@ -120,7 +120,7 @@ export default function TemplateSelection({
         <button
           type="button"
           onClick={() => onCreate("unsubmitted")}
-          className="h-10 px-6 rounded-md border border-[#d7dce3] bg-white hover:bg-gray-50 text-sm font-bold text-[#1f2d5d] transition-colors"
+          className="h-10 px-6 rounded-md border border-[#e4e4e4] bg-white hover:bg-gray-50 text-sm font-bold text-[#222628] transition-colors"
         >
           {draftActionLabel}
         </button>
@@ -128,7 +128,7 @@ export default function TemplateSelection({
           type="button"
           onClick={() => onCreate("submitted")}
           className="h-10 px-8 rounded-md text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(14,165,233,0.35)] transition-all hover:opacity-90 active:scale-95"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           {liveActionLabel}

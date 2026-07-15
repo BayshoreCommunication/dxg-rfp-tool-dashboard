@@ -13,11 +13,11 @@ import { uploadProposalFilesAction } from "@/app/actions/proposals";
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20";
-const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
-const subPanelClass = "mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
+const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
+const subPanelClass = "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
 const errorClass = "mt-1 text-sm text-red-500 normal-case";
 
 /* ─── Yes/No ─── */
@@ -25,7 +25,7 @@ const yesNoCls = (opt: "YES" | "NO", val: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (val !== opt)
-    return `${base} border-[#d7dce3] bg-white text-[#8f98bf] hover:border-slate-300`;
+    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
   if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
@@ -48,7 +48,7 @@ const YesNo = ({
 );
 
 const Group = ({ label }: { label: string }) => (
-  <div className="mb-5 mt-8 border-t border-[#e8edf5] pt-6 first:mt-0 first:border-0 first:pt-0">
+  <div className="mb-5 mt-8 border-t border-[#f0f0f0] pt-6 first:mt-0 first:border-0 first:pt-0">
     <p className={groupLabelClass}>{label}</p>
   </div>
 );
@@ -113,15 +113,15 @@ const UploadBox = ({
           />
         </svg>
       </div>
-      <p className="mb-1 text-sm font-bold text-[#1f2d5d]">Drag &amp; drop or browse</p>
-      <p className="mb-5 text-xs font-medium text-[#8f98bf]">{hint}</p>
+      <p className="mb-1 text-sm font-bold text-[#222628]">Drag &amp; drop or browse</p>
+      <p className="mb-5 text-xs font-medium text-[#969798]">{hint}</p>
       {atMax ? (
         <p className="text-xs text-slate-400">
           Max {maxFiles} {maxFiles === 1 ? "file" : "files"} reached
         </p>
       ) : (
         <label
-          className={`flex cursor-pointer items-center gap-2 rounded-lg bg-[#00c2c9] px-7 py-2.5 text-xs font-bold tracking-wide text-white transition-colors hover:bg-[#009198] ${
+          className={`flex cursor-pointer items-center gap-2 rounded-lg bg-[#008ad2] px-7 py-2.5 text-xs font-bold tracking-wide text-white transition-colors hover:bg-[#0069a0] ${
             busy ? "pointer-events-none opacity-70" : ""
           }`}
         >
@@ -143,7 +143,7 @@ const UploadBox = ({
           {files.map((f, i) => (
             <span
               key={i}
-              className="flex items-center gap-1.5 rounded-full border border-[#38bdf8] bg-sky-50 px-3 py-1.5 text-xs font-semibold text-[#1f2d5d]"
+              className="flex items-center gap-1.5 rounded-full border border-[#38bdf8] bg-sky-50 px-3 py-1.5 text-xs font-semibold text-[#222628]"
             >
               <span className="max-w-[180px] truncate">{f.split("/").pop() || f}</span>
               <button
@@ -230,16 +230,16 @@ const CoVendorCard = ({
   const up = (p: Partial<CoVendorEntry>) => onChange({ ...value, ...p });
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#d7dce3] bg-white">
+    <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#f8faff]"
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
       >
         <div className="flex items-center gap-3">
           <span>{icon}</span>
           <div>
-            <span className="text-sm font-bold text-[#0f1b57]">{title}</span>
+            <span className="text-sm font-bold text-[#222628]">{title}</span>
             {hasData && !open && (
               <span className="ml-2 text-xs text-slate-400">
                 {value.companyName || value.contactName}
@@ -258,7 +258,7 @@ const CoVendorCard = ({
       </button>
 
       {open && (
-        <div className="border-t border-[#e8edf5] px-4 pb-4 pt-4">
+        <div className="border-t border-[#f0f0f0] px-4 pb-4 pt-4">
           {topBanner}
           {advisory && (
             <div className="mb-4 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
@@ -336,7 +336,7 @@ const CoVendorCard = ({
           </div>
 
           {/* PDF row preview */}
-          <div className="mt-4 rounded-lg border border-[#e0e7ff] bg-[#f5f7ff] px-3 py-2">
+          <div className="mt-4 rounded-lg border border-[#eeeeee] bg-[#f9f9f9] px-3 py-2">
             <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
               PDF Section 7 Preview
             </p>
@@ -360,8 +360,8 @@ const CoVendorCard = ({
 /* ─── NDA type card style ─── */
 const ndaTypeCls = (opt: string, selected: string): string =>
   selected === opt
-    ? "flex items-start gap-3 rounded-lg border border-[#00c2c9] bg-[#00c2c9]/5 px-4 py-3 cursor-pointer"
-    : "flex items-start gap-3 rounded-lg border border-[#d7dce3] bg-white px-4 py-3 cursor-pointer hover:border-slate-300";
+    ? "flex items-start gap-3 rounded-lg border border-[#008ad2] bg-[#008ad2]/5 px-4 py-3 cursor-pointer"
+    : "flex items-start gap-3 rounded-lg border border-[#e4e4e4] bg-white px-4 py-3 cursor-pointer hover:border-slate-300";
 
 /* ─── Props ─── */
 interface Props {
@@ -540,18 +540,18 @@ const UploadsReferenceMaterials = ({
 
   return (
     <section
-      className="flex min-h-screen flex-col rounded-md border border-[#d7dce3] bg-white"
+      className="flex min-h-screen flex-col rounded-md border border-[#e4e4e4] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="border-b border-[#d7dce3] px-8 py-6">
+      <div className="border-b border-[#e4e4e4] px-8 py-6">
         <div className="mb-1 flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             Page 8 of 9
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">Uploads &amp; Co-Vendors</h2>
-        <p className="mt-1 text-sm text-[#8f98bf]">
+        <h2 className="text-[22px] font-bold text-[#222628]">Uploads &amp; Co-Vendors</h2>
+        <p className="mt-1 text-sm text-[#969798]">
           Reference files, brand assets, co-vendor coordination, and NDA settings.
         </p>
       </div>
@@ -583,7 +583,7 @@ const UploadsReferenceMaterials = ({
             maxFiles={1}
           />
           <div className="mt-3">
-            <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
+            <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-[#969798]">
               Brand Guide URL (alternative to upload)
             </label>
             <input
@@ -626,7 +626,7 @@ const UploadsReferenceMaterials = ({
           />
           {/* Reference URLs */}
           <div className="mt-3">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
               Reference URLs (Vimeo, YouTube, Behance, etc.)
             </p>
             {safeData.referenceUrls.map((u, i) => (
@@ -639,7 +639,7 @@ const UploadsReferenceMaterials = ({
                   onChange={(e) => updateRefUrl(i, { url: e.target.value })}
                 />
                 <input
-                  className="w-44 rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+                  className="w-44 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
                   placeholder="Label (optional)"
                   value={u.label}
                   onChange={(e) => updateRefUrl(i, { label: e.target.value })}
@@ -657,7 +657,7 @@ const UploadsReferenceMaterials = ({
               <button
                 type="button"
                 onClick={addRefUrl}
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#00c2c9] hover:underline"
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#008ad2] hover:underline"
               >
                 <PlusCircle size={14} /> Add reference URL
               </button>
@@ -699,13 +699,13 @@ const UploadsReferenceMaterials = ({
 
         {/* Pre-fill banner for In-House AV */}
         {prefillAvailable && (
-          <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-4 py-3">
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#008ad2]/30 bg-[#008ad2]/5 px-4 py-3">
             <span className="mt-0.5 shrink-0">🏛</span>
             <div className="flex-1">
               <p className="text-sm font-bold text-brand-dark">
                 Venue AV contact available from Page 6
               </p>
-              <p className="mt-0.5 text-xs text-[#009198]">
+              <p className="mt-0.5 text-xs text-[#0069a0]">
                 {inHouseAvCompanyName && (
                   <span className="font-semibold">{inHouseAvCompanyName}</span>
                 )}
@@ -716,7 +716,7 @@ const UploadsReferenceMaterials = ({
             <button
               type="button"
               onClick={applyPrefill}
-              className="shrink-0 rounded-lg border border-[#00c2c9]/30 bg-white px-3 py-1.5 text-xs font-bold text-brand-dark hover:bg-[#00c2c9]/5"
+              className="shrink-0 rounded-lg border border-[#008ad2]/30 bg-white px-3 py-1.5 text-xs font-bold text-brand-dark hover:bg-[#008ad2]/5"
             >
               Apply ✓
             </button>
@@ -799,13 +799,13 @@ const UploadsReferenceMaterials = ({
         </div>
 
         {/* Section 7 PDF preview table */}
-        <div className="mt-5 overflow-hidden rounded-xl border border-[#d7dce3] bg-white">
+        <div className="mt-5 overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
           <button
             type="button"
             onClick={() => setPdfPreviewOpen(!pdfPreviewOpen)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#f8faff]"
+            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
           >
-            <span className="text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#969798]">
               📄 Section 7 PDF Preview — Co-Vendor Table
             </span>
             {pdfPreviewOpen ? (
@@ -815,10 +815,10 @@ const UploadsReferenceMaterials = ({
             )}
           </button>
           {pdfPreviewOpen && (
-            <div className="border-t border-[#e8edf5] overflow-x-auto px-4 pb-4 pt-3">
+            <div className="border-t border-[#f0f0f0] overflow-x-auto px-4 pb-4 pt-3">
               <table className="w-full min-w-[560px] text-xs">
                 <thead>
-                  <tr className="border-b border-[#e8edf5]">
+                  <tr className="border-b border-[#f0f0f0]">
                     {["Category", "Company", "Contact", "Coordination Scope"].map((h) => (
                       <th key={h} className="pb-2 text-left font-bold text-slate-500 pr-3">
                         {h}
@@ -836,7 +836,7 @@ const UploadsReferenceMaterials = ({
                   ) : (
                     pdfRows.map((r, i) => (
                       <tr key={i} className="border-b border-[#f0f4f8] last:border-0">
-                        <td className="py-2 pr-3 font-semibold text-[#0f1b57]">{r.category}</td>
+                        <td className="py-2 pr-3 font-semibold text-[#222628]">{r.category}</td>
                         <td className="py-2 pr-3 text-slate-600">{r.entry.companyName || "TBD"}</td>
                         <td className="py-2 pr-3 text-slate-600">
                           {r.entry.contactName || "TBD"}
@@ -879,7 +879,7 @@ const UploadsReferenceMaterials = ({
           {safeData.ndaRequired === "YES" && (
             <div className={subPanelClass}>
               {/* Vendor experience flow */}
-              <div className="mb-5 rounded-lg border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-4 py-3">
+              <div className="mb-5 rounded-lg border border-[#008ad2]/30 bg-[#008ad2]/5 px-4 py-3">
                 <p className="mb-2 text-xs font-bold uppercase tracking-widest text-brand-dark">
                   Vendor Experience
                 </p>
@@ -892,7 +892,7 @@ const UploadsReferenceMaterials = ({
               </div>
 
               {/* NDA Type */}
-              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
+              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#969798]">
                 NDA Type <span className="text-red-500">*</span>
               </p>
               <div className="mb-4 space-y-2">
@@ -923,7 +923,7 @@ const UploadsReferenceMaterials = ({
                       className="mt-0.5 shrink-0"
                     />
                     <div>
-                      <p className="text-sm font-semibold text-[#0f1b57]">{opt.label}</p>
+                      <p className="text-sm font-semibold text-[#222628]">{opt.label}</p>
                       <p className="text-xs text-slate-500">{opt.desc}</p>
                     </div>
                   </label>
@@ -934,7 +934,7 @@ const UploadsReferenceMaterials = ({
               )}
 
               {/* NDA Document Upload */}
-              <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
+              <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-[#969798]">
                 NDA Document Upload
                 {safeData.ndaType !== "custom" && (
                   <span className="ml-2 font-normal normal-case text-slate-400">
@@ -957,7 +957,7 @@ const UploadsReferenceMaterials = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between border-t border-[#d7dce3] px-8 py-5">
+      <div className="flex items-center justify-between border-t border-[#e4e4e4] px-8 py-5">
         <button
           type="button"
           onClick={onBack}
@@ -970,7 +970,7 @@ const UploadsReferenceMaterials = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Contact &amp; Submit

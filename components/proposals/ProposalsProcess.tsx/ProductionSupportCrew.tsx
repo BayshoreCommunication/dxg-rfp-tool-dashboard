@@ -5,7 +5,7 @@ import type { ProductionSupportData, ProposalSettings } from "../AddNewProposal"
 import { PillRadio, PillCheckbox, toggleItem } from "./shared";
 
 /* ─── Shared style constants ─── */
-const labelClass = "mb-3 block text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+const labelClass = "mb-3 block text-sm font-bold text-[#222628] uppercase tracking-wide";
 
 const crewRoles = [
   "A1 (AUDIO)",
@@ -54,12 +54,12 @@ const ProductionSupportCrew = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* Header */}
-      <div className="px-8 py-6 border-b border-[#d7dce3]">
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">Production Support &amp; Crew</h2>
+      <div className="px-8 py-6 border-b border-[#e4e4e4]">
+        <h2 className="text-[22px] font-bold text-[#222628]">Production Support &amp; Crew</h2>
       </div>
 
       {/* Form Body */}
@@ -69,7 +69,7 @@ const ProductionSupportCrew = ({
         <div className={`p-4 -m-4 rounded-lg transition-colors ${showErrors && !data.scenicStageDesign ? "bg-red-50" : ""}`}>
           <label className={labelClass}>
             Scenic / Stage Design? <span className="text-red-500">*</span>{" "}
-            <span className="text-[#8f98bf] font-normal normal-case tracking-normal">
+            <span className="text-[#969798] font-normal normal-case tracking-normal">
               (We can lead the whole show or support your team.)
             </span>
           </label>
@@ -132,24 +132,24 @@ const ProductionSupportCrew = ({
         <div>
           <label className={labelClass}>
             Other Roles or Support Needed?{" "}
-            <span className="text-[#8f98bf] font-normal normal-case tracking-normal">(Optional)</span>
+            <span className="text-[#969798] font-normal normal-case tracking-normal">(Optional)</span>
           </label>
           <textarea
             rows={5}
             value={data.otherRolesNeeded}
             onChange={(e) => onChange({ otherRolesNeeded: e.target.value })}
             placeholder="Write here..."
-            className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+            className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
           />
         </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-8 py-4 border-t border-[#d7dce3]">
+      <div className="flex items-center justify-between px-8 py-4 border-t border-[#e4e4e4]">
         <button
           type="button"
           onClick={handleClear}
-          className="flex items-center gap-2 text-sm font-semibold text-[#8f98bf] hover:text-red-400 transition-colors"
+          className="flex items-center gap-2 text-sm font-semibold text-[#969798] hover:text-red-400 transition-colors"
         >
           <RotateCcw size={15} />
           CLEAR
@@ -168,7 +168,7 @@ const ProductionSupportCrew = ({
             type="button"
             onClick={onContinue}
             className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
           >
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
             Continue

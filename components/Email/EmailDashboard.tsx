@@ -192,14 +192,14 @@ export default function EmailDashboard() {
             key={campaign._id}
             className="relative overflow-hidden rounded-2xl bg-white p-6 border border-slate-200 shadow-sm transition-shadow hover:shadow-md"
           >
-            <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#00c2c9]/5 blur-3xl" />
+            <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#008ad2]/5 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-14 -left-14 h-40 w-40 rounded-full bg-[#2563eb]/5 blur-3xl" />
 
             <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               {/* Left side */}
               <div className="min-w-0 flex-1">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-dark">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#008ad2]/30 bg-[#008ad2]/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-dark">
                     Proposal Email
                   </span>
                   {/* <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500">
@@ -271,7 +271,7 @@ export default function EmailDashboard() {
                   onClick={() => handleDelete(campaign._id)}
                   disabled={isDeleting}
                   className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-[#0ea5e9]/20 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-                  style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+                  style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
                 >
                   <Trash2 size={15} />
                   {isDeleting ? "Deleting..." : "Delete"}

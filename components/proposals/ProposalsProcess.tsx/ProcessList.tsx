@@ -59,11 +59,16 @@ const CheckBadge = () => (
 const ProcessList = ({
   activeStep = 1,
   hideStepIds = [],
+  isEditMode = false,
+  onStepClick,
 }: {
   activeStep?: number;
   hideStepIds?: number[];
+  isEditMode?: boolean;
+  onStepClick?: (stepId: number) => void;
 }) => {
   const visibleSteps = steps.filter((s) => !hideStepIds.includes(s.id));
+  const clickable = isEditMode && !!onStepClick;
 
   let counter = 2;
   const badgedSteps = visibleSteps.map((step) => {
@@ -88,7 +93,13 @@ const ProcessList = ({
           const isLast      = index === badgedSteps.length - 1;
 
           return (
-            <div key={step.id} className="relative flex items-start gap-4 pb-8">
+            <div
+              key={step.id}
+              onClick={clickable ? () => onStepClick?.(step.id) : undefined}
+              className={`relative flex items-start gap-4 pb-8 ${
+                clickable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""
+              }`}
+            >
               {/* Connecting Line */}
               {!isLast && (
                 <div className={lineClass(isCompleted, isActive)} />

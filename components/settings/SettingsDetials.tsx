@@ -53,7 +53,7 @@ const SettingsDetials = () => {
         brandName: "",
         linkPrefix: "",
         defaultFont: "Poppins",
-        signatureColor: "#2DC6F5",
+        signatureColor: "#2FC6F5",
         logoFile: null,
       },
       proposals: {
@@ -182,7 +182,7 @@ const SettingsDetials = () => {
           onClick={handleUpdate}
           disabled={saving || loading}
           className="group relative flex items-center gap-2 overflow-hidden rounded-md px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.40)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(14,165,233,0.50)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/15 skew-x-[-20deg] transition-transform duration-500 group-hover:translate-x-full" />
           {saving ? "Updating..." : "Update Settings"}
@@ -195,7 +195,7 @@ const SettingsDetials = () => {
 const SettingsSectionSkeleton = () => {
   return (
     <div className="space-y-6">
-      <div className="rounded-md border border-[#d7dce3] bg-white px-5 py-6 md:px-8">
+      <div className="rounded-md border border-[#e4e4e4] bg-white px-5 py-6 md:px-8">
         <div className="h-7 w-52 animate-pulse rounded bg-slate-100" />
         <div className="mt-3 h-4 w-80 max-w-full animate-pulse rounded bg-slate-100" />
         <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -208,7 +208,7 @@ const SettingsSectionSkeleton = () => {
         </div>
       </div>
 
-      <div className="rounded-md border border-[#d7dce3] bg-white px-5 py-6 md:px-8">
+      <div className="rounded-md border border-[#e4e4e4] bg-white px-5 py-6 md:px-8">
         <div className="h-7 w-52 animate-pulse rounded bg-slate-100" />
         <div className="mt-3 h-4 w-[28rem] max-w-full animate-pulse rounded bg-slate-100" />
         <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -221,7 +221,7 @@ const SettingsSectionSkeleton = () => {
         </div>
       </div>
 
-      <div className="rounded-md border border-[#d7dce3] bg-white px-5 py-6 md:px-8">
+      <div className="rounded-md border border-[#e4e4e4] bg-white px-5 py-6 md:px-8">
         <div className="h-7 w-40 animate-pulse rounded bg-slate-100" />
         <div className="mt-3 h-4 w-96 max-w-full animate-pulse rounded bg-slate-100" />
         <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">

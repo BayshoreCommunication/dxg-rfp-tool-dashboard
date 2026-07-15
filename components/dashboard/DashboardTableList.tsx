@@ -157,13 +157,13 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
     <tr className="group transition-colors duration-150 hover:bg-slate-50/80 border-b border-slate-100 last:border-0">
       <td className="px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}>
             <span className="text-[10px] font-black text-white">
               {(title || "UP").slice(0, 2).toUpperCase()}
             </span>
           </div>
           <div>
-            <p className="text-[13px] font-semibold text-slate-800 leading-tight group-hover:text-[#00c2c9] transition-colors duration-150">
+            <p className="text-[13px] font-semibold text-slate-800 leading-tight group-hover:text-[#008ad2] transition-colors duration-150">
               {title}
             </p>
             <p className="text-[11px] text-slate-400 font-mono mt-0.5">
@@ -216,7 +216,7 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
           <Link
             href={`/email/send-email?proposalId=${proposal._id}`}
             className="flex items-center gap-1.5 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-150"
-            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
           >
             <Share2 size={12} />
             Share
@@ -304,7 +304,7 @@ export default function DashboardTableList({
                 placeholder="Search proposals..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 pr-3 py-2 text-[12px] bg-slate-50 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#00c2c9] focus:ring-1 focus:ring-[#00c2c9]/20 transition-all duration-150 w-72"
+                className="pl-8 pr-3 py-2 text-[12px] bg-slate-50 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#008ad2] focus:ring-1 focus:ring-[#008ad2]/20 transition-all duration-150 w-72"
               />
             </div>
 
@@ -387,7 +387,7 @@ export default function DashboardTableList({
           </p>
           <Link
             href="/proposals"
-            className="flex items-center gap-1 text-[12px] font-bold text-[#00c2c9] hover:text-brand-dark transition-colors duration-150"
+            className="flex items-center gap-1 text-[12px] font-bold text-[#008ad2] hover:text-brand-dark transition-colors duration-150"
           >
             View all proposals <ChevronRight size={13} />
           </Link>

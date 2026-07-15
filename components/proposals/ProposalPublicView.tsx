@@ -99,7 +99,7 @@ export default function ProposalPublicView({
           </div>
           <div className="flex items-center gap-2">
             <div className="h-9 w-28 animate-pulse rounded-xl bg-slate-200" />
-            <div className="h-9 w-32 animate-pulse rounded-xl bg-[#00c2c9]/20" />
+            <div className="h-9 w-32 animate-pulse rounded-xl bg-[#008ad2]/20" />
           </div>
         </div>
         {/* Page 1 skeleton */}
@@ -109,7 +109,7 @@ export default function ProposalPublicView({
             className="h-[140px] animate-pulse"
             style={{
               background:
-                "linear-gradient(135deg, #00c2c9 0%, #06b6d4 40%, #0ea5e9 70%, #2563eb 100%)",
+                "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)",
             }}
           >
             <div className="flex h-full flex-col items-center justify-center gap-3 px-10">
@@ -156,7 +156,7 @@ export default function ProposalPublicView({
         <div className="mx-auto mt-4 w-full max-w-[900px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div
             className="h-2 w-full"
-            style={{ background: "linear-gradient(90deg, #00c2c9, #2563eb)" }}
+            style={{ background: "linear-gradient(90deg, #2fc6f5, #008ad2)" }}
           />
           <div className="space-y-3 p-8">
             <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />

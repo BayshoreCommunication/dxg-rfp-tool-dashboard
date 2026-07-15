@@ -25,26 +25,38 @@
 }
 
 @theme {
-  /* ── RFPilot Brand ─────────────────────────────────── */
+  /* ── Brand Colour Palette ──────────────────────────────
+     Water Blue / Medium Turquoise / Davy Grey / Dark Jungle
+     Green / White. Only these colours (and tints derived
+     from them below) should be used in the visual style.
+  ─────────────────────────────────────────────────────── */
 
-  /* Primary teal */
-  --color-brand:        #00c2c9;
-  --color-brand-light:  #33ced4;
-  --color-brand-dark:   #009198;
-  --color-brand-muted:  #e0f9fa;
+  /* Primary — Water Blue */
+  --color-brand:        #008ad2;
+  --color-brand-light:  #2fc6f5; /* Medium Turquoise */
+  --color-brand-dark:   #0069a0;
+  --color-brand-muted:  #e0f1fa;
 
-  /* Secondary navy */
-  --color-navy:         #0e1b2b;
-  --color-navy-light:   #1c3047;
-  --color-navy-muted:   #e8edf3;
+  /* Secondary — Dark Jungle Green */
+  --color-navy:         #222628;
+  --color-navy-light:   #434748;
+  --color-navy-muted:   #edeeee;
+
+  /* Neutral — Davy Grey */
+  --color-gray:         #565859;
+  --color-gray-muted:   #969798; /* secondary/muted text */
+  --color-gray-border:  #e4e4e4; /* hairline borders */
+  --color-gray-panel:   #f9f9f9; /* subtle panel backgrounds */
+
+  --color-white:        #ffffff;
 
   /* Semantic aliases (used by Tailwind utilities & components) */
   --color-primary:       var(--color-brand);
   --color-secondary:     var(--color-navy);
 
   /* Gradient endpoints */
-  --color-primary-start: var(--color-brand);
-  --color-primary-end:   var(--color-navy);
+  --color-primary-start: var(--color-brand-light);
+  --color-primary-end:   var(--color-brand);
 
   /* ── Typography ────────────────────────────────────── */
   --font-sans:
@@ -53,22 +65,25 @@
     "Noto Color Emoji";
 }
 
-/* Brand gradient — teal → navy */
+/* Brand gradient — Medium Turquoise → Water Blue */
 .bg-primary-gradient {
   background: linear-gradient(
     135deg,
-    var(--color-brand) 0%,
-    var(--color-navy) 100%
+    var(--color-primary-start) 0%,
+    var(--color-primary-end) 100%
   );
 }
 
 /* Utility shorthands */
 .text-brand   { color: var(--color-brand); }
 .text-navy    { color: var(--color-navy); }
+.text-gray    { color: var(--color-gray); }
 .bg-brand     { background-color: var(--color-brand); }
 .bg-navy      { background-color: var(--color-navy); }
+.bg-gray      { background-color: var(--color-gray); }
 .border-brand { border-color: var(--color-brand); }
 .border-navy  { border-color: var(--color-navy); }
+.border-gray  { border-color: var(--color-gray); }
 
 body {
   /* background-color: #f4f4f4; */

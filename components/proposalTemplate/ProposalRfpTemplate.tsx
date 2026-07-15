@@ -5,36 +5,38 @@ const TEMPLATE_CSS = `
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
-  .rfp-root { --primary: #0f1b57; --accent: #00c2c9; --gray: #64748b; --border: #e2e8f0; --light: #f8fafc; --orange: #f97316; --amber: #fffbeb; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
+  .rfp-root { --primary: #222628; --accent: #008ad2; --gray: #565859; --border: #e4e4e4; --light: #fbfbfb; --orange: #f97316; --amber: #fffbeb; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
   .rfp-root .page { width: 210mm; min-height: 297mm; padding: 11mm 13mm 10mm; margin: 0 auto 8px; background: #fff; position: relative; page-break-after: always; }
   @media print { body { background: #fff; } .rfp-root .page { margin: 0; padding: 9mm 11mm 8mm; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rfp-root .page:last-child { page-break-after: auto; } .no-print { display: none !important; } .rfp-root .cover-header { margin: -9mm -11mm 14px; padding: 24px 11mm; } }
   .rfp-root .int-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-  .rfp-root .int-header-left { font-size: 10.5px; font-weight: 700; color: #0f1b57; letter-spacing: 0.2px; }
-  .rfp-root .int-header-right { font-size: 10.5px; font-weight: 700; color: #00c2c9; letter-spacing: 0.2px; }
+  .rfp-root .int-header-left { font-size: 10.5px; font-weight: 700; color: #222628; letter-spacing: 0.2px; }
+  .rfp-root .int-header-right { font-size: 10.5px; font-weight: 700; color: #008ad2; letter-spacing: 0.2px; }
   .rfp-root .divider { border: none; border-top: 1px solid #e2e8f0; margin: 0 0 8px; }
-  .rfp-root .divider-thick { border: none; border-top: 4px solid #00c2c9; margin: 10px 0 13px; border-radius: 2px; }
+  .rfp-root .divider-thick { border: none; border-top: 4px solid #008ad2; margin: 10px 0 13px; border-radius: 2px; }
   .rfp-root .footer { position: absolute; bottom: 7mm; left: 13mm; right: 13mm; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px; }
-  .rfp-root .cover-header { background: #0f1b57; margin: -11mm -13mm 14px; padding: 26px 13mm; display: flex; justify-content: space-between; align-items: center; }
+  .rfp-root .cover-header { background: #222628; margin: -11mm -13mm 14px; padding: 26px 13mm; display: flex; justify-content: space-between; align-items: center; }
   .rfp-root .cover-header-left { display: flex; flex-direction: column; gap: 5px; }
   .rfp-root .dxg-brand { display: flex; align-items: baseline; gap: 4px; }
   .rfp-root .dxg-logo { font-size: 24px; font-weight: 900; color: #fff; letter-spacing: -0.5px; line-height: 1; }
   .rfp-root .dxg-name { font-size: 12px; font-weight: 600; color: #c5d9f4; }
   .rfp-root .badge-confidential { display: inline-flex; align-items: center; background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.6px; width: fit-content; }
-  .rfp-root .badge-rfpilot { display: inline-flex; align-items: center; background: #00c2c9; color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; border-radius: 8px; letter-spacing: 0.3px; white-space: nowrap; }
+  .rfp-root .badge-rfpilot { display: inline-flex; align-items: center; background: #008ad2; color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; border-radius: 8px; letter-spacing: 0.3px; white-space: nowrap; }
+  .rfp-root .logo-chip { display: inline-flex; align-items: center; background: #fff; padding: 10px 18px; border-radius: 10px; }
+  .rfp-root .logo-chip img { display: block; height: 42px; width: auto; }
   .rfp-root .cover-title-block { margin-top: 4px; margin-bottom: 10px; }
   .rfp-root .rfp-label { display: inline-flex; align-items: center; background: #fef2f2; color: #b91c1c; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border: 1px solid #fecaca; }
-  .rfp-root .event-name { font-size: 28px; font-weight: 900; color: #0f1b57; line-height: 1.15; margin-bottom: 4px; letter-spacing: -0.3px; }
+  .rfp-root .event-name { font-size: 28px; font-weight: 900; color: #222628; line-height: 1.15; margin-bottom: 4px; letter-spacing: -0.3px; }
   .rfp-root .event-client { font-size: 14px; font-weight: 700; color: #64748b; margin-bottom: 10px; }
   .rfp-root .date-bar { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #e2e8f0; border-radius: 7px; overflow: hidden; margin-bottom: 10px; }
   .rfp-root .date-cell { padding: 8px 12px; font-size: 12px; background: #f8fafc; border-right: 1px solid #e2e8f0; }
   .rfp-root .date-cell:last-child { border-right: none; }
-  .rfp-root .date-cell b { color: #0f1b57; }
+  .rfp-root .date-cell b { color: #222628; }
   .rfp-root .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 9px; }
-  .rfp-root .stat-card { border: 1px solid #e2e8f0; border-top: 3px solid #00c2c9; border-radius: 7px; padding: 9px 9px 8px; background: rgba(0,194,201,0.03); text-align: center; }
+  .rfp-root .stat-card { border: 1px solid #e2e8f0; border-top: 3px solid #008ad2; border-radius: 7px; padding: 9px 9px 8px; background: rgba(0,138,210,0.03); text-align: center; }
   .rfp-root .stat-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .rfp-root .stat-value { font-size: 17px; font-weight: 900; color: #00c2c9; line-height: 1; }
+  .rfp-root .stat-value { font-size: 17px; font-weight: 900; color: #008ad2; line-height: 1; }
   .rfp-root .flags-section { margin-bottom: 9px; }
-  .rfp-root .flags-label { font-size: 10px; font-weight: 800; color: #00c2c9; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+  .rfp-root .flags-label { font-size: 10px; font-weight: 800; color: #008ad2; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
   .rfp-root .flags-row { display: flex; flex-wrap: wrap; gap: 5px; }
   .rfp-root .flag { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.2px; white-space: nowrap; }
   .rfp-root .flag::before { content: "●"; font-size: 8px; }
@@ -46,48 +48,48 @@ const TEMPLATE_CSS = `
   .rfp-root .flag.violet { background: #9333ea; color: #fff; }
   .rfp-root .flag.green { background: #166534; color: #fff; }
   .rfp-root .overview-box { border: 1px solid #e2e8f0; border-radius: 7px; padding: 10px 13px; background: #fff; margin-bottom: 8px; }
-  .rfp-root .overview-heading { font-size: 11px; font-weight: 800; color: #00c2c9; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
+  .rfp-root .overview-heading { font-size: 11px; font-weight: 800; color: #008ad2; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
   .rfp-root .overview-box p { font-size: 12px; color: #2d3748; line-height: 1.6; margin-bottom: 6px; }
   .rfp-root .overview-box p:last-of-type { margin-bottom: 0; }
   .rfp-root .contact-bar { display: grid; grid-template-columns: 90px 1fr 1fr 1fr; border: 1px solid #e2e8f0; border-radius: 7px; overflow: hidden; margin-top: 9px; }
-  .rfp-root .contact-label-cell { background: #0f1b57; color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px 6px; line-height: 1.4; }
-  .rfp-root .contact-data-cell { padding: 8px 11px; font-size: 12px; font-weight: 700; color: #0f1b57; border-left: 1px solid #e2e8f0; display: flex; align-items: center; background: #f8fafc; }
+  .rfp-root .contact-label-cell { background: #222628; color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px 6px; line-height: 1.4; }
+  .rfp-root .contact-data-cell { padding: 8px 11px; font-size: 12px; font-weight: 700; color: #222628; border-left: 1px solid #e2e8f0; display: flex; align-items: center; background: #f8fafc; }
   .rfp-root .section { margin-bottom: 9px; }
-  .rfp-root .section-title { background: #0f1b57; color: #fff; padding: 8px 13px; border-radius: 9px; display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 13px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; }
-  .rfp-root .sec-num { background: #00c2c9; color: #fff; min-width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; flex-shrink: 0; }
-  .rfp-root .section-subtitle { font-size: 10.5px; font-weight: 800; color: #00c2c9; text-transform: uppercase; letter-spacing: 0.9px; margin: 8px 0 5px; }
+  .rfp-root .section-title { background: #222628; color: #fff; padding: 8px 13px; border-radius: 9px; display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 13px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; }
+  .rfp-root .sec-num { background: #008ad2; color: #fff; min-width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; flex-shrink: 0; }
+  .rfp-root .section-subtitle { font-size: 10.5px; font-weight: 800; color: #008ad2; text-transform: uppercase; letter-spacing: 0.9px; margin: 8px 0 5px; }
   .rfp-root table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .rfp-root th { background: #0f1b57; color: #fff; font-size: 11px; font-weight: 700; padding: 7px 9px; text-align: left; letter-spacing: 0.3px; text-transform: uppercase; }
+  .rfp-root th { background: #222628; color: #fff; font-size: 11px; font-weight: 700; padding: 7px 9px; text-align: left; letter-spacing: 0.3px; text-transform: uppercase; }
   .rfp-root td { border: 1px solid #e2e8f0; padding: 6px 9px; vertical-align: top; line-height: 1.45; color: #1e293b; }
   .rfp-root tr:nth-child(even) td { background: #fafbfd; }
   .rfp-root tr:first-child td { border-top: none; }
   .rfp-root .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .rfp-root .info-card { border: 1px solid #e2e8f0; border-radius: 7px; padding: 9px 12px; background: #fff; }
-  .rfp-root .info-card h3 { font-size: 12.5px; font-weight: 800; color: #0f1b57; margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .rfp-root .info-card h3 { font-size: 12.5px; font-weight: 800; color: #222628; margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.3px; }
   .rfp-root .info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 0; border-bottom: 1px dashed #e5e7eb; gap: 8px; }
   .rfp-root .info-row:last-of-type { border-bottom: none; }
   .rfp-root .info-label { font-weight: 700; color: #64748b; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
   .rfp-root .info-value { font-weight: 600; color: #1e293b; font-size: 11px; text-align: right; }
-  .rfp-root .crew-box { margin-top: 7px; padding: 6px 10px; background: rgba(0,194,201,0.07); border-left: 3px solid #00c2c9; border-radius: 4px; }
-  .rfp-root .crew-title { font-size: 10px; font-weight: 800; color: #00c2c9; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
+  .rfp-root .crew-box { margin-top: 7px; padding: 6px 10px; background: rgba(0,138,210,0.07); border-left: 3px solid #008ad2; border-radius: 4px; }
+  .rfp-root .crew-title { font-size: 10px; font-weight: 800; color: #008ad2; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
   .rfp-root .crew-list { font-size: 11px; color: #374151; line-height: 1.5; }
   .rfp-root .note-box { margin-top: 6px; padding: 6px 10px; background: #fffbeb; border-left: 3px solid #f97316; border-radius: 4px; }
   .rfp-root .note-title { font-size: 10px; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
   .rfp-root .note-text { font-size: 11px; color: #78350f; line-height: 1.5; }
-  .rfp-root .callout { border: 1px solid #e2e8f0; border-left: 4px solid #00c2c9; border-radius: 6px; padding: 9px 12px; background: rgba(0,194,201,0.04); margin-top: 8px; }
+  .rfp-root .callout { border: 1px solid #e2e8f0; border-left: 4px solid #008ad2; border-radius: 6px; padding: 9px 12px; background: rgba(0,138,210,0.04); margin-top: 8px; }
   .rfp-root .callout p { font-size: 11.5px; color: #1e293b; line-height: 1.55; }
-  .rfp-root .callout-heading { font-size: 11px; font-weight: 800; color: #0f1b57; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.3px; }
+  .rfp-root .callout-heading { font-size: 11px; font-weight: 800; color: #222628; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.3px; }
   .rfp-root .orange-callout { border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 6px; padding: 9px 12px; background: #fff7ed; margin-top: 8px; font-size: 11.5px; color: #7c2d12; line-height: 1.55; font-style: italic; }
   .rfp-root .orange-callout b { color: #9a3412; font-style: normal; }
   .rfp-root .cta-box { display: flex; margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-  .rfp-root .cta-side { background: #0f1b57; color: #00c2c9; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 10px; display: flex; align-items: center; justify-content: center; text-align: center; min-width: 80px; line-height: 1.5; writing-mode: vertical-lr; transform: rotate(180deg); }
-  .rfp-root .cta-body { padding: 12px 15px; background: rgba(0,194,201,0.04); flex: 1; }
+  .rfp-root .cta-side { background: #222628; color: #008ad2; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 10px; display: flex; align-items: center; justify-content: center; text-align: center; min-width: 80px; line-height: 1.5; writing-mode: vertical-lr; transform: rotate(180deg); }
+  .rfp-root .cta-body { padding: 12px 15px; background: rgba(0,138,210,0.04); flex: 1; }
   .rfp-root .cta-body p { font-size: 11.5px; color: #1e293b; line-height: 1.6; }
-  .rfp-root .cta-link { margin-top: 6px; font-size: 12px; font-weight: 800; color: #00c2c9; }
+  .rfp-root .cta-link { margin-top: 6px; font-size: 12px; font-weight: 800; color: #008ad2; }
   .rfp-root .disclaimer-box { border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-top: 8px; background: #f8fafc; }
   .rfp-root .disclaimer-box p { font-size: 11px; color: #64748b; line-height: 1.6; text-align: center; }
   .rfp-root .matrix-bar { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 3px; }
-  .rfp-root .matrix-fill { height: 6px; background: #00c2c9; border-radius: 3px; }
+  .rfp-root .matrix-fill { height: 6px; background: #008ad2; border-radius: 3px; }
 `;
 
 /* ─── Data types ─── */
@@ -490,7 +492,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             </div>
             <div className="badge-confidential">Confidential</div>
           </div>
-          <div className="badge-rfpilot">Powered by RFPilot</div>
+          <div className="logo-chip">
+            <img src="/assets/logo/eventpage.png" alt="RFPilot" />
+          </div>
         </div>
 
         <div className="divider-thick" />
@@ -519,9 +523,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         </div>
 
         <div className="stats-row">
-          <div className="stat-card" style={{ borderTopColor: "#00c2c9", background: "rgba(0,194,201,0.04)" }}>
+          <div className="stat-card" style={{ borderTopColor: "#008ad2", background: "rgba(0,138,210,0.04)" }}>
             <div className="stat-label">Attendees</div>
-            <div className="stat-value" style={{ color: "#00c2c9" }}>{p(ev.attendees) || "—"}</div>
+            <div className="stat-value" style={{ color: "#008ad2" }}>{p(ev.attendees) || "—"}</div>
           </div>
           <div className="stat-card" style={{ borderTopColor: "#0ea5e9", background: "rgba(14,165,233,0.04)" }}>
             <div className="stat-label">Show Rooms</div>
@@ -573,20 +577,20 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           )}
           {arr(ev.primaryAudience).length > 0 && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "#00c2c9", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Primary Audience</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#008ad2", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Primary Audience</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                 {arr(ev.primaryAudience).map((a, i) => (
-                  <span key={i} style={{ display: "inline-flex", alignItems: "center", background: "#0f1b57", color: "#fff", fontSize: 10.5, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{a}</span>
+                  <span key={i} style={{ display: "inline-flex", alignItems: "center", background: "#222628", color: "#fff", fontSize: 10.5, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{a}</span>
                 ))}
               </div>
             </div>
           )}
           {arr(ev.toneDirection).length > 0 && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "#00c2c9", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Tone &amp; Direction</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#008ad2", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Tone &amp; Direction</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                 {arr(ev.toneDirection).map((t, i) => (
-                  <span key={i} style={{ display: "inline-flex", alignItems: "center", background: "rgba(0,194,201,0.1)", color: "#0e7490", fontSize: 10.5, fontWeight: 700, padding: "3px 10px", borderRadius: 20, border: "1px solid rgba(0,194,201,0.35)" }}>{t}</span>
+                  <span key={i} style={{ display: "inline-flex", alignItems: "center", background: "rgba(0,138,210,0.1)", color: "#0e7490", fontSize: 10.5, fontWeight: 700, padding: "3px 10px", borderRadius: 20, border: "1px solid rgba(0,138,210,0.35)" }}>{t}</span>
                 ))}
               </div>
             </div>
@@ -620,7 +624,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
               <table>
                 <thead>
                   <tr>
-                    {p(vs.loadInDate) && <th style={{ background: "#00c2c9" }}>Load-In</th>}
+                    {p(vs.loadInDate) && <th style={{ background: "#008ad2" }}>Load-In</th>}
                     {p(vs.rehearsalDate) && <th style={{ background: "#0ea5e9" }}>Rehearsal</th>}
                     {showStartDate && <th style={{ background: "#10b981" }}>Show Start</th>}
                     {showEndDate && <th style={{ background: "#8b5cf6" }}>Show End</th>}
@@ -629,7 +633,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
                 </thead>
                 <tbody>
                   <tr>
-                    {p(vs.loadInDate) && <td style={{ background: "rgba(0,194,201,0.06)", color: "#00c2c9", fontWeight: 700 }}>{fmtDate(p(vs.loadInDate))}{p(vs.loadInTime) ? ` — ${p(vs.loadInTime)}` : ""}</td>}
+                    {p(vs.loadInDate) && <td style={{ background: "rgba(0,138,210,0.06)", color: "#008ad2", fontWeight: 700 }}>{fmtDate(p(vs.loadInDate))}{p(vs.loadInTime) ? ` — ${p(vs.loadInTime)}` : ""}</td>}
                     {p(vs.rehearsalDate) && <td style={{ background: "rgba(14,165,233,0.06)", color: "#0ea5e9", fontWeight: 700 }}>{fmtDate(p(vs.rehearsalDate))}{p(vs.rehearsalTime) ? ` — ${p(vs.rehearsalTime)}` : ""}</td>}
                     {showStartDate && <td style={{ background: "rgba(16,185,129,0.06)", color: "#10b981", fontWeight: 700 }}>{fmtDate(showStartDate)}{p(vs.showStartTime) ? ` — ${p(vs.showStartTime)}` : ""}</td>}
                     {showEndDate && <td style={{ background: "rgba(139,92,246,0.06)", color: "#8b5cf6", fontWeight: 700 }}>{fmtDate(showEndDate)}{p(vs.showEndTime) ? ` — ${p(vs.showEndTime)}` : ""}</td>}
@@ -987,7 +991,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
               { label: "Alternates", detail: "At least one alternate/value-engineered option with scope tradeoffs explained." },
             ].map((req, i) => (
               <tr key={i}>
-                <td style={{ textAlign: "center", fontWeight: 900, background: i % 2 === 0 ? "#0f1b57" : "#00c2c9", color: i % 2 === 0 ? "#00c2c9" : "#fff" }}>{i + 1}</td>
+                <td style={{ textAlign: "center", fontWeight: 900, background: i % 2 === 0 ? "#222628" : "#008ad2", color: i % 2 === 0 ? "#008ad2" : "#fff" }}>{i + 1}</td>
                 <td><b>{req.label}</b></td>
                 <td>{req.detail}</td>
               </tr>
@@ -1025,7 +1029,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             {matrixRows.map((row, i) => (
               <tr key={i}>
                 <td>{row.label}</td>
-                <td style={{ textAlign: "center", fontWeight: 800, color: "#0f1b57" }}>{row.weight}%</td>
+                <td style={{ textAlign: "center", fontWeight: 800, color: "#222628" }}>{row.weight}%</td>
                 <td>{row.guide}</td>
               </tr>
             ))}
@@ -1071,7 +1075,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
                   window.open(url, "_blank");
                 }
               }}
-              style={{ background: "#0f1b57", color: "#fff", border: "none", borderRadius: 5, padding: "4px 9px", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+              style={{ background: "#222628", color: "#fff", border: "none", borderRadius: 5, padding: "4px 9px", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
             >
               ↓ Download
             </button>
@@ -1079,7 +1083,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         );
         const openBtn = (url: string) => (
           <td className="no-print" style={{ width: "12%", textAlign: "center", verticalAlign: "middle" }}>
-            <a href={url} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#00c2c9", color: "#fff", borderRadius: 5, padding: "4px 9px", fontSize: 10, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+            <a href={url} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#008ad2", color: "#fff", borderRadius: 5, padding: "4px 9px", fontSize: 10, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
               ↗ Open
             </a>
           </td>
@@ -1122,49 +1126,49 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
                     {brandFiles.map((f, i) => (
                       <tr key={`bg-${i}`}>
                         <td>{i === 0 ? <b>Brand Guide</b> : ""}</td>
-                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{fname(f)}</td>
                         {dlBtn(f, fname(f))}
                       </tr>
                     ))}
                     {p(up.brandGuideUrl) && (
                       <tr>
                         <td><b>Brand Guide URL</b></td>
-                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{p(up.brandGuideUrl)}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{p(up.brandGuideUrl)}</td>
                         {openBtn(p(up.brandGuideUrl))}
                       </tr>
                     )}
                     {logoFiles.map((f, i) => (
                       <tr key={`lo-${i}`}>
                         <td>{i === 0 ? <b>Event Logo</b> : ""}</td>
-                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{fname(f)}</td>
                         {dlBtn(f, fname(f))}
                       </tr>
                     ))}
                     {refFiles.map((f, i) => (
                       <tr key={`rf-${i}`}>
                         <td>{i === 0 ? <b>Reference Files</b> : ""}</td>
-                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{fname(f)}</td>
                         {dlBtn(f, fname(f))}
                       </tr>
                     ))}
                     {refUrls.map((u, i) => (
                       <tr key={`ru-${i}`}>
                         <td>{i === 0 && !refFiles.length ? <b>Reference URLs</b> : ""}</td>
-                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{u}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{u}</td>
                         {openBtn(u)}
                       </tr>
                     ))}
                     {venueDocs.map((f, i) => (
                       <tr key={`vd-${i}`}>
                         <td>{i === 0 ? <b>Venue Documents</b> : ""}</td>
-                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{fname(f)}</td>
                         {dlBtn(f, fname(f))}
                       </tr>
                     ))}
                     {ndaDocs.map((f, i) => (
                       <tr key={`nd-${i}`}>
                         <td>{i === 0 ? <b>NDA Document</b> : ""}</td>
-                        <td style={{ fontSize: 11, color: "#0f1b57" }}>{fname(f)}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{fname(f)}</td>
                         {dlBtn(f, fname(f))}
                       </tr>
                     ))}

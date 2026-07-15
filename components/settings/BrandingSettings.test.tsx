@@ -16,7 +16,7 @@ const defaultValue: BrandingSettingsForm = {
   brandName: 'Acme Corp',
   linkPrefix: 'acme',
   defaultFont: 'Poppins',
-  signatureColor: '#2DC6F5',
+  signatureColor: '#2FC6F5',
   logoFile: null,
 }
 
@@ -56,7 +56,7 @@ describe('BrandingSettings — rendering', () => {
 
   it('renders signature color input with current value', () => {
     render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
-    expect(screen.getByDisplayValue('#2DC6F5')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('#2FC6F5')).toBeInTheDocument()
   })
 
   it('renders logo upload button with aria-label', () => {
@@ -119,7 +119,7 @@ describe('BrandingSettings — onChange callbacks', () => {
 
   it('calls onChange with valid hex when signature color changes', () => {
     render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
-    fireEvent.change(screen.getByDisplayValue('#2DC6F5'), { target: { value: '#FF0000' } })
+    fireEvent.change(screen.getByDisplayValue('#2FC6F5'), { target: { value: '#FF0000' } })
     expect(mockOnChange).toHaveBeenCalledWith(
       expect.objectContaining({ signatureColor: '#FF0000' }),
     )
@@ -127,16 +127,16 @@ describe('BrandingSettings — onChange callbacks', () => {
 
   it('resets to fallback color when a 7-char invalid hex is entered', () => {
     render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
-    // 7-char invalid hex → handleHexChange falls back to the default #2DC6F5
-    fireEvent.change(screen.getByDisplayValue('#2DC6F5'), { target: { value: '#ZZZZZZ' } })
+    // 7-char invalid hex → handleHexChange falls back to the default #2FC6F5
+    fireEvent.change(screen.getByDisplayValue('#2FC6F5'), { target: { value: '#ZZZZZZ' } })
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ signatureColor: '#2DC6F5' }),
+      expect.objectContaining({ signatureColor: '#2FC6F5' }),
     )
   })
 
   it('does not call onChange while the user is mid-typing (< 7 chars)', () => {
     render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
-    fireEvent.change(screen.getByDisplayValue('#2DC6F5'), { target: { value: '#FF' } })
+    fireEvent.change(screen.getByDisplayValue('#2FC6F5'), { target: { value: '#FF' } })
     expect(mockOnChange).not.toHaveBeenCalled()
   })
 })

@@ -116,8 +116,8 @@ const SignupPage = () => {
       <button
         type="submit"
         disabled={loading}
-        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(15,27,87,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(15,27,87,0.55)] active:translate-y-0 disabled:opacity-70"
-        style={{ background: "#0f1b57" }}
+        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(34,38,40,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(34,38,40,0.55)] active:translate-y-0 disabled:opacity-70"
+        style={{ background: "#222628" }}
       >
         <span>{loading ? "Sending Code..." : "Get Started Free"}</span>
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -186,8 +186,8 @@ const SignupPage = () => {
       <button
         type="submit"
         disabled={loading}
-        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(15,27,87,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(15,27,87,0.55)] active:translate-y-0 disabled:opacity-70"
-        style={{ background: "#0f1b57" }}
+        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(34,38,40,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(34,38,40,0.55)] active:translate-y-0 disabled:opacity-70"
+        style={{ background: "#222628" }}
       >
         <span>{loading ? "Verifying..." : "Verify Code"}</span>
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -276,8 +276,8 @@ const SignupPage = () => {
       <button
         type="submit"
         disabled={loading}
-        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(15,27,87,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(15,27,87,0.55)] active:translate-y-0 disabled:opacity-70"
-        style={{ background: "#0f1b57" }}
+        className="cursor-pointer group relative mb-8 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-[15px] font-bold text-white shadow-[0_4px_20px_rgba(34,38,40,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(34,38,40,0.55)] active:translate-y-0 disabled:opacity-70"
+        style={{ background: "#222628" }}
       >
         <span>{loading ? "Creating Account..." : "Complete Setup"}</span>
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

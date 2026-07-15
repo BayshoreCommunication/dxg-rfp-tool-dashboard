@@ -47,7 +47,7 @@ const ProposalSuccessfullyCreate = ({
         <button
           type="button"
           onClick={onViewProposal}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-4 py-3 text-sm font-bold text-brand-dark transition-colors hover:bg-[#00c2c9]/10"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#008ad2]/30 bg-[#008ad2]/5 px-4 py-3 text-sm font-bold text-brand-dark transition-colors hover:bg-[#008ad2]/10"
         >
           <Eye size={16} />
           View Proposal
@@ -68,7 +68,7 @@ const ProposalSuccessfullyCreate = ({
           type="button"
           onClick={onSendEmail}
           className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95 ${onSaveCopy ? "" : "sm:col-span-2"}`}
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <Mail size={16} />
           Send This Proposal By Email

@@ -80,9 +80,9 @@ export default function SaveCopyModal({
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#d7dce3]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4e4e4]">
           <div>
-            <h2 className="text-[18px] font-semibold text-[#0f1b57]">Save a Copy</h2>
+            <h2 className="text-[18px] font-semibold text-[#222628]">Save a Copy</h2>
             <p className="mt-0.5 text-xs text-slate-500">
               Customize the copy. It will be saved as a draft.
             </p>
@@ -108,10 +108,10 @@ export default function SaveCopyModal({
               value={eventName}
               onChange={(e) => setEventName(e.target.value)}
               placeholder="Enter event name for the copy"
-              className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#00c2c9]/40 ${
+              className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40 ${
                 showErrors && !eventName.trim()
                   ? "border-red-400 bg-red-50"
-                  : "border-[#d7dce3] bg-white"
+                  : "border-[#e4e4e4] bg-white"
               }`}
             />
             {showErrors && !eventName.trim() && (
@@ -130,7 +130,7 @@ export default function SaveCopyModal({
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#00c2c9]/40"
+                className="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40"
               />
             </div>
             <div>
@@ -142,7 +142,7 @@ export default function SaveCopyModal({
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#00c2c9]/40"
+                className="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40"
               />
             </div>
           </div>
@@ -152,12 +152,12 @@ export default function SaveCopyModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#d7dce3]">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e4e4e4]">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="h-9 px-5 rounded-md border border-[#d7dce3] text-sm font-semibold text-[#1f2d5d] hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="h-9 px-5 rounded-md border border-[#e4e4e4] text-sm font-semibold text-[#222628] hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -166,7 +166,7 @@ export default function SaveCopyModal({
             onClick={handleConfirm}
             disabled={saving}
             className="h-9 px-6 rounded-md text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(14,165,233,0.35)] transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
           >
             {saving ? "Saving..." : "Save Copy"}
           </button>

@@ -7,14 +7,14 @@ import { InfoTooltip } from "./shared";
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20 placeholder:text-[#b0bace]";
-const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20 placeholder:text-[#b0bace]";
+const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const errorClass = "mt-1 text-sm text-red-500 normal-case";
 
 const Group = ({ label }: { label: string }) => (
-  <div className="mb-5 mt-8 border-t border-[#e8edf5] pt-6 first:mt-0 first:border-0 first:pt-0">
+  <div className="mb-5 mt-8 border-t border-[#f0f0f0] pt-6 first:mt-0 first:border-0 first:pt-0">
     <p className={groupLabelClass}>{label}</p>
   </div>
 );
@@ -59,15 +59,15 @@ const pillCls = (active: boolean): string => {
   const base =
     "flex h-10 cursor-pointer items-center justify-center rounded-md border px-4 text-sm font-semibold transition-all";
   return active
-    ? `${base} border-[#00c2c9] bg-[#00c2c9]/10 text-[#1f2d5d]`
-    : `${base} border-[#d7dce3] bg-white text-[#8f98bf] hover:border-slate-300`;
+    ? `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#222628]`
+    : `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
 };
 
 const phoneTypePillCls = (opt: string, selected: string): string => {
   const base = "rounded-full border px-4 py-1.5 text-xs font-semibold cursor-pointer transition-all";
   return selected === opt
-    ? `${base} border-[#00c2c9] bg-[#00c2c9]/10 text-[#0f1b57]`
-    : `${base} border-[#d7dce3] bg-white text-slate-500 hover:border-slate-300`;
+    ? `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#222628]`
+    : `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
 };
 
 const errInputCls = (val: string, showErrors: boolean): string =>
@@ -95,18 +95,18 @@ const AdditionalContactCard = ({
   const up = (p: Partial<AdditionalContact>) => onChange({ ...contact, ...p });
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#d7dce3] bg-white">
+    <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#f8faff]"
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#00c2c9]/10 text-xs font-bold text-[#00c2c9]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#008ad2]/10 text-xs font-bold text-[#008ad2]">
             {index + 1}
           </span>
           <div>
-            <span className="text-sm font-bold text-[#0f1b57]">
+            <span className="text-sm font-bold text-[#222628]">
               {contact.fullName || `Additional Contact ${index + 1}`}
             </span>
             {contact.titleAndRole && !open && (
@@ -125,7 +125,7 @@ const AdditionalContactCard = ({
       </button>
 
       {open && (
-        <div className="border-t border-[#e8edf5] px-4 pb-4 pt-4">
+        <div className="border-t border-[#f0f0f0] px-4 pb-4 pt-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Full Name</label>
@@ -278,18 +278,18 @@ const ContactInfo = ({
 
   return (
     <section
-      className="flex min-h-screen flex-col rounded-md border border-[#d7dce3] bg-white"
+      className="flex min-h-screen flex-col rounded-md border border-[#e4e4e4] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="border-b border-[#d7dce3] px-8 py-6">
+      <div className="border-b border-[#e4e4e4] px-8 py-6">
         <div className="mb-1 flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             Page 9 of 9
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">Contact &amp; Submit</h2>
-        <p className="mt-1 text-sm text-[#8f98bf]">
+        <h2 className="text-[22px] font-bold text-[#222628]">Contact &amp; Submit</h2>
+        <p className="mt-1 text-sm text-[#969798]">
           Primary contact details for proposal delivery, vendor communications, and the RFPilot portal.
         </p>
       </div>
@@ -425,7 +425,7 @@ const ContactInfo = ({
               value={safeData.contactPhoneExt}
               onChange={(e) => onChange({ contactPhoneExt: e.target.value })}
               placeholder="Ext."
-              className="w-24 rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20 placeholder:text-[#b0bace]"
+              className="w-24 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20 placeholder:text-[#b0bace]"
             />
           </div>
           {showErrors && !safeData.contactPhone.trim() && (
@@ -468,7 +468,7 @@ const ContactInfo = ({
             <p className={errorClass}>Legal organization name is required.</p>
           )}
           {safeData.organizationLegalName && (
-            <div className="mt-2 rounded-lg border border-[#e0e7ff] bg-[#f5f7ff] px-3 py-2">
+            <div className="mt-2 rounded-lg border border-[#eeeeee] bg-[#f9f9f9] px-3 py-2">
               <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
                 Cover Page Subtitle Preview
               </p>
@@ -511,7 +511,7 @@ const ContactInfo = ({
           <button
             type="button"
             onClick={addAdditionalContact}
-            className="flex items-center gap-1.5 text-sm font-semibold text-[#00c2c9] hover:underline"
+            className="flex items-center gap-1.5 text-sm font-semibold text-[#008ad2] hover:underline"
           >
             <PlusCircle size={16} /> Add additional contact
           </button>
@@ -591,13 +591,13 @@ const ContactInfo = ({
 
         {/* ── Cover page contact box preview ── */}
         {coverPreviewVisible && (
-          <div className="mb-6 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4">
+          <div className="mb-6 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4">
             <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">
               Cover Page — Primary Contact Box Preview
             </p>
             <div className="space-y-0.5 text-xs text-slate-700">
               {(safeData.contactFirstName || safeData.contactLastName) && (
-                <p className="text-sm font-bold text-[#0f1b57]">
+                <p className="text-sm font-bold text-[#222628]">
                   {safeData.contactFirstName} {safeData.contactLastName}
                 </p>
               )}
@@ -616,7 +616,7 @@ const ContactInfo = ({
                 </p>
               )}
               {safeData.additionalContacts.filter((c) => c.fullName || c.email).length > 0 && (
-                <div className="mt-2 border-t border-[#e0e7ff] pt-2">
+                <div className="mt-2 border-t border-[#eeeeee] pt-2">
                   <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
                     Additional Contacts
                   </p>
@@ -638,8 +638,8 @@ const ContactInfo = ({
         )}
 
         {/* ── Submit banner ── */}
-        <div className="rounded-xl border border-[#00c2c9]/30 bg-[#f0fbff] p-5">
-          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+        <div className="rounded-xl border border-[#008ad2]/30 bg-[#f0fbff] p-5">
+          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             {isEditMode ? "Ready to update your RFP?" : "Ready to generate your RFP?"}
           </p>
           <p className="text-sm text-[#4a5a8a]">
@@ -653,7 +653,7 @@ const ContactInfo = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between border-t border-[#d7dce3] px-8 py-5">
+      <div className="flex items-center justify-between border-t border-[#e4e4e4] px-8 py-5">
         <button
           type="button"
           onClick={onBack}
@@ -679,7 +679,7 @@ const ContactInfo = ({
             onClick={onContinue}
             disabled={isSubmitting || isSavingDraft}
             className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
           >
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
             {isSubmitting ? "Submitting…" : isEditMode ? "Update RFP" : "Generate RFP"}

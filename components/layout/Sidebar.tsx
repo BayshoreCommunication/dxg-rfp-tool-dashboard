@@ -97,7 +97,9 @@ const Sidebar = () => {
       if (mounted) setVendorUnreadCount(count);
     };
     void load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -161,7 +163,7 @@ const Sidebar = () => {
     };
   }, [pathname, socketUrl]);
 
-  const avatarUrl = userData?.branding?.logoFile?.trim() || "";
+  const avatarUrl = "/assets/logo/rfpilot-primary-logo.png"; // Replace with your actual logo URL or logic to fetch it
   const brandInitial =
     userData?.branding?.brandName?.charAt(0)?.toUpperCase() || "U";
 
@@ -176,7 +178,7 @@ const Sidebar = () => {
           {avatarUrl ? (
             <Image
               src={avatarUrl}
-              alt={userData?.branding?.brandName || "Logo"}
+              alt={"Logo"}
               width={64}
               height={64}
               className="h-full w-full object-contain p-1.5"
@@ -192,9 +194,10 @@ const Sidebar = () => {
       <nav className="flex flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto px-3 py-4">
         {navigationConfig.map((item) => {
           const isActive = isItemActive(item);
-          const badge = item.id === "vendor-responses" && vendorUnreadCount > 0
-            ? vendorUnreadCount
-            : null;
+          const badge =
+            item.id === "vendor-responses" && vendorUnreadCount > 0
+              ? vendorUnreadCount
+              : null;
 
           return (
             <Link key={item.id} href={item.href} className="block w-full">
@@ -207,7 +210,7 @@ const Sidebar = () => {
                 )}
               >
                 {isActive && (
-                  <div className="absolute -left-3 top-1/2 h-7 w-[4px] -translate-y-1/2 rounded-r-full bg-primary shadow-[2px_0_8px_rgba(0,194,201,0.4)]" />
+                  <div className="absolute -left-3 top-1/2 h-7 w-[4px] -translate-y-1/2 rounded-r-full bg-primary shadow-[2px_0_8px_rgba(0,138,210,0.4)]" />
                 )}
 
                 <div
@@ -220,7 +223,7 @@ const Sidebar = () => {
                 >
                   {item.icon}
                   {badge !== null && (
-                    <span className="pointer-events-none absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#00c2c9] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+                    <span className="pointer-events-none absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#008ad2] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
@@ -251,7 +254,7 @@ const Sidebar = () => {
           className={cn(
             "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200",
             pathname === "/notification"
-              ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(0,194,201,0.95)]"
+              ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(0,138,210,0.95)]"
               : "border-slate-200 bg-white text-slate-500 hover:border-primary/10 hover:bg-primary/5 hover:text-primary",
           )}
         >
@@ -274,7 +277,13 @@ const Sidebar = () => {
             className="block cursor-pointer"
           >
             <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-primary/20 transition-all duration-200 hover:scale-105 hover:ring-primary/40">
-              <div className="flex h-full w-full items-center justify-center text-sm font-black text-white" style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}>
+              <div
+                className="flex h-full w-full items-center justify-center text-sm font-black text-white"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)",
+                }}
+              >
                 {brandInitial}
               </div>
             </div>

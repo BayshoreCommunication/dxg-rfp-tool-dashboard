@@ -6,22 +6,22 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const subPanelClass =
-  "mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4";
+  "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
 const subPanelHeader =
-  "mb-3 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
+  "mb-3 text-xs font-bold uppercase tracking-widest text-[#969798]";
 
 /* ─── Yes/No buttons ─── */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#d7dce3] bg-white text-[#8f98bf] hover:border-slate-300`;
+    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
   if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
@@ -52,7 +52,7 @@ const YesNo = ({
 );
 
 const Group = ({ label }: { label: string }) => (
-  <div className="mb-5 mt-8 border-t border-[#e8edf5] pt-6 first:mt-0 first:border-0 first:pt-0">
+  <div className="mb-5 mt-8 border-t border-[#f0f0f0] pt-6 first:mt-0 first:border-0 first:pt-0">
     <p className={groupLabelClass}>{label}</p>
   </div>
 );
@@ -72,8 +72,8 @@ const amperagePillCls = (opt: string, selected: string): string => {
   const base =
     "rounded-full border px-4 py-1.5 text-xs font-semibold transition-all";
   if (selected === opt)
-    return `${base} border-[#00c2c9] bg-[#00c2c9]/10 text-[#0f1b57]`;
-  return `${base} border-[#d7dce3] bg-white text-slate-500 hover:border-slate-300`;
+    return `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#222628]`;
+  return `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
 };
 
 const INTERNET_USE_CASES = [
@@ -100,11 +100,11 @@ const Stepper = ({
 }) => {
   const num = parseInt(value, 10) || min;
   return (
-    <div className="flex items-center gap-0 overflow-hidden rounded-lg border border-[#d7dce3] w-fit">
+    <div className="flex items-center gap-0 overflow-hidden rounded-lg border border-[#e4e4e4] w-fit">
       <button
         type="button"
         onClick={() => onChange(String(Math.max(min, num - 1)))}
-        className="flex h-10 w-10 items-center justify-center bg-[#f5f7ff] text-lg font-bold text-[#1f2d5d] hover:bg-[#e0e7ff] transition-colors"
+        className="flex h-10 w-10 items-center justify-center bg-[#f9f9f9] text-lg font-bold text-[#222628] hover:bg-[#eeeeee] transition-colors"
       >
         −
       </button>
@@ -114,7 +114,7 @@ const Stepper = ({
       <button
         type="button"
         onClick={() => onChange(String(Math.min(max, num + 1)))}
-        className="flex h-10 w-10 items-center justify-center bg-[#f5f7ff] text-lg font-bold text-[#1f2d5d] hover:bg-[#e0e7ff] transition-colors"
+        className="flex h-10 w-10 items-center justify-center bg-[#f9f9f9] text-lg font-bold text-[#222628] hover:bg-[#eeeeee] transition-colors"
       >
         +
       </button>
@@ -191,20 +191,20 @@ const VenueTechnicalRequirements = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#d7dce3]">
+      <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             Page 6 of 9
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">
+        <h2 className="text-[22px] font-bold text-[#222628]">
           Venue &amp; Technical Infrastructure
         </h2>
-        <p className="mt-1 text-sm text-[#8f98bf]">
+        <p className="mt-1 text-sm text-[#969798]">
           Rigging, power, internet, COI, and venue access details — used to scope labor and logistics.
         </p>
       </div>
@@ -213,7 +213,7 @@ const VenueTechnicalRequirements = ({
 
         {/* ── Reference Panel (read-only) ── */}
         {(loadInDate || strikeDate || numberOfEventRooms || ledWallMaxWidth) && (
-          <div className="mb-6 rounded-xl border border-[#d7dce3] bg-[#f8faff] px-5 py-4">
+          <div className="mb-6 rounded-xl border border-[#e4e4e4] bg-[#fbfbfb] px-5 py-4">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
               From your venue &amp; room specs
             </p>
@@ -408,8 +408,8 @@ const VenueTechnicalRequirements = ({
                       onClick={() => onChange({ powerDropAmperage: opt })}
                       className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
                         data.powerDropAmperage === opt
-                          ? "border-[#00c2c9] bg-[#00c2c9]/10 text-[#0f1b57]"
-                          : "border-[#d7dce3] bg-white text-slate-500 hover:border-slate-300"
+                          ? "border-[#008ad2] bg-[#008ad2]/10 text-[#222628]"
+                          : "border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300"
                       }`}
                     >
                       {opt}
@@ -489,7 +489,7 @@ const VenueTechnicalRequirements = ({
           <textarea
             rows={4}
             maxLength={500}
-            className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+            className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
             placeholder="Paste the venue's COI requirements, additional insured language, or submission deadline…"
             value={data.coiRequirements}
             onChange={(e) => onChange({ coiRequirements: e.target.value })}
@@ -507,7 +507,7 @@ const VenueTechnicalRequirements = ({
           <textarea
             rows={3}
             maxLength={400}
-            className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+            className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
             placeholder="e.g. Load-in after 6am only, freight elevator reservations required 48hrs in advance, all crew must badge in at security…"
             value={data.venueAccessRequirements}
             onChange={(e) =>
@@ -522,7 +522,7 @@ const VenueTechnicalRequirements = ({
       </div>
 
       {/* ── Footer ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
         <button
           type="button"
           onClick={onBack}
@@ -535,7 +535,7 @@ const VenueTechnicalRequirements = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Investment &amp; Evaluation

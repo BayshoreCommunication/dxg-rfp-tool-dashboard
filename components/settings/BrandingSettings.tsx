@@ -9,9 +9,9 @@ const isHexColor = (value: string) => /^#([0-9A-Fa-f]{6})$/.test(value);
 const isObjectUrl = (value?: string | null) =>
   Boolean(value && value.startsWith("blob:"));
 
-const labelClass = "mb-2 block text-sm font-semibold text-[#8f98bf]";
+const labelClass = "mb-2 block text-sm font-semibold text-[#969798]";
 const inputClass =
-  "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
+  "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
 type BrandingSettingsProps = {
   value: BrandingSettingsForm;
@@ -63,8 +63,8 @@ const BrandingSettings = ({
   };
 
   return (
-    <section className="rounded-md border border-[#d7dce3] bg-white px-5 py-6 md:px-8">
-      <h2 className="md:text-[26px] font-semibold leading-none text-[#0f1b57]">
+    <section className="rounded-md border border-[#e4e4e4] bg-white px-5 py-6 md:px-8">
+      <h2 className="md:text-[26px] font-semibold leading-none text-[#222628]">
         Branding
       </h2>
 
@@ -74,7 +74,7 @@ const BrandingSettings = ({
           <button
             type="button"
             onClick={() => logoInputRef.current?.click()}
-            className="flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-md border border-[#d7dce3] bg-[#e8ebf0] text-[#c7ccd6] hover:border-primary/50"
+            className="flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-md border border-[#e4e4e4] bg-[#e8ebf0] text-[#c7ccd6] hover:border-primary/50"
             aria-label="Upload company logo"
           >
             {value.logoFile ? (
@@ -107,7 +107,7 @@ const BrandingSettings = ({
           <button
             type="button"
             onClick={() => logoInputRef.current?.click()}
-            className="rounded-md border border-[#d7dce3] bg-white px-4 py-2 text-sm font-semibold text-[#0f1b57] hover:bg-[#f4f7ff]"
+            className="rounded-md border border-[#e4e4e4] bg-white px-4 py-2 text-sm font-semibold text-[#222628] hover:bg-[#f4f7ff]"
           >
             {value.logoFile ? "Change" : "Upload"}
           </button>
@@ -139,16 +139,16 @@ const BrandingSettings = ({
           <label htmlFor="linkPrefix" className={labelClass}>
             Proposal Link Prefix
           </label>
-          <div className="flex h-10 overflow-hidden rounded-md border border-[#d7dce3] bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
+          <div className="flex h-10 overflow-hidden rounded-md border border-[#e4e4e4] bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
             <input
               id="linkPrefix"
               value={value.linkPrefix}
               onChange={(e) =>
                 onChange({ ...value, linkPrefix: e.target.value })
               }
-              className="w-full px-3 text-sm text-[#1f2d5d] outline-none"
+              className="w-full px-3 text-sm text-[#222628] outline-none"
             />
-            <span className="flex items-center border-l border-[#d7dce3] bg-[#f9fafc] px-3 text-xs font-medium text-[#1f2d5d]">
+            <span className="flex items-center border-l border-[#e4e4e4] bg-[#f9fafc] px-3 text-xs font-medium text-[#222628]">
               .goprospero.com
             </span>
           </div>
@@ -182,7 +182,7 @@ const BrandingSettings = ({
             <label htmlFor="signatureColor" className={labelClass}>
               Signature Color
             </label>
-            <div className="flex h-10 items-center gap-2 rounded-md border border-[#d7dce3] bg-white px-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
+            <div className="flex h-10 items-center gap-2 rounded-md border border-[#e4e4e4] bg-white px-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
               <button
                 type="button"
                 onClick={() => signaturePickerRef.current?.click()}
@@ -198,10 +198,10 @@ const BrandingSettings = ({
                     e.target.value,
                     (nextValue) =>
                       onChange({ ...value, signatureColor: nextValue }),
-                    "#2DC6F5",
+                    "#2FC6F5",
                   )
                 }
-                className="w-full text-sm font-medium text-[#1f2d5d] outline-none"
+                className="w-full text-sm font-medium text-[#222628] outline-none"
               />
             </div>
             <input

@@ -215,7 +215,7 @@ const unionVenueCls = (opt: "YES" | "NO" | "NOT_SURE", value: string): string =>
   const base =
     "flex h-10 cursor-pointer items-center justify-center rounded-md border px-4 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#d7dce3] bg-white text-[#8f98bf] hover:border-slate-300`;
+    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
   if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
   if (opt === "NO") return `${base} border-rose-400 bg-rose-50 text-rose-700`;
   return `${base} border-amber-400 bg-amber-50 text-amber-700`;
@@ -223,13 +223,13 @@ const unionVenueCls = (opt: "YES" | "NO" | "NOT_SURE", value: string): string =>
 
 /* ─── Shared style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
 const selectClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20 appearance-none";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20 appearance-none";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 
 interface Props {
   data: VenueScheduleData;
@@ -268,18 +268,18 @@ const VenueScheduleStep = ({
     : [];
 
   return (
-    <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
+    <section className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white">
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#d7dce3]">
+      <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             Page 2 of 9
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">
+        <h2 className="text-[22px] font-bold text-[#222628]">
           Venue and Overall Event Schedule
         </h2>
-        <p className="mt-1 text-sm text-[#8f98bf]">
+        <p className="mt-1 text-sm text-[#969798]">
           Venue details, union detection, and production timeline.
         </p>
       </div>
@@ -308,7 +308,7 @@ const VenueScheduleStep = ({
               {showErrors && !safeData.venueName.trim() ? (
                 <p className="text-xs text-red-500 normal-case">Required</p>
               ) : <span />}
-              <span className="text-xs text-[#8f98bf] shrink-0 ml-2">
+              <span className="text-xs text-[#969798] shrink-0 ml-2">
                 {safeData.venueName.length}/120
               </span>
             </div>
@@ -414,7 +414,7 @@ const VenueScheduleStep = ({
             <div>
               <label className={labelClass}>
                 Venue Address
-                <span className="ml-1 text-[#8f98bf] text-xs font-normal normal-case tracking-normal">(optional)</span>
+                <span className="ml-1 text-[#969798] text-xs font-normal normal-case tracking-normal">(optional)</span>
                 <InfoTooltip text="Full street address including ZIP code. Used for freight delivery coordination and vendor logistics planning." />
               </label>
               <input
@@ -444,7 +444,7 @@ const VenueScheduleStep = ({
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
               {safeData.venueState && STATE_TIMEZONES[safeData.venueState] && safeData.timeZone === STATE_TIMEZONES[safeData.venueState] && (
-                <p className="mt-1 text-xs text-[#00c2c9] normal-case">
+                <p className="mt-1 text-xs text-[#008ad2] normal-case">
                   Auto-detected from {safeData.venueState}
                 </p>
               )}
@@ -495,8 +495,8 @@ const VenueScheduleStep = ({
 
             {/* Union sub-panel */}
             {safeData.isUnionVenue === "YES" && (
-              <div className="mt-4 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-5">
-                <p className="mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
+              <div className="mt-4 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-5">
+                <p className="mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]">
                   Union Jurisdictions — Select All That Apply
                 </p>
 
@@ -566,7 +566,7 @@ const VenueScheduleStep = ({
                   onChange({ loadInDate: date, loadInTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12${safeData.loadInDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -588,7 +588,7 @@ const VenueScheduleStep = ({
                   onChange({ rehearsalDate: date, rehearsalTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time (optional)"
               />
               {!safeData.rehearsalDate && (
@@ -618,7 +618,7 @@ const VenueScheduleStep = ({
                   onChange({ showStartDate: date, showStartTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12${safeData.showStartDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
               {showErrors && !safeData.showStartDate.trim() && (
@@ -643,7 +643,7 @@ const VenueScheduleStep = ({
                   onChange({ showEndDate: date, showEndTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12${safeData.showEndDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
               {showErrors && !safeData.showEndDate.trim() && (
@@ -671,7 +671,7 @@ const VenueScheduleStep = ({
                   onChange({ strikeDate: date, strikeTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12${safeData.strikeDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -680,7 +680,7 @@ const VenueScheduleStep = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
         <button
           type="button"
           onClick={onBack}
@@ -693,7 +693,7 @@ const VenueScheduleStep = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Room Specifications

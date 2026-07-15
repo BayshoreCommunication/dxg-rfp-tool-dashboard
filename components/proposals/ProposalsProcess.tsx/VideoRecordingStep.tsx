@@ -55,13 +55,13 @@ export const defaultVideoRecording = (): VideoRecordingData => ({
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf] border-b border-[#d7dce3] pb-2";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
 const subPanelClass =
-  "mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4 space-y-4";
+  "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4 space-y-4";
 
 /* ─── Camera position options ─── */
 const CAMERA_POSITIONS = [
@@ -81,7 +81,7 @@ const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#d7dce3] bg-white text-[#8f98bf] hover:border-slate-300`;
+    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
   if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
@@ -122,25 +122,25 @@ const GatewayCard = ({
     onClick={onClick}
     className={`flex w-full flex-col rounded-xl border-2 p-5 text-left transition-all ${
       isSelected
-        ? "border-[#00c2c9] bg-[#00c2c9]/5"
-        : "border-[#d7dce3] bg-white hover:border-[#00c2c9]/40"
+        ? "border-[#008ad2] bg-[#008ad2]/5"
+        : "border-[#e4e4e4] bg-white hover:border-[#008ad2]/40"
     }`}
   >
     <div className="flex items-center gap-3 mb-2">
       <div
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-          isSelected ? "border-[#00c2c9] bg-[#00c2c9]" : "border-[#d7dce3]"
+          isSelected ? "border-[#008ad2] bg-[#008ad2]" : "border-[#e4e4e4]"
         }`}
       >
         {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
       </div>
       <span
-        className={`text-sm font-bold ${isSelected ? "text-[#00c2c9]" : "text-[#1f2d5d]"}`}
+        className={`text-sm font-bold ${isSelected ? "text-[#008ad2]" : "text-[#222628]"}`}
       >
         {title}
       </span>
     </div>
-    <p className="ml-8 text-xs leading-relaxed text-[#8f98bf]">{description}</p>
+    <p className="ml-8 text-xs leading-relaxed text-[#969798]">{description}</p>
   </button>
 );
 
@@ -208,18 +208,18 @@ const VideoRecordingStep = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#d7dce3]">
+      <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             Page 5 of 9
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">Video Recording &amp; Broadcast</h2>
-        <p className="mt-1 text-sm text-[#8f98bf]">
+        <h2 className="text-[22px] font-bold text-[#222628]">Video Recording &amp; Broadcast</h2>
+        <p className="mt-1 text-sm text-[#969798]">
           Cameras, recording specs, deliverables, and post-production requirements.
         </p>
       </div>
@@ -262,9 +262,9 @@ const VideoRecordingStep = ({
 
         {/* NO state info panel */}
         {safeData.videoRecordingRequired === "NO" && (
-          <div className="rounded-xl border border-[#d7dce3] bg-[#f5f7ff] px-6 py-5">
-            <p className="text-sm font-semibold text-[#1f2d5d]">Section 5 will be omitted from your RFP</p>
-            <p className="mt-1 text-xs text-[#8f98bf]">
+          <div className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] px-6 py-5">
+            <p className="text-sm font-semibold text-[#222628]">Section 5 will be omitted from your RFP</p>
+            <p className="mt-1 text-xs text-[#969798]">
               The AV vendor will execute the live show only. No cameras or recording equipment will be scoped.
             </p>
           </div>
@@ -288,7 +288,7 @@ const VideoRecordingStep = ({
                     <button
                       type="button"
                       onClick={() => onChange({ numberOfCameras: String(Math.max(1, camCount - 1)) })}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors"
                     >
                       −
                     </button>
@@ -304,13 +304,13 @@ const VideoRecordingStep = ({
                     <button
                       type="button"
                       onClick={() => onChange({ numberOfCameras: String(Math.min(20, camCount + 1)) })}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors"
                     >
                       +
                     </button>
                   </div>
                   {camHint && (
-                    <p className="mt-2 text-xs text-[#8f98bf] italic">{camHint}</p>
+                    <p className="mt-2 text-xs text-[#969798] italic">{camHint}</p>
                   )}
                 </div>
 
@@ -441,7 +441,7 @@ const VideoRecordingStep = ({
                     <InfoTooltip text="Do you need edited video deliverables — highlight reels or polished session edits — in addition to raw footage? Edited deliverables require a video editor, time, and an approval workflow." />
                   </label>
                   {suggestEdited && (
-                    <p className="mb-2 text-xs font-medium text-[#00c2c9]">
+                    <p className="mb-2 text-xs font-medium text-[#008ad2]">
                       ⚡ You assigned Sizzle/Recap Video to the AV vendor on Page 4 — enabling an edited deliverable here is recommended.
                     </p>
                   )}
@@ -465,7 +465,7 @@ const VideoRecordingStep = ({
 
                   {safeData.editedDeliverable.needed === "YES" && (
                     <div className={subPanelClass}>
-                      <p className="text-xs font-bold uppercase tracking-wide text-[#8f98bf]">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#969798]">
                         Edited Deliverable Details
                       </p>
 
@@ -617,7 +617,7 @@ const VideoRecordingStep = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
         <button
           type="button"
           onClick={onBack}
@@ -630,7 +630,7 @@ const VideoRecordingStep = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Venue &amp; Technical

@@ -1881,7 +1881,7 @@ const AddNewProposal = ({
           {/* Form card skeleton � 80% */}
           <div className="w-[80%] space-y-6">
             <div className="flex min-h-screen flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #00c2c9, #2563eb)" }} />
+              <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #2fc6f5, #008ad2)" }} />
               <div className="flex-1 space-y-6 p-8">
                 <div className="space-y-1">
                   <div className="h-6 w-48 animate-pulse rounded-lg bg-slate-200" />
@@ -1907,7 +1907,7 @@ const AddNewProposal = ({
               </div>
               <div className="flex justify-between border-t border-slate-100 px-8 py-4">
                 <div className="h-9 w-24 animate-pulse rounded-xl bg-slate-100" />
-                <div className="h-9 w-28 animate-pulse rounded-xl bg-[#00c2c9]/20" />
+                <div className="h-9 w-28 animate-pulse rounded-xl bg-[#008ad2]/20" />
               </div>
             </div>
           </div>
@@ -2112,6 +2112,8 @@ const AddNewProposal = ({
             <ProcessList
               activeStep={proposalProcessStep}
               hideStepIds={isInPersonOnly ? [4] : []}
+              isEditMode={isEditMode}
+              onStepClick={(stepId) => setProposalProcessStep(stepId)}
             />
           </div>
         </div>

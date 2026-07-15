@@ -16,16 +16,16 @@ export const PillRadio = ({
   <label
     className={`flex items-center gap-2 px-5 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
       checked
-        ? "border-[#00c2c9] bg-white text-[#1f2d5d]"
-        : "border-[#d7dce3] bg-white text-[#8f98bf] hover:border-[#00c2c9]/60"
+        ? "border-[#008ad2] bg-white text-[#222628]"
+        : "border-[#e4e4e4] bg-white text-[#969798] hover:border-[#008ad2]/60"
     }`}
   >
     <span
       className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        checked ? "border-[#00c2c9]" : "border-[#d7dce3]"
+        checked ? "border-[#008ad2]" : "border-[#e4e4e4]"
       }`}
     >
-      {checked && <span className="w-2 h-2 rounded-full bg-[#00c2c9]" />}
+      {checked && <span className="w-2 h-2 rounded-full bg-[#008ad2]" />}
     </span>
     <input
       type="radio"
@@ -51,16 +51,16 @@ export const PillCheckbox = ({
   <label
     className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
       checked
-        ? "border-[#00c2c9] bg-white text-[#1f2d5d]"
-        : "border-[#d7dce3] bg-white text-[#8f98bf] hover:border-[#00c2c9]/60"
+        ? "border-[#008ad2] bg-white text-[#222628]"
+        : "border-[#e4e4e4] bg-white text-[#969798] hover:border-[#008ad2]/60"
     }`}
   >
     <span
       className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        checked ? "border-[#00c2c9]" : "border-[#d7dce3]"
+        checked ? "border-[#008ad2]" : "border-[#e4e4e4]"
       }`}
     >
-      {checked && <span className="w-2 h-2 rounded-full bg-[#00c2c9]" />}
+      {checked && <span className="w-2 h-2 rounded-full bg-[#008ad2]" />}
     </span>
     <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
     {label}
@@ -105,7 +105,7 @@ export const InfoTooltip = ({ text }: { text: string }) => {
       <Info
         ref={iconRef}
         size={13}
-        style={{ cursor: "help", flexShrink: 0, color: pos ? "#00c2c9" : "#b0b9d1", transition: "color 0.15s" }}
+        style={{ cursor: "help", flexShrink: 0, color: pos ? "#008ad2" : "#b0b9d1", transition: "color 0.15s" }}
       />
       {pos && createPortal(
         <div
@@ -116,7 +116,7 @@ export const InfoTooltip = ({ text }: { text: string }) => {
             transform: "translate(-50%, -100%)",
             zIndex: 9999,
             width: "220px",
-            backgroundColor: "#1f2d5d",
+            backgroundColor: "#222628",
             color: "#ffffff",
             borderRadius: "8px",
             padding: "8px 12px",
@@ -140,7 +140,7 @@ export const InfoTooltip = ({ text }: { text: string }) => {
               height: 0,
               borderLeft: "5px solid transparent",
               borderRight: "5px solid transparent",
-              borderTop: "5px solid #1f2d5d",
+              borderTop: "5px solid #222628",
             }}
           />
         </div>,

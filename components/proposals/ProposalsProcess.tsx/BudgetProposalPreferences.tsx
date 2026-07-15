@@ -6,13 +6,13 @@ import { InfoTooltip, toggleItem } from "./shared";
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const subPanelClass =
-  "mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4";
+  "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
 const errorClass = "mt-1 text-sm text-red-500 normal-case";
 
 /* ─── Yes/No buttons ─── */
@@ -20,7 +20,7 @@ const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#d7dce3] bg-white text-[#8f98bf] hover:border-slate-300`;
+    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
   if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
@@ -43,7 +43,7 @@ const YesNo = ({
 );
 
 const Group = ({ label }: { label: string }) => (
-  <div className="mb-5 mt-8 border-t border-[#e8edf5] pt-6 first:mt-0 first:border-0 first:pt-0">
+  <div className="mb-5 mt-8 border-t border-[#f0f0f0] pt-6 first:mt-0 first:border-0 first:pt-0">
     <p className={groupLabelClass}>{label}</p>
   </div>
 );
@@ -90,8 +90,8 @@ const BUDGET_TIERS = [
 const tierCardCls = (val: string, selected: string): string => {
   const base =
     "relative flex flex-col rounded-xl border-2 px-3 py-3 cursor-pointer transition-all select-none text-left";
-  if (selected === val) return `${base} border-[#00c2c9] bg-[#00c2c9]/5`;
-  return `${base} border-[#d7dce3] bg-white hover:border-[#00c2c9]/40`;
+  if (selected === val) return `${base} border-[#008ad2] bg-[#008ad2]/5`;
+  return `${base} border-[#e4e4e4] bg-white hover:border-[#008ad2]/40`;
 };
 
 /* ─── Budget flexibility pills ─── */
@@ -106,8 +106,8 @@ const flexPillCls = (opt: string, selected: string): string => {
   const base =
     "rounded-full border px-4 py-1.5 text-xs font-semibold cursor-pointer transition-all";
   if (selected === opt)
-    return `${base} border-[#00c2c9] bg-[#00c2c9]/10 text-[#0f1b57]`;
-  return `${base} border-[#d7dce3] bg-white text-slate-500 hover:border-slate-300`;
+    return `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#222628]`;
+  return `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
 };
 
 /* ─── Proposal format options ─── */
@@ -163,15 +163,15 @@ const FORMAT_OPTIONS: {
 const formatCardCls = (checked: boolean): string => {
   const base =
     "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all cursor-pointer";
-  if (checked) return `${base} border-[#00c2c9] bg-[#00c2c9]/5`;
-  return `${base} border-[#d7dce3] bg-white hover:border-slate-300`;
+  if (checked) return `${base} border-[#008ad2] bg-[#008ad2]/5`;
+  return `${base} border-[#e4e4e4] bg-white hover:border-slate-300`;
 };
 
 const formatCheckCls = (checked: boolean): string => {
   const base =
     "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all";
-  if (checked) return `${base} border-[#00c2c9] bg-[#00c2c9]`;
-  return `${base} border-[#d7dce3]`;
+  if (checked) return `${base} border-[#008ad2] bg-[#008ad2]`;
+  return `${base} border-[#e4e4e4]`;
 };
 
 /* ─── Evaluation matrix criteria ─── */
@@ -397,22 +397,22 @@ const BudgetProposalPreferences = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
     >
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#d7dce3]">
+      <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             Page 7 of 9
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">
+        <h2 className="text-[22px] font-bold text-[#222628]">
           Investment &amp; Evaluation
         </h2>
-        <p className="mt-1 text-sm text-[#8f98bf]">
+        <p className="mt-1 text-sm text-[#969798]">
           Investment tier, evaluation matrix, proposal format requirements, and procurement timeline.
         </p>
       </div>
@@ -444,12 +444,12 @@ const BudgetProposalPreferences = ({
                     ★ Producer Call
                   </span>
                 )}
-                <span className="text-sm font-bold leading-tight text-[#0f1b57]">
+                <span className="text-sm font-bold leading-tight text-[#222628]">
                   {tier.value}
                 </span>
                 <span className="mt-0.5 text-xs text-slate-500">{tier.range}</span>
                 {safeData.estimatedAvBudget === tier.value && (
-                  <span className="absolute right-2 top-2 text-xs font-bold text-[#00c2c9]">
+                  <span className="absolute right-2 top-2 text-xs font-bold text-[#008ad2]">
                     ✓
                   </span>
                 )}
@@ -551,11 +551,11 @@ const BudgetProposalPreferences = ({
                   </span>
                   <span className="flex-1">
                     <span className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-[#0f1b57]">
+                      <span className="text-sm font-semibold text-[#222628]">
                         {opt.label}
                       </span>
                       {suggested && (
-                        <span className="rounded-full bg-[#00c2c9]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#00c2c9]">
+                        <span className="rounded-full bg-[#008ad2]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#008ad2]">
                           Suggested
                         </span>
                       )}
@@ -569,16 +569,16 @@ const BudgetProposalPreferences = ({
 
           {/* Auto-added items (read-only) */}
           {autoAddedFormats.length > 0 && (
-            <div className="mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-3">
+            <div className="mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-3">
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                 Auto-added based on your event profile
               </p>
               <div className="space-y-2">
                 {autoAddedFormats.map((f) => (
                   <div key={f.label} className="flex items-start gap-2">
-                    <span className="mt-0.5 shrink-0 text-xs text-[#00c2c9]">⚡</span>
+                    <span className="mt-0.5 shrink-0 text-xs text-[#008ad2]">⚡</span>
                     <div>
-                      <span className="text-xs font-semibold text-[#0f1b57]">{f.label}</span>
+                      <span className="text-xs font-semibold text-[#222628]">{f.label}</span>
                       <span className="ml-1 text-xs text-slate-500">— {f.desc}</span>
                     </div>
                   </div>
@@ -635,8 +635,8 @@ const BudgetProposalPreferences = ({
         )}
 
         {/* Matrix table */}
-        <div className="mb-3 overflow-hidden rounded-xl border border-[#d7dce3]">
-          <div className="grid grid-cols-[1fr_90px] border-b border-[#d7dce3] bg-[#f8faff] px-4 py-2.5">
+        <div className="mb-3 overflow-hidden rounded-xl border border-[#e4e4e4]">
+          <div className="grid grid-cols-[1fr_90px] border-b border-[#e4e4e4] bg-[#fbfbfb] px-4 py-2.5">
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
               Criterion &amp; Scoring Guide
             </span>
@@ -660,10 +660,10 @@ const BudgetProposalPreferences = ({
             return (
               <div
                 key={crit.key}
-                className="grid grid-cols-[1fr_90px] items-center border-b border-[#e8edf5] px-4 py-3 last:border-0"
+                className="grid grid-cols-[1fr_90px] items-center border-b border-[#f0f0f0] px-4 py-3 last:border-0"
               >
                 <div>
-                  <span className="block text-sm font-semibold text-[#0f1b57]">
+                  <span className="block text-sm font-semibold text-[#222628]">
                     {crit.label}
                   </span>
                   <span className="block text-xs italic text-slate-400">{guide}</span>
@@ -680,10 +680,10 @@ const BudgetProposalPreferences = ({
                     max={100}
                     value={w}
                     onChange={(e) => updateMatrix(crit.key, e.target.value)}
-                    className={`w-14 rounded-lg border px-2 py-1.5 text-center text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20 ${
+                    className={`w-14 rounded-lg border px-2 py-1.5 text-center text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20 ${
                       warnZero
                         ? "border-red-400 focus:border-red-400"
-                        : "border-[#d7dce3] focus:border-[#00c2c9]"
+                        : "border-[#e4e4e4] focus:border-[#008ad2]"
                     }`}
                   />
                   <span className="text-xs text-slate-400">%</span>
@@ -718,7 +718,7 @@ const BudgetProposalPreferences = ({
             <button
               type="button"
               onClick={quickBalance}
-              className="ml-auto rounded-lg border border-[#00c2c9] px-3 py-1.5 text-xs font-semibold text-[#00c2c9] transition-colors hover:bg-[#00c2c9]/5"
+              className="ml-auto rounded-lg border border-[#008ad2] px-3 py-1.5 text-xs font-semibold text-[#008ad2] transition-colors hover:bg-[#008ad2]/5"
             >
               Auto-balance {remaining > 0 ? `+${remaining}%` : `${remaining}%`}
             </button>
@@ -923,7 +923,7 @@ const BudgetProposalPreferences = ({
           />
           {safeData.competitiveBid === "YES" && (
             <div className={subPanelClass}>
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
                 How many vendors are being solicited?
               </p>
               <input
@@ -955,7 +955,7 @@ const BudgetProposalPreferences = ({
             <div className={subPanelClass}>
               <a
                 href="#"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#00c2c9] hover:underline"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#008ad2] hover:underline"
               >
                 Schedule a call with your DXG producer
                 <ExternalLink size={13} />
@@ -989,7 +989,7 @@ const BudgetProposalPreferences = ({
           />
           {safeData.howDidYouHear === "Other" && (
             <div className={subPanelClass}>
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#8f98bf]">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
                 Please specify
               </p>
               <textarea
@@ -1014,7 +1014,7 @@ const BudgetProposalPreferences = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
         <button
           type="button"
           onClick={onBack}
@@ -1027,7 +1027,7 @@ const BudgetProposalPreferences = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Uploads &amp; Co-Vendors

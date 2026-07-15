@@ -6,9 +6,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { SignaturesSettingsForm } from "./SettingsDetials";
 
 const labelClass =
-  "mb-2 flex items-center justify-between text-sm font-semibold text-[#8f98bf]";
+  "mb-2 flex items-center justify-between text-sm font-semibold text-[#969798]";
 const inputClass =
-  "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
+  "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
 const dancingScript = Dancing_Script({
   subsets: ["latin"],
@@ -119,11 +119,11 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
 
   /* ── Render ───────────────────────────────────────────────── */
   return (
-    <section className="rounded-md border border-[#d7dce3] bg-white px-5 py-6 md:px-8">
-      <h2 className="text-xl font-semibold leading-none text-[#0f1b57] md:text-[26px]">
+    <section className="rounded-md border border-[#e4e4e4] bg-white px-5 py-6 md:px-8">
+      <h2 className="text-xl font-semibold leading-none text-[#222628] md:text-[26px]">
         Signatures
       </h2>
-      <p className="mt-2 text-base leading-tight text-[#1f2d5d] md:text-[16px]">
+      <p className="mt-2 text-base leading-tight text-[#222628] md:text-[16px]">
         Define your default signature style and select signing options for
         prospects.
       </p>
@@ -175,17 +175,17 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
                 className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 transition-all ${
                   dragOver
                     ? "border-primary bg-primary/5"
-                    : "border-[#d7dce3] bg-[#fafbfc] hover:border-primary/60 hover:bg-primary/[0.03]"
+                    : "border-[#e4e4e4] bg-[#fafbfc] hover:border-primary/60 hover:bg-primary/[0.03]"
                 }`}
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Upload size={22} />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-[#1f2d5d]">
+                  <p className="text-sm font-semibold text-[#222628]">
                     Click to upload or drag &amp; drop
                   </p>
-                  <p className="mt-1 text-xs text-[#8f98bf]">
+                  <p className="mt-1 text-xs text-[#969798]">
                     PNG, JPG, SVG — transparent background recommended
                   </p>
                 </div>
@@ -203,7 +203,7 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
 
               {/* Preview */}
               {value.signatureImageUrl && (
-                <div className="relative flex items-center justify-center rounded-xl border border-[#d7dce3] bg-[#f7f8fa] p-6">
+                <div className="relative flex items-center justify-center rounded-xl border border-[#e4e4e4] bg-[#f7f8fa] p-6">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={value.signatureImageUrl}
@@ -225,9 +225,9 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
 
           {/* ───── DRAW (type → auto cursive) ──────────────────── */}
           {mode === "Draw" && (
-            <div className="space-y-4 rounded-xl border border-[#d7dce3] bg-[#fafbfc] p-5">
+            <div className="space-y-4 rounded-xl border border-[#e4e4e4] bg-[#fafbfc] p-5">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-[#8f98bf]">
+                <label className="mb-2 block text-sm font-semibold text-[#969798]">
                   Type your name to generate a digital signature
                 </label>
                 <input
@@ -249,7 +249,7 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
                     className={`${font.className} rounded-full border px-3 py-1 text-xs font-semibold transition ${
                       chosenFontIdx === idx
                         ? "border-primary bg-primary/10 text-primary"
-                        : "border-[#d7dce3] text-[#8f98bf] hover:border-primary/50 hover:text-primary"
+                        : "border-[#e4e4e4] text-[#969798] hover:border-primary/50 hover:text-primary"
                     }`}
                     style={{ fontFamily: font.family }}
                   >
@@ -259,10 +259,10 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
               </div>
 
               {/* Live preview */}
-              <div className="flex min-h-[140px] items-center justify-center rounded-xl border border-dashed border-[#d7dce3] bg-white px-6 py-4">
+              <div className="flex min-h-[140px] items-center justify-center rounded-xl border border-dashed border-[#e4e4e4] bg-white px-6 py-4">
                 {value.signatureText.trim() ? (
                   <span
-                    className={`${SIGN_FONTS[chosenFontIdx]?.className || ""} select-none text-[52px] leading-none text-[#1f2d5d]`}
+                    className={`${SIGN_FONTS[chosenFontIdx]?.className || ""} select-none text-[52px] leading-none text-[#222628]`}
                     style={{
                       fontFamily: value.signatureStyle || SIGN_FONTS[chosenFontIdx].family,
                     }}

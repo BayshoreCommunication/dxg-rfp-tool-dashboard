@@ -8,11 +8,11 @@ import { ArrowRight } from "lucide-react";
 
 /* ─── Shared style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "h-10 w-full rounded-md border border-[#d7dce3] bg-white px-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
+  "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf] border-b border-[#d7dce3] pb-2";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
 
 const eventTypeOptions = [
   "Corporate Conference",
@@ -186,18 +186,18 @@ const EventForm = ({
   const rfpTimelineLen = (data.rfpTimeline ?? "").length;
 
   return (
-    <section className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white">
+    <section className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-[#d7dce3]">
+      <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             Page 1 of 9
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">
+        <h2 className="text-[22px] font-bold text-[#222628]">
           Event Overview &amp; Narrative
         </h2>
-        <p className="mt-1 text-sm text-[#8f98bf]">
+        <p className="mt-1 text-sm text-[#969798]">
           These fields power the auto-generated narrative on your RFP cover page
           and set the tone for every section that follows.
         </p>
@@ -229,7 +229,7 @@ const EventForm = ({
                   {showErrors && !data.eventName.trim() ? (
                     <p className="text-sm text-red-500 normal-case">Event name is required.</p>
                   ) : <span />}
-                  <span className="text-xs text-[#8f98bf] shrink-0 ml-2">
+                  <span className="text-xs text-[#969798] shrink-0 ml-2">
                     {data.eventName.length}/120
                   </span>
                 </div>
@@ -238,7 +238,7 @@ const EventForm = ({
               <div>
                 <label className={labelClass}>
                   Edition / Year
-                  <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                   <InfoTooltip text="If this is a recurring event, indicate which edition (e.g. '12th Annual' or 'Year 5'). Leave blank if this is a one-time event. Helps contextualize event maturity in the AI-generated narrative." />
                 </label>
                 <input
@@ -311,7 +311,7 @@ const EventForm = ({
               <div>
                 <label className={labelClass}>
                   Event Theme / Tagline
-                  <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                   <InfoTooltip text="If your event has an official theme, tagline, or campaign line, enter it here. Leave blank if not yet finalized. Feeds AI narrative paragraph 2." />
                 </label>
                 <input
@@ -329,7 +329,7 @@ const EventForm = ({
               <div>
                 <label className={labelClass}>
                   Event Website
-                  <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                   <InfoTooltip text="Link to the event's official website, if one exists. Gives vendors quick access to branding, past editions, and public-facing details." />
                 </label>
                 <input
@@ -363,21 +363,21 @@ const EventForm = ({
                 {formatOptions.map((fmt) => (
                   <label
                     key={fmt.value}
-                    className="flex items-center gap-3 cursor-pointer text-sm text-[#1f2d5d]"
+                    className="flex items-center gap-3 cursor-pointer text-sm text-[#222628]"
                   >
                     <input
                       type="radio"
                       name="eventFormat"
                       checked={data.eventFormat === fmt.value}
                       onChange={() => onChange({ eventFormat: fmt.value })}
-                      className="accent-[#00c2c9] h-4 w-4"
+                      className="accent-[#008ad2] h-4 w-4"
                     />
                     {fmt.label}
                   </label>
                 ))}
               </div>
               {(data.eventFormat === "Hybrid" || data.eventFormat === "Virtual") && (
-                <div className="mt-3 flex items-start gap-2 rounded-md border border-[#00c2c9]/30 bg-[#00c2c9]/5 px-4 py-3 text-sm text-brand-dark">
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-[#008ad2]/30 bg-[#008ad2]/5 px-4 py-3 text-sm text-brand-dark">
                   <span className="font-bold">⚡</span>
                   <span>
                     <strong>Step 3 Unlocked:</strong> Hybrid &amp; Virtual Production fields are now active.
@@ -455,7 +455,7 @@ const EventForm = ({
                     ? "border-red-500 focus:border-red-500"
                     : ""
                 }`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f98bf] hover:text-primary"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#969798] hover:text-primary"
               />
               {isStartInPast && data.startDate && (
                 <p className="mt-1 text-xs text-amber-600 normal-case">
@@ -488,7 +488,7 @@ const EventForm = ({
                     ? "border-red-500 focus:border-red-500"
                     : ""
                 }`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#8f98bf] hover:text-primary"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#969798] hover:text-primary"
               />
               {showErrors && !data.endDate.trim() && (
                 <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
@@ -538,7 +538,7 @@ const EventForm = ({
               <textarea
                 rows={3}
                 maxLength={800}
-                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
                 placeholder='Describe what success looks like for this event. Examples: "Drive pipeline through 30 customer meetings," "Launch our Q2 product to 1,200 partners," "Celebrate our 25th anniversary with brand-defining moments."'
                 value={objectives}
                 onChange={(e) => onChange({ eventObjectives: e.target.value })}
@@ -549,7 +549,7 @@ const EventForm = ({
                     Leaving this blank will limit the quality of your auto-generated Event Overview narrative.
                   </p>
                 ) : <span />}
-                <span className={`text-xs shrink-0 ${objLen > 720 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                <span className={`text-xs shrink-0 ${objLen > 720 ? "text-amber-600" : "text-[#969798]"}`}>
                   {objLen}/800
                 </span>
               </div>
@@ -559,7 +559,7 @@ const EventForm = ({
             <div>
               <label className={labelClass}>
                 Tone / Brand Direction
-                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                 <InfoTooltip text="Pick up to 5 tags that capture the feel of this event. Vendors will use this to gauge creative direction. Feeds AI narrative paragraph 2 (creative context)." />
               </label>
               <p className="mb-3 text-xs text-slate-500 normal-case">
@@ -569,7 +569,7 @@ const EventForm = ({
               <div className="space-y-4">
                 {toneGroups.map((group) => (
                   <div key={group.label}>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#8f98bf]">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#969798]">
                       {group.label}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -606,19 +606,19 @@ const EventForm = ({
             <div>
               <label className={labelClass}>
                 Sacred Constraints / Special Considerations
-                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                 <InfoTooltip text="List any non-negotiable requirements vendors absolutely must honor — timing rules, brand restrictions, cultural sensitivities, executive preferences, or anything that has caused friction at past events. Appears verbatim in the Scope Overview special notes row." />
               </label>
               <textarea
                 rows={3}
                 maxLength={500}
-                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
                 placeholder="e.g. CEO keynote must run exactly 22 minutes. No standing ovations during memorial segment. Sponsor logos cannot appear on main stage screens."
                 value={data.sacredConstraints ?? ""}
                 onChange={(e) => onChange({ sacredConstraints: e.target.value })}
               />
               <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${constraintsLen > 450 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                <span className={`text-xs ${constraintsLen > 450 ? "text-amber-600" : "text-[#969798]"}`}>
                   {constraintsLen}/500
                 </span>
               </div>
@@ -628,19 +628,19 @@ const EventForm = ({
             <div>
               <label className={labelClass}>
                 About The Organization
-                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                 <InfoTooltip text="Give vendors context on who the requesting organization is — mission, industry, size, and any background that helps them understand who they'd be working with." />
               </label>
               <textarea
                 rows={4}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
                 placeholder="Describe the organization: who you are, what you do, and any relevant background vendors should know."
                 value={data.aboutOrganization ?? ""}
                 onChange={(e) => onChange({ aboutOrganization: e.target.value })}
               />
               <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${aboutOrganizationLen > 1350 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                <span className={`text-xs ${aboutOrganizationLen > 1350 ? "text-amber-600" : "text-[#969798]"}`}>
                   {aboutOrganizationLen}/1500
                 </span>
               </div>
@@ -650,19 +650,19 @@ const EventForm = ({
             <div>
               <label className={labelClass}>
                 Statement of Work
-                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                 <InfoTooltip text="Summarize the scope of work being requested from vendors — deliverables, responsibilities, and any boundaries on what's in or out of scope." />
               </label>
               <textarea
                 rows={4}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
                 placeholder="Describe the scope of work: what deliverables and responsibilities vendors are being asked to provide."
                 value={data.statementOfWork ?? ""}
                 onChange={(e) => onChange({ statementOfWork: e.target.value })}
               />
               <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${statementOfWorkLen > 1350 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                <span className={`text-xs ${statementOfWorkLen > 1350 ? "text-amber-600" : "text-[#969798]"}`}>
                   {statementOfWorkLen}/1500
                 </span>
               </div>
@@ -672,19 +672,19 @@ const EventForm = ({
             <div>
               <label className={labelClass}>
                 Event Profile
-                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                 <InfoTooltip text="Describe the profile of the event itself — history, significance, past attendance, or anything that helps vendors understand its stature." />
               </label>
               <textarea
                 rows={4}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
                 placeholder="Describe the event's profile: history, significance, past editions, or stature."
                 value={data.eventProfile ?? ""}
                 onChange={(e) => onChange({ eventProfile: e.target.value })}
               />
               <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${eventProfileLen > 1350 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                <span className={`text-xs ${eventProfileLen > 1350 ? "text-amber-600" : "text-[#969798]"}`}>
                   {eventProfileLen}/1500
                 </span>
               </div>
@@ -694,19 +694,19 @@ const EventForm = ({
             <div>
               <label className={labelClass}>
                 RFP Timeline
-                <span className="text-[#8f98bf] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
                 <InfoTooltip text="Outline the key dates in the RFP process — submission deadline, vendor selection date, and any other milestones vendors need to plan around." />
               </label>
               <textarea
                 rows={4}
                 maxLength={1000}
-                className="w-full rounded-md border border-[#d7dce3] bg-white px-4 py-3 text-sm text-[#1f2d5d] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
                 placeholder="e.g. RFP issued July 1, questions due July 10, proposals due July 24, vendor selected August 5."
                 value={data.rfpTimeline ?? ""}
                 onChange={(e) => onChange({ rfpTimeline: e.target.value })}
               />
               <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${rfpTimelineLen > 900 ? "text-amber-600" : "text-[#8f98bf]"}`}>
+                <span className={`text-xs ${rfpTimelineLen > 900 ? "text-amber-600" : "text-[#969798]"}`}>
                   {rfpTimelineLen}/1000
                 </span>
               </div>
@@ -716,7 +716,7 @@ const EventForm = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-end px-8 py-5 border-t border-[#d7dce3]">
+      <div className="flex items-center justify-end px-8 py-5 border-t border-[#e4e4e4]">
         {/* <button
           type="button"
           onClick={onBack}
@@ -729,7 +729,7 @@ const EventForm = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Venue &amp; Schedule

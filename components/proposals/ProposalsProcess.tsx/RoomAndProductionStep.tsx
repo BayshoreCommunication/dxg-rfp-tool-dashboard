@@ -97,21 +97,21 @@ const parseScheduleWorkbook = (buffer: ArrayBuffer): RoomByRoomData[] => {
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#1f2d5d] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const subPanelClass =
-  "mt-3 rounded-xl border border-[#e0e7ff] bg-[#f5f7ff] p-4";
+  "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
 const subPanelHeader =
-  "mb-3 text-xs font-bold uppercase tracking-widest text-[#8f98bf]";
+  "mb-3 text-xs font-bold uppercase tracking-widest text-[#969798]";
 
 // ─── YES/NO button helper (Tailwind-safe) ─────────────────────────────────────
 const yesNoCls = (opt: "Yes" | "No", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
-  if (value !== opt) return `${base} border-[#d7dce3] bg-white text-[#8f98bf] hover:border-slate-300`;
+  if (value !== opt) return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
   if (opt === "Yes") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
@@ -265,7 +265,7 @@ export const defaultRoom = (): RoomByRoomData => ({
 const Group = ({ label }: { label: string }) => (
   <div className="mb-5 mt-7 first:mt-0">
     <p className={groupLabelClass}>{label}</p>
-    <div className="h-px bg-[#e8edf5]" />
+    <div className="h-px bg-[#f0f0f0]" />
   </div>
 );
 
@@ -321,7 +321,7 @@ const RoomForm = ({
             placeholder="e.g. Main Keynote Ballroom"
           />
           <div className="mt-1 flex justify-end">
-            <span className="text-xs text-[#8f98bf]">{data.roomFunction.length}/80</span>
+            <span className="text-xs text-[#969798]">{data.roomFunction.length}/80</span>
           </div>
         </div>
         <div>
@@ -363,7 +363,7 @@ const RoomForm = ({
             }
           />
           {data.scheduleDay && (
-            <p className="mt-1 text-xs text-[#8f98bf] normal-case">{data.scheduleDay}</p>
+            <p className="mt-1 text-xs text-[#969798] normal-case">{data.scheduleDay}</p>
           )}
         </div>
         <div>
@@ -404,7 +404,7 @@ const RoomForm = ({
         <button
           type="button"
           onClick={() => setShowManualTimes((v) => !v)}
-          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#00c2c9] hover:text-[#009198] transition-colors"
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#008ad2] hover:text-[#0069a0] transition-colors"
         >
           <Plus size={14} className={`shrink-0 transition-transform ${showManualTimes ? "rotate-45" : ""}`} />
           Add Date &amp; Times for This Room
@@ -425,7 +425,7 @@ const RoomForm = ({
                 value={toDateTime(data.loadInDateTime)}
                 onChange={(d) => onChange({ loadInDateTime: d ? d.toISOString() : "" })}
                 inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -440,7 +440,7 @@ const RoomForm = ({
                 value={toDateTime(data.rehearsalDateTime)}
                 onChange={(d) => onChange({ rehearsalDateTime: d ? d.toISOString() : "" })}
                 inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -455,7 +455,7 @@ const RoomForm = ({
                 value={toDateTime(data.showStartDateTime)}
                 onChange={(d) => onChange({ showStartDateTime: d ? d.toISOString() : "" })}
                 inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -470,7 +470,7 @@ const RoomForm = ({
                 value={toDateTime(data.showEndDateTime)}
                 onChange={(d) => onChange({ showEndDateTime: d ? d.toISOString() : "" })}
                 inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#00c2c9] hover:text-[#009198]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -764,7 +764,7 @@ const RoomForm = ({
               </label>
               <textarea
                 rows={2}
-                className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+                className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
                 placeholder="e.g. Center I-MAG playback, lower-third overlays, integration with timecode..."
                 value={data.ledWallNotes ?? ""}
                 onChange={(e) => onChange({ ledWallNotes: e.target.value })}
@@ -943,7 +943,7 @@ const RoomForm = ({
             <textarea
               rows={3}
               maxLength={600}
-              className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+              className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
               placeholder='e.g. "Custom branded scenic wall flanking the LED, integrated lighting, illuminated logo above stage. Reference: minimalist editorial style, dark navy palette."'
               value={data.scenicStageDesignNotes ?? ""}
               onChange={(e) => onChange({ scenicStageDesignNotes: e.target.value })}
@@ -952,7 +952,7 @@ const RoomForm = ({
               <p className="text-xs text-amber-600 normal-case">
                 Scenic stage design may trigger a Producer Insight consultation recommendation.
               </p>
-              <span className="text-xs text-[#8f98bf] shrink-0 ml-2">
+              <span className="text-xs text-[#969798] shrink-0 ml-2">
                 {(data.scenicStageDesignNotes ?? "").length}/600
               </span>
             </div>
@@ -1127,7 +1127,7 @@ const RoomForm = ({
         <p className="mb-3 text-xs text-slate-500 normal-case">
           Select all that apply, or select &quot;None / Minimal&quot; if house lighting only.
           {lighting.includes("Moving Lights / Programmable Effects") && (
-            <span className="ml-1 text-[#00c2c9] font-semibold">
+            <span className="ml-1 text-[#008ad2] font-semibold">
               L1 (Lighting Director) will be auto-suggested in crew below.
             </span>
           )}
@@ -1312,7 +1312,7 @@ const RoomForm = ({
 
       {/* Auto-suggestions banner */}
       {unaddedSuggestions.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-[#00c2c9]/30 bg-[#00c2c9]/5 p-3 text-xs text-[#009198]">
+        <div className="flex items-start gap-2 rounded-lg border border-[#008ad2]/30 bg-[#008ad2]/5 p-3 text-xs text-[#0069a0]">
           <span className="shrink-0 font-bold">⚡</span>
           <div>
             <strong>Auto-suggestions based on your selections:</strong>
@@ -1324,7 +1324,7 @@ const RoomForm = ({
                   onClick={() =>
                     onChange({ showCrewNeeded: [...data.showCrewNeeded, role] })
                   }
-                  className="rounded-full border border-[#00c2c9]/30 bg-white px-2.5 py-0.5 text-xs font-semibold text-[#009198] hover:bg-[#00c2c9]/10 transition-colors"
+                  className="rounded-full border border-[#008ad2]/30 bg-white px-2.5 py-0.5 text-xs font-semibold text-[#0069a0] hover:bg-[#008ad2]/10 transition-colors"
                 >
                   + {role}
                 </button>
@@ -1368,12 +1368,12 @@ const RoomForm = ({
               ({ label: role, hasQty }) => hasQty && data.showCrewNeeded.includes(role),
             ).map(({ label: role }) => (
               <div key={role} className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[#1f2d5d]">{role}</span>
+                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[#222628]">{role}</span>
                 <input
                   type="number"
                   min={1}
                   max={20}
-                  className="h-8 w-14 rounded-md border border-[#d7dce3] bg-white text-center text-sm font-bold text-[#1f2d5d] outline-none focus:border-[#00c2c9] focus:ring-1 focus:ring-[#00c2c9]/20"
+                  className="h-8 w-14 rounded-md border border-[#e4e4e4] bg-white text-center text-sm font-bold text-[#222628] outline-none focus:border-[#008ad2] focus:ring-1 focus:ring-[#008ad2]/20"
                   placeholder="qty"
                   value={crewQty[role] ?? ""}
                   onChange={(e) =>
@@ -1398,7 +1398,7 @@ const RoomForm = ({
         </label>
         <textarea
           rows={3}
-          className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+          className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
           placeholder="Write here…"
           value={data.otherRolesNeeded}
           onChange={(e) => onChange({ otherRolesNeeded: e.target.value })}
@@ -1444,7 +1444,7 @@ const RoomForm = ({
             </label>
             <textarea
               rows={3}
-              className="w-full resize-none rounded-lg border border-[#d7dce3] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+              className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
               placeholder="e.g. IATSE Local 720 required for all rigging and electrical work per venue contract."
               value={data.unionLaborDetails}
               onChange={(e) => onChange({ unionLaborDetails: e.target.value })}
@@ -1483,28 +1483,28 @@ const RoomCard = ({
   const roomLabel = room.roomFunction.trim() || `Room ${index + 1}`;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#d7dce3] bg-white">
+    <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
       <div
         className="flex cursor-pointer items-center justify-between px-5 py-4 transition-colors hover:bg-slate-50"
-        style={{ borderBottom: isExpanded ? "1px solid #d7dce3" : "none" }}
+        style={{ borderBottom: isExpanded ? "1px solid #e4e4e4" : "none" }}
         onClick={onToggle}
       >
         <div className="flex items-center gap-3">
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-            style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
           >
             {index + 1}
           </span>
           <div>
-            <p className="text-sm font-bold text-[#1f2d5d]">
+            <p className="text-sm font-bold text-[#222628]">
               {roomLabel}
-              <span className="ml-2 text-xs font-normal text-[#8f98bf]">
+              <span className="ml-2 text-xs font-normal text-[#969798]">
                 Room {index + 1} of {total}
               </span>
             </p>
             {!isExpanded && room.estimatedAttendeesInRoom && (
-              <p className="text-xs text-[#8f98bf]">{room.estimatedAttendeesInRoom} attendees</p>
+              <p className="text-xs text-[#969798]">{room.estimatedAttendeesInRoom} attendees</p>
             )}
           </div>
         </div>
@@ -1513,7 +1513,7 @@ const RoomCard = ({
             type="button"
             onClick={onDuplicate}
             title="Copy this room's details to start a new room"
-            className="flex items-center gap-1.5 rounded-full border border-[#d7dce3] bg-white px-3 py-1 text-xs font-semibold text-[#1f2d5d] hover:border-[#00c2c9] hover:text-[#00c2c9] transition-colors"
+            className="flex items-center gap-1.5 rounded-full border border-[#e4e4e4] bg-white px-3 py-1 text-xs font-semibold text-[#222628] hover:border-[#008ad2] hover:text-[#008ad2] transition-colors"
           >
             <Copy size={13} className="shrink-0" />
             Copy Room
@@ -1523,13 +1523,13 @@ const RoomCard = ({
               type="button"
               onClick={onDelete}
               title="Remove this room"
-              className="flex items-center gap-1.5 rounded-full border border-[#d7dce3] bg-white px-3 py-1 text-xs font-semibold text-[#1f2d5d] hover:border-red-400 hover:text-red-500 transition-colors"
+              className="flex items-center gap-1.5 rounded-full border border-[#e4e4e4] bg-white px-3 py-1 text-xs font-semibold text-[#222628] hover:border-red-400 hover:text-red-500 transition-colors"
             >
               <Trash2 size={13} className="shrink-0" />
               Remove
             </button>
           )}
-          <div className="ml-1 text-[#8f98bf]">
+          <div className="ml-1 text-[#969798]">
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </div>
         </div>
@@ -1654,28 +1654,28 @@ const RoomAndProductionStep = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#d7dce3] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* Header */}
-      <div className="px-8 py-6 border-b border-[#d7dce3]">
+      <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#00c2c9]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#00c2c9]">
+          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
             Page 2B of 9
           </span>
           <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-600">
             Repeating Module
           </span>
         </div>
-        <h2 className="text-[22px] font-bold text-[#0f1b57]">Room Specifications &amp; Schedule</h2>
-        <p className="mt-1 text-sm text-[#8f98bf]">
+        <h2 className="text-[22px] font-bold text-[#222628]">Room Specifications &amp; Schedule</h2>
+        <p className="mt-1 text-sm text-[#969798]">
           One module per room — each room generates its own section in the RFP.
         </p>
       </div>
 
       {/* Number of Event Rooms — stepper */}
       <div className="px-6 pt-6">
-        <div className="mb-6 rounded-md border border-[#d7dce3] p-5">
+        <div className="mb-6 rounded-md border border-[#e4e4e4] p-5">
           <label className={labelClass}>
             Number of Event Rooms <span className="text-red-500">*</span>
             <InfoTooltip text="How many separate rooms require AV production? Each room gets its own specification module below. Example: 1 General Session + 1 Breakout + 1 VIP Lounge = 3 rooms." />
@@ -1686,7 +1686,7 @@ const RoomAndProductionStep = ({
               onClick={() =>
                 onNumberOfEventRoomsChange(String(Math.max(1, roomCount - 1)))
               }
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors select-none"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors select-none"
             >
               −
             </button>
@@ -1699,18 +1699,18 @@ const RoomAndProductionStep = ({
                   String(Math.max(1, Number(e.target.value) || 1)),
                 )
               }
-              className="h-10 w-16 rounded-lg border border-[#d7dce3] bg-white text-center text-sm font-bold text-[#1f2d5d] outline-none focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/20"
+              className="h-10 w-16 rounded-lg border border-[#e4e4e4] bg-white text-center text-sm font-bold text-[#222628] outline-none focus:border-[#008ad2] focus:ring-2 focus:ring-[#008ad2]/20"
             />
             <button
               type="button"
               onClick={() => onNumberOfEventRoomsChange(String(roomCount + 1))}
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7dce3] bg-white text-lg font-bold text-[#1f2d5d] hover:bg-[#f5f7ff] transition-colors select-none"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors select-none"
             >
               +
             </button>
           </div>
           {numberOfEventRooms && Number(numberOfEventRooms) > 0 && (
-            <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#00c2c9]/30 bg-[#00c2c9]/5 p-3 text-xs text-brand-dark">
+            <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#008ad2]/30 bg-[#008ad2]/5 p-3 text-xs text-brand-dark">
               <span className="mt-0.5 shrink-0">⚙️</span>
               <span>
                 <strong>System:</strong> This generates{" "}
@@ -1721,7 +1721,7 @@ const RoomAndProductionStep = ({
         </div>
 
         {/* Schedule upload */}
-        <div className="mb-6 rounded-md border border-[#d7dce3] p-5">
+        <div className="mb-6 rounded-md border border-[#e4e4e4] p-5">
           <label className={labelClass}>
             Upload Room Schedule
             <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
@@ -1741,7 +1741,7 @@ const RoomAndProductionStep = ({
             type="button"
             disabled={isUploadingSchedule}
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 rounded-lg border border-[#d7dce3] bg-white px-4 py-2 text-sm font-semibold text-[#1f2d5d] hover:border-[#00c2c9] hover:text-[#00c2c9] transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg border border-[#e4e4e4] bg-white px-4 py-2 text-sm font-semibold text-[#222628] hover:border-[#008ad2] hover:text-[#008ad2] transition-colors disabled:opacity-50"
           >
             <Upload size={15} className="shrink-0" />
             {isUploadingSchedule ? "Reading file…" : "Upload Schedule (Excel)"}
@@ -1770,7 +1770,7 @@ const RoomAndProductionStep = ({
       </div>
 
       {/* Footer nav */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#d7dce3]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
         <button
           type="button"
           onClick={onBack}
@@ -1783,7 +1783,7 @@ const RoomAndProductionStep = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #00c2c9 0%, #06b6d4 30%, #0ea5e9 60%, #2563eb 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           {isInPersonOnly ? "Content & Creative" : "Hybrid & Virtual"}
