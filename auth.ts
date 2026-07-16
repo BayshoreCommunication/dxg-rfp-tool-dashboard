@@ -12,6 +12,35 @@ const API_ORIGIN = BACKEND_URL.endsWith("/api")
 // Default timeout (ms) for backend auth requests. Prevents indefinite hangs
 // caused by Vercel cold-starts or slow networks.
 const AUTH_FETCH_TIMEOUT_MS = 8000;
+const bffHeaders = () => ({
+  "Content-Type": "application/json",
+  "x-rfpilot-bff-key": process.env.BFF_SHARED_SECRET || "",
+});
+
+async function refreshBackendAccessToken(token: Record<string, unknown>) {
+  if (!token.refreshToken) return { ...token, authError: "RefreshAccessTokenError" };
+  try {
+    const response = await fetchWithTimeout(`${API_ORIGIN}/api/auth/refresh`, {
+      method: "POST",
+      headers: bffHeaders(),
+      body: JSON.stringify({ refreshToken: token.refreshToken }),
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error("Backend refresh rejected");
+    const data = await response.json();
+    return {
+      ...token,
+      accessToken: data.accessToken,
+      accessTokenExpiresAt: data.tokenExpiresAt,
+      refreshToken: data.refreshToken,
+      refreshTokenExpiresAt: data.refreshExpiresAt,
+      sessionId: data.sessionId,
+      authError: undefined,
+    };
+  } catch {
+    return { ...token, authError: "RefreshAccessTokenError" };
+  }
+}
 
 function fetchWithTimeout(
   url: string,
@@ -55,7 +84,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             `${API_ORIGIN}/api/auth/login`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: bffHeaders(),
               body: JSON.stringify({
                 email: credentials.email,
                 password: credentials.password,
@@ -79,6 +108,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             name: data.user.name,
             avatar: data.user.avatar,
             accessToken: data.accessToken,
+            accessTokenExpiresAt: data.tokenExpiresAt,
+            refreshToken: data.refreshToken,
+            refreshTokenExpiresAt: data.refreshExpiresAt,
+            sessionId: data.sessionId,
           } as Record<string, unknown>;
         } catch {
           return null;
@@ -103,7 +136,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             `${API_ORIGIN}/api/auth/google`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: bffHeaders(),
               body: JSON.stringify({
                 idToken: account.id_token || "",
               }),
@@ -126,6 +159,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             email: data.user.email,
             avatar: data.user.avatar,
             accessToken: data.accessToken,
+            accessTokenExpiresAt: data.tokenExpiresAt,
+            refreshToken: data.refreshToken,
+            refreshTokenExpiresAt: data.refreshExpiresAt,
+            sessionId: data.sessionId,
           });
         } catch {
           return false;
@@ -138,11 +175,20 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       if (user) {
         return { ...token, ...user };
       }
-      return token;
+      if (typeof token.accessTokenExpiresAt === "number" &&
+          Date.now() < token.accessTokenExpiresAt - 60_000) return token;
+      return refreshBackendAccessToken(token);
     },
     async session({ session, token }) {
       if (token) {
-        Object.assign(session.user, token);
+        Object.assign(session.user, {
+          id: token.id || token.sub,
+          _id: token._id || token.sub,
+          name: token.name,
+          email: token.email,
+          avatar: token.avatar,
+        });
+        Object.assign(session, { authError: token.authError });
       }
       return session;
     },

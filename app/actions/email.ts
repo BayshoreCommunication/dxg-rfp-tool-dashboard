@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getBackendAccessToken } from "@/lib/server/backendSession";
 
 import { BACKEND_URL as API_URL } from "@/lib/config";
 
@@ -11,12 +11,7 @@ type ApiResponse = {
   pagination?: unknown;
 };
 
-const getAccessToken = async (): Promise<string | null> => {
-  const session = await auth();
-  return (
-    (session?.user as { accessToken?: string } | undefined)?.accessToken || null
-  );
-};
+const getAccessToken = getBackendAccessToken;
 
 export type SendProposalEmailPayload = {
   proposalId: string;

@@ -1,6 +1,7 @@
 "use server";
 
-import { auth, signIn } from "@/auth";
+import { signIn } from "@/auth";
+import { getBackendAccessToken } from "@/lib/server/backendSession";
 
 import { BACKEND_URL } from "@/lib/config";
 
@@ -73,7 +74,6 @@ export async function signUpAction(payload: {
     return {
       success: true,
       user: data.user,
-      accessToken: data.accessToken,
       message: data.message,
     };
   } catch (error: unknown) {
@@ -84,53 +84,11 @@ export async function signUpAction(payload: {
 /* ─────────────────────────────────────────
    SIGN IN
 ───────────────────────────────────────── */
-const AUTH_ERRORS: Record<string, string> = {
-  USER_NOT_FOUND:
-    "No account found with this email. Please create an account first.",
-  WRONG_PASSWORD: "Incorrect password. Please try again.",
-  USER_BLOCKED: "Your account has been blocked. Please contact support.",
-};
-
 export async function signInAction(email: string, password: string) {
-  // Pre-check credentials against backend for specific error messages
-  try {
-    const apiUrl = BACKEND_URL.endsWith("/api")
-      ? BACKEND_URL.slice(0, -4)
-      : BACKEND_URL;
-
-    const preCheck = await fetch(`${apiUrl}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      cache: "no-store",
-    });
-
-    if (!preCheck.ok) {
-      const errData = await preCheck.json().catch(() => ({}));
-      const code = errData?.errorCode as string | undefined;
-      return {
-        success: false,
-        message:
-          (code && AUTH_ERRORS[code]) ||
-          errData?.message ||
-          "Login failed. Please try again.",
-      };
-    }
-  } catch {
-    return {
-      success: false,
-      message: "Could not reach the server. Please try again.",
-    };
-  }
-
-  // Credentials valid — create the NextAuth session
   try {
     await signIn("credentials", { email, password, redirect: false });
-    const session = await auth();
     return {
       success: true,
-      user: session?.user,
-      accessToken: (session?.user as { accessToken?: string })?.accessToken,
       message: "Login successful",
     };
   } catch {
@@ -217,8 +175,10 @@ export async function resetPasswordAction(email: string, newPassword: string) {
 /* ─────────────────────────────────────────
    GET CURRENT USER
 ───────────────────────────────────────── */
-export async function getCurrentUserAction(accessToken: string) {
+export async function getCurrentUserAction() {
   try {
+    const accessToken = await getBackendAccessToken();
+    if (!accessToken) return { success: false, message: "User is not authenticated." };
     const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
@@ -236,9 +196,7 @@ export async function getCurrentUserAction(accessToken: string) {
 ───────────────────────────────────────── */
 export async function signOutAction() {
   try {
-    const session = await auth();
-    const accessToken = (session?.user as { accessToken?: string } | undefined)
-      ?.accessToken;
+    const accessToken = await getBackendAccessToken();
 
     // Call backend logout if accessToken exists
     if (accessToken) {

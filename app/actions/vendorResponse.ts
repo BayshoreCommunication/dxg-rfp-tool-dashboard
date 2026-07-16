@@ -1,14 +1,11 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getBackendAccessToken } from "@/lib/server/backendSession";
 import { BACKEND_URL } from "@/lib/config";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const getAccessToken = async (): Promise<string | null> => {
-  const session = await auth();
-  return (session?.user as any)?.accessToken || null;
-};
+const getAccessToken = getBackendAccessToken;
 
 export type VendorDocument = {
   name: string;

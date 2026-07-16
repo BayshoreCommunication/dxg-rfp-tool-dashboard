@@ -27,9 +27,11 @@ const resolveDownloadPreview = (proposal: RfpProposalData): boolean => {
 export default function ProposalPublicView({
   slug,
   source,
+  accessGrant,
 }: {
   slug?: string;
   source?: string;
+  accessGrant?: string;
 }) {
   const [proposal, setProposal] = useState<RfpProposalData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function ProposalPublicView({
       }
       setLoading(true);
       setError("");
-      const res = await getProposalByIdPublicAction(proposalId);
+      const res = await getProposalByIdPublicAction(proposalId, accessGrant);
       if (!mounted) return;
       if (!res.success || !res.data || typeof res.data !== "object") {
         setError(res.message || "Proposal not found.");
@@ -71,7 +73,7 @@ export default function ProposalPublicView({
 
       if (!incrementedRef.current && canTrackView) {
         incrementedRef.current = true;
-        const viewsRes = await incrementProposalViewsPublicAction(proposalId);
+        const viewsRes = await incrementProposalViewsPublicAction(proposalId, accessGrant);
         if (!mounted) return;
         if (
           viewsRes.success &&
@@ -86,7 +88,7 @@ export default function ProposalPublicView({
     return () => {
       mounted = false;
     };
-  }, [proposalId, isPublicAccess]);
+  }, [proposalId, isPublicAccess, accessGrant]);
 
   if (loading) {
     return (

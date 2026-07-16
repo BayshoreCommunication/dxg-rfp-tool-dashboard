@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getBackendAccessToken } from "@/lib/server/backendSession";
 
 import { BACKEND_URL as API_URL } from "@/lib/config";
 
@@ -14,9 +14,7 @@ const getErrorMessage = (error: unknown, fallback = "Network error") =>
   error instanceof Error && error.message ? error.message : fallback;
 
 const getAuthHeader = async (): Promise<HeadersInit> => {
-  const session = await auth();
-  const accessToken = (session?.user as { accessToken?: string } | undefined)
-    ?.accessToken;
+  const accessToken = await getBackendAccessToken();
   if (!accessToken) {
     return {};
   }

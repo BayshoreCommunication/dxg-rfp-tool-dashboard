@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getBackendAccessToken } from "@/lib/server/backendSession";
 import { BACKEND_URL } from "@/lib/config";
 
 interface UserDataResponse {
@@ -10,9 +10,7 @@ interface UserDataResponse {
 }
 
 export async function getUserData(): Promise<UserDataResponse> {
-  const session = await auth();
-  const accessToken = (session?.user as { accessToken?: string } | undefined)
-    ?.accessToken;
+  const accessToken = await getBackendAccessToken();
   const apiUrl = BACKEND_URL.endsWith("/api")
     ? BACKEND_URL.slice(0, -4)
     : BACKEND_URL;
