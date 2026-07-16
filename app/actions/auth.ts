@@ -4,6 +4,9 @@ import { auth, signIn } from "@/auth";
 
 import { BACKEND_URL } from "@/lib/config";
 
+const getErrorMessage = (error: unknown, fallback = "Network error") =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 /* ─────────────────────────────────────────
    SIGNUP — Step 1: Send OTP (spam check)
 ───────────────────────────────────────── */
@@ -20,8 +23,8 @@ export async function sendSignupOtpAction(email: string) {
       success: res.ok,
       message: data.message || (res.ok ? "OTP sent" : "Failed to send OTP"),
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
@@ -42,8 +45,8 @@ export async function verifySignupOtpAction(email: string, otp: string) {
       message:
         data.message || (res.ok ? "Email verified" : "Verification failed"),
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
@@ -73,8 +76,8 @@ export async function signUpAction(payload: {
       accessToken: data.accessToken,
       message: data.message,
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
@@ -156,8 +159,8 @@ export async function sendForgotPasswordOtpAction(email: string) {
         data.message ||
         (res.ok ? "Reset code sent" : "Failed to send reset code"),
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
@@ -183,8 +186,8 @@ export async function verifyForgotPasswordOtpAction(
       success: res.ok,
       message: data.message || (res.ok ? "OTP verified" : "Invalid OTP"),
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
@@ -206,8 +209,8 @@ export async function resetPasswordAction(email: string, newPassword: string) {
         data.message ||
         (res.ok ? "Password reset" : "Failed to reset password"),
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
@@ -223,8 +226,8 @@ export async function getCurrentUserAction(accessToken: string) {
     const data = await res.json();
     if (!res.ok) return { success: false, message: data.message };
     return { success: true, user: data.user };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
@@ -234,7 +237,8 @@ export async function getCurrentUserAction(accessToken: string) {
 export async function signOutAction() {
   try {
     const session = await auth();
-    const accessToken = (session?.user as any)?.accessToken;
+    const accessToken = (session?.user as { accessToken?: string } | undefined)
+      ?.accessToken;
 
     // Call backend logout if accessToken exists
     if (accessToken) {
@@ -244,7 +248,7 @@ export async function signOutAction() {
       });
     }
     return { success: true, message: "Signed out successfully" };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }

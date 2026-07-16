@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { toast } from 'react-toastify'
 import EmailSend from './EmailSend'
 
 // ─── Module mocks ──────────────────────────────────────────────────────────────
 
 const mockRouterPush = jest.fn()
-const mockSearchParamsGet = jest.fn(() => null)
+const mockSearchParamsGet = jest.fn<string | null, [string]>(() => null)
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
@@ -171,7 +172,6 @@ describe('EmailSend — send validation', () => {
     render(<EmailSend />)
     await waitForLoad()
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
-    const { toast } = require('react-toastify')
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Please select a proposal.'))
   })
 
@@ -179,7 +179,6 @@ describe('EmailSend — send validation', () => {
     render(<EmailSend />)
     await waitForLoad()
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
-    const { toast } = require('react-toastify')
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('Please add at least one valid recipient email.'),
     )
@@ -199,7 +198,6 @@ describe('EmailSend — send validation', () => {
     fireEvent.keyDown(input, { key: 'Enter' })
 
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
-    const { toast } = require('react-toastify')
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Please enter an email subject.'))
   })
 })
@@ -253,7 +251,6 @@ describe('EmailSend — successful send', () => {
     fireEvent.keyDown(input, { key: 'Enter' })
 
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
-    const { toast } = require('react-toastify')
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Server error'))
   })
 })

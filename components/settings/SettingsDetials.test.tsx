@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { toast } from 'react-toastify'
 import SettingsDetials from './SettingsDetials'
 
 // ─── Module mocks ──────────────────────────────────────────────────────────────
@@ -147,7 +148,6 @@ describe('SettingsDetials — update', () => {
     render(<SettingsDetials />)
     await waitFor(() => screen.getByTestId('branding-settings'), LOAD_TIMEOUT)
     fireEvent.click(screen.getByRole('button', { name: /update settings/i }))
-    const { toast } = require('react-toastify')
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Settings updated successfully.'))
   })
 
@@ -156,7 +156,6 @@ describe('SettingsDetials — update', () => {
     render(<SettingsDetials />)
     await waitFor(() => screen.getByTestId('branding-settings'), LOAD_TIMEOUT)
     fireEvent.click(screen.getByRole('button', { name: /update settings/i }))
-    const { toast } = require('react-toastify')
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Update failed.'))
   })
 

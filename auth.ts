@@ -105,10 +105,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                email,
-                name: googleProfile?.name || user?.name || "",
-                avatar: googleProfile?.picture || user?.image || "",
-                googleId: account.providerAccountId || "",
+                idToken: account.id_token || "",
               }),
             },
           );
@@ -145,7 +142,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     },
     async session({ session, token }) {
       if (token) {
-        session.user = token as any;
+        Object.assign(session.user, token);
       }
       return session;
     },

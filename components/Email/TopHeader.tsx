@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Settings2, Sparkles } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -8,6 +8,8 @@ const TopHeader = () => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Hydration guard: date/time text must be initialized on the client.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
