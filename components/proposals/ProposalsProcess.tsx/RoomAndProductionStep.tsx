@@ -430,7 +430,7 @@ const RoomForm = ({
       <div className="grid grid-cols-2 gap-5">
         <div>
           <label className={labelClass}>
-            Room Name / Label <span className="text-red-500">*</span>
+            Function Name <span className="text-red-500">*</span>
             <InfoTooltip text="Give this room a clear name. Examples: 'General Session Stage', 'Breakout Room A', 'VIP Lounge'. Vendors will see this name throughout the RFP as the sub-header for this room's section." />
           </label>
           <input
@@ -539,6 +539,7 @@ const RoomForm = ({
               <GlobalDateTimeInput
                 hideLabel
                 showFormatInLabel={false}
+                format="MM/dd/yyyy"
                 showTime
                 use12Hours
                 timeIntervals={15}
@@ -554,6 +555,7 @@ const RoomForm = ({
               <GlobalDateTimeInput
                 hideLabel
                 showFormatInLabel={false}
+                format="MM/dd/yyyy"
                 showTime
                 use12Hours
                 timeIntervals={15}
@@ -569,6 +571,7 @@ const RoomForm = ({
               <GlobalDateTimeInput
                 hideLabel
                 showFormatInLabel={false}
+                format="MM/dd/yyyy"
                 showTime
                 use12Hours
                 timeIntervals={15}
@@ -584,6 +587,7 @@ const RoomForm = ({
               <GlobalDateTimeInput
                 hideLabel
                 showFormatInLabel={false}
+                format="MM/dd/yyyy"
                 showTime
                 use12Hours
                 timeIntervals={15}

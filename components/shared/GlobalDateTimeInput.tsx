@@ -10,14 +10,17 @@ type DateFormatType =
   | "dd-MM-yyyy"
   | "MM-dd-yyyy"
   | "yyyy-MM-dd"
+  | "MM/dd/yyyy"
   | "yyyy-dd-MM HH:mm"
   | "dd-MM-yyyy HH:mm"
   | "MM-dd-yyyy HH:mm"
   | "yyyy-MM-dd HH:mm"
+  | "MM/dd/yyyy HH:mm"
   | "yyyy-dd-MM hh:mm aa"
   | "dd-MM-yyyy hh:mm aa"
   | "MM-dd-yyyy hh:mm aa"
-  | "yyyy-MM-dd hh:mm aa";
+  | "yyyy-MM-dd hh:mm aa"
+  | "MM/dd/yyyy hh:mm aa";
 
 interface GlobalDatePickerProps {
   label?: string;
@@ -52,14 +55,17 @@ const formatLabelMap: Record<DateFormatType, string> = {
   "dd-MM-yyyy": "DD-MM-YYYY",
   "MM-dd-yyyy": "MM-DD-YYYY",
   "yyyy-MM-dd": "YYYY-MM-DD",
+  "MM/dd/yyyy": "MM/DD/YYYY",
   "yyyy-dd-MM HH:mm": "YYYY-DD-MM HH:MM",
   "dd-MM-yyyy HH:mm": "DD-MM-YYYY HH:MM",
   "MM-dd-yyyy HH:mm": "MM-DD-YYYY HH:MM",
   "yyyy-MM-dd HH:mm": "YYYY-MM-DD HH:MM",
+  "MM/dd/yyyy HH:mm": "MM/DD/YYYY HH:MM",
   "yyyy-dd-MM hh:mm aa": "YYYY-DD-MM hh:MM AM/PM",
   "dd-MM-yyyy hh:mm aa": "DD-MM-YYYY hh:MM AM/PM",
   "MM-dd-yyyy hh:mm aa": "MM-DD-YYYY hh:MM AM/PM",
   "yyyy-MM-dd hh:mm aa": "YYYY-MM-DD hh:MM AM/PM",
+  "MM/dd/yyyy hh:mm aa": "MM/DD/YYYY hh:MM AM/PM",
 };
 
 const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
