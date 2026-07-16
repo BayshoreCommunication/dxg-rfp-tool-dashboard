@@ -39,6 +39,7 @@ export type VenueScheduleData = {
   isUnionVenue: "YES" | "NO" | "NOT_SURE" | "";
   unionJurisdictions: string[];
   unionJurisdictionOther: string;
+  unionLaborDetails: string;
   loadInDate: string;
   loadInTime: string;
   rehearsalDate: string;
@@ -63,6 +64,7 @@ export const defaultVenueSchedule = (): VenueScheduleData => ({
   isUnionVenue: "",
   unionJurisdictions: [],
   unionJurisdictionOther: "",
+  unionLaborDetails: "",
   loadInDate: "",
   loadInTime: "",
   rehearsalDate: "",
@@ -458,8 +460,9 @@ const VenueScheduleStep = ({
 
           <div className="mb-5">
             <label className={labelClass}>
-              Is This a Union Venue? <span className="text-red-500">*</span>
-              <InfoTooltip text="Union venues (IATSE, IBEW) require certified union labor for certain tasks. This triggers jurisdiction fields and adds a compliance note to Section 6, alerting vendors to budget union minimums and call times. If unsure, contact your venue's event services team." />
+              Does Your Contract With the Venue Require You to Use Union, Teamster, or In-House Labor?{" "}
+              <span className="text-red-500">*</span>
+              <InfoTooltip text="Some venue contracts mandate certified union AV technicians (IATSE, IBEW), Teamsters, or in-house labor for certain tasks. This triggers jurisdiction fields and adds a compliance note to Section 6, alerting vendors to budget union minimums and call times. If unsure, contact your venue's event services team." />
             </label>
             <div className="flex gap-3">
               <button
@@ -472,14 +475,18 @@ const VenueScheduleStep = ({
               <button
                 type="button"
                 className={unionVenueCls("NO", safeData.isUnionVenue)}
-                onClick={() => onChange({ isUnionVenue: "NO" })}
+                onClick={() =>
+                  onChange({ isUnionVenue: "NO", unionLaborDetails: "" })
+                }
               >
                 ✗ No — Non-union
               </button>
               <button
                 type="button"
                 className={unionVenueCls("NOT_SURE", safeData.isUnionVenue)}
-                onClick={() => onChange({ isUnionVenue: "NOT_SURE" })}
+                onClick={() =>
+                  onChange({ isUnionVenue: "NOT_SURE", unionLaborDetails: "" })
+                }
               >
                 ? Not Sure
               </button>
@@ -523,7 +530,7 @@ const VenueScheduleStep = ({
                 </div>
 
                 {unionJurisdictions.includes("Other") && (
-                  <div>
+                  <div className="mb-4">
                     <label className={labelClass}>
                       Other Union — Specify
                     </label>
@@ -538,6 +545,21 @@ const VenueScheduleStep = ({
                     />
                   </div>
                 )}
+
+                <div>
+                  <label className={`${labelClass} mt-0`}>
+                    Details or Contract Language
+                    <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span>
+                    <InfoTooltip text="Add any specific details, jurisdictions, or contract language vendors should be aware of." />
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={safeData.unionLaborDetails}
+                    onChange={(e) => onChange({ unionLaborDetails: e.target.value })}
+                    placeholder="e.g. IATSE Local 720 required for all rigging and electrical work per venue contract."
+                    className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008ad2] focus:ring-2 focus:ring-[#008ad2]/20"
+                  />
+                </div>
               </div>
             )}
           </div>

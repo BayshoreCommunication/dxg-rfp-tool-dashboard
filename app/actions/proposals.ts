@@ -649,3 +649,39 @@ export async function extractProposalFromFile(file: File): Promise<{
     return { success: false, message: error.message || "Network error" };
   }
 }
+
+/**
+ * AI fallback for messy time-of-day strings a spreadsheet parser can't confidently
+ * read on its own (typos, unusual notation). Only meant to be called with the small
+ * batch of values a local parser already gave up on, not every cell in a sheet.
+ * Returns one result per input value, in the same order — "HH:MM" (24-hour) or null.
+ */
+export async function normalizeScheduleTimesAction(values: string[]): Promise<{
+  success: boolean;
+  results?: (string | null)[];
+  message?: string;
+}> {
+  if (values.length === 0) return { success: true, results: [] };
+  try {
+    const token = await getAccessToken();
+    if (!token) {
+      return { success: false, message: "User is not authenticated." };
+    }
+
+    const res = await fetch(`${API_URL}/api/extract-proposal/normalize-times`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ values }),
+      cache: "no-store",
+    });
+
+    const json = await res.json();
+    return {
+      success: res.ok && json.success,
+      results: json.data?.results as (string | null)[] | undefined,
+      message: json.message,
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Network error" };
+  }
+}

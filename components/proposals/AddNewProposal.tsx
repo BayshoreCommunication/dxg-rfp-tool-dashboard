@@ -124,8 +124,6 @@ export type RoomByRoomData = {
   speakerTimer: string;
   scenicStageDesign: "Yes" | "No" | "";
   contentVideoNeeds: string;
-  unionLabor: "Yes" | "No" | "Not Sure" | "";
-  unionLaborDetails: string;
   showCrewNeeded: string[];
   otherRolesNeeded: string;
   /* ?? new fields matching HTML page 2B ?? */
@@ -149,7 +147,7 @@ export type RoomByRoomData = {
 
 export type ProductionSupportData = Pick<
   RoomByRoomData,
-  "scenicStageDesign" | "unionLabor" | "showCrewNeeded" | "otherRolesNeeded"
+  "scenicStageDesign" | "showCrewNeeded" | "otherRolesNeeded"
 >;
 
 export type VenueTechnicalData = {
@@ -698,7 +696,6 @@ const normalizeExtracted = (
       programConfidenceMonitor: normalizeProgramConfidenceMonitor(rRec.programConfidenceMonitor, rRec.programConfidenceMonitorQty),
       notesConfidenceMonitor: normalizeNotesConfidenceMonitor(rRec.notesConfidenceMonitor, rRec.notesConfidenceMonitorQty),
       scenicStageDesign: matchOption(r?.scenicStageDesign || raw.production?.scenicStageDesign, ["Yes", "No"]) as RoomByRoomData["scenicStageDesign"],
-      unionLabor: matchOption(r?.unionLabor || raw.production?.unionLabor, ["Yes", "No", "Not Sure"]) as RoomByRoomData["unionLabor"],
       showCrewNeeded: matchOptionsArray(
         (r?.showCrewNeeded?.length ? r.showCrewNeeded : raw.production?.showCrewNeeded) ?? [],
         ["A1 (AUDIO)", "A2 (AUDIO ASSIST)", "V1 (VIDEO)", "V2 (VIDEO ASSIST)", "TD (TECHNICAL DIRECTOR)", "L1 (LIGHTING)", "L2 (LIGHTING ASSIST)", "GRAPHICS OP", "CAMERA OPERATOR", "SHOWCALLER", "STAGE MANAGER", "PRODUCER", "TELEPROMPTER OP", "RIGGER", "STAGEHAND", "OTHER"],
@@ -829,6 +826,7 @@ const normalizeExtracted = (
           isUnionVenue: (matchOption((rv.isUnionVenue as string) ?? "", ["YES", "NO", "NOT_SURE"]).toUpperCase() || "") as VenueScheduleData["isUnionVenue"],
           unionJurisdictions: Array.isArray(rv.unionJurisdictions) ? rv.unionJurisdictions as string[] : [],
           unionJurisdictionOther: (rv.unionJurisdictionOther as string) ?? "",
+          unionLaborDetails: (rv.unionLaborDetails as string) ?? "",
           loadInDate: (rv.loadInDate as string) ?? "",
           loadInTime: (rv.loadInTime as string) ?? "",
           rehearsalDate: (rv.rehearsalDate as string) ?? "",
@@ -1056,7 +1054,6 @@ const mapApiProposalToFormData = (
         ...defaultRoom(),
         ...r,
         scenicStageDesign: ((r.scenicStageDesign || (isFirst ? raw.production?.scenicStageDesign : "")) ?? "") as RoomByRoomData["scenicStageDesign"],
-        unionLabor: ((r.unionLabor || (isFirst ? raw.production?.unionLabor : "")) ?? "") as RoomByRoomData["unionLabor"],
         showCrewNeeded: Array.isArray(r.showCrewNeeded) && (r.showCrewNeeded as string[]).length > 0
           ? (r.showCrewNeeded as string[])
           : (isFirst ? (raw.production?.showCrewNeeded ?? []) : []),
@@ -1361,7 +1358,6 @@ const AddNewProposal = ({
       (r) =>
         r.roomFunction.trim().length > 0 &&
         r.estimatedAttendeesInRoom.trim().length > 0 &&
-        r.unionLabor.trim().length > 0 &&
         r.showCrewNeeded.length > 0,
     );
   };
@@ -1510,9 +1506,6 @@ const AddNewProposal = ({
         videoPlaybackFormat: "",
       };
     }
-    if (normalized.unionLabor !== "Yes") {
-      normalized.unionLaborDetails = "";
-    }
     if (normalized.cameras.cameras !== "Yes") {
       normalized.cameras = { ...normalized.cameras, camerasQty: "" };
     }
@@ -1585,7 +1578,6 @@ const AddNewProposal = ({
       roomByRoom: normalizedRooms,
       production: {
         scenicStageDesign: firstRoom.scenicStageDesign,
-        unionLabor: firstRoom.unionLabor,
         showCrewNeeded: firstRoom.showCrewNeeded,
         otherRolesNeeded: firstRoom.otherRolesNeeded,
       },

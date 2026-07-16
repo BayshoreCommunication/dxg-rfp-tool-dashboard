@@ -1,12 +1,13 @@
 ﻿"use client";
 
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Download, Plus, Trash2, Upload } from "lucide-react";
 import { useRef, useState, type ChangeEvent } from "react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 import type { ProposalSettings, RoomByRoomData } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
+import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -55,44 +56,165 @@ const findRowKey = (row: Record<string, unknown>, candidates: string[]): string 
 
 const matchRoomSetup = (value: string): string => {
   const v = value.trim().toLowerCase();
-  return ROOM_SETUP_OPTIONS.find((opt) => opt.toLowerCase() === v) || "";
+  if (!v) return "";
+  const exact = ROOM_SETUP_OPTIONS.find((opt) => opt.toLowerCase() === v);
+  if (exact) return exact;
+  if (/round.*(?:of\s*)?8\b|\b8\s*[-\s]?top/.test(v)) return "Round of 8";
+  if (/round/.test(v)) return "Rounds of 10";
+  if (/classroom/.test(v)) return "Classroom";
+  if (/theat(er|re)/.test(v)) return "Theater";
+  return "";
 };
 
-const parseScheduleWorkbook = (buffer: ArrayBuffer): RoomByRoomData[] => {
+/** Extracts hours/minutes from an Excel time-of-day cell (Date object, numeric fraction, or "H:MM AM/PM" string). */
+const extractTimeOfDay = (val: unknown): { hours: number; minutes: number } | null => {
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return null;
+    return { hours: val.getUTCHours(), minutes: val.getUTCMinutes() };
+  }
+  if (typeof val === "number" && isFinite(val)) {
+    const frac = val - Math.floor(val);
+    const totalMinutes = Math.round(frac * 24 * 60);
+    return { hours: Math.floor(totalMinutes / 60) % 24, minutes: totalMinutes % 60 };
+  }
+  if (typeof val === "string") {
+    // Tolerate common spreadsheet typos: "11;15 AM" or "2.30pm" instead of "11:15 AM" / "2:30pm".
+    const normalized = val.trim().replace(/\s+/g, " ").replace(/^(\d{1,2})[;.,](\d{2})/, "$1:$2");
+    const m = normalized.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (m) {
+      let h = parseInt(m[1], 10);
+      const min = parseInt(m[2], 10);
+      if (m[3]) {
+        const ap = m[3].toUpperCase();
+        if (ap === "PM" && h !== 12) h += 12;
+        if (ap === "AM" && h === 12) h = 0;
+      }
+      return { hours: h, minutes: min };
+    }
+  }
+  return null;
+};
+
+/** "HH:MM" (24-hour, e.g. from the LLM normalizer) into hours/minutes. */
+const parse24HourTime = (val: string): { hours: number; minutes: number } | null => {
+  const m = val.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h > 23 || min > 59) return null;
+  return { hours: h, minutes: min };
+};
+
+/** Combines an ISO date (YYYY-MM-DD) with a time-of-day cell into a full ISO datetime string. */
+const combineDateAndTime = (isoDate: string, val: unknown): string => {
+  if (!isoDate) return "";
+  const time = extractTimeOfDay(val);
+  if (!time) return "";
+  const [y, m, d] = isoDate.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  const dt = new Date(Date.UTC(y, m - 1, d, time.hours, time.minutes));
+  return isNaN(dt.getTime()) ? "" : dt.toISOString();
+};
+
+/** A time cell that the local parser couldn't confidently read, queued for the LLM fallback. */
+type TimeFixup = { dedupeKey: string; field: "start" | "end"; raw: string; scheduleDate: string };
+
+const parseScheduleWorkbook = async (
+  buffer: ArrayBuffer,
+  normalizeTimes: (values: string[]) => Promise<(string | null)[]>,
+): Promise<{ rooms: RoomByRoomData[]; totalRows: number }> => {
   const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
   const sheetName = workbook.SheetNames[0];
-  if (!sheetName) return [];
+  if (!sheetName) return { rooms: [], totalRows: 0 };
   const sheet = workbook.Sheets[sheetName];
   const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
 
-  return json
-    .map((row): RoomByRoomData => {
-      const dateKey = findRowKey(row, ["date"]);
-      const dayKey = findRowKey(row, ["day"]);
-      const roomKey = findRowKey(row, ["room"]);
-      const functionKey = findRowKey(row, ["function name", "function"]);
-      const setupKey = findRowKey(row, ["room setup", "setup"]);
-      const attendeesKey = findRowKey(row, [
-        "# of attendees",
-        "number of attendees",
-        "attendees",
-        "room capacity",
-      ]);
+  // Keyed by normalized room name (falling back to function name when no room column exists)
+  // so repeated sessions in the same physical room collapse into a single room module.
+  const byKey = new Map<string, RoomByRoomData>();
+  const fixups: TimeFixup[] = [];
 
-      const scheduleDate = dateKey ? excelCellToIsoDate(row[dateKey]) : "";
-      const dayRaw = dayKey ? String(row[dayKey] ?? "").trim() : "";
+  for (const row of json) {
+    const dateKey = findRowKey(row, ["date"]);
+    const dayKey = findRowKey(row, ["day"]);
+    const roomKey = findRowKey(row, ["room", "room name", "room #", "room number", "room no"]);
+    const functionKey = findRowKey(row, ["function name", "function", "session name", "session"]);
+    const setupKey = findRowKey(row, ["room setup", "setup", "room set", "set"]);
+    const attendeesKey = findRowKey(row, [
+      "# of attendees",
+      "number of attendees",
+      "attendees",
+      "room capacity",
+      "capacity",
+      "expected attendees",
+    ]);
+    const startTimeKey = findRowKey(row, ["start time", "show start time"]);
+    const endTimeKey = findRowKey(row, ["end time", "show end time"]);
 
-      return {
-        ...defaultRoom(),
-        roomFunction: functionKey ? String(row[functionKey] ?? "").trim() : "",
-        roomLocation: roomKey ? String(row[roomKey] ?? "").trim() : "",
-        roomSetup: setupKey ? matchRoomSetup(String(row[setupKey] ?? "")) : "",
-        scheduleDate,
-        scheduleDay: dayRaw || dayOfWeekFromDate(scheduleDate),
-        estimatedAttendeesInRoom: attendeesKey ? String(row[attendeesKey] ?? "").trim() : "",
-      };
-    })
-    .filter((r) => r.roomFunction || r.roomLocation);
+    const roomNameRaw = roomKey ? String(row[roomKey] ?? "").trim() : "";
+    const functionNameRaw = functionKey ? String(row[functionKey] ?? "").trim() : "";
+    const dedupeKey = roomNameRaw
+      ? `room:${roomNameRaw.toLowerCase()}`
+      : functionNameRaw
+        ? `func:${functionNameRaw.toLowerCase()}`
+        : "";
+    if (!dedupeKey || byKey.has(dedupeKey)) continue;
+
+    const scheduleDate = dateKey ? excelCellToIsoDate(row[dateKey]) : "";
+    const dayRaw = dayKey ? String(row[dayKey] ?? "").trim() : "";
+
+    const startRawVal = startTimeKey ? row[startTimeKey] : undefined;
+    const endRawVal = endTimeKey ? row[endTimeKey] : undefined;
+    const showStartDateTime = startTimeKey ? combineDateAndTime(scheduleDate, startRawVal) : "";
+    const showEndDateTime = endTimeKey ? combineDateAndTime(scheduleDate, endRawVal) : "";
+
+    // Local parsing failed but the cell wasn't actually blank — queue it for the LLM fallback
+    // instead of silently dropping it (typos like "11;15 AM" land here).
+    if (!showStartDateTime && typeof startRawVal === "string" && startRawVal.trim()) {
+      fixups.push({ dedupeKey, field: "start", raw: startRawVal.trim(), scheduleDate });
+    }
+    if (!showEndDateTime && typeof endRawVal === "string" && endRawVal.trim()) {
+      fixups.push({ dedupeKey, field: "end", raw: endRawVal.trim(), scheduleDate });
+    }
+
+    byKey.set(dedupeKey, {
+      ...defaultRoom(),
+      roomFunction: functionNameRaw,
+      roomLocation: roomNameRaw,
+      roomSetup: setupKey ? matchRoomSetup(String(row[setupKey] ?? "")) : "",
+      scheduleDate,
+      scheduleDay: dayRaw || dayOfWeekFromDate(scheduleDate),
+      estimatedAttendeesInRoom: attendeesKey ? String(row[attendeesKey] ?? "").trim() : "",
+      showStartDateTime,
+      showEndDateTime,
+    });
+  }
+
+  if (fixups.length > 0) {
+    const uniqueRaw = Array.from(new Set(fixups.map((f) => f.raw)));
+    try {
+      const results = await normalizeTimes(uniqueRaw);
+      const rawToResolved = new Map(uniqueRaw.map((raw, i) => [raw, results[i] ?? null]));
+      for (const fixup of fixups) {
+        const resolved = rawToResolved.get(fixup.raw);
+        if (!resolved) continue;
+        const time = parse24HourTime(resolved);
+        if (!time || !fixup.scheduleDate) continue;
+        const [y, m, d] = fixup.scheduleDate.split("-").map(Number);
+        if (!y || !m || !d) continue;
+        const dt = new Date(Date.UTC(y, m - 1, d, time.hours, time.minutes));
+        if (isNaN(dt.getTime())) continue;
+        const room = byKey.get(fixup.dedupeKey);
+        if (!room) continue;
+        if (fixup.field === "start") room.showStartDateTime = dt.toISOString();
+        else room.showEndDateTime = dt.toISOString();
+      }
+    } catch {
+      // LLM fallback is best-effort; leave those specific fields blank rather than failing the whole upload.
+    }
+  }
+
+  return { rooms: Array.from(byKey.values()), totalRows: json.length };
 };
 
 // ─── Style constants ──────────────────────────────────────────────────────────
@@ -254,8 +376,6 @@ export const defaultRoom = (): RoomByRoomData => ({
   notesConfidenceMonitor: { notesConfidenceMonitor: "", notesConfidenceMonitorQty: "" },
   speakerTimer: "",
   contentVideoNeeds: "",
-  unionLabor: "",
-  unionLaborDetails: "",
   showCrewNeeded: [],
   showCrewQty: {},
   otherRolesNeeded: "",
@@ -1404,54 +1524,6 @@ const RoomForm = ({
           onChange={(e) => onChange({ otherRolesNeeded: e.target.value })}
         />
       </div>
-
-      {/* ── Union Labor ── */}
-      <div
-        className={`-mx-1 rounded-lg px-1 py-1 transition-colors ${
-          showErrors && !data.unionLabor ? "bg-red-50" : ""
-        }`}
-      >
-        <label className={labelClass}>
-          Does your contract with the venue require you to use Union, Teamster, or In-House Labor?{" "}
-          <span className="text-red-500">*</span>
-          <InfoTooltip text="Some venues mandate certified union AV technicians (IATSE, IBEW), Teamsters, or in-house labor. This affects crew costs, call times, and scheduling lead time — all flagged in Section 6 of the RFP." />
-        </label>
-        <div className="flex flex-wrap gap-3">
-          {(["Yes", "No", "Not Sure"] as const).map((opt) => (
-            <PillRadio
-              key={opt}
-              name={`${uid}-union`}
-              value={opt}
-              checked={data.unionLabor === opt}
-              onChange={() =>
-                onChange({
-                  unionLabor: opt,
-                  unionLaborDetails: opt !== "Yes" ? "" : data.unionLaborDetails,
-                })
-              }
-            />
-          ))}
-        </div>
-        {showErrors && !data.unionLabor && (
-          <p className="mt-2 text-sm normal-case text-red-500">Please select an option.</p>
-        )}
-        {data.unionLabor === "Yes" && (
-          <div className="mt-3">
-            <label className={`${labelClass} mt-0`}>
-              Details or Contract Language
-              <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-              <InfoTooltip text="Add any specific details, jurisdictions, or contract language vendors should be aware of." />
-            </label>
-            <textarea
-              rows={3}
-              className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
-              placeholder="e.g. IATSE Local 720 required for all rigging and electrical work per venue contract."
-              value={data.unionLaborDetails}
-              onChange={(e) => onChange({ unionLaborDetails: e.target.value })}
-            />
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -1636,7 +1708,10 @@ const RoomAndProductionStep = ({
     setIsUploadingSchedule(true);
     try {
       const buffer = await file.arrayBuffer();
-      const parsedRooms = parseScheduleWorkbook(buffer);
+      const { rooms: parsedRooms, totalRows } = await parseScheduleWorkbook(buffer, async (values) => {
+        const res = await normalizeScheduleTimesAction(values);
+        return res.success && res.results ? res.results : values.map(() => null);
+      });
       if (parsedRooms.length === 0) {
         toast.error("No rooms could be read from that file. Check the column headers and try again.");
         return;
@@ -1644,7 +1719,12 @@ const RoomAndProductionStep = ({
       onRoomsChange(parsedRooms);
       onNumberOfEventRoomsChange(String(parsedRooms.length));
       setExpandedRooms(new Set([0]));
-      toast.success(`Loaded ${parsedRooms.length} room${parsedRooms.length === 1 ? "" : "s"} from schedule.`);
+      const roomWord = `room${parsedRooms.length === 1 ? "" : "s"}`;
+      toast.success(
+        totalRows > parsedRooms.length
+          ? `Loaded ${parsedRooms.length} unique ${roomWord} from ${totalRows} schedule rows — repeated room names were consolidated.`
+          : `Loaded ${parsedRooms.length} ${roomWord} from schedule.`,
+      );
     } catch {
       toast.error("Couldn't read that file — please upload a valid Excel schedule.");
     } finally {
@@ -1737,15 +1817,25 @@ const RoomAndProductionStep = ({
             className="hidden"
             onChange={handleScheduleFileChange}
           />
-          <button
-            type="button"
-            disabled={isUploadingSchedule}
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 rounded-lg border border-[#e4e4e4] bg-white px-4 py-2 text-sm font-semibold text-[#222628] hover:border-[#008ad2] hover:text-[#008ad2] transition-colors disabled:opacity-50"
-          >
-            <Upload size={15} className="shrink-0" />
-            {isUploadingSchedule ? "Reading file…" : "Upload Schedule (Excel)"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={isUploadingSchedule}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 rounded-lg border border-[#e4e4e4] bg-white px-4 py-2 text-sm font-semibold text-[#222628] hover:border-[#008ad2] hover:text-[#008ad2] transition-colors disabled:opacity-50"
+            >
+              <Upload size={15} className="shrink-0" />
+              {isUploadingSchedule ? "Reading file…" : "Upload Schedule (Excel)"}
+            </button>
+            <a
+              href="/files/RFPilot%20schedule-example-sheet.xlsx"
+              download
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-[#008ad2] hover:text-[#0069a0] transition-colors"
+            >
+              <Download size={15} className="shrink-0" />
+              Download Sample Sheet
+            </a>
+          </div>
         </div>
       </div>
 

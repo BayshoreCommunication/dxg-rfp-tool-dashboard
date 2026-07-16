@@ -256,7 +256,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
   /* Flags */
   const hasLedWall = rooms.some((r) => p(r.ledWall).toUpperCase() === "YES");
-  const hasUnion = rooms.some((r) => p(r.unionLabor) === "Yes" || p(r.isUnionVenue) === "YES");
+  const hasUnion = p(vs.isUnionVenue) === "YES";
   const hasVideo = rooms.some((r) => {
     const rv = r.videoRecording;
     if (rv && typeof rv === "object") return p((rv as RD).videoRecording).toLowerCase() === "yes";
@@ -446,10 +446,6 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
         {/* Production */}
         <InfoRow label="Scenic Design" value={p(room.scenicStageDesign)} />
-        <InfoRow
-          label="Union Labor"
-          value={p(room.unionLabor) === "Yes" && p(room.unionLaborDetails) ? `Yes — ${p(room.unionLaborDetails)}` : p(room.unionLabor)}
-        />
 
         {crew.length > 0 && (
           <div className="crew-box">
@@ -651,7 +647,12 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           <InfoRow label="Venue Address" value={p(vs.venueAddress)} />
           <InfoRow label="Venue Status" value={p(vs.venueConfirmedStatus) ? p(vs.venueConfirmedStatus).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : ""} />
           <InfoRow label="Venue Type" value={p(vs.venueType)} />
-          <InfoRow label="Union Jurisdiction" value={p(vs.isUnionVenue) === "YES" ? [...arr(vs.unionJurisdictions), p(vs.unionJurisdictionOther)].filter(Boolean).join(", ") || "Yes" : p(vs.isUnionVenue) === "NO" ? "No" : ""} />
+          <InfoRow
+            label="Union / Teamster / In-House Labor"
+            value={p(vs.isUnionVenue) === "YES"
+              ? [[...arr(vs.unionJurisdictions), p(vs.unionJurisdictionOther)].filter(Boolean).join(", ") || "Yes", p(vs.unionLaborDetails)].filter(Boolean).join(" — ")
+              : p(vs.isUnionVenue) === "NO" ? "No" : ""}
+          />
           <InfoRow label="Event Format" value={p(ev.eventFormat)} />
           <InfoRow label="Attendees" value={p(ev.attendees)} />
           <InfoRow label="Production Rooms" value={p(vs.numberOfEventRooms) || String(rooms.length) || ""} />
@@ -891,7 +892,12 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             <InfoTd label="AV Contact Phone" value={p(ven.venueAvContactPhone)} />
             <InfoTd label="AV Contact Email" value={p(ven.venueAvContactEmail)} />
             <InfoTd label="In-House AV Company" value={p(ven.inHouseAvCompanyName)} />
-            <InfoTd label="Union Jurisdiction" value={p(vs.isUnionVenue) === "YES" ? arr(vs.unionJurisdictions).join(", ") || "Yes" : ""} />
+            <InfoTd
+              label="Union / Teamster / In-House Labor"
+              value={p(vs.isUnionVenue) === "YES"
+                ? [arr(vs.unionJurisdictions).join(", ") || "Yes", p(vs.unionLaborDetails)].filter(Boolean).join(" — ")
+                : ""}
+            />
             <InfoTd
               label="Rigging"
               value={p(ven.riggingRequired) === "YES"
