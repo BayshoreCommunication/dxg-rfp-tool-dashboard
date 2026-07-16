@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { getBackendAccessToken } from "@/lib/server/backendSession";
 
 import { BACKEND_URL } from "@/lib/config";
@@ -195,18 +195,26 @@ export async function getCurrentUserAction() {
    SIGN OUT
 ───────────────────────────────────────── */
 export async function signOutAction() {
+  let backendWarning: string | undefined;
   try {
     const accessToken = await getBackendAccessToken();
 
     // Call backend logout if accessToken exists
     if (accessToken) {
-      await fetch(`${BACKEND_URL}/api/auth/logout`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
       });
+      if (!response.ok) backendWarning = "Backend session revocation was not confirmed.";
     }
-    return { success: true, message: "Signed out successfully" };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error) };
+    backendWarning = getErrorMessage(error);
   }
+
+  // Auth.js clears its encrypted session cookie and performs the redirect.
+  // Keep this outside the catch: the framework uses a redirect exception to
+  // complete navigation from a server action.
+  await signOut({ redirectTo: "/sign-in" });
+  return { success: true, message: backendWarning || "Signed out successfully" };
 }

@@ -10,7 +10,6 @@ import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { BellDot, LogOut } from "lucide-react";
-import { signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,16 +39,19 @@ const Sidebar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [vendorUnreadCount, setVendorUnreadCount] = useState(0);
   const [socketUrl, setSocketUrl] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
 
   const isItemActive = (item: NavItem) => pathname === item.href;
 
   const signOutHandler = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
     try {
       await signOutAction();
     } catch (error) {
-      console.error("Backend logout failed:", error);
+      console.error("Sign out failed:", error);
+      setSigningOut(false);
     }
-    await signOut({ callbackUrl: "/sign-in" });
   };
 
   useEffect(() => {
@@ -294,11 +296,12 @@ const Sidebar = () => {
             <button
               type="button"
               onClick={() => void signOutHandler()}
+              disabled={signingOut}
               className="relative flex w-24 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-3 text-[12px] font-semibold text-gray-700 shadow-md hover:bg-gray-50"
             >
               <span className="absolute -left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-b border-l border-gray-200 bg-white" />
               <LogOut size={12} className="text-gray-500" />
-              Sign Out
+              {signingOut ? "Signing Out…" : "Sign Out"}
             </button>
           </div>
         </div>
