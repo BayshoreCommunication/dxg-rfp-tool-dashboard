@@ -24,6 +24,10 @@ import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMa
 import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalRequirements";
 import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
 import SaveCopyModal from "./SaveCopyModal";
+import ProposalWorkflowShell from "./ProposalWorkflowShell";
+import PrivateDocumentStatusPanel from "./PrivateDocumentStatusPanel";
+import ProposalContextPanel from "./ProposalContextPanel";
+import ProposalDraftPanel from "./ProposalDraftPanel";
 
 /* ─── Proposal data by step ─── */
 export type EventData = {
@@ -1952,6 +1956,13 @@ const AddNewProposal = ({
         <div className="flex w-full">
           {/* Form area — 70% */}
           <div className="w-[80%] mr-4">
+            {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED === "true" && (
+              <ProposalWorkflowShell proposalId={proposalId} />
+            )}
+            {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_ASYNC_STATUS_ENABLED === "true" && <PrivateDocumentStatusPanel proposalId={proposalId} />}
+            {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_CONTEXT_ENABLED === "true" && <ProposalContextPanel proposalId={proposalId} />}
+            {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_DRAFT_ENABLED === "true" && <ProposalDraftPanel proposalId={proposalId} />}
+            <div id="manual-proposal-details" />
             {proposalProcessStep === 1 && (
               <EventForm
                 data={proposalData.event}

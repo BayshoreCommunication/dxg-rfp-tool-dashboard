@@ -29,6 +29,8 @@ Every pull request must pass locked dependency installation, ESLint, strict Type
 
 Architecture, API contracts, accessibility expectations, feature flags, error states, and operational behavior must be updated with each material change.
 
+- [Async status and recovery UX](./ASYNC_STATUS_UX.md)
+
 ## Canonical proposal contract
 
 `contracts/proposal/v1/` contains the synchronized JSON Schema 2020-12 resource, public projection, extraction-candidate patch, runtime validators, and legacy adapter. `contracts/generated/` is deterministic generated output and its manifest. New proposal UI/API code must consume these generated contracts or an explicit compatibility projection rather than adding another handwritten proposal shape.
