@@ -1,11 +1,12 @@
 "use client";
 import {
   createProposalContextAction,
+  createSourceProposalContextAction,
   getLatestProposalContextAction,
   getProposalContextAction,
   type ProposalContextRun,
 } from "@/app/actions/proposalContext";
-import { getDurableJob } from "@/app/actions/durableJobs";
+import { getDurableJob, listPrivateDocumentSources, type PrivateDocumentSource } from "@/app/actions/durableJobs";
 import {
   applyCandidatesAction,
   getCandidateReviewAction,
@@ -37,6 +38,7 @@ export default function ProposalContextPanel({
     [notice, setNotice] = useState<string>(),
     [jobPurpose, setJobPurpose] = useState<"extract" | "apply">("extract"),
     [busy, setBusy] = useState(false);
+  const [sources,setSources]=useState<PrivateDocumentSource[]>([]),[sourceId,setSourceId]=useState("");
   const loadReview = async (id: string) => {
     const response = await getCandidateReviewAction(proposalId, id);
     if (!response.success) {
@@ -74,6 +76,7 @@ export default function ProposalContextPanel({
       active = false;
     };
   }, [proposalId]);
+  useEffect(()=>{let active=true;void listPrivateDocumentSources(proposalId).then(response=>{if(!active||!response.success)return;const eligible=response.data.filter(x=>x.status==="ready"&&x.confidentiality==="non_confidential");setSources(eligible);setSourceId(current=>current||eligible[0]?.id||"");});return()=>{active=false;};},[proposalId]);
   useEffect(() => {
     if (!jobId || !["queued", "running", "retry_scheduled"].includes(status))
       return;
@@ -127,7 +130,7 @@ export default function ProposalContextPanel({
     setNotice(undefined);
     setResult(undefined);
     setReview(undefined);
-    const response = await createProposalContextAction(proposalId, fixture);
+    const response = sourceId ? await createSourceProposalContextAction(proposalId,sourceId) : await createProposalContextAction(proposalId, fixture);
     setBusy(false);
     if (!response.success) {
       setError(response.message);
@@ -236,23 +239,26 @@ export default function ProposalContextPanel({
         Live AI requirement extraction
       </h2>
       <p className="mt-1 text-sm text-slate-600">
-        OpenAI extracts cited candidates from approved synthetic evidence.
+        OpenAI extracts cited candidates from an explicitly approved, non-confidential proposal source. Synthetic evidence remains available when no eligible source exists.
         Review is required before any separate structured-field application.
       </p>
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="text-sm font-medium">
-          Synthetic example
+          {sources.length?"Approved proposal source":"Synthetic example"}
           <select
             className="mt-1 block rounded-md border px-3 py-2"
-            value={fixture}
-            onChange={(e) => setFixture(e.target.value as typeof fixture)}
+            value={sources.length?sourceId:fixture}
+            onChange={(e) => sources.length?setSourceId(e.target.value):setFixture(e.target.value as typeof fixture)}
           >
+            {sources.map(source=><option key={source.id} value={source.id}>{source.originalFilename}</option>)}
+            {!sources.length&&<>
             <option value="synthetic-conference-simple">
               Simple conference
             </option>
             <option value="synthetic-conference-medium">
               Detailed conference
             </option>
+            </>}
           </select>
         </label>
         <button

@@ -43,7 +43,7 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
 };
 
 export type UploadSession = { sourceId: string; uploadUrl: string; requiredHeaders: Record<string, string> };
-export type PrivateDocumentSource = { id: string; status: string; originalFilename: string; createdAt: string };
+export type PrivateDocumentSource = { id: string; status: string; confidentiality: "non_confidential" | "confidential" | "internal" | "restricted"; originalFilename: string; createdAt: string };
 
 export const listPrivateDocumentSources = async (proposalId: string): Promise<ActionResult<PrivateDocumentSource[]>> =>
   request(`/api/v1/proposals/${encodeURIComponent(proposalId)}/sources?limit=100`, undefined, value => {
@@ -51,15 +51,15 @@ export const listPrivateDocumentSources = async (proposalId: string): Promise<Ac
     return value.flatMap(item => {
       if (!item || typeof item !== "object") return [];
       const row = item as Record<string, unknown>;
-      return typeof row.id === "string" && typeof row.status === "string" && typeof row.originalFilename === "string" && typeof row.createdAt === "string"
-        ? [{ id: row.id, status: row.status, originalFilename: row.originalFilename, createdAt: row.createdAt }]
+      return typeof row.id === "string" && typeof row.status === "string" && typeof row.confidentiality === "string" && typeof row.originalFilename === "string" && typeof row.createdAt === "string"
+        ? [{ id: row.id, status: row.status, confidentiality: row.confidentiality as PrivateDocumentSource["confidentiality"], originalFilename: row.originalFilename, createdAt: row.createdAt }]
         : [];
     });
   });
 
-export const createPrivateUploadSession = async (proposalId: string, file: { name: string; type: string; size: number }, idempotencyKey: string): Promise<ActionResult<UploadSession>> =>
+export const createPrivateUploadSession = async (proposalId: string, file: { name: string; type: string; size: number }, idempotencyKey: string, classification: "confidential" | "non_confidential" = "confidential"): Promise<ActionResult<UploadSession>> =>
   request(`/api/v1/proposals/${encodeURIComponent(proposalId)}/sources/upload-session`, {
-    method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey }, body: JSON.stringify({ filename: file.name, mimeType: file.type, sizeBytes: file.size }),
+    method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey }, body: JSON.stringify({ filename: file.name, mimeType: file.type, sizeBytes: file.size, classification }),
   }, value => {
     if (!value || typeof value !== "object") return null;
     const record = value as Record<string, unknown>; const source = record.source as Record<string, unknown> | undefined;

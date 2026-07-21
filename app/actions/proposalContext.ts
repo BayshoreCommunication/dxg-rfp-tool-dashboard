@@ -90,6 +90,7 @@ export const createProposalContextAction = async (
     },
     body: JSON.stringify({ fixture }),
   });
+export const createSourceProposalContextAction = async (proposalId:string,sourceId:string)=>await call<{jobId:string;runId:string;status:string;statusUrl:string;resultUrl:string}>(`/api/v1/proposals/${encodeURIComponent(proposalId)}/live-source-context-jobs`,{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":crypto.randomUUID()},body:JSON.stringify({sourceId})});
 export const getProposalContextAction = async (
   proposalId: string,
   runId: string,

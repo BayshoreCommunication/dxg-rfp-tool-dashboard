@@ -15,6 +15,7 @@ export default function PrivateDocumentStatusPanel({ proposalId }: { proposalId:
   const [delayed, setDelayed] = useState(false);
   const [trackedJobId, setTrackedJobId] = useState<string | null>(null);
   const [sources, setSources] = useState<PrivateDocumentSource[]>([]);
+  const [approvedForAi,setApprovedForAi]=useState(false);
   const pollCount = useRef(0);
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function PrivateDocumentStatusPanel({ proposalId }: { proposalId:
     if (!file || busy) return;
     setBusy(true); setMessage(null); setJob(null); setDelayed(false);
     const operationKey = crypto.randomUUID();
-    const session = await createPrivateUploadSession(proposalId, { name: file.name, type: file.type, size: file.size }, operationKey);
+    const session = await createPrivateUploadSession(proposalId, { name: file.name, type: file.type, size: file.size }, operationKey,approvedForAi?"non_confidential":"confidential");
     setCorrelationId(session.correlationId);
     if (!session.success) { setMessage(session.message); setBusy(false); return; }
     try {
@@ -90,13 +91,14 @@ export default function PrivateDocumentStatusPanel({ proposalId }: { proposalId:
         </button>
       </div>
       <p id="private-file-help" className="mt-2 text-xs text-slate-500">PDF, DOCX, XLSX, CSV, or TXT. The configured private-storage limit applies.</p>
+      <label className="mt-3 flex items-start gap-2 text-sm text-slate-700"><input type="checkbox" checked={approvedForAi} onChange={e=>setApprovedForAi(e.target.checked)} className="mt-1"/><span>I confirm this source is non-confidential and approved for live AI processing.</span></label>
       {presentation && <div role={presentation.tone === "error" ? "alert" : "status"} aria-live={presentation.tone === "error" ? "assertive" : "polite"} className={`mt-4 rounded-lg border p-4 ${tone}`}>
         <p className="font-semibold text-slate-900">{presentation.title}</p><p className="mt-1 text-sm text-slate-700">{presentation.detail}</p>
         {!presentation.terminal && <div className="mt-3 h-2 overflow-hidden rounded bg-white" aria-label={`Processing ${job?.progress ?? 0}%`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={job?.progress ?? 0}><div className="h-full bg-cyan-600 transition-[width] motion-reduce:transition-none" style={{ width: `${Math.max(job?.progress ?? 0, 8)}%` }} /></div>}
       </div>}
       {message && <div role="alert" tabIndex={-1} className="mt-4 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">{message}</div>}
       {(message || presentation?.tone === "error") && correlationId && <p className="mt-2 text-xs text-slate-600">Support reference: <code>{correlationId}</code></p>}
-      {sources.length > 0 && <div className="mt-5"><h3 className="text-sm font-semibold text-slate-900">Attached sources ({sources.length})</h3><ul className="mt-2 space-y-2">{sources.map(source => <li key={source.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><span className="max-w-[70%] truncate" title={source.originalFilename}>{source.originalFilename}</span><span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-700">{source.status.replaceAll("_", " ")}</span></li>)}</ul></div>}
+      {sources.length > 0 && <div className="mt-5"><h3 className="text-sm font-semibold text-slate-900">Attached sources ({sources.length})</h3><ul className="mt-2 space-y-2">{sources.map(source => <li key={source.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><span className="max-w-[60%] truncate" title={source.originalFilename}>{source.originalFilename}</span><span className="text-xs text-slate-600">{source.confidentiality.replaceAll("_"," ")}</span><span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-700">{source.status.replaceAll("_", " ")}</span></li>)}</ul></div>}
     </section>
   );
 }
