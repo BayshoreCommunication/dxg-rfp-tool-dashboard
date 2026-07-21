@@ -38,7 +38,7 @@ export default function ProposalContextPanel({
     [notice, setNotice] = useState<string>(),
     [jobPurpose, setJobPurpose] = useState<"extract" | "apply">("extract"),
     [busy, setBusy] = useState(false);
-  const [sources,setSources]=useState<PrivateDocumentSource[]>([]),[sourceId,setSourceId]=useState("");
+  const [sources,setSources]=useState<PrivateDocumentSource[]>([]),[sourceIds,setSourceIds]=useState<string[]>([]);
   const loadReview = async (id: string) => {
     const response = await getCandidateReviewAction(proposalId, id);
     if (!response.success) {
@@ -76,7 +76,7 @@ export default function ProposalContextPanel({
       active = false;
     };
   }, [proposalId]);
-  useEffect(()=>{let active=true;void listPrivateDocumentSources(proposalId).then(response=>{if(!active||!response.success)return;const eligible=response.data.filter(x=>x.status==="ready"&&x.confidentiality==="non_confidential");setSources(eligible);setSourceId(current=>current||eligible[0]?.id||"");});return()=>{active=false;};},[proposalId]);
+  useEffect(()=>{let active=true;void listPrivateDocumentSources(proposalId).then(response=>{if(!active||!response.success)return;const eligible=response.data.filter(x=>x.status==="ready"&&x.confidentiality==="non_confidential");setSources(eligible);setSourceIds(current=>current.length?current:eligible[0]?[eligible[0].id]:[]);});return()=>{active=false;};},[proposalId]);
   useEffect(() => {
     if (!jobId || !["queued", "running", "retry_scheduled"].includes(status))
       return;
@@ -130,7 +130,7 @@ export default function ProposalContextPanel({
     setNotice(undefined);
     setResult(undefined);
     setReview(undefined);
-    const response = sourceId ? await createSourceProposalContextAction(proposalId,sourceId) : await createProposalContextAction(proposalId, fixture);
+    const response = sourceIds.length ? await createSourceProposalContextAction(proposalId,sourceIds) : await createProposalContextAction(proposalId, fixture);
     setBusy(false);
     if (!response.success) {
       setError(response.message);
@@ -176,6 +176,8 @@ export default function ProposalContextPanel({
       setError("Choose a new, unapplied suggestion first.");
       return;
     }
+    const selectedPaths=selected.map(x=>review.canonicalPaths[x.id]);
+    if(new Set(selectedPaths).size!==selectedPaths.length){setError("Select only one candidate for each conflicting proposal field.");return;}
     const missingConfirmation = selected.some((x) => {
       const current = review.currentValues[review.canonicalPaths[x.id]];
       return (
@@ -247,8 +249,10 @@ export default function ProposalContextPanel({
           {sources.length?"Approved proposal source":"Synthetic example"}
           <select
             className="mt-1 block rounded-md border px-3 py-2"
-            value={sources.length?sourceId:fixture}
-            onChange={(e) => sources.length?setSourceId(e.target.value):setFixture(e.target.value as typeof fixture)}
+            multiple={sources.length>0}
+            size={sources.length?Math.min(sources.length,5):1}
+            value={sources.length?sourceIds:fixture}
+            onChange={(e) => sources.length?setSourceIds([...e.target.selectedOptions].map(option=>option.value).slice(0,5)):setFixture(e.target.value as typeof fixture)}
           >
             {sources.map(source=><option key={source.id} value={source.id}>{source.originalFilename}</option>)}
             {!sources.length&&<>
@@ -260,6 +264,7 @@ export default function ProposalContextPanel({
             </option>
             </>}
           </select>
+          {sources.length>0&&<span className="mt-1 block text-xs font-normal text-slate-500">Select up to five sources. Use Ctrl/Cmd to select multiple.</span>}
         </label>
         <button
           type="button"
@@ -293,6 +298,7 @@ export default function ProposalContextPanel({
           {notice}
         </p>
       )}
+      {result?.issues.some(issue=>issue.code==="CROSS_SOURCE_CONFLICT")&&<div role="alert" className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Sources disagree on one or more fields. Review each conflicting candidate; no value was selected or applied automatically.</div>}
       {result && review && (
         <div className="mt-5">
           <AiRunEvidence run={result.run} />
