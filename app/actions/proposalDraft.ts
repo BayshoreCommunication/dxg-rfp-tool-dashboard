@@ -1,2 +1,85 @@
-"use server";import{BACKEND_URL}from"@/lib/config";import{getBackendAccessToken}from"@/lib/server/backendSession";type Result<T>={success:true;data:T}|{success:false;code:string;message:string};const call=async<T>(path:string,init?:RequestInit):Promise<Result<T>>=>{const token=await getBackendAccessToken();if(!token)return{success:false,code:"AUTHENTICATION_REQUIRED",message:"Your session expired."};try{const r=await fetch(`${BACKEND_URL}${path}`,{...init,cache:"no-store",headers:{Authorization:`Bearer ${token}`,"X-Correlation-ID":crypto.randomUUID(),...(init?.headers??{})}}),b=await r.json().catch(()=>({}));return r.ok?{success:true,data:b.data as T}:{success:false,code:String(b.code||`HTTP_${r.status}`),message:String(b.title||"Draft operation failed.")};}catch{return{success:false,code:"NETWORK_ERROR",message:"Draft service could not be reached."};}};
-export type ProposalDraft={run:Record<string,unknown>;sections:Array<{id:string;key:string;heading:string;ordinal:number;paragraphs:Array<{text:string;citations:string[]}>}>;gaps:Array<{code:string;paths:string[]}>;proposalMutation:false};export const createProposalDraftAction=async(proposalId:string,expectedProposalVersion:number)=>await call<{runId:string;jobId:string;status:string}>(`/api/v1/proposals/${encodeURIComponent(proposalId)}/draft-jobs`,{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":crypto.randomUUID()},body:JSON.stringify({expectedProposalVersion,fixture:"synthetic-proposal-draft"})});export const getProposalDraftAction=async(proposalId:string,runId:string)=>await call<ProposalDraft>(`/api/v1/proposals/${encodeURIComponent(proposalId)}/draft-runs/${runId}`);export const getLatestProposalDraftAction=async(proposalId:string)=>await call<ProposalDraft>(`/api/v1/proposals/${encodeURIComponent(proposalId)}/draft-runs/latest`);
+"use server";
+import { BACKEND_URL } from "@/lib/config";
+import { getBackendAccessToken } from "@/lib/server/backendSession";
+type Result<T> =
+  | { success: true; data: T }
+  | { success: false; code: string; message: string };
+const call = async <T>(
+  path: string,
+  init?: RequestInit,
+): Promise<Result<T>> => {
+  const token = await getBackendAccessToken();
+  if (!token)
+    return {
+      success: false,
+      code: "AUTHENTICATION_REQUIRED",
+      message: "Your session expired.",
+    };
+  try {
+    const r = await fetch(`${BACKEND_URL}${path}`, {
+        ...init,
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Correlation-ID": crypto.randomUUID(),
+          ...(init?.headers ?? {}),
+        },
+      }),
+      b = await r.json().catch(() => ({}));
+    return r.ok
+      ? { success: true, data: b.data as T }
+      : {
+          success: false,
+          code: String(b.code || `HTTP_${r.status}`),
+          message: String(b.title || "Draft operation failed."),
+        };
+  } catch {
+    return {
+      success: false,
+      code: "NETWORK_ERROR",
+      message: "Draft service could not be reached.",
+    };
+  }
+};
+export type ProposalDraft = {
+  run: Record<string, unknown>;
+  sections: Array<{
+    id: string;
+    key: string;
+    heading: string;
+    ordinal: number;
+    paragraphs: Array<{ text: string; citations: string[] }>;
+  }>;
+  gaps: Array<{ code: string; paths: string[] }>;
+  proposalMutation: false;
+};
+export const createProposalDraftAction = async (
+  proposalId: string,
+  expectedProposalVersion: number,
+  live = true,
+) =>
+  await call<{ runId: string; jobId: string; status: string }>(
+    `/api/v1/proposals/${encodeURIComponent(proposalId)}/${live ? "live-draft-jobs" : "draft-jobs"}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        expectedProposalVersion,
+        fixture: "synthetic-proposal-draft",
+      }),
+    },
+  );
+export const getProposalDraftAction = async (
+  proposalId: string,
+  runId: string,
+) =>
+  await call<ProposalDraft>(
+    `/api/v1/proposals/${encodeURIComponent(proposalId)}/draft-runs/${runId}`,
+  );
+export const getLatestProposalDraftAction = async (proposalId: string) =>
+  await call<ProposalDraft>(
+    `/api/v1/proposals/${encodeURIComponent(proposalId)}/draft-runs/latest`,
+  );
