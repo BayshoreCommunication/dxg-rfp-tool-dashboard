@@ -14,6 +14,7 @@ import {
   type CandidateReview,
 } from "@/app/actions/candidateApplication";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import AiRunEvidence from "./AiRunEvidence";
 type Decision = {
   decision: "pending" | "accepted" | "modified" | "rejected";
@@ -38,6 +39,7 @@ export default function ProposalContextPanel({
     [notice, setNotice] = useState<string>(),
     [jobPurpose, setJobPurpose] = useState<"extract" | "apply">("extract"),
     [busy, setBusy] = useState(false);
+  const router = useRouter();
   const [sources,setSources]=useState<PrivateDocumentSource[]>([]),[sourceIds,setSourceIds]=useState<string[]>([]);
   const loadReview = async (id: string) => {
     const response = await getCandidateReviewAction(proposalId, id);
@@ -95,6 +97,10 @@ export default function ProposalContextPanel({
           setResult(context.data);
           await loadReview(runId);
         } else setError(context.message);
+        // After a successful application the proposal version advanced, so
+        // "Applied" badges refresh above and server components re-render here
+        // without a full page reload.
+        if (jobPurpose === "apply") router.refresh();
       }
       if (
         ["failed", "dead_letter", "cancelled"].includes(response.data.status)
@@ -122,7 +128,7 @@ export default function ProposalContextPanel({
         clearInterval(timer);
     }, 1000);
     return () => clearInterval(timer);
-  }, [jobId, jobPurpose, proposalId, runId, status]);
+  }, [jobId, jobPurpose, proposalId, router, runId, status]);
   const start = async () => {
     setJobPurpose("extract");
     setBusy(true);

@@ -1,7 +1,10 @@
 ﻿"use client";
 
-import { CheckCircle, Download, FileText, HelpCircle, Loader2, X } from "lucide-react";
+import { CheckCircle, Download, FileText, HelpCircle, Loader2, Sparkles, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createProposalAction } from "@/app/actions/proposals";
+import type { ProposalData } from "@/components/proposals/AddNewProposal";
 
 type AddProposalUploadProps = {
   selectedFile: File | null;
@@ -652,6 +655,31 @@ export default function AddProposalUpload({
   onContinueWithoutUpload,
 }: AddProposalUploadProps) {
   const [showGuide, setShowGuide] = useState(false);
+  const router = useRouter();
+  const [assistedBusy, setAssistedBusy] = useState(false);
+  const [assistedError, setAssistedError] = useState<string | null>(null);
+  const assistedEnabled = process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED === "true";
+
+  // Assisted start: create the draft immediately and continue in the governed
+  // workspace (scanned uploads, cited extraction, human review) instead of the
+  // legacy synchronous pre-fill.
+  const startAssisted = async () => {
+    if (assistedBusy) return;
+    setAssistedBusy(true);
+    setAssistedError(null);
+    const result = await createProposalAction({
+      event: { eventName: "Untitled proposal" },
+      status: "unsubmitted",
+      isDraft: true,
+    } as unknown as ProposalData & { status?: "unsubmitted" });
+    const proposalId = (result.data as { _id?: string } | undefined)?._id;
+    if (!result.success || !proposalId) {
+      setAssistedError(result.message || "The proposal could not be created. Please try again.");
+      setAssistedBusy(false);
+      return;
+    }
+    router.push(`/proposals/proposal-edit?proposalId=${proposalId}`);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -667,6 +695,32 @@ export default function AddProposalUpload({
 
       <div className="mt-10 flex justify-center pb-16">
         <div className="w-full">
+          {assistedEnabled && (
+            <div className="mb-5 flex w-full flex-wrap items-center justify-between gap-4 rounded-xl border border-[#087f69]/30 bg-emerald-50/60 px-5 py-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#087f69]/10">
+                  <Sparkles size={16} className="text-[#087f69]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Start with the AI assistant</h3>
+                  <p className="mt-0.5 max-w-xl text-xs leading-5 text-slate-600">
+                    Chat with the assistant, add files and notes through security-scanned
+                    private storage, and review cited suggestions field by field. You stay
+                    in control of every change.
+                  </p>
+                  {assistedError && <p role="alert" className="mt-1 text-xs text-rose-600">{assistedError}</p>}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void startAssisted()}
+                disabled={assistedBusy}
+                className="rounded-xl bg-[#087f69] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#066553] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {assistedBusy ? "Creating proposal…" : "Start with assistant"}
+              </button>
+            </div>
+          )}
           <div
             className="mb-5 flex w-full items-center justify-between gap-4 rounded-xl px-5 py-4"
             style={{
