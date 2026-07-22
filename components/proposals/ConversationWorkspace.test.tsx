@@ -78,7 +78,7 @@ describe("ConversationWorkspace", () => {
   });
 
   test("answering a question calls the patch action and refetches the conversation", async () => {
-    mockedPatchQuestion.mockResolvedValue({ success: true, correlationId: "test-correlation", data: { id: "q-1", status: "answered", answeredMessageId: "msg-3" } });
+    mockedPatchQuestion.mockResolvedValue({ success: true, correlationId: "test-correlation", data: { id: "q-1", status: "answered", answeredMessageId: "msg-3", appliedField: null } });
     render(<ConversationWorkspace proposalId="507f1f77bcf86cd799439011" />);
     await screen.findByText("What is the event date?");
     const initialLoads = mockedGetConversation.mock.calls.length;

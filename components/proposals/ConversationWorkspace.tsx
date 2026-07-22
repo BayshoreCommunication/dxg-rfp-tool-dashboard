@@ -1,34 +1,16 @@
 "use client";
 
 import {
-  createProposalNotesAction,
-  getConversationAction,
-  patchConversationQuestionAction,
-  postConversationMessageAction,
-  type ConversationData,
   type ConversationIntent,
   type ConversationMessage,
   type ConversationQuestion,
   type ConversationRunType,
 } from "@/app/actions/conversation";
-import { createSourceScanJob, getDurableJob, listPrivateDocumentSources, type PrivateDocumentSource } from "@/app/actions/durableJobs";
-import { nextPollDelay, presentJob, type DurableJob } from "@/lib/asyncOperations";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { presentJob } from "@/lib/asyncOperations";
+import { useState } from "react";
+import { useConversation, useNotesScan, useProposalSources } from "./useConversation";
 
-const notesScanKey = (proposalId: string) => `rfpilot:notes-scan:${proposalId}`;
-
-type PendingSend = {
-  localId: string;
-  content: string;
-  intent: ConversationIntent;
-  sourceIds: string[];
-  expectedProposalVersion?: number;
-  idempotencyKey: string;
-  state: "sending" | "failed";
-  errorMessage?: string;
-};
-
-const defaultContent: Record<ConversationIntent, string> = {
+export const defaultIntentContent: Record<ConversationIntent, string> = {
   chat: "",
   extract_requirements: "Extract the requirements from the selected sources.",
   generate_draft: "Generate a proposal draft from the current information.",
@@ -48,228 +30,44 @@ export default function ConversationWorkspace({
   proposalVersion?: number;
   onOpenRun?: (runType: ConversationRunType, runId: string) => void;
 }) {
-  const [data, setData] = useState<ConversationData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [notesMode, setNotesMode] = useState(false);
   const [notesNonConfidential, setNotesNonConfidential] = useState(false);
-  const [pending, setPending] = useState<PendingSend[]>([]);
-  const [sources, setSources] = useState<PrivateDocumentSource[]>([]);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [questionBusyId, setQuestionBusyId] = useState<string | null>(null);
-  const [questionError, setQuestionError] = useState<string | null>(null);
-  const [notesBusy, setNotesBusy] = useState(false);
-  const [notesError, setNotesError] = useState<string | null>(null);
-  const [notesJob, setNotesJob] = useState<DurableJob | null>(null);
-  // Restores an in-flight notes scan after a reload.
-  const [notesJobId, setNotesJobId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    const saved = window.sessionStorage.getItem(notesScanKey(proposalId));
-    return saved && /^[0-9a-f-]{36}$/i.test(saved) ? saved : null;
-  });
-  const dataRef = useRef<ConversationData | null>(null);
-  const notesPollCount = useRef(0);
 
-  useEffect(() => { dataRef.current = data; }, [data]);
-
-  const refresh = useCallback(async () => {
-    const result = await getConversationAction(proposalId);
-    if (!result.success) {
-      setLoadError(result.message);
-      return;
-    }
-    setLoadError(null);
-    setData(result.data);
-  }, [proposalId]);
-
-  useEffect(() => {
-    let active = true;
-    void getConversationAction(proposalId).then(result => {
-      if (!active) return;
-      setLoading(false);
-      if (!result.success) { setLoadError(result.message); return; }
-      setLoadError(null);
-      setData(result.data);
-    });
-    return () => { active = false; };
-  }, [proposalId]);
-
-  useEffect(() => {
-    let active = true;
-    void listPrivateDocumentSources(proposalId).then(result => {
-      if (!active || !result.success) return;
-      setSources(result.data.filter(item => item.status === "ready" && item.confidentiality === "non_confidential"));
-    });
-    return () => { active = false; };
-  }, [proposalId, notesJobId]);
-
-  // Live updates: SSE through the local proxy, with a polling fallback that
-  // backs off exponentially and pauses while the tab is hidden. The stream is
-  // reopened on the next visibility change after a failure.
-  useEffect(() => {
-    let active = true;
-    let source: EventSource | null = null;
-    let pollTimer: ReturnType<typeof setTimeout> | undefined;
-    let pollCount = 0;
-
-    const stopPolling = () => { if (pollTimer) { clearTimeout(pollTimer); pollTimer = undefined; } };
-    const startPolling = () => {
-      if (!active || pollTimer) return;
-      const poll = async () => {
-        if (!active) return;
-        if (document.hidden) { pollTimer = setTimeout(poll, 2_000); return; }
-        await refresh();
-        if (!active) return;
-        pollCount += 1;
-        pollTimer = setTimeout(poll, nextPollDelay(pollCount));
-      };
-      pollTimer = setTimeout(poll, nextPollDelay(pollCount));
-    };
-
-    const connect = () => {
-      if (!active) return;
-      if (typeof EventSource === "undefined") { startPolling(); return; }
-      try {
-        source = new EventSource(`/api/proposals/${proposalId}/conversation/events`);
-      } catch {
-        startPolling();
-        return;
-      }
-      const fallback = () => {
-        source?.close();
-        source = null;
-        startPolling();
-      };
-      source.addEventListener("update", event => {
-        try {
-          const payload = JSON.parse((event as MessageEvent).data) as { messageCount?: number; pendingMessages?: number; openQuestions?: number };
-          const current = dataRef.current;
-          const changed = !current
-            || payload.messageCount !== current.messages.length
-            || (payload.pendingMessages ?? 0) !== current.messages.filter(item => item.status === "pending").length
-            || (payload.openQuestions ?? 0) !== current.questions.filter(item => item.status === "open").length;
-          if (changed) void refresh();
-        } catch {
-          void refresh();
-        }
-      });
-      source.addEventListener("reconnect", fallback);
-      source.onerror = fallback;
-    };
-
-    const onVisibility = () => {
-      if (document.hidden || source || !active) return;
-      stopPolling();
-      pollCount = 0;
-      connect();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    connect();
-    return () => {
-      active = false;
-      source?.close();
-      stopPolling();
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [proposalId, refresh]);
-
-  useEffect(() => {
-    if (!notesJobId) return;
-    let active = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const poll = async () => {
-      if (!active) return;
-      if (document.hidden) { timer = setTimeout(poll, 2_000); return; }
-      const result = await getDurableJob(notesJobId);
-      if (!active) return;
-      if (!result.success) { setNotesError(result.message); return; }
-      setNotesJob(result.data);
-      if (presentJob(result.data).terminal) {
-        window.sessionStorage.removeItem(notesScanKey(proposalId));
-        setNotesJobId(null);
-        return;
-      }
-      notesPollCount.current += 1;
-      timer = setTimeout(poll, nextPollDelay(notesPollCount.current));
-    };
-    void poll();
-    return () => { active = false; if (timer) clearTimeout(timer); };
-  }, [proposalId, notesJobId]);
-
-  const performSend = useCallback(async (entry: PendingSend) => {
-    const result = await postConversationMessageAction(proposalId, {
-      content: entry.content,
-      intent: entry.intent,
-      ...(entry.intent === "extract_requirements" ? { sourceIds: entry.sourceIds } : {}),
-      ...(entry.intent === "generate_draft" ? { expectedProposalVersion: entry.expectedProposalVersion } : {}),
-    }, entry.idempotencyKey);
-    if (!result.success) {
-      setPending(prev => prev.map(item => item.localId === entry.localId ? { ...item, state: "failed", errorMessage: result.message } : item));
-      return;
-    }
-    // The send succeeded, so this idempotency key is retired with its entry.
-    setPending(prev => prev.filter(item => item.localId !== entry.localId));
-    await refresh();
-  }, [proposalId, refresh]);
+  const {
+    data, loading, loadError, pending, sendMessage, retrySend,
+    resolveQuestion: patchQuestion, questionBusyId, questionError,
+  } = useConversation(proposalId);
+  const { notesJob, notesJobId, notesError, notesBusy, submitNotes: saveNotes } = useNotesScan(proposalId);
+  const { sources: allSources } = useProposalSources(proposalId, notesJobId);
+  const sources = allSources.filter(item => item.status === "ready" && item.confidentiality === "non_confidential");
 
   const send = async (intent: ConversationIntent) => {
-    const content = text.trim() || defaultContent[intent];
+    const content = text.trim() || defaultIntentContent[intent];
     if (!content) return;
     if (intent === "extract_requirements" && selectedSourceIds.length === 0) return;
     if (intent === "generate_draft" && typeof proposalVersion !== "number") return;
-    const idempotencyKey = crypto.randomUUID();
-    const entry: PendingSend = {
-      localId: idempotencyKey,
+    setText("");
+    await sendMessage({
       content,
       intent,
       sourceIds: selectedSourceIds.slice(0, 5),
       expectedProposalVersion: proposalVersion,
-      idempotencyKey,
-      state: "sending",
-    };
-    setPending(prev => [...prev, entry]);
-    setText("");
-    await performSend(entry);
-  };
-
-  const retrySend = async (localId: string) => {
-    const entry = pending.find(item => item.localId === localId);
-    if (!entry || entry.state !== "failed") return;
-    // A retry reuses the original idempotency key so the backend deduplicates.
-    setPending(prev => prev.map(item => item.localId === localId ? { ...item, state: "sending", errorMessage: undefined } : item));
-    await performSend({ ...entry, state: "sending" });
+    });
   };
 
   const submitNotes = async () => {
-    const value = text.trim();
-    if (!value || notesBusy) return;
-    setNotesBusy(true);
-    setNotesError(null);
-    const idempotencyKey = crypto.randomUUID();
-    const created = await createProposalNotesAction(proposalId, { text: value, classification: notesNonConfidential ? "non_confidential" : "confidential" }, idempotencyKey);
-    if (!created.success) { setNotesError(created.message); setNotesBusy(false); return; }
-    const queued = await createSourceScanJob(created.data.source.id, idempotencyKey);
-    if (!queued.success) { setNotesError(queued.message); setNotesBusy(false); return; }
-    window.sessionStorage.setItem(notesScanKey(proposalId), queued.data.id);
-    notesPollCount.current = 0;
-    setNotesJob(queued.data);
-    setNotesJobId(queued.data.id);
-    setText("");
-    setNotesBusy(false);
+    const saved = await saveNotes(text, notesNonConfidential ? "non_confidential" : "confidential");
+    if (saved) setText("");
   };
 
   const resolveQuestion = async (question: ConversationQuestion, status: "answered" | "dismissed") => {
     const answer = (answers[question.id] ?? "").trim();
     if (status === "answered" && !answer) return;
-    setQuestionBusyId(question.id);
-    setQuestionError(null);
-    const result = await patchConversationQuestionAction(proposalId, question.id, status === "answered" ? { status, answer } : { status });
-    setQuestionBusyId(null);
-    if (!result.success) { setQuestionError(result.message); return; }
-    setAnswers(prev => ({ ...prev, [question.id]: "" }));
-    await refresh();
+    const resolved = await patchQuestion(question.id, status === "answered" ? { status, answer } : { status });
+    if (resolved) setAnswers(prev => ({ ...prev, [question.id]: "" }));
   };
 
   const onComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

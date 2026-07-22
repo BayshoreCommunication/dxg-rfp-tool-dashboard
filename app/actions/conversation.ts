@@ -23,6 +23,10 @@ const safeMessages: Record<string, string> = {
   CONVERSATION_NOT_FOUND: "This conversation is no longer available.",
 };
 
+// Backend problem+json titles for these codes are safe, user-facing validation
+// messages that vary by field, so they pass through instead of a generic text.
+const detailMessageCodes = new Set(["INVALID_CANDIDATE_VALUE", "INVALID_QUESTION_ANSWER"]);
+
 const request = async <T>(path: string, init?: RequestInit, parse?: (value: unknown) => T | null): Promise<ActionResult<T>> => {
   const correlationId = crypto.randomUUID();
   const token = await getBackendAccessToken();
@@ -38,7 +42,11 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
     const responseCorrelation = response.headers.get("x-correlation-id") || correlationId;
     if (!response.ok) {
       const code = typeof body.code === "string" ? body.code : `HTTP_${response.status}`;
-      return { success: false, code, message: safeMessages[code] ?? "The operation could not be completed safely.", correlationId: responseCorrelation };
+      // Field-validation problems carry a friendly, user-facing title from the
+      // backend (e.g. "Candidate date must use the YYYY-MM-DD format.") that
+      // the guided question flow shows verbatim so it can re-ask.
+      const detail = detailMessageCodes.has(code) && typeof body.title === "string" && body.title.length > 0 && body.title.length <= 300 ? body.title : null;
+      return { success: false, code, message: safeMessages[code] ?? detail ?? "The operation could not be completed safely.", correlationId: responseCorrelation };
     }
     const value = parse ? parse(body.data) : body.data as T;
     if (value === null || value === undefined) return { success: false, code: "INVALID_RESPONSE", message: "The service returned an unexpected response.", correlationId: responseCorrelation };
@@ -66,6 +74,7 @@ export type ConversationMessage = {
   createdAt: string;
   attachments: ConversationAttachment[];
 };
+export type ConversationQuestionImpact = "schedule" | "cost" | "production" | "scope";
 export type ConversationQuestion = {
   id: string;
   code: string;
@@ -73,6 +82,7 @@ export type ConversationQuestion = {
   paths: string[];
   prompt: string;
   status: "open" | "answered" | "dismissed";
+  impact?: ConversationQuestionImpact | null;
   contextRunId: string | null;
   createdAt: string;
 };
@@ -125,6 +135,7 @@ const parseQuestion = (value: unknown): ConversationQuestion | null => {
     paths: Array.isArray(value.paths) ? value.paths.filter((item): item is string => typeof item === "string") : [],
     prompt: typeof value.prompt === "string" ? value.prompt : "",
     status: value.status === "answered" || value.status === "dismissed" ? value.status : "open",
+    impact: value.impact === "schedule" || value.impact === "cost" || value.impact === "production" || value.impact === "scope" ? value.impact : null,
     contextRunId: typeof value.contextRunId === "string" ? value.contextRunId : null,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
   };
@@ -183,17 +194,23 @@ export const patchConversationQuestionAction = async (
   proposalId: string,
   questionId: string,
   input: { status: "answered" | "dismissed"; answer?: string },
-): Promise<ActionResult<{ id: string; status: string; answeredMessageId: string | null }>> =>
+): Promise<ActionResult<{ id: string; status: string; answeredMessageId: string | null; appliedField: { path: string; mongoPath: string; value: unknown } | null }>> =>
   request(`/api/v1/proposals/${encodeURIComponent(proposalId)}/conversation/questions/${encodeURIComponent(questionId)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   }, value => {
     if (!isRecord(value) || typeof value.id !== "string") return null;
+    // appliedField reports when the answer was also written into the proposal
+    // (single whitelisted-field questions), so the UI can confirm the value.
+    const appliedField = isRecord(value.appliedField) && typeof value.appliedField.path === "string"
+      ? { path: value.appliedField.path, mongoPath: typeof value.appliedField.mongoPath === "string" ? value.appliedField.mongoPath : "", value: value.appliedField.value }
+      : null;
     return {
       id: value.id,
       status: typeof value.status === "string" ? value.status : "",
       answeredMessageId: typeof value.answeredMessageId === "string" ? value.answeredMessageId : null,
+      appliedField,
     };
   });
 
