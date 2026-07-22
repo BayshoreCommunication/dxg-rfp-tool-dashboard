@@ -1031,7 +1031,9 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
 
       <div className="mx-auto flex max-w-6xl flex-col gap-5 lg:flex-row">
         {/* Workspace card */}
-        <section aria-label="Proposal assistant workspace" className="flex min-h-[70vh] flex-1 flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        {/* The card is height-bounded so the thread scrolls inside it and the
+            composer stays put, instead of the whole page growing. */}
+        <section aria-label="Proposal assistant workspace" className="flex max-h-[calc(100vh-8rem)] min-h-[70vh] flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           {!started ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
               <div
@@ -1055,7 +1057,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
             </div>
           ) : (
             <>
-              <div className="flex-1 overflow-y-auto pr-1" aria-live="polite">
+              <div className="min-h-0 flex-1 overflow-y-auto pr-1" aria-live="polite">
                 {loadError && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{loadError}</p>}
                 {loading && <p role="status" className="text-sm text-slate-500">Loading the conversation…</p>}
                 <ol className="space-y-3">
@@ -1232,7 +1234,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
         {/* Right rail — hidden until the conversation begins, then slides in
             from the right (CSS-only; skipped under prefers-reduced-motion). */}
         {railVisible && (
-        <aside className="w-full shrink-0 space-y-4 motion-safe:animate-[rail-slide-in_300ms_ease-out_both] lg:w-80">
+        <aside className="w-full shrink-0 space-y-4 motion-safe:animate-[rail-slide-in_300ms_ease-out_both] lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:overflow-y-auto lg:pr-1">
           {/* Sources — the three rail cards share the slide-in but each fades
               and translates in with a ~100ms stagger for a noticeable entrance. */}
           <section aria-labelledby="rail-sources-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm motion-safe:animate-[rail-card-in_360ms_ease-out_both]">

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import InvestmentGuidancePanel from "./InvestmentGuidancePanel";
 import {
   generateInvestmentGuidanceAction,
@@ -22,7 +22,7 @@ const mockedLatest = getLatestInvestmentGuidanceAction as jest.MockedFunction<
 const report: InvestmentReport = {
   id: "investment-1",
   proposalVersion: 2,
-  engineVersion: "invest-1.0.0",
+  engineVersion: "dxg-av-pricing-engine.v2",
   currency: "USD",
   totalLowMinor: 1_250_000,
   totalMidMinor: 1_800_000,
@@ -30,16 +30,42 @@ const report: InvestmentReport = {
   lineItems: [
     {
       category: "audio",
-      label: "Audio",
+      label: "General session - Main speakers",
       currency: "USD",
       lowMinor: 500_000,
       midMinor: 700_000,
       highMinor: 900_000,
+      templateKey: "GENERAL_SESSION",
+      componentKey: "gs_line_array",
+      kind: "equipment",
+      quantity: 4,
+      unitLabel: "per box / day",
+      implied: false,
+      appliedFactors: [
+        { kind: "regional", label: "Chicago", factor: 1.2 },
+        { kind: "union", label: "Union (standard)", factor: 1.4 },
+      ],
       provenance: {
         pricingRecordIds: ["rec-1", "rec-2"],
         ruleIds: ["rule-1"],
         drivers: { days: 3 },
       },
+    },
+    {
+      category: "labor",
+      label: "General session - A1 audio lead",
+      currency: "USD",
+      lowMinor: 200_000,
+      midMinor: 300_000,
+      highMinor: 400_000,
+      templateKey: "GENERAL_SESSION",
+      componentKey: "gs_a1",
+      kind: "labor",
+      quantity: 30,
+      unitLabel: "per hour",
+      implied: false,
+      appliedFactors: [],
+      provenance: { pricingRecordIds: ["rec-3"], ruleIds: [], drivers: { hours: 30 } },
     },
   ],
   refusals: [
@@ -64,6 +90,75 @@ const report: InvestmentReport = {
       explanation: "Union venues carry minimum-call requirements.",
     },
   ],
+  confidence: {
+    score: 72,
+    band: "medium",
+    deductions: [
+      {
+        ruleKey: "projection_brightness_lumens_not_stated",
+        label: "Projector lumens not stated",
+        deduction: 10,
+        reason: "Brightness drives the projector class.",
+      },
+      {
+        ruleKey: "union_status_unknown",
+        label: "Union status unknown",
+        deduction: 18,
+        reason: "Union rules materially change labor cost.",
+      },
+    ],
+    note: "Usable planning range. Confirm to tighten it: Union status unknown; Projector lumens not stated.",
+  },
+  assumptions: [
+    {
+      key: "general_session_mics",
+      label: "General session wireless channels",
+      note: "4 wireless channels on the main stage - confirm presenter count.",
+    },
+    {
+      key: "implied_breakout_screen",
+      label: "Screen assumed included",
+      note: "Breakout rooms pricing includes screen because the rest of the package requires it - assumed included, confirm with the client.",
+    },
+  ],
+  scenarios: [
+    {
+      key: "base",
+      label: "Base - non-union, outside AV",
+      lowMinor: 1_000_000,
+      midMinor: 1_400_000,
+      highMinor: 1_900_000,
+      basis: "Approved base rates with the regional factor only.",
+    },
+    {
+      key: "union",
+      label: "Union labor - Chicago",
+      lowMinor: 1_250_000,
+      midMinor: 1_800_000,
+      highMinor: 2_400_000,
+      basis: "Labor carries the union modifier for this market.",
+    },
+    {
+      key: "in_house",
+      label: "Venue / hotel in-house AV",
+      lowMinor: 1_600_000,
+      midMinor: 2_300_000,
+      highMinor: 3_100_000,
+      basis: "Equipment carries the in-house markup and the service charge compounds.",
+    },
+  ],
+  basis: {
+    market: "Chicago",
+    regionalFactor: 1.2,
+    unionKey: "union_standard",
+    unionFactor: 1.4,
+    inHouseKey: "outside_independent_av_baseline",
+    inHouseFactor: 1,
+    serviceChargeFactor: 1,
+    multiDayFactor: 1.8,
+    days: 3,
+    showDayEquipmentBasis: "Day 1 at full rate; each additional show day at the approved hold-over factor (3 show days).",
+  },
   createdAt: "2026-07-21T10:00:00.000Z",
 };
 
@@ -78,8 +173,8 @@ describe("InvestmentGuidancePanel", () => {
     render(<InvestmentGuidancePanel proposalId={proposalId} />);
     // Headline low/mid/high totals formatted from minor units.
     expect(await screen.findByText("$12,500")).toBeInTheDocument();
-    expect(screen.getByText("$18,000")).toBeInTheDocument();
-    expect(screen.getByText("$24,000")).toBeInTheDocument();
+    expect(screen.getAllByText("$18,000").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("$24,000").length).toBeGreaterThan(0);
     // The refusal surfaces as a prominent card, not an error.
     expect(
       screen.getByText(
@@ -112,6 +207,129 @@ describe("InvestmentGuidancePanel", () => {
         /Generate investment guidance to see a low \/ typical \/ high range/,
       ),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("shows the confidence band, score and the deductions behind it", async () => {
+    mockedLatest.mockResolvedValue({ success: true, data: report });
+    render(<InvestmentGuidancePanel proposalId={proposalId} />);
+    expect(await screen.findByText("Medium confidence — 72/100")).toBeInTheDocument();
+    // Each deduction is named with the points it cost, never hidden.
+    expect(screen.getByText("Projector lumens not stated −10")).toBeInTheDocument();
+    expect(screen.getByText("Union status unknown −18")).toBeInTheDocument();
+  });
+
+  test("a low confidence band shows the engine note as a prominent warning", async () => {
+    const low: InvestmentReport = {
+      ...report,
+      confidence: {
+        score: 41,
+        band: "low",
+        deductions: [
+          { ruleKey: "market_city_unknown", label: "Market not identified", deduction: 20, reason: "" },
+        ],
+        note: "Indicative range only - too many inputs are unknown to defend these figures. Confirm before quoting: Market not identified.",
+      },
+    };
+    mockedLatest.mockResolvedValue({ success: true, data: low });
+    render(<InvestmentGuidancePanel proposalId={proposalId} />);
+    expect(await screen.findByText("Low confidence — 41/100")).toBeInTheDocument();
+    const note = screen.getByText(/Indicative range only/);
+    expect(note).toBeInTheDocument();
+    expect(note.className).toMatch(/rose/);
+  });
+
+  test("renders every scenario with its label, mid amount and basis", async () => {
+    mockedLatest.mockResolvedValue({ success: true, data: report });
+    render(<InvestmentGuidancePanel proposalId={proposalId} />);
+    expect(await screen.findByText("Base - non-union, outside AV")).toBeInTheDocument();
+    expect(screen.getByText("Union labor - Chicago")).toBeInTheDocument();
+    expect(screen.getByText("Venue / hotel in-house AV")).toBeInTheDocument();
+    expect(screen.getByText("$14,000")).toBeInTheDocument();
+    expect(screen.getByText("$23,000")).toBeInTheDocument();
+    expect(
+      screen.getByText("Approved base rates with the regional factor only."),
+    ).toBeInTheDocument();
+    // Scenarios are alternatives, and the panel says so.
+    expect(screen.getByText(/don't add them up/)).toBeInTheDocument();
+  });
+
+  test("composes the basis line and omits neutral 1.0 factors", async () => {
+    mockedLatest.mockResolvedValue({ success: true, data: report });
+    render(<InvestmentGuidancePanel proposalId={proposalId} />);
+    const line = await screen.findByText(/Priced on Chicago ×1.20/);
+    expect(line.textContent).toContain(
+      "Chicago ×1.20 · union standard ×1.40 · outside AV · 3 show days (equipment ×1.80)",
+    );
+    // in-house and service charge are 1.0 here, so no multiplier is printed for them.
+    expect(line.textContent).not.toContain("×1.00");
+    expect(line.textContent).not.toContain("service charge");
+  });
+
+  test("line items carry a kind tag, quantity and their applied factors", async () => {
+    mockedLatest.mockResolvedValue({ success: true, data: report });
+    render(<InvestmentGuidancePanel proposalId={proposalId} />);
+    const row = (await screen.findByText("General session - Main speakers")).closest("tr");
+    expect(row).not.toBeNull();
+    const cell = within(row as HTMLTableRowElement);
+    expect(cell.getByText("equipment")).toBeInTheDocument();
+    expect(cell.getByText("4 per box / day")).toBeInTheDocument();
+    // The multiplier stack lives inside the existing provenance disclosure.
+    expect(cell.getByText("Chicago ×1.20")).toBeInTheDocument();
+    expect(cell.getByText("Union (standard) ×1.40")).toBeInTheDocument();
+    expect(cell.getByText(/2 approved pricing records/)).toBeInTheDocument();
+    expect(
+      within(
+        (screen.getByText("General session - A1 audio lead").closest("tr") as HTMLTableRowElement),
+      ).getByText("labor"),
+    ).toBeInTheDocument();
+  });
+
+  test("implied components render as confirm cards, defaults as muted notes", async () => {
+    mockedLatest.mockResolvedValue({ success: true, data: report });
+    render(<InvestmentGuidancePanel proposalId={proposalId} />);
+    expect(await screen.findByText("Assumed included — confirm (1)")).toBeInTheDocument();
+    const implied = screen.getByText("Screen assumed included").closest("li");
+    expect(implied?.className).toMatch(/amber/);
+    // A defaulted quantity is context, not a decision to confirm.
+    const defaulted = screen.getByText("General session wireless channels").closest("li");
+    expect(defaulted?.className).not.toMatch(/amber/);
+    expect(screen.getByText("Planning assumptions (1)")).toBeInTheDocument();
+  });
+
+  test("a legacy report without confidence, scenarios or basis still renders its totals", async () => {
+    const legacy: InvestmentReport = {
+      ...report,
+      lineItems: [
+        {
+          category: "audio",
+          label: "Audio",
+          currency: "USD",
+          lowMinor: 500_000,
+          midMinor: 700_000,
+          highMinor: 900_000,
+          templateKey: "",
+          componentKey: "",
+          kind: null,
+          quantity: null,
+          unitLabel: null,
+          implied: false,
+          appliedFactors: [],
+          provenance: { pricingRecordIds: ["rec-1"], ruleIds: [], drivers: {} },
+        },
+      ],
+      confidence: null,
+      assumptions: [],
+      scenarios: [],
+      basis: null,
+    };
+    mockedLatest.mockResolvedValue({ success: true, data: legacy });
+    render(<InvestmentGuidancePanel proposalId={proposalId} />);
+    expect(await screen.findByText("$12,500")).toBeInTheDocument();
+    expect(screen.getByText("Audio")).toBeInTheDocument();
+    expect(screen.queryByText(/confidence —/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Scenarios")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Priced on/)).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

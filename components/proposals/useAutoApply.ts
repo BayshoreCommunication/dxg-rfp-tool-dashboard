@@ -34,12 +34,21 @@ const CONFLICT_MESSAGE =
   "Your proposal changed while I was filling it in, so nothing was applied automatically.";
 const GENERIC_FAILURE_MESSAGE = "I couldn’t fill your proposal automatically.";
 
-const hasValue = (value: unknown) => value !== undefined && value !== null && value !== "";
+// The assistant creates a proposal with a placeholder title because the event
+// name is required at creation; it must not block the extracted real name.
+const PLACEHOLDER_VALUES = new Set(["untitled proposal"]);
+const hasValue = (value: unknown) =>
+  value !== undefined && value !== null && value !== "" &&
+  !(typeof value === "string" && PLACEHOLDER_VALUES.has(value.trim().toLowerCase()));
 
 // Safe-to-accept candidates: unapplied, high confidence, targeting an empty
 // proposal field, and the only unapplied candidate for that canonical path.
 const selectAutoAccepted = (review: CandidateReview) => {
-  const unapplied = review.operations.filter(op => !review.appliedOperationIds.includes(op.id));
+  // A candidate whose value the backend could not map has no canonical path;
+  // accepting it would fail the application job, so it never auto-applies.
+  const unapplied = review.operations.filter(
+    op => !review.appliedOperationIds.includes(op.id) && typeof review.canonicalPaths[op.id] === "string",
+  );
   const pathCounts = new Map<string, number>();
   for (const op of unapplied) {
     const path = review.canonicalPaths[op.id];
