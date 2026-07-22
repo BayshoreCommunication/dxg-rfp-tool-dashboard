@@ -12,6 +12,10 @@ const safeMessages: Record<string, string> = {
   FEATURE_DISABLED: "Secure background processing is not available in this environment.",
   JOB_NOT_FOUND: "This operation is no longer available.",
   SOURCE_NOT_FOUND: "This document is no longer available.",
+  // requestDeletion only refuses a source that is still busy with another
+  // document operation; retention and legal hold get their own message below.
+  INVALID_SOURCE_STATE: "This document is busy with another operation. Wait for it to finish, then try again.",
+  RETENTION_BLOCKED: "This document cannot be removed while a retention rule or legal hold applies.",
   UNSUPPORTED_MEDIA_TYPE: "Choose a PDF, DOCX, XLSX, CSV, or TXT file.",
   FILE_SIZE_INVALID: "Choose a file smaller than the approved upload limit.",
   STORAGE_UNAVAILABLE: "Private file storage is temporarily unavailable.",
@@ -55,6 +59,15 @@ export const listPrivateDocumentSources = async (proposalId: string): Promise<Ac
         ? [{ id: row.id, status: row.status, confidentiality: row.confidentiality as PrivateDocumentSource["confidentiality"], originalFilename: row.originalFilename, createdAt: row.createdAt }]
         : [];
     });
+  });
+
+// Detaches a wrongly-uploaded source: the backend deletes the object from
+// private storage and tombstones the row, so the list refresh drops it.
+export const deletePrivateDocumentSource = async (sourceId: string): Promise<ActionResult<{ id: string; status: string }>> =>
+  request(`/api/v1/sources/${encodeURIComponent(sourceId)}`, { method: "DELETE" }, value => {
+    if (!value || typeof value !== "object") return null;
+    const row = value as Record<string, unknown>;
+    return typeof row.id === "string" && typeof row.status === "string" ? { id: row.id, status: row.status } : null;
   });
 
 export const createPrivateUploadSession = async (proposalId: string, file: { name: string; type: string; size: number }, idempotencyKey: string, classification: "confidential" | "non_confidential" = "confidential"): Promise<ActionResult<UploadSession>> =>

@@ -3,6 +3,7 @@ import AssistantWorkspacePage from "./AssistantWorkspacePage";
 import { createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
+import { generateGuidanceAction } from "@/app/actions/guidance";
 import {
   completePrivateUpload,
   createPrivateUploadSession,
@@ -88,6 +89,8 @@ const mockedGetLatestContext = getLatestProposalContextAction as jest.MockedFunc
 const mockedGetReview = getCandidateReviewAction as jest.MockedFunction<typeof getCandidateReviewAction>;
 const mockedSaveReview = saveCandidateReviewAction as jest.MockedFunction<typeof saveCandidateReviewAction>;
 const mockedApplyCandidates = applyCandidatesAction as jest.MockedFunction<typeof applyCandidatesAction>;
+const mockedGenerateGuidance = generateGuidanceAction as jest.MockedFunction<typeof generateGuidanceAction>;
+const mockedGetDraft = getProposalDraftAction as jest.MockedFunction<typeof getProposalDraftAction>;
 
 const PROPOSAL_ID = "abc123abc123abc123abc123";
 
@@ -126,26 +129,52 @@ const conversationWithQuestion = {
     questions: [
       {
         id: "q-1", code: "MISSING_EVENT_DATE", severity: "blocking" as const, paths: ["/eventDate"],
-        prompt: "What is the event date?", status: "open" as const, contextRunId: "run-1", createdAt: "2026-07-21T10:00:00.000Z",
+        prompt: "What is the event date?", status: "open" as const, answerType: "text" as const, options: [], answeredMessageId: null, contextRunId: "run-1", createdAt: "2026-07-21T10:00:00.000Z",
       },
     ],
   },
 };
 
-const guidedQuestion = (id: string, prompt: string, path: string, impact: "schedule" | "cost" | "production" | "scope") => ({
+const guidedQuestion = (
+  id: string,
+  prompt: string,
+  path: string,
+  impact: "schedule" | "cost" | "production" | "scope",
+  control: { answerType?: "date" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string } = {},
+) => ({
   id,
   code: `MISSING_FIELD:${path}`,
   severity: "question" as const,
   paths: [path],
   prompt,
-  status: "open" as const,
+  status: control.status ?? ("open" as const),
   impact,
+  answerType: control.answerType ?? ("text" as const),
+  options: control.options ?? [],
+  answeredMessageId: control.answeredMessageId ?? null,
   contextRunId: "run-1",
   createdAt: "2026-07-21T10:00:00.000Z",
 });
 
 const startDateQuestion = guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule");
 const roomsQuestion = guidedQuestion("q-rooms", "How many event rooms are required?", "/content/venueSchedule/numberOfEventRooms", "cost");
+const datePickerQuestion = guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date" });
+// Mirrors streamingPlatformOptions in the wizard step and the backend whitelist.
+const STREAMING_PLATFORMS = [
+  "Client-Owned Platform",
+  "Attendee Hub (Cvent)",
+  "Zoom Webinar",
+  "ON24",
+  "Hopin",
+  "Webex Events",
+  "YouTube Live",
+  "Vendor Recommendation Needed",
+  "Other",
+];
+const formatQuestion = guidedQuestion("q-format", "Is the event in-person, hybrid, or virtual?", "/content/event/eventFormat", "scope", {
+  answerType: "choice",
+  options: ["In-Person", "Hybrid", "Virtual"],
+});
 
 const conversationWithGuidedQuestions = (questions: Array<ReturnType<typeof guidedQuestion>>) => ({
   success: true as const,
@@ -170,6 +199,8 @@ describe("AssistantWorkspacePage", () => {
     // leaves the manual flow untouched.
     mockedGetReview.mockResolvedValue({ success: false, code: "REVIEW_UNAVAILABLE", message: "none" });
     mockedGetLatestContext.mockResolvedValue({ success: false, code: "CONTEXT_RUN_UNAVAILABLE", message: "none" } as never);
+    // The completion card's readiness check degrades quietly by default.
+    mockedGenerateGuidance.mockResolvedValue({ success: false, code: "GUIDANCE_DISABLED", message: "Proposal guidance is not enabled for this environment yet." });
   });
 
   test("empty state greets the signed-in user by first name", async () => {
@@ -182,7 +213,7 @@ describe("AssistantWorkspacePage", () => {
     expect(mockedGetConversation).not.toHaveBeenCalled();
   });
 
-  test("first send lazily creates the proposal, updates the URL in place, then posts the message", async () => {
+  test("first send lazily creates the proposal, moves the URL to the assistant route, then posts the message", async () => {
     mockedCreateProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID } });
     mockedPostMessage.mockResolvedValue({
       success: true,
@@ -205,7 +236,9 @@ describe("AssistantWorkspacePage", () => {
     );
     // The proposal must exist before the message is sent.
     expect(mockedCreateProposal.mock.invocationCallOrder[0]).toBeLessThan(mockedPostMessage.mock.invocationCallOrder[0]);
-    expect(replace).toHaveBeenCalledWith(`/proposals/add-new-proposal?proposalId=${PROPOSAL_ID}`);
+    // One canonical URL for an existing proposal's assistant.
+    expect(replace).toHaveBeenCalledWith(`/proposals/${PROPOSAL_ID}/assistant`);
+    expect(replace).not.toHaveBeenCalledWith(expect.stringContaining("add-new-proposal"));
   });
 
   test("guided flow shows one question at a time with progress, impact tag, and a remaining count in the rail", async () => {
@@ -237,14 +270,23 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("Question 1 of 2");
+    const initialLoads = mockedGetConversation.mock.calls.length;
+
+    // Ported from the retired ConversationWorkspace suite: the Answer control
+    // stays disabled until something has actually been typed.
+    const answerButton = screen.getByRole("button", { name: "Answer" });
+    expect(answerButton).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "2026-09-01" } });
-    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+    expect(answerButton).toBeEnabled();
+    fireEvent.click(answerButton);
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
       "q-start",
       { status: "answered", answer: "2026-09-01" },
     ));
+    // …and resolving a question refetches the conversation (useConversation).
+    await waitFor(() => expect(mockedGetConversation.mock.calls.length).toBeGreaterThan(initialLoads));
     // The confirmed value shows and the flow advances to the next question.
     expect(await screen.findByText("Start date: 2026-09-01 ✓")).toBeInTheDocument();
     expect(await screen.findByText("Question 2 of 2")).toBeInTheDocument();
@@ -292,28 +334,259 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByText(/✓/)).not.toBeInTheDocument();
   });
 
-  test("answering the last question shows the completion card linking to the editor", async () => {
+  test("a date question renders the date picker and submits a YYYY-MM-DD value", async () => {
     mockedGetConversation
-      .mockResolvedValueOnce(conversationWithGuidedQuestions([roomsQuestion]))
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([datePickerQuestion, roomsQuestion]))
+      .mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: "2026-09-01" } },
+    });
+
+    const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Question 1 of 2");
+    // The date control is the shared react-datepicker wrapper, not a bare text box.
+    expect(container.querySelector(".react-datepicker__input-container")).not.toBeNull();
+    const input = screen.getByLabelText("Answer this question");
+    expect(input).toHaveAttribute("placeholder", "YYYY-MM-DD");
+
+    fireEvent.change(input, { target: { value: "2026-09-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-start",
+      { status: "answered", answer: "2026-09-01" },
+    ));
+    expect(await screen.findByText("Start date: 2026-09-01 ✓")).toBeInTheDocument();
+  });
+
+  test("a choice question renders pills and clicking one submits that option immediately", async () => {
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([formatQuestion, roomsQuestion]))
+      .mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-format", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/eventFormat", mongoPath: "event.eventFormat", value: "in_person" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Question 1 of 2");
+    for (const option of ["In-Person", "Hybrid", "Virtual"])
+      expect(screen.getByRole("button", { name: option })).toBeInTheDocument();
+    // A closed option set answers in one tap: no separate Answer control.
+    expect(screen.queryByRole("button", { name: "Answer" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Skip" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hybrid" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-format",
+      { status: "answered", answer: "Hybrid" },
+    ));
+    expect(await screen.findByText("Event format: Hybrid ✓")).toBeInTheDocument();
+    expect(await screen.findByText("Question 2 of 2")).toBeInTheDocument();
+  });
+
+  test("a long choice list renders every option as a pill and submits the clicked one", async () => {
+    const platformQuestion = guidedQuestion("q-platform", "Which streaming platform will the event use?", "/content/hybridVirtual/streamingPlatform", "production", {
+      answerType: "choice",
+      options: STREAMING_PLATFORMS,
+    });
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([platformQuestion]))
       .mockResolvedValue(conversationWithGuidedQuestions([]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
-      data: { id: "q-rooms", status: "answered", answeredMessageId: null, appliedField: { path: "/content/venueSchedule/numberOfEventRooms", mongoPath: "venueSchedule.numberOfEventRooms", value: "6" } },
+      data: { id: "q-platform", status: "answered", answeredMessageId: null, appliedField: { path: "/content/hybridVirtual/streamingPlatform", mongoPath: "hybridVirtual.streamingPlatform", value: "Vendor Recommendation Needed" } },
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("Question 1 of 1");
-    fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "6" } });
+    for (const option of STREAMING_PLATFORMS)
+      expect(screen.getByRole("button", { name: option })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Vendor Recommendation Needed" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-platform",
+      { status: "answered", answer: "Vendor Recommendation Needed" },
+    ));
+    expect(await screen.findByText("Streaming platform: Vendor Recommendation Needed ✓")).toBeInTheDocument();
+  });
+
+  test("a text question keeps the typed answer plus Answer button behaviour", async () => {
+    const platformQuestion = guidedQuestion("q-platform", "Which streaming platform will the event use?", "/content/hybridVirtual/streamingPlatform", "production", { answerType: "text" });
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([platformQuestion]))
+      .mockResolvedValue(conversationWithGuidedQuestions([]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-platform", status: "answered", answeredMessageId: null, appliedField: { path: "/content/hybridVirtual/streamingPlatform", mongoPath: "hybridVirtual.streamingPlatform", value: "Zoom" } },
+    });
+
+    const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Question 1 of 1");
+    const input = screen.getByLabelText("Answer this question");
+    expect(input).toHaveAttribute("type", "text");
+    expect(container.querySelector(".react-datepicker__input-container")).toBeNull();
+
+    fireEvent.change(input, { target: { value: "Zoom" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
-    expect(await screen.findByText("Number of event rooms: 6 ✓")).toBeInTheDocument();
-    expect(await screen.findByText("All key questions answered — everything else is optional.")).toBeInTheDocument();
-    expect(screen.getByText("Review your full proposal in the editor.")).toBeInTheDocument();
-    const editorLink = screen.getByRole("link", { name: "Open the proposal editor" });
-    expect(editorLink).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-platform",
+      { status: "answered", answer: "Zoom" },
+    ));
+    expect(await screen.findByText("Streaming platform: Zoom ✓")).toBeInTheDocument();
+  });
+
+  test("an answered question is replayed above its answer, and an unmatched answer still renders alone", async () => {
+    const answerMessage = {
+      id: "msg-answer", ordinal: 2, role: "user" as const, kind: "question_answer" as const, content: "2027-04-14",
+      intent: "chat", runType: null, runId: null, jobId: null, status: "complete" as const, createdAt: "2026-07-21T10:01:00.000Z", attachments: [],
+    };
+    const orphanAnswer = { ...answerMessage, id: "msg-orphan", ordinal: 3, content: "Zoom Webinar" };
+    const answeredQuestion = guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", {
+      answerType: "date",
+      status: "answered",
+      answeredMessageId: "msg-answer",
+    });
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 2, updatedAt: "2026-07-21T10:00:00.000Z" },
+        messages: [answerMessage, orphanAnswer],
+        questions: [answeredQuestion],
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    // The question that produced the answer is replayed as history above it.
+    expect(await screen.findByText("When does the event start? (YYYY-MM-DD)")).toBeInTheDocument();
+    expect(screen.getByText("2027-04-14")).toBeInTheDocument();
+    expect(screen.getAllByText("Asked")).toHaveLength(1);
+    // The answer with no matching question renders exactly as before.
+    expect(screen.getByText("Zoom Webinar")).toBeInTheDocument();
+    expect(screen.getAllByText("Answer")).toHaveLength(2);
+  });
+
+  // ── Completion progress card ────────────────────────────────────────────────
+
+  const roomsAnswered = {
+    success: true as const,
+    correlationId: "test-correlation",
+    data: { id: "q-rooms", status: "answered" as const, answeredMessageId: null, appliedField: { path: "/content/venueSchedule/numberOfEventRooms", mongoPath: "venueSchedule.numberOfEventRooms", value: "6" } },
+  };
+
+  // "Event basics" is complete, so it must never appear among the weakest three;
+  // "Risk" is the fourth-thinnest and is cut by the cap.
+  const guidanceReport = {
+    id: "gr-1",
+    proposalVersion: 7,
+    engineVersion: "guidance.v1",
+    overallCompleteness: 0.68,
+    completeness: [
+      { section: "event", label: "Event basics", filled: 8, total: 8, score: 1 },
+      { section: "risk", label: "Risk & compliance", filled: 5, total: 6, score: 0.83 },
+      { section: "venueSchedule", label: "Venue & schedule", filled: 2, total: 9, score: 0.22 },
+      { section: "production", label: "Production", filled: 3, total: 6, score: 0.5 },
+      { section: "budget", label: "Budget", filled: 1, total: 4, score: 0.25 },
+    ],
+    findings: [
+      { code: "MISSING_VENUE", severity: "blocking" as const, category: "completeness" as const, message: "The venue is missing.", paths: ["/venue"] },
+      { code: "MISSING_BUDGET", severity: "blocking" as const, category: "budget" as const, message: "The budget is missing.", paths: ["/budget"] },
+    ],
+    findingCount: 2,
+    blockingCount: 2,
+    createdAt: "2026-07-21T10:00:00.000Z",
+  };
+
+  const answerLastQuestion = async () => {
+    await screen.findByText("Question 1 of 1");
+    fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "6" } });
+    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+    await screen.findByText("Number of event rooms: 6 ✓");
+  };
+
+  test("answering the last question shows a completion progress card built from the guidance report", async () => {
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([roomsQuestion]))
+      .mockResolvedValue(conversationWithGuidedQuestions([]));
+    mockedPatchQuestion.mockResolvedValue(roomsAnswered);
+    mockedGenerateGuidance.mockResolvedValue({ success: true, data: guidanceReport });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await answerLastQuestion();
+
+    expect(await screen.findByText("Your proposal is 68% complete")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Proposal completeness" })).toHaveAttribute("aria-valuenow", "68");
+    // The three thinnest sections, thinnest first; complete sections stay out.
+    expect(screen.getByText("Venue & schedule")).toBeInTheDocument();
+    expect(screen.getByText("2/9")).toBeInTheDocument();
+    expect(screen.getByText("Budget")).toBeInTheDocument();
+    expect(screen.getByText("1/4")).toBeInTheDocument();
+    expect(screen.getByText("Production")).toBeInTheDocument();
+    expect(screen.getByText("3/6")).toBeInTheDocument();
+    expect(screen.queryByText("Event basics")).not.toBeInTheDocument();
+    expect(screen.queryByText("Risk & compliance")).not.toBeInTheDocument();
+    // One calm amber line for the blocking findings.
+    expect(screen.getByText("2 items need attention before publishing.")).toBeInTheDocument();
+    // The deterministic engine runs exactly once, not on every render.
+    expect(mockedGenerateGuidance).toHaveBeenCalledTimes(1);
+    expect(mockedGenerateGuidance).toHaveBeenCalledWith(PROPOSAL_ID);
     // The rail reflects completion too (it slides in asynchronously).
     expect(await screen.findByText("All key questions answered.")).toBeInTheDocument();
+    // The consistent action row: one primary, a tertiary link, and no second
+    // readiness button because a report is already on screen — only the rail's
+    // own chip remains.
+    expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Edit all details" })).toHaveLength(2);
+    // The old vague copy is gone for good.
+    expect(screen.queryByText(/everything else is optional/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open the proposal editor" })).not.toBeInTheDocument();
+  });
+
+  test("a failed readiness check falls back to the plain headline with the actions still working", async () => {
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([roomsQuestion]))
+      .mockResolvedValue(conversationWithGuidedQuestions([]));
+    mockedPatchQuestion.mockResolvedValue(roomsAnswered);
+    mockedGetProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID, version: 4, event: { eventName: "" } } });
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: { runType: "proposal_draft", runId: "run-2", jobId: "job-2" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await answerLastQuestion();
+
+    expect(await screen.findByText("Key questions answered.")).toBeInTheDocument();
+    // No percentage, no bar, and never a raw error from the guidance service.
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByText(/is not enabled for this environment/)).not.toBeInTheDocument();
+    // With no report on screen the card offers the check itself, alongside the
+    // rail's own chip (the rail slides in asynchronously).
+    await screen.findByText("All key questions answered.");
+    expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate proposal draft" }));
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { content: "Generate a proposal draft from the current information.", intent: "generate_draft", expectedProposalVersion: 4 },
+      expect.any(String),
+    ));
   });
 
   test("a completed extraction run links to reviewing and applying the extracted fields", async () => {
@@ -957,5 +1230,102 @@ describe("AssistantWorkspacePage", () => {
     expect(await screen.findByText("1 detail captured from your sources.")).toBeInTheDocument();
     expect(screen.queryByText(/suggestions? need/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
+  });
+
+  // ── Draft staleness ─────────────────────────────────────────────────────────
+
+  const draftMessage = {
+    id: "msg-draft", ordinal: 2, role: "assistant" as const, kind: "run_result" as const, content: "Here is your draft.",
+    intent: null, runType: "proposal_draft" as const, runId: "run-2", jobId: "job-2", status: "complete" as const,
+    createdAt: "2026-07-21T10:05:00.000Z", attachments: [],
+  };
+
+  const conversationWithDraft = (questions: Array<Record<string, unknown>> = []) => ({
+    success: true as const,
+    correlationId: "test-correlation",
+    data: {
+      conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 2, updatedAt: "2026-07-21T10:05:00.000Z" },
+      messages: [...conversationWithQuestion.data.messages, draftMessage],
+      questions,
+    },
+  }) as never;
+
+  // The run payload is the raw draft-run row, so the version lives on
+  // expected_proposal_version; `null` models a payload that carries none.
+  const draftRun = (expectedProposalVersion: number | null) => ({
+    success: true as const,
+    correlationId: "test-correlation",
+    data: {
+      run: { id: "run-2", model: "gpt-test", ...(expectedProposalVersion === null ? {} : { expected_proposal_version: expectedProposalVersion }) },
+      sections: [],
+      gaps: [],
+      regenerations: [],
+      proposalMutation: false,
+    },
+  }) as never;
+
+  const proposalAtVersion = (version: number) => ({
+    success: true as const,
+    message: "ok",
+    data: { _id: PROPOSAL_ID, version, event: { eventName: "" } },
+  });
+
+  const STALE_HINT = "This draft was written before your latest answers.";
+
+  test("the primary action reads Regenerate draft once a draft exists", async () => {
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithDraft([roomsQuestion]))
+      .mockResolvedValue(conversationWithDraft([]));
+    mockedPatchQuestion.mockResolvedValue(roomsAnswered);
+    mockedGenerateGuidance.mockResolvedValue({ success: true, data: guidanceReport });
+    mockedGetDraft.mockResolvedValue(draftRun(7));
+    mockedGetProposal.mockResolvedValue(proposalAtVersion(7));
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await answerLastQuestion();
+
+    expect(await screen.findByText("Your proposal is 68% complete")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate draft" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate proposal draft" })).not.toBeInTheDocument();
+    // Draft and proposal are on the same version, so nothing is stale.
+    expect(screen.queryByText(STALE_HINT)).not.toBeInTheDocument();
+  });
+
+  test("the staleness hint shows only when the proposal moved past the draft's version", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
+    mockedGetDraft.mockResolvedValue(draftRun(5));
+    mockedGetProposal.mockResolvedValue(proposalAtVersion(9));
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: { runType: "proposal_draft", runId: "run-3", jobId: "job-3" } },
+    });
+
+    const ahead = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    expect(await screen.findByText(STALE_HINT)).toBeInTheDocument();
+    // Regenerating uses the CURRENT proposal version, not the draft's.
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate draft" }));
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { content: "Generate a proposal draft from the current information.", intent: "generate_draft", expectedProposalVersion: 9 },
+      expect.any(String),
+    ));
+    ahead.unmount();
+
+    // Same version — the draft is current, so no hint.
+    mockedGetProposal.mockResolvedValue(proposalAtVersion(5));
+    const level = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Here is your draft.");
+    await waitFor(() => expect(mockedGetDraft).toHaveBeenCalled());
+    expect(screen.queryByText(STALE_HINT)).not.toBeInTheDocument();
+    level.unmount();
+
+    // The run carries no version at all — never guess.
+    mockedGetDraft.mockResolvedValue(draftRun(null));
+    mockedGetProposal.mockResolvedValue(proposalAtVersion(9));
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Here is your draft.");
+    await waitFor(() => expect(mockedGetDraft).toHaveBeenCalled());
+    expect(screen.queryByText(STALE_HINT)).not.toBeInTheDocument();
   });
 });

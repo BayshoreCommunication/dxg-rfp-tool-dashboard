@@ -25,7 +25,6 @@ import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalReq
 import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
 import SaveCopyModal from "./SaveCopyModal";
 import ProposalWorkflowShell from "./ProposalWorkflowShell";
-import PrivateDocumentStatusPanel from "./PrivateDocumentStatusPanel";
 import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
 
@@ -1959,7 +1958,6 @@ const AddNewProposal = ({
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED === "true" && (
               <ProposalWorkflowShell proposalId={proposalId} />
             )}
-            {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_ASYNC_STATUS_ENABLED === "true" && <PrivateDocumentStatusPanel proposalId={proposalId} />}
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_CONTEXT_ENABLED === "true" && <ProposalContextPanel proposalId={proposalId} />}
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_DRAFT_ENABLED === "true" && <ProposalDraftPanel proposalId={proposalId} />}
             <div id="manual-proposal-details" />

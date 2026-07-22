@@ -1,9 +1,10 @@
 "use client";
 
-// Shared conversation/session hooks extracted from ConversationWorkspace so the
-// chat-first assistant workspace and the workflow panel reuse one governed
-// implementation: idempotent sends, SSE with polling fallback, notes-as-source
-// scanning, and private upload sessions.
+// Shared conversation/session hooks behind the chat-first assistant workspace:
+// idempotent sends, SSE with polling fallback, notes-as-source scanning, and
+// private upload sessions. They stay a separate module so the conversation
+// mechanics can be reasoned about (and tested) apart from the page that renders
+// them.
 
 import {
   createProposalNotesAction,
@@ -225,9 +226,19 @@ export function useConversation(proposalId: string | null) {
 }
 
 // Lists the private document sources of a proposal. refreshKey retriggers the
-// fetch (for example when a scan job finishes and a new source becomes ready).
+// fetch (for example when a scan job finishes and a new source becomes ready);
+// refresh() re-reads the list on demand and can be awaited, so a caller that
+// just mutated a source (removing one) can wait for the authoritative list
+// instead of reloading the page or guessing optimistically.
 export function useProposalSources(proposalId: string | null, refreshKey?: unknown) {
   const [sources, setSources] = useState<PrivateDocumentSource[]>([]);
+
+  const refresh = useCallback(async () => {
+    if (!proposalId) return;
+    const result = await listPrivateDocumentSources(proposalId);
+    if (result.success) setSources(result.data);
+  }, [proposalId]);
+
   useEffect(() => {
     if (!proposalId) return;
     let active = true;
@@ -236,7 +247,7 @@ export function useProposalSources(proposalId: string | null, refreshKey?: unkno
     });
     return () => { active = false; };
   }, [proposalId, refreshKey]);
-  return { sources };
+  return { sources, refresh };
 }
 
 // Generic durable-job tracker with sessionStorage persistence so an in-flight
@@ -492,5 +503,20 @@ export function useAutoExtraction(
     setWatch({ proposalId: targetProposalId, sourceIds: fresh });
   }, []);
 
-  return { queueAutoExtract, autoScanning: watch !== null, scanCount: watch?.sourceIds.length ?? 0, failedNotices };
+  // A source that no longer exists (it was removed from the rail) must leave
+  // the pending extraction selection, in memory and in the persisted intent,
+  // or the watch would wait forever for a scan that can never become ready.
+  const dropSource = useCallback((sourceId: string) => {
+    setWatch(current => {
+      if (!current) return current;
+      const remaining = current.sourceIds.filter(id => id !== sourceId);
+      return remaining.length > 0 ? { ...current, sourceIds: remaining } : null;
+    });
+    if (!proposalId) return;
+    const store = readAutoExtractStore(proposalId);
+    if (!store.pending.includes(sourceId)) return;
+    writeAutoExtractStore(proposalId, { pending: store.pending.filter(id => id !== sourceId), handled: store.handled });
+  }, [proposalId]);
+
+  return { queueAutoExtract, dropSource, autoScanning: watch !== null, scanCount: watch?.sourceIds.length ?? 0, failedNotices };
 }

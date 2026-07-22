@@ -28,7 +28,7 @@ describe("assisted proposal start", () => {
     process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED = "true";
     render(<AddProposalUpload {...props} />);
     fireEvent.click(screen.getByRole("button", { name: /start with assistant/i }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/proposals/proposal-edit?proposalId=abc123abc123abc123abc123"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/proposals/abc123abc123abc123abc123/assistant"));
     expect(createProposalAction).toHaveBeenCalledWith(
       expect.objectContaining({ status: "unsubmitted", isDraft: true, event: { eventName: "Untitled proposal" } }),
     );

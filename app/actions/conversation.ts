@@ -75,6 +75,9 @@ export type ConversationMessage = {
   attachments: ConversationAttachment[];
 };
 export type ConversationQuestionImpact = "schedule" | "cost" | "production" | "scope";
+// The control the guided question card renders. Anything the backend does not
+// recognise (and every free-form question) falls back to a plain text box.
+export type ConversationAnswerType = "date" | "choice" | "number" | "text";
 export type ConversationQuestion = {
   id: string;
   code: string;
@@ -83,6 +86,11 @@ export type ConversationQuestion = {
   prompt: string;
   status: "open" | "answered" | "dismissed";
   impact?: ConversationQuestionImpact | null;
+  answerType: ConversationAnswerType;
+  options: string[];
+  // The answer message this question produced, so the thread can show the
+  // question above the answer it belongs to.
+  answeredMessageId: string | null;
   contextRunId: string | null;
   createdAt: string;
 };
@@ -126,8 +134,16 @@ const parseMessage = (value: unknown): ConversationMessage | null => {
   };
 };
 
+const ANSWER_TYPES = ["date", "choice", "number", "text"] as const;
+
 const parseQuestion = (value: unknown): ConversationQuestion | null => {
   if (!isRecord(value) || typeof value.id !== "string") return null;
+  const answerType = ANSWER_TYPES.includes(value.answerType as ConversationAnswerType) ? value.answerType as ConversationAnswerType : "text";
+  // Options are submitted verbatim, so only clean strings are kept and a choice
+  // without any usable option degrades to a text box rather than a dead card.
+  const options = Array.isArray(value.options)
+    ? value.options.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
   return {
     id: value.id,
     code: typeof value.code === "string" ? value.code : "",
@@ -136,6 +152,9 @@ const parseQuestion = (value: unknown): ConversationQuestion | null => {
     prompt: typeof value.prompt === "string" ? value.prompt : "",
     status: value.status === "answered" || value.status === "dismissed" ? value.status : "open",
     impact: value.impact === "schedule" || value.impact === "cost" || value.impact === "production" || value.impact === "scope" ? value.impact : null,
+    answerType: answerType === "choice" && options.length === 0 ? "text" : answerType,
+    options,
+    answeredMessageId: typeof value.answeredMessageId === "string" && value.answeredMessageId ? value.answeredMessageId : null,
     contextRunId: typeof value.contextRunId === "string" ? value.contextRunId : null,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
   };

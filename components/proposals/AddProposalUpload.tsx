@@ -678,7 +678,7 @@ export default function AddProposalUpload({
       setAssistedBusy(false);
       return;
     }
-    router.push(`/proposals/proposal-edit?proposalId=${proposalId}`);
+    router.push(`/proposals/${proposalId}/assistant`);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

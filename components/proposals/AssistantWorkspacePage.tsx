@@ -7,16 +7,19 @@
 // picked via the paperclip or the rail are STAGED as chips in the composer and
 // only uploaded when the message is sent. No proposal exists until the user
 // first sends a message or saves notes — then one is created lazily and the
-// URL is updated in place.
+// URL is replaced with that proposal's canonical assistant route
+// (/proposals/{id}/assistant), which is also how an existing proposal's
+// assistant is reached.
 
 import {
   type ConversationMessage,
   type ConversationQuestion,
   type ConversationRunType,
 } from "@/app/actions/conversation";
-import { type PrivateDocumentSource } from "@/app/actions/durableJobs";
+import { deletePrivateDocumentSource, type PrivateDocumentSource } from "@/app/actions/durableJobs";
+import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
-import { generateGuidanceAction, type GuidanceReport } from "@/app/actions/guidance";
+import { generateGuidanceAction, type GuidanceReport, type GuidanceSectionCompleteness } from "@/app/actions/guidance";
 import { generateInvestmentGuidanceAction, type InvestmentReport } from "@/app/actions/investment";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction, type ProposalDraftSection } from "@/app/actions/proposalDraft";
@@ -66,6 +69,13 @@ const questionFieldLabel = (question: ConversationQuestion): string => {
   if (!segment) return "Answer";
   const words = segment.replace(/([A-Z])/g, " $1").toLowerCase().trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+// A picked calendar day submitted as YYYY-MM-DD from its LOCAL parts:
+// toISOString() would shift the day for anyone behind UTC.
+const localIsoDay = (date: Date): string => {
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
@@ -242,6 +252,60 @@ function CardFooter({ copyValue, detailsHref, detailsLabel }: { copyValue: strin
   );
 }
 
+// ── Shared card action row ───────────────────────────────────────────────────
+// Every "what next?" card in the thread offers the same three actions in the
+// same order and at the same height: one solid primary (generate/regenerate the
+// draft), an outline secondary (readiness check, only while no report is on
+// screen) and a quiet tertiary link into the editor. Two cards must never show
+// two primary buttons that do the same thing, so the caller decides which card
+// owns the row.
+const ACTION_BASE =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
+const ACTION_PRIMARY = `${ACTION_BASE} bg-[#087f69] text-white hover:bg-[#0a9a81]`;
+const ACTION_SECONDARY = `${ACTION_BASE} border border-[#087f69] bg-white text-[#087f69] hover:bg-emerald-50`;
+const ACTION_TERTIARY = `${ACTION_BASE} px-1 text-slate-500 underline underline-offset-2 hover:text-slate-800`;
+
+function CardActionRow({ proposalId, hasDraft, draftBusy, onGenerateDraft, onRunReadiness, readinessBusy = false }: {
+  proposalId: string;
+  hasDraft: boolean;
+  draftBusy: boolean;
+  onGenerateDraft: () => void;
+  // Omitted when a readiness report is already on screen — the check never
+  // competes with a result the user is already reading.
+  onRunReadiness?: () => void;
+  readinessBusy?: boolean;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={onGenerateDraft}
+        disabled={draftBusy}
+        aria-busy={draftBusy}
+        className={ACTION_PRIMARY}
+      >
+        {draftBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
+        {draftBusy ? "Generating…" : hasDraft ? "Regenerate draft" : "Generate proposal draft"}
+      </button>
+      {onRunReadiness && (
+        <button
+          type="button"
+          onClick={onRunReadiness}
+          disabled={readinessBusy}
+          aria-busy={readinessBusy}
+          className={ACTION_SECONDARY}
+        >
+          {readinessBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
+          {readinessBusy ? "Checking…" : "Run readiness check"}
+        </button>
+      )}
+      <Link href={`/proposals/proposal-edit?proposalId=${proposalId}`} className={ACTION_TERTIARY}>
+        Edit all details
+      </Link>
+    </div>
+  );
+}
+
 function SkeletonCard({ label }: { label: string }) {
   return (
     <div role="status" className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -259,9 +323,17 @@ function SkeletonCard({ label }: { label: string }) {
 }
 
 // ChatGPT-style guided clarification flow: ONE question at a time in the
-// thread, with progress, an impact tag, an answer input and a Skip action.
+// thread, with progress, an impact tag, a typed answer control (date picker,
+// choice pills, number or free text, chosen by the backend) and a Skip action.
 // An invalid answer (backend 422) keeps the question and shows the validation
 // message so the user can re-answer.
+const ANSWER_FIELD_CLASS =
+  "min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 disabled:cursor-not-allowed disabled:bg-slate-50";
+const PRIMARY_BUTTON_CLASS =
+  "shrink-0 rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
+const SKIP_BUTTON_CLASS =
+  "shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50";
+
 function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, onSkip }: {
   question: ConversationQuestion;
   current: number;
@@ -271,11 +343,29 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
   onAnswer: (answer: string) => void;
   onSkip: () => void;
 }) {
-  // The caller keys this card by question id, so the input resets per question.
+  // The caller keys this card by question id, so the control resets per question.
   const [value, setValue] = useState("");
+  const [day, setDay] = useState<Date | null>(null);
+  const [pendingOption, setPendingOption] = useState<string | null>(null);
   const impactLabel = question.impact ? impactLabels[question.impact] : null;
+  const answerType = question.answerType;
+  const inputId = `guided-answer-${question.id}`;
+  // A picked day is submitted from its LOCAL calendar parts; toISOString would
+  // shift the date by a day for anyone west of UTC.
+  const answer = answerType === "date" ? (day ? localIsoDay(day) : "") : value.trim();
+  const skipButton = (
+    <button
+      type="button"
+      onClick={() => { if (!busy) onSkip(); }}
+      disabled={busy}
+      className={SKIP_BUTTON_CLASS}
+    >
+      Skip
+    </button>
+  );
+
   return (
-    <div className="max-w-[85%] rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+    <div className="w-full max-w-[85%] rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">Question {current} of {total}</p>
         {impactLabel && (
@@ -286,35 +376,81 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
         )}
       </div>
       <p className="mt-2 text-sm font-medium text-slate-900">{question.prompt || question.code.replaceAll("_", " ").toLowerCase()}</p>
-      <form
-        className="mt-3 flex items-center gap-2"
-        onSubmit={event => { event.preventDefault(); if (value.trim() && !busy) onAnswer(value.trim()); }}
-      >
-        <input
-          type="text"
-          value={value}
-          onChange={event => setValue(event.target.value)}
-          disabled={busy}
-          placeholder="Type your answer…"
-          aria-label="Answer this question"
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#00c2c9]"
-        />
-        <button
-          type="submit"
-          disabled={busy || !value.trim()}
-          className="shrink-0 rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+
+      {answerType === "choice" ? (
+        // One tap answers: each pill submits its own value, so there is no
+        // separate Answer step for a closed set of options. Long lists (e.g.
+        // the nine streaming platforms) get tighter pills, and every pill wraps
+        // rather than stretching the card on a narrow screen.
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {question.options.map(option => {
+            // Only the in-flight pill is highlighted, so a rejected answer (422)
+            // never leaves an option looking accepted.
+            const active = busy && pendingOption === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                disabled={busy}
+                aria-busy={active}
+                onClick={() => { if (busy) return; setPendingOption(option); onAnswer(option); }}
+                className={`max-w-full whitespace-normal break-words rounded-full border text-left text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  question.options.length > 5 ? "px-3 py-1.5" : "px-4 py-2"
+                } ${
+                  active
+                    ? "border-[#087f69] bg-[#087f69] text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:border-[#00c2c9] hover:bg-[#00c2c9]/10 hover:text-[#087f69]"
+                }`}
+              >
+                {active ? "Saving…" : option}
+              </button>
+            );
+          })}
+          {skipButton}
+        </div>
+      ) : (
+        <form
+          className="mt-3 flex flex-wrap items-center gap-2"
+          onSubmit={event => { event.preventDefault(); if (answer && !busy) onAnswer(answer); }}
         >
-          {busy ? "Saving…" : "Answer"}
-        </button>
-        <button
-          type="button"
-          onClick={() => { if (!busy) onSkip(); }}
-          disabled={busy}
-          className="shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Skip
-        </button>
-      </form>
+          {answerType === "date" ? (
+            <div className="flex min-w-[11rem] flex-1 basis-48 items-center">
+              <label htmlFor={inputId} className="sr-only">Answer this question</label>
+              <GlobalDateInput
+                id={inputId}
+                value={day}
+                onChange={setDay}
+                format="yyyy-MM-dd"
+                placeholder="YYYY-MM-DD"
+                hideLabel
+                showErrorMessage={false}
+                disabled={busy}
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? "cursor-not-allowed bg-slate-50" : ""}`}
+                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
+              />
+            </div>
+          ) : (
+            <input
+              type={answerType === "number" ? "number" : "text"}
+              {...(answerType === "number" ? { min: 0, inputMode: "numeric" as const, step: 1 } : {})}
+              value={value}
+              onChange={event => setValue(event.target.value)}
+              disabled={busy}
+              placeholder={answerType === "number" ? "Enter a number…" : "Type your answer…"}
+              aria-label="Answer this question"
+              className={`${ANSWER_FIELD_CLASS} basis-48`}
+            />
+          )}
+          <button
+            type="submit"
+            disabled={busy || !answer}
+            className={PRIMARY_BUTTON_CLASS}
+          >
+            {busy ? "Saving…" : "Answer"}
+          </button>
+          {skipButton}
+        </form>
+      )}
       {error && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
     </div>
   );
@@ -368,10 +504,29 @@ function ContextRunCard({ proposalId, message, sourcesById }: {
   );
 }
 
-// Details of a completed draft run: read-only sections rendered inline.
-function DraftRunCard({ proposalId, message }: { proposalId: string; message: ConversationMessage }) {
+// The version a draft run was generated against. The run payload is the raw
+// database row, so the snake_case column is authoritative; the camelCase name
+// is accepted for older/normalised payloads. Anything else stays unknown — the
+// staleness hint is never rendered on a guess.
+const draftRunVersion = (run: unknown): number | null => {
+  if (!isRecord(run)) return null;
+  const raw = run.expected_proposal_version ?? run.expectedProposalVersion;
+  if (typeof raw !== "number" && typeof raw !== "string") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : null;
+};
+
+// Details of a completed draft run: read-only sections rendered inline, plus a
+// quiet staleness hint when the proposal moved on after the draft was written.
+function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, onRegenerate }: {
+  proposalId: string;
+  message: ConversationMessage;
+  currentProposalVersion: number | undefined;
+  draftBusy: boolean;
+  onRegenerate: () => void;
+}) {
   const [sections, setSections] = useState<ProposalDraftSection[]>([]);
-  const [model, setModel] = useState<unknown>(null);
+  const [run, setRun] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!message.runId) return;
@@ -379,10 +534,15 @@ function DraftRunCard({ proposalId, message }: { proposalId: string; message: Co
     void getProposalDraftAction(proposalId, message.runId).then(result => {
       if (!active || !result.success) return;
       setSections(result.data.sections ?? []);
-      setModel(isRecord(result.data.run) ? result.data.run.model : null);
+      setRun(isRecord(result.data.run) ? result.data.run : null);
     });
     return () => { active = false; };
   }, [proposalId, message.runId]);
+
+  const model = run?.model ?? null;
+  const draftVersion = draftRunVersion(run);
+  // Both versions must be known: a missing version means "unknown", not "stale".
+  const stale = draftVersion !== null && typeof currentProposalVersion === "number" && currentProposalVersion > draftVersion;
 
   const draftText = sections.map(section => `${section.heading}\n${section.paragraphs.map(p => p.text).join("\n")}`).join("\n\n") || message.content;
   const detailsHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
@@ -390,19 +550,38 @@ function DraftRunCard({ proposalId, message }: { proposalId: string; message: Co
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Results</p>
       <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-800">{message.content}</p>
-      {sections.length > 0 && (
-        <div className="mt-3 space-y-2">
-          {sections.map(section => (
-            <details key={section.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-800">{section.heading}</summary>
-              <div className="mt-2 space-y-2">
-                {section.paragraphs.map((paragraph, index) => (
-                  <p key={index} className="text-sm text-slate-700">{paragraph.text}</p>
-                ))}
-              </div>
-            </details>
-          ))}
+      {stale && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="min-w-0 text-xs text-amber-900">This draft was written before your latest answers.</p>
+          <button
+            type="button"
+            onClick={onRegenerate}
+            disabled={draftBusy}
+            aria-busy={draftBusy}
+            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {draftBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
+            {draftBusy ? "Generating…" : "Regenerate draft"}
+          </button>
         </div>
+      )}
+      {/* The draft reads as a document: every section open, so a planner can
+          scan the whole thing without opening eight disclosures. */}
+      {sections.length > 0 && (
+        <article className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-slate-50/70">
+          {sections.map(section => (
+            <section key={section.id} className="p-3">
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{section.heading}</h4>
+              <div className="mt-1.5 space-y-2">
+                {section.paragraphs.length > 0
+                  ? section.paragraphs.map((paragraph, index) => (
+                      <p key={index} className="text-sm leading-relaxed text-slate-700">{paragraph.text}</p>
+                    ))
+                  : <p className="text-sm italic text-slate-400">Nothing supported by evidence yet for this section.</p>}
+              </div>
+            </section>
+          ))}
+        </article>
       )}
       <div className="mt-2"><ModelBadge model={model} /></div>
       <CardFooter copyValue={draftText} detailsHref={detailsHref} detailsLabel="View draft" />
@@ -413,15 +592,22 @@ function DraftRunCard({ proposalId, message }: { proposalId: string; message: Co
 // "Here's what I captured" overview: the key details already on the proposal
 // plus the explicit next step (generate the draft). It replaces the old
 // no-questions notice and disappears once a draft run exists.
-function OverviewCard({ proposalId, eventName, rows, detailCount, pendingReview, busy, error, onGenerateDraft }: {
+// `showActions` is false when the completion progress card is on screen — that
+// card then owns the single primary action for the whole thread.
+function OverviewCard({ proposalId, eventName, rows, detailCount, detailSource, pendingReview, busy, error, showActions, hasDraft, onGenerateDraft, onRunReadiness, readinessBusy }: {
   proposalId: string;
+  detailSource: "sources" | "answers" | "both";
   eventName: string | null;
   rows: OverviewRow[];
   detailCount: number;
   pendingReview: number;
   busy: boolean;
   error: string | null;
+  showActions: boolean;
+  hasDraft: boolean;
   onGenerateDraft: () => void;
+  onRunReadiness?: () => void;
+  readinessBusy: boolean;
 }) {
   const editorHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   const title = eventName && eventName !== PLACEHOLDER_EVENT_NAME ? eventName : "your proposal";
@@ -440,7 +626,8 @@ function OverviewCard({ proposalId, eventName, rows, detailCount, pendingReview,
       )}
       {detailCount > 0 && (
         <p className="mt-2.5 text-xs text-slate-500">
-          {detailCount} detail{detailCount === 1 ? "" : "s"} captured from your sources.
+          {detailCount} detail{detailCount === 1 ? "" : "s"} captured from{" "}
+          {detailSource === "sources" ? "your sources" : detailSource === "answers" ? "your answers" : "your sources and answers"}.
         </p>
       )}
       {pendingReview > 0 && (
@@ -449,22 +636,93 @@ function OverviewCard({ proposalId, eventName, rows, detailCount, pendingReview,
           <Link href={editorHref} className="font-semibold text-[#087f69] underline underline-offset-2">Review suggestions</Link>
         </p>
       )}
-      <div className="mt-3 border-t border-slate-100 pt-3">
-        <button
-          type="button"
-          onClick={onGenerateDraft}
-          disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      {showActions && (
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          <CardActionRow
+            proposalId={proposalId}
+            hasDraft={hasDraft}
+            draftBusy={busy}
+            onGenerateDraft={onGenerateDraft}
+            onRunReadiness={onRunReadiness}
+            readinessBusy={readinessBusy}
+          />
+          <p className="mt-2 text-xs text-slate-500">Or add more details — upload another file, paste notes, or ask me anything.</p>
+        </div>
+      )}
+      {showActions && error && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
+    </div>
+  );
+}
+
+// The 3 thinnest sections, so the card names what is actually worth filling in
+// next. Complete sections are never listed — this is a progress moment.
+export const weakestSections = (report: GuidanceReport): GuidanceSectionCompleteness[] =>
+  [...report.completeness]
+    .filter(section => section.total > 0 && section.score < 1)
+    .sort((a, b) => a.score - b.score || a.label.localeCompare(b.label))
+    .slice(0, 3);
+
+// Shown once every key question is answered: a real progress summary from the
+// deterministic guidance engine (percentage, slim bar, weakest sections) rather
+// than a vague "everything else is optional". A failed check degrades to the
+// plain headline — the actions always stay available.
+function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, draftError, onGenerateDraft, onRunReadiness, readinessBusy }: {
+  proposalId: string;
+  report: GuidanceReport | null;
+  checking: boolean;
+  hasDraft: boolean;
+  draftBusy: boolean;
+  draftError: string | null;
+  onGenerateDraft: () => void;
+  onRunReadiness?: () => void;
+  readinessBusy: boolean;
+}) {
+  const percent = report ? Math.round(report.overallCompleteness * 100) : null;
+  const weakest = report ? weakestSections(report) : [];
+  return (
+    <div className="max-w-[85%] rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+      <p className="text-sm font-semibold text-emerald-900">
+        {percent === null ? "Key questions answered." : `Your proposal is ${percent}% complete`}
+      </p>
+      {percent !== null && (
+        <div
+          role="progressbar"
+          aria-valuenow={percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Proposal completeness"
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-emerald-100"
         >
-          {busy && <Loader2 size={12} className="animate-spin" aria-hidden />}
-          Generate proposal draft
-        </button>
-        <p className="mt-2 text-xs text-slate-500">Or add more details — upload another file, paste notes, or ask me anything.</p>
-        <Link href={editorHref} className="mt-1.5 inline-block text-xs font-semibold text-[#087f69] underline underline-offset-2">
-          Edit all details
-        </Link>
-      </div>
-      {error && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
+          <div className="h-full rounded-full bg-[#087f69]" style={{ width: `${percent}%` }} />
+        </div>
+      )}
+      {percent === null && checking && (
+        <p role="status" className="mt-1 text-xs text-emerald-800">Checking what&rsquo;s left…</p>
+      )}
+      {weakest.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {weakest.map(section => (
+            <li key={section.section || section.label} className="flex items-baseline justify-between gap-3 rounded-lg border border-emerald-100 bg-white px-2.5 py-1.5 text-xs text-slate-700">
+              <span className="min-w-0 truncate" title={section.label}>{section.label}</span>
+              <span className="shrink-0 font-semibold tabular-nums text-slate-500">{section.filled}/{section.total}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {report && report.blockingCount > 0 && (
+        <p className="mt-2 text-xs font-medium text-amber-800">
+          {report.blockingCount} item{report.blockingCount === 1 ? "" : "s"} need{report.blockingCount === 1 ? "s" : ""} attention before publishing.
+        </p>
+      )}
+      <CardActionRow
+        proposalId={proposalId}
+        hasDraft={hasDraft}
+        draftBusy={draftBusy}
+        onGenerateDraft={onGenerateDraft}
+        onRunReadiness={onRunReadiness}
+        readinessBusy={readinessBusy}
+      />
+      {draftError && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{draftError}</p>}
     </div>
   );
 }
@@ -554,6 +812,11 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const uploadedRef = useRef(new Map<File, string>());
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesText, setNotesText] = useState("");
+  // Rail source removal: which row is asking for confirmation, which one has a
+  // delete in flight, and per-row failure messages.
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [removingSourceId, setRemovingSourceId] = useState<string | null>(null);
+  const [removeErrors, setRemoveErrors] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState<string | null>(null);
   const [localCards, setLocalCards] = useState<LocalCard[]>([]);
   const [guidanceBusy, setGuidanceBusy] = useState(false);
@@ -561,6 +824,11 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const [proposalVersion, setProposalVersion] = useState<number>();
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
+  // Completion progress summary: one deterministic guidance run per
+  // proposal+version, kept out of render by a ref guard.
+  const [completionReport, setCompletionReport] = useState<GuidanceReport | null>(null);
+  const [completionChecking, setCompletionChecking] = useState(false);
+  const completionRunRef = useRef<{ proposalId: string; version: number | null } | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
@@ -575,11 +843,17 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   // Auto-orchestration: a send with attachments queues a watch on the new
   // sources' scans; when all of them are ready one extract_requirements message
   // is sent automatically (exactly once per originating send).
-  const { queueAutoExtract, autoScanning, scanCount, failedNotices } = useAutoExtraction(proposalId, sendMessage);
-  const { sources } = useProposalSources(proposalId, `${notesJobId ?? ""}:${uploadJobId ?? ""}:${notesJob?.status ?? ""}:${uploadJob?.status ?? ""}:${autoScanning}`);
+  const { queueAutoExtract, dropSource, autoScanning, scanCount, failedNotices } = useAutoExtraction(proposalId, sendMessage);
+  const { sources, refresh: refreshSources } = useProposalSources(proposalId, `${notesJobId ?? ""}:${uploadJobId ?? ""}:${notesJob?.status ?? ""}:${uploadJob?.status ?? ""}:${autoScanning}`);
 
   const messages = useMemo(() => data?.messages ?? [], [data]);
   const openQuestions = (data?.questions ?? []).filter(item => item.status === "open");
+  // answer message id -> the question it answered, so the thread can replay the
+  // question above the answer instead of showing a bare value.
+  const askedByAnswerMessageId = useMemo(
+    () => new Map((data?.questions ?? []).flatMap(item => (item.answeredMessageId ? [[item.answeredMessageId, item] as const] : []))),
+    [data],
+  );
   const readySources = sources.filter(item => item.status === "ready" && item.confidentiality === "non_confidential");
   const sourcesById = useMemo(() => new Map(sources.map(source => [source.id, source])), [sources]);
   const sending = pending.some(item => item.state === "sending");
@@ -611,14 +885,22 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   // as a draft run exists — from then on the thread shows the draft itself.
   const hasDraftRun = messages.some(message => message.runType === "proposal_draft");
   const autoApplySettled = !autoApply || autoApply.phase !== "applying";
-  const showOverview = completedContextRuns > 0 && !loading && !!data
-    && openQuestions.length === 0 && autoApplySettled && !hasDraftRun;
   const overviewRows = useMemo(() => buildOverviewRows(proposal), [proposal]);
+  // A proposal built by conversation alone never has an extraction run, so the
+  // hand-off also opens once questions have been answered or the proposal has
+  // real content — otherwise that path dead-ends with no way to reach a draft.
+  const answeredQuestions = (data?.questions ?? []).filter(question => question.status === "answered").length;
+  const hasCapturedContent = completedContextRuns > 0 || answeredQuestions > 0 || overviewRows.length > 0;
+  const showOverview = hasCapturedContent && !loading && !!data
+    && openQuestions.length === 0 && autoApplySettled && !hasDraftRun;
   const overviewDetailCount = autoApply?.phase === "applied" ? autoApply.added : overviewRows.length;
   const overviewPendingReview = autoApply?.phase === "applied" ? autoApply.needsReview : 0;
+  // Details reach a proposal by extraction, by answered questions, or both.
+  const overviewDetailSource: "sources" | "answers" | "both" =
+    completedContextRuns > 0 && answeredQuestions > 0 ? "both" : completedContextRuns > 0 ? "sources" : "answers";
 
   // The right rail only exists once the conversation has begun: messages exist
-  // (including a resumed ?proposalId with history), a send is pending, or a
+  // (including a proposal resumed from its route with history), a send is pending, or a
   // staged upload is in progress. Once shown it stays shown; its entrance is a
   // CSS-only slide-in-from-right keyframe animation played on mount.
   const conversationActive = messages.length > 0 || pending.length > 0 || sendBusy || localCards.length > 0;
@@ -656,9 +938,12 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     return () => { active = false; };
   }, [proposalId, data?.conversation?.updatedAt, completedContextRuns, autoApplyRefreshes]);
 
-  // Draft generation needs the reviewed proposal version — same lookup the
-  // workflow shell uses (latest context run -> candidate review).
+  // The proposal document carries its own version, so a draft can be generated
+  // from a conversation-only proposal that has no extraction run at all. The
+  // context/review lookup stays as a fallback for older payloads.
   const fetchProposalVersion = useCallback(async (id: string): Promise<number | undefined> => {
+    const current = await getProposalByIdAction(id);
+    if (current.success && isRecord(current.data) && typeof current.data.version === "number") return current.data.version;
     const latest = await getLatestProposalContextAction(id);
     if (!latest.success || !isRecord(latest.data.run) || typeof latest.data.run.id !== "string") return undefined;
     const review = await getCandidateReviewAction(id, latest.data.run.id);
@@ -674,7 +959,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       if (active && typeof version === "number") setProposalVersion(version);
     });
     return () => { active = false; };
-  }, [proposalId, completedContextRuns, autoApplyRefreshes, fetchProposalVersion]);
+  }, [proposalId, completedContextRuns, autoApplyRefreshes, data?.conversation?.updatedAt, fetchProposalVersion]);
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView?.({ block: "end" });
@@ -698,8 +983,9 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       return null;
     }
     setProposalId(id);
-    // Stay in place; only reflect the new proposal in the URL for resume/share.
-    router.replace(`/proposals/add-new-proposal?proposalId=${id}`);
+    // Stay in place; only move the URL to the proposal's canonical assistant
+    // route so resume/share links land on one surface.
+    router.replace(`/proposals/${id}/assistant`);
     return id;
   }, [proposalId, router]);
 
@@ -755,6 +1041,31 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     });
   }, []);
 
+  // Detaching a source from the rail. The row asks for confirmation inline
+  // (never a window.confirm), the source is only dropped from the list once the
+  // backend has actually deleted it, and a failure leaves the row in place with
+  // the safe message underneath it.
+  const handleRemoveSource = useCallback(async (sourceId: string) => {
+    if (removingSourceId) return;
+    setRemovingSourceId(sourceId);
+    setRemoveErrors(prev => {
+      const next = { ...prev };
+      delete next[sourceId];
+      return next;
+    });
+    const result = await deletePrivateDocumentSource(sourceId);
+    setRemovingSourceId(null);
+    setConfirmRemoveId(null);
+    if (!result.success) {
+      setRemoveErrors(prev => ({ ...prev, [sourceId]: result.message }));
+      return;
+    }
+    // A removed source can never become ready, so it leaves any pending
+    // extraction selection before the authoritative list is re-read.
+    dropSource(sourceId);
+    await refreshSources();
+  }, [removingSourceId, dropSource, refreshSources]);
+
   const handleSaveNotes = async () => {
     if (!notesText.trim() || notesBusy) return;
     const id = await ensureProposal();
@@ -785,10 +1096,11 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     await sendDraftMessage(proposalVersion);
   };
 
-  // Same code path as the rail's "Generate draft" chip, but the overview card
-  // can be clicked before the version lookup settled — in that case the current
-  // version is re-read first so the draft never runs against a stale one.
-  const runDraftFromOverview = async () => {
+  // Same code path as the rail's "Generate draft" chip, and the single handler
+  // behind every card-level generate/regenerate action. A card can be clicked
+  // before the version lookup settled — in that case the CURRENT version is
+  // re-read first so the draft never runs against a stale one.
+  const runDraftFromCard = async () => {
     if (!proposalId || sending || draftBusy) return;
     setDraftError(null);
     let version = proposalVersion;
@@ -829,9 +1141,48 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   // confirms the value and advances, a validation failure (422) re-asks with
   // the friendly message. Skip dismisses the question and advances.
   const currentQuestion = openQuestions[0] ?? null;
-  const questionProgressTotal = answeredCount + skippedCount + openQuestions.length;
-  const questionProgressCurrent = answeredCount + skippedCount + 1;
-  const questionsComplete = answeredCount > 0 && !loading && !!data && openQuestions.length === 0;
+  // Answers persist, so the resolved count must come from the conversation and
+  // not only from this session — otherwise a refresh hides the progress card on
+  // a proposal whose questions were all answered earlier.
+  const resolvedQuestions = (data?.questions ?? []).filter(question => question.status !== "open").length;
+  const answeredTotal = Math.max(answeredCount + skippedCount, resolvedQuestions);
+  const questionProgressTotal = answeredTotal + openQuestions.length;
+  const questionProgressCurrent = answeredTotal + 1;
+  const questionsComplete = answeredTotal > 0 && !loading && !!data && openQuestions.length === 0;
+
+  // Finishing the questions is a progress moment, so the card reports real
+  // numbers: the guidance engine is deterministic and synchronous, so it is run
+  // once per proposal+version. The ref (not state) is the guard, so a re-render
+  // can never refire it; a later version bump refreshes the report exactly once.
+  // A failure leaves the report null and the card falls back to a plain
+  // headline — the flow is never blocked and no raw error is shown.
+  useEffect(() => {
+    if (!questionsComplete || !proposalId) return;
+    const version = typeof proposalVersion === "number" ? proposalVersion : null;
+    const previous = completionRunRef.current;
+    const stale = !previous
+      || previous.proposalId !== proposalId
+      || (version !== null && previous.version !== null && previous.version !== version);
+    if (!stale) return;
+    completionRunRef.current = { proposalId, version };
+    let active = true;
+    setCompletionChecking(true);
+    void (async () => {
+      try {
+        const result = await generateGuidanceAction(proposalId);
+        if (!active) return;
+        setCompletionReport(result?.success ? result.data : null);
+        // The report knows the version it was computed for; recording it keeps
+        // the "version changed" refresh accurate even if the lookup lagged.
+        if (result?.success) completionRunRef.current = { proposalId, version: result.data.proposalVersion || version };
+      } catch {
+        if (active) setCompletionReport(null);
+      } finally {
+        if (active) setCompletionChecking(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [questionsComplete, proposalId, proposalVersion]);
 
   const answerCurrentQuestion = async (answer: string) => {
     if (!currentQuestion) return;
@@ -849,6 +1200,11 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     if (resolved) setSkippedCount(count => count + 1);
   };
 
+  // A readiness report already on screen (the completion card's own numbers, or
+  // a card produced by the rail action) retires the secondary button so the
+  // user is never offered a check whose result they are already reading.
+  const guidanceDisplayed = !!completionReport || localCards.some(card => card.kind === "guidance");
+
   const onComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -862,20 +1218,37 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     }
     const mine = message.role === "user";
     if (mine) {
+      // An answer on its own ("2027-04-14") carries no meaning, so the question
+      // it resolved is replayed above it as quiet, assistant-side history.
+      const asked = message.kind === "question_answer" ? askedByAnswerMessageId.get(message.id) ?? null : null;
+      const askedImpact = asked?.impact ? impactLabels[asked.impact] : null;
       return (
-        <li key={message.id} className="flex justify-end">
-          <div className="max-w-[75%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900">
-            {message.kind === "question_answer" && <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#087f69]">Answer</p>}
-            <p className="whitespace-pre-wrap">{message.content}</p>
-            {message.attachments.length > 0 && (
-              <ul className="mt-2 flex flex-wrap gap-1.5">
-                {message.attachments.map(attachment => (
-                  <li key={attachment.sourceId} className="rounded-full border border-[#00c2c9]/40 bg-white px-2 py-0.5 text-xs text-slate-600">
-                    <span className="max-w-[10rem] truncate align-middle" title={attachment.filename}>{attachment.filename || "Attached source"}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+        <li key={message.id} className="flex flex-col gap-1.5">
+          {asked && (
+            <div className="flex justify-start">
+              <div className="max-w-[75%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600">
+                <p className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Asked
+                  {askedImpact && <span className="font-semibold normal-case tracking-normal text-slate-400">· {askedImpact}</span>}
+                </p>
+                <p className="whitespace-pre-wrap">{asked.prompt}</p>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <div className="max-w-[75%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900">
+              {message.kind === "question_answer" && <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#087f69]">Answer</p>}
+              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.attachments.length > 0 && (
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {message.attachments.map(attachment => (
+                    <li key={attachment.sourceId} className="rounded-full border border-[#00c2c9]/40 bg-white px-2 py-0.5 text-xs text-slate-600">
+                      <span className="max-w-[10rem] truncate align-middle" title={attachment.filename}>{attachment.filename || "Attached source"}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </li>
       );
@@ -895,7 +1268,17 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       return <li key={message.id} className="flex justify-start"><ContextRunCard proposalId={proposalId} message={message} sourcesById={sourcesById} /></li>;
     }
     if (message.runType === "proposal_draft" && message.status === "complete" && proposalId) {
-      return <li key={message.id} className="flex justify-start"><DraftRunCard proposalId={proposalId} message={message} /></li>;
+      return (
+        <li key={message.id} className="flex justify-start">
+          <DraftRunCard
+            proposalId={proposalId}
+            message={message}
+            currentProposalVersion={proposalVersion}
+            draftBusy={draftBusy || sending}
+            onRegenerate={() => void runDraftFromCard()}
+          />
+        </li>
+      );
     }
     return (
       <li key={message.id} className="flex justify-start">
@@ -1117,10 +1500,15 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                         eventName={eventName}
                         rows={overviewRows}
                         detailCount={overviewDetailCount}
+                        detailSource={overviewDetailSource}
                         pendingReview={overviewPendingReview}
                         busy={draftBusy || sending}
                         error={draftError}
-                        onGenerateDraft={() => void runDraftFromOverview()}
+                        showActions={!questionsComplete}
+                        hasDraft={hasDraftRun}
+                        onGenerateDraft={() => void runDraftFromCard()}
+                        onRunReadiness={guidanceDisplayed ? undefined : () => void runGuidance()}
+                        readinessBusy={guidanceBusy}
                       />
                     </li>
                   )}
@@ -1211,16 +1599,17 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                   )}
                   {questionsComplete && proposalId && (
                     <li className="flex justify-start">
-                      <div className="max-w-[85%] rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-                        <p className="text-sm font-semibold text-emerald-900">All key questions answered — everything else is optional.</p>
-                        <p className="mt-1 text-sm text-emerald-800">Review your full proposal in the editor.</p>
-                        <Link
-                          href={`/proposals/proposal-edit?proposalId=${proposalId}`}
-                          className="mt-2 inline-block rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                        >
-                          Open the proposal editor
-                        </Link>
-                      </div>
+                      <CompletionCard
+                        proposalId={proposalId}
+                        report={completionReport}
+                        checking={completionChecking}
+                        hasDraft={hasDraftRun}
+                        draftBusy={draftBusy || sending}
+                        draftError={draftError}
+                        onGenerateDraft={() => void runDraftFromCard()}
+                        onRunReadiness={guidanceDisplayed ? undefined : () => void runGuidance()}
+                        readinessBusy={guidanceBusy}
+                      />
                     </li>
                   )}
                 </ol>
@@ -1293,15 +1682,54 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
               <p role="alert" className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-800">{uploadError || notesError}</p>
             )}
             {sources.length > 0 ? (
-              <ul className="mt-3 space-y-1.5">
-                {sources.map(source => (
-                  <li key={source.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
-                    <span className="min-w-0 flex-1 truncate text-slate-700" title={source.originalFilename}>{source.originalFilename}</span>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${source.status === "ready" ? "bg-emerald-100 text-emerald-800" : source.status === "failed" ? "bg-red-100 text-red-800" : "bg-white text-slate-600"}`}>
-                      {source.status.replaceAll("_", " ")}
-                    </span>
-                  </li>
-                ))}
+              <ul aria-label="Attached sources" className="mt-3 space-y-1.5">
+                {sources.map(source => {
+                  const removing = removingSourceId === source.id;
+                  const removeError = removeErrors[source.id];
+                  return (
+                    <li key={source.id} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 flex-1 truncate text-slate-700" title={source.originalFilename}>{source.originalFilename}</span>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${source.status === "ready" ? "bg-emerald-100 text-emerald-800" : source.status === "failed" ? "bg-red-100 text-red-800" : "bg-white text-slate-600"}`}>
+                          {source.status.replaceAll("_", " ")}
+                        </span>
+                        {confirmRemoveId === source.id ? (
+                          // Inline confirmation, so nothing leaves the page and
+                          // the row keeps its own context while deciding.
+                          <span className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => void handleRemoveSource(source.id)}
+                              disabled={removing}
+                              className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {removing ? "Removing…" : "Remove?"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmRemoveId(null)}
+                              disabled={removing}
+                              className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            aria-label={`Remove ${source.originalFilename}`}
+                            onClick={() => { setConfirmRemoveId(source.id); }}
+                            disabled={!!removingSourceId}
+                            className="shrink-0 rounded-full p-0.5 text-slate-300 transition-colors hover:bg-slate-200 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <X size={12} aria-hidden />
+                          </button>
+                        )}
+                      </div>
+                      {removeError && <p role="alert" className="mt-1 text-[11px] text-red-700">{removeError}</p>}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="mt-3 text-xs text-slate-400">No sources yet. Add a file or notes to get started.</p>
