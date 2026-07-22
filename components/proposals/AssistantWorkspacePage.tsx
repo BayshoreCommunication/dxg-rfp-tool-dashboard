@@ -70,6 +70,93 @@ const questionFieldLabel = (question: ConversationQuestion): string => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
+// ── Captured-detail summary ──────────────────────────────────────────────────
+// The overview card reads the proposal document itself (legacy field names) and
+// renders only the fields that actually carry a value.
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const PLACEHOLDER_EVENT_NAME = "Untitled proposal";
+
+export type OverviewRow = { label: string; value: string };
+
+const textValue = (value: unknown): string => {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
+};
+
+type DayParts = { year: number; month: number; day: number };
+
+// Dates are stored as plain strings ("2027-03-16"); they are read as calendar
+// days so a timezone offset can never shift the rendered date.
+const parseDay = (value: unknown): DayParts | null => {
+  const raw = textValue(value);
+  if (!raw) return null;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (iso) {
+    const month = Number(iso[2]) - 1;
+    const day = Number(iso[3]);
+    if (month < 0 || month > 11 || day < 1 || day > 31) return null;
+    return { year: Number(iso[1]), month, day };
+  }
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return { year: parsed.getFullYear(), month: parsed.getMonth(), day: parsed.getDate() };
+};
+
+const formatDay = (parts: DayParts, withYear = true) =>
+  `${parts.day} ${MONTHS[parts.month]}${withYear ? ` ${parts.year}` : ""}`;
+
+// "16–18 Mar 2027" when both ends share a month, "28 Feb – 2 Mar 2027" within a
+// year, otherwise both ends fully qualified.
+const formatDateRange = (start: unknown, end: unknown): string => {
+  const from = parseDay(start);
+  const to = parseDay(end);
+  if (!from && !to) return "";
+  if (!from) return formatDay(to as DayParts);
+  if (!to) return formatDay(from);
+  if (from.year === to.year && from.month === to.month) {
+    return from.day === to.day ? formatDay(from) : `${from.day}–${to.day} ${MONTHS[from.month]} ${from.year}`;
+  }
+  if (from.year === to.year) return `${formatDay(from, false)} – ${formatDay(to)}`;
+  return `${formatDay(from)} – ${formatDay(to)}`;
+};
+
+const isYes = (value: unknown) => textValue(value).toUpperCase() === "YES";
+
+// Key captured details, in reading order, capped so the card stays scannable.
+export const buildOverviewRows = (proposal: Record<string, unknown> | null): OverviewRow[] => {
+  if (!proposal) return [];
+  const event = isRecord(proposal.event) ? proposal.event : {};
+  const venueSchedule = isRecord(proposal.venueSchedule) ? proposal.venueSchedule : {};
+  const hybridVirtual = isRecord(proposal.hybridVirtual) ? proposal.hybridVirtual : {};
+  const videoRecording = isRecord(proposal.videoRecordingStep) ? proposal.videoRecordingStep : {};
+  const budget = isRecord(proposal.budget) ? proposal.budget : {};
+
+  const rows: OverviewRow[] = [];
+  const push = (label: string, value: string) => { if (value) rows.push({ label, value }); };
+
+  const eventName = textValue(event.eventName);
+  push("Event", eventName === PLACEHOLDER_EVENT_NAME ? "" : eventName);
+  push("Dates", formatDateRange(event.startDate, event.endDate));
+  push("Format", textValue(event.eventFormat));
+  push("Attendees", textValue(event.attendees));
+  push("Venue", textValue(venueSchedule.venueName));
+  push("City", textValue(venueSchedule.venueCity));
+  push("Event rooms", textValue(venueSchedule.numberOfEventRooms));
+  if (isYes(venueSchedule.isUnionVenue)) rows.push({ label: "Union venue", value: "Yes" });
+  push("Streaming platform", textValue(hybridVirtual.streamingPlatform));
+  if (isYes(videoRecording.videoRecordingRequired)) {
+    const cameras = textValue(videoRecording.numberOfCameras);
+    rows.push({ label: "Video recording", value: cameras ? `Yes — ${cameras} camera${cameras === "1" ? "" : "s"}` : "Yes" });
+  }
+  const due = parseDay(budget.proposalSubmissionDueDate);
+  if (due) rows.push({ label: "Proposal due", value: formatDay(due) });
+
+  return rows.slice(0, 10);
+};
+
 const firstNameOf = (name: unknown): string | null => {
   if (typeof name !== "string") return null;
   const first = name.trim().split(/\s+/)[0];
@@ -323,6 +410,65 @@ function DraftRunCard({ proposalId, message }: { proposalId: string; message: Co
   );
 }
 
+// "Here's what I captured" overview: the key details already on the proposal
+// plus the explicit next step (generate the draft). It replaces the old
+// no-questions notice and disappears once a draft run exists.
+function OverviewCard({ proposalId, eventName, rows, detailCount, pendingReview, busy, error, onGenerateDraft }: {
+  proposalId: string;
+  eventName: string | null;
+  rows: OverviewRow[];
+  detailCount: number;
+  pendingReview: number;
+  busy: boolean;
+  error: string | null;
+  onGenerateDraft: () => void;
+}) {
+  const editorHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
+  const title = eventName && eventName !== PLACEHOLDER_EVENT_NAME ? eventName : "your proposal";
+  return (
+    <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-sm font-semibold text-slate-900">Here&rsquo;s what I have for {title}</p>
+      {rows.length > 0 && (
+        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+          {rows.map(row => (
+            <div key={row.label} className="flex items-baseline justify-between gap-3 border-b border-slate-100 pb-1">
+              <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-400">{row.label}</dt>
+              <dd className="min-w-0 truncate text-right text-sm text-slate-800" title={row.value}>{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {detailCount > 0 && (
+        <p className="mt-2.5 text-xs text-slate-500">
+          {detailCount} detail{detailCount === 1 ? "" : "s"} captured from your sources.
+        </p>
+      )}
+      {pendingReview > 0 && (
+        <p className="mt-1 text-xs text-slate-600">
+          {pendingReview} suggestion{pendingReview === 1 ? "" : "s"} need{pendingReview === 1 ? "s" : ""} your review.{" "}
+          <Link href={editorHref} className="font-semibold text-[#087f69] underline underline-offset-2">Review suggestions</Link>
+        </p>
+      )}
+      <div className="mt-3 border-t border-slate-100 pt-3">
+        <button
+          type="button"
+          onClick={onGenerateDraft}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy && <Loader2 size={12} className="animate-spin" aria-hidden />}
+          Generate proposal draft
+        </button>
+        <p className="mt-2 text-xs text-slate-500">Or add more details — upload another file, paste notes, or ask me anything.</p>
+        <Link href={editorHref} className="mt-1.5 inline-block text-xs font-semibold text-[#087f69] underline underline-offset-2">
+          Edit all details
+        </Link>
+      </div>
+      {error && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
+    </div>
+  );
+}
+
 function GuidanceCard({ report }: { report: GuidanceReport }) {
   const blocking = report.findings.filter(f => f.severity === "blocking").length;
   const warnings = report.findings.filter(f => f.severity === "warning").length;
@@ -389,6 +535,9 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const [proposalId, setProposalId] = useState<string | null>(initialProposalId ?? null);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string | null>(null);
+  // The full proposal document backs the captured-details overview; the
+  // breadcrumb reads its event name from the same fetch.
+  const [proposal, setProposal] = useState<Record<string, unknown> | null>(null);
   const [text, setText] = useState("");
   // Guided clarification flow: progress across this session plus the latest
   // confirmed value ("Rooms: 6") shown after a successful answer.
@@ -410,6 +559,8 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const [guidanceBusy, setGuidanceBusy] = useState(false);
   const [investmentBusy, setInvestmentBusy] = useState(false);
   const [proposalVersion, setProposalVersion] = useState<number>();
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
@@ -454,10 +605,17 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   }, [refresh]);
   const autoApply = useAutoApply(proposalId, latestContextRunId, onAutoApplied);
 
-  // Extraction completed without producing any clarification questions: an
-  // assistant-style notice tells the user nothing needs answering. It never
-  // shows before at least one extraction has completed.
-  const extractionNoQuestions = completedContextRuns > 0 && !loading && !!data && (data.questions ?? []).length === 0;
+  // Captured-details overview: shown once an extraction has completed, no open
+  // clarification question is waiting (the guided flow always goes first), and
+  // auto-apply has either finished or had nothing to apply. It retires as soon
+  // as a draft run exists — from then on the thread shows the draft itself.
+  const hasDraftRun = messages.some(message => message.runType === "proposal_draft");
+  const autoApplySettled = !autoApply || autoApply.phase !== "applying";
+  const showOverview = completedContextRuns > 0 && !loading && !!data
+    && openQuestions.length === 0 && autoApplySettled && !hasDraftRun;
+  const overviewRows = useMemo(() => buildOverviewRows(proposal), [proposal]);
+  const overviewDetailCount = autoApply?.phase === "applied" ? autoApply.added : overviewRows.length;
+  const overviewPendingReview = autoApply?.phase === "applied" ? autoApply.needsReview : 0;
 
   // The right rail only exists once the conversation has begun: messages exist
   // (including a resumed ?proposalId with history), a send is pending, or a
@@ -482,13 +640,15 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     return () => { active = false; };
   }, []);
 
-  // Breadcrumb title tracks the proposal's current event name — refreshed when
-  // the conversation changes (e.g. after extraction results are applied).
+  // The proposal document backs both the breadcrumb title and the captured
+  // details overview — refreshed when the conversation changes (e.g. after
+  // extraction results are applied).
   useEffect(() => {
     if (!proposalId) return;
     let active = true;
     void getProposalByIdAction(proposalId).then(result => {
       if (!active || !result.success || !isRecord(result.data)) return;
+      setProposal(result.data);
       const event = isRecord(result.data.event) ? result.data.event : null;
       const name = typeof event?.eventName === "string" ? event.eventName.trim() : "";
       if (name) setEventName(name);
@@ -498,21 +658,27 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
 
   // Draft generation needs the reviewed proposal version — same lookup the
   // workflow shell uses (latest context run -> candidate review).
+  const fetchProposalVersion = useCallback(async (id: string): Promise<number | undefined> => {
+    const latest = await getLatestProposalContextAction(id);
+    if (!latest.success || !isRecord(latest.data.run) || typeof latest.data.run.id !== "string") return undefined;
+    const review = await getCandidateReviewAction(id, latest.data.run.id);
+    return review.success ? review.data.proposalVersion : undefined;
+  }, []);
+
+  // The version is re-read after auto-apply (which bumps autoApplyRefreshes) so
+  // a draft is never generated against a stale version.
   useEffect(() => {
     if (!proposalId) return;
     let active = true;
-    void (async () => {
-      const latest = await getLatestProposalContextAction(proposalId);
-      if (!active || !latest.success || !isRecord(latest.data.run) || typeof latest.data.run.id !== "string") return;
-      const review = await getCandidateReviewAction(proposalId, latest.data.run.id);
-      if (active && review.success) setProposalVersion(review.data.proposalVersion);
-    })();
+    void fetchProposalVersion(proposalId).then(version => {
+      if (active && typeof version === "number") setProposalVersion(version);
+    });
     return () => { active = false; };
-  }, [proposalId, completedContextRuns, autoApplyRefreshes]);
+  }, [proposalId, completedContextRuns, autoApplyRefreshes, fetchProposalVersion]);
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView?.({ block: "end" });
-  }, [messages.length, pending.length, localCards.length, autoScanning, failedNotices.length, openQuestions.length, lastConfirmed, autoApply, extractionNoQuestions]);
+  }, [messages.length, pending.length, localCards.length, autoScanning, failedNotices.length, openQuestions.length, lastConfirmed, autoApply, showOverview]);
 
   // Lazy creation: the proposal only exists once the user contributes content.
   const ensureProposal = useCallback(async (): Promise<string | null> => {
@@ -606,13 +772,37 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     });
   };
 
-  const runDraft = async () => {
-    if (typeof proposalVersion !== "number" || sending || !proposalId) return;
+  const sendDraftMessage = async (version: number) => {
     await sendMessage({
       content: taskContent.generate_draft,
       intent: "generate_draft",
-      expectedProposalVersion: proposalVersion,
+      expectedProposalVersion: version,
     });
+  };
+
+  const runDraft = async () => {
+    if (typeof proposalVersion !== "number" || sending || !proposalId) return;
+    await sendDraftMessage(proposalVersion);
+  };
+
+  // Same code path as the rail's "Generate draft" chip, but the overview card
+  // can be clicked before the version lookup settled — in that case the current
+  // version is re-read first so the draft never runs against a stale one.
+  const runDraftFromOverview = async () => {
+    if (!proposalId || sending || draftBusy) return;
+    setDraftError(null);
+    let version = proposalVersion;
+    if (typeof version !== "number") {
+      setDraftBusy(true);
+      version = await fetchProposalVersion(proposalId);
+      setDraftBusy(false);
+      if (typeof version === "number") setProposalVersion(version);
+    }
+    if (typeof version !== "number") {
+      setDraftError("I couldn’t confirm the current version of your proposal. Open the editor, review the details, and try again.");
+      return;
+    }
+    await sendDraftMessage(version);
   };
 
   const runGuidance = async () => {
@@ -918,11 +1108,18 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                       </p>
                     </li>
                   )}
-                  {extractionNoQuestions && (
+                  {showOverview && proposalId && (
                     <li className="flex justify-start">
-                      <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800 shadow-sm">
-                        <p>I have all the key details I need — no clarification questions. Everything else is optional in the editor.</p>
-                      </div>
+                      <OverviewCard
+                        proposalId={proposalId}
+                        eventName={eventName}
+                        rows={overviewRows}
+                        detailCount={overviewDetailCount}
+                        pendingReview={overviewPendingReview}
+                        busy={draftBusy || sending}
+                        error={draftError}
+                        onGenerateDraft={() => void runDraftFromOverview()}
+                      />
                     </li>
                   )}
                   {localCards.map(card => (
