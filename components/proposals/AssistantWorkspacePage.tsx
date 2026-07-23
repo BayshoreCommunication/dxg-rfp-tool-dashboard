@@ -28,8 +28,7 @@ import { getUserData } from "@/app/actions/user";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
 import { presentJob } from "@/lib/asyncOperations";
 import {
-  ArrowUp, ClipboardCheck, Copy, FileText, Loader2, Paperclip, PencilLine,
-  Sparkles, StickyNote, Upload, X,
+  ArrowUp, FileText, Loader2, Paperclip, PencilLine, Sparkles, StickyNote, Upload, X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -69,6 +68,24 @@ const questionFieldLabel = (question: ConversationQuestion): string => {
   if (!segment) return "Answer";
   const words = segment.replace(/([A-Z])/g, " $1").toLowerCase().trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+const citationLabel = (citation: string): string => {
+  const segment = citation.split("/").filter(Boolean).pop() ?? citation;
+  const labels: Record<string, string> = {
+    aboutOrganization: "Organization",
+    editionYear: "Edition / year",
+    endDate: "End date",
+    eventFormat: "Event format",
+    eventName: "Event name",
+    eventObjectives: "Event objectives",
+    eventType: "Event type",
+    startDate: "Start date",
+    statementOfWork: "Scope of work",
+  };
+  if (labels[segment]) return labels[segment];
+  const words = segment.replace(/([A-Z])/g, " $1").replace(/[_-]+/g, " ").toLowerCase().trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Proposal detail";
 };
 
 // A picked calendar day submitted as YYYY-MM-DD from its LOCAL parts:
@@ -135,6 +152,22 @@ const formatDateRange = (start: unknown, end: unknown): string => {
 
 const isYes = (value: unknown) => textValue(value).toUpperCase() === "YES";
 
+const budgetTierLabel = (proposal: Record<string, unknown> | null): string => {
+  if (!proposal) return "";
+  const budget = isRecord(proposal.budget) ? proposal.budget : {};
+  const tier = textValue(budget.estimatedAvBudget);
+  const ranges: Record<string, string> = {
+    Essential: "$10K – $25K",
+    Standard: "$25K – $50K",
+    Production: "$50K – $100K",
+    Premium: "$100K – $250K",
+    Enterprise: "$250K – $500K",
+    Signature: "$500K+",
+    "Not Yet Determined": "Need guidance",
+  };
+  return tier ? `${tier}${ranges[tier] ? ` (${ranges[tier]})` : ""}` : "";
+};
+
 // Key captured details, in reading order, capped so the card stays scannable.
 export const buildOverviewRows = (proposal: Record<string, unknown> | null): OverviewRow[] => {
   if (!proposal) return [];
@@ -189,10 +222,6 @@ const money = (minor: number | null | undefined, currency: string | null) => {
   }
 };
 
-const copyText = (value: string) => {
-  void navigator.clipboard?.writeText(value).catch(() => undefined);
-};
-
 const MAX_STAGED_FILES = 3;
 
 const formatFileSize = (bytes: number) => {
@@ -202,16 +231,6 @@ const formatFileSize = (bytes: number) => {
 };
 
 // ── Small presentational pieces ──────────────────────────────────────────────
-
-function ModelBadge({ model }: { model: unknown }) {
-  if (typeof model !== "string" || !model.trim()) return null;
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500" title="AI model used for this run">
-      <Sparkles size={10} className="text-[#00c2c9]" aria-hidden />
-      {model}
-    </span>
-  );
-}
 
 function SourceChips({ chips }: { chips: Array<{ label: string; count: number }> }) {
   if (chips.length === 0) return null;
@@ -231,23 +250,13 @@ function SourceChips({ chips }: { chips: Array<{ label: string; count: number }>
   );
 }
 
-function CardFooter({ copyValue, detailsHref, detailsLabel }: { copyValue: string; detailsHref?: string; detailsLabel?: string }) {
-  const [copied, setCopied] = useState(false);
+function CardFooter({ detailsHref, detailsLabel }: { detailsHref?: string; detailsLabel?: string }) {
+  if (!detailsHref) return null;
   return (
     <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-2.5">
-      <button
-        type="button"
-        onClick={() => { copyText(copyValue); setCopied(true); setTimeout(() => setCopied(false), 1_500); }}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800"
-      >
-        {copied ? <ClipboardCheck size={13} aria-hidden /> : <Copy size={13} aria-hidden />}
-        {copied ? "Copied" : "Copy"}
-      </button>
-      {detailsHref && (
-        <Link href={detailsHref} className="text-xs font-semibold text-[#087f69] underline underline-offset-2">
-          {detailsLabel ?? "View details"}
-        </Link>
-      )}
+      <Link href={detailsHref} className="text-xs font-semibold text-[#087f69] underline underline-offset-2">
+        {detailsLabel ?? "View details"}
+      </Link>
     </div>
   );
 }
@@ -465,7 +474,6 @@ function ContextRunCard({ proposalId, message, sourcesById }: {
 }) {
   const [chips, setChips] = useState<Array<{ label: string; count: number }>>([]);
   const [fieldCount, setFieldCount] = useState<number | null>(null);
-  const [model, setModel] = useState<unknown>(null);
 
   useEffect(() => {
     if (!message.runId) return;
@@ -482,7 +490,6 @@ function ContextRunCard({ proposalId, message, sourcesById }: {
       }
       setChips([...counts.entries()].map(([label, count]) => ({ label, count })));
       setFieldCount(Array.isArray(result.data.operations) ? result.data.operations.length : 0);
-      setModel(isRecord(result.data.run) ? result.data.run.model : null);
     });
     return () => { active = false; };
   }, [proposalId, message.runId, sourcesById]);
@@ -498,8 +505,7 @@ function ContextRunCard({ proposalId, message, sourcesById }: {
           Review &amp; apply {fieldCount} extracted field{fieldCount === 1 ? "" : "s"}
         </Link>
       )}
-      <div className="mt-2"><ModelBadge model={model} /></div>
-      <CardFooter copyValue={message.content} detailsHref={reviewHref} />
+      <CardFooter detailsHref={reviewHref} />
     </div>
   );
 }
@@ -539,12 +545,10 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
     return () => { active = false; };
   }, [proposalId, message.runId]);
 
-  const model = run?.model ?? null;
   const draftVersion = draftRunVersion(run);
   // Both versions must be known: a missing version means "unknown", not "stale".
   const stale = draftVersion !== null && typeof currentProposalVersion === "number" && currentProposalVersion > draftVersion;
 
-  const draftText = sections.map(section => `${section.heading}\n${section.paragraphs.map(p => p.text).join("\n")}`).join("\n\n") || message.content;
   const detailsHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   return (
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -575,7 +579,22 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
               <div className="mt-1.5 space-y-2">
                 {section.paragraphs.length > 0
                   ? section.paragraphs.map((paragraph, index) => (
-                      <p key={index} className="text-sm leading-relaxed text-slate-700">{paragraph.text}</p>
+                      <div key={index}>
+                        <p className="text-sm leading-relaxed text-slate-700">{paragraph.text}</p>
+                        {paragraph.citations.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1" aria-label="Sources">
+                            {paragraph.citations.map(citation => (
+                              <span
+                                key={citation}
+                                data-citation={citation}
+                                className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-500"
+                              >
+                                {citationLabel(citation)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ))
                   : <p className="text-sm italic text-slate-400">Nothing supported by evidence yet for this section.</p>}
               </div>
@@ -583,8 +602,7 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
           ))}
         </article>
       )}
-      <div className="mt-2"><ModelBadge model={model} /></div>
-      <CardFooter copyValue={draftText} detailsHref={detailsHref} detailsLabel="View draft" />
+      <CardFooter detailsHref={detailsHref} detailsLabel="View draft" />
     </div>
   );
 }
@@ -751,13 +769,12 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
           {finding.message}
         </p>
       ))}
-      <p className="mt-2 text-[11px] text-slate-400">Deterministic checks — no AI-generated numbers. Engine {report.engineVersion}</p>
-      <CardFooter copyValue={summary} />
+      <p className="mt-2 text-[11px] text-slate-400">Verified checks based on your proposal details.</p>
     </div>
   );
 }
 
-function InvestmentCard({ report }: { report: InvestmentReport }) {
+function InvestmentCard({ report, declaredBudget }: { report: InvestmentReport; declaredBudget: string }) {
   const summary = report.totalMidMinor !== null && report.currency
     ? `Estimated investment ${money(report.totalLowMinor, report.currency)} – ${money(report.totalHighMinor, report.currency)} (mid ${money(report.totalMidMinor, report.currency)}).`
     : "Investment guidance generated — some categories need more information before an estimate is possible.";
@@ -765,6 +782,11 @@ function InvestmentCard({ report }: { report: InvestmentReport }) {
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Results — Investment guidance</p>
       <p className="mt-2 text-sm text-slate-800">{summary}</p>
+      {declaredBudget && (
+        <p className="mt-2 rounded-lg border border-cyan-100 bg-cyan-50 p-2 text-xs text-slate-700">
+          Your stated planning budget is <strong>{declaredBudget}</strong>. The estimate below is scope-based guidance, not a replacement for that budget.
+        </p>
+      )}
       {report.lineItems.length > 0 && (
         <ul className="mt-2 space-y-1">
           {report.lineItems.slice(0, 5).map(item => (
@@ -780,8 +802,7 @@ function InvestmentCard({ report }: { report: InvestmentReport }) {
           {report.refusals.length} categor{report.refusals.length === 1 ? "y" : "ies"} need more information: {report.refusals.map(r => r.ask).join(" ")}
         </p>
       )}
-      <p className="mt-2 text-[11px] text-slate-400">Range guidance from approved pricing records. Engine {report.engineVersion}</p>
-      <CardFooter copyValue={summary} />
+      <p className="mt-2 text-[11px] text-slate-400">Range guidance from approved pricing records.</p>
     </div>
   );
 }
@@ -1017,12 +1038,22 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       setSendBusy(false);
     }
     const content = value || "Please review the attached file.";
+    if (value && sourceIds.length === 0) {
+      setSendBusy(true);
+      const typedSourceId = await submitNotes(value, "non_confidential", id);
+      setSendBusy(false);
+      if (!typedSourceId) {
+        setSendError("Your message could not be prepared for requirement extraction.");
+        return;
+      }
+      sourceIds.push(typedSourceId);
+    }
     setText("");
     setStaged([]);
     uploadedRef.current.clear();
     const sent = await sendMessage({ content, intent: "chat", ...(sourceIds.length > 0 ? { sourceIds } : {}) }, id);
-    // A send that carried attachments starts the automatic extraction watch:
-    // once every attached source's scan is ready, extraction runs on its own.
+    // Every planner brief, whether typed or attached, enters the same governed
+    // source boundary and starts extraction once scanning succeeds.
     if (sent && sourceIds.length > 0) queueAutoExtract(id, sourceIds);
   };
 
@@ -1284,7 +1315,6 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       <li key={message.id} className="flex justify-start">
         <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800 shadow-sm">
           <p className="whitespace-pre-wrap">{message.content}</p>
-          <CardFooter copyValue={message.content} />
         </div>
       </li>
     );
@@ -1379,6 +1409,19 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     </div>
   );
 
+  const aiWorking = sending || autoScanning || draftBusy || guidanceBusy || investmentBusy;
+  const aiStatus = autoScanning
+    ? { title: "Reading your sources", detail: "Checking evidence and preparing requirements." }
+    : draftBusy
+      ? { title: "Writing your draft", detail: "Building cited sections from approved details." }
+      : guidanceBusy
+        ? { title: "Checking readiness", detail: "Reviewing completeness, risks, and open decisions." }
+        : investmentBusy
+          ? { title: "Building investment guidance", detail: "Calculating a scope-based planning range." }
+          : sending
+            ? { title: "Thinking through your request", detail: "The assistant is preparing the next response." }
+            : { title: "Ready to help", detail: "Add information or choose a suggested next step." };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-100/70 px-4 py-4 sm:px-6">
       {/* Shared keyframes: typing dots in the thread, rail slide-in and the
@@ -1387,6 +1430,8 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
         @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-0.25rem); opacity: 1; } }
         @keyframes rail-slide-in { from { opacity: 0; transform: translateX(1.5rem); } to { opacity: 1; transform: translateX(0); } }
         @keyframes rail-card-in { from { opacity: 0; transform: translateX(0.75rem) translateY(0.375rem); } to { opacity: 1; transform: translateX(0) translateY(0); } }
+        @keyframes ai-glow { 0%, 100% { opacity: 0.35; transform: scale(0.9); } 50% { opacity: 0.75; transform: scale(1.08); } }
+        @keyframes ai-orbit { to { transform: rotate(360deg); } }
       `}</style>
       {/* Top bar */}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 pb-4">
@@ -1515,7 +1560,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                   {localCards.map(card => (
                     <li key={card.id} className="flex justify-start">
                       {card.kind === "guidance" && <GuidanceCard report={card.report} />}
-                      {card.kind === "investment" && <InvestmentCard report={card.report} />}
+                      {card.kind === "investment" && <InvestmentCard report={card.report} declaredBudget={budgetTierLabel(proposal)} />}
                       {card.kind === "error" && <p role="alert" className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{card.message}</p>}
                     </li>
                   ))}
@@ -1623,10 +1668,46 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
         {/* Right rail — hidden until the conversation begins, then slides in
             from the right (CSS-only; skipped under prefers-reduced-motion). */}
         {railVisible && (
-        <aside className="w-full shrink-0 space-y-4 motion-safe:animate-[rail-slide-in_300ms_ease-out_both] lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:overflow-y-auto lg:pr-1">
+        <aside aria-label="Proposal assistant tools" className="w-full shrink-0 space-y-4 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-[rail-slide-in_300ms_ease-out_both] lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:overflow-y-auto">
+          <section
+            aria-labelledby="rail-ai-title"
+            tabIndex={0}
+            className="relative overflow-hidden rounded-2xl border border-cyan-200/80 bg-gradient-to-br from-[#062f3a] via-[#075569] to-[#087f69] p-4 text-white shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
+          >
+            <div aria-hidden className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-[#00c2c9]/30 blur-2xl motion-safe:animate-[ai-glow_2.8s_ease-in-out_infinite]" />
+            <div className="relative flex items-start gap-3">
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10">
+                {aiWorking && <span className="absolute inset-[-4px] rounded-2xl border border-dashed border-[#67e8f9]/70 motion-safe:animate-[ai-orbit_5s_linear_infinite]" />}
+                <Sparkles size={18} aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-100">AI workspace</p>
+                <h2 id="rail-ai-title" className="mt-1 text-sm font-bold">{aiStatus.title}</h2>
+                <p className="mt-1 text-xs leading-relaxed text-cyan-50/80">{aiStatus.detail}</p>
+              </div>
+            </div>
+            <dl className="relative mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-white/15 bg-white/10 p-2">
+                <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">Sources</dt>
+                <dd className="mt-0.5 text-sm font-bold">{readySources.length}</dd>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-white/10 p-2">
+                <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">Captured</dt>
+                <dd className="mt-0.5 text-sm font-bold">{overviewDetailCount}</dd>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-white/10 p-2">
+                <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">Questions</dt>
+                <dd className="mt-0.5 text-sm font-bold">{openQuestions.length}</dd>
+              </div>
+            </dl>
+            <div className="relative mt-3 flex items-center gap-2 text-[10px] font-semibold text-cyan-50/80">
+              <span className={`h-2 w-2 rounded-full ${aiWorking ? "bg-cyan-300 motion-safe:animate-pulse" : "bg-emerald-300"}`} />
+              {aiWorking ? "AI is actively working" : "Secure proposal context is ready"}
+            </div>
+          </section>
           {/* Sources — the three rail cards share the slide-in but each fades
               and translates in with a ~100ms stagger for a noticeable entrance. */}
-          <section aria-labelledby="rail-sources-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm motion-safe:animate-[rail-card-in_360ms_ease-out_both]">
+          <section aria-labelledby="rail-sources-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]" style={{ animationDelay: "80ms" }}>
             <h2 id="rail-sources-title" className="text-sm font-bold text-slate-900">Sources</h2>
             <p className="mt-0.5 text-xs text-slate-500">Add files or notes to this proposal</p>
             <div className="mt-3 flex gap-2">
@@ -1738,7 +1819,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
           </section>
 
           {/* Suggested tasks */}
-          <section aria-labelledby="rail-tasks-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm motion-safe:animate-[rail-card-in_360ms_ease-out_both]" style={{ animationDelay: "100ms" }}>
+          <section aria-labelledby="rail-tasks-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]" style={{ animationDelay: "160ms" }}>
             <h2 id="rail-tasks-title" className="text-sm font-bold text-slate-900">Suggested tasks</h2>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -1783,7 +1864,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
           </section>
 
           {/* Suggested questions */}
-          <section aria-labelledby="rail-questions-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm motion-safe:animate-[rail-card-in_360ms_ease-out_both]" style={{ animationDelay: "200ms" }}>
+          <section aria-labelledby="rail-questions-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]" style={{ animationDelay: "240ms" }}>
             <h2 id="rail-questions-title" className="text-sm font-bold text-slate-900">Suggested questions</h2>
             {openQuestions.length === 0 ? (
               <p className="mt-2 text-xs text-slate-400">

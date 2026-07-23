@@ -2,6 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { getToken } from "next-auth/jwt";
+import { hasExpiredBackendSession } from "@/lib/authTokenState";
 
 export async function getBackendSession() {
   const cookieStore = await cookies();
@@ -13,6 +14,9 @@ export async function getBackendSession() {
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie: process.env.NODE_ENV === "production",
   });
+  if (hasExpiredBackendSession(token)) {
+    return { accessToken: null, refreshToken: null, sessionId: null };
+  }
   return {
     accessToken: typeof token?.accessToken === "string" ? token.accessToken : null,
     refreshToken: typeof token?.refreshToken === "string" ? token.refreshToken : null,

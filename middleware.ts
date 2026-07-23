@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
+import { SESSION_EXPIRED_ERROR } from "./lib/authTokenState";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -42,10 +43,13 @@ export async function middleware(request: NextRequest) {
 
   // 4. All remaining routes require a valid session
   const session = await auth();
+  const sessionExpired =
+    (session as { authError?: string } | null)?.authError ===
+    SESSION_EXPIRED_ERROR;
 
   // --- OAUTH CALLBACK HANDLING ---
   if (pathname === "/auth/callback") {
-    if (!session?.user) {
+    if (!session?.user || sessionExpired) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
     return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -54,7 +58,7 @@ export async function middleware(request: NextRequest) {
   // --- ROOT PATH REDIRECT ---
   if (pathname === "/") {
     return NextResponse.redirect(
-      new URL(session?.user ? "/dashboard" : "/sign-in", request.url),
+      new URL(session?.user && !sessionExpired ? "/dashboard" : "/sign-in", request.url),
     );
   }
 
@@ -64,9 +68,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // --- UNAUTHENTICATED USER ON PROTECTED ROUTES ---
-  if (!session?.user) {
+  if (!session?.user || sessionExpired) {
     const url = new URL("/sign-in", request.url);
     url.searchParams.set("callbackUrl", pathname);
+    if (sessionExpired) url.searchParams.set("reason", "session-expired");
     return NextResponse.redirect(url);
   }
 

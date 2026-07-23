@@ -313,17 +313,17 @@ export function useNotesScan(proposalId: string | null) {
   ) => {
     const target = targetProposalId ?? proposalId;
     const value = text.trim();
-    if (!target || !value || busy) return false;
+    if (!target || !value || busy) return null;
     setBusy(true);
     tracker.setError(null);
     const idempotencyKey = crypto.randomUUID();
     const created = await createProposalNotesAction(target, { text: value, classification }, idempotencyKey);
-    if (!created.success) { tracker.setError(created.message); setBusy(false); return false; }
+    if (!created.success) { tracker.setError(created.message); setBusy(false); return null; }
     const queued = await createSourceScanJob(created.data.source.id, idempotencyKey);
-    if (!queued.success) { tracker.setError(queued.message); setBusy(false); return false; }
+    if (!queued.success) { tracker.setError(queued.message); setBusy(false); return null; }
     tracker.track(queued.data, target);
     setBusy(false);
-    return true;
+    return created.data.source.id;
   }, [proposalId, busy, tracker]);
 
   return {

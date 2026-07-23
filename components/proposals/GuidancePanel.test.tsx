@@ -95,4 +95,25 @@ describe("GuidancePanel", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
+
+  test("shows friendly field names and navigates to the relevant form step", async () => {
+    const onNavigateToStep = jest.fn();
+    mockedLatest.mockResolvedValue({ success: true, data: report });
+    render(
+      <GuidancePanel
+        proposalId={proposalId}
+        onNavigateToStep={onNavigateToStep}
+      />,
+    );
+
+    expect(await screen.findByText("number of power drops")).toBeInTheDocument();
+    expect(
+      screen.queryByText("/content/venue/numberOfPowerDrops"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Fix in Venue & Technical" }),
+    );
+    expect(onNavigateToStep).toHaveBeenCalledWith(7);
+  });
 });

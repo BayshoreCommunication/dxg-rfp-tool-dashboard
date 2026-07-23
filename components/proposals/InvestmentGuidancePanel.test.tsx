@@ -213,7 +213,7 @@ describe("InvestmentGuidancePanel", () => {
   test("shows the confidence band, score and the deductions behind it", async () => {
     mockedLatest.mockResolvedValue({ success: true, data: report });
     render(<InvestmentGuidancePanel proposalId={proposalId} />);
-    expect(await screen.findByText("Medium confidence — 72/100")).toBeInTheDocument();
+    expect(await screen.findByText("Medium confidence — confidence 72/100")).toBeInTheDocument();
     // Each deduction is named with the points it cost, never hidden.
     expect(screen.getByText("Projector lumens not stated −10")).toBeInTheDocument();
     expect(screen.getByText("Union status unknown −18")).toBeInTheDocument();
@@ -233,10 +233,25 @@ describe("InvestmentGuidancePanel", () => {
     };
     mockedLatest.mockResolvedValue({ success: true, data: low });
     render(<InvestmentGuidancePanel proposalId={proposalId} />);
-    expect(await screen.findByText("Low confidence — 41/100")).toBeInTheDocument();
+    expect(await screen.findByText("Low confidence — confidence 41/100")).toBeInTheDocument();
     const note = screen.getByText(/Indicative range only/);
     expect(note).toBeInTheDocument();
     expect(note.className).toMatch(/rose/);
+  });
+
+  test("compares the generated range with the selected planning budget", async () => {
+    mockedLatest.mockResolvedValue({ success: true, data: report });
+    render(
+      <InvestmentGuidancePanel
+        proposalId={proposalId}
+        estimatedAvBudget="Premium"
+      />,
+    );
+
+    expect(await screen.findByText("Premium · $100K–$250K")).toBeInTheDocument();
+    expect(
+      screen.getByText(/current scope estimate is below the selected planning budget/i),
+    ).toBeInTheDocument();
   });
 
   test("renders every scenario with its label, mid amount and basis", async () => {

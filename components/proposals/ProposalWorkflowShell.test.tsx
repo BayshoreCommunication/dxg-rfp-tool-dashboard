@@ -16,6 +16,7 @@ jest.mock("./ProposalContextPanel", () => panel("proposal-context"));
 jest.mock("./ProposalDraftPanel", () => panel("proposal-draft"));
 jest.mock("./GuidancePanel", () => panel("guidance"));
 jest.mock("./InvestmentGuidancePanel", () => panel("investment-guidance"));
+jest.mock("./KeyQuestionsPanel", () => panel("key-questions"));
 
 jest.mock("@/app/actions/proposalWorkflow", () => ({
   getProposalWorkflowAction: jest.fn(),

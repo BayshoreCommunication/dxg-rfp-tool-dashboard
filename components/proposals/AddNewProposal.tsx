@@ -1840,6 +1840,24 @@ const AddNewProposal = ({
       return isInPersonOnly && prev === 4 ? 3 : prev;
     });
 
+  const navigateToStep = (step: number) => {
+    if (!isEditMode || step < 1 || step > 10) return;
+    if (isInPersonOnly && step === 4) return;
+    setProposalProcessStep(step);
+    setShowErrors(false);
+  };
+
+  const refreshProposalAfterQuestion = async () => {
+    if (!proposalId) return;
+    const result = await getProposalByIdAction(proposalId);
+    if (!result.success || !result.data || typeof result.data !== "object") return;
+    const mapped = mapApiProposalToFormData(
+      result.data as EditableProposalApiResponse,
+    );
+    setProposalData(mapped);
+    setRooms(mapped.roomByRoom.map((room) => ({ ...defaultRoom(), ...room })));
+  };
+
   if (createdProposal) {
     return (
       <>
@@ -1956,7 +1974,12 @@ const AddNewProposal = ({
           {/* Form area — 70% */}
           <div className="w-[80%] mr-4">
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED === "true" && (
-              <ProposalWorkflowShell proposalId={proposalId} />
+              <ProposalWorkflowShell
+                proposalId={proposalId}
+                estimatedAvBudget={proposalData.budget.estimatedAvBudget}
+                onNavigateToFormStep={navigateToStep}
+                onQuestionResolved={refreshProposalAfterQuestion}
+              />
             )}
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_CONTEXT_ENABLED === "true" && <ProposalContextPanel proposalId={proposalId} />}
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_DRAFT_ENABLED === "true" && <ProposalDraftPanel proposalId={proposalId} />}
@@ -2121,6 +2144,7 @@ const AddNewProposal = ({
             <ProcessList
               activeStep={proposalProcessStep}
               hideStepIds={isInPersonOnly ? [4] : []}
+              onStepChange={isEditMode ? navigateToStep : undefined}
             />
           </div>
         </div>

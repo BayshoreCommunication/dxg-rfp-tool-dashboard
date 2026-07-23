@@ -39,6 +39,36 @@ const humanizePath = (path: string) => {
     .toLowerCase();
 };
 
+const stepForPath = (path: string) => {
+  if (path.includes("/event/")) return { step: 1, label: "Event Overview" };
+  if (path.includes("/venueSchedule/")) return { step: 2, label: "Venue & Schedule" };
+  if (path.includes("/roomByRoom/")) return { step: 3, label: "Room Specifications" };
+  if (path.includes("/hybridVirtual/")) return { step: 4, label: "Hybrid & Virtual" };
+  if (path.includes("/contentCreative/")) return { step: 5, label: "Content & Creative" };
+  if (path.includes("/videoRecordingStep/")) return { step: 6, label: "Video Recording" };
+  if (path.includes("/venue/")) return { step: 7, label: "Venue & Technical" };
+  if (path.includes("/budget/")) return { step: 8, label: "Investment & Evaluation" };
+  if (path.includes("/uploads/")) return { step: 9, label: "Uploads & Co-Vendors" };
+  if (path.includes("/contact/")) return { step: 10, label: "Contact & Submit" };
+  return undefined;
+};
+
+const stepForFinding = (finding: GuidanceFinding) => {
+  const message = finding.message.toLowerCase();
+  if (message.includes("room-by-room")) return { step: 3, label: "Room Specifications" };
+  if (message.includes("hybrid") || message.includes("virtual"))
+    return { step: 4, label: "Hybrid & Virtual" };
+  if (message.includes("content") || message.includes("creative"))
+    return { step: 5, label: "Content & Creative" };
+  if (message.includes("video") || message.includes("recording"))
+    return { step: 6, label: "Video Recording" };
+  if (message.includes("venue technical"))
+    return { step: 7, label: "Venue & Technical" };
+  if (message.includes("budget") || message.includes("timeline"))
+    return { step: 8, label: "Investment & Evaluation" };
+  return undefined;
+};
+
 const percent = (score: number) => Math.round(score * 100);
 
 const Bar = ({ score, tone }: { score: number; tone: string }) => (
@@ -53,28 +83,62 @@ const Bar = ({ score, tone }: { score: number; tone: string }) => (
   </div>
 );
 
-const FindingItem = ({ finding }: { finding: GuidanceFinding }) => (
-  <li
-    className={`rounded-lg border p-3 ${severityPresentation[finding.severity].container}`}
-  >
-    <p className="text-sm text-slate-800">{finding.message}</p>
-    {finding.paths.length > 0 && (
-      <p className="mt-2 flex flex-wrap gap-1">
-        {finding.paths.map((path) => (
-          <span
-            key={path}
-            title={path}
-            className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-600"
-          >
-            {humanizePath(path)}
-          </span>
-        ))}
-      </p>
-    )}
-  </li>
-);
+const FindingItem = ({
+  finding,
+  onNavigateToStep,
+}: {
+  finding: GuidanceFinding;
+  onNavigateToStep?: (step: number) => void;
+}) => {
+  const pathDestinations = finding.paths.map(stepForPath);
+  const inferredDestination = stepForFinding(finding);
+  const destinations = Array.from(
+    new Map(
+      [...pathDestinations, inferredDestination]
+        .filter((destination): destination is NonNullable<typeof destination> => Boolean(destination))
+        .map((destination) => [destination.step, destination]),
+    ).values(),
+  );
 
-export default function GuidancePanel({ proposalId }: { proposalId: string }) {
+  return (
+    <li
+      className={`rounded-lg border p-3 ${severityPresentation[finding.severity].container}`}
+    >
+      <p className="text-sm text-slate-800">{finding.message}</p>
+      {finding.paths.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {finding.paths.map((path) => (
+            <span
+              key={path}
+              className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-600"
+            >
+              {humanizePath(path)}
+            </span>
+          ))}
+          {onNavigateToStep &&
+            destinations.map((destination) => (
+              <button
+                key={destination.step}
+                type="button"
+                onClick={() => onNavigateToStep(destination.step)}
+                className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-[#087f69] shadow-sm ring-1 ring-inset ring-[#087f69]/30 hover:bg-emerald-50"
+              >
+                Fix in {destination.label}
+              </button>
+            ))}
+        </div>
+      )}
+    </li>
+  );
+};
+
+export default function GuidancePanel({
+  proposalId,
+  onNavigateToStep,
+}: {
+  proposalId: string;
+  onNavigateToStep?: (step: number) => void;
+}) {
   const [report, setReport] = useState<GuidanceReport>();
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -140,7 +204,7 @@ export default function GuidancePanel({ proposalId }: { proposalId: string }) {
               className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"
             />
           )}
-          {running ? "Checking…" : "Run readiness check"}
+          {running ? "Checking…" : report ? "Refresh readiness" : "Run readiness check"}
         </button>
         {loading && (
           <span role="status" className="text-sm text-slate-600">
@@ -218,6 +282,7 @@ export default function GuidancePanel({ proposalId }: { proposalId: string }) {
                     <FindingItem
                       key={`${finding.code}-${finding.paths.join(",")}`}
                       finding={finding}
+                      onNavigateToStep={onNavigateToStep}
                     />
                   ))}
                 </ul>
@@ -226,7 +291,7 @@ export default function GuidancePanel({ proposalId }: { proposalId: string }) {
           </div>
           <p className="border-t border-slate-100 pt-3 text-xs text-slate-500">
             Deterministic checks based on your proposal fields — no
-            AI-generated numbers. Engine {report.engineVersion} ·{" "}
+            AI-generated numbers. Updated{" "}
             {report.createdAt
               ? new Date(report.createdAt).toLocaleString()
               : ""}

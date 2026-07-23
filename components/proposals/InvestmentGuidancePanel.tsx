@@ -45,6 +45,26 @@ const confidencePresentation: Record<
   low: { label: "Low", chip: "bg-rose-100 text-rose-800" },
 };
 
+const budgetTiers: Record<string, { label: string; low: number | null; high: number | null }> = {
+  Essential: { label: "Essential · $10K–$25K", low: 1_000_000, high: 2_500_000 },
+  Standard: { label: "Standard · $25K–$50K", low: 2_500_000, high: 5_000_000 },
+  Production: { label: "Production · $50K–$100K", low: 5_000_000, high: 10_000_000 },
+  Premium: { label: "Premium · $100K–$250K", low: 10_000_000, high: 25_000_000 },
+  Enterprise: { label: "Enterprise · $250K–$500K", low: 25_000_000, high: 50_000_000 },
+  Signature: { label: "Signature · $500K+", low: 50_000_000, high: null },
+  "Not Yet Determined": { label: "Not yet determined", low: null, high: null },
+};
+
+const displayDeductionLabel = (deduction: InvestmentConfidence["deductions"][number]) => {
+  if (deduction.ruleKey === "market_city_unknown") return "Pricing market not confirmed";
+  return deduction.label;
+};
+
+const friendlyConfidenceNote = (note: string) =>
+  note
+    .replaceAll("Market / city unknown", "Pricing market not confirmed")
+    .replaceAll("Market not identified", "Pricing market not confirmed");
+
 // The engine's condition keys, said the way a producer would say them.
 const unionLabels: Record<string, string> = {
   non_union_baseline: "non-union",
@@ -83,11 +103,15 @@ const basisSummary = (basis: InvestmentBasis): string => {
 
 const ConfidenceHeader = ({ confidence }: { confidence: InvestmentConfidence }) => {
   const tone = confidencePresentation[confidence.band];
+  const label =
+    confidence.band === "low" && confidence.score === 0
+      ? "Very early estimate"
+      : `${tone.label} confidence`;
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-full px-3 py-1 text-sm font-semibold ${tone.chip}`}>
-          {tone.label} confidence — {confidence.score}/100
+          {label} — confidence {confidence.score}/100
         </span>
         {confidence.deductions.length === 0 && (
           <span className="text-xs text-slate-500">No missing pricing-critical inputs.</span>
@@ -101,7 +125,7 @@ const ConfidenceHeader = ({ confidence }: { confidence: InvestmentConfidence }) 
               title={deduction.reason || undefined}
               className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-600"
             >
-              {deduction.label} −{deduction.deduction}
+              {displayDeductionLabel(deduction)} −{deduction.deduction}
             </li>
           ))}
         </ul>
@@ -109,14 +133,39 @@ const ConfidenceHeader = ({ confidence }: { confidence: InvestmentConfidence }) 
       {confidence.note &&
         (confidence.band === "low" ? (
           <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-rose-900">
-            {confidence.note}
+            {friendlyConfidenceNote(confidence.note)}
           </p>
         ) : (
-          <p className="mt-2 text-xs text-slate-600">{confidence.note}</p>
+          <p className="mt-2 text-xs text-slate-600">{friendlyConfidenceNote(confidence.note)}</p>
         ))}
     </div>
   );
 };
+
+const Disclosure = ({
+  title,
+  summary,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  children: React.ReactNode;
+}) => (
+  <details className="rounded-xl border border-slate-200 bg-slate-50/60">
+    <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-slate-900 marker:hidden">
+      <span className="flex items-center justify-between gap-3">
+        <span>
+          {title}
+          {summary && (
+            <span className="ml-2 text-xs font-normal text-slate-500">{summary}</span>
+          )}
+        </span>
+        <span aria-hidden className="text-slate-400">＋</span>
+      </span>
+    </summary>
+    <div className="border-t border-slate-200 p-4">{children}</div>
+  </details>
+);
 
 const ScenarioStrip = ({
   scenarios,
@@ -232,7 +281,13 @@ const Assumptions = ({ assumptions }: { assumptions: InvestmentAssumption[] }) =
   );
 };
 
-export default function InvestmentGuidancePanel({ proposalId }: { proposalId: string }) {
+export default function InvestmentGuidancePanel({
+  proposalId,
+  estimatedAvBudget,
+}: {
+  proposalId: string;
+  estimatedAvBudget?: string;
+}) {
   const [report, setReport] = useState<InvestmentReport>();
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -265,6 +320,17 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
   };
 
   const basisLine = report?.basis ? basisSummary(report.basis) : "";
+  const selectedBudget = estimatedAvBudget ? budgetTiers[estimatedAvBudget] : undefined;
+  const budgetComparison =
+    report && selectedBudget?.low !== null && selectedBudget?.low !== undefined
+      ? report.totalHighMinor !== null && report.totalHighMinor < selectedBudget.low
+        ? "The current scope estimate is below the selected planning budget. This usually means important room, venue, labor, or production details are still missing."
+        : selectedBudget.high !== null &&
+            report.totalLowMinor !== null &&
+            report.totalLowMinor > selectedBudget.high
+          ? "The current scope estimate is above the selected planning budget. Review scope or consider value engineering."
+          : "The current scope estimate overlaps the selected planning budget."
+      : undefined;
 
   return (
     <section
@@ -275,8 +341,8 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
         Investment guidance
       </h3>
       <p className="mt-1 text-sm text-slate-600">
-        A defensible low / typical / high investment range built only from
-        approved DXG pricing records and expert rules.
+        A preliminary planning range based on the scope captured so far,
+        available pricing records, and expert rules. It is not a vendor quote.
       </p>
       <div className="mt-3 flex items-center gap-3">
         <button
@@ -291,7 +357,7 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
               className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"
             />
           )}
-          {running ? "Generating…" : "Generate investment guidance"}
+          {running ? "Generating…" : report ? "Recalculate guidance" : "Generate investment guidance"}
         </button>
         {loading && (
           <span role="status" className="text-sm text-slate-600">
@@ -313,6 +379,18 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
       {report && (
         <div className="mt-5 space-y-6">
           {report.confidence && <ConfidenceHeader confidence={report.confidence} />}
+
+          {selectedBudget && (
+            <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-800">
+                Planning budget
+              </p>
+              <p className="mt-1 text-lg font-bold text-slate-900">{selectedBudget.label}</p>
+              {budgetComparison && (
+                <p className="mt-1 text-sm text-slate-700">{budgetComparison}</p>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-3">
             {(
@@ -343,12 +421,13 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
           )}
 
           {report.scenarios.length > 0 && (
-            <ScenarioStrip scenarios={report.scenarios} currency={report.currency} />
+            <Disclosure title={`Scenarios (${report.scenarios.length})`} summary="Compare alternative labor and provider models">
+              <ScenarioStrip scenarios={report.scenarios} currency={report.currency} />
+            </Disclosure>
           )}
 
           {report.lineItems.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold text-slate-900">Line items</h4>
+            <Disclosure title={`Line items (${report.lineItems.length})`} summary="Equipment and labor detail">
               <div className="mt-2 overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
@@ -405,10 +484,14 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Disclosure>
           )}
 
-          {report.assumptions.length > 0 && <Assumptions assumptions={report.assumptions} />}
+          {report.assumptions.length > 0 && (
+            <Disclosure title={`Assumptions (${report.assumptions.length})`} summary="Items to confirm before quoting">
+              <Assumptions assumptions={report.assumptions} />
+            </Disclosure>
+          )}
 
           {report.refusals.length > 0 && (
             <div>
@@ -434,7 +517,7 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
           )}
 
           {report.ancillary.length > 0 && (
-            <div>
+            <Disclosure title={`Ancillary factors (${report.ancillary.length})`} summary="Venue, travel, freight, fees, and insurance">
               <h4 className="text-sm font-semibold text-slate-900">Ancillary factors</h4>
               <ul className="mt-2 space-y-2">
                 {report.ancillary.map((factor) => {
@@ -464,11 +547,11 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
                   );
                 })}
               </ul>
-            </div>
+            </Disclosure>
           )}
 
           {report.recommendations.length > 0 && (
-            <div>
+            <Disclosure title={`Recommendations (${report.recommendations.length})`} summary="Production considerations">
               <h4 className="text-sm font-semibold text-slate-900">Recommendations</h4>
               <ul className="mt-2 space-y-2">
                 {report.recommendations.map((recommendation) => (
@@ -484,12 +567,13 @@ export default function InvestmentGuidancePanel({ proposalId }: { proposalId: st
                   </li>
                 ))}
               </ul>
-            </div>
+            </Disclosure>
           )}
 
           <p className="border-t border-slate-100 pt-3 text-xs text-slate-500">
-            Every number traces to approved DXG pricing records and expert
-            rules. Engine {report.engineVersion} ·{" "}
+            Calculation trace available for each line item. Confidence,
+            assumptions, and missing inputs determine whether this range is
+            suitable for quoting. Updated{" "}
             {report.createdAt ? new Date(report.createdAt).toLocaleString() : ""}
           </p>
         </div>

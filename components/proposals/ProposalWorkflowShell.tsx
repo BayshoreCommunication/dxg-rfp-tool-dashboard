@@ -10,13 +10,24 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import GuidancePanel from "./GuidancePanel";
 import InvestmentGuidancePanel from "./InvestmentGuidancePanel";
+import KeyQuestionsPanel from "./KeyQuestionsPanel";
 import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
 
 const labels = ["Provide Information", "Review the Draft", "Answer Key Questions", "See Guidance", "Publish"];
 const tones = { complete: "border-emerald-500 bg-emerald-50", in_progress: "border-cyan-500 bg-cyan-50", available: "border-slate-300 bg-white", gated: "border-slate-200 bg-slate-50" };
 
-export default function ProposalWorkflowShell({ proposalId }: { proposalId: string }) {
+export default function ProposalWorkflowShell({
+  proposalId,
+  estimatedAvBudget,
+  onNavigateToFormStep,
+  onQuestionResolved,
+}: {
+  proposalId: string;
+  estimatedAvBudget?: string;
+  onNavigateToFormStep?: (step: number) => void;
+  onQuestionResolved?: () => void | Promise<void>;
+}) {
   // Read per render (as AddProposalUpload does) so the flagged and unflagged
   // shapes can both be exercised in tests; NEXT_PUBLIC_* is inlined at build.
   const conversationsEnabled = process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED === "true";
@@ -24,6 +35,7 @@ export default function ProposalWorkflowShell({ proposalId }: { proposalId: stri
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [openQuestionCount, setOpenQuestionCount] = useState<number | null>(null);
   // The disclosure used to be expanded by ConversationWorkspace's onOpenRun.
   // That conversation now lives on its own route and reaches these panels by
   // navigation ("View draft", "Review & apply N extracted fields"), so the
@@ -50,7 +62,24 @@ export default function ProposalWorkflowShell({ proposalId }: { proposalId: stri
     setData(result.data);
   };
 
-  const steps = data?.steps ?? ([1, 2, 3, 4, 5] as const).map((id) => ({ id, key: "", label: labels[id - 1], status: "available" as const, summary: "Loading…" }));
+  const handleQuestionResolved = async () => {
+    await onQuestionResolved?.();
+    const result = await getProposalWorkflowAction(proposalId);
+    if (result.success) setData(result.data);
+  };
+
+  const steps = (data?.steps ?? ([1, 2, 3, 4, 5] as const).map((id) => ({ id, key: "", label: labels[id - 1], status: "available" as const, summary: "Loading…" })))
+    .map((item) =>
+      item.id === 3 && openQuestionCount !== null
+        ? {
+            ...item,
+            summary:
+              openQuestionCount === 0
+                ? "All key questions answered"
+                : `${openQuestionCount} key ${openQuestionCount === 1 ? "question" : "questions"} remaining`,
+          }
+        : item,
+    );
   return <section aria-label="Assisted proposal workflow" className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
     {/* The conversation itself lives on one surface only: this editor links out
         to it rather than embedding a second copy. */}
@@ -71,14 +100,14 @@ export default function ProposalWorkflowShell({ proposalId }: { proposalId: stri
                 editor no longer carries a second upload/status panel. */}
             {step === 1 && <><p className="rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-sm text-slate-700">You can upload more than one source. Each file is privately quarantined and checked independently. Pasted notes and previous-proposal reuse will be enabled only through the same approved source boundary.</p></>}
             {step === 2 && <><ProposalContextPanel proposalId={proposalId} /><ProposalDraftPanel proposalId={proposalId} /></>}
-            {step === 3 && <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">Known information gaps also appear in the cited draft under Review the Draft. Complete them in the detailed editor, then regenerate the read-only draft.</p>}
+            {step === 3 && <KeyQuestionsPanel proposalId={proposalId} onQuestionResolved={handleQuestionResolved} onOpenQuestionCountChange={setOpenQuestionCount} />}
           </div>
         </details>
       </div>}
       {!conversationsEnabled && step === 1 && <div><h2 className="mb-3 text-lg font-semibold">Provide information</h2><p className="rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-sm text-slate-700">You can upload more than one source. Each file is privately quarantined and checked independently. Pasted notes and previous-proposal reuse will be enabled only through the same approved source boundary.</p></div>}
       {!conversationsEnabled && step === 2 && <div className="space-y-5"><ProposalContextPanel proposalId={proposalId} /><ProposalDraftPanel proposalId={proposalId} /></div>}
-      {!conversationsEnabled && step === 3 && <div><h2 className="text-lg font-semibold">Answer key questions</h2><p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">Known information gaps appear in the cited draft under Review the Draft. Complete them in the detailed editor, then regenerate the read-only draft. AI-generated questions are not enabled in this slice.</p></div>}
-      {step === 4 && <div className="space-y-3"><h2 className="text-lg font-semibold">See guidance</h2>{conversationsEnabled && data?.steps.some((item) => item.id === 4 && item.status !== "gated") ? <><GuidancePanel proposalId={proposalId} /><InvestmentGuidancePanel proposalId={proposalId} /></> : <p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700"><strong>Investment guidance is not enabled.</strong> It requires separate DXG approval, pricing methodology, and evidence controls. No price or equipment recommendation is being generated.</p>}</div>}
+      {!conversationsEnabled && step === 3 && <div><h2 className="text-lg font-semibold">Answer key questions</h2><p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Key questions are available when the assisted proposal workflow is enabled.</p></div>}
+      {step === 4 && <div className="space-y-3"><h2 className="text-lg font-semibold">See Guidance</h2>{conversationsEnabled && data?.steps.some((item) => item.id === 4 && item.status !== "gated") ? <><GuidancePanel proposalId={proposalId} onNavigateToStep={onNavigateToFormStep} /><InvestmentGuidancePanel proposalId={proposalId} estimatedAvBudget={estimatedAvBudget} /></> : <p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700"><strong>Investment guidance is not enabled.</strong> It requires separate DXG approval, pricing methodology, and evidence controls. No price or equipment recommendation is being generated.</p>}</div>}
       {step === 5 && <div><h2 className="text-lg font-semibold">Publish</h2><p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Complete the detailed proposal form and use the existing final validation and publish controls below. This workflow cannot automatically publish or send a proposal.</p><a href="#manual-proposal-details" className="mt-3 inline-block rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white">Continue to final details</a></div>}
     </div>
   </section>;

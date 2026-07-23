@@ -2,6 +2,11 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { BACKEND_URL } from "@/lib/config";
+import {
+  expireBackendSession,
+  REFRESH_RETRY_ERROR,
+  SESSION_EXPIRED_ERROR,
+} from "@/lib/authTokenState";
 
 // Strip a trailing "/api" segment once at module load — avoids repeated string
 // manipulation on every login attempt.
@@ -18,7 +23,7 @@ const bffHeaders = () => ({
 });
 
 async function refreshBackendAccessToken(token: Record<string, unknown>) {
-  if (!token.refreshToken) return { ...token, authError: "RefreshAccessTokenError" };
+  if (!token.refreshToken) return expireBackendSession(token);
   try {
     const response = await fetchWithTimeout(`${API_ORIGIN}/api/auth/refresh`, {
       method: "POST",
@@ -26,7 +31,10 @@ async function refreshBackendAccessToken(token: Record<string, unknown>) {
       body: JSON.stringify({ refreshToken: token.refreshToken }),
       cache: "no-store",
     });
-    if (!response.ok) throw new Error("Backend refresh rejected");
+    if (response.status === 401 || response.status === 403) {
+      return expireBackendSession(token);
+    }
+    if (!response.ok) throw new Error("Backend refresh failed");
     const data = await response.json();
     return {
       ...token,
@@ -38,7 +46,7 @@ async function refreshBackendAccessToken(token: Record<string, unknown>) {
       authError: undefined,
     };
   } catch {
-    return { ...token, authError: "RefreshAccessTokenError" };
+    return { ...token, authError: REFRESH_RETRY_ERROR };
   }
 }
 
@@ -175,6 +183,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       if (user) {
         return { ...token, ...user };
       }
+      // A rejected refresh token is terminal. Keep the marker until the user
+      // signs in again instead of calling the refresh endpoint on every request.
+      if (token.authError === SESSION_EXPIRED_ERROR) return token;
       if (typeof token.accessTokenExpiresAt === "number" &&
           Date.now() < token.accessTokenExpiresAt - 60_000) return token;
       return refreshBackendAccessToken(token);

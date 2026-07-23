@@ -194,6 +194,21 @@ describe("AssistantWorkspacePage", () => {
     mockedGetUser.mockResolvedValue({ ok: true, data: { name: "Travis Deployment" } });
     mockedGetConversation.mockResolvedValue(emptyConversation);
     mockedListSources.mockResolvedValue({ success: true, data: [], correlationId: "test-correlation" });
+    mockedCreateNotes.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { source: { id: "typed-source" } },
+    } as never);
+    mockedCreateScanJob.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: scanJob("queued"),
+    });
+    mockedGetDurableJob.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: scanJob("succeeded"),
+    });
     mockedGetProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID, event: { eventName: "" } } });
     // Auto-apply stays silent by default: a review that cannot be loaded
     // leaves the manual flow untouched.
@@ -228,9 +243,14 @@ describe("AssistantWorkspacePage", () => {
 
     await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
       PROPOSAL_ID,
-      { content: "We are planning a 300-person conference.", intent: "chat" },
+      { content: "We are planning a 300-person conference.", intent: "chat", sourceIds: ["typed-source"] },
       expect.any(String),
     ));
+    expect(mockedCreateNotes).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { text: "We are planning a 300-person conference.", classification: "non_confidential" },
+      expect.any(String),
+    );
     expect(mockedCreateProposal).toHaveBeenCalledWith(
       expect.objectContaining({ event: { eventName: "Untitled proposal" }, status: "unsubmitted", isDraft: true }),
     );
@@ -758,13 +778,16 @@ describe("AssistantWorkspacePage", () => {
     // No Sources card, tasks, or questions rail in the empty greeting state.
     expect(screen.queryByText("Sources")).not.toBeInTheDocument();
     expect(screen.queryByText("Suggested tasks")).not.toBeInTheDocument();
+    expect(screen.queryByText("AI workspace")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add notes" })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Message the proposal assistant"), { target: { value: "Plan a gala dinner." } });
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     // Once the send lands the rail slides in and stays.
-    expect(await screen.findByText("Sources")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
+    expect(screen.getByText("AI workspace")).toBeInTheDocument();
+    expect(screen.getByLabelText("Proposal assistant tools")).toBeInTheDocument();
     expect(screen.getByText("Suggested tasks")).toBeInTheDocument();
     expect(screen.getByText("Suggested questions")).toBeInTheDocument();
   });
@@ -1271,6 +1294,42 @@ describe("AssistantWorkspacePage", () => {
   });
 
   const STALE_HINT = "This draft was written before your latest answers.";
+
+  test("completed draft paragraphs display their citations", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithDraft());
+    mockedGetProposal.mockResolvedValue(proposalAtVersion(7));
+    mockedGetDraft.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        run: { id: "run-2", model: "gpt-test", expected_proposal_version: 7 },
+        sections: [{
+          id: "section-1",
+          key: "event_overview",
+          heading: "Event Overview",
+          ordinal: 0,
+          paragraphs: [{
+            text: "Northstar Summit is a hybrid event.",
+            citations: ["/content/event/eventName", "/content/event/eventFormat"],
+          }],
+          decision: null,
+          decisionReason: null,
+        }],
+        gaps: [],
+        regenerations: [],
+        proposalMutation: false,
+      },
+    } as never);
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByText("Northstar Summit is a hybrid event.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sources")).toHaveTextContent("Event name");
+    expect(screen.getByLabelText("Sources")).toHaveTextContent("Event format");
+    expect(screen.getByLabelText("Sources")).not.toHaveTextContent("/content/");
+    expect(screen.queryByRole("button", { name: "Copy" })).not.toBeInTheDocument();
+    expect(screen.queryByText("gpt-test")).not.toBeInTheDocument();
+  });
 
   test("the primary action reads Regenerate draft once a draft exists", async () => {
     mockedGetConversation
