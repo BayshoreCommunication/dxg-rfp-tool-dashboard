@@ -1344,10 +1344,16 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    expect(await screen.findByText("Northstar Summit is a hybrid event.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Sources")).toHaveTextContent("Event name");
-    expect(screen.getByLabelText("Sources")).toHaveTextContent("Event format");
-    expect(screen.getByLabelText("Sources")).not.toHaveTextContent("/content/");
+    const draftParagraph = await screen.findByText(
+      "Northstar Summit is a hybrid event.",
+    );
+    expect(draftParagraph).toBeInTheDocument();
+    const citationSources = draftParagraph.parentElement?.querySelector(
+      '[aria-label="Sources"]',
+    );
+    expect(citationSources).toHaveTextContent("Event name");
+    expect(citationSources).toHaveTextContent("Event format");
+    expect(citationSources).not.toHaveTextContent("/content/");
     expect(screen.queryByRole("button", { name: "Copy" })).not.toBeInTheDocument();
     expect(screen.queryByText("gpt-test")).not.toBeInTheDocument();
   });

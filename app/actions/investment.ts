@@ -1,6 +1,6 @@
 "use server";
 import { BACKEND_URL } from "@/lib/config";
-import { getBackendAccessToken } from "@/lib/server/backendSession";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 type Result<T> =
   | { success: true; data: T }
@@ -281,18 +281,14 @@ const call = async (
   proposalId: string,
   init?: RequestInit,
 ): Promise<Result<InvestmentReport>> => {
-  const token = await getBackendAccessToken();
-  if (!token)
-    return { success: false, code: "AUTHENTICATION_REQUIRED", message: "Your session expired." };
   const suffix = init?.method === "POST" ? "" : "/latest";
   try {
-    const response = await fetch(
+    const response = await authenticatedBackendFetch(
       `${BACKEND_URL}/api/v1/proposals/${encodeURIComponent(proposalId)}/investment-guidance-reports${suffix}`,
       {
         ...init,
         cache: "no-store",
         headers: {
-          Authorization: `Bearer ${token}`,
           "X-Correlation-ID": crypto.randomUUID(),
           ...(init?.headers ?? {}),
         },

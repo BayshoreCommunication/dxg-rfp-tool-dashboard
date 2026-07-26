@@ -1,9 +1,9 @@
 "use server";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { getBackendAccessToken } from "@/lib/server/backendSession";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
 import { BACKEND_URL as API_URL, FRONTEND_URL } from "@/lib/config";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 import { revalidatePath } from "next/cache";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,9 +31,6 @@ type ApiResponse = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal helpers
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** Reads the session access token; returns null when the user is not signed in. */
-const getAccessToken = getBackendAccessToken;
 
 const toSlug = (value: string): string =>
   value
@@ -136,15 +133,10 @@ export async function createProposalAction(
   },
 ): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-    const res = await fetch(`${API_URL}/api/proposals`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/proposals`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
       cache: "no-store",
@@ -176,11 +168,6 @@ export async function getProposalsAction(params?: {
   sortOrder?: "asc" | "desc";
   includeCounts?: boolean;
 }): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   const query = new URLSearchParams();
   if (params?.status) query.set("status", params.status);
   if (typeof params?.favorite === "boolean") {
@@ -208,11 +195,13 @@ export async function getProposalsAction(params?: {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/proposals?${query.toString()}`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals?${query.toString()}`,
+      {
+        method: "GET",
+        cache: "no-store",
+      },
+    );
     const data = await res.json();
     return {
       success: res.ok,
@@ -234,20 +223,17 @@ export async function getProposalCountsAction(search?: string): Promise<{
 }> {
   const empty: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0, archive: 0, saved: 0 };
 
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated.", counts: empty };
-  }
-
   const query = new URLSearchParams({ includeCounts: "true", limit: "1", page: "1" });
   if (search?.trim()) query.set("search", search.trim());
 
   try {
-    const res = await fetch(`${API_URL}/api/proposals?${query.toString()}`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals?${query.toString()}`,
+      {
+        method: "GET",
+        cache: "no-store",
+      },
+    );
     const data = await res.json();
 
     if (!res.ok || !data.counts) {
@@ -278,13 +264,8 @@ export async function getProposalCountsAction(search?: string): Promise<{
  */
 export async function getProposalByIdAction(id: string): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-
-    const res = await fetch(`${API_URL}/api/proposals/${id}`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/proposals/${id}`, {
       method: "GET",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
       cache: "no-store",
     });
     const data = await res.json();
@@ -310,21 +291,18 @@ export async function copyProposalAction(
     isDraft?: boolean;
   },
 ): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${sourceId}/copy`, {
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals/${sourceId}/copy`,
+      {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(overrides ?? {}),
       cache: "no-store",
-    });
+      },
+    );
     const data = await res.json();
     if (res.ok) revalidatePath("/proposals");
     return {
@@ -347,17 +325,11 @@ export async function updateProposalAction(
     status?: string;
   },
 ): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/proposals/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updates),
       cache: "no-store",
@@ -376,15 +348,9 @@ export async function updateProposalAction(
 
 /** Archive a proposal (soft delete — recoverable for 30 days). */
 export async function deleteProposalAction(id: string): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/proposals/${id}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();
@@ -401,17 +367,14 @@ export async function deleteProposalAction(id: string): Promise<ApiResponse> {
 
 /** Restore an archived proposal back to active. */
 export async function restoreProposalAction(id: string): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}/restore`, {
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals/${id}/restore`,
+      {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
-    });
+      },
+    );
     const data = await res.json();
     if (res.ok) revalidatePath("/proposals");
     return {
@@ -425,17 +388,14 @@ export async function restoreProposalAction(id: string): Promise<ApiResponse> {
 
 /** Permanently delete an archived proposal — cannot be undone. */
 export async function permanentlyDeleteProposalAction(id: string): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}/permanent`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals/${id}/permanent`,
+      {
+        method: "DELETE",
+        cache: "no-store",
+      },
+    );
     const data = await res.json();
     if (res.ok) revalidatePath("/proposals");
     return {
@@ -454,21 +414,18 @@ export async function updateProposalStatusAction(
   id: string,
   status: "unsubmitted" | "submitted" | "reviewed" | "approved" | "rejected",
 ): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}/status`, {
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals/${id}/status`,
+      {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ status }),
       cache: "no-store",
-    });
+      },
+    );
     const data = await res.json();
     if (res.ok) revalidatePath("/proposals");
     return {
@@ -492,21 +449,18 @@ export async function updateProposalMetaAction(
     viewsCount?: number;
   },
 ): Promise<ApiResponse> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { success: false, message: "User is not authenticated." };
-  }
-
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}/meta`, {
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals/${id}/meta`,
+      {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updates),
       cache: "no-store",
-    });
+      },
+    );
     const data = await res.json();
     if (res.ok) revalidatePath("/proposals");
     return {
@@ -524,15 +478,13 @@ export async function incrementProposalViewsAction(
   id: string,
 ): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-
-    const res = await fetch(`${API_URL}/api/proposals/${id}/views`, {
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals/${id}/views`,
+      {
       method: "PATCH",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
       cache: "no-store",
-    });
+      },
+    );
     const data = await res.json();
     return {
       success: res.ok,
@@ -559,22 +511,14 @@ export async function uploadProposalFilesAction(formData: FormData): Promise<{
   avQuoteFileUrls: string[];
 }> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return {
-        success: false,
-        message: "User is not authenticated.",
-        supportDocumentUrls: [],
-        avQuoteFileUrls: [],
-      };
-    }
-
-    const res = await fetch(`${API_URL}/api/proposals/upload-files`, {
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/proposals/upload-files`,
+      {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
       body: formData,
       cache: "no-store",
-    });
+      },
+    );
 
     const json = await res.json();
 
@@ -625,20 +569,17 @@ export async function extractProposalFromFile(file: File): Promise<{
   message?: string;
 }> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(`${API_URL}/api/extract-proposal`, {
+    const res = await authenticatedBackendFetch(
+      `${API_URL}/api/extract-proposal`,
+      {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
       body: formData,
       cache: "no-store",
-    });
+      },
+    );
 
     const json = await res.json();
     return {

@@ -1,6 +1,6 @@
 "use server";
 
-import { getBackendAccessToken } from "@/lib/server/backendSession";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 import { BACKEND_URL as API_URL } from "@/lib/config";
 
@@ -10,8 +10,6 @@ type ApiResponse = {
   data?: unknown;
   pagination?: unknown;
 };
-
-const getAccessToken = getBackendAccessToken;
 
 export type SendProposalEmailPayload = {
   proposalId: string;
@@ -24,16 +22,10 @@ export async function sendProposalEmailAction(
   payload: SendProposalEmailPayload,
 ): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
-    const res = await fetch(`${API_URL}/api/emails/send`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/emails/send`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
       cache: "no-store",
@@ -58,19 +50,13 @@ export async function getEmailCampaignsAction(params?: {
   limit?: number;
 }): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
     const query = new URLSearchParams();
     if (params?.proposalId) query.set("proposalId", params.proposalId);
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
 
-    const res = await fetch(`${API_URL}/api/emails?${query.toString()}`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/emails?${query.toString()}`, {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();
@@ -92,17 +78,11 @@ export async function getEmailStatsAction(
   proposalId?: string,
 ): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
     const query = new URLSearchParams();
     if (proposalId) query.set("proposalId", proposalId);
 
-    const res = await fetch(`${API_URL}/api/emails/stats?${query.toString()}`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/emails/stats?${query.toString()}`, {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();
@@ -123,14 +103,8 @@ export async function deleteEmailCampaignsByProposalAction(
   proposalId: string,
 ): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
-    const res = await fetch(`${API_URL}/api/emails/proposal/${proposalId}`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/emails/proposal/${proposalId}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();
@@ -152,14 +126,8 @@ export async function deleteEmailCampaignAction(
   campaignId: string,
 ): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
-    const res = await fetch(`${API_URL}/api/emails/${campaignId}`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/emails/${campaignId}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();

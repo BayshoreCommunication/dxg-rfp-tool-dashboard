@@ -121,6 +121,8 @@ const Sidebar = () => {
   useEffect(() => {
     if (!socketUrl) return;
 
+    let disposed = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     const socket = new WebSocket(socketUrl);
 
     socket.onmessage = (event) => {
@@ -158,7 +160,21 @@ const Sidebar = () => {
       console.warn("Notification WebSocket connection error.");
     };
 
+    socket.onclose = () => {
+      if (disposed) return;
+      reconnectTimer = setTimeout(() => {
+        void getNotificationSocketConfigAction().then((result) => {
+          if (!disposed && result.success && result.socketUrl) {
+            setSocketUrl(result.socketUrl);
+          }
+        });
+      }, 2_000);
+    };
+
     return () => {
+      disposed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      socket.onclose = null;
       socket.close();
     };
   }, [pathname, socketUrl]);

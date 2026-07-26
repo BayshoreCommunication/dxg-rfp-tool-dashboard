@@ -1,11 +1,7 @@
 "use server";
 
-import { getBackendAccessToken } from "@/lib/server/backendSession";
 import { BACKEND_URL } from "@/lib/config";
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-const getAccessToken = getBackendAccessToken;
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 export type VendorDocument = {
   name: string;
@@ -41,9 +37,6 @@ export const getVendorResponsesAction = async ({
   campaignId?: string;
 } = {}) => {
   try {
-    const token = await getAccessToken();
-    if (!token) return { success: false, message: "Not authenticated", data: [] };
-
     const params = new URLSearchParams({
       page: String(page),
       limit: String(limit),
@@ -52,10 +45,12 @@ export const getVendorResponsesAction = async ({
     if (campaignId) params.set("campaignId", campaignId);
     else if (proposalId) params.set("proposalId", proposalId);
 
-    const res = await fetch(`${BACKEND_URL}/api/vendor-responses?${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await authenticatedBackendFetch(
+      `${BACKEND_URL}/api/vendor-responses?${params}`,
+      {
       cache: "no-store",
-    });
+      },
+    );
 
     const json = await res.json();
     return json;
@@ -66,13 +61,10 @@ export const getVendorResponsesAction = async ({
 
 export const getVendorUnreadCountAction = async (): Promise<number> => {
   try {
-    const token = await getAccessToken();
-    if (!token) return 0;
-
-    const res = await fetch(`${BACKEND_URL}/api/vendor-responses?page=1&limit=1`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
+    const res = await authenticatedBackendFetch(
+      `${BACKEND_URL}/api/vendor-responses?page=1&limit=1`,
+      { cache: "no-store" },
+    );
 
     const json = await res.json();
     return typeof json?.unreadCount === "number" ? json.unreadCount : 0;
@@ -83,13 +75,12 @@ export const getVendorUnreadCountAction = async (): Promise<number> => {
 
 export const getVendorResponseByIdAction = async (id: string) => {
   try {
-    const token = await getAccessToken();
-    if (!token) return { success: false, message: "Not authenticated" };
-
-    const res = await fetch(`${BACKEND_URL}/api/vendor-responses/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await authenticatedBackendFetch(
+      `${BACKEND_URL}/api/vendor-responses/${id}`,
+      {
       cache: "no-store",
-    });
+      },
+    );
 
     return await res.json();
   } catch {
@@ -99,13 +90,10 @@ export const getVendorResponseByIdAction = async (id: string) => {
 
 export const markVendorResponseReadAction = async (id: string) => {
   try {
-    const token = await getAccessToken();
-    if (!token) return { success: false, message: "Not authenticated" };
-
-    const res = await fetch(`${BACKEND_URL}/api/vendor-responses/${id}/read`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await authenticatedBackendFetch(
+      `${BACKEND_URL}/api/vendor-responses/${id}/read`,
+      { method: "PATCH" },
+    );
 
     return await res.json();
   } catch {

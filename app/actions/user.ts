@@ -1,7 +1,7 @@
 "use server";
 
-import { getBackendAccessToken } from "@/lib/server/backendSession";
 import { BACKEND_URL } from "@/lib/config";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 interface UserDataResponse {
   error?: string;
@@ -10,18 +10,9 @@ interface UserDataResponse {
 }
 
 export async function getUserData(): Promise<UserDataResponse> {
-  const accessToken = await getBackendAccessToken();
   const apiUrl = BACKEND_URL.endsWith("/api")
     ? BACKEND_URL.slice(0, -4)
     : BACKEND_URL;
-
-  if (!accessToken) {
-    return {
-      error: "User is not authenticated.",
-      ok: false,
-      data: null,
-    };
-  }
 
   try {
     if (!apiUrl) {
@@ -32,11 +23,10 @@ export async function getUserData(): Promise<UserDataResponse> {
       };
     }
 
-    const response = await fetch(`${apiUrl}/api/users/me`, {
+    const response = await authenticatedBackendFetch(`${apiUrl}/api/users/me`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
       },
       cache: "no-store",
     });

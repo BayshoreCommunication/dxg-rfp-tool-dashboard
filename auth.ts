@@ -1,69 +1,30 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { BACKEND_URL } from "@/lib/config";
+import {
+  AUTH_API_ORIGIN,
+  authBffHeaders,
+  BACKEND_REFRESH_COMMAND,
+  BACKEND_REFRESH_HANDOFF,
+  backendRefreshCoordinator,
+  fetchWithTimeout,
+  verifyBackendRefreshCommand,
+} from "@/lib/authRefresh";
 import {
   expireBackendSession,
-  REFRESH_RETRY_ERROR,
+  readJwtExpiresAt,
   SESSION_EXPIRED_ERROR,
 } from "@/lib/authTokenState";
 
-// Strip a trailing "/api" segment once at module load — avoids repeated string
-// manipulation on every login attempt.
-const API_ORIGIN = BACKEND_URL.endsWith("/api")
-  ? BACKEND_URL.slice(0, -4)
-  : BACKEND_URL;
-
-// Default timeout (ms) for backend auth requests. Prevents indefinite hangs
-// caused by Vercel cold-starts or slow networks.
-const AUTH_FETCH_TIMEOUT_MS = 8000;
-const bffHeaders = () => ({
-  "Content-Type": "application/json",
-  "x-rfpilot-bff-key": process.env.BFF_SHARED_SECRET || "",
-});
-
-async function refreshBackendAccessToken(token: Record<string, unknown>) {
-  if (!token.refreshToken) return expireBackendSession(token);
-  try {
-    const response = await fetchWithTimeout(`${API_ORIGIN}/api/auth/refresh`, {
-      method: "POST",
-      headers: bffHeaders(),
-      body: JSON.stringify({ refreshToken: token.refreshToken }),
-      cache: "no-store",
-    });
-    if (response.status === 401 || response.status === 403) {
-      return expireBackendSession(token);
-    }
-    if (!response.ok) throw new Error("Backend refresh failed");
-    const data = await response.json();
-    return {
-      ...token,
-      accessToken: data.accessToken,
-      accessTokenExpiresAt: data.tokenExpiresAt,
-      refreshToken: data.refreshToken,
-      refreshTokenExpiresAt: data.refreshExpiresAt,
-      sessionId: data.sessionId,
-      authError: undefined,
-    };
-  } catch {
-    return { ...token, authError: REFRESH_RETRY_ERROR };
+class DashboardCredentialsSignin extends CredentialsSignin {
+  constructor(code: string) {
+    super();
+    this.code = code;
   }
 }
 
-function fetchWithTimeout(
-  url: string,
-  options: RequestInit,
-  timeoutMs = AUTH_FETCH_TIMEOUT_MS,
-): Promise<Response> {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
-    clearTimeout(id),
-  );
-}
-
-export const { auth, signIn, signOut, handlers } = NextAuth({
-  secret: process.env.NEXTAUTH_SECRET,
+export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   trustHost: true,
   providers: [
     Google({
@@ -89,10 +50,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         try {
           const response = await fetchWithTimeout(
-            `${API_ORIGIN}/api/auth/login`,
+            `${AUTH_API_ORIGIN}/api/auth/login`,
             {
               method: "POST",
-              headers: bffHeaders(),
+              headers: authBffHeaders(),
               body: JSON.stringify({
                 email: credentials.email,
                 password: credentials.password,
@@ -100,12 +61,19 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             },
           );
 
+          const data = await response.json().catch(() => ({}));
           if (!response.ok) {
-            return null;
+            throw new DashboardCredentialsSignin(
+              typeof data?.errorCode === "string"
+                ? data.errorCode
+                : "credentials",
+            );
           }
-
-          const data = await response.json();
-          if (!data?.user?._id || !data?.accessToken) {
+          if (
+            !data?.user?._id ||
+            !data?.accessToken ||
+            typeof data?.refreshToken !== "string"
+          ) {
             return null;
           }
 
@@ -121,8 +89,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             refreshTokenExpiresAt: data.refreshExpiresAt,
             sessionId: data.sessionId,
           } as Record<string, unknown>;
-        } catch {
-          return null;
+        } catch (error) {
+          if (error instanceof CredentialsSignin) throw error;
+          throw new DashboardCredentialsSignin("server_unavailable");
         }
       },
     }),
@@ -141,10 +110,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         try {
           const response = await fetchWithTimeout(
-            `${API_ORIGIN}/api/auth/google`,
+            `${AUTH_API_ORIGIN}/api/auth/google`,
             {
               method: "POST",
-              headers: bffHeaders(),
+              headers: authBffHeaders(),
               body: JSON.stringify({
                 idToken: account.id_token || "",
               }),
@@ -156,7 +125,11 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           }
 
           const data = await response.json();
-          if (!data?.user?._id || !data?.accessToken) {
+          if (
+            !data?.user?._id ||
+            !data?.accessToken ||
+            typeof data?.refreshToken !== "string"
+          ) {
             return false;
           }
 
@@ -179,16 +152,59 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
-        return { ...token, ...user };
+        return { ...token, ...user, authError: undefined };
       }
+      const nextToken = { ...token };
+      delete nextToken[BACKEND_REFRESH_HANDOFF];
       // A rejected refresh token is terminal. Keep the marker until the user
       // signs in again instead of calling the refresh endpoint on every request.
-      if (token.authError === SESSION_EXPIRED_ERROR) return token;
-      if (typeof token.accessTokenExpiresAt === "number" &&
-          Date.now() < token.accessTokenExpiresAt - 60_000) return token;
-      return refreshBackendAccessToken(token);
+      if (nextToken.authError === SESSION_EXPIRED_ERROR) return nextToken;
+      if (typeof nextToken.refreshToken !== "string") {
+        const legacyExpiresAt =
+          typeof nextToken.accessTokenExpiresAt === "number"
+            ? nextToken.accessTokenExpiresAt
+            : readJwtExpiresAt(nextToken.accessToken);
+        if (
+          typeof nextToken.accessToken === "string" &&
+          legacyExpiresAt &&
+          Date.now() < legacyExpiresAt
+        ) {
+          return { ...nextToken, accessTokenExpiresAt: legacyExpiresAt };
+        }
+        return expireBackendSession(nextToken);
+      }
+      if (
+        typeof nextToken.refreshTokenExpiresAt === "number" &&
+        Date.now() >= nextToken.refreshTokenExpiresAt
+      ) {
+        return expireBackendSession(nextToken);
+      }
+      const sessionId =
+        typeof nextToken.sessionId === "string" ? nextToken.sessionId : "";
+      const forceRefresh =
+        trigger === "update" &&
+        Boolean(sessionId) &&
+        (await verifyBackendRefreshCommand(
+          (session as Record<string, unknown> | undefined)?.[
+            BACKEND_REFRESH_COMMAND
+          ],
+          sessionId,
+        ));
+      if (!forceRefresh) return nextToken;
+
+      const refreshed = await backendRefreshCoordinator.refresh(nextToken);
+      if (
+        typeof refreshed.accessToken === "string" &&
+        typeof refreshed.refreshToken === "string" &&
+        refreshed.authError === undefined
+      ) {
+        return Object.assign(refreshed, {
+          [BACKEND_REFRESH_HANDOFF]: true,
+        });
+      }
+      return refreshed;
     },
     async session({ session, token }) {
       if (token) {
@@ -199,7 +215,23 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           email: token.email,
           avatar: token.avatar,
         });
-        Object.assign(session, { authError: token.authError });
+        Object.assign(session, {
+          authError: token.authError,
+          backendAccessExpired:
+            typeof token.accessTokenExpiresAt === "number" &&
+            Date.now() >= token.accessTokenExpiresAt,
+        });
+        if (token[BACKEND_REFRESH_HANDOFF] === true) {
+          Object.assign(session, {
+            [BACKEND_REFRESH_HANDOFF]: {
+              accessToken: token.accessToken,
+              accessTokenExpiresAt: token.accessTokenExpiresAt,
+              refreshToken: token.refreshToken,
+              refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+              sessionId: token.sessionId,
+            },
+          });
+        }
       }
       return session;
     },

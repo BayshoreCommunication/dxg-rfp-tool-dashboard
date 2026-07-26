@@ -1,6 +1,6 @@
 "use server";
 
-import { getBackendAccessToken } from "@/lib/server/backendSession";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 import { BACKEND_URL as API_URL } from "@/lib/config";
 
@@ -39,18 +39,10 @@ export type DashboardOverviewData = {
   latestProposals: DashboardOverviewProposal[];
 };
 
-const getAccessToken = getBackendAccessToken;
-
 export async function getDashboardOverviewAction(): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
-    const res = await fetch(`${API_URL}/api/dashboard/overview`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/dashboard/overview`, {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();
