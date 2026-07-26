@@ -1,6 +1,6 @@
 "use server";
 import { BACKEND_URL } from "@/lib/config";
-import { getBackendAccessToken } from "@/lib/server/backendSession";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 type Result<T> =
   | { success: true; data: T }
@@ -116,15 +116,11 @@ const call = async <T,>(
   init: RequestInit | undefined,
   parse: (value: unknown) => T | null,
 ): Promise<Result<T>> => {
-  const token = await getBackendAccessToken();
-  if (!token)
-    return { success: false, code: "AUTHENTICATION_REQUIRED", message: "Your session expired." };
   try {
-    const response = await fetch(`${BACKEND_URL}${path}`, {
+    const response = await authenticatedBackendFetch(`${BACKEND_URL}${path}`, {
       ...init,
       cache: "no-store",
       headers: {
-        Authorization: `Bearer ${token}`,
         "X-Correlation-ID": crypto.randomUUID(),
         ...(init?.headers ?? {}),
       },

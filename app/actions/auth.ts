@@ -1,7 +1,9 @@
 "use server";
 
 import { signIn, signOut } from "@/auth";
-import { getBackendAccessToken } from "@/lib/server/backendSession";
+import { authBffHeaders } from "@/lib/authRefresh";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
+import { revokeCurrentBackendSession } from "@/lib/server/backendLogout";
 
 import { BACKEND_URL } from "@/lib/config";
 
@@ -64,8 +66,8 @@ export async function signUpAction(payload: {
   try {
     const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: authBffHeaders(),
+      body: JSON.stringify({ ...payload, createSession: false }),
       cache: "no-store",
     });
     const data = await res.json();
@@ -86,7 +88,27 @@ export async function signUpAction(payload: {
 ───────────────────────────────────────── */
 export async function signInAction(email: string, password: string) {
   try {
-    await signIn("credentials", { email, password, redirect: false });
+    const resultUrl = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+    const result = new URL(String(resultUrl), "http://auth.local");
+    if (result.searchParams.has("error")) {
+      const code = result.searchParams.get("code");
+      const messages: Record<string, string> = {
+        USER_NOT_FOUND: "No account found with this email.",
+        WRONG_PASSWORD: "Incorrect password. Please try again.",
+        USER_BLOCKED: "Your account has been blocked. Please contact support.",
+        server_unavailable: "Could not reach the server. Please try again.",
+      };
+      return {
+        success: false,
+        message:
+          (code ? messages[code] : undefined) ||
+          "Login failed. Please try again.",
+      };
+    }
     return {
       success: true,
       message: "Login successful",
@@ -177,10 +199,7 @@ export async function resetPasswordAction(email: string, newPassword: string) {
 ───────────────────────────────────────── */
 export async function getCurrentUserAction() {
   try {
-    const accessToken = await getBackendAccessToken();
-    if (!accessToken) return { success: false, message: "User is not authenticated." };
-    const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    const res = await authenticatedBackendFetch(`${BACKEND_URL}/api/auth/me`, {
       cache: "no-store",
     });
     const data = await res.json();
@@ -197,17 +216,8 @@ export async function getCurrentUserAction() {
 export async function signOutAction() {
   let backendWarning: string | undefined;
   try {
-    const accessToken = await getBackendAccessToken();
-
-    // Call backend logout if accessToken exists
-    if (accessToken) {
-      const response = await fetch(`${BACKEND_URL}/api/auth/logout`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: "no-store",
-      });
-      if (!response.ok) backendWarning = "Backend session revocation was not confirmed.";
-    }
+    const revoked = await revokeCurrentBackendSession();
+    if (!revoked) backendWarning = "Backend session revocation was not confirmed.";
   } catch (error: unknown) {
     backendWarning = getErrorMessage(error);
   }

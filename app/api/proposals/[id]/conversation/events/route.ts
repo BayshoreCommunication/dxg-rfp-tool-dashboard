@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { BACKEND_URL } from "@/lib/config";
-import { getBackendAccessToken } from "@/lib/server/backendSession";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,17 +17,12 @@ export async function GET(
     return new Response("Invalid proposal id", { status: 400 });
   }
 
-  const token = await getBackendAccessToken();
-  if (!token) {
-    return new Response("Authentication required", { status: 401 });
-  }
-
   let upstream: Response;
   try {
-    upstream = await fetch(
+    upstream = await authenticatedBackendFetch(
       `${BACKEND_URL}/api/v1/proposals/${encodeURIComponent(id)}/conversation/events`,
       {
-        headers: { Authorization: `Bearer ${token}`, Accept: "text/event-stream" },
+        headers: { Accept: "text/event-stream" },
         cache: "no-store",
         signal: req.signal,
       },

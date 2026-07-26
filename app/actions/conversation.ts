@@ -1,7 +1,7 @@
 "use server";
 
 import { BACKEND_URL } from "@/lib/config";
-import { getBackendAccessToken } from "@/lib/server/backendSession";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 type ActionResult<T> = { success: true; data: T; correlationId: string } | { success: false; code: string; message: string; correlationId: string };
 
@@ -32,13 +32,11 @@ const unknownFailureMessage = (correlationId: string) =>
 
 const request = async <T>(path: string, init?: RequestInit, parse?: (value: unknown) => T | null): Promise<ActionResult<T>> => {
   const correlationId = crypto.randomUUID();
-  const token = await getBackendAccessToken();
-  if (!token) return { success: false, code: "AUTHENTICATION_REQUIRED", message: safeMessages.AUTHENTICATION_REQUIRED, correlationId };
   try {
-    const response = await fetch(`${BACKEND_URL}${path}`, {
+    const response = await authenticatedBackendFetch(`${BACKEND_URL}${path}`, {
       ...init,
       cache: "no-store",
-      headers: { Authorization: `Bearer ${token}`, "X-Correlation-ID": correlationId, ...(init?.headers ?? {}) },
+      headers: { "X-Correlation-ID": correlationId, ...(init?.headers ?? {}) },
     });
     const payload: unknown = await response.json().catch(() => null);
     const body = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};

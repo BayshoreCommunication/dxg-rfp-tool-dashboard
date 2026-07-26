@@ -1,6 +1,6 @@
 "use server";
 
-import { getBackendAccessToken } from "@/lib/server/backendSession";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 import { BACKEND_URL as API_URL } from "@/lib/config";
 
@@ -13,8 +13,6 @@ type ApiResponse = {
   websocket?: unknown;
   socketUrl?: string;
 };
-
-const getAccessToken = getBackendAccessToken;
 
 export type NotificationItem = {
   _id: string;
@@ -34,11 +32,6 @@ export async function getNotificationsAction(params?: {
   unreadOnly?: boolean;
 }): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
     const query = new URLSearchParams();
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
@@ -46,11 +39,10 @@ export async function getNotificationsAction(params?: {
       query.set("unreadOnly", String(params.unreadOnly));
     }
 
-    const res = await fetch(
+    const res = await authenticatedBackendFetch(
       `${API_URL}/api/notifications?${query.toString()}`,
       {
         method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       },
     );
@@ -75,14 +67,8 @@ export async function getNotificationsAction(params?: {
 
 export async function getUnreadNotificationCountAction(): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
-    const res = await fetch(`${API_URL}/api/notifications/unread-count`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/notifications/unread-count`, {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();
@@ -106,14 +92,8 @@ export async function markNotificationAsReadAction(
   id: string,
 ): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
-    const res = await fetch(`${API_URL}/api/notifications/${id}/read`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/notifications/${id}/read`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();
@@ -134,14 +114,8 @@ export async function markNotificationAsReadAction(
 
 export async function markAllNotificationsAsReadAction(): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
-    }
-
-    const res = await fetch(`${API_URL}/api/notifications/read-all`, {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/notifications/read-all`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     const data = await res.json();
@@ -162,16 +136,27 @@ export async function markAllNotificationsAsReadAction(): Promise<ApiResponse> {
 
 export async function getNotificationSocketConfigAction(): Promise<ApiResponse> {
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return { success: false, message: "User is not authenticated." };
+    const response = await authenticatedBackendFetch(
+      `${API_URL}/api/notifications/socket-ticket`,
+      {
+        method: "POST",
+        cache: "no-store",
+      },
+    );
+    const data = await response.json().catch(() => ({}));
+    const ticket = data?.data?.ticket;
+    if (!response.ok || typeof ticket !== "string") {
+      return {
+        success: false,
+        message: data?.message || "Unable to authorize notification socket.",
+      };
     }
 
     const wsBase = API_URL.replace(/^http/i, "ws").replace(/\/+$/, "");
 
     return {
       success: true,
-      socketUrl: `${wsBase}/api/notifications/ws?token=${encodeURIComponent(token)}`,
+      socketUrl: `${wsBase}/api/notifications/ws?ticket=${encodeURIComponent(ticket)}`,
     };
   } catch (error: unknown) {
     return {

@@ -4,17 +4,20 @@
  * survive anything: missing keys, wrong types, out-of-range numbers.
  */
 import { getLatestInvestmentGuidanceAction } from "./investment";
+import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
-jest.mock("@/lib/server/backendSession", () => ({
-  getBackendAccessToken: jest.fn(async () => "test-token"),
+jest.mock("@/lib/server/backendClient", () => ({
+  authenticatedBackendFetch: jest.fn(),
 }));
 
 const respondWith = (data: unknown) => {
-  global.fetch = jest.fn(async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({ data }),
-  })) as unknown as typeof fetch;
+  jest.mocked(authenticatedBackendFetch).mockResolvedValue(
+    {
+      ok: true,
+      status: 200,
+      json: async () => ({ data }),
+    } as Response,
+  );
 };
 
 const baseReport = {
