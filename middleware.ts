@@ -34,8 +34,10 @@ export async function middleware(request: NextRequest) {
     "/vendor-response",
     // Public API routes — vendor form submission & check (backend handles its own auth)
     "/api/vendor-responses",
-    "/api/metadata",
     "/api/proposals",
+    // NOTE: /api/metadata is deliberately NOT public. It server-side fetches a
+    // caller-supplied URL, so leaving it unauthenticated made it an open SSRF
+    // proxy. The route enforces its own session check as well.
   ];
   if (publicPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
