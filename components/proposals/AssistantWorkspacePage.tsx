@@ -855,6 +855,18 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const threadEndRef = useRef<HTMLDivElement | null>(null);
   const creatingRef = useRef(false);
 
+  // Grow for both explicit newlines and browser-wrapped lines. Counting
+  // newlines alone leaves long single-line messages hidden inside a one-row
+  // textarea.
+  useEffect(() => {
+    const textarea = composerRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 160 ? "auto" : "hidden";
+  }, [text]);
+
   const {
     data, loading, loadError, refresh, pending, sendMessage, retrySend,
     resolveQuestion, questionBusyId, questionError,
@@ -1038,22 +1050,13 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       setSendBusy(false);
     }
     const content = value || "Please review the attached file.";
-    if (value && sourceIds.length === 0) {
-      setSendBusy(true);
-      const typedSourceId = await submitNotes(value, "non_confidential", id);
-      setSendBusy(false);
-      if (!typedSourceId) {
-        setSendError("Your message could not be prepared for requirement extraction.");
-        return;
-      }
-      sourceIds.push(typedSourceId);
-    }
     setText("");
     setStaged([]);
     uploadedRef.current.clear();
     const sent = await sendMessage({ content, intent: "chat", ...(sourceIds.length > 0 ? { sourceIds } : {}) }, id);
-    // Every planner brief, whether typed or attached, enters the same governed
-    // source boundary and starts extraction once scanning succeeds.
+    // Attachments enter the governed source boundary and start extraction once
+    // scanning succeeds. Ordinary chat remains conversation context; users can
+    // explicitly promote longer text through the "Add notes" source control.
     if (sent && sourceIds.length > 0) queueAutoExtract(id, sourceIds);
   };
 
@@ -1388,10 +1391,10 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
             value={text}
             onChange={event => setText(event.target.value)}
             onKeyDown={onComposerKeyDown}
-            rows={Math.min(6, Math.max(1, text.split("\n").length))}
+            rows={1}
             placeholder="Describe your event or ask for help…"
             aria-label="Message the proposal assistant"
-            className="max-h-40 flex-1 resize-none bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-slate-900 outline-none placeholder:text-slate-400"
           />
           <button
             type="button"
@@ -1466,7 +1469,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
             <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
               <div
                 aria-hidden
-                className="h-24 w-24 rounded-full"
+                className="h-24 w-24 rounded-full motion-safe:animate-[ai-orbit_8s_linear_infinite]"
                 style={{
                   background: `radial-gradient(circle at 35% 35%, #ffffff 0%, ${ACCENT}55 35%, ${ACCENT} 70%, ${DEEP} 100%)`,
                   boxShadow: `0 0 60px 18px ${ACCENT}33, 0 0 25px 4px ${ACCENT}44`,

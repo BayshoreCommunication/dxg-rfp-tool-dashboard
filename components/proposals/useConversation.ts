@@ -63,7 +63,7 @@ export function useConversation(proposalId: string | null) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingSend[]>([]);
   const [questionBusyId, setQuestionBusyId] = useState<string | null>(null);
-  const [questionError, setQuestionError] = useState<string | null>(null);
+  const [questionFailure, setQuestionFailure] = useState<{ questionId: string; message: string } | null>(null);
   const dataRef = useRef<ConversationData | null>(null);
 
   useEffect(() => { dataRef.current = data; }, [data]);
@@ -214,15 +214,42 @@ export function useConversation(proposalId: string | null) {
   const resolveQuestion = useCallback(async (questionId: string, input: { status: "answered" | "dismissed"; answer?: string }) => {
     if (!proposalId) return false;
     setQuestionBusyId(questionId);
-    setQuestionError(null);
+    setQuestionFailure(null);
     const result = await patchConversationQuestionAction(proposalId, questionId, input);
     setQuestionBusyId(null);
-    if (!result.success) { setQuestionError(result.message); return false; }
+    if (!result.success) {
+      // A question answer spans Mongo (proposal field) and Postgres
+      // (conversation history). If Mongo succeeded and the live synchronizer
+      // retired the question before Postgres recorded the answer, the request
+      // can report a failure even though the authoritative conversation has
+      // already advanced. Re-read once before showing an error; validation
+      // failures deliberately stay on the same question and keep their useful
+      // inline message.
+      if (result.code !== "INVALID_CANDIDATE_VALUE" && result.code !== "INVALID_QUESTION_ANSWER") {
+        const latest = await getConversationAction(proposalId);
+        if (latest.success) {
+          setLoadError(null);
+          setData(latest.data);
+          const stillOpen = latest.data.questions.some(question => question.id === questionId && question.status === "open");
+          if (!stillOpen) {
+            setQuestionFailure(null);
+            return true;
+          }
+        }
+      }
+      setQuestionFailure({ questionId, message: result.message });
+      return false;
+    }
     await refresh();
     return true;
   }, [proposalId, refresh]);
 
-  return { data, loading, loadError, refresh, pending, sendMessage, retrySend, resolveQuestion, questionBusyId, questionError };
+  const currentQuestionId = data?.questions.find(question => question.status === "open")?.id ?? null;
+  const currentQuestionError = questionFailure?.questionId === currentQuestionId ? questionFailure.message : null;
+  return {
+    data, loading, loadError, refresh, pending, sendMessage, retrySend, resolveQuestion,
+    questionBusyId, questionError: currentQuestionError,
+  };
 }
 
 // Lists the private document sources of a proposal. refreshKey retriggers the

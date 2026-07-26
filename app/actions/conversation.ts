@@ -27,6 +27,9 @@ const safeMessages: Record<string, string> = {
 // messages that vary by field, so they pass through instead of a generic text.
 const detailMessageCodes = new Set(["INVALID_CANDIDATE_VALUE", "INVALID_QUESTION_ANSWER"]);
 
+const unknownFailureMessage = (correlationId: string) =>
+  `We couldn't complete that request. Please try again. Reference: ${correlationId}`;
+
 const request = async <T>(path: string, init?: RequestInit, parse?: (value: unknown) => T | null): Promise<ActionResult<T>> => {
   const correlationId = crypto.randomUUID();
   const token = await getBackendAccessToken();
@@ -46,7 +49,7 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
       // backend (e.g. "Candidate date must use the YYYY-MM-DD format.") that
       // the guided question flow shows verbatim so it can re-ask.
       const detail = detailMessageCodes.has(code) && typeof body.title === "string" && body.title.length > 0 && body.title.length <= 300 ? body.title : null;
-      return { success: false, code, message: safeMessages[code] ?? detail ?? "The operation could not be completed safely.", correlationId: responseCorrelation };
+      return { success: false, code, message: safeMessages[code] ?? detail ?? unknownFailureMessage(responseCorrelation), correlationId: responseCorrelation };
     }
     const value = parse ? parse(body.data) : body.data as T;
     if (value === null || value === undefined) return { success: false, code: "INVALID_RESPONSE", message: "The service returned an unexpected response.", correlationId: responseCorrelation };

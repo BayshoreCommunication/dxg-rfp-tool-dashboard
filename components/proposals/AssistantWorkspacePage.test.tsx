@@ -243,14 +243,12 @@ describe("AssistantWorkspacePage", () => {
 
     await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
       PROPOSAL_ID,
-      { content: "We are planning a 300-person conference.", intent: "chat", sourceIds: ["typed-source"] },
+      { content: "We are planning a 300-person conference.", intent: "chat" },
       expect.any(String),
     ));
-    expect(mockedCreateNotes).toHaveBeenCalledWith(
-      PROPOSAL_ID,
-      { text: "We are planning a 300-person conference.", classification: "non_confidential" },
-      expect.any(String),
-    );
+    // Ordinary conversation stays in the thread. Only explicit notes or
+    // attachments become governed extraction sources.
+    expect(mockedCreateNotes).not.toHaveBeenCalled();
     expect(mockedCreateProposal).toHaveBeenCalledWith(
       expect.objectContaining({ event: { eventName: "Untitled proposal" }, status: "unsubmitted", isDraft: true }),
     );
@@ -332,6 +330,29 @@ describe("AssistantWorkspacePage", () => {
     // The question stays open for another attempt; no confirmation, no advance.
     expect(screen.getByText("When does the event start? (YYYY-MM-DD)")).toBeInTheDocument();
     expect(screen.queryByText(/✓/)).not.toBeInTheDocument();
+  });
+
+  test("a failed answer request recovers when refresh shows the question already advanced", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
+    mockedPatchQuestion.mockImplementation(async () => {
+      // Simulate Mongo accepting the value while the live synchronizer retires
+      // the Postgres question before the request finishes.
+      mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([]));
+      return {
+        success: false,
+        code: "INTERNAL_ERROR",
+        message: "We couldn't complete that request. Please try again. Reference: recovery-test",
+        correlationId: "recovery-test",
+      };
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("How many event rooms are required?");
+    fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "4" } });
+    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+
+    expect(await screen.findByText("Number of event rooms: 4 ✓")).toBeInTheDocument();
+    expect(screen.queryByText(/Reference: recovery-test/)).not.toBeInTheDocument();
   });
 
   test("Skip dismisses the current question", async () => {
