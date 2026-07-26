@@ -1,7 +1,7 @@
 "use server";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { auth } from "@/auth";
+import { getBackendAccessToken } from "@/lib/server/backendSession";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
 import { BACKEND_URL as API_URL, FRONTEND_URL } from "@/lib/config";
 import { revalidatePath } from "next/cache";
@@ -33,10 +33,7 @@ type ApiResponse = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Reads the session access token; returns null when the user is not signed in. */
-const getAccessToken = async (): Promise<string | null> => {
-  const session = await auth();
-  return (session?.user as any)?.accessToken || null;
-};
+const getAccessToken = getBackendAccessToken;
 
 const toSlug = (value: string): string =>
   value
@@ -84,9 +81,11 @@ const withProposalMeta = (payload: unknown) => {
 /** Fetch a proposal by ID without a token — used by public share/preview links. */
 export async function getProposalByIdPublicAction(
   id: string,
+  accessGrant?: string,
 ): Promise<ApiResponse> {
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}`, {
+    const query = accessGrant ? `?accessGrant=${encodeURIComponent(accessGrant)}` : "";
+    const res = await fetch(`${API_URL}/api/proposals/${id}${query}`, {
       method: "GET",
       cache: "no-store",
     });
@@ -104,9 +103,11 @@ export async function getProposalByIdPublicAction(
 /** Increment view count without a token — called when a public link is opened. */
 export async function incrementProposalViewsPublicAction(
   id: string,
+  accessGrant?: string,
 ): Promise<ApiResponse> {
   try {
-    const res = await fetch(`${API_URL}/api/proposals/${id}/views`, {
+    const query = accessGrant ? `?accessGrant=${encodeURIComponent(accessGrant)}` : "";
+    const res = await fetch(`${API_URL}/api/proposals/${id}/views${query}`, {
       method: "PATCH",
       cache: "no-store",
     });

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import VendorAnalysisSection from "./VendorAnalysisSection";
 
 type Props = {
   initialResponses: VendorResponseItem[];
@@ -263,6 +264,14 @@ export default function VendorResponsesView({
                     </ul>
                   </div>
                 )}
+              </div>
+
+              <div className="mt-5">
+                <VendorAnalysisSection
+                  key={selected._id}
+                  responseId={selected._id}
+                  proposalId={selected.proposalId}
+                />
               </div>
             </div>
           </div>

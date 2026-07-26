@@ -3,7 +3,13 @@ import GlobalDateInput from './GlobalDateInput'
 
 jest.mock('react-datepicker', () => ({
   __esModule: true,
-  default: ({ onChange, placeholderText, disabled, id, name }: any) => (
+  default: ({ onChange, placeholderText, disabled, id, name }: {
+    onChange: (date: Date | null) => void
+    placeholderText?: string
+    disabled?: boolean
+    id?: string
+    name?: string
+  }) => (
     <input
       data-testid="datepicker"
       id={id}

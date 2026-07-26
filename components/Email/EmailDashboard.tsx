@@ -120,6 +120,8 @@ export default function EmailDashboard() {
   }, []);
 
   useEffect(() => {
+    // The async loader owns loading/data state for this page transition.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData(currentPage);
   }, [currentPage, loadData]);
 

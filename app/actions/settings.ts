@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getBackendAccessToken } from "@/lib/server/backendSession";
 
 import { BACKEND_URL as API_URL } from "@/lib/config";
 
@@ -10,9 +10,11 @@ type SettingsResponse = {
   data?: unknown;
 };
 
+const getErrorMessage = (error: unknown, fallback = "Network error") =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 const getAuthHeader = async (): Promise<HeadersInit> => {
-  const session = await auth();
-  const accessToken = (session?.user as any)?.accessToken;
+  const accessToken = await getBackendAccessToken();
   if (!accessToken) {
     return {};
   }
@@ -40,13 +42,13 @@ export async function getSettingsAction(): Promise<SettingsResponse> {
         data.message || (res.ok ? "Settings fetched" : "Failed to fetch"),
       data: data.data,
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
 export async function updateSettingsAction(
-  settings: Record<string, any>,
+  settings: Record<string, unknown>,
   logoFile?: File | null,
 ): Promise<SettingsResponse> {
   try {
@@ -73,8 +75,8 @@ export async function updateSettingsAction(
       message: data.message || (res.ok ? "Settings updated" : "Update failed"),
       data: data.data,
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }
 
@@ -96,7 +98,7 @@ export async function deleteSettingsAction(): Promise<SettingsResponse> {
       message: data.message || (res.ok ? "Settings deleted" : "Delete failed"),
       data: data.data,
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
   }
 }

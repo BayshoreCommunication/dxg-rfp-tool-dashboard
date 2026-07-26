@@ -51,6 +51,8 @@ export default function SaveCopyModal({
 
   useEffect(() => {
     if (isOpen) {
+      // Opening the modal intentionally resets its draft from current defaults.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEventName(defaultEventName);
       setStartDate(defaultStartDate);
       setEndDate(defaultEndDate);

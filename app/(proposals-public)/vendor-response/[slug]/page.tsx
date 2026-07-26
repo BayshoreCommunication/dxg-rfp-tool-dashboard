@@ -3,18 +3,20 @@ import { BACKEND_URL } from "@/lib/config";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ source?: string; email?: string; tid?: string }>;
+  searchParams: Promise<{ source?: string; email?: string; tid?: string; accessGrant?: string }>;
 };
 
 const fetchProposalInfo = async (
   slug: string,
+  accessGrant?: string,
 ): Promise<{ title: string; proposalId: string } | null> => {
   const match = /([a-f0-9]{24})$/i.exec(slug);
   if (!match) return null;
   const proposalId = match[1];
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/proposals/${proposalId}`, {
+    const query = accessGrant ? `?accessGrant=${encodeURIComponent(accessGrant)}` : "";
+    const res = await fetch(`${BACKEND_URL}/api/proposals/${proposalId}${query}`, {
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -31,8 +33,8 @@ export default async function VendorResponsePage({
   searchParams,
 }: PageProps) {
   const { slug } = await params;
-  const { email, tid } = await searchParams;
-  const info = await fetchProposalInfo(slug);
+  const { email, tid, accessGrant } = await searchParams;
+  const info = await fetchProposalInfo(slug, accessGrant);
 
   return (
     <VendorResponseForm
@@ -41,6 +43,7 @@ export default async function VendorResponsePage({
       proposalTitle={info?.title ?? ""}
       initialEmail={email ?? ""}
       initialTrackingId={tid ?? ""}
+      accessGrant={accessGrant}
     />
   );
 }

@@ -6,6 +6,7 @@ export async function GET(req: NextRequest) {
   const proposalId = searchParams.get("proposalId");
   const email = searchParams.get("email");
   const emailTrackingId = searchParams.get("emailTrackingId");
+  const accessGrant = searchParams.get("accessGrant");
 
   // At least one identifier must be present
   if (!emailTrackingId && (!proposalId || !email)) {
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
     if (emailTrackingId) params.set("emailTrackingId", emailTrackingId);
     if (proposalId) params.set("proposalId", proposalId);
     if (email) params.set("email", email);
+    if (accessGrant) params.set("accessGrant", accessGrant);
 
     const res = await fetch(
       `${BACKEND_URL}/api/vendor-responses/check?${params.toString()}`,

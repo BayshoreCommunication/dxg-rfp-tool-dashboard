@@ -4,7 +4,7 @@ import { BACKEND_URL } from "@/lib/config";
 // Public GET — no user session needed.
 // Uses BACKEND_API_KEY (server-side env var) so the backend accepts the request.
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -13,18 +13,12 @@ export async function GET(
     return NextResponse.json({ success: false, message: "Invalid proposal id" }, { status: 400 });
   }
 
-  const apiKey = process.env.BACKEND_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { success: false, message: "Public access not configured." },
-      { status: 503 },
-    );
-  }
+  const accessGrant = req.nextUrl.searchParams.get("accessGrant");
+  const query = accessGrant ? `?accessGrant=${encodeURIComponent(accessGrant)}` : "";
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/proposals/${id}`, {
+    const res = await fetch(`${BACKEND_URL}/api/proposals/${id}${query}`, {
       method: "GET",
-      headers: { Authorization: `Bearer ${apiKey}` },
       cache: "no-store",
     });
 

@@ -24,6 +24,9 @@ import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMa
 import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalRequirements";
 import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
 import SaveCopyModal from "./SaveCopyModal";
+import ProposalWorkflowShell from "./ProposalWorkflowShell";
+import ProposalContextPanel from "./ProposalContextPanel";
+import ProposalDraftPanel from "./ProposalDraftPanel";
 
 /* ─── Proposal data by step ─── */
 export type EventData = {
@@ -1829,6 +1832,24 @@ const AddNewProposal = ({
       return isInPersonOnly && prev === 4 ? 3 : prev;
     });
 
+  const navigateToStep = (step: number) => {
+    if (!isEditMode || step < 1 || step > 10) return;
+    if (isInPersonOnly && step === 4) return;
+    setProposalProcessStep(step);
+    setShowErrors(false);
+  };
+
+  const refreshProposalAfterQuestion = async () => {
+    if (!proposalId) return;
+    const result = await getProposalByIdAction(proposalId);
+    if (!result.success || !result.data || typeof result.data !== "object") return;
+    const mapped = mapApiProposalToFormData(
+      result.data as EditableProposalApiResponse,
+    );
+    setProposalData(mapped);
+    setRooms(mapped.roomByRoom.map((room) => ({ ...defaultRoom(), ...room })));
+  };
+
   if (createdProposal) {
     return (
       <>
@@ -1944,6 +1965,17 @@ const AddNewProposal = ({
         <div className="flex w-full">
           {/* Form area — 70% */}
           <div className="w-[80%] mr-4">
+            {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED === "true" && (
+              <ProposalWorkflowShell
+                proposalId={proposalId}
+                estimatedAvBudget={proposalData.budget.estimatedAvBudget}
+                onNavigateToFormStep={navigateToStep}
+                onQuestionResolved={refreshProposalAfterQuestion}
+              />
+            )}
+            {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_CONTEXT_ENABLED === "true" && <ProposalContextPanel proposalId={proposalId} />}
+            {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_DRAFT_ENABLED === "true" && <ProposalDraftPanel proposalId={proposalId} />}
+            <div id="manual-proposal-details" />
             {proposalProcessStep === 1 && (
               <EventForm
                 data={proposalData.event}
@@ -2104,8 +2136,7 @@ const AddNewProposal = ({
             <ProcessList
               activeStep={proposalProcessStep}
               hideStepIds={isInPersonOnly ? [4] : []}
-              isEditMode={isEditMode}
-              onStepClick={(stepId) => setProposalProcessStep(stepId)}
+              onStepChange={isEditMode ? navigateToStep : undefined}
             />
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { toast } from 'react-toastify'
 import EmailDashboard from './EmailDashboard'
 
 // ─── Module mocks ──────────────────────────────────────────────────────────────
@@ -197,7 +198,6 @@ describe('EmailDashboard — delete campaign', () => {
     render(<EmailDashboard />)
     await waitFor(() => screen.getByText('Delete'), LOAD_TIMEOUT)
     fireEvent.click(screen.getByText('Delete'))
-    const { toast } = require('react-toastify')
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Server error'))
     // wait for setDeletingCampaignId(null) to settle (handleDelete returns early on failure)
     await waitFor(() => screen.getByText('Delete'), LOAD_TIMEOUT)

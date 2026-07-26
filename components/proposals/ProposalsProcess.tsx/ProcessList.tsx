@@ -59,16 +59,13 @@ const CheckBadge = () => (
 const ProcessList = ({
   activeStep = 1,
   hideStepIds = [],
-  isEditMode = false,
-  onStepClick,
+  onStepChange,
 }: {
   activeStep?: number;
   hideStepIds?: number[];
-  isEditMode?: boolean;
-  onStepClick?: (stepId: number) => void;
+  onStepChange?: (step: number) => void;
 }) => {
   const visibleSteps = steps.filter((s) => !hideStepIds.includes(s.id));
-  const clickable = isEditMode && !!onStepClick;
 
   let counter = 2;
   const badgedSteps = visibleSteps.map((step) => {
@@ -91,30 +88,36 @@ const ProcessList = ({
           const isActive    = activeStep === step.id;
           const isCompleted = activeStep > step.id;
           const isLast      = index === badgedSteps.length - 1;
+          const isNavigable = typeof onStepChange === "function";
 
           return (
-            <div
-              key={step.id}
-              onClick={clickable ? () => onStepClick?.(step.id) : undefined}
-              className={`relative flex items-start gap-4 pb-8 ${
-                clickable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""
-              }`}
-            >
+            <div key={step.id} className="relative flex items-start gap-4 pb-8">
               {/* Connecting Line */}
               {!isLast && (
                 <div className={lineClass(isCompleted, isActive)} />
               )}
 
-              {/* Circle badge */}
-              <div className={circleClass(isActive, isCompleted)}>
-                {isCompleted ? <CheckIcon /> : step.badge}
-              </div>
+              <button
+                type="button"
+                aria-current={isActive ? "step" : undefined}
+                aria-label={`Go to ${step.label}`}
+                disabled={!isNavigable}
+                onClick={() => onStepChange?.(step.id)}
+                className={`group -m-2 flex flex-1 items-start gap-4 rounded-xl p-2 text-left transition ${
+                  isNavigable
+                    ? "cursor-pointer hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                    : "cursor-default"
+                }`}
+              >
+                <div className={circleClass(isActive, isCompleted)}>
+                  {isCompleted ? <CheckIcon /> : step.badge}
+                </div>
 
-              {/* Step info � grows to fill space */}
-              <div className="flex flex-1 flex-col">
-                <span className={labelClass(isActive, isCompleted)}>{step.label}</span>
-                <span className={subClass(isActive, isCompleted)}>{step.sub}</span>
-              </div>
+                <div className="flex flex-1 flex-col">
+                  <span className={labelClass(isActive, isCompleted)}>{step.label}</span>
+                  <span className={subClass(isActive, isCompleted)}>{step.sub}</span>
+                </div>
+              </button>
 
               {/* Right-side checkmark for completed steps */}
               {/* {isCompleted && (

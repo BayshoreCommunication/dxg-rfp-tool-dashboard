@@ -261,7 +261,7 @@ const ContentCreativeStep = ({
                 Select an owner for each content element. This table appears verbatim in Section 4 of your RFP.
               </p>
               <p className="mb-5 text-[11px] text-[#969798] italic">
-                "The table below defines content ownership responsibilities. Vendors must confirm their ability to deliver all items marked as AV Vendor responsibility and flag any items requiring clarification. TBD items should be addressed in the vendor's questions."
+                &quot;The table below defines content ownership responsibilities. Vendors must confirm their ability to deliver all items marked as AV Vendor responsibility and flag any items requiring clarification. TBD items should be addressed in the vendor&apos;s questions.&quot;
               </p>
 
               {/* Legend */}

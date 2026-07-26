@@ -5,14 +5,14 @@ const Page = async ({
   searchParams,
 }: {
   params: Promise<{ slug?: string }>;
-  searchParams: Promise<{ source?: string }>;
+  searchParams: Promise<{ source?: string; accessGrant?: string }>;
 }) => {
   const { slug } = await params;
-  const { source } = await searchParams;
+  const { source, accessGrant } = await searchParams;
 
   return (
     <div className="">
-      <ProposalPublicView slug={slug} source={source} />
+      <ProposalPublicView slug={slug} source={source} accessGrant={accessGrant} />
     </div>
   );
 };

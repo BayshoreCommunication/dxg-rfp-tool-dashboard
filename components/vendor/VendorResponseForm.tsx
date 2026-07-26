@@ -9,6 +9,7 @@ type Props = {
   proposalTitle: string;
   initialEmail?: string;
   initialTrackingId?: string;
+  accessGrant?: string;
 };
 
 type FileEntry = {
@@ -36,6 +37,7 @@ export default function VendorResponseForm({
   proposalTitle,
   initialEmail = "",
   initialTrackingId = "",
+  accessGrant = "",
 }: Props) {
   const [vendorName, setVendorName] = useState("");
   const [submittedBy, setSubmittedBy] = useState("");
@@ -71,6 +73,7 @@ export default function VendorResponseForm({
       // When arriving via an email link, pass the tracking ID so the backend
       // only triggers update mode if THIS campaign's link was already responded to.
       if (initialTrackingId) params.set("emailTrackingId", initialTrackingId);
+      if (accessGrant) params.set("accessGrant", accessGrant);
       const res = await fetch(`/api/vendor-responses/check?${params.toString()}`);
       const json = await res.json();
       if (json.alreadySubmitted && json.existingResponse) {
@@ -135,6 +138,7 @@ export default function VendorResponseForm({
       formData.append("email", email.trim());
       formData.append("message", message.trim());
       if (initialTrackingId) formData.append("emailTrackingId", initialTrackingId);
+      if (accessGrant) formData.append("accessGrant", accessGrant);
       files.forEach(({ file }) => formData.append("documents", file));
 
       const res = await fetch(`/api/vendor-responses`, {
