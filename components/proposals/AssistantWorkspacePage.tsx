@@ -12,6 +12,7 @@
 // assistant is reached.
 
 import {
+  closeConversationSegmentAction,
   type ConversationMessage,
   type ConversationQuestion,
   type ConversationRunType,
@@ -22,7 +23,12 @@ import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
 import { generateGuidanceAction, type GuidanceReport, type GuidanceSectionCompleteness } from "@/app/actions/guidance";
 import { generateInvestmentGuidanceAction, type InvestmentReport } from "@/app/actions/investment";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
-import { getProposalDraftAction, type ProposalDraftSection } from "@/app/actions/proposalDraft";
+import {
+  decideDraftSectionAction,
+  getProposalDraftAction,
+  regenerateDraftSectionAction,
+  type ProposalDraftSection,
+} from "@/app/actions/proposalDraft";
 import { createProposalAction, getProposalByIdAction } from "@/app/actions/proposals";
 import { getUserData } from "@/app/actions/user";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
@@ -41,7 +47,7 @@ const DEEP = "#087f69";
 
 const runLabels: Record<ConversationRunType, { pending: string; failed: string }> = {
   proposal_context: { pending: "Extracting requirements…", failed: "Requirement extraction did not finish. Try again." },
-  proposal_draft: { pending: "Drafting the proposal…", failed: "Draft generation did not finish. Try again." },
+  proposal_draft: { pending: "Creating your first proposal draft…", failed: "I couldn’t create the draft, but your answers are safe. Try again." },
 };
 
 const taskContent: Record<"extract_requirements" | "generate_draft", string> = {
@@ -52,7 +58,21 @@ const taskContent: Record<"extract_requirements" | "generate_draft", string> = {
 type LocalCard =
   | { id: string; kind: "guidance"; report: GuidanceReport }
   | { id: string; kind: "investment"; report: InvestmentReport }
+  // Extraction from typed messages happens in the background, so without a
+  // card the planner sees sources and applied fields appear from nowhere.
+  | { id: string; kind: "segment"; created: boolean; reason?: string }
   | { id: string; kind: "error"; message: string };
+
+// Why a "use what I've told you" request produced nothing. Deliberately plain:
+// none of these are failures, and the planner should not be made to feel one
+// happened.
+const segmentSkipReasons: Record<string, string> = {
+  open: "I'll use these once you pause or add a bit more.",
+  insufficient: "There isn't enough detail in your messages yet for me to pull requirements from.",
+  empty: "Nothing new since the last time I read your messages.",
+  disabled: "Reading requirements from chat isn't switched on in this environment.",
+  ingestion_disabled: "Source handling isn't switched on in this environment.",
+};
 
 const impactLabels: Record<string, string> = {
   cost: "affects cost",
@@ -309,7 +329,7 @@ function CardActionRow({ proposalId, hasDraft, draftBusy, onGenerateDraft, onRun
         </button>
       )}
       <Link href={`/proposals/proposal-edit?proposalId=${proposalId}`} className={ACTION_TERTIARY}>
-        Edit all details
+        Advanced editing
       </Link>
     </div>
   );
@@ -342,6 +362,17 @@ const PRIMARY_BUTTON_CLASS =
   "shrink-0 rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
 const SKIP_BUTTON_CLASS =
   "shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50";
+const INITIAL_GUIDED_QUESTION_COUNT = 8;
+const ADAPTIVE_VENUE_PATHS = new Set([
+  "/content/venueSchedule/venueConfirmedStatus",
+  "/content/venueSchedule/isUnionVenue",
+  "/content/venue/inHouseAvRequired",
+  "/content/venue/riggingRequired",
+  "/content/venue/powerDropsRequired",
+  "/content/venueSchedule/loadInDate",
+  "/content/venueSchedule/loadInTime",
+  "/content/venue/venueAccessRequirements",
+]);
 
 function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, onSkip }: {
   question: ConversationQuestion;
@@ -359,6 +390,10 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
   const impactLabel = question.impact ? impactLabels[question.impact] : null;
   const answerType = question.answerType;
   const inputId = `guided-answer-${question.id}`;
+  const venueFollowUp = question.paths.some(path => ADAPTIVE_VENUE_PATHS.has(path));
+  const progressLabel = venueFollowUp
+    ? `Venue follow-up ${Math.max(1, current - INITIAL_GUIDED_QUESTION_COUNT)} of ${Math.max(1, total - INITIAL_GUIDED_QUESTION_COUNT)}`
+    : `Question ${current} of ${Math.min(total, INITIAL_GUIDED_QUESTION_COUNT)}`;
   // A picked day is submitted from its LOCAL calendar parts; toISOString would
   // shift the date by a day for anyone west of UTC.
   const answer = answerType === "date" ? (day ? localIsoDay(day) : "") : value.trim();
@@ -376,7 +411,7 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
   return (
     <div className="w-full max-w-[85%] rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">Question {current} of {total}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">{progressLabel}</p>
         {impactLabel && (
           <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-800">{impactLabel}</span>
         )}
@@ -533,13 +568,27 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
 }) {
   const [sections, setSections] = useState<ProposalDraftSection[]>([]);
   const [run, setRun] = useState<Record<string, unknown> | null>(null);
+  const [gaps, setGaps] = useState<Array<{ code: string; paths: string[] }>>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sectionBusy, setSectionBusy] = useState<string | null>(null);
+  const [sectionNotice, setSectionNotice] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!message.runId) return;
     let active = true;
     void getProposalDraftAction(proposalId, message.runId).then(result => {
-      if (!active || !result.success) return;
+      if (!active) return;
+      // Cleared here rather than synchronously in the effect body: a
+      // synchronous setState triggers a cascading render (and fails lint), and
+      // holding the previous message until the reload resolves avoids a blank
+      // flicker between the old error and the new outcome.
+      if (!result.success) {
+        setLoadError(result.message);
+        return;
+      }
+      setLoadError(null);
       setSections(result.data.sections ?? []);
+      setGaps(result.data.gaps ?? []);
       setRun(isRecord(result.data.run) ? result.data.run : null);
     });
     return () => { active = false; };
@@ -550,22 +599,64 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
   const stale = draftVersion !== null && typeof currentProposalVersion === "number" && currentProposalVersion > draftVersion;
 
   const detailsHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
+  const decide = async (section: ProposalDraftSection, decision: "accepted" | "rejected") => {
+    if (!message.runId || sectionBusy) return;
+    setSectionBusy(section.key);
+    const result = await decideDraftSectionAction(proposalId, message.runId, section.key, {
+      decision,
+      ...(decision === "rejected" ? { reason: "Planner requested a revised section." } : {}),
+    });
+    setSectionBusy(null);
+    if (!result.success) {
+      setSectionNotice(current => ({ ...current, [section.key]: result.message }));
+      return;
+    }
+    setSections(current => current.map(item => item.key === section.key ? { ...item, decision: result.data.decision, decisionReason: result.data.reason } : item));
+    setSectionNotice(current => ({ ...current, [section.key]: decision === "accepted" ? "Section approved." : "Marked for revision." }));
+  };
+  const revise = async (section: ProposalDraftSection) => {
+    if (!message.runId || sectionBusy) return;
+    const version = currentProposalVersion ?? draftVersion;
+    if (!version) {
+      setSectionNotice(current => ({ ...current, [section.key]: "I couldn’t confirm the latest proposal version. Try again from Advanced editing." }));
+      return;
+    }
+    setSectionBusy(section.key);
+    const rejected = await decideDraftSectionAction(proposalId, message.runId, section.key, { decision: "rejected", reason: "Planner requested a revised section." });
+    if (!rejected.success) {
+      setSectionBusy(null);
+      setSectionNotice(current => ({ ...current, [section.key]: rejected.message }));
+      return;
+    }
+    const result = await regenerateDraftSectionAction(proposalId, message.runId, section.key, version, crypto.randomUUID());
+    setSectionBusy(null);
+    setSections(current => current.map(item => item.key === section.key ? { ...item, decision: "rejected", decisionReason: rejected.data.reason } : item));
+    setSectionNotice(current => ({ ...current, [section.key]: result.success ? "Revision started. You can continue reviewing the other sections." : result.message }));
+  };
+  const prioritizedGaps = gaps.map(gap => {
+    const text = `${gap.code} ${gap.paths.join(" ")}`.toLowerCase();
+    const priority = /(eventname|startdate|enddate|proposal.*due|deadline)/.test(text)
+      ? "Required before publishing"
+      : /(venue|room|production|budget|stream|record|rigging|power)/.test(text)
+        ? "Improves scope and pricing"
+        : "Optional detail";
+    return { ...gap, priority };
+  });
   return (
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Results</p>
       <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-800">{message.content}</p>
+      {loadError && (
+        <p role="alert" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          The draft was created, but its review details could not load. Reload this page or use Advanced editing. ({loadError})
+        </p>
+      )}
       {stale && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
           <p className="min-w-0 text-xs text-amber-900">This draft was written before your latest answers.</p>
-          <button
-            type="button"
-            onClick={onRegenerate}
-            disabled={draftBusy}
-            aria-busy={draftBusy}
-            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <button type="button" onClick={onRegenerate} disabled={draftBusy} aria-busy={draftBusy} className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 disabled:opacity-50">
             {draftBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
-            {draftBusy ? "Generating…" : "Regenerate draft"}
+            {draftBusy ? "Updating…" : "Update draft"}
           </button>
         </div>
       )}
@@ -575,7 +666,12 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
         <article className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-slate-50/70">
           {sections.map(section => (
             <section key={section.id} className="p-3">
-              <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{section.heading}</h4>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{section.heading}</h4>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${section.decision === "accepted" ? "bg-emerald-100 text-emerald-800" : section.decision === "rejected" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-500"}`}>
+                  {section.decision === "accepted" ? "Approved" : section.decision === "rejected" ? "Revision requested" : "Needs review"}
+                </span>
+              </div>
               <div className="mt-1.5 space-y-2">
                 {section.paragraphs.length > 0
                   ? section.paragraphs.map((paragraph, index) => (
@@ -598,11 +694,31 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
                     ))
                   : <p className="text-sm italic text-slate-400">Nothing supported by evidence yet for this section.</p>}
               </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button type="button" disabled={sectionBusy === section.key} onClick={() => void decide(section, "accepted")} className="rounded-lg bg-[#087f69] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Approve</button>
+                <button type="button" disabled={sectionBusy === section.key} onClick={() => void revise(section)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-50">{sectionBusy === section.key ? "Working…" : "Revise section"}</button>
+                {sectionNotice[section.key] && <span role="status" className="text-xs text-slate-500">{sectionNotice[section.key]}</span>}
+              </div>
             </section>
           ))}
         </article>
       )}
-      <CardFooter detailsHref={detailsHref} detailsLabel="View draft" />
+      {prioritizedGaps.length > 0 && (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+          <p className="text-xs font-semibold text-slate-900">Suggested improvements</p>
+          <ul className="mt-2 space-y-1.5">
+            {prioritizedGaps.slice(0, 5).map((gap, index) => (
+              <li key={`${gap.code}-${index}`} className="flex items-start justify-between gap-3 text-xs text-slate-600">
+                <span>{gap.code.replaceAll("_", " ").toLowerCase()}</span>
+                <span className="shrink-0 font-semibold text-slate-500">{gap.priority}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-2.5">
+        <Link href={detailsHref} className="text-xs font-semibold text-[#087f69] underline underline-offset-2">View draft</Link>
+      </div>
     </div>
   );
 }
@@ -695,12 +811,16 @@ function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, dra
   onRunReadiness?: () => void;
   readinessBusy: boolean;
 }) {
-  const percent = report ? Math.round(report.overallCompleteness * 100) : null;
-  const weakest = report ? weakestSections(report) : [];
+  // A raw schema percentage is useful to experts but discouraging during
+  // beginner intake: a perfectly useful first draft can be built from a small
+  // subset of the full 114-field editor. Only show the percentage after a
+  // draft exists; before that, frame this as readiness for the first outcome.
+  const percent = hasDraft && report ? Math.round(report.overallCompleteness * 100) : null;
+  const weakest = hasDraft && report ? weakestSections(report) : [];
   return (
     <div className="max-w-[85%] rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
       <p className="text-sm font-semibold text-emerald-900">
-        {percent === null ? "Key questions answered." : `Your proposal is ${percent}% complete`}
+        {hasDraft ? (percent === null ? "Your first draft is ready." : `Your proposal is ${percent}% complete`) : "I have enough information to create a useful first draft."}
       </p>
       {percent !== null && (
         <div
@@ -714,8 +834,11 @@ function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, dra
           <div className="h-full rounded-full bg-[#087f69]" style={{ width: `${percent}%` }} />
         </div>
       )}
-      {percent === null && checking && (
-        <p role="status" className="mt-1 text-xs text-emerald-800">Checking what&rsquo;s left…</p>
+      {!hasDraft && (
+        <p className="mt-1 text-xs text-emerald-800">I&rsquo;ll create it automatically. You can keep adding details while I work.</p>
+      )}
+      {hasDraft && percent === null && checking && (
+        <p role="status" className="mt-1 text-xs text-emerald-800">Checking what&rsquo;s worth improving next…</p>
       )}
       {weakest.length > 0 && (
         <ul className="mt-3 space-y-1">
@@ -741,6 +864,30 @@ function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, dra
         readinessBusy={readinessBusy}
       />
       {draftError && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{draftError}</p>}
+    </div>
+  );
+}
+
+function DraftNextStepCard({ proposalId, busy, error, onUpdateDraft }: {
+  proposalId: string;
+  busy: boolean;
+  error: string | null;
+  onUpdateDraft: () => void;
+}) {
+  const editorHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
+  return (
+    <div className="w-full max-w-[85%] rounded-2xl border border-cyan-200 bg-cyan-50 p-4 shadow-sm">
+      <p className="text-sm font-semibold text-slate-900">All questions answered — your draft is ready for the next step.</p>
+      <p className="mt-1 text-xs text-slate-600">Update it with your latest answers, then open the draft to review and finish it.</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={onUpdateDraft} disabled={busy} className={PRIMARY_BUTTON_CLASS}>
+          {busy ? "Updating draft…" : "Update draft with answers"}
+        </button>
+        <Link href={editorHref} className="inline-flex rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          Review draft
+        </Link>
+      </div>
+      {error && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
     </div>
   );
 }
@@ -841,6 +988,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const [createError, setCreateError] = useState<string | null>(null);
   const [localCards, setLocalCards] = useState<LocalCard[]>([]);
   const [guidanceBusy, setGuidanceBusy] = useState(false);
+  const [segmentBusy, setSegmentBusy] = useState(false);
   const [investmentBusy, setInvestmentBusy] = useState(false);
   const [proposalVersion, setProposalVersion] = useState<number>();
   const [draftBusy, setDraftBusy] = useState(false);
@@ -850,6 +998,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const [completionReport, setCompletionReport] = useState<GuidanceReport | null>(null);
   const [completionChecking, setCompletionChecking] = useState(false);
   const completionRunRef = useRef<{ proposalId: string; version: number | null } | null>(null);
+  const autoDraftRef = useRef<string | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
@@ -916,7 +1065,22 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   // clarification question is waiting (the guided flow always goes first), and
   // auto-apply has either finished or had nothing to apply. It retires as soon
   // as a draft run exists — from then on the thread shows the draft itself.
-  const hasDraftRun = messages.some(message => message.runType === "proposal_draft");
+  const hasSuccessfulDraft = messages.some(message => message.runType === "proposal_draft" && message.status === "complete");
+  const hasActiveDraft = messages.some(message => message.runType === "proposal_draft" && message.status === "pending");
+  const hasDraftRun = hasSuccessfulDraft || hasActiveDraft;
+  // Once a later draft succeeds, failed or stranded earlier attempts are
+  // activity-log detail, not part of the planner's main story.
+  const visibleMessages = useMemo(() => {
+    if (!hasSuccessfulDraft) return messages;
+    let latestSuccess = -1;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index].runType === "proposal_draft" && messages[index].status === "complete") {
+        latestSuccess = index;
+        break;
+      }
+    }
+    return messages.filter((message, index) => message.runType !== "proposal_draft" || index === latestSuccess);
+  }, [messages, hasSuccessfulDraft]);
   const autoApplySettled = !autoApply || autoApply.phase !== "applying";
   const overviewRows = useMemo(() => buildOverviewRows(proposal), [proposal]);
   // A proposal built by conversation alone never has an extraction run, so the
@@ -926,7 +1090,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const hasCapturedContent = completedContextRuns > 0 || answeredQuestions > 0 || overviewRows.length > 0;
   const showOverview = hasCapturedContent && !loading && !!data
     && openQuestions.length === 0 && autoApplySettled && !hasDraftRun;
-  const overviewDetailCount = autoApply?.phase === "applied" ? autoApply.added : overviewRows.length;
+  const overviewDetailCount = Math.max(autoApply?.phase === "applied" ? autoApply.added : 0, overviewRows.length, answeredQuestions);
   const overviewPendingReview = autoApply?.phase === "applied" ? autoApply.needsReview : 0;
   // Details reach a proposal by extraction, by answered questions, or both.
   const overviewDetailSource: "sources" | "answers" | "both" =
@@ -1118,7 +1282,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   };
 
   const sendDraftMessage = async (version: number) => {
-    await sendMessage({
+    return await sendMessage({
       content: taskContent.generate_draft,
       intent: "generate_draft",
       expectedProposalVersion: version,
@@ -1138,7 +1302,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   // before the version lookup settled — in that case the CURRENT version is
   // re-read first so the draft never runs against a stale one.
   const runDraftFromCard = async () => {
-    if (!proposalId || sending || draftBusy) return;
+    if (!proposalId || sending || draftBusy) return false;
     setDraftError(null);
     setDraftBusy(true);
     const version = await fetchProposalVersion(proposalId);
@@ -1146,9 +1310,29 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     if (typeof version === "number") setProposalVersion(version);
     if (typeof version !== "number") {
       setDraftError("I couldn’t confirm the current version of your proposal. Open the editor, review the details, and try again.");
-      return;
+      return false;
     }
-    await sendDraftMessage(version);
+    return await sendDraftMessage(version);
+  };
+
+  const updateDraftAndOpen = async () => {
+    if (!proposalId) return;
+    const started = await runDraftFromCard();
+    if (started) router.push(`/proposals/proposal-edit?proposalId=${proposalId}`);
+  };
+
+  // Closes the current run of typed messages into a source and starts
+  // extraction, rather than waiting for the idle timer to do it.
+  const runUseMessages = async () => {
+    if (!proposalId || segmentBusy) return;
+    setSegmentBusy(true);
+    const result = await closeConversationSegmentAction(proposalId);
+    setSegmentBusy(false);
+    setLocalCards(prev => [...prev, result.success
+      ? { id: crypto.randomUUID(), kind: "segment", created: result.data.created, reason: result.data.reason }
+      : { id: crypto.randomUUID(), kind: "error", message: result.message }]);
+    // A new source and its extraction run only show up on a refresh.
+    if (result.success && result.data.created) await refreshSources();
   };
 
   const runGuidance = async () => {
@@ -1183,6 +1367,21 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const questionProgressTotal = answeredTotal + openQuestions.length;
   const questionProgressCurrent = answeredTotal + 1;
   const questionsComplete = answeredTotal > 0 && !loading && !!data && openQuestions.length === 0;
+  // Automatic drafting is for the guided beginner path. Source-driven
+  // extraction still pauses on the captured-details review so a planner can
+  // inspect what came from uploaded material before generation.
+  const minimumContextReady = answeredQuestions >= 5;
+
+  // Beginner path: once the minimum useful context is present, drafting is the
+  // natural next step, not another feature button the user has to discover.
+  // The proposal id + version guard prevents duplicate runs across re-renders.
+  useEffect(() => {
+    if (!questionsComplete || !minimumContextReady || !proposalId || hasDraftRun || sending || draftBusy) return;
+    const key = `${proposalId}:${proposalVersion ?? "latest"}`;
+    if (autoDraftRef.current === key) return;
+    autoDraftRef.current = key;
+    void runDraftFromCard();
+  }, [questionsComplete, minimumContextReady, proposalId, proposalVersion, hasDraftRun, sending, draftBusy]);
 
   // Finishing the questions is a progress moment, so the card reports real
   // numbers: the guidance engine is deterministic and synchronous, so it is run
@@ -1443,7 +1642,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
           {proposalId && (
             <>
               <span aria-hidden className="text-slate-300">/</span>
-              <span className="font-semibold text-slate-900">{eventName || "Untitled proposal"}</span>
+              <span className="font-semibold text-slate-900">{eventName && eventName !== PLACEHOLDER_EVENT_NAME ? eventName : "New proposal"}</span>
             </>
           )}
         </nav>
@@ -1455,7 +1654,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 motion-safe:animate-[rail-card-in_0.3s_ease-out]"
           >
             <PencilLine size={14} aria-hidden />
-            Edit all details
+            Advanced editing
           </Link>
         )}
       </div>
@@ -1492,7 +1691,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                 {loadError && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{loadError}</p>}
                 {loading && <p role="status" className="text-sm text-slate-500">Loading the conversation…</p>}
                 <ol className="space-y-3">
-                  {messages.map(renderMessage)}
+                  {visibleMessages.map(renderMessage)}
                   {autoApply?.phase === "applying" && (
                     <li className="flex justify-start">
                       <p role="status" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-500 shadow-sm">
@@ -1564,6 +1763,15 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                     <li key={card.id} className="flex justify-start">
                       {card.kind === "guidance" && <GuidanceCard report={card.report} />}
                       {card.kind === "investment" && <InvestmentCard report={card.report} declaredBudget={budgetTierLabel(proposal)} />}
+                      {card.kind === "segment" && (
+                        // Extraction from typed messages is otherwise silent:
+                        // a source and applied fields would simply appear.
+                        <p role="status" className="max-w-[85%] rounded-2xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900">
+                          {card.created
+                            ? "I saved what you've told me as a source and I'm pulling requirements from it. Anything I'm unsure about will come back as a question."
+                            : segmentSkipReasons[card.reason ?? ""] ?? "There's nothing new for me to read yet."}
+                        </p>
+                      )}
                       {card.kind === "error" && <p role="alert" className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{card.message}</p>}
                     </li>
                   ))}
@@ -1645,7 +1853,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                       />
                     </li>
                   )}
-                  {questionsComplete && proposalId && (
+                  {questionsComplete && proposalId && !hasDraftRun && (
                     <li className="flex justify-start">
                       <CompletionCard
                         proposalId={proposalId}
@@ -1657,6 +1865,16 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                         onGenerateDraft={() => void runDraftFromCard()}
                         onRunReadiness={guidanceDisplayed ? undefined : () => void runGuidance()}
                         readinessBusy={guidanceBusy}
+                      />
+                    </li>
+                  )}
+                  {questionsComplete && proposalId && hasSuccessfulDraft && (
+                    <li className="flex justify-start">
+                      <DraftNextStepCard
+                        proposalId={proposalId}
+                        busy={draftBusy || sending || hasActiveDraft}
+                        error={draftError}
+                        onUpdateDraft={() => void updateDraftAndOpen()}
                       />
                     </li>
                   )}
@@ -1774,6 +1992,17 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                     <li key={source.id} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
                       <div className="flex items-center justify-between gap-2">
                         <span className="min-w-0 flex-1 truncate text-slate-700" title={source.originalFilename}>{source.originalFilename}</span>
+                        {source.origin === "conversation" && (
+                          // The planner never pressed "add this as a source" for
+                          // these — the system built them from what was typed —
+                          // so they must not look like an attached file.
+                          <span
+                            className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800"
+                            title="Built from your messages and used for extraction"
+                          >
+                            from chat
+                          </span>
+                        )}
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${source.status === "ready" ? "bg-emerald-100 text-emerald-800" : source.status === "failed" ? "bg-red-100 text-red-800" : "bg-white text-slate-600"}`}>
                           {source.status.replaceAll("_", " ")}
                         </span>
@@ -1827,6 +2056,16 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
+                onClick={() => void runUseMessages()}
+                disabled={segmentBusy || sending || messages.length === 0}
+                title={messages.length === 0 ? "Tell me about your event first." : "Turn what you've typed into a source and pull requirements from it."}
+                aria-busy={segmentBusy}
+                className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+              >
+                {segmentBusy ? "Reading your messages…" : "Use what I've told you"}
+              </button>
+              <button
+                type="button"
                 onClick={() => void runExtract()}
                 disabled={readySources.length === 0 || sending}
                 title={readySources.length === 0 ? "Add at least one ready source first." : undefined}
@@ -1841,7 +2080,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                 title={typeof proposalVersion !== "number" ? "Review extracted requirements first to establish the proposal version." : undefined}
                 className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
               >
-                Generate draft
+                {hasSuccessfulDraft ? "Regenerate draft" : "Generate draft"}
               </button>
               <button
                 type="button"
@@ -1877,7 +2116,9 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
               </p>
             ) : (
               <p className="mt-2 text-xs text-slate-600">
-                {`${openQuestions.length} ${openQuestions.length === 1 ? "question" : "questions"} remaining — answer them one at a time in the conversation.`}
+                {openQuestions.length === 1
+                  ? "1 question remaining — answer it in the conversation."
+                  : `${openQuestions.length} questions remaining — answer them one at a time in the conversation.`}
               </p>
             )}
           </section>

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import AssistantWorkspacePage from "./AssistantWorkspacePage";
-import { createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
+import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
 import { generateGuidanceAction } from "@/app/actions/guidance";
@@ -16,13 +16,15 @@ import { getUserData } from "@/app/actions/user";
 import { applyCandidatesAction, getCandidateReviewAction, saveCandidateReviewAction } from "@/app/actions/candidateApplication";
 
 const replace = jest.fn();
-jest.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
+const push = jest.fn();
+jest.mock("next/navigation", () => ({ useRouter: () => ({ replace, push }) }));
 
 jest.mock("@/app/actions/conversation", () => ({
   getConversationAction: jest.fn(),
   postConversationMessageAction: jest.fn(),
   patchConversationQuestionAction: jest.fn(),
   createProposalNotesAction: jest.fn(),
+  closeConversationSegmentAction: jest.fn(),
 }));
 
 jest.mock("@/app/actions/durableJobs", () => ({
@@ -45,7 +47,11 @@ jest.mock("@/app/actions/proposalContext", () => ({
   getLatestProposalContextAction: jest.fn().mockResolvedValue({ success: false, code: "CONTEXT_RUN_UNAVAILABLE", message: "none" }),
   getProposalContextAction: jest.fn(),
 }));
-jest.mock("@/app/actions/proposalDraft", () => ({ getProposalDraftAction: jest.fn() }));
+jest.mock("@/app/actions/proposalDraft", () => ({
+  getProposalDraftAction: jest.fn(),
+  decideDraftSectionAction: jest.fn(),
+  regenerateDraftSectionAction: jest.fn(),
+}));
 jest.mock("@/app/actions/candidateApplication", () => ({
   getCandidateReviewAction: jest.fn(),
   saveCandidateReviewAction: jest.fn(),
@@ -79,6 +85,7 @@ const mockedCreateProposal = createProposalAction as jest.MockedFunction<typeof 
 const mockedGetProposal = getProposalByIdAction as jest.MockedFunction<typeof getProposalByIdAction>;
 const mockedGetUser = getUserData as jest.MockedFunction<typeof getUserData>;
 const mockedCreateNotes = createProposalNotesAction as jest.MockedFunction<typeof createProposalNotesAction>;
+const mockedCloseSegment = closeConversationSegmentAction as jest.MockedFunction<typeof closeConversationSegmentAction>;
 const mockedCreateSession = createPrivateUploadSession as jest.MockedFunction<typeof createPrivateUploadSession>;
 const mockedCompleteUpload = completePrivateUpload as jest.MockedFunction<typeof completePrivateUpload>;
 const mockedCreateScanJob = createSourceScanJob as jest.MockedFunction<typeof createSourceScanJob>;
@@ -559,7 +566,7 @@ describe("AssistantWorkspacePage", () => {
     await screen.findByText("Number of event rooms: 6 ✓");
   };
 
-  test("answering the last question shows a completion progress card built from the guidance report", async () => {
+  test("answering the last question celebrates first-draft readiness without exposing a discouraging schema percentage", async () => {
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([roomsQuestion]))
       .mockResolvedValue(conversationWithGuidedQuestions([]));
@@ -569,17 +576,8 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await answerLastQuestion();
 
-    expect(await screen.findByText("Your proposal is 68% complete")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "Proposal completeness" })).toHaveAttribute("aria-valuenow", "68");
-    // The three thinnest sections, thinnest first; complete sections stay out.
-    expect(screen.getByText("Venue & schedule")).toBeInTheDocument();
-    expect(screen.getByText("2/9")).toBeInTheDocument();
-    expect(screen.getByText("Budget")).toBeInTheDocument();
-    expect(screen.getByText("1/4")).toBeInTheDocument();
-    expect(screen.getByText("Production")).toBeInTheDocument();
-    expect(screen.getByText("3/6")).toBeInTheDocument();
-    expect(screen.queryByText("Event basics")).not.toBeInTheDocument();
-    expect(screen.queryByText("Risk & compliance")).not.toBeInTheDocument();
+    expect(await screen.findByText("I have enough information to create a useful first draft.")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar", { name: "Proposal completeness" })).not.toBeInTheDocument();
     // One calm amber line for the blocking findings.
     expect(screen.getByText("2 items need attention before publishing.")).toBeInTheDocument();
     // The deterministic engine runs exactly once, not on every render.
@@ -592,7 +590,7 @@ describe("AssistantWorkspacePage", () => {
     // own chip remains.
     expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Edit all details" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Advanced editing" })).toHaveLength(2);
     // The old vague copy is gone for good.
     expect(screen.queryByText(/everything else is optional/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open the proposal editor" })).not.toBeInTheDocument();
@@ -613,7 +611,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await answerLastQuestion();
 
-    expect(await screen.findByText("Key questions answered.")).toBeInTheDocument();
+    expect(await screen.findByText("I have enough information to create a useful first draft.")).toBeInTheDocument();
     // No percentage, no bar, and never a raw error from the guidance service.
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByText(/is not enabled for this environment/)).not.toBeInTheDocument();
@@ -659,7 +657,7 @@ describe("AssistantWorkspacePage", () => {
     mockedListSources.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
-      data: [{ id: "src-9", status: "scanning", confidentiality: "non_confidential", originalFilename: "pending.pdf", createdAt: "2026-07-21T10:00:00.000Z" }],
+      data: [{ id: "src-9", status: "scanning", confidentiality: "non_confidential", originalFilename: "pending.pdf", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" as const }],
     });
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("pending.pdf");
@@ -672,8 +670,8 @@ describe("AssistantWorkspacePage", () => {
       success: true,
       correlationId: "test-correlation",
       data: [
-        { id: "src-1", status: "ready", confidentiality: "non_confidential", originalFilename: "venue.pdf", createdAt: "2026-07-21T10:00:00.000Z" },
-        { id: "src-2", status: "ready", confidentiality: "confidential", originalFilename: "internal.pdf", createdAt: "2026-07-21T10:00:00.000Z" },
+        { id: "src-1", status: "ready", confidentiality: "non_confidential", originalFilename: "venue.pdf", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" as const },
+        { id: "src-2", status: "ready", confidentiality: "confidential", originalFilename: "internal.pdf", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" as const },
       ],
     });
     mockedPostMessage.mockResolvedValue({
@@ -831,6 +829,7 @@ describe("AssistantWorkspacePage", () => {
     confidentiality: "non_confidential" as const,
     originalFilename: "venue.pdf",
     createdAt: "2026-07-21T10:00:00.000Z",
+    origin: "upload" as const,
   });
 
   const stageAndSendFile = async () => {
@@ -942,7 +941,7 @@ describe("AssistantWorkspacePage", () => {
     mockedCreateNotes.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
-      data: { source: { id: "src-notes", status: "uploaded", confidentiality: "non_confidential", originalFilename: "Notes", createdAt: "2026-07-21T10:00:00.000Z" } },
+      data: { source: { id: "src-notes", status: "uploaded", confidentiality: "non_confidential", originalFilename: "Notes", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" as const } },
     } as never);
     mockedCreateScanJob.mockResolvedValue({ success: true, correlationId: "test-correlation", data: scanJob("queued") });
     mockedGetDurableJob.mockResolvedValue({ success: true, correlationId: "test-correlation", data: scanJob("succeeded") });
@@ -1148,7 +1147,7 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
     expect(screen.getByText("Or add more details — upload another file, paste notes, or ask me anything.")).toBeInTheDocument();
     // The card's own editor link (the top bar carries the second one).
-    expect(screen.getAllByRole("link", { name: "Edit all details" }).length).toBeGreaterThan(1);
+    expect(screen.getAllByRole("link", { name: "Advanced editing" }).length).toBeGreaterThan(1);
     // The old notice is gone for good.
     expect(screen.queryByText(/I have all the key details I need/)).not.toBeInTheDocument();
   });
@@ -1263,10 +1262,10 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    // The applied-field count wins over the row count once auto-apply reports.
-    expect(await screen.findByText("1 detail captured from your sources.")).toBeInTheDocument();
-    expect(screen.getByText(/4 suggestions need your review\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review suggestions" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+    // The visible proposal fields win over a smaller last-operation count, so
+    // the rail/card never regress to "Captured: 1" after ten fields exist.
+    expect(await screen.findByText("10 details captured from your sources.")).toBeInTheDocument();
+    expect(screen.queryByText("1 detail captured from your sources.")).not.toBeInTheDocument();
   });
 
   test("the overview omits the review line when auto-apply left nothing pending", async () => {
@@ -1293,7 +1292,7 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    expect(await screen.findByText("1 detail captured from your sources.")).toBeInTheDocument();
+    expect(await screen.findByText("10 details captured from your sources.")).toBeInTheDocument();
     expect(screen.queryByText(/suggestions? need/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
   });
@@ -1338,6 +1337,34 @@ describe("AssistantWorkspacePage", () => {
 
   const STALE_HINT = "This draft was written before your latest answers.";
 
+  test("completed questioning ends with explicit update and review actions", async () => {
+    const answered = Array.from({ length: 5 }, (_, index) =>
+      guidedQuestion(`answered-${index}`, `Answered question ${index + 1}`, `/content/event/answered${index}`, "scope", {
+        status: "answered",
+        answeredMessageId: `answer-${index}`,
+      }));
+    mockedGetConversation.mockResolvedValue(conversationWithDraft(answered));
+    mockedGetProposal.mockResolvedValue(proposalAtVersion(9));
+    mockedGetDraft.mockResolvedValue(draftRun(9));
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: "assistant-2", run: { runType: "proposal_draft", runId: "run-3", jobId: "job-3" } },
+    } as never);
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByText("All questions answered — your draft is ready for the next step.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review draft" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+    fireEvent.click(screen.getByRole("button", { name: "Update draft with answers" }));
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { content: "Generate a proposal draft from the current information.", intent: "generate_draft", expectedProposalVersion: 9 },
+      expect.any(String),
+    ));
+    expect(push).toHaveBeenCalledWith(`/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+  });
+
   test("completed draft paragraphs display their citations", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithDraft());
     mockedGetProposal.mockResolvedValue(proposalAtVersion(7));
@@ -1374,6 +1401,51 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByText("gpt-test")).not.toBeInTheDocument();
   });
 
+  test("a source built from chat is labelled, so it never looks like an attached file", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
+    mockedListSources.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: [
+        { ...sourceRow("ready", "src-file"), originalFilename: "venue.pdf" },
+        { ...sourceRow("ready", "src-chat"), originalFilename: "conversation-notes-2.txt", origin: "conversation" as const },
+      ],
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    // The planner never pressed "add this as a source" for the chat-derived
+    // one, so it must be distinguishable from a file they chose to upload.
+    expect(await screen.findByText("conversation-notes-2.txt")).toBeInTheDocument();
+    expect(screen.getAllByText("from chat")).toHaveLength(1);
+  });
+
+  test("asking the assistant to use typed messages reports what happened", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
+    mockedCloseSegment.mockResolvedValue({ success: true, correlationId: "c", data: { created: true } });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Use what/i }));
+
+    // Extraction is otherwise silent: a source and applied fields would appear
+    // with nothing explaining where they came from.
+    expect(await screen.findByText(/saved what you/i)).toBeInTheDocument();
+    expect(mockedCloseSegment).toHaveBeenCalledWith(PROPOSAL_ID);
+  });
+
+  test("nothing new to use is reported as a normal outcome, not an error", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
+    mockedCloseSegment.mockResolvedValue({ success: true, correlationId: "c", data: { created: false, reason: "insufficient" } });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Use what/i }));
+
+    const notice = await screen.findByText(/enough detail in your messages/i);
+    expect(notice).toBeInTheDocument();
+    // A skip is a status, not an alert: nothing failed.
+    expect(notice.getAttribute("role")).toBe("status");
+  });
+
   test("the primary action reads Regenerate draft once a draft exists", async () => {
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithDraft([roomsQuestion]))
@@ -1386,7 +1458,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await answerLastQuestion();
 
-    expect(await screen.findByText("Your proposal is 68% complete")).toBeInTheDocument();
+    expect(await screen.findByText("Here is your draft.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate draft" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Generate proposal draft" })).not.toBeInTheDocument();
     // Draft and proposal are on the same version, so nothing is stale.
@@ -1406,7 +1478,7 @@ describe("AssistantWorkspacePage", () => {
     const ahead = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     expect(await screen.findByText(STALE_HINT)).toBeInTheDocument();
     // Regenerating uses the CURRENT proposal version, not the draft's.
-    fireEvent.click(screen.getByRole("button", { name: "Regenerate draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Update draft" }));
     await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
       PROPOSAL_ID,
       { content: "Generate a proposal draft from the current information.", intent: "generate_draft", expectedProposalVersion: 9 },

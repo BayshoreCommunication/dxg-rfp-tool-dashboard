@@ -212,6 +212,29 @@ export const postConversationMessageAction = async (
     };
   });
 
+/**
+ * Ask the assistant to use what has been typed so far.
+ *
+ * Segments otherwise close on idle or turn count, so without this a planner who
+ * has just finished describing their event waits on a timer with no way to say
+ * "now". `created: false` is a normal answer — there may be nothing new since
+ * the last segment, or nothing substantive enough — so callers must
+ * distinguish it from a failure.
+ */
+export const closeConversationSegmentAction = async (
+  proposalId: string,
+): Promise<ActionResult<{ created: boolean; reason?: string }>> =>
+  request(`/api/v1/proposals/${encodeURIComponent(proposalId)}/conversation/segments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  }, value => {
+    if (!isRecord(value)) return null;
+    return {
+      created: value.created === true,
+      reason: typeof value.reason === "string" ? value.reason : undefined,
+    };
+  });
+
 export const patchConversationQuestionAction = async (
   proposalId: string,
   questionId: string,

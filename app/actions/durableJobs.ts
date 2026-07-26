@@ -47,7 +47,12 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
 };
 
 export type UploadSession = { sourceId: string; uploadUrl: string; requiredHeaders: Record<string, string> };
-export type PrivateDocumentSource = { id: string; status: string; confidentiality: "non_confidential" | "confidential" | "internal" | "restricted"; originalFilename: string; createdAt: string };
+// `origin` distinguishes a source the planner deliberately added from one the
+// system derived from what they typed in chat. Only the latter reaches the
+// provider without an explicit "this is a source" action, so the UI has to say
+// so. Defaults to "upload" when absent: older responses predate the field.
+export type SourceOrigin = "upload" | "notes" | "conversation";
+export type PrivateDocumentSource = { id: string; status: string; confidentiality: "non_confidential" | "confidential" | "internal" | "restricted"; originalFilename: string; createdAt: string; origin: SourceOrigin };
 
 export const listPrivateDocumentSources = async (proposalId: string): Promise<ActionResult<PrivateDocumentSource[]>> =>
   request(`/api/v1/proposals/${encodeURIComponent(proposalId)}/sources?limit=100`, undefined, value => {
@@ -56,7 +61,7 @@ export const listPrivateDocumentSources = async (proposalId: string): Promise<Ac
       if (!item || typeof item !== "object") return [];
       const row = item as Record<string, unknown>;
       return typeof row.id === "string" && typeof row.status === "string" && typeof row.confidentiality === "string" && typeof row.originalFilename === "string" && typeof row.createdAt === "string"
-        ? [{ id: row.id, status: row.status, confidentiality: row.confidentiality as PrivateDocumentSource["confidentiality"], originalFilename: row.originalFilename, createdAt: row.createdAt }]
+        ? [{ id: row.id, status: row.status, confidentiality: row.confidentiality as PrivateDocumentSource["confidentiality"], originalFilename: row.originalFilename, createdAt: row.createdAt, origin: row.origin === "conversation" || row.origin === "notes" ? row.origin : "upload" }]
         : [];
     });
   });
