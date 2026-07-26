@@ -235,6 +235,12 @@ export default function ProposalContextPanel({
     setStatus(response.data.status);
     setNotice("Selected fields queued for controlled application.");
   };
+  // The API reports candidates whose value could not be normalized onto their
+  // target field, with a human-readable reason. Nothing consumed it, so those
+  // suggestions silently vanished from the review — the planner never learned
+  // the AI had proposed something the system rejected.
+  const invalid = review?.invalidOperations ?? [];
+  const invalidById = new Set(invalid.map((item) => item.operationId));
   return (
     <section
       aria-labelledby="proposal-context-title"
@@ -308,9 +314,34 @@ export default function ProposalContextPanel({
       {result && review && (
         <div className="mt-5">
           <AiRunEvidence run={result.run} />
+          {invalid.length > 0 && (
+            <div className="mt-3 rounded-md border border-slate-300 bg-slate-50 p-3">
+              <h4 className="text-sm font-semibold text-slate-800">
+                {invalid.length} suggestion{invalid.length === 1 ? "" : "s"} could not be used
+              </h4>
+              <p className="mt-1 text-xs text-slate-600">
+                The AI proposed these, but they do not fit the proposal field
+                they target. They have not been applied and need no action —
+                enter the value yourself if it matters.
+              </p>
+              <ul className="mt-2 space-y-2">
+                {invalid.map((item) => (
+                  <li key={item.operationId} className="text-sm text-slate-700">
+                    <span className="font-mono text-xs text-slate-500">{item.path}</span>
+                    <div>{item.reason}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <h3 className="font-semibold">Review suggested information</h3>
           <ul className="mt-2 space-y-3">
             {review.operations.map((item) => {
+              // Candidates the backend could not map to a proposal field have
+              // no canonical path, so they used to render as a blank label with
+              // an unusable decision control. They are listed separately below
+              // with the reason the API already supplies.
+              if (invalidById.has(item.id)) return null;
               const d = decisions[item.id] ?? { decision: "pending" },
                 applied = review.appliedOperationIds.includes(item.id);
               const canonical = review.canonicalPaths[item.id],
