@@ -1230,6 +1230,28 @@ describe("AssistantWorkspacePage", () => {
     ));
   });
 
+  test("draft generation re-reads the version after guided answers mutate the proposal", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithCompletedRun([]));
+    mockedGetProposalContext.mockResolvedValue(contextRunResult);
+    mockedGetProposal
+      .mockResolvedValueOnce({ success: true, message: "ok", data: { _id: PROPOSAL_ID, version: 4, event: { eventName: "AI Summit" } } })
+      .mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID, version: 16, event: { eventName: "AI Summit" } } });
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: { runType: "proposal_draft", runId: "run-2", jobId: "job-2" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Generate draft" }));
+
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { content: "Generate a proposal draft from the current information.", intent: "generate_draft", expectedProposalVersion: 16 },
+      expect.any(String),
+    ));
+  });
+
   test("the overview reports the auto-applied field count and the suggestions still needing review", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
     mockedGetProposalContext.mockResolvedValue(contextRunResult);

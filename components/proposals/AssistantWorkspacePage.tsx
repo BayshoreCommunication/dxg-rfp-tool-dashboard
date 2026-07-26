@@ -1126,8 +1126,11 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   };
 
   const runDraft = async () => {
-    if (typeof proposalVersion !== "number" || sending || !proposalId) return;
-    await sendDraftMessage(proposalVersion);
+    if (sending || !proposalId) return;
+    const version = await fetchProposalVersion(proposalId);
+    if (typeof version !== "number") return;
+    setProposalVersion(version);
+    await sendDraftMessage(version);
   };
 
   // Same code path as the rail's "Generate draft" chip, and the single handler
@@ -1137,13 +1140,10 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const runDraftFromCard = async () => {
     if (!proposalId || sending || draftBusy) return;
     setDraftError(null);
-    let version = proposalVersion;
-    if (typeof version !== "number") {
-      setDraftBusy(true);
-      version = await fetchProposalVersion(proposalId);
-      setDraftBusy(false);
-      if (typeof version === "number") setProposalVersion(version);
-    }
+    setDraftBusy(true);
+    const version = await fetchProposalVersion(proposalId);
+    setDraftBusy(false);
+    if (typeof version === "number") setProposalVersion(version);
     if (typeof version !== "number") {
       setDraftError("I couldn’t confirm the current version of your proposal. Open the editor, review the details, and try again.");
       return;
