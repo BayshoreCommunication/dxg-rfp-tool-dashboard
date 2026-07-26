@@ -71,7 +71,7 @@ describe("ProposalWorkflowShell", () => {
     // The assistant is reached by link, not by a second embedded copy.
     expect(screen.getByRole("link", { name: /Open the assistant/ }))
       .toHaveAttribute("href", `/proposals/${PROPOSAL_ID}/assistant`);
-    expect(screen.queryByText(/Work with the proposal assistant/)).toBeInTheDocument();
+    expect(screen.queryByText(/The assistant is the easiest place/)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });
 
@@ -108,7 +108,7 @@ describe("ProposalWorkflowShell", () => {
 
     // Stepper, assistant banner and the step-1 guidance copy all stay.
     expect(screen.getByRole("list", { name: "Proposal creation steps" })).toBeInTheDocument();
-    expect(screen.getByText(/Work with the proposal assistant/)).toBeInTheDocument();
+    expect(screen.getByText(/The assistant is the easiest place/)).toBeInTheDocument();
     expect(screen.getByText(/You can upload more than one source/)).toBeInTheDocument();
 
     // The other panels are untouched.

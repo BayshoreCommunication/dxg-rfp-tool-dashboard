@@ -195,31 +195,29 @@ describe("InvestmentGuidancePanel", () => {
     ).toBeInTheDocument();
   });
 
-  test("shows the empty state when no report exists yet", async () => {
+  test("automatically generates guidance when no report exists yet", async () => {
     mockedLatest.mockResolvedValue({
       success: false,
       code: "INVESTMENT_GUIDANCE_NOT_FOUND",
       message: "No investment guidance has been generated for this proposal yet.",
     });
     render(<InvestmentGuidancePanel proposalId={proposalId} />);
-    expect(
-      await screen.findByText(
-        /Generate investment guidance to see a low \/ typical \/ high range/,
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("$12,500")).toBeInTheDocument();
+    expect(mockedGenerate).toHaveBeenCalledTimes(1);
+    expect(mockedGenerate).toHaveBeenCalledWith(proposalId);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  test("shows the confidence band, score and the deductions behind it", async () => {
+  test("shows a plain-language estimate status and keeps scoring in optional details", async () => {
     mockedLatest.mockResolvedValue({ success: true, data: report });
     render(<InvestmentGuidancePanel proposalId={proposalId} />);
-    expect(await screen.findByText("Medium confidence — confidence 72/100")).toBeInTheDocument();
-    // Each deduction is named with the points it cost, never hidden.
-    expect(screen.getByText("Projector lumens not stated −10")).toBeInTheDocument();
-    expect(screen.getByText("Union status unknown −18")).toBeInTheDocument();
+    expect(await screen.findByText("Planning estimate")).toBeInTheDocument();
+    expect(screen.getByText("Estimate confidence: 72/100")).toBeInTheDocument();
+    expect(screen.getByText("Projector lumens not stated (10-point impact)")).toBeInTheDocument();
+    expect(screen.getByText("Union status unknown (18-point impact)")).toBeInTheDocument();
   });
 
-  test("a low confidence band shows the engine note as a prominent warning", async () => {
+  test("an early estimate leads with a friendly question and assistant action", async () => {
     const low: InvestmentReport = {
       ...report,
       confidence: {
@@ -233,10 +231,13 @@ describe("InvestmentGuidancePanel", () => {
     };
     mockedLatest.mockResolvedValue({ success: true, data: low });
     render(<InvestmentGuidancePanel proposalId={proposalId} />);
-    expect(await screen.findByText("Low confidence — confidence 41/100")).toBeInTheDocument();
-    const note = screen.getByText(/Indicative range only/);
-    expect(note).toBeInTheDocument();
-    expect(note.className).toMatch(/rose/);
+    expect(await screen.findByText("Early estimate")).toBeInTheDocument();
+    expect(screen.getByText("In which city will the event take place?")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Answer these questions" })).toHaveAttribute(
+      "href",
+      `/proposals/${proposalId}/assistant`,
+    );
+    expect(screen.queryByText("Low confidence — confidence 41/100")).not.toBeInTheDocument();
   });
 
   test("compares the generated range with the selected planning budget", async () => {
@@ -269,10 +270,10 @@ describe("InvestmentGuidancePanel", () => {
     expect(screen.getByText(/don't add them up/)).toBeInTheDocument();
   });
 
-  test("composes the basis line and omits neutral 1.0 factors", async () => {
+  test("keeps the pricing basis in optional calculation details and omits neutral factors", async () => {
     mockedLatest.mockResolvedValue({ success: true, data: report });
     render(<InvestmentGuidancePanel proposalId={proposalId} />);
-    const line = await screen.findByText(/Priced on Chicago ×1.20/);
+    const line = await screen.findByText(/Pricing basis: Chicago ×1.20/);
     expect(line.textContent).toContain(
       "Chicago ×1.20 · union standard ×1.40 · outside AV · 3 show days (equipment ×1.80)",
     );

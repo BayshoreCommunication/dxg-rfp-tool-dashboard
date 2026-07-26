@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   generateInvestmentGuidanceAction,
   getLatestInvestmentGuidanceAction,
@@ -101,43 +102,114 @@ const basisSummary = (basis: InvestmentBasis): string => {
   return parts.join(" · ");
 };
 
-const ConfidenceHeader = ({ confidence }: { confidence: InvestmentConfidence }) => {
+const questionByRule: Record<string, string> = {
+  scope_vague: "What parts of the event should the production partner provide?",
+  no_line_items_to_price: "What audio, video, lighting, staging, or event support do you need?",
+  in_house_status_unknown: "Will the venue require its own audio and video provider?",
+  hotel_in_house_vs_outside_av_unknown:
+    "Will the venue provide the audio and video equipment, or can you use an outside partner?",
+  market_city_unknown: "In which city will the event take place?",
+  projection_brightness_lumens_not_stated:
+    "Approximately how large should the main screen or video wall be?",
+  screen_led_size_or_pixel_pitch_not_stated:
+    "Approximately how large should the main screen or video wall be?",
+  hybrid_streaming_scope_unclear: "Will remote attendees watch the event online?",
+  wireless_channel_count_not_stated:
+    "Approximately how many wireless microphones will you need?",
+  connectivity_bandwidth_needs_unknown:
+    "Will the venue provide dedicated internet for the event?",
+  interpretation_accessibility_needs_unstated:
+    "Do you need captioning, sign-language support, or language interpretation?",
+  union_status_unknown: "Does the venue require union labor?",
+};
+
+const friendlyQuestion = (deduction: InvestmentConfidence["deductions"][number]) =>
+  questionByRule[deduction.ruleKey] ??
+  (deduction.ruleKey.includes("scope_vague")
+    ? "What parts of the event should the production partner provide?"
+    : deduction.ruleKey.includes("in_house")
+      ? "Will the venue provide the audio and video equipment, or can you use an outside partner?"
+      : deduction.ruleKey.includes("calibrated")
+        ? "Do you have a previous event budget or vendor quote we can use as a reference?"
+        : `Can you confirm this planning detail: ${deduction.label.replace(/\s*unknown|\s*not stated/gi, "")}?`);
+
+const ConfidenceHeader = ({
+  confidence,
+  proposalId,
+  pricingBasis,
+}: {
+  confidence: InvestmentConfidence;
+  proposalId: string;
+  pricingBasis?: string;
+}) => {
   const tone = confidencePresentation[confidence.band];
   const label =
-    confidence.band === "low" && confidence.score === 0
-      ? "Very early estimate"
-      : `${tone.label} confidence`;
+    confidence.band === "low"
+      ? "Early estimate"
+      : confidence.band === "medium"
+        ? "Planning estimate"
+        : "Detailed estimate";
+  const questions = Array.from(
+    new Set(confidence.deductions.map(friendlyQuestion)),
+  ).slice(0, 6);
   return (
-    <div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`rounded-full px-3 py-1 text-sm font-semibold ${tone.chip}`}>
-          {label} — confidence {confidence.score}/100
-        </span>
-        {confidence.deductions.length === 0 && (
-          <span className="text-xs text-slate-500">No missing pricing-critical inputs.</span>
-        )}
-      </div>
-      {confidence.deductions.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-1">
-          {confidence.deductions.map((deduction) => (
-            <li
-              key={deduction.ruleKey || deduction.label}
-              title={deduction.reason || undefined}
-              className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-600"
+    <div className={`rounded-xl border p-4 ${confidence.band === "low" ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
+      <p className="font-semibold text-slate-900">{label}</p>
+      <p className="mt-1 text-sm text-slate-700">
+        {confidence.band === "low"
+          ? "We need a few more details before we can provide a reliable planning range."
+          : confidence.band === "medium"
+            ? "This range is useful for early planning. A few more details will make it more precise."
+            : "This range is based on detailed event information and is ready for planning conversations."}
+      </p>
+      {questions.length > 0 && (
+        <>
+          <p className="mt-4 text-sm font-semibold text-slate-900">Helpful details to confirm</p>
+          <ul className="mt-2 space-y-2">
+            {questions.map((question) => (
+              <li key={question} className="flex gap-2 text-sm text-slate-700">
+                <span aria-hidden className="text-[#087f69]">•</span>
+                <span>{question}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link
+              href={`/proposals/${proposalId}/assistant`}
+              className="rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white"
             >
-              {displayDeductionLabel(deduction)} −{deduction.deduction}
-            </li>
-          ))}
-        </ul>
+              Answer these questions
+            </Link>
+            <span className="text-xs text-slate-600">
+              You can skip anything you don&apos;t know—we&apos;ll clearly label any assumptions.
+            </span>
+          </div>
+        </>
       )}
-      {confidence.note &&
-        (confidence.band === "low" ? (
-          <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-rose-900">
-            {friendlyConfidenceNote(confidence.note)}
-          </p>
-        ) : (
-          <p className="mt-2 text-xs text-slate-600">{friendlyConfidenceNote(confidence.note)}</p>
-        ))}
+      <div className="mt-4">
+        <Disclosure title="How this estimate was calculated" summary="Optional technical details">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-full px-3 py-1 text-sm font-semibold ${tone.chip}`}>
+              Estimate confidence: {confidence.score}/100
+            </span>
+          </div>
+          {confidence.deductions.length > 0 && (
+            <ul className="mt-3 space-y-1">
+              {confidence.deductions.map((deduction) => (
+                <li key={deduction.ruleKey || deduction.label} className="text-xs text-slate-600">
+                  {displayDeductionLabel(deduction)} ({deduction.deduction}-point impact)
+                </li>
+              ))}
+            </ul>
+          )}
+          {confidence.note && (
+            <p className="mt-3 text-xs text-slate-600">{friendlyConfidenceNote(confidence.note)}</p>
+          )}
+          {pricingBasis && (
+            <p className="mt-3 text-xs text-slate-600">Pricing basis: {pricingBasis}</p>
+          )}
+        </Disclosure>
+      </div>
     </div>
   );
 };
@@ -292,15 +364,47 @@ export default function InvestmentGuidancePanel({
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string>();
+  const autoGenerationRef = useRef<{
+    proposalId: string;
+    promise: ReturnType<typeof generateInvestmentGuidanceAction>;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
-    void getLatestInvestmentGuidanceAction(proposalId).then((result) => {
+    void getLatestInvestmentGuidanceAction(proposalId).then(async (result) => {
       if (!active) return;
+      if (result.success) {
+        setReport(result.data);
+        setLoading(false);
+        return;
+      }
+      if (result.code !== "INVESTMENT_GUIDANCE_NOT_FOUND") {
+        setError(result.message);
+        setLoading(false);
+        return;
+      }
+      // Entering See Guidance should produce the useful outcome without a
+      // second discovery click. Reuse the same promise when React replays the
+      // effect in development so the result is not lost and no duplicate
+      // report is started.
+      let generationPromise =
+        autoGenerationRef.current?.proposalId === proposalId
+          ? autoGenerationRef.current.promise
+          : null;
+      if (!generationPromise) {
+        generationPromise = generateInvestmentGuidanceAction(proposalId);
+        autoGenerationRef.current = {
+          proposalId,
+          promise: generationPromise,
+        };
+      }
+      setRunning(true);
+      const generated = await generationPromise;
+      if (!active) return;
+      setRunning(false);
       setLoading(false);
-      // No report yet is a normal empty state, not an error.
-      if (result.success) setReport(result.data);
-      else if (result.code !== "INVESTMENT_GUIDANCE_NOT_FOUND") setError(result.message);
+      if (generated.success) setReport(generated.data);
+      else setError(generated.message);
     });
     return () => {
       active = false;
@@ -378,7 +482,13 @@ export default function InvestmentGuidancePanel({
       )}
       {report && (
         <div className="mt-5 space-y-6">
-          {report.confidence && <ConfidenceHeader confidence={report.confidence} />}
+          {report.confidence?.band === "low" && (
+            <ConfidenceHeader
+              confidence={report.confidence}
+              proposalId={proposalId}
+              pricingBasis={basisLine}
+            />
+          )}
 
           {selectedBudget && (
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
@@ -411,13 +521,12 @@ export default function InvestmentGuidancePanel({
             ))}
           </div>
 
-          {basisLine && (
-            <p className="-mt-3 text-xs text-slate-500">
-              Priced on {basisLine}.
-              {report.basis?.showDayEquipmentBasis
-                ? ` ${report.basis.showDayEquipmentBasis}`
-                : ""}
-            </p>
+          {report.confidence && report.confidence.band !== "low" && (
+            <ConfidenceHeader
+              confidence={report.confidence}
+              proposalId={proposalId}
+              pricingBasis={basisLine}
+            />
           )}
 
           {report.scenarios.length > 0 && (
