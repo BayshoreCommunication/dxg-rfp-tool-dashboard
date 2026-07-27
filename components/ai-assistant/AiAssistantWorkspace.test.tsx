@@ -301,4 +301,33 @@ describe("AiAssistantWorkspace", () => {
       }),
     ).toHaveLength(2);
   });
+
+  test("keeps the popup minimal and docks the composer at the bottom", () => {
+    render(
+      <AiAssistantWorkspace
+        initialThreads={[]}
+        initialDetail={null}
+        presentation="popup"
+        onClose={jest.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Assistant options" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("AI Assistant")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create a proposal" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("assistant-composer-dock")).toHaveClass(
+      "mt-auto",
+      "shrink-0",
+    );
+    expect(
+      screen.getByTestId("assistant-control-scrim"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Message the AI Assistant"),
+    ).toBeInTheDocument();
+  });
 });

@@ -12,6 +12,7 @@ export default function MessageList({
   loading,
   isNearBottom,
   onNearBottomChange,
+  compact = false,
 }: {
   messages: AssistantDisplayMessage[];
   streamingAssistant: {
@@ -22,6 +23,7 @@ export default function MessageList({
   loading: boolean;
   isNearBottom: boolean;
   onNearBottomChange: (value: boolean) => void;
+  compact?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -113,7 +115,11 @@ export default function MessageList({
             node.scrollHeight - node.scrollTop - node.clientHeight;
           onNearBottomChange(distance < 96);
         }}
-        className="h-full overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6"
+        className={
+          compact
+            ? "h-full overflow-y-auto overscroll-contain px-3 pb-4 pt-14"
+            : "h-full overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6"
+        }
         aria-label="AI Assistant conversation"
       >
         <p aria-live="polite" className="sr-only">

@@ -1,5 +1,4 @@
 import {
-  Bot,
   House,
   Mail,
   NotepadTextDashed,
@@ -27,16 +26,6 @@ export const navigationConfig: NavItem[] = [
     href: "/proposals",
     icon: <NotepadTextDashed size={22} />,
   },
-  ...(process.env.NEXT_PUBLIC_AI_ASSISTANT_ENABLED === "true"
-    ? [
-        {
-          id: "ai-assistant",
-          title: "AI Assistant",
-          href: "/ai-assistant",
-          icon: <Bot size={22} />,
-        },
-      ]
-    : []),
   {
     id: "email",
     title: "Email",

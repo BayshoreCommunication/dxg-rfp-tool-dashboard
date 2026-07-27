@@ -187,6 +187,10 @@ export const aiAssistantReducer = (
         ...state,
         threads: action.threads,
         threadListStatus: "ready",
+        error: state.selectedThreadId ? state.error : null,
+        conversationStatus: state.selectedThreadId
+          ? state.conversationStatus
+          : "empty",
       };
     case "THREADS_FAILED":
       return { ...state, threadListStatus: "error" };

@@ -20,6 +20,7 @@ export default function ChatComposer({
   onSend,
   onAbort,
   compact = false,
+  showKeyboardHint = true,
 }: {
   value: string;
   busy: boolean;
@@ -30,6 +31,7 @@ export default function ChatComposer({
   onSend: () => void;
   onAbort: () => void;
   compact?: boolean;
+  showKeyboardHint?: boolean;
 }) {
   const internalRef = useRef<HTMLTextAreaElement | null>(null);
   const composingRef = useRef(false);
@@ -96,7 +98,12 @@ export default function ChatComposer({
           onCompositionEnd={() => {
             composingRef.current = false;
           }}
-          className="max-h-36 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2 py-2.5 text-[15px] leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400 placeholder-shown:min-h-20 disabled:cursor-not-allowed disabled:opacity-60 sm:placeholder-shown:min-h-10"
+          className={cn(
+            "max-h-36 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2 leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60",
+            compact
+              ? "py-1.5 text-[13px] placeholder-shown:min-h-10"
+              : "py-2.5 text-[15px] placeholder-shown:min-h-20 sm:placeholder-shown:min-h-10",
+          )}
         />
         {busy ? (
           <button
@@ -119,24 +126,31 @@ export default function ChatComposer({
           </button>
         )}
       </form>
-      <div className="mt-1.5 flex min-h-4 items-center justify-between gap-3 px-1 text-[11px]">
-        <span className="text-slate-600">
-          Enter to send · Shift+Enter for a new line
-        </span>
-        {nearLimit && (
-          <span
-            id="ai-assistant-character-count"
-            className={cn(
-              "shrink-0",
-              count >= ASSISTANT_MESSAGE_MAX_LENGTH
-                ? "text-rose-600"
-                : "text-slate-400",
-            )}
-          >
-            {count.toLocaleString()}/{ASSISTANT_MESSAGE_MAX_LENGTH.toLocaleString()}
-          </span>
-        )}
-      </div>
+      {(showKeyboardHint || nearLimit) && (
+        <div className="mt-1.5 flex min-h-4 items-center justify-between gap-3 px-1 text-[11px]">
+          {showKeyboardHint ? (
+            <span className="text-slate-600">
+              Enter to send · Shift+Enter for a new line
+            </span>
+          ) : (
+            <span />
+          )}
+          {nearLimit && (
+            <span
+              id="ai-assistant-character-count"
+              className={cn(
+                "shrink-0",
+                count >= ASSISTANT_MESSAGE_MAX_LENGTH
+                  ? "text-rose-600"
+                  : "text-slate-400",
+              )}
+            >
+              {count.toLocaleString()}/
+              {ASSISTANT_MESSAGE_MAX_LENGTH.toLocaleString()}
+            </span>
+          )}
+        </div>
+      )}
       {retryAfterSeconds > 0 && (
         <p
           id="ai-assistant-retry-status"

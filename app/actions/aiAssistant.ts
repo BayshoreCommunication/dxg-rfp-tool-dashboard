@@ -157,3 +157,35 @@ export const archiveAssistantThreadAction = async (
     },
     parseAssistantThread,
   );
+
+export const getAssistantBootstrapAction = async (): Promise<
+  AssistantActionResult<{
+    threads: AssistantThread[];
+    detail: AssistantThreadDetail | null;
+  }>
+> => {
+  const threadsResult = await listAssistantThreadsAction();
+  if (!threadsResult.success) return threadsResult;
+
+  const activeThread = threadsResult.data.find(
+    (thread) => thread.status === "active",
+  );
+  if (!activeThread) {
+    return {
+      success: true,
+      data: { threads: threadsResult.data, detail: null },
+      correlationId: threadsResult.correlationId,
+    };
+  }
+
+  const detailResult = await getAssistantThreadAction(activeThread.id);
+  if (!detailResult.success) return detailResult;
+  return {
+    success: true,
+    data: {
+      threads: threadsResult.data,
+      detail: detailResult.data,
+    },
+    correlationId: detailResult.correlationId,
+  };
+};

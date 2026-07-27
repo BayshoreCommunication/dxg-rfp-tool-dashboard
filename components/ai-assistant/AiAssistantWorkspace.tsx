@@ -7,6 +7,7 @@ import type {
   AssistantUiError,
 } from "@/lib/aiAssistant/types";
 import AssistantEmptyState from "./AssistantEmptyState";
+import AssistantFloatingControls from "./AssistantFloatingControls";
 import AssistantHeader from "./AssistantHeader";
 import AssistantHistory from "./AssistantHistory";
 import ChatComposer from "./ChatComposer";
@@ -18,10 +19,14 @@ export default function AiAssistantWorkspace({
   initialThreads,
   initialDetail,
   initialError = null,
+  presentation = "page",
+  onClose,
 }: {
   initialThreads: AssistantThread[];
   initialDetail: AssistantThreadDetail | null;
   initialError?: AssistantUiError | null;
+  presentation?: "page" | "dialog" | "popup";
+  onClose?: () => void;
 }) {
   const assistant = useAiAssistant({
     initialThreads,
@@ -78,20 +83,54 @@ export default function AiAssistantWorkspace({
       onChange={assistant.setDraft}
       onSend={() => void assistant.send()}
       onAbort={assistant.abort}
-      compact={hasConversation}
+      compact={hasConversation || presentation === "popup"}
+      showKeyboardHint={presentation !== "popup"}
     />
+  );
+  const embeddedPresentation = presentation !== "page";
+  const popupPresentation = presentation === "popup";
+  const popupComposerDock = (
+    <div
+      data-testid="assistant-composer-dock"
+      className="mt-auto shrink-0 bg-white/95 px-3 pb-3 pt-2 backdrop-blur"
+    >
+      {state.error && (
+        <div className="mb-2">
+          <ConversationError
+            error={state.error}
+            retryAfterSeconds={assistant.retryAfterSeconds}
+            onRetry={retry}
+            onDismiss={assistant.clearError}
+            compact
+          />
+        </div>
+      )}
+      {composer}
+    </div>
   );
 
   return (
-    <div className="-mx-3 flex min-h-[calc(100vh-3rem)] w-auto max-w-[1152px] flex-col sm:mx-auto sm:w-full">
-      <p className="mb-3 shrink-0 text-sm font-semibold text-slate-600">
-        AI Assistant
-      </p>
+    <div
+      className={
+        embeddedPresentation
+          ? "relative flex h-full min-h-0 w-full flex-col"
+          : "-mx-3 flex min-h-[calc(100vh-3rem)] w-auto max-w-[1152px] flex-col sm:mx-auto sm:w-full"
+      }
+    >
+      {!embeddedPresentation && (
+        <p className="mb-3 shrink-0 text-sm font-semibold text-slate-600">
+          AI Assistant
+        </p>
+      )}
       <section
         aria-label="AI Assistant workspace"
-        className="flex min-h-[620px] flex-1 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_22px_70px_-50px_rgba(15,23,42,0.65)] sm:rounded-[26px]"
+        className={
+          embeddedPresentation
+            ? "flex min-h-0 flex-1 overflow-hidden bg-white"
+            : "flex min-h-[620px] flex-1 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_22px_70px_-50px_rgba(15,23,42,0.65)] sm:rounded-[26px]"
+        }
       >
-        {activeThreads.length > 0 && (
+        {activeThreads.length > 0 && !popupPresentation && (
           <AssistantHistory
             threads={state.threads}
             selectedThreadId={state.selectedThreadId}
@@ -103,48 +142,58 @@ export default function AiAssistantWorkspace({
           />
         )}
         <div className="flex min-w-0 flex-1 flex-col">
-          <AssistantHeader
-            title={selectedThread?.title || "New conversation"}
-            hasHistory={activeThreads.length > 0}
-            onOpenHistory={() => setHistoryOpen(true)}
-            onNewChat={newChat}
-          />
-          {!hasConversation ? (
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <AssistantEmptyState
-                onSuggestion={(prompt) => {
-                  assistant.setDraft(prompt);
-                  window.requestAnimationFrame(() =>
-                    composerRef.current?.focus(),
-                  );
-                }}
-              >
-                {state.error && (
-                  <div className="mb-3 text-left">
-                    <ConversationError
-                      error={state.error}
-                      retryAfterSeconds={assistant.retryAfterSeconds}
-                      onRetry={retry}
-                      onDismiss={assistant.clearError}
-                    />
-                  </div>
-                )}
-                {composer}
-              </AssistantEmptyState>
-            </div>
+          {popupPresentation && (
+            <div
+              data-testid="assistant-control-scrim"
+              aria-hidden
+              className="pointer-events-none absolute inset-x-px top-px z-20 h-14 rounded-t-[19px] bg-linear-to-b from-white via-white/95 to-transparent"
+            />
+          )}
+          {popupPresentation && onClose ? (
+            <AssistantFloatingControls
+              hasHistory={activeThreads.length > 0}
+              onOpenHistory={() => setHistoryOpen(true)}
+              onNewChat={newChat}
+              onClose={onClose}
+            />
           ) : (
-            <>
-              <MessageList
-                messages={state.messages}
-                streamingAssistant={state.streamingAssistant}
-                loading={loading}
-                isNearBottom={state.isNearBottom}
-                onNearBottomChange={assistant.setNearBottom}
-              />
-              <div className="shrink-0 border-t border-slate-100 bg-white/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:px-7">
-                <div className="mx-auto max-w-3xl">
+            <AssistantHeader
+              title={selectedThread?.title || "New conversation"}
+              hasHistory={activeThreads.length > 0}
+              onOpenHistory={() => setHistoryOpen(true)}
+              onNewChat={newChat}
+              onClose={onClose}
+            />
+          )}
+          {!hasConversation ? (
+            popupPresentation ? (
+              <>
+                <div className="min-h-0 flex-1 overflow-y-auto pt-10">
+                  <AssistantEmptyState
+                    compact
+                    showSuggestions={false}
+                    onSuggestion={(prompt) => {
+                      assistant.setDraft(prompt);
+                      window.requestAnimationFrame(() =>
+                        composerRef.current?.focus(),
+                      );
+                    }}
+                  />
+                </div>
+                {popupComposerDock}
+              </>
+            ) : (
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <AssistantEmptyState
+                  onSuggestion={(prompt) => {
+                    assistant.setDraft(prompt);
+                    window.requestAnimationFrame(() =>
+                      composerRef.current?.focus(),
+                    );
+                  }}
+                >
                   {state.error && (
-                    <div className="mb-3">
+                    <div className="mb-3 text-left">
                       <ConversationError
                         error={state.error}
                         retryAfterSeconds={assistant.retryAfterSeconds}
@@ -154,15 +203,53 @@ export default function AiAssistantWorkspace({
                     </div>
                   )}
                   {composer}
-                </div>
+                </AssistantEmptyState>
               </div>
+            )
+          ) : (
+            <>
+              <MessageList
+                messages={state.messages}
+                streamingAssistant={state.streamingAssistant}
+                loading={loading}
+                isNearBottom={state.isNearBottom}
+                onNearBottomChange={assistant.setNearBottom}
+                compact={popupPresentation}
+              />
+              {popupPresentation ? (
+                popupComposerDock
+              ) : (
+                <div className="assistant-safe-bottom shrink-0 border-t border-slate-100 bg-white/95 px-4 pt-3 backdrop-blur sm:px-7">
+                  <div className="mx-auto max-w-3xl">
+                    {state.error && (
+                      <div className="mb-3">
+                        <ConversationError
+                          error={state.error}
+                          retryAfterSeconds={assistant.retryAfterSeconds}
+                          onRetry={retry}
+                          onDismiss={assistant.clearError}
+                        />
+                      </div>
+                    )}
+                    {composer}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
       </section>
 
       {historyOpen && (
-        <div className="fixed bottom-0 left-[90px] right-0 top-0 z-40 lg:hidden">
+        <div
+          className={
+            popupPresentation
+              ? "absolute inset-0 z-40"
+              : embeddedPresentation
+              ? "absolute inset-0 z-40 lg:hidden"
+              : "fixed bottom-0 left-[90px] right-0 top-0 z-40 lg:hidden"
+          }
+        >
           <button
             type="button"
             aria-label="Close conversation history"

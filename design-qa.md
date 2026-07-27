@@ -1,75 +1,82 @@
-# AI Assistant Phase 4 Design QA
+# AI Assistant Popup Design QA
 
-**Evidence:** Supplied source reference plus local desktop, mobile, error-state, full-view, and focused comparison captures. Local review captures are intentionally not committed.
+**Result:** Passed
+
+**Reference:** User-supplied popup/control/composer screenshots and `Screen Recording 2026-07-27 at 12.16.16 PM.mov`
+
+**Implementation:** Compact, non-modal sidebar helper
 
 ## Comparison setup
 
-- Source pixels: 1918 × 965, including 87px of browser chrome.
-- Source content crop: 1918 × 878.
-- Desktop implementation: 1664 × 762 CSS pixels at device pixel ratio 1.
-- Density normalization: the source content crop was downsampled to 1664 × 762 before comparison. The implementation was not resampled.
-- Mobile implementation: 390 × 844 CSS pixels at device pixel ratio 1.
-- State: new/empty conversation. The mobile error capture additionally verifies a safe expired-session failure while preserving the draft.
-- The supplied reference establishes the empty-state visual direction. The approved plan intentionally replaces the time-dependent greeting with hydration-safe copy, omits the inactive attachment affordance, and adds `New chat` plus four platform-focused prompts.
+- Final responsive review used a 571 × 655 viewport, matching the latest
+  user-supplied popup state.
+- The reference and implementation composer were reviewed together at
+  `/tmp/ai-assistant-popup-final-qa/composer-comparison.png`.
+- The reference and implementation floating controls were reviewed together at
+  `/tmp/ai-assistant-popup-final-qa/controls-comparison.png`.
+- Final empty and completed-conversation captures are at
+  `/tmp/ai-assistant-popup-final-qa/empty-popup.png` and
+  `/tmp/ai-assistant-popup-final-qa/conversation-popup.png`.
+- Opening and closing were inspected at multiple points in the transition.
+  Local QA captures remain outside the repository.
 
-## Findings
+## Final visual contract
 
-No actionable P0, P1, or P2 findings remain.
+- Popup: 360 × 420 CSS pixels at the matched viewport.
+- No title/header bar.
+- Floating three-dot and close controls in the top-right corner.
+- Three-dot menu exposes New conversation and Conversation history.
+- Empty state contains only the orb, a short help statement, and the composer.
+- Composer is a dedicated bottom dock and remains aligned to the popup edge in
+  empty, streaming, completed, and error states.
+- Conversation content scrolls independently between the floating controls and
+  the bottom composer.
 
-- Fonts and typography: the implementation uses the application's existing Proxima Nova stack, strong navy display weight, readable slate body copy, and mobile sizes that do not clip or wrap awkwardly.
-- Spacing and layout rhythm: the card, centered orb/content stack, composer, and restrained shadow follow the reference composition. The final 1152px card maximum preserves a readable conversation width and supports the planned history rail.
-- Colors and visual tokens: the existing pale-slate background, white surface, navy type, and cyan/teal actions match the source and dashboard design system.
-- Image quality and asset fidelity: `orb-soft-v2.png` is a real 384 × 384 raster asset with a clean white edge, soft cyan halo, matte radial shading, and no visible square boundary. It replaces the earlier overly glossy asset.
-- Copy and content: scope copy is concise and independently understandable. The guidance disclaimer accurately states that v1 is read-only.
-- Icons: existing Lucide icons use consistent stroke weight, alignment, and accessible names.
-- Accessibility: heading hierarchy, labelled workspace/composer, visible focus treatments, disabled send state, polite status semantics, alert semantics, and reduced-motion rules are present.
-- Responsiveness: the 390px view retains the fixed product sidebar, readable heading, complete placeholder, usable 44px+ actions, single-column prompts, and vertical scrolling without horizontal overflow.
+## Resolved findings
 
-## Comparison history
+- [P1] The earlier popup was too tall and information-dense.
+  - Reduced the surface to 360 × 420.
+  - Removed the duplicated header/title and compact quick-suggestion grid.
+  - Kept errors in a compact recovery strip above the composer.
+- [P1] The composer moved with empty-state content instead of behaving like a
+  helper input.
+  - Separated it from the empty state and docked it at the bottom.
+  - Verified the dock bottom stays within one CSS pixel of the dialog bottom.
+- [P1] Closing produced a scaled white rectangle over the launcher/dashboard.
+  - Replaced the deep launcher-collapse scale with a short bottom-origin
+    fade/slide and subtle scale.
+  - Removed immediate pointer-triggered focus restoration that could expose a
+    white focus-offset flash.
+  - Initial closed render is hidden without playing the exit animation.
+- [P2] The top controls competed with conversation content.
+  - Added a subtle white-to-transparent control scrim with no visible header
+    boundary.
+  - Kept controls above messages with independent menu and Escape handling.
+- [P2] Generated Next/Turbopack caches could be scanned as Tailwind sources
+  during isolated QA builds.
+  - Excluded `.next` and `.next-*` output from Tailwind source discovery.
+  - Replaced the arbitrary safe-area utility with a stable custom class.
 
-### Iteration 1
+## Interaction and accessibility checks
 
-- [P2] The 390px layout clipped the empty-state heading and crowded the composer.
-  - Fix: reclaimed 12px per side inside the assistant feature only, reduced mobile empty-state typography/padding, and used a smaller mobile radius.
-  - Post-fix evidence: local mobile comparison capture.
-- [P2] The desktop card was wider than the reference composition.
-  - Fix: changed the workspace maximum from 1320px to 1152px.
-  - Post-fix evidence: local normalized desktop comparison capture.
+- Launcher remains above the sidebar footer divider and Notifications.
+- Open, menu, new conversation, history, close, composer, send, stop, retry,
+  and dismiss controls retain accessible names.
+- Escape closes the options menu before it closes the popup.
+- Closed content is `aria-hidden`, inert, and non-interactive.
+- Reduced-motion users receive immediate open/close states.
+- A streamed response completed through the same-origin product SSE flow and
+  persisted into history.
+- The dialog, message list, and composer fit without horizontal page overflow.
+- Dashboard verification passed: contracts, type-check, 45 Jest suites with
+  328 tests, and the production Next.js build. The existing 23-warning lint
+  baseline remains unchanged.
 
-### Iteration 2
+## Final assessment
 
-- [P2] The first generated orb was a dark glossy jewel rather than the reference's soft translucent sphere.
-  - Fix: generated a softer matte cyan asset from the source art direction, normalized its white edge, and moved it to the cache-safe versioned path `public/assets/ai-assistant/orb-soft-v2.png`.
-  - Post-fix evidence: local focused comparison capture.
-- [P2] The required mobile placeholder wrapped to three lines inside a one-line empty textarea and was clipped.
-  - Fix: added an 80px minimum only while the mobile textarea is placeholder-shown and reduced the mobile orb container from 160px to 144px to preserve vertical balance.
-  - Post-fix evidence: local final mobile capture.
-
-## Interaction and runtime checks
-
-- Prompt suggestion click populated and focused the composer.
-- Message submission exercised the safe unauthenticated/session-expired path.
-- The error appeared as an alert with a sign-in recovery action and correlation reference.
-- The failed submission preserved the user's draft.
-- Desktop, mobile, empty, and error states were captured in the browser.
-- Browser console warnings/errors checked after the final render: none.
-- The populated history sheet, streaming, retry, keyboard, and smart-scroll behaviors are covered by component tests because the visual QA route deliberately used non-persistent mock initial state.
-
-## Open questions
-
-- None blocking. Conversation quality, real provider latency, and authenticated staging behavior belong to Phase 5.
-
-## Implementation checklist
-
-- [x] Match the reference's centered empty-state composition.
-- [x] Preserve approved Phase 4 header, suggestions, and read-only guidance.
-- [x] Verify desktop and 390px responsive layouts.
-- [x] Verify suggestion, submission-error, and draft-preservation behavior.
-- [x] Check browser console output.
-- [x] Resolve all P0/P1/P2 findings.
-
-## Follow-up polish
-
-- P3: a future design-system pass could promote assistant-specific cyan/navy values to named tokens once other assistant surfaces adopt them.
+No actionable P0, P1, or P2 visual or interaction findings remain. The
+Assistant now reads as a small contextual helper, matches the supplied
+floating-control and composer direction, and opens/closes without the reported
+white artifact.
 
 final result: passed

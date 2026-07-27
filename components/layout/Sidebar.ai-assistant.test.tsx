@@ -1,8 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import Sidebar from "./Sidebar";
 
 jest.mock("next/navigation", () => ({
-  usePathname: () => "/ai-assistant",
+  usePathname: () => "/dashboard",
 }));
 jest.mock("@/app/actions/auth", () => ({
   signOutAction: jest.fn(),
@@ -29,20 +29,34 @@ jest.mock("@/config/navigation", () => ({
       href: "/proposals",
       icon: <span aria-hidden>P</span>,
     },
-    {
-      id: "ai-assistant",
-      title: "AI Assistant",
-      href: "/ai-assistant",
-      icon: <span aria-hidden>AI</span>,
-    },
   ],
 }));
 
-describe("Sidebar AI Assistant item", () => {
-  test("uses the existing navigation pattern and marks the route active", () => {
-    render(<Sidebar />);
-    const link = screen.getByRole("link", { name: /AI Assistant/ });
-    expect(link).toHaveAttribute("href", "/ai-assistant");
-    expect(link).toHaveAttribute("aria-current", "page");
+describe("Sidebar AI Assistant launcher", () => {
+  test("opens the dialog from above notifications without adding a route link", () => {
+    const onOpenAssistant = jest.fn();
+    render(
+      <Sidebar
+        assistantOpen
+        onOpenAssistant={onOpenAssistant}
+      />,
+    );
+    const launcher = screen.getByRole("button", {
+      name: "Hide AI Assistant popup",
+    });
+    expect(launcher).toHaveAttribute("aria-haspopup", "dialog");
+    expect(launcher).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.queryByRole("link", { name: /AI Assistant/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(launcher);
+    expect(onOpenAssistant).toHaveBeenCalledTimes(1);
+
+    const divider = screen.getByTestId("sidebar-footer-divider");
+    expect(
+      launcher.compareDocumentPosition(divider) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

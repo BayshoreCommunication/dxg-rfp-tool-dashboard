@@ -33,10 +33,13 @@ Architecture, API contracts, accessibility expectations, feature flags, error st
 
 ## Platform AI Assistant
 
-The customer-facing `/ai-assistant` route is a read-only platform-guidance
-surface. It is intentionally separate from the proposal-specific assistant at
-`/proposals/{id}/assistant`:
+The customer-facing AI Assistant is a read-only compact helper popup
+launched from the sidebar footer above Notifications. It intentionally has no
+dedicated customer page route and remains separate from the proposal-specific
+assistant at `/proposals/{id}/assistant`:
 
+- the non-modal popup lazy-loads personal history on first open and preserves its
+  reducer state across close/reopen interactions;
 - thread reads and lifecycle changes use typed server actions;
 - streamed message posts use a same-origin Next.js BFF route;
 - backend bearer credentials and the OpenAI API key never enter browser state;
@@ -50,9 +53,11 @@ surface. It is intentionally separate from the proposal-specific assistant at
 - rendered Markdown disables raw HTML and accepts only internal paths or HTTPS
   links.
 
-`NEXT_PUBLIC_AI_ASSISTANT_ENABLED=true` controls dashboard visibility and route
-availability only. Backend authorization, `assistant:use`, feature flags,
-ownership checks, RLS, provider gates, and kill switches remain authoritative.
+`NEXT_PUBLIC_AI_ASSISTANT_ENABLED=true` controls launcher/popup visibility
+only. Backend authorization, `assistant:use`, feature flags, ownership checks,
+RLS, provider gates, and kill switches remain authoritative.
+
+User-facing operating help: [Using the AI Assistant](../user-guides/AI_ASSISTANT.md).
 
 ## Canonical proposal contract
 

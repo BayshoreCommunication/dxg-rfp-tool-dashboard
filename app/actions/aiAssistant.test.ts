@@ -2,6 +2,7 @@
 
 import {
   createAssistantThreadAction,
+  getAssistantBootstrapAction,
   getAssistantThreadAction,
   listAssistantThreadsAction,
 } from "./aiAssistant";
@@ -101,5 +102,29 @@ describe("AI Assistant server actions", () => {
       retryable: true,
       retryAfterSeconds: 17,
     });
+  });
+
+  test("bootstraps the most recent active conversation for the popup", async () => {
+    mockedFetch
+      .mockResolvedValueOnce(
+        Response.json(
+          { data: [thread] },
+          { headers: { "X-Correlation-ID": "corr-list" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        Response.json(
+          { data: { thread, messages: [] } },
+          { headers: { "X-Correlation-ID": "corr-detail" } },
+        ),
+      );
+
+    const result = await getAssistantBootstrapAction();
+    expect(result).toEqual({
+      success: true,
+      data: { threads: [thread], detail: { thread, messages: [] } },
+      correlationId: "corr-detail",
+    });
+    expect(mockedFetch).toHaveBeenCalledTimes(2);
   });
 });

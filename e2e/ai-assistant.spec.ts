@@ -14,7 +14,10 @@ const signIn = async (page: Page) => {
     .getByRole("button", { name: "Sign In to Dashboard" })
     .click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await page.goto("/ai-assistant");
+  await page.getByRole("button", { name: "Open AI Assistant" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "AI Assistant" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("region", { name: "AI Assistant workspace" }),
   ).toBeVisible();
@@ -30,8 +33,11 @@ test("streams a response, persists history, starts a new chat, and remains respo
   page,
 }, testInfo) => {
   await expect(
+    page.getByRole("button", { name: "Hide AI Assistant popup" }),
+  ).toHaveAttribute("aria-expanded", "true");
+  await expect(
     page.getByRole("link", { name: "AI Assistant" }),
-  ).toHaveAttribute("aria-current", "page");
+  ).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "How can I help?" }),
   ).toBeVisible();
@@ -64,7 +70,20 @@ test("streams a response, persists history, starts a new chat, and remains respo
     page.getByRole("link", { name: "Proposals" }).last(),
   ).toHaveAttribute("href", "/proposals");
 
+  await page.getByRole("button", { name: "Close AI Assistant" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "AI Assistant" }),
+  ).not.toBeVisible();
+  await page.getByRole("button", { name: "Open AI Assistant" }).click();
+  await expect(
+    page
+      .getByLabel("AI Assistant conversation")
+      .locator("ol")
+      .getByText(/Publication and sending remain explicit actions/),
+  ).toBeVisible();
+
   await page.reload();
+  await page.getByRole("button", { name: "Open AI Assistant" }).click();
   await expect(
     page
       .getByLabel("AI Assistant conversation")
@@ -73,6 +92,7 @@ test("streams a response, persists history, starts a new chat, and remains respo
   ).toBeVisible();
 
   if (testInfo.project.name.includes("mobile")) {
+    await page.getByRole("button", { name: "Assistant options" }).click();
     await page
       .getByRole("button", { name: "Open conversation history" })
       .click();
@@ -92,7 +112,10 @@ test("streams a response, persists history, starts a new chat, and remains respo
   );
   expect(fitsViewport).toBe(true);
 
-  await page.getByRole("button", { name: /^New(?: chat)?$/ }).click();
+  await page.getByRole("button", { name: "Assistant options" }).click();
+  await page
+    .getByRole("button", { name: "Start new conversation" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "How can I help?" }),
   ).toBeVisible();
