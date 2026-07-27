@@ -374,6 +374,7 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
   const impactLabel = question.impact ? impactLabels[question.impact] : null;
   const answerType = question.answerType;
   const inputId = `guided-answer-${question.id}`;
+  const errorId = `guided-answer-error-${question.id}`;
   // A picked day is submitted from its LOCAL calendar parts; toISOString would
   // shift the date by a day for anyone west of UTC.
   const answer = answerType === "date" ? (day ? localIsoDay(day) : "") : value.trim();
@@ -462,6 +463,8 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
               disabled={busy}
               placeholder={answerType === "number" ? "Enter a number…" : "Type your answer…"}
               aria-label="Answer this question"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
               className={`${ANSWER_FIELD_CLASS} basis-48`}
             />
           )}
@@ -475,7 +478,7 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
           {skipButton}
         </form>
       )}
-      {error && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
+      {error && <p id={errorId} role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
     </div>
   );
 }
@@ -715,7 +718,11 @@ function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, dra
   return (
     <div className="max-w-[85%] rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
       <p className="text-sm font-semibold text-emerald-900">
-        {percent === null ? "Key questions answered." : `Your proposal is ${percent}% complete`}
+        {/* Not "X% complete": the stepper uses "complete" for how far
+            through the workflow a proposal is, and this measures how much of
+            the questionnaire is filled in. Two different questions deserve two
+            different words, or a planner reads them as contradicting. */}
+        {percent === null ? "Key questions answered." : `Your proposal details are ${percent}% filled in`}
       </p>
       {percent !== null && (
         <div
@@ -910,7 +917,8 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const completedContextRuns = messages.filter(m => m.runType === "proposal_context" && m.status === "complete").length;
 
   // Auto-apply after extraction: the latest completed proposal_context run is
-  // handed to useAutoApply, which fires once per runId (sessionStorage guard),
+  // handed to useAutoApply, which fires once per runId across open tabs
+  // (localStorage guard),
   // accepts only empty + high-confidence candidates, and polls the application
   // job. A successful application refreshes the conversation and breadcrumb
   // (the event name typically populates from the applied fields).

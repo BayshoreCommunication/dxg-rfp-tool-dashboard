@@ -7,7 +7,8 @@
 // pending for the human reviewer). The review is saved, one controlled
 // application job is queued with the review's proposal version, and the job is
 // polled with the shared backoff. Overwrites are never confirmed automatically.
-// The flow fires exactly once per runId (sessionStorage guard) and a failure —
+// The flow fires exactly once per runId across every open tab (localStorage
+// guard) and a failure —
 // including PROPOSAL_VERSION_CONFLICT — surfaces a quiet notice pointing at
 // the manual review surface instead of retrying.
 
@@ -79,8 +80,8 @@ export function useAutoApply(
     // Exactly once per run: the guard is claimed before any work starts and is
     // only released if the effect tears down before anything was written.
     try {
-      if (window.sessionStorage.getItem(autoApplyKey(runId))) return;
-      window.sessionStorage.setItem(autoApplyKey(runId), "started");
+      if (window.localStorage.getItem(autoApplyKey(runId))) return;
+      window.localStorage.setItem(autoApplyKey(runId), "started");
     } catch {
       return;
     }
@@ -158,7 +159,7 @@ export function useAutoApply(
       active = false;
       if (timer) clearTimeout(timer);
       if (!committed) {
-        try { window.sessionStorage.removeItem(autoApplyKey(runId)); } catch { /* reload-resume only */ }
+        try { window.localStorage.removeItem(autoApplyKey(runId)); } catch { /* reload-resume only */ }
       }
     };
   }, [proposalId, runId]);

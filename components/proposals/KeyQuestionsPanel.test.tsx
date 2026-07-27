@@ -71,7 +71,6 @@ test("renders and submits the current key question", async () => {
 });
 
 test("shows a completion state when no open questions remain", () => {
-  const onOpenQuestionCountChange = jest.fn();
   mockedUseConversation.mockReturnValue({
     ...mockedUseConversation("proposal-1"),
     data: {
@@ -84,9 +83,7 @@ test("shows a completion state when no open questions remain", () => {
   render(
     <KeyQuestionsPanel
       proposalId="proposal-1"
-      onOpenQuestionCountChange={onOpenQuestionCountChange}
     />,
   );
   expect(screen.getByText("All key questions answered")).toBeInTheDocument();
-  expect(onOpenQuestionCountChange).toHaveBeenCalledWith(0);
 });

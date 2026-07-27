@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 import type { ConversationQuestion } from "@/app/actions/conversation";
@@ -107,11 +107,9 @@ function QuestionControl({
 export default function KeyQuestionsPanel({
   proposalId,
   onQuestionResolved,
-  onOpenQuestionCountChange,
 }: {
   proposalId: string;
   onQuestionResolved?: () => void | Promise<void>;
-  onOpenQuestionCountChange?: (count: number) => void;
 }) {
   const {
     data,
@@ -127,9 +125,9 @@ export default function KeyQuestionsPanel({
   const currentQuestion = openQuestions[0];
   const total = answeredCount + openQuestions.length;
 
-  useEffect(() => {
-    if (!loading && data) onOpenQuestionCountChange?.(openQuestions.length);
-  }, [data, loading, onOpenQuestionCountChange, openQuestions.length]);
+  // No count is reported upward. The server derives the open-question count
+  // with the workflow phase and every consumer reads it from there; a second
+  // count published from here could only ever disagree with it.
 
   const resolve = async (
     question: ConversationQuestion,

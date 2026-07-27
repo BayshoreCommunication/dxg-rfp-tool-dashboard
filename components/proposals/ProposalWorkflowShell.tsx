@@ -35,11 +35,6 @@ export default function ProposalWorkflowShell({
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
-  // Was local state that nothing ever assigned, so the step-3 summary below
-  // silently never used it. The server already derives this count alongside
-  // the phase and next action, so read it from there — one definition of
-  // "answered" rather than a second one free to drift from it.
-  const openQuestionCount = data?.facts?.openQuestionCount ?? null;
   // The disclosure used to be expanded by ConversationWorkspace's onOpenRun.
   // That conversation now lives on its own route and reaches these panels by
   // navigation ("View draft", "Review & apply N extracted fields"), so the
@@ -72,18 +67,11 @@ export default function ProposalWorkflowShell({
     if (result.success) setData(result.data);
   };
 
-  const steps = (data?.steps ?? ([1, 2, 3, 4, 5] as const).map((id) => ({ id, key: "", label: labels[id - 1], status: "available" as const, summary: "Loading…" })))
-    .map((item) =>
-      item.id === 3 && openQuestionCount !== null
-        ? {
-            ...item,
-            summary:
-              openQuestionCount === 0
-                ? "All key questions answered"
-                : `${openQuestionCount} key ${openQuestionCount === 1 ? "question" : "questions"} remaining`,
-          }
-        : item,
-    );
+  // Rendered exactly as the server derived them. The step summaries used to be
+  // patched here for step 3, which restated a count the server already computes
+  // — a second definition of "answered" whose only possible contribution was to
+  // disagree. Every status and summary now comes from one place.
+  const steps = data?.steps ?? ([1, 2, 3, 4, 5] as const).map((id) => ({ id, key: "", label: labels[id - 1], status: "available" as const, summary: "Loading…" }));
   return <section aria-label="Assisted proposal workflow" className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
     {/* The conversation itself lives on one surface only: this editor links out
         to it rather than embedding a second copy. */}
@@ -92,7 +80,9 @@ export default function ProposalWorkflowShell({
         <p className="text-sm font-semibold text-slate-900">{data?.state?.headline ?? "Build your proposal with the assistant"}</p>
         <p className="mt-0.5 text-xs text-slate-600">The assistant is the easiest place to answer questions, review the draft, and decide what to improve.</p>
       </div>
-      <Link href={`/proposals/${proposalId}/assistant`} className="rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#066553]">{data?.state?.nextActionLabel ?? "Open the assistant"} →</Link>
+      {/* A published RFP has no next action. Offering one that still reads
+          "Answer the next question" would invite work that is already over. */}
+      {data?.state?.nextAction !== "none" && <Link href={`/proposals/${proposalId}/assistant`} className="rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#066553]">{data?.state?.nextActionLabel ?? "Open the assistant"} →</Link>}
     </div>}
     <div className="mt-4 flex items-center justify-between gap-3">
       <p className="text-xs text-slate-500">Advanced editor · all proposal fields</p>

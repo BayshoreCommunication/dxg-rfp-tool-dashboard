@@ -38,7 +38,7 @@ const workflow = {
     steps: [
       { id: 1 as const, key: "provide", label: "Provide Information", status: "in_progress" as const, summary: "2 sources ready" },
       { id: 2 as const, key: "draft", label: "Review the Draft", status: "available" as const, summary: "No draft yet" },
-      { id: 3 as const, key: "questions", label: "Answer Key Questions", status: "available" as const, summary: "1 gap" },
+      { id: 3 as const, key: "questions", label: "Answer Key Questions", status: "available" as const, summary: "2 key question(s) remaining" },
       { id: 4 as const, key: "guidance", label: "See Guidance", status: "gated" as const, summary: "Not enabled" },
       { id: 5 as const, key: "publish", label: "Publish", status: "gated" as const, summary: "Not ready" },
     ],
@@ -78,14 +78,15 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });
 
-  test("the open-question count comes from the server, not a second local one", async () => {
-    // The panel used to report its own count up into local state, so two
-    // definitions of "answered" could disagree in the same view. The server
-    // derives this one alongside the phase, and answering a question already
-    // refreshes the workflow, so the stepper reads only that.
+  test("step statuses and summaries are rendered, not recomputed", async () => {
+    // The panel reported its own question count up into local state and the
+    // stepper patched step 3 with it, so two definitions of "answered" could
+    // disagree in the same view. The server derives every status and summary
+    // from one phase; the shell now only renders them.
     render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
-    expect(await screen.findByText("2 key questions remaining")).toBeInTheDocument();
-    expect(screen.queryByText("1 gap")).not.toBeInTheDocument();
+    expect(await screen.findByText("2 key question(s) remaining")).toBeInTheDocument();
+    for (const summary of ["2 sources ready", "No draft yet", "Not enabled", "Not ready"])
+      expect(screen.getByText(summary)).toBeInTheDocument();
   });
 
   test("drops the workflow framing above the stepper", async () => {

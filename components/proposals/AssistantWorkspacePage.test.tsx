@@ -192,6 +192,7 @@ describe("AssistantWorkspacePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     window.sessionStorage.clear();
+    window.localStorage.clear();
     EventSourceStub.instances = [];
     mockedGetUser.mockResolvedValue({ ok: true, data: { name: "Travis Deployment" } });
     mockedGetConversation.mockResolvedValue(emptyConversation);
@@ -316,22 +317,26 @@ describe("AssistantWorkspacePage", () => {
   });
 
   test("an invalid answer shows the validation message and re-asks the same question", async () => {
-    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([startDateQuestion]));
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: false,
       code: "INVALID_CANDIDATE_VALUE",
-      message: "Candidate date must use the YYYY-MM-DD format.",
+      message: "Room count must be between 1 and 200.",
       correlationId: "test-correlation",
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("Question 1 of 1");
-    fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "next Tuesday" } });
+    const answerInput = screen.getByLabelText("Answer this question");
+    fireEvent.change(answerInput, { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
-    expect(await screen.findByText("Candidate date must use the YYYY-MM-DD format.")).toBeInTheDocument();
+    const validation = await screen.findByRole("alert");
+    expect(validation).toHaveTextContent("Room count must be between 1 and 200.");
+    expect(answerInput).toHaveAttribute("aria-invalid", "true");
+    expect(answerInput).toHaveAttribute("aria-describedby", validation.id);
     // The question stays open for another attempt; no confirmation, no advance.
-    expect(screen.getByText("When does the event start? (YYYY-MM-DD)")).toBeInTheDocument();
+    expect(screen.getByText("How many event rooms are required?")).toBeInTheDocument();
     expect(screen.queryByText(/✓/)).not.toBeInTheDocument();
   });
 
@@ -572,7 +577,10 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await answerLastQuestion();
 
-    expect(await screen.findByText("Your proposal is 68% complete")).toBeInTheDocument();
+    // "Complete" is the stepper's word for workflow phase; this card measures how
+    // much of the questionnaire is filled in, which is a different question.
+    expect(await screen.findByText("Your proposal details are 68% filled in")).toBeInTheDocument();
+    expect(screen.queryByText(/68% complete/)).not.toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Proposal completeness" })).toHaveAttribute("aria-valuenow", "68");
     // The three thinnest sections, thinnest first; complete sections stay out.
     expect(screen.getByText("Venue & schedule")).toBeInTheDocument();
@@ -1055,9 +1063,10 @@ describe("AssistantWorkspacePage", () => {
     expect(mockedApplyCandidates).toHaveBeenCalledTimes(1);
     expect(mockedApplyCandidates).toHaveBeenCalledWith(PROPOSAL_ID, "run-1", 7, ["op-a"], [], true);
     expect(mockedSaveReview.mock.invocationCallOrder[0]).toBeLessThan(mockedApplyCandidates.mock.invocationCallOrder[0]);
-    expect(window.sessionStorage.getItem("rfpilot:auto-apply:run-1")).toBe("started");
+    expect(window.localStorage.getItem("rfpilot:auto-apply:run-1")).toBe("started");
 
-    // The sessionStorage guard prevents a re-fire for the same run.
+    // The localStorage guard prevents a re-fire for the same run and is shared
+    // by other tabs viewing this proposal.
     unmount();
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByRole("link", { name: /Review & apply 5 extracted fields/ });
@@ -1420,7 +1429,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await answerLastQuestion();
 
-    expect(await screen.findByText("Your proposal is 68% complete")).toBeInTheDocument();
+    expect(await screen.findByText("Your proposal details are 68% filled in")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate draft" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Generate proposal draft" })).not.toBeInTheDocument();
     // Draft and proposal are on the same version, so nothing is stale.
