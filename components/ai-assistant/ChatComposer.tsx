@@ -89,7 +89,11 @@ export default function ChatComposer({
                 ? "ai-assistant-character-count"
                 : undefined
           }
-          placeholder="Ask about proposals, events, or using the platform…"
+          placeholder={
+            compact
+              ? "Ask about RFPilot…"
+              : "Ask about proposals, events, or using the platform…"
+          }
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
           onCompositionStart={() => {

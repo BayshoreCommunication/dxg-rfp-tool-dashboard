@@ -57,4 +57,11 @@ describe("ChatComposer", () => {
     fireEvent.submit(screen.getByRole("button", { name: "Send message" }).closest("form")!);
     expect(props.onSend).not.toHaveBeenCalled();
   });
+
+  test("uses a short single-line placeholder in compact popups", () => {
+    renderComposer({ value: "", compact: true });
+    expect(
+      screen.getByLabelText("Message the AI Assistant"),
+    ).toHaveAttribute("placeholder", "Ask about RFPilot…");
+  });
 });

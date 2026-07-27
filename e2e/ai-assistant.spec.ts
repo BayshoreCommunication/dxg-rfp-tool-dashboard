@@ -55,6 +55,15 @@ test("streams a response, persists history, starts a new chat, and remains respo
   await page.keyboard.press("Escape");
 
   const composer = page.getByLabel("Message the AI Assistant");
+  await expect(composer).toHaveAttribute(
+    "placeholder",
+    "Ask about RFPilot…",
+  );
+  expect(
+    await composer.evaluate(
+      (element) => element.scrollHeight <= element.clientHeight,
+    ),
+  ).toBe(true);
   await composer.fill("How do I create and review a proposal?");
   await composer.press("Shift+Enter");
   await composer.type("Please explain the safe workflow.");
