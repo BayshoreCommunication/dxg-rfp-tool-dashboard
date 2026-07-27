@@ -3,7 +3,8 @@
 > User help. Last updated: 2026-07-27.
 
 The AI Assistant is a small helper available from the robot icon near the
-bottom of the RFPilot sidebar, above Notifications.
+bottom of the RFPilot sidebar, above Notifications. The icon appears only for
+organizations included in the current Assistant rollout.
 
 ## What it can help with
 

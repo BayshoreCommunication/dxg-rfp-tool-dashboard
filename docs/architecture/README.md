@@ -53,9 +53,11 @@ assistant at `/proposals/{id}/assistant`:
 - rendered Markdown disables raw HTML and accepts only internal paths or HTTPS
   links.
 
-`NEXT_PUBLIC_AI_ASSISTANT_ENABLED=true` controls launcher/popup visibility
-only. Backend authorization, `assistant:use`, feature flags, ownership checks,
-RLS, provider gates, and kill switches remain authoritative.
+`NEXT_PUBLIC_AI_ASSISTANT_ENABLED=true` is only the public build prerequisite.
+The authenticated layout also requires `enabled: true` from the backend
+organization-access endpoint before it renders the launcher. Backend
+authorization, `assistant:use`, organization cohort, feature flags, ownership
+checks, RLS, provider gates, and kill switches remain authoritative.
 
 User-facing operating help: [Using the AI Assistant](../user-guides/AI_ASSISTANT.md).
 

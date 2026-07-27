@@ -6,11 +6,11 @@ import Sidebar from "@/components/layout/Sidebar";
 
 export default function LayoutWrapper({
   children,
+  assistantEnabled = false,
 }: {
   children: React.ReactNode;
+  assistantEnabled?: boolean;
 }) {
-  const assistantEnabled =
-    process.env.NEXT_PUBLIC_AI_ASSISTANT_ENABLED === "true";
   const [assistantOpen, setAssistantOpen] = useState(false);
 
   return (

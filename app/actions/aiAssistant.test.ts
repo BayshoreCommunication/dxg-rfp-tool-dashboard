@@ -2,6 +2,7 @@
 
 import {
   createAssistantThreadAction,
+  getAssistantAccessAction,
   getAssistantBootstrapAction,
   getAssistantThreadAction,
   listAssistantThreadsAction,
@@ -43,6 +44,36 @@ describe("AI Assistant server actions", () => {
       expect.stringContaining("/api/v1/assistant/threads?limit=25"),
       expect.objectContaining({ cache: "no-store" }),
     );
+  });
+
+  test("loads organization-scoped assistant access", async () => {
+    mockedFetch.mockResolvedValue(
+      Response.json(
+        { data: { enabled: true } },
+        { headers: { "X-Correlation-ID": "corr-access" } },
+      ),
+    );
+    const result = await getAssistantAccessAction();
+    expect(result).toEqual({
+      success: true,
+      data: { enabled: true },
+      correlationId: "corr-access",
+    });
+    expect(mockedFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/assistant/access"),
+      expect.objectContaining({ cache: "no-store" }),
+    );
+  });
+
+  test("rejects an invalid assistant access payload", async () => {
+    mockedFetch.mockResolvedValue(
+      Response.json({ data: { enabled: "yes" } }),
+    );
+    const result = await getAssistantAccessAction();
+    expect(result).toMatchObject({
+      success: false,
+      code: "INVALID_RESPONSE",
+    });
   });
 
   test("creates a thread with JSON and the caller's idempotency key", async () => {

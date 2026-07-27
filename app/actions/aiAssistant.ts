@@ -17,6 +17,8 @@ const safeMessages: Record<string, string> = {
   AUTHENTICATION_REQUIRED: "Your session has expired. Please sign in again.",
   AUTHORIZATION_DENIED: "You do not have access to the AI Assistant.",
   AI_ASSISTANT_DISABLED: "The AI Assistant is not available in this environment.",
+  AI_ASSISTANT_ORGANIZATION_NOT_ENABLED:
+    "The AI Assistant is not enabled for this organization.",
   AI_ASSISTANT_KILLED: "The AI Assistant is temporarily unavailable.",
   ASSISTANT_THREAD_NOT_FOUND: "This conversation is no longer available.",
   ASSISTANT_THREAD_ARCHIVED: "This conversation is archived.",
@@ -28,6 +30,13 @@ const safeMessages: Record<string, string> = {
 
 const unknownFailureMessage = (correlationId: string) =>
   `We couldn't complete that request. Try again. Reference: ${correlationId}`;
+
+const parseAssistantAccess = (
+  value: unknown,
+): { enabled: boolean } | null =>
+  isRecord(value) && typeof value.enabled === "boolean"
+    ? { enabled: value.enabled }
+    : null;
 
 const request = async <T>(
   path: string,
@@ -107,6 +116,15 @@ export const listAssistantThreadsAction = async (
     `/api/v1/assistant/threads?limit=${encodeURIComponent(String(limit))}`,
     undefined,
     parseAssistantThreadList,
+  );
+
+export const getAssistantAccessAction = async (): Promise<
+  AssistantActionResult<{ enabled: boolean }>
+> =>
+  request(
+    "/api/v1/assistant/access",
+    undefined,
+    parseAssistantAccess,
   );
 
 export const createAssistantThreadAction = async (
