@@ -286,13 +286,21 @@ const Sidebar = ({
             title="AI Assistant"
             onClick={onOpenAssistant}
             className={cn(
-              "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-[transform,background-color,border-color,color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transform-none",
+              "group relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-[background-color,border-color,color,box-shadow] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               assistantOpen
                 ? "border-[#0e1b2b] bg-[#0e1b2b] text-white shadow-[0_14px_30px_-16px_rgba(14,27,43,0.9)]"
-                : "border-primary/25 bg-primary/10 text-[#009da4] shadow-[0_14px_30px_-18px_rgba(0,194,201,0.9)] hover:border-primary/45 hover:bg-primary/15 motion-safe:animate-[assistant-float_3.8s_ease-in-out_infinite]",
+                : "border-primary/25 bg-primary/10 text-[#009da4] shadow-[0_14px_30px_-18px_rgba(0,194,201,0.9)] hover:border-primary/45 hover:bg-primary/15",
             )}
           >
-            <Bot size={21} strokeWidth={2.2} aria-hidden />
+            <span
+              className={cn(
+                "flex transition-transform duration-300 ease-out group-hover:-translate-y-0.5 motion-reduce:transform-none",
+                !assistantOpen &&
+                  "motion-safe:animate-[assistant-float_3.8s_ease-in-out_infinite]",
+              )}
+            >
+              <Bot size={21} strokeWidth={2.2} aria-hidden />
+            </span>
           </button>
         </div>
       )}

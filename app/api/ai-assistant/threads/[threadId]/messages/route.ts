@@ -30,9 +30,32 @@ const problem = (
     },
   );
 
-const normalizedOrigin = (value: string): string | null => {
+const normalizedOrigin = (
+  value: string | null | undefined,
+): string | null => {
+  if (!value) return null;
   try {
     return new URL(value).origin;
+  } catch {
+    return null;
+  }
+};
+
+const firstForwardedValue = (value: string | null): string | null =>
+  value?.split(",", 1)[0]?.trim() || null;
+
+const originForHost = (
+  hostValue: string | null,
+  protocolValue: string | null,
+): string | null => {
+  const host = firstForwardedValue(hostValue);
+  const protocol = firstForwardedValue(protocolValue)?.replace(/:$/, "");
+  if (!host || (protocol !== "http" && protocol !== "https")) return null;
+
+  try {
+    const url = new URL(`${protocol}://${host}`);
+    if (url.host.toLowerCase() !== host.toLowerCase()) return null;
+    return url.origin;
   } catch {
     return null;
   }
@@ -41,8 +64,17 @@ const normalizedOrigin = (value: string): string | null => {
 export const isAllowedAssistantOrigin = (request: NextRequest): boolean => {
   const supplied = normalizedOrigin(request.headers.get("origin") || "");
   if (!supplied) return false;
+
+  const protocol =
+    firstForwardedValue(request.headers.get("x-forwarded-proto")) ||
+    request.nextUrl.protocol;
   const allowed = new Set(
-    [request.nextUrl.origin, FRONTEND_URL]
+    [
+      request.nextUrl.origin,
+      FRONTEND_URL,
+      originForHost(request.headers.get("x-forwarded-host"), protocol),
+      originForHost(request.headers.get("host"), protocol),
+    ]
       .map(normalizedOrigin)
       .filter((value): value is string => Boolean(value)),
   );

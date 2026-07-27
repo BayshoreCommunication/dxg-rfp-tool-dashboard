@@ -13,7 +13,14 @@ const threadId = "01890b2e-58b1-7c7e-9b0a-1a2b3c4d5e6f";
 
 const request = (
   body: Record<string, unknown>,
-  overrides: { origin?: string | null; contentType?: string } = {},
+  overrides: {
+    origin?: string | null;
+    contentType?: string;
+    requestOrigin?: string;
+    host?: string;
+    forwardedHost?: string;
+    forwardedProto?: string;
+  } = {},
 ) => {
   const headers = new Headers({
     "Content-Type": overrides.contentType ?? "application/json",
@@ -21,8 +28,15 @@ const request = (
   if (overrides.origin !== null) {
     headers.set("Origin", overrides.origin ?? "http://localhost:3000");
   }
+  if (overrides.host) headers.set("Host", overrides.host);
+  if (overrides.forwardedHost) {
+    headers.set("X-Forwarded-Host", overrides.forwardedHost);
+  }
+  if (overrides.forwardedProto) {
+    headers.set("X-Forwarded-Proto", overrides.forwardedProto);
+  }
   return new NextRequest(
-    `http://localhost:3000/api/ai-assistant/threads/${threadId}/messages`,
+    `${overrides.requestOrigin ?? "http://localhost:3000"}/api/ai-assistant/threads/${threadId}/messages`,
     {
       method: "POST",
       headers,
@@ -90,6 +104,79 @@ describe("AI Assistant streaming BFF", () => {
     expect(missing.status).toBe(403);
     expect(crossOrigin.status).toBe(403);
     expect(mockedFetch).not.toHaveBeenCalled();
+  });
+
+  test("accepts the browser origin when a dev proxy derives a different request URL", async () => {
+    mockedFetch.mockResolvedValue(
+      new Response(
+        'event: response.completed\ndata: {"version":1,"assistantMessageId":"a","content":"Hello","citations":[]}\n\n',
+        {
+          headers: {
+            "Content-Type": "text/event-stream; charset=utf-8",
+          },
+        },
+      ),
+    );
+    const response = await POST(
+      request(
+        {
+          content: "Hello",
+          idempotencyKey: "assistant-message:proxy-test",
+          responseIdempotencyKey: "assistant-response:proxy-test",
+        },
+        {
+          origin: "http://localhost:3001",
+          requestOrigin: "http://dashboard:3000",
+          host: "localhost:3001",
+        },
+      ),
+      { params: Promise.resolve({ threadId }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("accepts an explicit forwarded origin but never an unrelated origin", async () => {
+    mockedFetch.mockResolvedValue(
+      new Response(
+        'event: response.completed\ndata: {"version":1,"assistantMessageId":"a","content":"Hello","citations":[]}\n\n',
+        {
+          headers: {
+            "Content-Type": "text/event-stream; charset=utf-8",
+          },
+        },
+      ),
+    );
+    const body = {
+      content: "Hello",
+      idempotencyKey: "assistant-message:forwarded-test",
+      responseIdempotencyKey: "assistant-response:forwarded-test",
+    };
+    const accepted = await POST(
+      request(body, {
+        origin: "https://dashboard.example",
+        requestOrigin: "http://dashboard:3000",
+        host: "dashboard:3000",
+        forwardedHost: "dashboard.example",
+        forwardedProto: "https",
+      }),
+      { params: Promise.resolve({ threadId }) },
+    );
+    const denied = await POST(
+      request(body, {
+        origin: "https://attacker.example",
+        requestOrigin: "http://dashboard:3000",
+        host: "dashboard:3000",
+        forwardedHost: "dashboard.example",
+        forwardedProto: "https",
+      }),
+      { params: Promise.resolve({ threadId }) },
+    );
+
+    expect(accepted.status).toBe(200);
+    expect(denied.status).toBe(403);
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
   });
 
   test("keeps upstream rate-limit failures as problem JSON with Retry-After", async () => {

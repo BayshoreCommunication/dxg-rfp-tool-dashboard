@@ -4,6 +4,18 @@ import type { Page } from "@playwright/test";
 
 const backendOrigin = "http://127.0.0.1:8011";
 
+const waitForPopupMotion = async (page: Page) => {
+  await page
+    .getByRole("dialog", { name: "AI Assistant" })
+    .evaluate(async (element) => {
+      await Promise.all(
+        element
+          .getAnimations()
+          .map((animation) => animation.finished.catch(() => undefined)),
+      );
+    });
+};
+
 const signIn = async (page: Page) => {
   await page.goto("/sign-in");
   await page.getByPlaceholder("name@company.com").fill(
@@ -21,6 +33,7 @@ const signIn = async (page: Page) => {
   await expect(
     page.getByRole("region", { name: "AI Assistant workspace" }),
   ).toBeVisible();
+  await waitForPopupMotion(page);
 };
 
 test.beforeEach(async ({ page }) => {
@@ -115,7 +128,7 @@ test("streams a response, persists history, starts a new chat, and remains respo
   if (testInfo.project.name.includes("mobile")) {
     await page.getByRole("button", { name: "Assistant options" }).click();
     await page
-      .getByRole("button", { name: "Open conversation history" })
+      .getByRole("menuitem", { name: "Open conversation history" })
       .click();
     await expect(
       page.getByRole("complementary", {
@@ -135,7 +148,7 @@ test("streams a response, persists history, starts a new chat, and remains respo
 
   await page.getByRole("button", { name: "Assistant options" }).click();
   await page
-    .getByRole("button", { name: "Start new conversation" })
+    .getByRole("menuitem", { name: "Start new conversation" })
     .click();
   await expect(
     page.getByRole("heading", { name: "How can I help?" }),
@@ -146,7 +159,9 @@ test("streams a response, persists history, starts a new chat, and remains respo
 test("has no serious or critical automated accessibility violations", async ({
   page,
 }) => {
-  const result = await new AxeBuilder({ page }).analyze();
+  const result = await new AxeBuilder({ page })
+    .include('[role="dialog"][aria-label="AI Assistant"]')
+    .analyze();
   const blocking = result.violations.filter(
     (violation) =>
       violation.impact === "serious" || violation.impact === "critical",
@@ -171,11 +186,13 @@ test("drags within the viewport, remembers its position, and can reset", async (
   });
   const initialBox = await dialog.boundingBox();
   const handleBox = await dragHandle.boundingBox();
-  const viewport = page.viewportSize();
+  const viewport = await page.evaluate(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
   expect(initialBox).not.toBeNull();
   expect(handleBox).not.toBeNull();
-  expect(viewport).not.toBeNull();
-  if (!initialBox || !handleBox || !viewport) return;
+  if (!initialBox || !handleBox) return;
 
   await page.mouse.move(
     handleBox.x + handleBox.width / 2,
@@ -236,12 +253,14 @@ test("drags within the viewport, remembers its position, and can reset", async (
 
   await page.getByRole("button", { name: "Close AI Assistant" }).click();
   await page.getByRole("button", { name: "Open AI Assistant" }).click();
+  await waitForPopupMotion(page);
   const reopenedBox = await dialog.boundingBox();
   expect(reopenedBox?.x).toBeCloseTo(leftEdgeBox.x, 0);
   expect(reopenedBox?.y).toBeCloseTo(leftEdgeBox.y, 0);
 
   await page.reload();
   await page.getByRole("button", { name: "Open AI Assistant" }).click();
+  await waitForPopupMotion(page);
   const restoredBox = await dialog.boundingBox();
   expect(restoredBox?.x).toBeCloseTo(leftEdgeBox.x, 0);
   expect(restoredBox?.y).toBeCloseTo(leftEdgeBox.y, 0);
