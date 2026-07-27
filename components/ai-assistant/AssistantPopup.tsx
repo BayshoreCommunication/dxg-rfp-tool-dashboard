@@ -139,7 +139,7 @@ export default function AssistantPopup({
         left: position?.x ?? 12,
         top: position?.y ?? 12,
       }}
-      className={`fixed z-40 h-[min(420px,calc(100dvh-24px))] w-[min(360px,calc(100vw-24px))] origin-bottom-left overflow-hidden rounded-[20px] border border-slate-200/90 bg-white text-left outline-none will-change-[transform,opacity] transition-[box-shadow,border-color] duration-200 ${
+      className={`fixed z-[60] h-[min(420px,calc(100dvh-24px))] w-[min(360px,calc(100vw-24px))] origin-bottom-left overflow-hidden rounded-[20px] border border-slate-200/90 bg-white text-left outline-none will-change-[transform,opacity] transition-[box-shadow,border-color] duration-200 ${
         dragging
           ? "cursor-grabbing border-[#00c2c9]/45 shadow-[0_30px_80px_-24px_rgba(14,27,43,0.68)]"
           : "shadow-[0_24px_64px_-24px_rgba(14,27,43,0.56)]"

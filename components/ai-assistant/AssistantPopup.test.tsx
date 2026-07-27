@@ -78,6 +78,9 @@ describe("AssistantPopup", () => {
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
     ).toHaveClass("assistant-popup-open");
+    expect(
+      screen.getByRole("dialog", { name: "AI Assistant" }),
+    ).toHaveClass("z-[60]");
 
     fireEvent.click(
       screen.getByRole("button", { name: "Close mocked workspace" }),

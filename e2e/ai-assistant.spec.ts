@@ -182,17 +182,48 @@ test("drags within the viewport, remembers its position, and can reset", async (
       Math.abs(movedBox.y - initialBox.y),
   ).toBeGreaterThan(20);
 
+  const movedHandleBox = await dragHandle.boundingBox();
+  expect(movedHandleBox).not.toBeNull();
+  if (!movedHandleBox) return;
+  await page.mouse.move(
+    movedHandleBox.x + movedHandleBox.width / 2,
+    movedHandleBox.y + movedHandleBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(-500, -500, { steps: 8 });
+  await page.mouse.up();
+
+  const leftEdgeBox = await dialog.boundingBox();
+  const leftEdgeHandleBox = await dragHandle.boundingBox();
+  expect(leftEdgeBox).not.toBeNull();
+  expect(leftEdgeHandleBox).not.toBeNull();
+  if (!leftEdgeBox || !leftEdgeHandleBox) return;
+  expect(leftEdgeBox.x).toBeGreaterThanOrEqual(11);
+  expect(leftEdgeBox.y).toBeGreaterThanOrEqual(11);
+  expect(await dragHandle.isVisible()).toBe(true);
+  const handleIsTopmost = await page.evaluate(
+    ({ x, y }) => {
+      const topmost = document.elementFromPoint(x, y);
+      return Boolean(topmost?.closest('[aria-label="Move AI Assistant"]'));
+    },
+    {
+      x: leftEdgeHandleBox.x + leftEdgeHandleBox.width / 2,
+      y: leftEdgeHandleBox.y + leftEdgeHandleBox.height / 2,
+    },
+  );
+  expect(handleIsTopmost).toBe(true);
+
   await page.getByRole("button", { name: "Close AI Assistant" }).click();
   await page.getByRole("button", { name: "Open AI Assistant" }).click();
   const reopenedBox = await dialog.boundingBox();
-  expect(reopenedBox?.x).toBeCloseTo(movedBox.x, 0);
-  expect(reopenedBox?.y).toBeCloseTo(movedBox.y, 0);
+  expect(reopenedBox?.x).toBeCloseTo(leftEdgeBox.x, 0);
+  expect(reopenedBox?.y).toBeCloseTo(leftEdgeBox.y, 0);
 
   await page.reload();
   await page.getByRole("button", { name: "Open AI Assistant" }).click();
   const restoredBox = await dialog.boundingBox();
-  expect(restoredBox?.x).toBeCloseTo(movedBox.x, 0);
-  expect(restoredBox?.y).toBeCloseTo(movedBox.y, 0);
+  expect(restoredBox?.x).toBeCloseTo(leftEdgeBox.x, 0);
+  expect(restoredBox?.y).toBeCloseTo(leftEdgeBox.y, 0);
 
   await page.getByRole("button", { name: "Assistant options" }).click();
   await page
@@ -202,6 +233,7 @@ test("drags within the viewport, remembers its position, and can reset", async (
   expect(resetBox).not.toBeNull();
   if (!resetBox) return;
   expect(
-    Math.abs(resetBox.x - movedBox.x) + Math.abs(resetBox.y - movedBox.y),
+    Math.abs(resetBox.x - leftEdgeBox.x) +
+      Math.abs(resetBox.y - leftEdgeBox.y),
   ).toBeGreaterThan(20);
 });
