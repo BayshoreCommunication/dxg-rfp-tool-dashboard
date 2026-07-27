@@ -20,6 +20,7 @@ describe("MessageList", () => {
         messages={[]}
         streamingAssistant={null}
         loading={false}
+        responding={false}
         isNearBottom={false}
         onNearBottomChange={onNearBottomChange}
       />,
@@ -41,6 +42,7 @@ describe("MessageList", () => {
           receivedFirstDelta: false,
         }}
         loading={false}
+        responding
         isNearBottom
         onNearBottomChange={jest.fn()}
       />,
@@ -48,5 +50,55 @@ describe("MessageList", () => {
     expect(
       screen.getByRole("status", { name: "Assistant is responding" }),
     ).toBeInTheDocument();
+  });
+
+  test("announces typing while a request is waiting for acceptance", () => {
+    render(
+      <MessageList
+        messages={[]}
+        streamingAssistant={null}
+        loading={false}
+        responding
+        isNearBottom
+        onNearBottomChange={jest.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("status", { name: "Assistant is responding" }),
+    ).toBeInTheDocument();
+  });
+
+  test("keeps following new content when the reader is near the bottom", () => {
+    const { rerender } = render(
+      <MessageList
+        messages={[]}
+        streamingAssistant={null}
+        loading={false}
+        responding
+        isNearBottom
+        onNearBottomChange={jest.fn()}
+      />,
+    );
+    jest.mocked(Element.prototype.scrollIntoView).mockClear();
+
+    rerender(
+      <MessageList
+        messages={[]}
+        streamingAssistant={{
+          messageId: "assistant-1",
+          content: "First streamed words",
+          receivedFirstDelta: true,
+        }}
+        loading={false}
+        responding
+        isNearBottom
+        onNearBottomChange={jest.fn()}
+      />,
+    );
+
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "Jump to latest" }),
+    ).toBeNull();
   });
 });

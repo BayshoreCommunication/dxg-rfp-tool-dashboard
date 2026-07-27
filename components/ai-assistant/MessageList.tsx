@@ -10,9 +10,11 @@ export default function MessageList({
   messages,
   streamingAssistant,
   loading,
+  responding,
   isNearBottom,
   onNearBottomChange,
   compact = false,
+  onNavigate,
 }: {
   messages: AssistantDisplayMessage[];
   streamingAssistant: {
@@ -21,9 +23,11 @@ export default function MessageList({
     receivedFirstDelta: boolean;
   } | null;
   loading: boolean;
+  responding: boolean;
   isNearBottom: boolean;
   onNearBottomChange: (value: boolean) => void;
   compact?: boolean;
+  onNavigate?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -41,20 +45,6 @@ export default function MessageList({
     },
     [onNearBottomChange],
   );
-
-  useEffect(() => {
-    const root = containerRef.current;
-    const target = bottomRef.current;
-    if (!root || !target || typeof IntersectionObserver === "undefined") {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => onNearBottomChange(entry.isIntersecting),
-      { root, threshold: 0.1 },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [onNearBottomChange]);
 
   useEffect(() => {
     if (isNearBottom) scrollToLatest("auto");
@@ -138,21 +128,25 @@ export default function MessageList({
         {!loading && (
           <ol className="mx-auto max-w-3xl space-y-4">
             {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+              <MessageBubble
+                key={message.id}
+                message={message}
+                onNavigate={onNavigate}
+              />
             ))}
             {streamingMessage && (
               <MessageBubble
                 key={streamingMessage.id}
                 message={streamingMessage}
                 streaming
+                onNavigate={onNavigate}
               />
             )}
-            {streamingAssistant &&
-              !streamingAssistant.receivedFirstDelta && (
-                <li className="flex justify-start">
-                  <TypingIndicator />
-                </li>
-              )}
+            {responding && !streamingMessage && (
+              <li className="flex justify-start">
+                <TypingIndicator />
+              </li>
+            )}
           </ol>
         )}
         <div ref={bottomRef} className="h-px" aria-hidden />

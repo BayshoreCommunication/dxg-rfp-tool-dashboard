@@ -21,17 +21,19 @@ export const safeAssistantHref = (href: string | undefined): string | null => {
 
 export default function AssistantSources({
   citations,
+  onNavigate,
 }: {
   citations: AssistantCitation[];
+  onNavigate?: () => void;
 }) {
   if (citations.length === 0) return null;
   return (
-    <div className="mt-3 border-t border-slate-100 pt-3">
-      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-        <BookOpen size={12} aria-hidden />
+    <div className="mt-2.5 border-t border-slate-100 pt-2.5">
+      <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">
+        <BookOpen size={11} aria-hidden />
         Sources
       </p>
-      <ul className="mt-2 flex flex-wrap gap-1.5">
+      <ul className="mt-1.5 flex flex-wrap gap-1">
         {citations.map((citation) => {
           const href = safeAssistantHref(citation.href);
           const content = (
@@ -48,7 +50,8 @@ export default function AssistantSources({
                 href.startsWith("/") ? (
                   <Link
                     href={href}
-                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                    onClick={onNavigate}
+                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                   >
                     {content}
                   </Link>
@@ -57,13 +60,13 @@ export default function AssistantSources({
                     href={href}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                   >
                     {content}
                   </a>
                 )
               ) : (
-                <span className="inline-flex max-w-full items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                <span className="inline-flex max-w-full items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-500">
                   <span className="max-w-[13rem] truncate">
                     {citation.title}
                   </span>

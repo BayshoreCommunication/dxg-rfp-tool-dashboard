@@ -1,6 +1,12 @@
 "use client";
 
-import { LoaderCircle, Move, X } from "lucide-react";
+import {
+  GripVertical,
+  LoaderCircle,
+  Maximize2,
+  Move,
+  X,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -54,10 +60,15 @@ export default function AssistantPopup({
   });
   const {
     position,
+    size,
     dragging,
+    resizing,
     positionModified,
+    sizeModified,
     resetPosition,
+    resetSize,
     dragHandleProps,
+    resizeHandleProps,
   } = useDraggablePopup(popupRef);
 
   const load = useCallback(async () => {
@@ -135,12 +146,16 @@ export default function AssistantPopup({
       data-state={open ? "open" : "closed"}
       data-motion-origin="launcher"
       data-dragging={dragging ? "true" : "false"}
+      data-resizing={resizing ? "true" : "false"}
       style={{
         left: position?.x ?? 12,
         top: position?.y ?? 12,
+        ...(size
+          ? { width: size.width, height: size.height }
+          : {}),
       }}
       className={`fixed z-[60] h-[min(460px,calc(100dvh-24px))] w-[min(384px,calc(100vw-24px))] origin-bottom-left overflow-hidden rounded-[20px] border border-slate-200/90 bg-white text-left outline-none will-change-[transform,opacity] transition-[box-shadow,border-color] duration-200 ${
-        dragging
+        dragging || resizing
           ? "cursor-grabbing border-[#00c2c9]/45 shadow-[0_30px_80px_-24px_rgba(14,27,43,0.68)]"
           : "shadow-[0_24px_64px_-24px_rgba(14,27,43,0.56)]"
       } ${
@@ -160,6 +175,30 @@ export default function AssistantPopup({
         }`}
       >
         <Move size={15} strokeWidth={2.2} aria-hidden />
+      </button>
+      <button
+        type="button"
+        aria-label="Resize AI Assistant from upper right"
+        title="Drag to resize · Arrow keys resize · Home resets size"
+        data-testid="assistant-resize-top-right"
+        {...resizeHandleProps("topRight")}
+        className="group absolute right-0 top-14 z-50 flex h-16 w-4 touch-none cursor-nesw-resize items-center justify-center rounded-l-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9]"
+      >
+        <span className="flex h-9 w-2.5 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition group-hover:text-[#00aeb5] group-focus-visible:text-[#00aeb5]">
+          <GripVertical size={10} strokeWidth={2.3} aria-hidden />
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label="Resize AI Assistant from lower right"
+        title="Drag to resize · Arrow keys resize · Home resets size"
+        data-testid="assistant-resize-bottom-right"
+        {...resizeHandleProps("bottomRight")}
+        className="group absolute bottom-1 right-1 z-50 flex h-8 w-8 touch-none cursor-nwse-resize items-end justify-end rounded-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+      >
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 shadow-sm transition group-hover:text-[#00aeb5] group-focus-visible:text-[#00aeb5]">
+          <Maximize2 size={11} strokeWidth={2.2} aria-hidden />
+        </span>
       </button>
       <div
         className={`h-full transition-opacity motion-reduce:transition-none ${
@@ -203,7 +242,9 @@ export default function AssistantPopup({
             presentation="popup"
             onClose={close}
             onResetPosition={resetPosition}
+            onResetSize={resetSize}
             positionModified={positionModified}
+            sizeModified={sizeModified}
           />
         )}
       </div>

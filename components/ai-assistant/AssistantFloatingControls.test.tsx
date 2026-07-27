@@ -41,6 +41,7 @@ describe("AssistantFloatingControls", () => {
         onNewChat={jest.fn()}
         onClose={jest.fn()}
         onResetPosition={jest.fn()}
+        onResetSize={jest.fn()}
       />,
     );
 
@@ -55,6 +56,11 @@ describe("AssistantFloatingControls", () => {
     expect(
       screen.getByRole("menuitem", {
         name: "Reset popup position",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("menuitem", {
+        name: "Reset popup size",
       }),
     ).toBeDisabled();
   });
@@ -101,6 +107,31 @@ describe("AssistantFloatingControls", () => {
       screen.getByRole("menuitem", { name: "Reset popup position" }),
     );
     expect(onResetPosition).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("menu", { name: "Assistant options" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("resets a resized popup from the options menu", () => {
+    const onResetSize = jest.fn();
+    render(
+      <AssistantFloatingControls
+        hasHistory
+        onOpenHistory={jest.fn()}
+        onNewChat={jest.fn()}
+        onClose={jest.fn()}
+        onResetSize={onResetSize}
+        sizeModified
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Assistant options" }),
+    );
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Reset popup size" }),
+    );
+    expect(onResetSize).toHaveBeenCalledTimes(1);
     expect(
       screen.queryByRole("menu", { name: "Assistant options" }),
     ).not.toBeInTheDocument();

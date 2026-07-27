@@ -2,6 +2,7 @@
 
 import {
   History,
+  Minimize2,
   MoreHorizontal,
   Plus,
   RotateCcw,
@@ -15,14 +16,18 @@ export default function AssistantFloatingControls({
   onNewChat,
   onClose,
   onResetPosition,
+  onResetSize,
   positionModified = false,
+  sizeModified = false,
 }: {
   hasHistory: boolean;
   onOpenHistory: () => void;
   onNewChat: () => void;
   onClose: () => void;
   onResetPosition?: () => void;
+  onResetSize?: () => void;
   positionModified?: boolean;
+  sizeModified?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -106,6 +111,18 @@ export default function AssistantFloatingControls({
               >
                 <RotateCcw size={15} aria-hidden />
                 Reset popup position
+              </button>
+            )}
+            {onResetSize && (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!sizeModified}
+                onClick={() => runAndClose(onResetSize)}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-[#0e1b2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+              >
+                <Minimize2 size={15} aria-hidden />
+                Reset popup size
               </button>
             )}
           </div>

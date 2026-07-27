@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   AssistantThread,
   AssistantThreadDetail,
@@ -22,7 +22,9 @@ export default function AiAssistantWorkspace({
   presentation = "page",
   onClose,
   onResetPosition,
+  onResetSize,
   positionModified = false,
+  sizeModified = false,
 }: {
   initialThreads: AssistantThread[];
   initialDetail: AssistantThreadDetail | null;
@@ -30,7 +32,9 @@ export default function AiAssistantWorkspace({
   presentation?: "page" | "dialog" | "popup";
   onClose?: () => void;
   onResetPosition?: () => void;
+  onResetSize?: () => void;
   positionModified?: boolean;
+  sizeModified?: boolean;
 }) {
   const assistant = useAiAssistant({
     initialThreads,
@@ -53,6 +57,12 @@ export default function AiAssistantWorkspace({
     Boolean(state.streamingAssistant) ||
     state.conversationStatus === "sending" ||
     state.conversationStatus === "streaming";
+
+  useEffect(() => {
+    if (state.conversationStatus === "sending") {
+      composerRef.current?.focus();
+    }
+  }, [state.conversationStatus]);
 
   const selectThread = (threadId: string) => {
     setHistoryOpen(false);
@@ -160,7 +170,9 @@ export default function AiAssistantWorkspace({
               onNewChat={newChat}
               onClose={onClose}
               onResetPosition={onResetPosition}
+              onResetSize={onResetSize}
               positionModified={positionModified}
+              sizeModified={sizeModified}
             />
           ) : (
             <AssistantHeader
@@ -218,9 +230,11 @@ export default function AiAssistantWorkspace({
                 messages={state.messages}
                 streamingAssistant={state.streamingAssistant}
                 loading={loading}
+                responding={assistant.busy}
                 isNearBottom={state.isNearBottom}
                 onNearBottomChange={assistant.setNearBottom}
                 compact={popupPresentation}
+                onNavigate={popupPresentation ? onClose : undefined}
               />
               {popupPresentation ? (
                 popupComposerDock

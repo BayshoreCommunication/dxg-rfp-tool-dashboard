@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import AiAssistantWorkspace from "./AiAssistantWorkspace";
 import {
   archiveAssistantThreadAction,
@@ -82,6 +88,29 @@ const streamResponse = (source: string): Response => {
     }),
     headers: { get: () => null },
   } as unknown as Response;
+};
+
+const controlledStreamResponse = () => {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const response = {
+    ok: true,
+    status: 200,
+    body: new ReadableStream<Uint8Array>({
+      start(streamController) {
+        controller = streamController;
+      },
+    }),
+    headers: { get: () => null },
+  } as unknown as Response;
+  return {
+    response,
+    push(source: string) {
+      controller.enqueue(new TextEncoder().encode(source));
+    },
+    close() {
+      controller.close();
+    },
+  };
 };
 
 const completedStream = () =>
@@ -210,7 +239,11 @@ describe("AiAssistantWorkspace", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
-    expect(await screen.findByText("How do proposals work?")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByText("How do proposals work?"),
+      ).toBeInTheDocument(),
+    );
     expect(
       await screen.findAllByText(/Open \[Proposals\]/),
     ).toHaveLength(2);
@@ -220,6 +253,198 @@ describe("AiAssistantWorkspace", () => {
     );
     await waitFor(() => expect(mockedCreateThread).toHaveBeenCalledTimes(1));
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("shows a new-thread message and typing state before thread creation resolves", async () => {
+    let resolveThread!: (
+      value: Awaited<ReturnType<typeof createAssistantThreadAction>>,
+    ) => void;
+    mockedCreateThread.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveThread = resolve;
+      }),
+    );
+    jest.mocked(global.fetch).mockResolvedValue(completedStream());
+    render(
+      <AiAssistantWorkspace
+        initialThreads={[]}
+        initialDetail={null}
+      />,
+    );
+    const composer = screen.getByLabelText("Message the AI Assistant");
+    fireEvent.change(composer, {
+      target: { value: "How do proposals work?" },
+    });
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    expect(screen.getByText("How do proposals work?")).toBeInTheDocument();
+    const activeComposer = screen.getByLabelText(
+      "Message the AI Assistant",
+    );
+    expect(activeComposer).toHaveValue("");
+    expect(activeComposer).toHaveFocus();
+    expect(activeComposer).not.toBeDisabled();
+    expect(
+      screen.getByRole("status", { name: "Assistant is responding" }),
+    ).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveThread({
+        success: true,
+        data: { created: true, thread },
+        correlationId: "corr-thread",
+      });
+    });
+    expect(
+      await screen.findAllByText(/Open \[Proposals\]/),
+    ).toHaveLength(2);
+    expect(screen.getAllByText("How do proposals work?")).toHaveLength(1);
+  });
+
+  test("renders assistant deltas progressively and finalizes without duplication", async () => {
+    const controlled = controlledStreamResponse();
+    jest.mocked(global.fetch).mockResolvedValue(controlled.response);
+    render(
+      <AiAssistantWorkspace
+        initialThreads={[thread]}
+        initialDetail={{ thread, messages: [] }}
+      />,
+    );
+    const composer = screen.getByLabelText("Message the AI Assistant");
+    fireEvent.change(composer, {
+      target: { value: "How do proposals work?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    const activeComposer = screen.getByLabelText(
+      "Message the AI Assistant",
+    );
+    expect(activeComposer).toHaveValue("");
+    expect(activeComposer).toHaveFocus();
+    expect(
+      screen.getByRole("status", { name: "Assistant is responding" }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      controlled.push(
+        event("message.accepted", {
+          version: 1,
+          userMessage,
+          assistantMessageId: assistantMessage.id,
+          correlationId: "corr-stream",
+        }) +
+          event("response.started", {
+            version: 1,
+            assistantMessageId: assistantMessage.id,
+          }),
+      );
+    });
+    expect(
+      screen.getByRole("status", { name: "Assistant is responding" }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      controlled.push(
+        event("response.delta", {
+          version: 1,
+          assistantMessageId: assistantMessage.id,
+          delta: "Open ",
+        }),
+      );
+    });
+    expect(await screen.findByText("Open")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "Assistant is responding" }),
+    ).toBeNull();
+
+    await act(async () => {
+      controlled.push(
+        event("response.delta", {
+          version: 1,
+          assistantMessageId: assistantMessage.id,
+          delta: "[Proposals](/proposals) to start.",
+        }),
+      );
+    });
+    expect(
+      await screen.findByText(/Open \[Proposals\]/),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      controlled.push(
+        event("response.completed", {
+          version: 1,
+          message: assistantMessage,
+          correlationId: "corr-stream",
+        }),
+      );
+      controlled.close();
+    });
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/Open \[Proposals\]/),
+      ).toHaveLength(2),
+    );
+    expect(screen.getAllByText("How do proposals work?")).toHaveLength(1);
+  });
+
+  test("coalesces two Enter submits before React commits the sending state", async () => {
+    const controlled = controlledStreamResponse();
+    jest.mocked(global.fetch).mockResolvedValue(controlled.response);
+    render(
+      <AiAssistantWorkspace
+        initialThreads={[thread]}
+        initialDetail={{ thread, messages: [] }}
+      />,
+    );
+    const composer = screen.getByLabelText("Message the AI Assistant");
+    fireEvent.change(composer, {
+      target: { value: "How do proposals work?" },
+    });
+
+    act(() => {
+      composer.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      composer.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      controlled.push(
+        event("message.accepted", {
+          version: 1,
+          userMessage,
+          assistantMessageId: assistantMessage.id,
+          correlationId: "corr-stream",
+        }) +
+          event("response.delta", {
+            version: 1,
+            assistantMessageId: assistantMessage.id,
+            delta: assistantMessage.content,
+          }) +
+          event("response.completed", {
+            version: 1,
+            message: assistantMessage,
+            correlationId: "corr-stream",
+          }),
+      );
+      controlled.close();
+    });
+    await waitFor(() =>
+      expect(screen.getAllByText("How do proposals work?")).toHaveLength(1),
+    );
   });
 
   test("network retry reuses both keys before message acceptance", async () => {
@@ -329,5 +554,25 @@ describe("AiAssistantWorkspace", () => {
     expect(
       screen.getByLabelText("Message the AI Assistant"),
     ).toBeInTheDocument();
+  });
+
+  test("closes the popup when an internal Assistant link is followed", () => {
+    const onClose = jest.fn();
+    render(
+      <AiAssistantWorkspace
+        initialThreads={[thread]}
+        initialDetail={{
+          thread,
+          messages: [userMessage, assistantMessage],
+        }}
+        presentation="popup"
+        onClose={onClose}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getAllByRole("link", { name: "Proposals" })[0],
+    );
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

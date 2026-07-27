@@ -1,8 +1,15 @@
 "use client";
 
-import { Check, Copy, LoaderCircle, Sparkles } from "lucide-react";
+import {
+  Check,
+  Copy,
+  LoaderCircle,
+  Sparkles,
+  Square,
+  Volume2,
+} from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import AssistantSources, {
@@ -11,14 +18,71 @@ import AssistantSources, {
 import type { AssistantDisplayMessage } from "@/lib/aiAssistant/types";
 import { cn } from "@/lib/utils";
 
+const escapeMarkdownLabel = (value: string): string =>
+  value.replace(/([\\[\]])/g, "\\$1");
+
+export const normalizeAssistantMarkdownLinks = (
+  content: string,
+  citations: AssistantDisplayMessage["citations"],
+): string =>
+  [...citations]
+    .flatMap((citation) => {
+      const href = safeAssistantHref(citation.href);
+      return href?.startsWith("/")
+        ? [{ href, title: citation.title }]
+        : [];
+    })
+    .sort((left, right) => right.href.length - left.href.length)
+    .reduce(
+      (markdown, citation) =>
+        markdown.replaceAll(
+          citation.href,
+          (match, offset: number, source: string) => {
+            const before = source.slice(Math.max(0, offset - 2), offset);
+            const after = source.at(offset + citation.href.length) || "";
+            if (before === "](" || /[\w/-]/.test(after)) return match;
+            return `[${escapeMarkdownLabel(citation.title)}](${citation.href})`;
+          },
+        ),
+      content,
+    );
+
+export const assistantSpeechText = (content: string): string =>
+  content
+    .replace(/\[([^\]]+)]\((?:[^()]|\([^()]*\))*\)/g, "$1")
+    .replace(/[`*_>#]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 export default function MessageBubble({
   message,
   streaming = false,
+  onNavigate,
 }: {
   message: AssistantDisplayMessage;
   streaming?: boolean;
+  onNavigate?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () =>
+        setSpeechSupported(
+          "speechSynthesis" in window &&
+            typeof window.SpeechSynthesisUtterance !== "undefined",
+        ),
+      0,
+    );
+    return () => {
+      window.clearTimeout(timer);
+      if (utteranceRef.current) window.speechSynthesis?.cancel();
+    };
+  }, []);
+
   if (message.role === "system_event") {
     return (
       <li className="text-center text-xs text-slate-400">
@@ -29,12 +93,40 @@ export default function MessageBubble({
   const user = message.role === "user";
   const interrupted =
     message.status === "failed" || message.status === "aborted";
+  const renderedContent = user
+    ? message.content
+    : normalizeAssistantMarkdownLinks(message.content, message.citations);
 
   const copy = async () => {
     if (!message.content || !navigator.clipboard) return;
     await navigator.clipboard.writeText(message.content);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1_500);
+  };
+
+  const toggleReadAloud = () => {
+    if (!speechSupported) return;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      utteranceRef.current = null;
+      setSpeaking(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(
+      assistantSpeechText(message.content),
+    );
+    utterance.onend = () => {
+      utteranceRef.current = null;
+      setSpeaking(false);
+    };
+    utterance.onerror = () => {
+      utteranceRef.current = null;
+      setSpeaking(false);
+    };
+    utteranceRef.current = utterance;
+    setSpeaking(true);
+    window.speechSynthesis.speak(utterance);
   };
 
   return (
@@ -61,7 +153,7 @@ export default function MessageBubble({
         <div className="min-w-0">
           <div
             className={cn(
-              "relative rounded-2xl px-4 py-3 text-[15px] leading-6",
+              "relative rounded-2xl px-3 py-2.5 text-[14px] leading-5",
               user
                 ? "rounded-br-md bg-[#0e1b2b] text-white shadow-[0_10px_28px_-22px_rgba(14,27,43,0.9)]"
                 : "rounded-bl-md border border-slate-200 bg-white text-slate-700 shadow-[0_10px_28px_-24px_rgba(15,23,42,0.55)]",
@@ -82,6 +174,7 @@ export default function MessageBubble({
                       return safe.startsWith("/") ? (
                         <Link
                           href={safe}
+                          onClick={onNavigate}
                           className="font-semibold text-[#087f69] underline decoration-[#00c2c9]/40 underline-offset-2 hover:text-[#009da4]"
                         >
                           {children}
@@ -98,15 +191,15 @@ export default function MessageBubble({
                       );
                     },
                     p: ({ children }) => (
-                      <p className="mb-2 last:mb-0">{children}</p>
+                      <p className="mb-1.5 last:mb-0">{children}</p>
                     ),
                     ul: ({ children }) => (
-                      <ul className="my-2 list-disc space-y-1 pl-5">
+                      <ul className="my-1.5 list-disc space-y-0.5 pl-4">
                         {children}
                       </ul>
                     ),
                     ol: ({ children }) => (
-                      <ol className="my-2 list-decimal space-y-1 pl-5">
+                      <ol className="my-1.5 list-decimal space-y-0.5 pl-4">
                         {children}
                       </ol>
                     ),
@@ -117,13 +210,13 @@ export default function MessageBubble({
                       </strong>
                     ),
                     code: ({ children }) => (
-                      <code className="rounded bg-slate-100 px-1 py-0.5 text-[13px] text-slate-800">
+                      <code className="rounded bg-slate-100 px-1 py-0.5 text-[12px] text-slate-800">
                         {children}
                       </code>
                     ),
                   }}
                 >
-                  {message.content}
+                  {renderedContent}
                 </ReactMarkdown>
                 {streaming && (
                   <LoaderCircle
@@ -134,7 +227,12 @@ export default function MessageBubble({
                 )}
               </div>
             )}
-            {!user && <AssistantSources citations={message.citations} />}
+            {!user && (
+              <AssistantSources
+                citations={message.citations}
+                onNavigate={onNavigate}
+              />
+            )}
           </div>
           <div
             className={cn(
@@ -153,19 +251,40 @@ export default function MessageBubble({
               </span>
             )}
             {!user && message.content && !streaming && (
-              <button
-                type="button"
-                onClick={() => void copy()}
-                aria-label="Copy assistant response"
-                className="flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] text-slate-400 opacity-100 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
-              >
-                {copied ? (
-                  <Check size={12} aria-hidden />
-                ) : (
-                  <Copy size={12} aria-hidden />
+              <div className="flex items-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => void copy()}
+                  aria-label="Copy assistant response"
+                  className="flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] text-slate-400 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                >
+                  {copied ? (
+                    <Check size={12} aria-hidden />
+                  ) : (
+                    <Copy size={12} aria-hidden />
+                  )}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+                {speechSupported && message.status === "complete" && (
+                  <button
+                    type="button"
+                    onClick={toggleReadAloud}
+                    aria-label={
+                      speaking
+                        ? "Stop reading assistant response"
+                        : "Read assistant response aloud"
+                    }
+                    className="flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] text-slate-400 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                  >
+                    {speaking ? (
+                      <Square size={11} fill="currentColor" aria-hidden />
+                    ) : (
+                      <Volume2 size={12} aria-hidden />
+                    )}
+                    {speaking ? "Stop" : "Listen"}
+                  </button>
                 )}
-                {copied ? "Copied" : "Copy"}
-              </button>
+              </div>
             )}
           </div>
         </div>

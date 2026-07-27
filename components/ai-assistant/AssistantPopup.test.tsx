@@ -12,21 +12,29 @@ jest.mock("./AiAssistantWorkspace", () => ({
     presentation,
     onClose,
     onResetPosition,
+    onResetSize,
     positionModified,
+    sizeModified,
   }: {
     presentation: string;
     onClose: () => void;
     onResetPosition: () => void;
+    onResetSize: () => void;
     positionModified: boolean;
+    sizeModified: boolean;
   }) => (
     <div>
       <span>Workspace presentation: {presentation}</span>
       <span>Position changed: {String(positionModified)}</span>
+      <span>Size changed: {String(sizeModified)}</span>
       <button type="button" onClick={onClose}>
         Close mocked workspace
       </button>
       <button type="button" onClick={onResetPosition}>
         Reset mocked position
+      </button>
+      <button type="button" onClick={onResetSize}>
+        Reset mocked size
       </button>
     </div>
   ),
@@ -186,5 +194,158 @@ describe("AssistantPopup", () => {
     }
 
     expect(dialog).toHaveStyle({ left: "628px", top: "296px" });
+  });
+
+  test("resizes from the lower right, remembers size, and resets it", async () => {
+    const { unmount } = render(
+      <AssistantPopup open onOpenChange={jest.fn()} />,
+    );
+    await screen.findByText("Workspace presentation: popup");
+
+    const dialog = screen.getByRole("dialog", {
+      name: "AI Assistant",
+    });
+    const resize = screen.getByRole("button", {
+      name: "Resize AI Assistant from lower right",
+    });
+    await waitFor(() =>
+      expect(dialog).toHaveStyle({ width: "384px", height: "460px" }),
+    );
+    expect(screen.getByText("Size changed: false")).toBeInTheDocument();
+
+    fireEvent.keyDown(resize, { key: "ArrowRight" });
+    fireEvent.keyDown(resize, { key: "ArrowDown" });
+    expect(dialog).toHaveStyle({ width: "400px", height: "476px" });
+    expect(screen.getByText("Size changed: true")).toBeInTheDocument();
+    expect(window.localStorage.getItem("rfpilot:ai-assistant-size:v1"))
+      .toBe('{"width":400,"height":476}');
+
+    unmount();
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("dialog", { name: "AI Assistant" }),
+      ).toHaveStyle({ width: "400px", height: "476px" }),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset mocked size" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "AI Assistant" }),
+    ).toHaveStyle({ width: "384px", height: "460px" });
+    expect(window.localStorage.getItem("rfpilot:ai-assistant-size:v1"))
+      .toBeNull();
+  });
+
+  test("limits resizing to twice the default size and the viewport", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 1400,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 1200,
+    });
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+
+    const dialog = screen.getByRole("dialog", {
+      name: "AI Assistant",
+    });
+    const resize = screen.getByRole("button", {
+      name: "Resize AI Assistant from upper right",
+    });
+    for (let index = 0; index < 100; index += 1) {
+      fireEvent.keyDown(resize, {
+        key: "ArrowRight",
+        shiftKey: true,
+      });
+      fireEvent.keyDown(resize, {
+        key: "ArrowUp",
+        shiftKey: true,
+      });
+    }
+
+    expect(dialog).toHaveStyle({ width: "768px", height: "920px" });
+  });
+
+  test("resizes upward from the upper-right handle", async () => {
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+
+    const dialog = screen.getByRole("dialog", {
+      name: "AI Assistant",
+    });
+    const resize = screen.getByRole("button", {
+      name: "Resize AI Assistant from upper right",
+    });
+    await waitFor(() =>
+      expect(dialog).toHaveStyle({ top: "173px", height: "460px" }),
+    );
+    fireEvent.keyDown(resize, { key: "ArrowUp" });
+
+    expect(dialog).toHaveStyle({ top: "157px", height: "476px" });
+  });
+
+  test("resizes with a pointer drag from the lower-right handle", async () => {
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+
+    const dialog = screen.getByRole("dialog", {
+      name: "AI Assistant",
+    });
+    Object.defineProperty(dialog, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 102,
+        y: 173,
+        left: 102,
+        top: 173,
+        right: 486,
+        bottom: 633,
+        width: 384,
+        height: 460,
+        toJSON: () => ({}),
+      }),
+    });
+    const resize = screen.getByRole("button", {
+      name: "Resize AI Assistant from lower right",
+    });
+    Object.defineProperty(resize, "setPointerCapture", {
+      configurable: true,
+      value: jest.fn(),
+    });
+    Object.defineProperty(resize, "hasPointerCapture", {
+      configurable: true,
+      value: jest.fn().mockReturnValue(false),
+    });
+
+    const dispatchPointer = (
+      type: "pointerdown" | "pointermove" | "pointerup",
+      clientX: number,
+      clientY: number,
+    ) => {
+      const event = new Event(type, {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperties(event, {
+        button: { value: 0 },
+        pointerId: { value: 7 },
+        clientX: { value: clientX },
+        clientY: { value: clientY },
+      });
+      fireEvent(resize, event);
+    };
+
+    dispatchPointer("pointerdown", 486, 633);
+    dispatchPointer("pointermove", 550, 681);
+    dispatchPointer("pointerup", 550, 681);
+
+    expect(dialog).toHaveStyle({ width: "448px", height: "508px" });
+    expect(window.localStorage.getItem("rfpilot:ai-assistant-size:v1"))
+      .toBe('{"width":448,"height":508}');
   });
 });

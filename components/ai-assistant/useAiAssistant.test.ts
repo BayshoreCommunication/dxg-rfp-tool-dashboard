@@ -44,7 +44,7 @@ const state: AssistantUiState = {
   streamingAssistant: null,
   error: null,
   isNearBottom: true,
-  draft: userMessage.content,
+  draft: "",
   pendingRequest: {
     content: userMessage.content,
     userIdempotencyKey: "user-key",
@@ -77,6 +77,51 @@ describe("aiAssistantReducer", () => {
       content: "",
       receivedFirstDelta: false,
     });
+  });
+
+  test("clears the submitted draft and adds the optimistic row at send start", () => {
+    const pending = {
+      ...state.pendingRequest!,
+      optimisticId: "local:new-user-key",
+      userIdempotencyKey: "new-user-key",
+      content: "Explain proposal review",
+    };
+    const next = aiAssistantReducer(
+      {
+        ...state,
+        messages: [],
+        draft: pending.content,
+        conversationStatus: "ready",
+        pendingRequest: null,
+      },
+      { type: "SEND_STARTED", pending },
+    );
+
+    expect(next.draft).toBe("");
+    expect(next.messages).toHaveLength(1);
+    expect(next.messages[0]).toMatchObject({
+      id: pending.optimisticId,
+      content: pending.content,
+      optimistic: true,
+    });
+  });
+
+  test("does not erase a next draft when message acceptance arrives", () => {
+    const next = aiAssistantReducer(
+      { ...state, draft: "My next question" },
+      {
+        type: "STREAM_EVENT",
+        event: {
+          type: "message.accepted",
+          version: 1,
+          userMessage,
+          assistantMessageId: "assistant-1",
+          correlationId: "corr",
+        },
+      },
+    );
+
+    expect(next.draft).toBe("My next question");
   });
 
   test("retains visible partial output when a stream fails", () => {

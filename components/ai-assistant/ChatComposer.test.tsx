@@ -42,6 +42,12 @@ describe("ChatComposer", () => {
   test("busy state replaces send with an accessible stop control", () => {
     const props = renderComposer({ busy: true, canSend: false });
     expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+    expect(
+      screen.getByLabelText("Message the AI Assistant"),
+    ).not.toBeDisabled();
+    expect(
+      screen.getByLabelText("Message the AI Assistant"),
+    ).toHaveAttribute("aria-busy", "true");
     fireEvent.click(
       screen.getByRole("button", { name: "Stop assistant response" }),
     );
@@ -73,5 +79,22 @@ describe("ChatComposer", () => {
     expect(input).toHaveClass("assistant-composer-scrollbar");
     expect(input).toHaveClass("pr-[68px]");
     expect(send).toHaveClass("absolute", "right-5");
+  });
+
+  test("returns focus to the composer after clicking send", () => {
+    const requestAnimationFrame = jest
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    const props = renderComposer();
+    const input = screen.getByLabelText("Message the AI Assistant");
+
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(props.onSend).toHaveBeenCalledTimes(1);
+    expect(input).toHaveFocus();
+    requestAnimationFrame.mockRestore();
   });
 });

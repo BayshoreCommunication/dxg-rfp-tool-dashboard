@@ -236,14 +236,32 @@ export const aiAssistantReducer = (
       return { ...state, draft: action.draft };
     case "SET_NEAR_BOTTOM":
       return { ...state, isNearBottom: action.value };
-    case "SEND_STARTED":
+    case "SEND_STARTED": {
+      const optimistic = action.pending.optimisticId
+        ? optimisticMessage(
+            action.pending.threadId || "",
+            action.pending.content,
+            action.pending.optimisticId,
+            state.messages.reduce(
+              (maximum, message) => Math.max(maximum, message.ordinal),
+              0,
+            ) + 1,
+          )
+        : null;
       return {
         ...state,
+        messages:
+          optimistic &&
+          !state.messages.some((message) => message.id === optimistic.id)
+            ? [...state.messages, optimistic]
+            : state.messages,
         conversationStatus: "sending",
         error: null,
+        draft: "",
         pendingRequest: action.pending,
         retryAvailableAt: null,
       };
+    }
     case "THREAD_CREATED":
       return {
         ...state,
@@ -282,7 +300,6 @@ export const aiAssistantReducer = (
         return {
           ...state,
           messages,
-          draft: "",
           pendingRequest: state.pendingRequest
             ? { ...state.pendingRequest, accepted: true }
             : null,
@@ -523,6 +540,7 @@ export function useAiAssistant({
   const stateRef = useRef(state);
   const abortRef = useRef<AbortController | null>(null);
   const abortReasonRef = useRef<"user" | "navigation" | null>(null);
+  const requestActiveRef = useRef(false);
   const [clock, setClock] = useState(() => Date.now());
 
   useEffect(() => {
@@ -760,6 +778,7 @@ export function useAiAssistant({
   const send = useCallback(async () => {
     const content = stateRef.current.draft.trim();
     if (
+      requestActiveRef.current ||
       !content ||
       content.length > ASSISTANT_MESSAGE_MAX_LENGTH ||
       retryAfterSeconds > 0 ||
@@ -768,21 +787,33 @@ export function useAiAssistant({
     ) {
       return;
     }
+    const userIdempotencyKey = `assistant-message:${crypto.randomUUID()}`;
     const pending: PendingRequest = {
       content,
-      userIdempotencyKey: `assistant-message:${crypto.randomUUID()}`,
+      userIdempotencyKey,
       responseIdempotencyKey: `assistant-response:${crypto.randomUUID()}`,
       threadId: stateRef.current.selectedThreadId,
       threadIdempotencyKey: `assistant-thread:${crypto.randomUUID()}`,
-      optimisticId: null,
+      optimisticId: `local:${userIdempotencyKey}`,
       accepted: false,
     };
-    await runRequest(pending);
+    requestActiveRef.current = true;
+    try {
+      await runRequest(pending);
+    } finally {
+      requestActiveRef.current = false;
+    }
   }, [retryAfterSeconds, runRequest]);
 
   const retry = useCallback(async () => {
     const current = stateRef.current.pendingRequest;
-    if (!current || retryAfterSeconds > 0) return;
+    if (
+      requestActiveRef.current ||
+      !current ||
+      retryAfterSeconds > 0
+    ) {
+      return;
+    }
     const explicitRetry = current.accepted;
     const pending = explicitRetry
       ? {
@@ -791,7 +822,12 @@ export function useAiAssistant({
           optimisticId: null,
         }
       : current;
-    await runRequest(pending, explicitRetry);
+    requestActiveRef.current = true;
+    try {
+      await runRequest(pending, explicitRetry);
+    } finally {
+      requestActiveRef.current = false;
+    }
   }, [retryAfterSeconds, runRequest]);
 
   const abort = useCallback(() => {

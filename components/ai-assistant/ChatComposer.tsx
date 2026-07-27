@@ -48,6 +48,12 @@ export default function ChatComposer({
       textarea.scrollHeight > 144 ? "auto" : "hidden";
   }, [activeRef, value]);
 
+  const submit = () => {
+    if (!canSend) return;
+    onSend();
+    window.requestAnimationFrame(() => activeRef.current?.focus());
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (
       event.key === "Enter" &&
@@ -56,7 +62,7 @@ export default function ChatComposer({
       !event.nativeEvent.isComposing
     ) {
       event.preventDefault();
-      if (canSend) onSend();
+      submit();
     }
   };
 
@@ -65,7 +71,7 @@ export default function ChatComposer({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (canSend) onSend();
+          submit();
         }}
         className={cn(
           "relative rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_12px_34px_-24px_rgba(15,23,42,0.6)] transition focus-within:border-[#00c2c9]/70 focus-within:ring-4 focus-within:ring-[#00c2c9]/10",
@@ -81,7 +87,7 @@ export default function ChatComposer({
           value={value}
           rows={1}
           maxLength={ASSISTANT_MESSAGE_MAX_LENGTH}
-          disabled={busy}
+          aria-busy={busy}
           aria-describedby={
             retryAfterSeconds > 0
               ? "ai-assistant-retry-status"
@@ -103,7 +109,7 @@ export default function ChatComposer({
             composingRef.current = false;
           }}
           className={cn(
-            "assistant-composer-scrollbar block max-h-36 min-h-10 w-full min-w-0 resize-none bg-transparent pl-2 pr-[68px] leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60",
+            "assistant-composer-scrollbar block max-h-36 min-h-10 w-full min-w-0 resize-none bg-transparent pl-2 pr-[68px] leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400",
             compact
               ? "py-1.5 text-[13px] placeholder-shown:min-h-10"
               : "py-2.5 text-[15px] placeholder-shown:min-h-20 sm:placeholder-shown:min-h-10",
