@@ -25,8 +25,8 @@ type DragState = {
 const VIEWPORT_MARGIN = 12;
 const DEFAULT_LEFT = 102;
 const DEFAULT_BOTTOM = 135;
-const FALLBACK_WIDTH = 360;
-const FALLBACK_HEIGHT = 420;
+const FALLBACK_WIDTH = 384;
+const FALLBACK_HEIGHT = 460;
 const POSITION_STORAGE_KEY = "rfpilot:ai-assistant-position:v1";
 
 const positionsMatch = (

@@ -81,6 +81,12 @@ describe("AssistantPopup", () => {
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
     ).toHaveClass("z-[60]");
+    expect(
+      screen.getByRole("dialog", { name: "AI Assistant" }),
+    ).toHaveClass("w-[min(384px,calc(100vw-24px))]");
+    expect(
+      screen.getByRole("dialog", { name: "AI Assistant" }),
+    ).toHaveClass("h-[min(460px,calc(100dvh-24px))]");
 
     fireEvent.click(
       screen.getByRole("button", { name: "Close mocked workspace" }),
@@ -135,15 +141,15 @@ describe("AssistantPopup", () => {
       name: "Move AI Assistant",
     });
     await waitFor(() =>
-      expect(dialog).toHaveStyle({ left: "102px", top: "213px" }),
+      expect(dialog).toHaveStyle({ left: "102px", top: "173px" }),
     );
     expect(screen.getByText("Position changed: false")).toBeInTheDocument();
 
     fireEvent.keyDown(handle, { key: "ArrowRight" });
-    expect(dialog).toHaveStyle({ left: "114px", top: "213px" });
+    expect(dialog).toHaveStyle({ left: "114px", top: "173px" });
     expect(screen.getByText("Position changed: true")).toBeInTheDocument();
     expect(window.localStorage.getItem("rfpilot:ai-assistant-position:v1"))
-      .toBe('{"x":114,"y":213}');
+      .toBe('{"x":114,"y":173}');
 
     unmount();
     render(<AssistantPopup open onOpenChange={jest.fn()} />);
@@ -151,7 +157,7 @@ describe("AssistantPopup", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("dialog", { name: "AI Assistant" }),
-      ).toHaveStyle({ left: "114px", top: "213px" }),
+      ).toHaveStyle({ left: "114px", top: "173px" }),
     );
 
     fireEvent.click(
@@ -159,7 +165,7 @@ describe("AssistantPopup", () => {
     );
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
-    ).toHaveStyle({ left: "102px", top: "213px" });
+    ).toHaveStyle({ left: "102px", top: "173px" });
     expect(window.localStorage.getItem("rfpilot:ai-assistant-position:v1"))
       .toBeNull();
   });
@@ -172,13 +178,13 @@ describe("AssistantPopup", () => {
       name: "Move AI Assistant",
     });
     await waitFor(() =>
-      expect(dialog).toHaveStyle({ left: "102px", top: "213px" }),
+      expect(dialog).toHaveStyle({ left: "102px", top: "173px" }),
     );
     for (let index = 0; index < 100; index += 1) {
       fireEvent.keyDown(handle, { key: "ArrowRight", shiftKey: true });
       fireEvent.keyDown(handle, { key: "ArrowDown", shiftKey: true });
     }
 
-    expect(dialog).toHaveStyle({ left: "652px", top: "336px" });
+    expect(dialog).toHaveStyle({ left: "628px", top: "296px" });
   });
 });
