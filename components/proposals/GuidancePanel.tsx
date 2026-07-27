@@ -237,6 +237,12 @@ export default function GuidancePanel({
               </p>
             </div>
             <Bar score={report.overallCompleteness} tone="bg-[#087f69]" />
+            {/* The bars are weighted toward the fields a vendor cannot quote
+                without, so they deliberately do not match the raw answered
+                counts below. Saying so costs a line and saves the question. */}
+            <p className="mt-1 text-xs text-slate-500">
+              Weighted toward the fields vendors need in order to quote.
+            </p>
           </div>
           {report.completeness.length > 0 && (
             <div>
