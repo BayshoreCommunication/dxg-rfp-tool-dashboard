@@ -1049,10 +1049,11 @@ describe("AssistantWorkspacePage", () => {
       { operationId: "op-c1", decision: "pending" },
       { operationId: "op-c2", decision: "pending" },
     ]);
-    // The application job uses the review's proposal version and NEVER
-    // confirms overwrites.
+    // The application job uses the review's proposal version, NEVER confirms
+    // overwrites, and declares itself automatic — that last flag is what lets
+    // the server enforce the confidence bar rather than trusting this client.
     expect(mockedApplyCandidates).toHaveBeenCalledTimes(1);
-    expect(mockedApplyCandidates).toHaveBeenCalledWith(PROPOSAL_ID, "run-1", 7, ["op-a"], []);
+    expect(mockedApplyCandidates).toHaveBeenCalledWith(PROPOSAL_ID, "run-1", 7, ["op-a"], [], true);
     expect(mockedSaveReview.mock.invocationCallOrder[0]).toBeLessThan(mockedApplyCandidates.mock.invocationCallOrder[0]);
     expect(window.sessionStorage.getItem("rfpilot:auto-apply:run-1")).toBe("started");
 

@@ -123,6 +123,9 @@ export function useAutoApply(
         review.proposalVersion,
         [...acceptedIds],
         [],
+        // Declares this an unattended application so the server enforces the
+        // confidence bar too, rather than trusting this client to.
+        true,
       );
       if (!active) return;
       if (!applied.success) {
