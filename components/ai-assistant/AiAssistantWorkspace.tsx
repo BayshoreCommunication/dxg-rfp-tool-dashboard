@@ -21,12 +21,16 @@ export default function AiAssistantWorkspace({
   initialError = null,
   presentation = "page",
   onClose,
+  onResetPosition,
+  positionModified = false,
 }: {
   initialThreads: AssistantThread[];
   initialDetail: AssistantThreadDetail | null;
   initialError?: AssistantUiError | null;
   presentation?: "page" | "dialog" | "popup";
   onClose?: () => void;
+  onResetPosition?: () => void;
+  positionModified?: boolean;
 }) {
   const assistant = useAiAssistant({
     initialThreads,
@@ -155,6 +159,8 @@ export default function AiAssistantWorkspace({
               onOpenHistory={() => setHistoryOpen(true)}
               onNewChat={newChat}
               onClose={onClose}
+              onResetPosition={onResetPosition}
+              positionModified={positionModified}
             />
           ) : (
             <AssistantHeader

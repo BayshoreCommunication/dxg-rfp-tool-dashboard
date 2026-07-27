@@ -1,6 +1,12 @@
 "use client";
 
-import { History, MoreHorizontal, Plus, X } from "lucide-react";
+import {
+  History,
+  MoreHorizontal,
+  Plus,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export default function AssistantFloatingControls({
@@ -8,11 +14,15 @@ export default function AssistantFloatingControls({
   onOpenHistory,
   onNewChat,
   onClose,
+  onResetPosition,
+  positionModified = false,
 }: {
   hasHistory: boolean;
   onOpenHistory: () => void;
   onNewChat: () => void;
   onClose: () => void;
+  onResetPosition?: () => void;
+  positionModified?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -86,6 +96,18 @@ export default function AssistantFloatingControls({
               <History size={15} aria-hidden />
               Conversation history
             </button>
+            {onResetPosition && (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!positionModified}
+                onClick={() => runAndClose(onResetPosition)}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-[#0e1b2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+              >
+                <RotateCcw size={15} aria-hidden />
+                Reset popup position
+              </button>
+            )}
           </div>
         )}
       </div>

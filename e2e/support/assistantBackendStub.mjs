@@ -177,6 +177,14 @@ const server = http.createServer(async (request, response) => {
 
   if (
     request.method === "GET" &&
+    pathname === "/api/v1/assistant/access"
+  ) {
+    json(response, 200, { data: { enabled: true } });
+    return;
+  }
+
+  if (
+    request.method === "GET" &&
     pathname === "/api/v1/assistant/threads"
   ) {
     json(response, 200, { data: [...threads.values()] });

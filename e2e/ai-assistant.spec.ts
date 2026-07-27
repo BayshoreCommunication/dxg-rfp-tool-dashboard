@@ -140,3 +140,68 @@ test("has no serious or critical automated accessibility violations", async ({
       .join("\n"),
   ).toEqual([]);
 });
+
+test("drags within the viewport, remembers its position, and can reset", async ({
+  page,
+}) => {
+  const dialog = page.getByRole("dialog", { name: "AI Assistant" });
+  const dragHandle = page.getByRole("button", {
+    name: "Move AI Assistant",
+  });
+  const initialBox = await dialog.boundingBox();
+  const handleBox = await dragHandle.boundingBox();
+  const viewport = page.viewportSize();
+  expect(initialBox).not.toBeNull();
+  expect(handleBox).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  if (!initialBox || !handleBox || !viewport) return;
+
+  await page.mouse.move(
+    handleBox.x + handleBox.width / 2,
+    handleBox.y + handleBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(viewport.width + 500, viewport.height + 500, {
+    steps: 8,
+  });
+  await page.mouse.up();
+
+  const movedBox = await dialog.boundingBox();
+  expect(movedBox).not.toBeNull();
+  if (!movedBox) return;
+  expect(movedBox.x).toBeGreaterThanOrEqual(11);
+  expect(movedBox.y).toBeGreaterThanOrEqual(11);
+  expect(movedBox.x + movedBox.width).toBeLessThanOrEqual(
+    viewport.width - 11,
+  );
+  expect(movedBox.y + movedBox.height).toBeLessThanOrEqual(
+    viewport.height - 11,
+  );
+  expect(
+    Math.abs(movedBox.x - initialBox.x) +
+      Math.abs(movedBox.y - initialBox.y),
+  ).toBeGreaterThan(20);
+
+  await page.getByRole("button", { name: "Close AI Assistant" }).click();
+  await page.getByRole("button", { name: "Open AI Assistant" }).click();
+  const reopenedBox = await dialog.boundingBox();
+  expect(reopenedBox?.x).toBeCloseTo(movedBox.x, 0);
+  expect(reopenedBox?.y).toBeCloseTo(movedBox.y, 0);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Open AI Assistant" }).click();
+  const restoredBox = await dialog.boundingBox();
+  expect(restoredBox?.x).toBeCloseTo(movedBox.x, 0);
+  expect(restoredBox?.y).toBeCloseTo(movedBox.y, 0);
+
+  await page.getByRole("button", { name: "Assistant options" }).click();
+  await page
+    .getByRole("menuitem", { name: "Reset popup position" })
+    .click();
+  const resetBox = await dialog.boundingBox();
+  expect(resetBox).not.toBeNull();
+  if (!resetBox) return;
+  expect(
+    Math.abs(resetBox.x - movedBox.x) + Math.abs(resetBox.y - movedBox.y),
+  ).toBeGreaterThan(20);
+});

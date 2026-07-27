@@ -29,6 +29,17 @@ with that proposal's information and sources.
 Shift+Enter adds a new line. While a response is streaming, the stop button
 ends that response.
 
+## Move the helper
+
+Drag the move control at the popup's upper-left to place the helper anywhere
+inside the browser window. RFPilot remembers the position on this device and
+keeps the popup inside the visible screen after a resize.
+
+Keyboard users can focus the move control and use Arrow keys to nudge the
+popup, Shift+Arrow for a larger step, or Home to restore the default position.
+The three-dot menu also includes **Reset popup position** after the helper has
+been moved.
+
 ## If something goes wrong
 
 - Use **Try again** for a retryable error.

@@ -11,14 +11,22 @@ jest.mock("./AiAssistantWorkspace", () => ({
   default: ({
     presentation,
     onClose,
+    onResetPosition,
+    positionModified,
   }: {
     presentation: string;
     onClose: () => void;
+    onResetPosition: () => void;
+    positionModified: boolean;
   }) => (
     <div>
       <span>Workspace presentation: {presentation}</span>
+      <span>Position changed: {String(positionModified)}</span>
       <button type="button" onClick={onClose}>
         Close mocked workspace
+      </button>
+      <button type="button" onClick={onResetPosition}>
+        Reset mocked position
       </button>
     </div>
   ),
@@ -29,6 +37,15 @@ const mockedBootstrap = jest.mocked(getAssistantBootstrapAction);
 describe("AssistantPopup", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.localStorage.clear();
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 1024,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 768,
+    });
     mockedBootstrap.mockResolvedValue({
       success: true,
       data: { threads: [], detail: null },
@@ -102,5 +119,63 @@ describe("AssistantPopup", () => {
     await screen.findByText("Workspace presentation: popup");
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  test("moves with the keyboard, remembers the position, and resets it", async () => {
+    const { unmount } = render(
+      <AssistantPopup open onOpenChange={jest.fn()} />,
+    );
+    await screen.findByText("Workspace presentation: popup");
+
+    const dialog = screen.getByRole("dialog", { name: "AI Assistant" });
+    const handle = screen.getByRole("button", {
+      name: "Move AI Assistant",
+    });
+    await waitFor(() =>
+      expect(dialog).toHaveStyle({ left: "102px", top: "213px" }),
+    );
+    expect(screen.getByText("Position changed: false")).toBeInTheDocument();
+
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    expect(dialog).toHaveStyle({ left: "114px", top: "213px" });
+    expect(screen.getByText("Position changed: true")).toBeInTheDocument();
+    expect(window.localStorage.getItem("rfpilot:ai-assistant-position:v1"))
+      .toBe('{"x":114,"y":213}');
+
+    unmount();
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("dialog", { name: "AI Assistant" }),
+      ).toHaveStyle({ left: "114px", top: "213px" }),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset mocked position" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "AI Assistant" }),
+    ).toHaveStyle({ left: "102px", top: "213px" });
+    expect(window.localStorage.getItem("rfpilot:ai-assistant-position:v1"))
+      .toBeNull();
+  });
+
+  test("keeps a moved position inside the viewport", async () => {
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+    const dialog = screen.getByRole("dialog", { name: "AI Assistant" });
+    const handle = screen.getByRole("button", {
+      name: "Move AI Assistant",
+    });
+    await waitFor(() =>
+      expect(dialog).toHaveStyle({ left: "102px", top: "213px" }),
+    );
+    for (let index = 0; index < 100; index += 1) {
+      fireEvent.keyDown(handle, { key: "ArrowRight", shiftKey: true });
+      fireEvent.keyDown(handle, { key: "ArrowDown", shiftKey: true });
+    }
+
+    expect(dialog).toHaveStyle({ left: "652px", top: "336px" });
   });
 });

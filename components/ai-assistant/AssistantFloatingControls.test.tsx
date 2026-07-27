@@ -10,6 +10,8 @@ describe("AssistantFloatingControls", () => {
         onOpenHistory={jest.fn()}
         onNewChat={onNewChat}
         onClose={jest.fn()}
+        onResetPosition={jest.fn()}
+        positionModified
       />,
     );
 
@@ -38,6 +40,7 @@ describe("AssistantFloatingControls", () => {
         onOpenHistory={jest.fn()}
         onNewChat={jest.fn()}
         onClose={jest.fn()}
+        onResetPosition={jest.fn()}
       />,
     );
 
@@ -47,6 +50,11 @@ describe("AssistantFloatingControls", () => {
     expect(
       screen.getByRole("menuitem", {
         name: "Open conversation history",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("menuitem", {
+        name: "Reset popup position",
       }),
     ).toBeDisabled();
   });
@@ -59,6 +67,7 @@ describe("AssistantFloatingControls", () => {
         onOpenHistory={jest.fn()}
         onNewChat={jest.fn()}
         onClose={onClose}
+        onResetPosition={jest.fn()}
       />,
     );
 
@@ -70,5 +79,30 @@ describe("AssistantFloatingControls", () => {
       screen.queryByRole("menu", { name: "Assistant options" }),
     ).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  test("resets a moved popup from the options menu", () => {
+    const onResetPosition = jest.fn();
+    render(
+      <AssistantFloatingControls
+        hasHistory
+        onOpenHistory={jest.fn()}
+        onNewChat={jest.fn()}
+        onClose={jest.fn()}
+        onResetPosition={onResetPosition}
+        positionModified
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Assistant options" }),
+    );
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Reset popup position" }),
+    );
+    expect(onResetPosition).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("menu", { name: "Assistant options" }),
+    ).not.toBeInTheDocument();
   });
 });

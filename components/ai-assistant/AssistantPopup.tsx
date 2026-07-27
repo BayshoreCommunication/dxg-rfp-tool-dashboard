@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle, X } from "lucide-react";
+import { LoaderCircle, Move, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -15,6 +15,7 @@ import type {
   AssistantUiError,
 } from "@/lib/aiAssistant/types";
 import AiAssistantWorkspace from "./AiAssistantWorkspace";
+import useDraggablePopup from "./useDraggablePopup";
 
 type BootstrapState =
   | { status: "idle" }
@@ -51,6 +52,13 @@ export default function AssistantPopup({
   const [bootstrap, setBootstrap] = useState<BootstrapState>({
     status: "idle",
   });
+  const {
+    position,
+    dragging,
+    positionModified,
+    resetPosition,
+    dragHandleProps,
+  } = useDraggablePopup(popupRef);
 
   const load = useCallback(async () => {
     const result = await getAssistantBootstrapAction();
@@ -126,12 +134,33 @@ export default function AssistantPopup({
       inert={!open}
       data-state={open ? "open" : "closed"}
       data-motion-origin="launcher"
-      className={`fixed bottom-[135px] left-[102px] z-40 h-[min(420px,calc(100dvh-153px))] w-[min(360px,calc(100vw-116px))] origin-bottom-left overflow-hidden rounded-[20px] border border-slate-200/90 bg-white text-left shadow-[0_24px_64px_-24px_rgba(14,27,43,0.56)] outline-none will-change-[transform,opacity] ${
+      data-dragging={dragging ? "true" : "false"}
+      style={{
+        left: position?.x ?? 12,
+        top: position?.y ?? 12,
+      }}
+      className={`fixed z-40 h-[min(420px,calc(100dvh-24px))] w-[min(360px,calc(100vw-24px))] origin-bottom-left overflow-hidden rounded-[20px] border border-slate-200/90 bg-white text-left outline-none will-change-[transform,opacity] transition-[box-shadow,border-color] duration-200 ${
+        dragging
+          ? "cursor-grabbing border-[#00c2c9]/45 shadow-[0_30px_80px_-24px_rgba(14,27,43,0.68)]"
+          : "shadow-[0_24px_64px_-24px_rgba(14,27,43,0.56)]"
+      } ${
         open
           ? "assistant-popup-open"
           : "assistant-popup-closed"
       }`}
     >
+      <button
+        type="button"
+        aria-label="Move AI Assistant"
+        title="Drag to move · Arrow keys to nudge · Home to reset"
+        data-testid="assistant-drag-handle"
+        {...dragHandleProps}
+        className={`absolute left-3 top-3 z-40 inline-flex h-8 w-9 touch-none items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-400 shadow-[0_10px_24px_-16px_rgba(15,23,42,0.75)] backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:bg-slate-100 hover:text-[#00aeb5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 motion-reduce:transform-none ${
+          dragging ? "cursor-grabbing text-[#00aeb5]" : "cursor-grab"
+        }`}
+      >
+        <Move size={15} strokeWidth={2.2} aria-hidden />
+      </button>
       <div
         className={`h-full transition-opacity motion-reduce:transition-none ${
           open
@@ -173,6 +202,8 @@ export default function AssistantPopup({
             initialError={bootstrap.error}
             presentation="popup"
             onClose={close}
+            onResetPosition={resetPosition}
+            positionModified={positionModified}
           />
         )}
       </div>
