@@ -22,11 +22,11 @@ describe("AssistantFloatingControls", () => {
       screen.getByRole("menu", { name: "Assistant options" }),
     ).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole("menuitem", {
-        name: "Start new conversation",
-      }),
-    );
+    const newConversation = screen.getByRole("menuitem", {
+      name: "Start new conversation",
+    });
+    expect(newConversation).toHaveClass("whitespace-nowrap");
+    fireEvent.click(newConversation);
     expect(onNewChat).toHaveBeenCalledTimes(1);
     expect(
       screen.queryByRole("menu", { name: "Assistant options" }),

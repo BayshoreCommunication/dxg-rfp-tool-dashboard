@@ -42,6 +42,18 @@ test("streams a response, persists history, starts a new chat, and remains respo
     page.getByRole("heading", { name: "How can I help?" }),
   ).toBeVisible();
 
+  await page.getByRole("button", { name: "Assistant options" }).click();
+  const newConversationAction = page.getByRole("menuitem", {
+    name: "Start new conversation",
+  });
+  await expect(newConversationAction).toHaveCSS("white-space", "nowrap");
+  expect(
+    await newConversationAction.evaluate(
+      (element) => element.scrollHeight <= element.clientHeight,
+    ),
+  ).toBe(true);
+  await page.keyboard.press("Escape");
+
   const composer = page.getByLabel("Message the AI Assistant");
   await composer.fill("How do I create and review a proposal?");
   await composer.press("Shift+Enter");
