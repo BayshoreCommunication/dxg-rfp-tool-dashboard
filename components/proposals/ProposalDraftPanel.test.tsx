@@ -184,4 +184,38 @@ describe("ProposalDraftPanel section review", () => {
     // Field-path citations keep the plain evidence treatment.
     expect(screen.getByText("Evidence: /eventName")).toBeInTheDocument();
   });
+
+  test("the download offers only what was accepted, and says so", async () => {
+    mockedLatestDraft.mockResolvedValue(draftFixture);
+    render(<ProposalDraftPanel proposalId={proposalId} />);
+
+    const link = await screen.findByText("Download RFP");
+    // The fixture has one accepted, one rejected and one undecided section, so
+    // the planner is told what will actually be in the file before downloading.
+    expect(link).toHaveAttribute(
+      "href",
+      `/api/proposals/${proposalId}/draft-export`,
+    );
+    expect(link.getAttribute("aria-disabled")).toBe("false");
+    expect(screen.getByText(/1 accepted section will be included/)).toBeInTheDocument();
+    expect(screen.getByText(/Rejected and undecided sections are left out/)).toBeInTheDocument();
+  });
+
+  test("with nothing accepted the download is inert rather than an error to discover", async () => {
+    mockedLatestDraft.mockResolvedValue({
+      ...draftFixture,
+      data: {
+        ...draftFixture.data,
+        sections: [section("summary", "Summary", 1), section("approach", "Approach", 2, "rejected")],
+      },
+    });
+    render(<ProposalDraftPanel proposalId={proposalId} />);
+
+    const link = await screen.findByText("Download RFP");
+    // No href: the backend would answer 409, and making the planner click to
+    // find that out is worse than saying it up front.
+    expect(link).not.toHaveAttribute("href");
+    expect(link.getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByText("Accept at least one section to download the RFP.")).toBeInTheDocument();
+  });
 });

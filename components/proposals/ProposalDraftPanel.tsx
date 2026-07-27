@@ -337,6 +337,27 @@ export default function ProposalDraftPanel({
       {draft && (
         <div className="mt-5 space-y-4">
           <AiRunEvidence run={draft.run} />
+          {(() => {
+            // Only accepted sections are exported, so the control says so
+            // rather than letting the planner discover it from a 409.
+            const acceptedCount = draft.sections.filter(s => s.decision === "accepted").length;
+            return (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <a
+                  href={acceptedCount ? `/api/proposals/${encodeURIComponent(proposalId)}/draft-export` : undefined}
+                  aria-disabled={acceptedCount === 0}
+                  className={`rounded px-4 py-2 text-sm font-semibold ${acceptedCount ? "bg-[#087f69] text-white" : "pointer-events-none bg-slate-200 text-slate-500"}`}
+                >
+                  Download RFP
+                </a>
+                <p className="text-xs text-slate-600">
+                  {acceptedCount
+                    ? `${acceptedCount} accepted section${acceptedCount === 1 ? "" : "s"} will be included. Rejected and undecided sections are left out.`
+                    : "Accept at least one section to download the RFP."}
+                </p>
+              </div>
+            );
+          })()}
           {draft.sections.map((s) => {
             const overlay = overlays[s.key],
               shown = overlay && !overlay.showOriginal ? overlay.section : s,
