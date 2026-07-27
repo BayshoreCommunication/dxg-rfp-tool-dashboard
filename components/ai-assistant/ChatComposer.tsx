@@ -68,7 +68,7 @@ export default function ChatComposer({
           if (canSend) onSend();
         }}
         className={cn(
-          "flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_12px_34px_-24px_rgba(15,23,42,0.6)] transition focus-within:border-[#00c2c9]/70 focus-within:ring-4 focus-within:ring-[#00c2c9]/10",
+          "relative rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_12px_34px_-24px_rgba(15,23,42,0.6)] transition focus-within:border-[#00c2c9]/70 focus-within:ring-4 focus-within:ring-[#00c2c9]/10",
           compact ? "min-h-14" : "min-h-[58px]",
         )}
       >
@@ -103,7 +103,7 @@ export default function ChatComposer({
             composingRef.current = false;
           }}
           className={cn(
-            "max-h-36 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2 leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60",
+            "assistant-composer-scrollbar block max-h-36 min-h-10 w-full min-w-0 resize-none bg-transparent pl-2 pr-[68px] leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60",
             compact
               ? "py-1.5 text-[13px] placeholder-shown:min-h-10"
               : "py-2.5 text-[15px] placeholder-shown:min-h-20 sm:placeholder-shown:min-h-10",
@@ -115,7 +115,7 @@ export default function ChatComposer({
             onClick={onAbort}
             aria-label="Stop assistant response"
             title="Stop response"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0e1b2b] text-white transition-colors hover:bg-[#1c3047] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
+            className="absolute bottom-2 right-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[#0e1b2b] text-white transition-colors hover:bg-[#1c3047] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
           >
             <Square size={13} fill="currentColor" aria-hidden />
           </button>
@@ -124,7 +124,7 @@ export default function ChatComposer({
             type="submit"
             disabled={!canSend}
             aria-label="Send message"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00b8bf] text-white shadow-sm transition duration-200 hover:bg-[#009da4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+            className="absolute bottom-2 right-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[#00b8bf] text-white shadow-sm transition duration-200 hover:bg-[#009da4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
           >
             <ArrowUp size={17} strokeWidth={2.4} aria-hidden />
           </button>

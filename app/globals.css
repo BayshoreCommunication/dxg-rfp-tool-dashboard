@@ -179,6 +179,33 @@ strong {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
+.assistant-composer-scrollbar {
+  scrollbar-color: #a8b1bd #eef2f6;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.assistant-composer-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.assistant-composer-scrollbar::-webkit-scrollbar-track {
+  margin-block: 4px;
+  border-radius: 9999px;
+  background: #eef2f6;
+}
+
+.assistant-composer-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 28px;
+  border: 2px solid #eef2f6;
+  border-radius: 9999px;
+  background: #a8b1bd;
+}
+
+.assistant-composer-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #7f8b99;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .assistant-popup-open {
     animation: none;

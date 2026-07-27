@@ -64,4 +64,14 @@ describe("ChatComposer", () => {
       screen.getByLabelText("Message the AI Assistant"),
     ).toHaveAttribute("placeholder", "Ask about RFPilot…");
   });
+
+  test("keeps the rounded scrollbar to the right of the send control", () => {
+    renderComposer({ value: "One\nTwo\nThree" });
+    const input = screen.getByLabelText("Message the AI Assistant");
+    const send = screen.getByRole("button", { name: "Send message" });
+
+    expect(input).toHaveClass("assistant-composer-scrollbar");
+    expect(input).toHaveClass("pr-[68px]");
+    expect(send).toHaveClass("absolute", "right-5");
+  });
 });

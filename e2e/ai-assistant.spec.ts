@@ -77,6 +77,28 @@ test("streams a response, persists history, starts a new chat, and remains respo
       (element) => element.scrollHeight <= element.clientHeight,
     ),
   ).toBe(true);
+  await composer.fill(
+    Array.from(
+      { length: 12 },
+      (_, index) => `Scrollable assistant composer line ${index + 1}`,
+    ).join("\n"),
+  );
+  const composerGeometry = await composer.evaluate((element) => {
+    const send = element.parentElement?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Send message"]',
+    );
+    const composerRect = element.getBoundingClientRect();
+    const sendRect = send?.getBoundingClientRect();
+    return {
+      overflowing: element.scrollHeight > element.clientHeight,
+      composerRight: composerRect.right,
+      sendRight: sendRect?.right ?? composerRect.right,
+    };
+  });
+  expect(composerGeometry.overflowing).toBe(true);
+  expect(composerGeometry.composerRight).toBeGreaterThan(
+    composerGeometry.sendRight,
+  );
   await composer.fill("How do I create and review a proposal?");
   await composer.press("Shift+Enter");
   await composer.type("Please explain the safe workflow.");
