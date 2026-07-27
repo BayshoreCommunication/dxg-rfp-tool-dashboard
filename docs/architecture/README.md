@@ -31,6 +31,29 @@ Architecture, API contracts, accessibility expectations, feature flags, error st
 
 - [Async status and recovery UX](./ASYNC_STATUS_UX.md)
 
+## Platform AI Assistant
+
+The customer-facing `/ai-assistant` route is a read-only platform-guidance
+surface. It is intentionally separate from the proposal-specific assistant at
+`/proposals/{id}/assistant`:
+
+- thread reads and lifecycle changes use typed server actions;
+- streamed message posts use a same-origin Next.js BFF route;
+- backend bearer credentials and the OpenAI API key never enter browser state;
+- the browser consumes only versioned product SSE events, never provider
+  events;
+- PostgreSQL remains the durable message source of truth while a feature-local
+  reducer owns optimistic and streaming state;
+- retries reuse the user-message idempotency key and use a distinct stable
+  response-attempt key, avoiding duplicate user turns while preserving failed
+  assistant attempts;
+- rendered Markdown disables raw HTML and accepts only internal paths or HTTPS
+  links.
+
+`NEXT_PUBLIC_AI_ASSISTANT_ENABLED=true` controls dashboard visibility and route
+availability only. Backend authorization, `assistant:use`, feature flags,
+ownership checks, RLS, provider gates, and kill switches remain authoritative.
+
 ## Canonical proposal contract
 
 `contracts/proposal/v1/` contains the synchronized JSON Schema 2020-12 resource, public projection, extraction-candidate patch, runtime validators, and legacy adapter. `contracts/generated/` is deterministic generated output and its manifest. New proposal UI/API code must consume these generated contracts or an explicit compatibility projection rather than adding another handwritten proposal shape.

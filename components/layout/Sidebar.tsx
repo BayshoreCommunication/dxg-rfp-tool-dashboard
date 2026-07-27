@@ -215,7 +215,12 @@ const Sidebar = () => {
             : null;
 
           return (
-            <Link key={item.id} href={item.href} className="block w-full">
+            <Link
+              key={item.id}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className="block w-full"
+            >
               <div
                 className={cn(
                   "group relative flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-3 transition-all duration-200",
@@ -249,7 +254,7 @@ const Sidebar = () => {
                     "text-[9.5px] font-bold leading-none tracking-wide",
                     isActive
                       ? "text-primary"
-                      : "text-gray-400 group-hover:text-primary",
+                      : "text-gray-500 group-hover:text-primary",
                   )}
                 >
                   {item.title}

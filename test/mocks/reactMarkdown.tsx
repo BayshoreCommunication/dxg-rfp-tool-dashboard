@@ -1,0 +1,9 @@
+import type { ReactNode } from "react";
+
+export default function ReactMarkdownMock({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return <>{children}</>;
+}

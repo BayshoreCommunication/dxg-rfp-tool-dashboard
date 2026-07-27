@@ -25,6 +25,8 @@ import { getLatestProposalContextAction, getProposalContextAction } from "@/app/
 import { getProposalDraftAction, type ProposalDraftSection } from "@/app/actions/proposalDraft";
 import { createProposalAction, getProposalByIdAction } from "@/app/actions/proposals";
 import { getUserData } from "@/app/actions/user";
+import AssistantOrb from "@/components/ai/shared/AssistantOrb";
+import TypingIndicator from "@/components/ai/shared/TypingIndicator";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
 import { presentJob } from "@/lib/asyncOperations";
 import {
@@ -1467,14 +1469,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
         <section aria-label="Proposal assistant workspace" className="flex max-h-[calc(100vh-8rem)] min-h-[70vh] flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           {!started ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-              <div
-                aria-hidden
-                className="h-24 w-24 rounded-full motion-safe:animate-[ai-orbit_8s_linear_infinite]"
-                style={{
-                  background: `radial-gradient(circle at 35% 35%, #ffffff 0%, ${ACCENT}55 35%, ${ACCENT} 70%, ${DEEP} 100%)`,
-                  boxShadow: `0 0 60px 18px ${ACCENT}33, 0 0 25px 4px ${ACCENT}44`,
-                }}
-              />
+              <AssistantOrb />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900">
                   Good {dayPart()}{firstName ? `, ${firstName}` : ""}
@@ -1590,17 +1585,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                   ))}
                   {sending && (
                     <li className="flex justify-start">
-                      <div role="status" aria-label="The assistant is responding" className="rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
-                        <span aria-hidden className="flex items-center gap-1">
-                          {[0, 1, 2].map(dot => (
-                            <span
-                              key={dot}
-                              className="h-1.5 w-1.5 rounded-full bg-slate-400 motion-safe:animate-[typing-bounce_1.2s_ease-in-out_infinite]"
-                              style={{ animationDelay: `${dot * 150}ms` }}
-                            />
-                          ))}
-                        </span>
-                      </div>
+                      <TypingIndicator label="The assistant is responding" />
                     </li>
                   )}
                   {autoScanning && !sending && (

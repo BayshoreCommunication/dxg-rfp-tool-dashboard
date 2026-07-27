@@ -1,4 +1,10 @@
-import { House, Mail, NotepadTextDashed, Settings, Inbox } from "lucide-react";
+import {
+  Bot,
+  House,
+  Mail,
+  NotepadTextDashed,
+  Settings,
+} from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -21,18 +27,22 @@ export const navigationConfig: NavItem[] = [
     href: "/proposals",
     icon: <NotepadTextDashed size={22} />,
   },
+  ...(process.env.NEXT_PUBLIC_AI_ASSISTANT_ENABLED === "true"
+    ? [
+        {
+          id: "ai-assistant",
+          title: "AI Assistant",
+          href: "/ai-assistant",
+          icon: <Bot size={22} />,
+        },
+      ]
+    : []),
   {
     id: "email",
     title: "Email",
     href: "/email",
     icon: <Mail size={22} />,
   },
-  // {
-  //   id: "vendor-responses",
-  //   title: "Responses",
-  //   href: "/vendor-responses",
-  //   icon: <Inbox size={22} />,
-  // },
   {
     id: "settings",
     title: "Setting",

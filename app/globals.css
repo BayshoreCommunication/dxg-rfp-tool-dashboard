@@ -100,3 +100,24 @@ strong {
   font-family: var(--font-sans);
   font-weight: 400;
 }
+
+@keyframes assistant-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes assistant-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
