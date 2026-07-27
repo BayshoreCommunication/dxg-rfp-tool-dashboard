@@ -8,6 +8,7 @@ import type { ProposalSettings, RoomByRoomData } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
+import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -1634,6 +1635,10 @@ interface Props {
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
   isInPersonOnly?: boolean;
+  /** Saved proposal id; recommendations only exist against a saved draft. */
+  proposalId?: string | null;
+  /** Re-seeds the wizard's local rooms from the saved proposal after an apply. */
+  onRecommendationsApplied?: () => void | Promise<void>;
 }
 
 const RoomAndProductionStep = ({
@@ -1646,6 +1651,8 @@ const RoomAndProductionStep = ({
   showErrors = false,
   proposalSettings,
   isInPersonOnly = false,
+  proposalId = null,
+  onRecommendationsApplied,
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
   const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
@@ -1756,6 +1763,13 @@ const RoomAndProductionStep = ({
           One module per room — each room generates its own section in the RFP.
         </p>
       </div>
+
+      {/* Room recommendations — review-first suggestions for a saved draft */}
+      {proposalId && process.env.NEXT_PUBLIC_ROOM_RECOMMENDATIONS_ENABLED === "true" && (
+        <div className="px-6 pt-6">
+          <RoomRecommendationsPanel proposalId={proposalId} onApplied={onRecommendationsApplied} />
+        </div>
+      )}
 
       {/* Number of Event Rooms — stepper */}
       <div className="px-6 pt-6">

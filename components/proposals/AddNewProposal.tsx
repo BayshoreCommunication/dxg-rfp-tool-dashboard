@@ -2009,6 +2009,8 @@ const AddNewProposal = ({
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
                 isInPersonOnly={isInPersonOnly}
+                proposalId={proposalId ?? null}
+                onRecommendationsApplied={refreshProposalAfterQuestion}
               />
             )}
             {proposalProcessStep === 4 && (
