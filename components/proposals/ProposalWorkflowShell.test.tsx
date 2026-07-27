@@ -32,6 +32,9 @@ const workflow = {
   success: true as const,
   data: {
     workflow: { currentStep: 1 as const },
+    // The server derives the open-question count with the phase and next
+    // action; the stepper reads it from here rather than keeping its own.
+    facts: { openQuestionCount: 2 },
     steps: [
       { id: 1 as const, key: "provide", label: "Provide Information", status: "in_progress" as const, summary: "2 sources ready" },
       { id: 2 as const, key: "draft", label: "Review the Draft", status: "available" as const, summary: "No draft yet" },
@@ -73,6 +76,16 @@ describe("ProposalWorkflowShell", () => {
       .toHaveAttribute("href", `/proposals/${PROPOSAL_ID}/assistant`);
     expect(screen.queryByText(/The assistant is the easiest place/)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
+  });
+
+  test("the open-question count comes from the server, not a second local one", async () => {
+    // The panel used to report its own count up into local state, so two
+    // definitions of "answered" could disagree in the same view. The server
+    // derives this one alongside the phase, and answering a question already
+    // refreshes the workflow, so the stepper reads only that.
+    render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
+    expect(await screen.findByText("2 key questions remaining")).toBeInTheDocument();
+    expect(screen.queryByText("1 gap")).not.toBeInTheDocument();
   });
 
   test("drops the workflow framing above the stepper", async () => {

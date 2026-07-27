@@ -35,7 +35,11 @@ export default function ProposalWorkflowShell({
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [openQuestionCount, setOpenQuestionCount] = useState<number | null>(null);
+  // Was local state that nothing ever assigned, so the step-3 summary below
+  // silently never used it. The server already derives this count alongside
+  // the phase and next action, so read it from there — one definition of
+  // "answered" rather than a second one free to drift from it.
+  const openQuestionCount = data?.facts?.openQuestionCount ?? null;
   // The disclosure used to be expanded by ConversationWorkspace's onOpenRun.
   // That conversation now lives on its own route and reaches these panels by
   // navigation ("View draft", "Review & apply N extracted fields"), so the
@@ -106,7 +110,10 @@ export default function ProposalWorkflowShell({
                 editor no longer carries a second upload/status panel. */}
             {step === 1 && <><p className="rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-sm text-slate-700">You can upload more than one source. Each file is privately quarantined and checked independently. Pasted notes and previous-proposal reuse will be enabled only through the same approved source boundary.</p></>}
             {step === 2 && <><ProposalContextPanel proposalId={proposalId} /><ProposalDraftPanel proposalId={proposalId} /></>}
-            {step === 3 && <KeyQuestionsPanel proposalId={proposalId} onQuestionResolved={handleQuestionResolved} onOpenQuestionCountChange={setOpenQuestionCount} />}
+            {/* The panel no longer reports its own count up: answering a question
+                already refreshes the workflow, and the server fact is what the
+                summary reads, so a second count here could only disagree. */}
+            {step === 3 && <KeyQuestionsPanel proposalId={proposalId} onQuestionResolved={handleQuestionResolved} />}
           </div>
         </details>
       </div>}
