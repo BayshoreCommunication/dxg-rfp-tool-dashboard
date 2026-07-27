@@ -156,6 +156,29 @@ describe("VendorAnalysisSection", () => {
     expect(screen.getAllByText("Show the quoted passage")).toHaveLength(2);
   });
 
+  test("the review can be downloaded, scoped to its proposal", async () => {
+    mockedLatest.mockResolvedValue({ success: true, data: completedRun });
+    render(<VendorAnalysisSection responseId={responseId} proposalId={proposalId} />);
+
+    const link = await screen.findByRole("link", { name: "Download review" });
+    // The backend scopes the analysis by proposal as well as response, so the
+    // proposal id has to travel with the request.
+    expect(link).toHaveAttribute(
+      "href",
+      `/api/vendor-responses/${responseId}/analysis-export?proposalId=${proposalId}`,
+    );
+  });
+
+  test("a failed run offers no download", async () => {
+    mockedLatest.mockResolvedValue({
+      success: true,
+      data: { run: { ...completedRun.run, status: "failed", safeErrorCode: "VENDOR_EVIDENCE_EMPTY" }, findings: [], evidence: [] },
+    });
+    render(<VendorAnalysisSection responseId={responseId} proposalId={proposalId} />);
+    await screen.findByText(/no analyzable text/);
+    expect(screen.queryByRole("link", { name: "Download review" })).not.toBeInTheDocument();
+  });
+
   test("surfaces the safe message when the run failed with no evidence", async () => {
     mockedLatest.mockResolvedValue({
       success: true,

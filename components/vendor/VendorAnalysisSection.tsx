@@ -250,6 +250,17 @@ function VendorAnalysisSectionInner({
           )}
           {analyzing ? "Analyzing…" : analysis ? "Analyze again" : "Analyze this response"}
         </button>
+        {/* Shortlisting happens in a meeting, from a circulated document,
+            among people without logins. The download carries the verdicts and
+            the passages they were drawn from. */}
+        {analysis && !failed && findings.length > 0 && (
+          <a
+            href={`/api/vendor-responses/${encodeURIComponent(responseId)}/analysis-export?proposalId=${encodeURIComponent(proposalId)}`}
+            className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+          >
+            Download review
+          </a>
+        )}
         {loading && !analyzing && (
           <span role="status" className="text-sm text-slate-500">
             Loading the latest analysis…

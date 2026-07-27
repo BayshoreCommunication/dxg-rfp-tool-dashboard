@@ -7,13 +7,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Download the reviewed draft as an RFP document.
+ * Download the investment estimate as a standalone budget document.
  *
- * A plain link rather than a server action: the response is a file with its own
- * Content-Disposition, and letting the browser handle the download natively
- * avoids buffering the whole document into client memory just to re-offer it.
- * The backend session token is attached here, server-side, the same way the
- * conversation SSE proxy does it.
+ * Same shape as the draft export: a plain link, so the browser handles the
+ * download natively and the backend's session token is attached server-side.
  */
 export async function GET(
   req: NextRequest,
@@ -34,7 +31,7 @@ export async function GET(
   let upstream: Response;
   try {
     upstream = await authenticatedBackendFetch(
-      `${BACKEND_URL}/api/v1/proposals/${encodeURIComponent(id)}/draft-export`,
+      `${BACKEND_URL}/api/v1/proposals/${encodeURIComponent(id)}/investment-guidance-reports/export`,
       { cache: "no-store", signal: req.signal },
     );
   } catch {
@@ -42,9 +39,8 @@ export async function GET(
   }
 
   if (!upstream.ok) {
-    // The backend's own codes are meaningful here — 409 NO_ACCEPTED_SECTIONS is
-    // a normal state, not a fault — so the status is passed through for the UI
-    // to interpret rather than collapsed into a generic failure.
+    // 404 (no estimate generated yet) and 503 (feature off) are normal states,
+    // so the backend's status is passed through for the UI to interpret.
     const body = await upstream.text().catch(() => "");
     return new Response(body || "Export unavailable", {
       status: upstream.status,
@@ -56,9 +52,8 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": upstream.headers.get("content-type") ?? "text/html; charset=utf-8",
-      // Preserve the filename the backend chose from the event name.
       "Content-Disposition":
-        upstream.headers.get("content-disposition") ?? 'attachment; filename="proposal-rfp.html"',
+        upstream.headers.get("content-disposition") ?? 'attachment; filename="investment-estimate.html"',
       "Cache-Control": "no-store",
     },
   });

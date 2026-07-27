@@ -463,6 +463,17 @@ export default function InvestmentGuidancePanel({
           )}
           {running ? "Generating…" : report ? "Recalculate guidance" : "Generate investment guidance"}
         </button>
+        {/* The estimate goes to whoever approves the money, and they do not
+            have a login. The document carries the refusals and assumptions
+            that stop a range reading as a quote. */}
+        {report && (
+          <a
+            href={`/api/proposals/${encodeURIComponent(proposalId)}/investment-export`}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+          >
+            Download estimate
+          </a>
+        )}
         {loading && (
           <span role="status" className="text-sm text-slate-600">
             Loading the latest guidance…
