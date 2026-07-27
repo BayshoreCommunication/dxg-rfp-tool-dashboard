@@ -38,7 +38,7 @@ export type VendorAnalysisFinding = {
   message: string;
   confidence: number;
   needsHumanReview: boolean;
-  citations: unknown[];
+  citations: string[];
 };
 export type VendorAnalysisRun = {
   runId: string;
@@ -52,9 +52,17 @@ export type VendorAnalysisRun = {
   createdAt: string;
   completedAt: string | null;
 };
+/** One cited fragment of the vendor response, persisted with the run so a
+ * finding’s citation id resolves to the words that produced it. */
+export type VendorAnalysisEvidence = {
+  fragmentId: string;
+  origin: string;
+  excerpt: string;
+};
 export type VendorAnalysisResult = {
   run: VendorAnalysisRun;
   findings: VendorAnalysisFinding[];
+  evidence: VendorAnalysisEvidence[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -104,7 +112,20 @@ const parseAnalysis = (value: unknown): VendorAnalysisResult | null => {
           message: item.message,
           confidence: Number.isFinite(Number(item.confidence)) ? Number(item.confidence) : 0,
           needsHumanReview: item.needsHumanReview === true,
-          citations: Array.isArray(item.citations) ? item.citations : [],
+          citations: (Array.isArray(item.citations) ? item.citations : []).filter(
+            (citation): citation is string => typeof citation === "string" && citation !== "",
+          ),
+        },
+      ];
+    }),
+    evidence: (Array.isArray(value.evidence) ? value.evidence : []).flatMap((item) => {
+      if (!isRecord(item) || typeof item.fragmentId !== "string" || typeof item.excerpt !== "string")
+        return [];
+      return [
+        {
+          fragmentId: item.fragmentId,
+          origin: typeof item.origin === "string" ? item.origin : "",
+          excerpt: item.excerpt,
         },
       ];
     }),

@@ -48,7 +48,7 @@ const completedRun: VendorAnalysisResult = {
       message: "The vendor confirms availability for the event dates.",
       confidence: 0.9,
       needsHumanReview: false,
-      citations: [],
+      citations: ["vendor-fragment-0"],
     },
     {
       ordinal: 2,
@@ -59,7 +59,7 @@ const completedRun: VendorAnalysisResult = {
       message: "Rigging is mentioned but no rig plot is included.",
       confidence: 0.6,
       needsHumanReview: true,
-      citations: [],
+      citations: ["vendor-fragment-1", "vendor-fragment-missing"],
     },
     {
       ordinal: 3,
@@ -83,6 +83,10 @@ const completedRun: VendorAnalysisResult = {
       needsHumanReview: false,
       citations: [],
     },
+  ],
+  evidence: [
+    { fragmentId: "vendor-fragment-0", origin: "message", excerpt: "We are available on those dates." },
+    { fragmentId: "vendor-fragment-1", origin: "DXG/vendor-responses-private/x/rig-notes.pdf", excerpt: "Rigging handled by house crew." },
   ],
 };
 
@@ -127,12 +131,38 @@ describe("VendorAnalysisSection", () => {
     expect(mockedLatest).toHaveBeenCalledWith(responseId, proposalId);
   });
 
+  test("a finding can be traced to the words the vendor actually wrote", async () => {
+    // The citations were ids into an array that lived only for the run, so a
+    // reader saw the claim and never its basis. The run now persists the cited
+    // fragments and each finding resolves its own.
+    mockedLatest.mockResolvedValue({ success: true, data: completedRun });
+    render(<VendorAnalysisSection responseId={responseId} proposalId={proposalId} />);
+
+    const passages = await screen.findAllByText(/quoted passage/);
+    // Two findings cite; the third cites nothing and must not offer to show it.
+    expect(passages).toHaveLength(2);
+    expect(screen.getByText("We are available on those dates.")).toBeInTheDocument();
+    expect(screen.getByText("Rigging handled by house crew.")).toBeInTheDocument();
+
+    // Where it came from matters as much as what it said.
+    expect(screen.getByText("From the vendor’s message")).toBeInTheDocument();
+    expect(screen.getByText("From rig-notes.pdf")).toBeInTheDocument();
+
+    // One of the two ids resolves to nothing (an older run, or a fragment that
+    // was not persisted); the summary counts only what it can actually show.
+    // The second finding cites two ids but only one resolves (an older run, or
+    // a fragment that was not persisted), so the summary stays singular: it
+    // counts what it can actually show, not what was claimed.
+    expect(screen.getAllByText("Show the quoted passage")).toHaveLength(2);
+  });
+
   test("surfaces the safe message when the run failed with no evidence", async () => {
     mockedLatest.mockResolvedValue({
       success: true,
       data: {
         run: { ...completedRun.run, status: "failed", safeErrorCode: "VENDOR_EVIDENCE_EMPTY" },
         findings: [],
+        evidence: [],
       },
     });
     render(

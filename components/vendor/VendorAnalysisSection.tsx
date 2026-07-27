@@ -5,6 +5,7 @@ import {
   createVendorAnalysisJobAction,
   getLatestVendorAnalysisAction,
   type VendorAnalysisFinding,
+  type VendorAnalysisEvidence,
   type VendorAnalysisResult,
 } from "@/app/actions/vendorAnalysis";
 import { nextPollDelay } from "@/lib/asyncOperations";
@@ -38,7 +39,54 @@ const VerdictChip = ({ verdict }: { verdict: string | null }) => {
   );
 };
 
-const FlagCard = ({ finding }: { finding: VendorAnalysisFinding }) => (
+/**
+ * A finding's citations used to be ids like "vendor-fragment-3" that pointed
+ * into an array living only for the run, so the reader saw the claim and never
+ * its basis. The run now persists the cited fragments; this resolves them.
+ */
+type EvidenceIndex = Map<string, VendorAnalysisEvidence>;
+
+const originLabel = (origin: string) =>
+  origin === "message" ? "the vendor’s message" : origin.split("/").pop() || "an attached document";
+
+const CitedEvidence = ({
+  citations,
+  evidence,
+}: {
+  citations: string[];
+  evidence: EvidenceIndex;
+}) => {
+  const resolved = citations.flatMap((id) => {
+    const item = evidence.get(id);
+    return item ? [item] : [];
+  });
+  // Runs analyzed before the evidence table existed resolve to nothing. Showing
+  // an empty "Show quoted text" would promise something that is not there.
+  if (!resolved.length) return null;
+  return (
+    <details className="mt-1.5">
+      <summary className="cursor-pointer text-xs font-medium text-slate-500">
+        Show the {resolved.length === 1 ? "quoted passage" : `${resolved.length} quoted passages`}
+      </summary>
+      <ul className="mt-1.5 space-y-1.5">
+        {resolved.map((item) => (
+          <li key={item.fragmentId} className="border-l-2 border-slate-300 pl-2.5">
+            <p className="text-xs text-slate-500">From {originLabel(item.origin)}</p>
+            <p className="whitespace-pre-wrap text-xs text-slate-700">{item.excerpt}</p>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+};
+
+const FlagCard = ({
+  finding,
+  evidence,
+}: {
+  finding: VendorAnalysisFinding;
+  evidence: EvidenceIndex;
+}) => (
   <li
     className={`rounded-lg border p-3 ${
       finding.kind === "pricing_flag"
@@ -58,6 +106,7 @@ const FlagCard = ({ finding }: { finding: VendorAnalysisFinding }) => (
     {finding.requirementLabel && (
       <p className="mt-1 text-xs text-slate-500">Related to: {finding.requirementLabel}</p>
     )}
+    <CitedEvidence citations={finding.citations} evidence={evidence} />
   </li>
 );
 
@@ -153,6 +202,11 @@ function VendorAnalysisSectionInner({
     (finding) => finding.kind === "pricing_flag" || finding.kind === "production_flag",
   );
   const questions = findings.filter((finding) => finding.kind === "vendor_question");
+  // Built once per render: a finding cites by fragment id and every card
+  // resolves against the same set.
+  const evidenceIndex: EvidenceIndex = new Map(
+    (analysis?.evidence ?? []).map((item) => [item.fragmentId, item]),
+  );
   const verdictCount = (verdict: string) =>
     compliance.filter((finding) => finding.verdict === verdict).length;
   const failed = analysis && analysis.run.status !== "succeeded";
@@ -268,7 +322,10 @@ function VendorAnalysisSectionInner({
                           </span>
                         )}
                       </td>
-                      <td className="py-2 text-slate-700">{finding.message}</td>
+                      <td className="py-2 text-slate-700">
+                        {finding.message}
+                        <CitedEvidence citations={finding.citations} evidence={evidenceIndex} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -283,7 +340,7 @@ function VendorAnalysisSectionInner({
               </h4>
               <ul className="mt-2 space-y-2">
                 {flags.map((finding) => (
-                  <FlagCard key={finding.ordinal} finding={finding} />
+                  <FlagCard key={finding.ordinal} finding={finding} evidence={evidenceIndex} />
                 ))}
               </ul>
             </div>
