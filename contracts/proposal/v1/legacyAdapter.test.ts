@@ -23,6 +23,24 @@ const legacyProposal = {
   roomByRoom: [
     {
       roomFunction: "General Session",
+      functions: [
+        {
+          functionName: "Opening Keynote",
+          scheduleDate: "2026-10-10",
+          showStartDateTime: "2026-10-10T09:00:00.000Z",
+          showEndDateTime: "2026-10-10T10:00:00.000Z",
+          roomSetup: "Theater",
+          estimatedAttendees: "500",
+        },
+        {
+          functionName: "Leadership Panel",
+          scheduleDate: "2026-10-10",
+          showStartDateTime: "2026-10-10T11:00:00.000Z",
+          showEndDateTime: "2026-10-10T12:00:00.000Z",
+          roomSetup: "Theater",
+          estimatedAttendees: "450",
+        },
+      ],
       estimatedAttendeesInRoom: "500",
       podiumMic: { podiumMic: "Yes", podiumMicQty: "1" },
       wirelessMics: { wirelessMics: "Yes", wirelessMicsQty: "4", wirelessMicsType: "Lavalier" },
@@ -158,6 +176,8 @@ describe("legacy proposal adapter", () => {
     expect(result.proposal.content.event.format).toBe("hybrid");
     expect(result.proposal.content.event.attendeeCount).toBe(500);
     expect(result.proposal.content.rooms[0].audio?.wirelessMicCount).toBe(4);
+    expect(result.proposal.content.rooms[0].scheduleEntries).toHaveLength(2);
+    expect(result.proposal.content.rooms[0].scheduleEntries?.[1].function).toBe("Leadership Panel");
     expect(result.proposal.content.rooms[0].production?.unionLabor).toBeNull();
     expect(result.proposal.content.hybridVirtual?.remoteSpeakers?.count).toBe(5);
     expect(result.proposal.content.contentCreative?.liveDataFeeds?.required).toBe(true);

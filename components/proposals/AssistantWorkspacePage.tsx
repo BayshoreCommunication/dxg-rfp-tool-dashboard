@@ -29,7 +29,7 @@ import { getUserData } from "@/app/actions/user";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
 import { presentJob } from "@/lib/asyncOperations";
 import {
-  ArrowUp, FileText, Loader2, Paperclip, PencilLine, Sparkles, StickyNote, Upload, X,
+  ArrowUp, Download, FileText, Loader2, Paperclip, PencilLine, Sparkles, StickyNote, Upload, X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -358,23 +358,77 @@ const PRIMARY_BUTTON_CLASS =
 const SKIP_BUTTON_CLASS =
   "shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50";
 
-function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, onSkip }: {
+export function isBeforeLocalToday(candidate: Date, now = new Date()): boolean {
+  const selectedDay = new Date(candidate);
+  selectedDay.setHours(0, 0, 0, 0);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  return selectedDay < today;
+}
+
+const isEventEndDateQuestion = (question: ConversationQuestion) =>
+  question.paths.some(path => path.endsWith("/event/endDate"));
+
+const isLoadInDateQuestion = (question: ConversationQuestion) =>
+  question.paths.some(path => path.endsWith("/venueSchedule/loadInDate"));
+
+const isLoadInTimeQuestion = (question: ConversationQuestion) =>
+  question.paths.some(path => path.endsWith("/venueSchedule/loadInTime"));
+
+export const displayQuestionPrompt = (question: ConversationQuestion): string => {
+  if (question.paths.some(path => path.endsWith("/venueSchedule/venueName"))) {
+    return "Which venue will host the event? Enter the venue name, or use Skip if it is still undecided.";
+  }
+  return question.prompt || question.code.replaceAll("_", " ").toLowerCase();
+};
+
+export function minimumDateForQuestion(
+  question: ConversationQuestion,
+  proposal: Record<string, unknown> | null,
+  now = new Date(),
+): Date {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  if (!isEventEndDateQuestion(question) || !proposal) return today;
+
+  const event = isRecord(proposal.event) ? proposal.event : {};
+  const start = parseDay(event.startDate);
+  if (!start) return today;
+  const startDate = new Date(start.year, start.month, start.day);
+  return startDate > today ? startDate : today;
+}
+
+export function maximumDateForQuestion(
+  question: ConversationQuestion,
+  proposal: Record<string, unknown> | null,
+): Date | undefined {
+  if (!isLoadInDateQuestion(question) || !proposal) return undefined;
+  const event = isRecord(proposal.event) ? proposal.event : {};
+  const start = parseDay(event.startDate);
+  return start ? new Date(start.year, start.month, start.day) : undefined;
+}
+
+function GuidedQuestionCard({ question, current, total, busy, error, minimumDate, maximumDate, onAnswer, onSkip }: {
   question: ConversationQuestion;
   current: number;
   total: number;
   busy: boolean;
   error: string | null;
+  minimumDate: Date;
+  maximumDate?: Date;
   onAnswer: (answer: string) => void;
   onSkip: () => void;
 }) {
   // The caller keys this card by question id, so the control resets per question.
   const [value, setValue] = useState("");
   const [day, setDay] = useState<Date | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
   const [pendingOption, setPendingOption] = useState<string | null>(null);
   const impactLabel = question.impact ? impactLabels[question.impact] : null;
   const answerType = question.answerType;
   const inputId = `guided-answer-${question.id}`;
   const errorId = `guided-answer-error-${question.id}`;
+  const displayError = dateError || error;
   // A picked day is submitted from its LOCAL calendar parts; toISOString would
   // shift the date by a day for anyone west of UTC.
   const answer = answerType === "date" ? (day ? localIsoDay(day) : "") : value.trim();
@@ -400,7 +454,7 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
           <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">Blocking</span>
         )}
       </div>
-      <p className="mt-2 text-sm font-medium text-slate-900">{question.prompt || question.code.replaceAll("_", " ").toLowerCase()}</p>
+      <p className="mt-2 text-sm font-medium text-slate-900">{displayQuestionPrompt(question)}</p>
 
       {answerType === "choice" ? (
         // One tap answers: each pill submits its own value, so there is no
@@ -444,27 +498,51 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
               <GlobalDateInput
                 id={inputId}
                 value={day}
-                onChange={setDay}
+                onChange={nextDay => {
+                  if (nextDay && isBeforeLocalToday(nextDay, minimumDate)) {
+                    setDay(null);
+                    setDateError(isEventEndDateQuestion(question)
+                      ? "Event end date cannot be earlier than the event start date."
+                      : "Event start date cannot be earlier than today.");
+                    return;
+                  }
+                  if (nextDay && maximumDate && nextDay > maximumDate) {
+                    setDay(null);
+                    setDateError("Production load-in cannot be after the event start date.");
+                    return;
+                  }
+                  setDateError(null);
+                  setDay(nextDay);
+                }}
                 format="yyyy-MM-dd"
                 placeholder="YYYY-MM-DD"
+                minDate={minimumDate}
+                maxDate={maximumDate}
                 hideLabel
                 showErrorMessage={false}
                 disabled={busy}
+                error={displayError ?? undefined}
+                ariaInvalid={!!displayError}
+                ariaDescribedBy={displayError ? errorId : undefined}
                 inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? "cursor-not-allowed bg-slate-50" : ""}`}
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
               />
             </div>
           ) : (
             <input
-              type={answerType === "number" ? "number" : "text"}
-              {...(answerType === "number" ? { min: 0, inputMode: "numeric" as const, step: 1 } : {})}
+              type={isLoadInTimeQuestion(question) ? "time" : answerType === "number" ? "number" : "text"}
+              {...(answerType === "number"
+                ? { min: 0, inputMode: "numeric" as const, step: 1 }
+                : isLoadInTimeQuestion(question)
+                  ? { step: 300 }
+                  : {})}
               value={value}
               onChange={event => setValue(event.target.value)}
               disabled={busy}
-              placeholder={answerType === "number" ? "Enter a number…" : "Type your answer…"}
+              placeholder={answerType === "number" ? "Enter a number…" : isLoadInTimeQuestion(question) ? "HH:MM" : "Type your answer…"}
               aria-label="Answer this question"
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? errorId : undefined}
+              aria-invalid={displayError ? true : undefined}
+              aria-describedby={displayError ? errorId : undefined}
               className={`${ANSWER_FIELD_CLASS} basis-48`}
             />
           )}
@@ -478,7 +556,7 @@ function GuidedQuestionCard({ question, current, total, busy, error, onAnswer, o
           {skipButton}
         </form>
       )}
-      {error && <p id={errorId} role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
+      {displayError && <p id={errorId} role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{displayError}</p>}
     </div>
   );
 }
@@ -770,7 +848,6 @@ function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, dra
 function GuidanceCard({ report }: { report: GuidanceReport }) {
   const blocking = report.findings.filter(f => f.severity === "blocking").length;
   const warnings = report.findings.filter(f => f.severity === "warning").length;
-  const summary = `Readiness check: ${Math.round(report.overallCompleteness * 100)}% complete, ${report.findings.length} finding(s) (${blocking} blocking, ${warnings} to review).`;
   return (
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Results — Readiness check</p>
@@ -1356,6 +1433,29 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       <li key={message.id} className="flex justify-start">
         <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800 shadow-sm">
           <p className="whitespace-pre-wrap">{message.content}</p>
+          {(message.actions?.length ?? 0) > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+              {message.actions?.includes("download_room_schedule_template") && (
+                <a
+                  href="/files/RFPilot%20schedule-example-sheet.xlsx"
+                  download
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#008ad2] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#006fa8]"
+                >
+                  <Download size={14} aria-hidden />
+                  Download Sample Sheet
+                </a>
+              )}
+              {message.actions?.includes("open_room_specifications") && proposalId && (
+                <Link
+                  href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposalId)}&step=3`}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#008ad2] bg-white px-3 py-2 text-xs font-semibold text-[#008ad2] transition-colors hover:bg-[#008ad2]/5"
+                >
+                  <Upload size={14} aria-hidden />
+                  Open Room Specifications &amp; Upload
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </li>
     );
@@ -1678,7 +1778,11 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                       </p>
                     </li>
                   )}
-                  {currentQuestion && (
+                  {/* Keep the conversational turn coherent: field-gap
+                      questions may synchronize before the assistant reply is
+                      ready, but the next question must not jump ahead of that
+                      reply in the thread. */}
+                  {currentQuestion && !sending && (
                     <li className="flex justify-start">
                       <GuidedQuestionCard
                         key={currentQuestion.id}
@@ -1687,6 +1791,8 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                         total={questionProgressTotal}
                         busy={questionBusyId === currentQuestion.id}
                         error={questionError}
+                        minimumDate={minimumDateForQuestion(currentQuestion, proposal)}
+                        maximumDate={maximumDateForQuestion(currentQuestion, proposal)}
                         onAnswer={answer => void answerCurrentQuestion(answer)}
                         onSkip={() => void skipCurrentQuestion()}
                       />

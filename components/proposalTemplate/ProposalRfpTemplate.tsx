@@ -381,26 +381,47 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         ? `Yes — Bilingual (${arr(room.teleprompterLanguages).join(" / ") || ""})`
         : teleVal
       : "";
+    const functionSchedules = Array.isArray(room.functions) && room.functions.length > 0
+      ? room.functions.map((value) => value && typeof value === "object" ? value as RD : {})
+      : [{
+          functionName: room.roomFunction,
+          scheduleDate: room.scheduleDate,
+          scheduleDay: room.scheduleDay,
+          showStartDateTime: room.showStartDateTime,
+          showEndDateTime: room.showEndDateTime,
+          roomSetup: room.roomSetup,
+          estimatedAttendees: room.estimatedAttendeesInRoom,
+        }];
 
     return (
       <div key={idx} className="info-card">
         <h3>
           Room {idx + 1} of {total}
-          {p(room.roomFunction) ? ` — ${p(room.roomFunction)}` : ""}
+          {p(room.roomLocation) || p(room.roomFunction)
+            ? ` — ${p(room.roomLocation) || p(room.roomFunction)}`
+            : ""}
         </h3>
 
         {/* Scheduling */}
         {p(room.roomLocation) && <InfoRow label="Room" value={p(room.roomLocation)} />}
-        <InfoRow label="Room Setup" value={p(room.roomSetup)} />
-        <InfoRow
-          label="Date"
-          value={[fmtDate(p(room.scheduleDate)), p(room.scheduleDay)].filter(Boolean).join(" — ")}
-        />
-        <InfoRow label="Attendees" value={p(room.estimatedAttendeesInRoom)} />
+        {functionSchedules.map((entry, functionIndex) => (
+          <div key={`${idx}-function-${functionIndex}`}>
+            <InfoRow
+              label={`Function ${functionIndex + 1}`}
+              value={p(entry.functionName) || `Function ${functionIndex + 1}`}
+            />
+            <InfoRow label="Room Setup" value={p(entry.roomSetup)} />
+            <InfoRow
+              label="Date"
+              value={[fmtDate(p(entry.scheduleDate)), p(entry.scheduleDay)].filter(Boolean).join(" — ")}
+            />
+            <InfoRow label="Attendees" value={p(entry.estimatedAttendees)} />
+            <InfoRow label="Show Start" value={p(entry.showStartDateTime)} />
+            <InfoRow label="Show End" value={p(entry.showEndDateTime)} />
+          </div>
+        ))}
         <InfoRow label="Load In" value={p(room.loadInDateTime)} />
         <InfoRow label="Rehearsal" value={p(room.rehearsalDateTime)} />
-        <InfoRow label="Show Start" value={p(room.showStartDateTime)} />
-        <InfoRow label="Show End" value={p(room.showEndDateTime)} />
         <InfoRow label="Stage Dimensions" value={p(room.stageDimensions)} />
 
         {/* Audio */}

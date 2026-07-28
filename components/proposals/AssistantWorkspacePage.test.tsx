@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import AssistantWorkspacePage from "./AssistantWorkspacePage";
+import AssistantWorkspacePage, { displayQuestionPrompt, isBeforeLocalToday, maximumDateForQuestion, minimumDateForQuestion } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
@@ -161,6 +161,9 @@ const guidedQuestion = (
 const startDateQuestion = guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule");
 const roomsQuestion = guidedQuestion("q-rooms", "How many event rooms are required?", "/content/venueSchedule/numberOfEventRooms", "cost");
 const datePickerQuestion = guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date" });
+const endDatePickerQuestion = guidedQuestion("q-end", "When does the event end? (YYYY-MM-DD)", "/content/event/endDate", "schedule", { answerType: "date" });
+const loadInDatePickerQuestion = guidedQuestion("q-load-in", "When can production load in? (YYYY-MM-DD)", "/content/venueSchedule/loadInDate", "schedule", { answerType: "date" });
+const loadInTimePickerQuestion = guidedQuestion("q-load-in-time", "What time can production load in? (HH:MM)", "/content/venueSchedule/loadInTime", "schedule");
 // Mirrors streamingPlatformOptions in the wizard step and the backend whitelist.
 const STREAMING_PLATFORMS = [
   "Client-Owned Platform",
@@ -263,6 +266,42 @@ describe("AssistantWorkspacePage", () => {
     expect(replace).not.toHaveBeenCalledWith(expect.stringContaining("add-new-proposal"));
   });
 
+  test("room schedule guidance renders allowlisted download and upload workflow actions", async () => {
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 1, updatedAt: "2026-07-21T10:00:00.000Z" },
+        messages: [{
+          id: "msg-room-help",
+          ordinal: 1,
+          role: "assistant",
+          kind: "status",
+          content: "Download the room schedule template, fill it, and upload it in Room Specifications.",
+          actions: ["download_room_schedule_template", "open_room_specifications"],
+          intent: null,
+          runType: null,
+          runId: null,
+          jobId: null,
+          status: "complete",
+          createdAt: "2026-07-21T10:00:00.000Z",
+          attachments: [],
+        }],
+        questions: [],
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const download = await screen.findByRole("link", { name: "Download Sample Sheet" });
+    expect(download).toHaveAttribute("href", "/files/RFPilot%20schedule-example-sheet.xlsx");
+    expect(download).toHaveAttribute("download");
+    expect(screen.getByRole("link", { name: "Open Room Specifications & Upload" })).toHaveAttribute(
+      "href",
+      `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}&step=3`,
+    );
+  });
+
   test("guided flow shows one question at a time with progress, impact tag, and a remaining count in the rail", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([startDateQuestion, roomsQuestion]));
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
@@ -278,6 +317,68 @@ describe("AssistantWorkspacePage", () => {
     expect(await screen.findByText(/2 questions remaining/)).toBeInTheDocument();
     // Nothing was answered yet, so no completion card.
     expect(screen.queryByText(/All key questions answered/)).not.toBeInTheDocument();
+  });
+
+  test("event start date validation uses the user's local calendar day", () => {
+    const now = new Date(2026, 6, 27, 23, 45);
+
+    expect(isBeforeLocalToday(new Date(2026, 6, 26, 23, 59), now)).toBe(true);
+    expect(isBeforeLocalToday(new Date(2026, 6, 27, 0, 0), now)).toBe(false);
+    expect(isBeforeLocalToday(new Date(2026, 6, 28, 0, 0), now)).toBe(false);
+  });
+
+  test("event end date uses the applied start date as its earliest selectable day", () => {
+    const now = new Date(2026, 6, 27, 23, 45);
+    const proposal = { event: { startDate: "2026-07-30" } };
+
+    expect(minimumDateForQuestion(endDatePickerQuestion, proposal, now))
+      .toEqual(new Date(2026, 6, 30));
+    expect(minimumDateForQuestion(datePickerQuestion, proposal, now))
+      .toEqual(new Date(2026, 6, 27));
+  });
+
+  test("production load-in cannot be selected after the event starts", () => {
+    const proposal = { event: { startDate: "2026-07-30", endDate: "2026-08-02" } };
+
+    expect(maximumDateForQuestion(loadInDatePickerQuestion, proposal))
+      .toEqual(new Date(2026, 6, 30));
+    expect(maximumDateForQuestion(endDatePickerQuestion, proposal)).toBeUndefined();
+  });
+
+  test("production load-in time uses a native time picker and submits HH:MM", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([loadInTimePickerQuestion]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-load-in-time", status: "answered", answeredMessageId: null, appliedField: null },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("What time can production load in? (HH:MM)");
+    const timeInput = screen.getByLabelText("Answer this question");
+    expect(timeInput).toHaveAttribute("type", "time");
+    expect(timeInput).toHaveAttribute("step", "300");
+
+    fireEvent.change(timeInput, { target: { value: "07:30" } });
+    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-load-in-time",
+      { status: "answered", answer: "07:30" },
+    ));
+  });
+
+  test("venue-name guidance points undecided users to Skip, not a missing option", () => {
+    const venueQuestion = guidedQuestion(
+      "q-venue",
+      "Which venue will host the event? Enter the venue name, or “Not selected” if it is still undecided.",
+      "/content/venueSchedule/venueName",
+      "cost",
+    );
+
+    expect(displayQuestionPrompt(venueQuestion)).toMatch(/use Skip/i);
+    expect(displayQuestionPrompt(venueQuestion)).not.toMatch(/Not selected/i);
   });
 
   test("answering a question confirms the value and advances to the next one", async () => {
@@ -933,6 +1034,7 @@ describe("AssistantWorkspacePage", () => {
   test("an assistant typing indicator shows while a send is in flight", async () => {
     let resolvePost: (value: unknown) => void = () => undefined;
     mockedPostMessage.mockImplementation(() => new Promise(resolve => { resolvePost = resolve as (value: unknown) => void; }) as never);
+    mockedGetConversation.mockResolvedValue(conversationWithQuestion);
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     const composer = await screen.findByLabelText("Message the proposal assistant");
@@ -940,6 +1042,7 @@ describe("AssistantWorkspacePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     expect(await screen.findByLabelText("The assistant is responding")).toBeInTheDocument();
+    expect(screen.queryByText("What is the event date?")).not.toBeInTheDocument();
 
     resolvePost({
       success: true,
@@ -947,6 +1050,7 @@ describe("AssistantWorkspacePage", () => {
       data: { created: true, message: null, assistantMessageId: null, run: null },
     });
     await waitFor(() => expect(screen.queryByLabelText("The assistant is responding")).not.toBeInTheDocument());
+    expect(await screen.findByText("What is the event date?")).toBeInTheDocument();
   });
 
   test("saving notes needs no approval checkbox and stores them as non_confidential", async () => {

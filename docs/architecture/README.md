@@ -34,3 +34,19 @@ Architecture, API contracts, accessibility expectations, feature flags, error st
 ## Canonical proposal contract
 
 `contracts/proposal/v1/` contains the synchronized JSON Schema 2020-12 resource, public projection, extraction-candidate patch, runtime validators, and legacy adapter. `contracts/generated/` is deterministic generated output and its manifest. New proposal UI/API code must consume these generated contracts or an explicit compatibility projection rather than adding another handwritten proposal shape.
+
+## Room schedule compatibility
+
+`roomByRoom[]` represents physical rooms with one shared AV specification per
+room. A room may contain `functions[]`, where each entry retains its own
+function name, date, start/end times, setup, and attendance. Spreadsheet import
+groups rows by normalized physical room name. For compatibility with existing
+proposals and room-recommendation rules, the first function is mirrored into
+the legacy scalar schedule fields and peak function attendance is mirrored into
+`estimatedAttendeesInRoom`. The canonical proposal projection exposes all
+functions as `room.scheduleEntries`.
+
+Assistant conversation messages can expose two allowlisted room-schedule
+actions: download the header-only workbook and open the existing proposal
+directly on Room Specifications. The dashboard renders only recognized action
+ids; the assistant cannot supply arbitrary URLs or execute an upload.

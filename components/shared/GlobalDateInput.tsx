@@ -27,6 +27,8 @@ interface GlobalDatePickerProps {
   labelClassName?: string;
   inputClassName?: string;
   buttonClassName?: string;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
 }
 
 const formatLabelMap: Record<DateFormatType, string> = {
@@ -56,6 +58,8 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
   labelClassName = "mb-2 block text-sm font-medium text-gray-700",
   inputClassName,
   buttonClassName = "absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black",
+  ariaInvalid = false,
+  ariaDescribedBy,
 }) => {
   const dateRef = useRef<DatePicker>(null);
 
@@ -93,6 +97,8 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
           className={resolvedInputClassName}
           wrapperClassName="w-full"
           showPopperArrow={false}
+          ariaInvalid={ariaInvalid ? "true" : undefined}
+          ariaDescribedBy={ariaDescribedBy}
         />
 
         <button

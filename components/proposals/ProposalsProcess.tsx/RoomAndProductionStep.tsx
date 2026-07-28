@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Download, Plus, Tr
 import { useRef, useState, type ChangeEvent } from "react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
-import type { ProposalSettings, RoomByRoomData } from "../AddNewProposal";
+import type { ProposalSettings, RoomByRoomData, RoomFunctionSchedule } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
@@ -113,26 +113,39 @@ const combineDateAndTime = (isoDate: string, val: unknown): string => {
   if (!time) return "";
   const [y, m, d] = isoDate.split("-").map(Number);
   if (!y || !m || !d) return "";
-  const dt = new Date(Date.UTC(y, m - 1, d, time.hours, time.minutes));
+  // Schedule workbooks express venue-local wall-clock times. Match manual
+  // entry semantics by constructing in the browser's local zone before
+  // persisting the ISO instant.
+  const dt = new Date(y, m - 1, d, time.hours, time.minutes);
   return isNaN(dt.getTime()) ? "" : dt.toISOString();
 };
 
 /** A time cell that the local parser couldn't confidently read, queued for the LLM fallback. */
-type TimeFixup = { dedupeKey: string; field: "start" | "end"; raw: string; scheduleDate: string };
+type TimeFixup = {
+  roomIndex: number;
+  functionIndex: number;
+  field: "start" | "end";
+  raw: string;
+  scheduleDate: string;
+};
 
-const parseScheduleWorkbook = async (
+export const parseScheduleWorkbook = async (
   buffer: ArrayBuffer,
   normalizeTimes: (values: string[]) => Promise<(string | null)[]>,
 ): Promise<{ rooms: RoomByRoomData[]; totalRows: number }> => {
-  const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+  // Keep Excel dates/times as serial numbers. Converting time-only cells into
+  // JavaScript Date objects can introduce historical local-time offsets (for
+  // example 1:45 becoming 1:51 in some time zones).
+  const workbook = XLSX.read(buffer, { type: "array", cellDates: false });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) return { rooms: [], totalRows: 0 };
   const sheet = workbook.Sheets[sheetName];
   const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
 
-  // Keyed by normalized room name (falling back to function name when no room column exists)
-  // so repeated sessions in the same physical room collapse into a single room module.
-  const byKey = new Map<string, RoomByRoomData>();
+  // Group schedule rows by physical room. Functions retain their individual
+  // schedule details while the room owns one shared AV specification.
+  const rooms: RoomByRoomData[] = [];
+  const roomIndexByKey = new Map<string, number>();
   const fixups: TimeFixup[] = [];
 
   for (const row of json) {
@@ -154,12 +167,7 @@ const parseScheduleWorkbook = async (
 
     const roomNameRaw = roomKey ? String(row[roomKey] ?? "").trim() : "";
     const functionNameRaw = functionKey ? String(row[functionKey] ?? "").trim() : "";
-    const dedupeKey = roomNameRaw
-      ? `room:${roomNameRaw.toLowerCase()}`
-      : functionNameRaw
-        ? `func:${functionNameRaw.toLowerCase()}`
-        : "";
-    if (!dedupeKey || byKey.has(dedupeKey)) continue;
+    if (!roomNameRaw && !functionNameRaw) continue;
 
     const scheduleDate = dateKey ? excelCellToIsoDate(row[dateKey]) : "";
     const dayRaw = dayKey ? String(row[dayKey] ?? "").trim() : "";
@@ -171,24 +179,52 @@ const parseScheduleWorkbook = async (
 
     // Local parsing failed but the cell wasn't actually blank — queue it for the LLM fallback
     // instead of silently dropping it (typos like "11;15 AM" land here).
-    if (!showStartDateTime && typeof startRawVal === "string" && startRawVal.trim()) {
-      fixups.push({ dedupeKey, field: "start", raw: startRawVal.trim(), scheduleDate });
-    }
-    if (!showEndDateTime && typeof endRawVal === "string" && endRawVal.trim()) {
-      fixups.push({ dedupeKey, field: "end", raw: endRawVal.trim(), scheduleDate });
-    }
-
-    byKey.set(dedupeKey, {
-      ...defaultRoom(),
-      roomFunction: functionNameRaw,
-      roomLocation: roomNameRaw,
-      roomSetup: setupKey ? matchRoomSetup(String(row[setupKey] ?? "")) : "",
+    const roomSetup = setupKey ? matchRoomSetup(String(row[setupKey] ?? "")) : "";
+    const estimatedAttendees = attendeesKey ? String(row[attendeesKey] ?? "").trim() : "";
+    const scheduleEntry: RoomFunctionSchedule = {
+      functionName: functionNameRaw,
       scheduleDate,
       scheduleDay: dayRaw || dayOfWeekFromDate(scheduleDate),
-      estimatedAttendeesInRoom: attendeesKey ? String(row[attendeesKey] ?? "").trim() : "",
       showStartDateTime,
       showEndDateTime,
-    });
+      roomSetup,
+      estimatedAttendees,
+    };
+    const physicalRoomKey = roomNameRaw
+      ? `room:${roomNameRaw.toLowerCase()}`
+      : `function-without-room:${functionNameRaw.toLowerCase()}:${rooms.length}`;
+    let roomIndex = roomIndexByKey.get(physicalRoomKey);
+    if (roomIndex === undefined) {
+      roomIndex = rooms.length;
+      roomIndexByKey.set(physicalRoomKey, roomIndex);
+      rooms.push({
+        ...defaultRoom(),
+        functions: [scheduleEntry],
+        roomFunction: functionNameRaw,
+        roomLocation: roomNameRaw,
+        roomSetup,
+        scheduleDate,
+        scheduleDay: scheduleEntry.scheduleDay,
+        estimatedAttendeesInRoom: estimatedAttendees,
+        showStartDateTime,
+        showEndDateTime,
+      });
+    } else {
+      const room = rooms[roomIndex];
+      room.functions.push(scheduleEntry);
+      const peak = Math.max(
+        Number(room.estimatedAttendeesInRoom) || 0,
+        Number(estimatedAttendees) || 0,
+      );
+      if (peak > 0) room.estimatedAttendeesInRoom = String(peak);
+    }
+    const functionIndex = rooms[roomIndex].functions.length - 1;
+    if (!showStartDateTime && typeof startRawVal === "string" && startRawVal.trim()) {
+      fixups.push({ roomIndex, functionIndex, field: "start", raw: startRawVal.trim(), scheduleDate });
+    }
+    if (!showEndDateTime && typeof endRawVal === "string" && endRawVal.trim()) {
+      fixups.push({ roomIndex, functionIndex, field: "end", raw: endRawVal.trim(), scheduleDate });
+    }
   }
 
   if (fixups.length > 0) {
@@ -203,19 +239,25 @@ const parseScheduleWorkbook = async (
         if (!time || !fixup.scheduleDate) continue;
         const [y, m, d] = fixup.scheduleDate.split("-").map(Number);
         if (!y || !m || !d) continue;
-        const dt = new Date(Date.UTC(y, m - 1, d, time.hours, time.minutes));
+        const dt = new Date(y, m - 1, d, time.hours, time.minutes);
         if (isNaN(dt.getTime())) continue;
-        const room = byKey.get(fixup.dedupeKey);
+        const room = rooms[fixup.roomIndex];
         if (!room) continue;
-        if (fixup.field === "start") room.showStartDateTime = dt.toISOString();
-        else room.showEndDateTime = dt.toISOString();
+        const scheduleEntry = room.functions[fixup.functionIndex];
+        if (!scheduleEntry) continue;
+        if (fixup.field === "start") scheduleEntry.showStartDateTime = dt.toISOString();
+        else scheduleEntry.showEndDateTime = dt.toISOString();
+        if (fixup.functionIndex === 0) {
+          if (fixup.field === "start") room.showStartDateTime = dt.toISOString();
+          else room.showEndDateTime = dt.toISOString();
+        }
       }
     } catch {
       // LLM fallback is best-effort; leave those specific fields blank rather than failing the whole upload.
     }
   }
 
-  return { rooms: Array.from(byKey.values()), totalRows: json.length };
+  return { rooms, totalRows: json.length };
 };
 
 // ─── Style constants ──────────────────────────────────────────────────────────
@@ -324,6 +366,7 @@ const VIDEO_PLAYBACK_FORMAT_OPTIONS = ["4:3", "16:9", "Custom Wide Screen"];
 
 // ─── Default room factory ─────────────────────────────────────────────────────
 export const defaultRoom = (): RoomByRoomData => ({
+  functions: [],
   roomFunction: "",
   roomLocation: "",
   roomSetup: "",
@@ -390,6 +433,39 @@ const Group = ({ label }: { label: string }) => (
   </div>
 );
 
+const defaultFunctionSchedule = (): RoomFunctionSchedule => ({
+  functionName: "",
+  scheduleDate: "",
+  scheduleDay: "",
+  showStartDateTime: "",
+  showEndDateTime: "",
+  roomSetup: "",
+  estimatedAttendees: "",
+});
+
+const schedulesForRoom = (room: RoomByRoomData): RoomFunctionSchedule[] => {
+  if (Array.isArray(room.functions) && room.functions.length > 0) return room.functions;
+  const hasLegacySchedule = [
+    room.roomFunction,
+    room.scheduleDate,
+    room.showStartDateTime,
+    room.showEndDateTime,
+    room.roomSetup,
+    room.estimatedAttendeesInRoom,
+  ].some((value) => value.trim().length > 0);
+  return hasLegacySchedule
+    ? [{
+        functionName: room.roomFunction,
+        scheduleDate: room.scheduleDate,
+        scheduleDay: room.scheduleDay,
+        showStartDateTime: room.showStartDateTime,
+        showEndDateTime: room.showEndDateTime,
+        roomSetup: room.roomSetup,
+        estimatedAttendees: room.estimatedAttendeesInRoom,
+      }]
+    : [defaultFunctionSchedule()];
+};
+
 // ─── Single room form ─────────────────────────────────────────────────────────
 const RoomForm = ({
   data,
@@ -417,6 +493,35 @@ const RoomForm = ({
   if (data.teleprompterRequired === "Yes") autoSuggest.push("Teleprompter Operator");
   if (lighting.includes("Moving Lights / Programmable Effects")) autoSuggest.push("L1 (Lighting Director)");
   const unaddedSuggestions = autoSuggest.filter((r) => !data.showCrewNeeded.includes(r));
+  const functionSchedules = schedulesForRoom(data);
+
+  const updateFunctionSchedules = (next: RoomFunctionSchedule[]) => {
+    const schedules = next.length > 0 ? next : [defaultFunctionSchedule()];
+    const primary = schedules[0];
+    const peakAttendance = Math.max(
+      0,
+      ...schedules.map((entry) => Number(entry.estimatedAttendees) || 0),
+    );
+    onChange({
+      functions: schedules,
+      // Mirror the first schedule into the legacy fields so existing proposals,
+      // recommendation rules, and exports remain backward-compatible.
+      roomFunction: primary.functionName,
+      roomSetup: primary.roomSetup,
+      scheduleDate: primary.scheduleDate,
+      scheduleDay: primary.scheduleDay,
+      showStartDateTime: primary.showStartDateTime,
+      showEndDateTime: primary.showEndDateTime,
+      estimatedAttendeesInRoom: peakAttendance > 0 ? String(peakAttendance) : "",
+    });
+  };
+
+  const updateFunction = (index: number, updates: Partial<RoomFunctionSchedule>) =>
+    updateFunctionSchedules(
+      functionSchedules.map((entry, entryIndex) =>
+        entryIndex === index ? { ...entry, ...updates } : entry,
+      ),
+    );
 
   const [showManualTimes, setShowManualTimes] = useState(
     Boolean(
@@ -427,114 +532,138 @@ const RoomForm = ({
   return (
     <div className="space-y-5 px-6 py-6">
 
-      {/* ── Identity ── */}
-      <div className="grid grid-cols-2 gap-5">
-        <div>
-          <label className={labelClass}>
-            Function Name <span className="text-red-500">*</span>
-            <InfoTooltip text="Give this room a clear name. Examples: 'General Session Stage', 'Breakout Room A', 'VIP Lounge'. Vendors will see this name throughout the RFP as the sub-header for this room's section." />
-          </label>
-          <input
-            maxLength={80}
-            className={`${inputClass} ${errCls(data.roomFunction)}`}
-            value={data.roomFunction}
-            onChange={(e) => onChange({ roomFunction: e.target.value })}
-            placeholder="e.g. Main Keynote Ballroom"
-          />
-          <div className="mt-1 flex justify-end">
-            <span className="text-xs text-[#969798]">{data.roomFunction.length}/80</span>
-          </div>
-        </div>
-        <div>
-          <label className={labelClass}>
-            # of Attendees <span className="text-red-500">*</span>
-            <InfoTooltip text="Expected number of attendees in this specific room. Drives audio system sizing — vendors will spec a distributed array based on this number." />
-          </label>
-          <input
-            type="number"
-            min={1}
-            max={50000}
-            className={`${inputClass} ${errCls(data.estimatedAttendeesInRoom)}`}
-            value={data.estimatedAttendeesInRoom}
-            onChange={(e) => onChange({ estimatedAttendeesInRoom: e.target.value })}
-            placeholder="e.g. 1200"
-          />
-        </div>
-      </div>
-
-      {/* ── Schedule ── */}
-      <Group label="Schedule" />
-
-      <div className="grid grid-cols-2 gap-5">
-        <div>
-          <label className={labelClass}>
-            Date
-            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-            <InfoTooltip text="The date this room is in use. Can be filled in manually here or bulk-uploaded via the schedule Excel upload above." />
-          </label>
-          <input
-            type="date"
-            className={inputClass}
-            value={data.scheduleDate}
-            onChange={(e) =>
-              onChange({
-                scheduleDate: e.target.value,
-                scheduleDay: dayOfWeekFromDate(e.target.value),
-              })
-            }
-          />
-          {data.scheduleDay && (
-            <p className="mt-1 text-xs text-[#969798] normal-case">{data.scheduleDay}</p>
-          )}
-        </div>
-        <div>
-          <label className={labelClass}>
-            Room
-            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-            <InfoTooltip text="The physical room or space at the venue, if different from the function name above. Example: 'Grand Ballroom A'." />
-          </label>
-          <input
-            className={inputClass}
-            value={data.roomLocation}
-            onChange={(e) => onChange({ roomLocation: e.target.value })}
-            placeholder="e.g. Grand Ballroom A"
-          />
-        </div>
-      </div>
-
       <div>
         <label className={labelClass}>
-          Room Setup
-          <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-          <InfoTooltip text="How seating/tables are arranged in this room." />
+          Physical Room Name <span className="text-red-500">*</span>
+          <InfoTooltip text="The venue room shared by every function listed below. Example: 'A-110-112'." />
         </label>
-        <select
-          className={inputClass}
-          value={data.roomSetup}
-          onChange={(e) => onChange({ roomSetup: e.target.value })}
-        >
-          <option value="">Select room setup…</option>
-          {ROOM_SETUP_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
+        <input
+          maxLength={200}
+          className={`${inputClass} ${errCls(data.roomLocation)}`}
+          value={data.roomLocation}
+          onChange={(e) => onChange({ roomLocation: e.target.value })}
+          placeholder="e.g. A-110-112"
+        />
       </div>
 
-      {/* Manual room times */}
+      <Group label="Functions & Schedule" />
+      <div className="space-y-4">
+        {functionSchedules.map((entry, functionIndex) => (
+          <div key={`${uid}-function-${functionIndex}`} className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm font-bold text-[#222628]">Function {functionIndex + 1}</p>
+              {functionSchedules.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => updateFunctionSchedules(functionSchedules.filter((_, index) => index !== functionIndex))}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700"
+                >
+                  <Trash2 size={13} /> Remove function
+                </button>
+              )}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>Function Name <span className="text-red-500">*</span></label>
+                <input
+                  maxLength={200}
+                  className={`${inputClass} ${errCls(entry.functionName)}`}
+                  value={entry.functionName}
+                  onChange={(event) => updateFunction(functionIndex, { functionName: event.target.value })}
+                  placeholder="e.g. Opening Keynote"
+                />
+              </div>
+              <div>
+                <label className={labelClass}># of Attendees <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50000}
+                  className={`${inputClass} ${errCls(entry.estimatedAttendees)}`}
+                  value={entry.estimatedAttendees}
+                  onChange={(event) => updateFunction(functionIndex, { estimatedAttendees: event.target.value })}
+                  placeholder="e.g. 160"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Date <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={entry.scheduleDate}
+                  onChange={(event) => updateFunction(functionIndex, {
+                    scheduleDate: event.target.value,
+                    scheduleDay: dayOfWeekFromDate(event.target.value),
+                  })}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                <select
+                  className={inputClass}
+                  value={entry.roomSetup}
+                  onChange={(event) => updateFunction(functionIndex, { roomSetup: event.target.value })}
+                >
+                  <option value="">Select room setup…</option>
+                  {ROOM_SETUP_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Start Time <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                <GlobalDateTimeInput
+                  hideLabel
+                  showFormatInLabel={false}
+                  format="MM/dd/yyyy"
+                  showTime
+                  use12Hours
+                  timeIntervals={15}
+                  value={toDateTime(entry.showStartDateTime)}
+                  onChange={(date) => updateFunction(functionIndex, { showStartDateTime: date ? date.toISOString() : "" })}
+                  inputClassName={`${inputClass} pr-12`}
+                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2]"
+                  placeholder="Select date & time"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>End Time <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                <GlobalDateTimeInput
+                  hideLabel
+                  showFormatInLabel={false}
+                  format="MM/dd/yyyy"
+                  showTime
+                  use12Hours
+                  timeIntervals={15}
+                  value={toDateTime(entry.showEndDateTime)}
+                  onChange={(date) => updateFunction(functionIndex, { showEndDateTime: date ? date.toISOString() : "" })}
+                  inputClassName={`${inputClass} pr-12`}
+                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2]"
+                  placeholder="Select date & time"
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => updateFunctionSchedules([...functionSchedules, defaultFunctionSchedule()])}
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#008ad2] hover:text-[#0069a0] transition-colors"
+        >
+          <Plus size={14} /> Add another function
+        </button>
+      </div>
+
+      {/* Room-wide production access times */}
       <div>
         <button
           type="button"
-          onClick={() => setShowManualTimes((v) => !v)}
-          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#008ad2] hover:text-[#0069a0] transition-colors"
+          onClick={() => setShowManualTimes((value) => !value)}
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#008ad2] hover:text-[#0069a0]"
         >
-          <Plus size={14} className={`shrink-0 transition-transform ${showManualTimes ? "rotate-45" : ""}`} />
-          Add Date &amp; Times for This Room
+          <Plus size={14} className={showManualTimes ? "rotate-45" : ""} />
+          Add room load-in &amp; rehearsal times
         </button>
-        <p className="mt-1 text-xs text-slate-400 normal-case">
-          Use this if load-in, rehearsal, and show times weren&apos;t included in a schedule upload.
-        </p>
         {showManualTimes && (
-          <div className="mt-3 grid grid-cols-2 gap-4">
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
             <div>
               <label className={`${labelClass} mt-0`}>Load-In</label>
               <GlobalDateTimeInput
@@ -562,38 +691,6 @@ const RoomForm = ({
                 timeIntervals={15}
                 value={toDateTime(data.rehearsalDateTime)}
                 onChange={(d) => onChange({ rehearsalDateTime: d ? d.toISOString() : "" })}
-                inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
-                placeholder="Select date & time"
-              />
-            </div>
-            <div>
-              <label className={`${labelClass} mt-0`}>Show Start</label>
-              <GlobalDateTimeInput
-                hideLabel
-                showFormatInLabel={false}
-                format="MM/dd/yyyy"
-                showTime
-                use12Hours
-                timeIntervals={15}
-                value={toDateTime(data.showStartDateTime)}
-                onChange={(d) => onChange({ showStartDateTime: d ? d.toISOString() : "" })}
-                inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
-                placeholder="Select date & time"
-              />
-            </div>
-            <div>
-              <label className={`${labelClass} mt-0`}>Show End</label>
-              <GlobalDateTimeInput
-                hideLabel
-                showFormatInLabel={false}
-                format="MM/dd/yyyy"
-                showTime
-                use12Hours
-                timeIntervals={15}
-                value={toDateTime(data.showEndDateTime)}
-                onChange={(d) => onChange({ showEndDateTime: d ? d.toISOString() : "" })}
                 inputClassName={`${inputClass} pr-12`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
@@ -1557,7 +1654,8 @@ const RoomCard = ({
   canDelete: boolean;
   showErrors: boolean;
 }) => {
-  const roomLabel = room.roomFunction.trim() || `Room ${index + 1}`;
+  const roomLabel = room.roomLocation.trim() || room.roomFunction.trim() || `Room ${index + 1}`;
+  const functionCount = schedulesForRoom(room).filter((entry) => entry.functionName.trim()).length;
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
@@ -1580,8 +1678,11 @@ const RoomCard = ({
                 Room {index + 1} of {total}
               </span>
             </p>
-            {!isExpanded && room.estimatedAttendeesInRoom && (
-              <p className="text-xs text-[#969798]">{room.estimatedAttendeesInRoom} attendees</p>
+            {!isExpanded && (
+              <p className="text-xs text-[#969798]">
+                {functionCount} function{functionCount === 1 ? "" : "s"}
+                {room.estimatedAttendeesInRoom ? ` · peak ${room.estimatedAttendeesInRoom} attendees` : ""}
+              </p>
             )}
           </div>
         </div>
@@ -1662,7 +1763,8 @@ const RoomAndProductionStep = ({
   const toggleRoom = (i: number) =>
     setExpandedRooms((prev) => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
       return next;
     });
 
@@ -1674,7 +1776,8 @@ const RoomAndProductionStep = ({
     if (!source) return;
     const copy: RoomByRoomData = {
       ...source,
-      roomFunction: source.roomFunction ? `${source.roomFunction} (Copy)` : "",
+      functions: schedulesForRoom(source).map((entry) => ({ ...entry })),
+      roomLocation: source.roomLocation ? `${source.roomLocation} (Copy)` : "",
     };
     const nextRooms = [...rooms, copy];
     onRoomsChange(nextRooms);
@@ -1685,7 +1788,7 @@ const RoomAndProductionStep = ({
   const deleteRoom = (i: number) => {
     if (rooms.length <= 1) return;
     const room = rooms[i];
-    const label = room?.roomFunction.trim() || `Room ${i + 1}`;
+    const label = room?.roomLocation.trim() || room?.roomFunction.trim() || `Room ${i + 1}`;
     if (!window.confirm(`Remove "${label}"? This can't be undone.`)) return;
 
     const nextRooms = rooms.filter((_, idx) => idx !== i);
@@ -1706,7 +1809,7 @@ const RoomAndProductionStep = ({
     e.target.value = "";
     if (!file) return;
 
-    const hasExistingData = rooms.some((r) => r.roomFunction.trim());
+    const hasExistingData = rooms.some((r) => r.roomLocation.trim() || r.roomFunction.trim());
     if (
       hasExistingData &&
       !window.confirm(
@@ -1732,9 +1835,7 @@ const RoomAndProductionStep = ({
       setExpandedRooms(new Set([0]));
       const roomWord = `room${parsedRooms.length === 1 ? "" : "s"}`;
       toast.success(
-        totalRows > parsedRooms.length
-          ? `Loaded ${parsedRooms.length} unique ${roomWord} from ${totalRows} schedule rows — repeated room names were consolidated.`
-          : `Loaded ${parsedRooms.length} ${roomWord} from schedule.`,
+        `Loaded ${parsedRooms.length} physical ${roomWord} with ${totalRows} scheduled function${totalRows === 1 ? "" : "s"}. AV specifications are shared within each room.`,
       );
     } catch {
       toast.error("Couldn't read that file — please upload a valid Excel schedule.");
@@ -1823,10 +1924,10 @@ const RoomAndProductionStep = ({
           <label className={labelClass}>
             Upload Room Schedule
             <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-            <InfoTooltip text="Upload an Excel (.xlsx) schedule to bulk-create room modules. Expected columns: Date, Day, Room, Function Name, Room Setup, # of Attendees. This replaces the current room list." />
+            <InfoTooltip text="Upload an Excel (.xlsx) schedule to bulk-create room modules. Each schedule row becomes a separate module, so the same physical room can contain multiple functions on the same date. This replaces the current room list." />
           </label>
           <p className="mb-3 text-xs text-slate-500 normal-case">
-            Columns: Date, Day, Room, Function Name, Room Setup, # of Attendees. Each row becomes a room module below.
+            Rows with the same room name are grouped into one physical room. Each row remains a separate function schedule sharing that room&apos;s AV specifications.
           </p>
           <input
             ref={fileInputRef}

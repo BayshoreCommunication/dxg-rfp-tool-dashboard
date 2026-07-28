@@ -7,7 +7,7 @@ import {
   updateProposalAction,
 } from "@/app/actions/proposals";
 import { getSettingsAction } from "@/app/actions/settings";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AddProposalUpload from "./AddProposalUpload";
@@ -52,7 +52,23 @@ export type EventData = {
   rfpTimeline?: string;
 };
 
+export type RoomFunctionSchedule = {
+  functionName: string;
+  scheduleDate: string;
+  scheduleDay: string;
+  showStartDateTime: string;
+  showEndDateTime: string;
+  roomSetup: string;
+  estimatedAttendees: string;
+};
+
 export type RoomByRoomData = {
+  /**
+   * Legacy primary-function fields remain populated for existing consumers.
+   * `functions` is authoritative when present and allows one physical room to
+   * host multiple scheduled functions while sharing the room-level AV spec.
+   */
+  functions: RoomFunctionSchedule[];
   roomFunction: string;
   roomLocation: string;
   roomSetup: string;
@@ -1015,6 +1031,48 @@ const normalizeNotesConfidenceMonitor = (
   };
 };
 
+const normalizeRoomFunctions = (
+  room: Record<string, unknown>,
+): RoomFunctionSchedule[] => {
+  if (Array.isArray(room.functions) && room.functions.length > 0) {
+    return room.functions.map((value) => {
+      const entry = value && typeof value === "object"
+        ? value as Record<string, unknown>
+        : {};
+      return {
+        functionName: typeof entry.functionName === "string" ? entry.functionName : "",
+        scheduleDate: typeof entry.scheduleDate === "string" ? entry.scheduleDate : "",
+        scheduleDay: typeof entry.scheduleDay === "string" ? entry.scheduleDay : "",
+        showStartDateTime: typeof entry.showStartDateTime === "string" ? entry.showStartDateTime : "",
+        showEndDateTime: typeof entry.showEndDateTime === "string" ? entry.showEndDateTime : "",
+        roomSetup: typeof entry.roomSetup === "string" ? entry.roomSetup : "",
+        estimatedAttendees: typeof entry.estimatedAttendees === "string"
+          ? entry.estimatedAttendees
+          : typeof entry.estimatedAttendees === "number"
+            ? String(entry.estimatedAttendees)
+            : "",
+      };
+    });
+  }
+
+  const functionName = typeof room.roomFunction === "string" ? room.roomFunction : "";
+  const scheduleDate = typeof room.scheduleDate === "string" ? room.scheduleDate : "";
+  const showStartDateTime = typeof room.showStartDateTime === "string" ? room.showStartDateTime : "";
+  const showEndDateTime = typeof room.showEndDateTime === "string" ? room.showEndDateTime : "";
+  if (![functionName, scheduleDate, showStartDateTime, showEndDateTime].some(Boolean)) return [];
+  return [{
+    functionName,
+    scheduleDate,
+    scheduleDay: typeof room.scheduleDay === "string" ? room.scheduleDay : "",
+    showStartDateTime,
+    showEndDateTime,
+    roomSetup: typeof room.roomSetup === "string" ? room.roomSetup : "",
+    estimatedAttendees: typeof room.estimatedAttendeesInRoom === "string"
+      ? room.estimatedAttendeesInRoom
+      : "",
+  }];
+};
+
 const mapApiProposalToFormData = (
   raw: EditableProposalApiResponse,
 ): ProposalData => ({
@@ -1056,6 +1114,12 @@ const mapApiProposalToFormData = (
       return {
         ...defaultRoom(),
         ...r,
+        functions: normalizeRoomFunctions(r),
+        roomLocation: typeof r.roomLocation === "string" && r.roomLocation.trim()
+          ? r.roomLocation
+          : typeof r.roomFunction === "string"
+            ? r.roomFunction
+            : "",
         scenicStageDesign: ((r.scenicStageDesign || (isFirst ? raw.production?.scenicStageDesign : "")) ?? "") as RoomByRoomData["scenicStageDesign"],
         showCrewNeeded: Array.isArray(r.showCrewNeeded) && (r.showCrewNeeded as string[]).length > 0
           ? (r.showCrewNeeded as string[])
@@ -1162,9 +1226,15 @@ const AddNewProposal = ({
 }: AddNewProposalProps) => {
   const isEditMode = mode === "edit";
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedStep = Number(searchParams.get("step"));
+  const initialEditStep =
+    Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 10
+      ? requestedStep
+      : 1;
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [proposalProcessStep, setProposalProcessStep] = useState(
-    isEditMode ? 1 : 0,
+    isEditMode ? initialEditStep : 0,
   );
   const [isExtracting, setIsExtracting] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEditMode);
@@ -1300,7 +1370,7 @@ const AddNewProposal = ({
           dateFormat: mapped.proposalSettings.dateFormat,
         },
       }));
-      setProposalProcessStep(1);
+      setProposalProcessStep(initialEditStep);
       setLoadingExisting(false);
     };
 
@@ -1309,7 +1379,7 @@ const AddNewProposal = ({
     return () => {
       mounted = false;
     };
-  }, [isEditMode, proposalId, router]);
+  }, [initialEditStep, isEditMode, proposalId, router]);
 
   /* ??? Single source of truth for all steps ??? */
   const [proposalData, setProposalData] =
@@ -1326,7 +1396,7 @@ const AddNewProposal = ({
   // Sync rooms array length when numberOfEventRooms stepper changes
   useEffect(() => {
     if (loadingExisting) return;
-    const count = Math.min(20, Math.max(1, Number(proposalData.venueSchedule.numberOfEventRooms) || 1));
+    const count = Math.min(200, Math.max(1, Number(proposalData.venueSchedule.numberOfEventRooms) || 1));
     setRooms((prev) => {
       if (prev.length === count) return prev;
       if (prev.length < count) {
@@ -1359,8 +1429,15 @@ const AddNewProposal = ({
   const isRoomAndProductionStepValid = () => {
     return rooms.every(
       (r) =>
-        r.roomFunction.trim().length > 0 &&
-        r.estimatedAttendeesInRoom.trim().length > 0 &&
+        r.roomLocation.trim().length > 0 &&
+        (r.functions.length > 0
+          ? r.functions.every(
+              (entry) =>
+                entry.functionName.trim().length > 0 &&
+                entry.estimatedAttendees.trim().length > 0,
+            )
+          : r.roomFunction.trim().length > 0 &&
+            r.estimatedAttendeesInRoom.trim().length > 0) &&
         r.showCrewNeeded.length > 0,
     );
   };
@@ -1450,6 +1527,22 @@ const AddNewProposal = ({
     roomByRoom: RoomByRoomData,
   ): RoomByRoomData => {
     const normalized = { ...roomByRoom };
+    if (normalized.functions.length > 0) {
+      const primary = normalized.functions[0];
+      normalized.roomFunction = primary.functionName;
+      normalized.roomSetup = primary.roomSetup;
+      normalized.scheduleDate = primary.scheduleDate;
+      normalized.scheduleDay = primary.scheduleDay;
+      normalized.showStartDateTime = primary.showStartDateTime;
+      normalized.showEndDateTime = primary.showEndDateTime;
+      const peakAttendance = Math.max(
+        0,
+        ...normalized.functions.map((entry) => Number(entry.estimatedAttendees) || 0),
+      );
+      normalized.estimatedAttendeesInRoom = peakAttendance > 0
+        ? String(peakAttendance)
+        : "";
+    }
 
     // Clear nested qty fields when parent is not "Yes"
     if (normalized.wirelessMics.wirelessMics !== "Yes") {

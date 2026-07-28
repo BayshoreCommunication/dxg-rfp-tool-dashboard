@@ -316,24 +316,9 @@ const VenueScheduleStep = ({
             </div>
           </div>
 
-          {/* City + State */}
+          {/* State first, then City: state establishes region/time-zone context
+              before the planner enters a city. */}
           <div className="mb-5 grid grid-cols-2 gap-5">
-            <div>
-              <label className={labelClass}>
-                City <span className="text-red-500">*</span>
-                <InfoTooltip text="The city where the venue is located. Compared against 20 known union markets to trigger the union jurisdiction advisory banner." />
-              </label>
-              <input
-                type="text"
-                value={safeData.venueCity}
-                onChange={(e) => onChange({ venueCity: e.target.value })}
-                placeholder="e.g. Las Vegas"
-                className={`${inputClass} ${err(safeData.venueCity)}`}
-              />
-              {showErrors && !safeData.venueCity.trim() && (
-                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
-              )}
-            </div>
             <div>
               <label className={labelClass}>
                 State <span className="text-red-500">*</span>
@@ -350,6 +335,22 @@ const VenueScheduleStep = ({
                 ))}
               </select>
               {showErrors && !safeData.venueState && (
+                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+              )}
+            </div>
+            <div>
+              <label className={labelClass}>
+                City <span className="text-red-500">*</span>
+                <InfoTooltip text="The city where the venue is located. Compared against 20 known union markets to trigger the union jurisdiction advisory banner." />
+              </label>
+              <input
+                type="text"
+                value={safeData.venueCity}
+                onChange={(e) => onChange({ venueCity: e.target.value })}
+                placeholder="e.g. Las Vegas"
+                className={`${inputClass} ${err(safeData.venueCity)}`}
+              />
+              {showErrors && !safeData.venueCity.trim() && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
             </div>

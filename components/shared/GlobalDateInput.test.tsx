@@ -3,12 +3,15 @@ import GlobalDateInput from './GlobalDateInput'
 
 jest.mock('react-datepicker', () => ({
   __esModule: true,
-  default: ({ onChange, placeholderText, disabled, id, name }: {
+  default: ({ onChange, placeholderText, disabled, id, name, minDate, ariaInvalid, ariaDescribedBy }: {
     onChange: (date: Date | null) => void
     placeholderText?: string
     disabled?: boolean
     id?: string
     name?: string
+    minDate?: Date
+    ariaInvalid?: 'true' | 'false'
+    ariaDescribedBy?: string
   }) => (
     <input
       data-testid="datepicker"
@@ -16,6 +19,9 @@ jest.mock('react-datepicker', () => ({
       name={name}
       placeholder={placeholderText}
       disabled={disabled}
+      min={minDate ? `${minDate.getFullYear()}-${String(minDate.getMonth() + 1).padStart(2, '0')}-${String(minDate.getDate()).padStart(2, '0')}` : undefined}
+      aria-invalid={ariaInvalid}
+      aria-describedby={ariaDescribedBy}
       onChange={(e) => onChange(e.target.value ? new Date(e.target.value) : null)}
     />
   ),
@@ -75,5 +81,21 @@ describe('GlobalDateInput', () => {
     mockOnChange.mockClear()
     fireEvent.change(input, { target: { value: '' } })
     expect(mockOnChange).toHaveBeenCalledWith(null)
+  })
+
+  it('passes the earliest allowed date and accessible error state to the input', () => {
+    render(
+      <GlobalDateInput
+        value={null}
+        onChange={mockOnChange}
+        minDate={new Date(2026, 6, 27)}
+        ariaInvalid
+        ariaDescribedBy="date-error"
+      />,
+    )
+
+    expect(screen.getByTestId('datepicker')).toHaveAttribute('min', '2026-07-27')
+    expect(screen.getByTestId('datepicker')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByTestId('datepicker')).toHaveAttribute('aria-describedby', 'date-error')
   })
 })

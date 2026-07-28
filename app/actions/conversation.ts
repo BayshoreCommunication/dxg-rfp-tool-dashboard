@@ -61,12 +61,16 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 
 export type ConversationAttachment = { sourceId: string; role: string; filename: string; sourceStatus: string };
 export type ConversationRunType = "proposal_context" | "proposal_draft";
+export type ConversationAssistantAction =
+  | "download_room_schedule_template"
+  | "open_room_specifications";
 export type ConversationMessage = {
   id: string;
   ordinal: number;
   role: "user" | "assistant" | "system_event";
   kind: "note" | "instruction" | "action_request" | "run_result" | "status" | "question_answer";
   content: string;
+  actions?: ConversationAssistantAction[];
   intent: string | null;
   runType: ConversationRunType | null;
   runId: string | null;
@@ -119,12 +123,20 @@ const parseMessage = (value: unknown): ConversationMessage | null => {
   const kind = kinds.includes(value.kind as (typeof kinds)[number]) ? value.kind as ConversationMessage["kind"] : "note";
   const status = value.status === "pending" || value.status === "failed" ? value.status : "complete";
   const runType = value.runType === "proposal_context" || value.runType === "proposal_draft" ? value.runType : null;
+  const allowedActions: ConversationAssistantAction[] = [
+    "download_room_schedule_template",
+    "open_room_specifications",
+  ];
   return {
     id: value.id,
     ordinal: typeof value.ordinal === "number" ? value.ordinal : 0,
     role,
     kind,
     content: typeof value.content === "string" ? value.content : "",
+    actions: Array.isArray(value.actions)
+      ? value.actions.filter((item): item is ConversationAssistantAction =>
+          typeof item === "string" && allowedActions.includes(item as ConversationAssistantAction)).slice(0, 2)
+      : [],
     intent: typeof value.intent === "string" ? value.intent : null,
     runType,
     runId: typeof value.runId === "string" ? value.runId : null,
