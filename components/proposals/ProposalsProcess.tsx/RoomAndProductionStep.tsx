@@ -151,10 +151,24 @@ export const parseScheduleWorkbook = async (
   // JavaScript Date objects can introduce historical local-time offsets (for
   // example 1:45 becoming 1:51 in some time zones).
   const workbook = XLSX.read(buffer, { type: "array", cellDates: false });
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) return { rooms: [], totalRows: 0 };
-  const sheet = workbook.Sheets[sheetName];
-  const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+  // The shipped template carries several tabs (pivot, virtual schedule, room
+  // list), and planners reorder them. Read the first sheet that actually looks
+  // like a schedule rather than assuming it is the leftmost one.
+  const readSheet = (name: string) =>
+    XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[name], { defval: "" });
+  const looksLikeSchedule = (rows: Record<string, unknown>[]) =>
+    rows.length > 0 &&
+    Boolean(findRowKey(rows[0], ["room", "room name", "room #", "room number", "room no"])) &&
+    Boolean(findRowKey(rows[0], ["function name", "function", "session name", "session"]));
+  let json: Record<string, unknown>[] = [];
+  for (const name of workbook.SheetNames) {
+    const rows = readSheet(name);
+    if (looksLikeSchedule(rows)) { json = rows; break; }
+  }
+  // Nothing recognizable: fall back to the first sheet so the existing "no rooms
+  // could be read" message still describes what the planner uploaded.
+  if (json.length === 0 && workbook.SheetNames[0]) json = readSheet(workbook.SheetNames[0]);
+  if (json.length === 0) return { rooms: [], totalRows: 0 };
 
   // Group schedule rows by physical room. Functions retain their individual
   // schedule details while the room owns one shared AV specification.
