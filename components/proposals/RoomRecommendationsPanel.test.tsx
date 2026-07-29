@@ -165,8 +165,40 @@ test("when everything is already set the panel says so without re-applying", asy
   const onApplied = jest.fn();
   render(<RoomRecommendationsPanel proposalId="0123456789abcdef01234567" onApplied={onApplied} />);
   await user.click(await screen.findByRole("button", { name: "Fill rooms for me" }));
-  expect(await screen.findByText(/already set/)).toBeInTheDocument();
+  expect(await screen.findByText(/already had a value/)).toBeInTheDocument();
   expect(onApplied).not.toHaveBeenCalled();
+});
+
+test("a zero-fill outcome explains itself instead of always claiming everything is set", async () => {
+  const user = userEvent.setup();
+  const emptyRun = run();
+  // No rooms at all: there is nothing to fill yet, which is not the same thing.
+  emptyRun.payload = { ...emptyRun.payload, rooms: [], globalClarificationQuestions: [] };
+  mockGenerate.mockResolvedValue({ success: true, data: emptyRun });
+  mockAutoApply.mockResolvedValue(application({ appliedPaths: [], skippedPaths: [] }));
+  render(<RoomRecommendationsPanel proposalId="0123456789abcdef01234567" />);
+  await user.click(await screen.findByRole("button", { name: "Fill rooms for me" }));
+  expect(await screen.findByText(/Add your rooms below/)).toBeInTheDocument();
+});
+
+test("missing room facts read as questions to answer, not as nothing to do", async () => {
+  const user = userEvent.setup();
+  const unaskedRun = run();
+  unaskedRun.payload = {
+    ...unaskedRun.payload,
+    rooms: unaskedRun.payload.rooms.map((room) => ({
+      ...room,
+      recommendations: [],
+      clarificationQuestions: [
+        { questionKey: "q1", ruleId: "ROOM_PURPOSE_MISSING_001", prompt: "What is this room used for?", paths: [] },
+      ],
+    })),
+  };
+  mockGenerate.mockResolvedValue({ success: true, data: unaskedRun });
+  mockAutoApply.mockResolvedValue(application({ appliedPaths: [], skippedPaths: [] }));
+  render(<RoomRecommendationsPanel proposalId="0123456789abcdef01234567" />);
+  await user.click(await screen.findByRole("button", { name: "Fill rooms for me" }));
+  expect(await screen.findByText(/need a little more about your rooms/)).toBeInTheDocument();
 });
 
 test("warnings and open questions still surface compactly", async () => {

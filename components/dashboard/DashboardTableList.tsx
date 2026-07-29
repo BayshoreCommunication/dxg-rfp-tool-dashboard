@@ -84,6 +84,14 @@ function toStatus(value?: string): ProposalStatus {
 
 type DashboardFilterType = "all" | "draft" | "live" | "favorite" | "expired";
 
+/**
+ * A row is a draft if it shows the Draft badge. The badge reads the status
+ * while the filter and counts read isDraft, so a proposal carrying one but not
+ * the other listed as "Draft" under a DRAFT tab that counted zero.
+ */
+const isDraftRow = (proposal: { isDraft?: boolean; status?: string }): boolean =>
+  proposal.isDraft === true || toStatus(proposal.status) === "unsubmitted";
+
 const FILTER_TABS: Array<{ key: DashboardFilterType; label: string }> = [
   { key: "all", label: "ALL" },
   { key: "draft", label: "DRAFT" },
@@ -253,11 +261,11 @@ export default function DashboardTableList({
         const status = toStatus(p.status);
         const matchStatus =
           filter === "all" ||
-          (filter === "draft" && p.isDraft) ||
+          (filter === "draft" && isDraftRow(p)) ||
           (filter === "live" && status === "submitted") ||
           (filter === "favorite" && Boolean(p.isFavorite)) ||
           (filter === "expired" &&
-            !p.isDraft &&
+            !isDraftRow(p) &&
             (p.isActive === false || status === "rejected"));
 
         return matchSearch && matchStatus;
@@ -268,12 +276,12 @@ export default function DashboardTableList({
   const tabCounts = useMemo(
     () => ({
       all: proposals.length,
-      draft: proposals.filter((p) => p.isDraft).length,
+      draft: proposals.filter(isDraftRow).length,
       live: proposals.filter((p) => toStatus(p.status) === "submitted").length,
       favorite: proposals.filter((p) => Boolean(p.isFavorite)).length,
       expired: proposals.filter(
         (p) =>
-          !p.isDraft &&
+          !isDraftRow(p) &&
           (p.isActive === false || toStatus(p.status) === "rejected"),
       ).length,
     }),

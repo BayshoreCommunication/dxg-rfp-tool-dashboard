@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 import type { ProposalSettings, RoomByRoomData, RoomFunctionSchedule } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
+import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./eventTimeZone";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
@@ -20,6 +21,23 @@ const dayOfWeekFromDate = (isoDate: string): string => {
   return isNaN(date.getTime()) ? "" : WEEKDAY_NAMES[date.getDay()];
 };
 
+
+/**
+ * A schedule date is a plain calendar day ("2027-03-10"), so it converts to and
+ * from the picker's Date at local noon — midnight can slip to the previous day
+ * in negative-offset zones.
+ */
+const isoDateToLocalDate = (iso: string): Date | null => {
+  const [year, month, day] = (iso || "").split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day, 12);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+const localDateToIsoDate = (date: Date | null): string => {
+  if (!date || isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
 
 // ─── Schedule upload (Excel) helpers ──────────────────────────────────────────
 const excelCellToIsoDate = (val: unknown): string => {
@@ -585,14 +603,21 @@ const RoomForm = ({
               </div>
               <div>
                 <label className={labelClass}>Date <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
-                <input
-                  type="date"
-                  className={inputClass}
-                  value={entry.scheduleDate}
-                  onChange={(event) => updateFunction(functionIndex, {
-                    scheduleDate: event.target.value,
-                    scheduleDay: dayOfWeekFromDate(event.target.value),
-                  })}
+                {/* A native date input renders in the browser's locale, so this
+                    showed 10/03/2027 beside a start time reading 03/10/2027 —
+                    the same day in two orders, one card apart. */}
+                <GlobalDateInput
+                  hideLabel
+                  showFormatInLabel={false}
+                  format="MM-dd-yyyy"
+                  value={isoDateToLocalDate(entry.scheduleDate)}
+                  onChange={(date) => {
+                    const iso = localDateToIsoDate(date);
+                    updateFunction(functionIndex, { scheduleDate: iso, scheduleDay: dayOfWeekFromDate(iso) });
+                  }}
+                  inputClassName={`${inputClass} pr-12`}
+                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2]"
+                  placeholder="Select date"
                 />
               </div>
               <div>

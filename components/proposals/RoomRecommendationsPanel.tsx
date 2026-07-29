@@ -42,6 +42,29 @@ const chipTitle = (item: RoomRecItem, skipped: boolean): string => {
   return parts.join("\n");
 };
 
+/**
+ * Why nothing was filled, or null when something was. "Everything that can be
+ * filled is already set" was shown for every zero-fill outcome, including a
+ * proposal with no rooms and rooms missing the facts the rules need — the most
+ * reassuring reading of the least informative result.
+ */
+const nothingFilledReason = (run: RoomRecRun, application: { appliedPaths: string[]; skippedPaths?: string[] }): string | null => {
+  if (application.appliedPaths.length > 0) return null;
+  const rooms = run.payload.rooms;
+  if (rooms.length === 0) return "Add your rooms below and I'll fill in what I can.";
+  const suggestions = rooms.reduce((total, room) => total + room.recommendations.length, 0);
+  if (suggestions === 0) {
+    const questions =
+      rooms.reduce((total, room) => total + room.clarificationQuestions.length, 0) +
+      run.payload.globalClarificationQuestions.length;
+    return questions > 0
+      ? "I need a little more about your rooms first — see the questions below."
+      : "Nothing here needs filling in from your current selections.";
+  }
+  if ((application.skippedPaths ?? []).length > 0) return "Everything I could fill already had a value, so I left it alone.";
+  return "Everything that can be filled is already set.";
+};
+
 type Props = {
   proposalId: string;
   /** Called after fields are filled so the wizard re-seeds its rooms from the saved proposal. */
@@ -93,11 +116,7 @@ const RoomRecommendationsPanel = ({ proposalId, onApplied }: Props) => {
     setAppliedPaths(new Set(applied.data.appliedPaths));
     setSkippedPaths(new Set(applied.data.skippedPaths ?? []));
     const count = applied.data.appliedPaths.length;
-    setNotice(
-      count === 0
-        ? "Everything that can be filled is already set."
-        : `${count} field${count === 1 ? "" : "s"} filled in — adjust anything below.`,
-    );
+    setNotice(nothingFilledReason(generated.data, applied.data) ?? `${count} field${count === 1 ? "" : "s"} filled in — adjust anything below.`);
     if (count > 0) await onApplied?.();
     setBusy(false);
   };
