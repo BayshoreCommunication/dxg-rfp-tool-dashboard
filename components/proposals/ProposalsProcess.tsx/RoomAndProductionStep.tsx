@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 import type { ProposalSettings, RoomByRoomData, RoomFunctionSchedule } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
+import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./eventTimeZone";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
 import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
 
@@ -19,11 +20,6 @@ const dayOfWeekFromDate = (isoDate: string): string => {
   return isNaN(date.getTime()) ? "" : WEEKDAY_NAMES[date.getDay()];
 };
 
-const toDateTime = (iso: string): Date | null => {
-  if (!iso) return null;
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? null : d;
-};
 
 // ─── Schedule upload (Excel) helpers ──────────────────────────────────────────
 const excelCellToIsoDate = (val: unknown): string => {
@@ -107,17 +103,15 @@ const parse24HourTime = (val: string): { hours: number; minutes: number } | null
 };
 
 /** Combines an ISO date (YYYY-MM-DD) with a time-of-day cell into a full ISO datetime string. */
-const combineDateAndTime = (isoDate: string, val: unknown): string => {
+const combineDateAndTime = (isoDate: string, val: unknown, timeZoneLabel?: string | null): string => {
   if (!isoDate) return "";
   const time = extractTimeOfDay(val);
   if (!time) return "";
-  const [y, m, d] = isoDate.split("-").map(Number);
-  if (!y || !m || !d) return "";
-  // Schedule workbooks express venue-local wall-clock times. Match manual
-  // entry semantics by constructing in the browser's local zone before
-  // persisting the ISO instant.
-  const dt = new Date(y, m - 1, d, time.hours, time.minutes);
-  return isNaN(dt.getTime()) ? "" : dt.toISOString();
+  // Schedule workbooks express venue wall-clock times, so anchor them to the
+  // event's zone rather than the machine's — otherwise a schedule uploaded
+  // from another zone stores the wrong instant and the RFP quotes vendors the
+  // wrong times.
+  return wallClockToIso(isoDate, time, timeZoneLabel);
 };
 
 /** A time cell that the local parser couldn't confidently read, queued for the LLM fallback. */
@@ -132,6 +126,8 @@ type TimeFixup = {
 export const parseScheduleWorkbook = async (
   buffer: ArrayBuffer,
   normalizeTimes: (values: string[]) => Promise<(string | null)[]>,
+  /** Venue & Schedule time-zone label; times in the sheet are wall-clock there. */
+  timeZoneLabel?: string | null,
 ): Promise<{ rooms: RoomByRoomData[]; totalRows: number }> => {
   // Keep Excel dates/times as serial numbers. Converting time-only cells into
   // JavaScript Date objects can introduce historical local-time offsets (for
@@ -174,8 +170,8 @@ export const parseScheduleWorkbook = async (
 
     const startRawVal = startTimeKey ? row[startTimeKey] : undefined;
     const endRawVal = endTimeKey ? row[endTimeKey] : undefined;
-    const showStartDateTime = startTimeKey ? combineDateAndTime(scheduleDate, startRawVal) : "";
-    const showEndDateTime = endTimeKey ? combineDateAndTime(scheduleDate, endRawVal) : "";
+    const showStartDateTime = startTimeKey ? combineDateAndTime(scheduleDate, startRawVal, timeZoneLabel) : "";
+    const showEndDateTime = endTimeKey ? combineDateAndTime(scheduleDate, endRawVal, timeZoneLabel) : "";
 
     // Local parsing failed but the cell wasn't actually blank — queue it for the LLM fallback
     // instead of silently dropping it (typos like "11;15 AM" land here).
@@ -237,19 +233,18 @@ export const parseScheduleWorkbook = async (
         if (!resolved) continue;
         const time = parse24HourTime(resolved);
         if (!time || !fixup.scheduleDate) continue;
-        const [y, m, d] = fixup.scheduleDate.split("-").map(Number);
-        if (!y || !m || !d) continue;
-        const dt = new Date(y, m - 1, d, time.hours, time.minutes);
-        if (isNaN(dt.getTime())) continue;
+        // Repaired times are wall-clock too, so they take the same anchoring.
+        const iso = wallClockToIso(fixup.scheduleDate, time, timeZoneLabel);
+        if (!iso) continue;
         const room = rooms[fixup.roomIndex];
         if (!room) continue;
         const scheduleEntry = room.functions[fixup.functionIndex];
         if (!scheduleEntry) continue;
-        if (fixup.field === "start") scheduleEntry.showStartDateTime = dt.toISOString();
-        else scheduleEntry.showEndDateTime = dt.toISOString();
+        if (fixup.field === "start") scheduleEntry.showStartDateTime = iso;
+        else scheduleEntry.showEndDateTime = iso;
         if (fixup.functionIndex === 0) {
-          if (fixup.field === "start") room.showStartDateTime = dt.toISOString();
-          else room.showEndDateTime = dt.toISOString();
+          if (fixup.field === "start") room.showStartDateTime = iso;
+          else room.showEndDateTime = iso;
         }
       }
     } catch {
@@ -472,11 +467,14 @@ const RoomForm = ({
   onChange,
   showErrors,
   roomIndex,
+  eventTimeZone,
 }: {
   data: RoomByRoomData;
   onChange: (u: Partial<RoomByRoomData>) => void;
   showErrors: boolean;
   roomIndex: number;
+  /** Schedule times are wall-clock at the venue, so they render in its zone. */
+  eventTimeZone?: string | null;
 }) => {
   const uid = `room-${roomIndex}`;
   const errCls = (v: string) =>
@@ -617,8 +615,8 @@ const RoomForm = ({
                   showTime
                   use12Hours
                   timeIntervals={15}
-                  value={toDateTime(entry.showStartDateTime)}
-                  onChange={(date) => updateFunction(functionIndex, { showStartDateTime: date ? date.toISOString() : "" })}
+                  value={toEventZoneDisplay(entry.showStartDateTime, eventTimeZone)}
+                  onChange={(date) => updateFunction(functionIndex, { showStartDateTime: fromEventZoneDisplay(date, eventTimeZone) })}
                   inputClassName={`${inputClass} pr-12`}
                   buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2]"
                   placeholder="Select date & time"
@@ -633,8 +631,8 @@ const RoomForm = ({
                   showTime
                   use12Hours
                   timeIntervals={15}
-                  value={toDateTime(entry.showEndDateTime)}
-                  onChange={(date) => updateFunction(functionIndex, { showEndDateTime: date ? date.toISOString() : "" })}
+                  value={toEventZoneDisplay(entry.showEndDateTime, eventTimeZone)}
+                  onChange={(date) => updateFunction(functionIndex, { showEndDateTime: fromEventZoneDisplay(date, eventTimeZone) })}
                   inputClassName={`${inputClass} pr-12`}
                   buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2]"
                   placeholder="Select date & time"
@@ -673,8 +671,8 @@ const RoomForm = ({
                 showTime
                 use12Hours
                 timeIntervals={15}
-                value={toDateTime(data.loadInDateTime)}
-                onChange={(d) => onChange({ loadInDateTime: d ? d.toISOString() : "" })}
+                value={toEventZoneDisplay(data.loadInDateTime, eventTimeZone)}
+                onChange={(d) => onChange({ loadInDateTime: fromEventZoneDisplay(d, eventTimeZone) })}
                 inputClassName={`${inputClass} pr-12`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
@@ -689,8 +687,8 @@ const RoomForm = ({
                 showTime
                 use12Hours
                 timeIntervals={15}
-                value={toDateTime(data.rehearsalDateTime)}
-                onChange={(d) => onChange({ rehearsalDateTime: d ? d.toISOString() : "" })}
+                value={toEventZoneDisplay(data.rehearsalDateTime, eventTimeZone)}
+                onChange={(d) => onChange({ rehearsalDateTime: fromEventZoneDisplay(d, eventTimeZone) })}
                 inputClassName={`${inputClass} pr-12`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
                 placeholder="Select date & time"
@@ -1651,6 +1649,7 @@ const RoomCard = ({
   onDelete,
   canDelete,
   showErrors,
+  eventTimeZone,
 }: {
   room: RoomByRoomData;
   index: number;
@@ -1662,6 +1661,7 @@ const RoomCard = ({
   onDelete: () => void;
   canDelete: boolean;
   showErrors: boolean;
+  eventTimeZone?: string | null;
 }) => {
   const roomLabel = room.roomLocation.trim() || room.roomFunction.trim() || `Room ${index + 1}`;
   const functionCount = schedulesForRoom(room).filter((entry) => entry.functionName.trim()).length;
@@ -1728,6 +1728,7 @@ const RoomCard = ({
           onChange={onChange}
           showErrors={showErrors}
           roomIndex={index}
+          eventTimeZone={eventTimeZone}
         />
       )}
     </div>
@@ -1791,6 +1792,8 @@ interface Props {
    * every blocked attempt so retrying the same room scrolls again.
    */
   focusRoom?: { index: number; token: number } | null;
+  /** Venue & Schedule time-zone label; uploaded schedule times are wall-clock there. */
+  eventTimeZone?: string | null;
 }
 
 const RoomAndProductionStep = ({
@@ -1806,6 +1809,7 @@ const RoomAndProductionStep = ({
   proposalId = null,
   onRecommendationsApplied,
   focusRoom = null,
+  eventTimeZone = null,
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
   const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
@@ -1892,7 +1896,7 @@ const RoomAndProductionStep = ({
       const { rooms: parsedRooms, totalRows } = await parseScheduleWorkbook(buffer, async (values) => {
         const res = await normalizeScheduleTimesAction(values);
         return res.success && res.results ? res.results : values.map(() => null);
-      });
+      }, eventTimeZone);
       if (parsedRooms.length === 0) {
         toast.error("No rooms could be read from that file. Check the column headers and try again.");
         return;
@@ -2045,6 +2049,7 @@ const RoomAndProductionStep = ({
               onDelete={() => deleteRoom(i)}
               canDelete={rooms.length > 1}
               showErrors={showErrors}
+              eventTimeZone={eventTimeZone}
             />
           </div>
         ))}

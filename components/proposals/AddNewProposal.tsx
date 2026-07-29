@@ -2117,6 +2117,7 @@ const AddNewProposal = ({
                 proposalId={proposalId ?? null}
                 onRecommendationsApplied={refreshProposalAfterQuestion}
                 focusRoom={focusRoom}
+                eventTimeZone={proposalData.venueSchedule.timeZone}
               />
             )}
             {proposalProcessStep === 4 && (
