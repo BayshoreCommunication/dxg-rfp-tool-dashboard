@@ -159,6 +159,116 @@ const report: InvestmentReport = {
     days: 3,
     showDayEquipmentBasis: "Day 1 at full rate; each additional show day at the approved hold-over factor (3 show days).",
   },
+  calculationVersion: "deterministic-budget.v1",
+  pricingReleaseVersion: "approved-pricing.v1:abc123",
+  ruleReleaseVersion: "approved-rules.v1:def456",
+  budgetAnalysis: {
+    calculationVersion: "deterministic-budget.v1",
+    pricingReleaseVersion: "approved-pricing.v1:abc123",
+    ruleReleaseVersion: "approved-rules.v1:def456",
+    status: "incomplete",
+    currency: "USD",
+    included: [
+      { key: "gs_line_array", label: "Main speakers", source: "approved_pricing_record" },
+      { key: "gs_a1", label: "A1 audio lead", source: "approved_pricing_record" },
+    ],
+    missing: [
+      { key: "lighting", label: "Lighting", reason: "No approved lighting rate." },
+    ],
+    needsConfirmation: [
+      { key: "insurance", label: "Insurance", reason: "Confirm coverage." },
+    ],
+    optional: [],
+    possibleSavings: [
+      {
+        key: "reuse-1",
+        label: "Validate shared-equipment alternative",
+        reason: "Two non-overlapping rooms may be able to reuse cameras.",
+        estimatedImpact: null,
+      },
+    ],
+    categoryBreakdown: [
+      {
+        category: "audio",
+        amount: {
+          currency: "USD",
+          lowMinor: 500_000,
+          midMinor: 700_000,
+          highMinor: 900_000,
+        },
+      },
+      {
+        category: "labor",
+        amount: {
+          currency: "USD",
+          lowMinor: 200_000,
+          midMinor: 300_000,
+          highMinor: 400_000,
+        },
+      },
+    ],
+    roomBreakdown: [
+      {
+        roomKey: "main",
+        roomLabel: "General Session",
+        status: "allocated_range",
+        amount: {
+          currency: "USD",
+          lowMinor: 700_000,
+          midMinor: 1_000_000,
+          highMinor: 1_300_000,
+        },
+        allocationBasis: "Approved general-session package lines.",
+      },
+    ],
+    laborSubtotal: {
+      currency: "USD",
+      lowMinor: 200_000,
+      midMinor: 300_000,
+      highMinor: 400_000,
+    },
+    equipmentSubtotal: {
+      currency: "USD",
+      lowMinor: 500_000,
+      midMinor: 700_000,
+      highMinor: 900_000,
+    },
+    sharedServicesSubtotal: {
+      currency: "USD",
+      lowMinor: 550_000,
+      midMinor: 800_000,
+      highMinor: 1_100_000,
+    },
+    estimatedAncillarySubtotal: null,
+    calculatedTotal: {
+      currency: "USD",
+      lowMinor: 1_250_000,
+      midMinor: 1_800_000,
+      highMinor: 2_400_000,
+    },
+    completeTotal: null,
+    budgetCeiling: {
+      amountMinor: 2_000_000,
+      currency: "USD",
+      source: "explicit_amount",
+      label: "Explicit planning ceiling",
+    },
+    warnings: [
+      {
+        code: "ESTIMATE_MAY_EXCEED_BUDGET_CEILING",
+        severity: "warning",
+        explanation: "The approved estimate range may exceed the stated budget ceiling.",
+        suggestedNextAction: "Confirm scope and compare value engineering.",
+        paths: ["/content/budget/estimatedAvBudget"],
+        estimatedImpact: {
+          currency: "USD",
+          lowMinor: 0,
+          midMinor: 0,
+          highMinor: 400_000,
+        },
+      },
+    ],
+  },
   createdAt: "2026-07-21T10:00:00.000Z",
 };
 
@@ -183,6 +293,28 @@ describe("InvestmentGuidancePanel", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(mockedLatest).toHaveBeenCalledWith(proposalId);
+  });
+
+  test("shows deterministic coverage, warnings, breakdowns, and release versions", async () => {
+    mockedLatest.mockResolvedValue({ success: true, data: report });
+    render(<InvestmentGuidancePanel proposalId={proposalId} />);
+    expect(await screen.findByText("Incomplete estimate")).toBeInTheDocument();
+    expect(
+      screen.getByText("2 included · 1 missing · 1 to confirm"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The approved estimate range may exceed the stated budget ceiling.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Estimated impact: $0 – $4,000")).toBeInTheDocument();
+    expect(screen.getByText("Equipment")).toBeInTheDocument();
+    expect(screen.getByText("Labor")).toBeInTheDocument();
+    expect(screen.getByText("Shared services")).toBeInTheDocument();
+    expect(screen.getByText("General Session")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Calculation deterministic-budget\.v1/),
+    ).toHaveTextContent("approved-pricing.v1:abc123");
   });
 
   test("refusal cards show the ask so the owner knows what to do next", async () => {
@@ -240,7 +372,10 @@ describe("InvestmentGuidancePanel", () => {
   });
 
   test("compares the generated range with the selected planning budget", async () => {
-    mockedLatest.mockResolvedValue({ success: true, data: report });
+    mockedLatest.mockResolvedValue({
+      success: true,
+      data: { ...report, budgetAnalysis: null },
+    });
     render(
       <InvestmentGuidancePanel
         proposalId={proposalId}
@@ -337,6 +472,10 @@ describe("InvestmentGuidancePanel", () => {
       assumptions: [],
       scenarios: [],
       basis: null,
+      calculationVersion: "",
+      pricingReleaseVersion: "",
+      ruleReleaseVersion: "",
+      budgetAnalysis: null,
     };
     mockedLatest.mockResolvedValue({ success: true, data: legacy });
     render(<InvestmentGuidancePanel proposalId={proposalId} />);

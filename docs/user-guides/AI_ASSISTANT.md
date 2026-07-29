@@ -55,6 +55,13 @@ alternative—not permission to share equipment. Transport, reset, testing,
 venue rules, and non-overlap must all be confirmed. Room and shared-service
 prices are not calculated by this schedule check.
 
+Use **Investment guidance** for the separately governed deterministic budget
+range. It shows whether the result is complete, what is included or missing,
+which items need confirmation, category/room/labor/shared-service breakdowns,
+and supported budget-ceiling warnings. Missing approved rates remain blank;
+RFPilot does not guess them. The displayed calculation, pricing-release, and
+rule-release versions preserve the basis of a historical estimate.
+
 ## Start a conversation
 
 1. Select the robot icon in the sidebar.
