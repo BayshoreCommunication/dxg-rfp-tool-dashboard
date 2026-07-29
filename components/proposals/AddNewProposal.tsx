@@ -15,7 +15,7 @@ import BudgetProposalPreferences from "./ProposalsProcess.tsx/BudgetProposalPref
 import ContactInfo from "./ProposalsProcess.tsx/ContactInfo";
 import EventForm from "./ProposalsProcess.tsx/EventForm";
 import ProcessList from "./ProposalsProcess.tsx/ProcessList";
-import RoomAndProductionStep, { defaultRoom } from "./ProposalsProcess.tsx/RoomAndProductionStep";
+import RoomAndProductionStep, { defaultRoom, firstIncompleteRoom } from "./ProposalsProcess.tsx/RoomAndProductionStep";
 import HybridVirtualStep from "./ProposalsProcess.tsx/HybridVirtualStep";
 import VenueScheduleStep, { defaultVenueSchedule, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
 import ContentCreativeStep, { defaultContentCreative, type ContentCreativeData } from "./ProposalsProcess.tsx/ContentCreativeStep";
@@ -1248,6 +1248,9 @@ const AddNewProposal = ({
   const [copyingSaving, setCopyingSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  // Room the step should open and scroll to after it blocked Continue. The
+  // token makes a repeat attempt on the same room re-trigger the scroll.
+  const [focusRoom, setFocusRoom] = useState<{ index: number; token: number } | null>(null);
 
   const [proposalSettings, setProposalSettings] = useState<ProposalSettings>(
     defaultProposalSettings,
@@ -1426,20 +1429,18 @@ const AddNewProposal = ({
     );
   };
 
-  const isRoomAndProductionStepValid = () => {
-    return rooms.every(
-      (r) =>
-        r.roomLocation.trim().length > 0 &&
-        (r.functions.length > 0
-          ? r.functions.every(
-              (entry) =>
-                entry.functionName.trim().length > 0 &&
-                entry.estimatedAttendees.trim().length > 0,
-            )
-          : r.roomFunction.trim().length > 0 &&
-            r.estimatedAttendeesInRoom.trim().length > 0) &&
-        r.showCrewNeeded.length > 0,
-    );
+  const isRoomAndProductionStepValid = () => firstIncompleteRoom(rooms) === null;
+
+  /**
+   * Blocking Continue silently is indistinguishable from a broken button when
+   * the offending room is collapsed — its inline errors are not rendered. Name
+   * the room and what it needs, then ask the step to open and reveal it.
+   */
+  const reportIncompleteRoom = () => {
+    const incomplete = firstIncompleteRoom(rooms);
+    if (!incomplete) return;
+    toast.error(`${incomplete.label} still needs: ${incomplete.missing.join(", ")}.`);
+    setFocusRoom({ index: incomplete.index, token: Date.now() });
   };
 
   const isVenueStepValid = () => {
@@ -1605,11 +1606,21 @@ const AddNewProposal = ({
     if (normalized.cameras.cameras !== "Yes") {
       normalized.cameras = { ...normalized.cameras, camerasQty: "" };
     }
-    if (normalized.audienceQa.audienceQa !== "Yes") {
+    // Audience Q&A has no separate yes/no control — the chosen method is the
+    // whole answer — so the usual "clear the child when the parent isn't Yes"
+    // rule silently discarded the planner's selection on every save. Derive the
+    // flag from the method instead, and only clear the method when the planner
+    // actually said there is no Q&A.
+    const audienceQaMethod = normalized.audienceQa.audienceQaMethod.trim();
+    if (audienceQaMethod) {
+      const declinesQa = /^no q&a/i.test(audienceQaMethod);
       normalized.audienceQa = {
         ...normalized.audienceQa,
-        audienceQaMethod: "",
+        audienceQa: declinesQa ? "No" : "Yes",
+        audienceQaMethod: declinesQa ? "" : audienceQaMethod,
       };
+    } else if (normalized.audienceQa.audienceQa !== "Yes") {
+      normalized.audienceQa = { ...normalized.audienceQa, audienceQaMethod: "" };
     }
     if (normalized.videoRecording.videoRecording !== "Yes") {
       normalized.videoRecording = {
@@ -1851,6 +1862,7 @@ const AddNewProposal = ({
     }
     // Step 2 = Venue & Schedule � no required validation blocking
     if (proposalProcessStep === 3 && !isRoomAndProductionStepValid()) {
+      reportIncompleteRoom();
       return;
     }
     // Steps 4 (Hybrid & Virtual), 5 (Content & Creative), 6 (Video Recording) � no required validation
@@ -2104,6 +2116,7 @@ const AddNewProposal = ({
                 isInPersonOnly={isInPersonOnly}
                 proposalId={proposalId ?? null}
                 onRecommendationsApplied={refreshProposalAfterQuestion}
+                focusRoom={focusRoom}
               />
             )}
             {proposalProcessStep === 4 && (

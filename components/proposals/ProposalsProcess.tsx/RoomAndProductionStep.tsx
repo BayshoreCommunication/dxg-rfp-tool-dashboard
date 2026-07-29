@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Download, Plus, Trash2, Upload } from "lucide-react";
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 import type { ProposalSettings, RoomByRoomData, RoomFunctionSchedule } from "../AddNewProposal";
@@ -760,7 +760,16 @@ const RoomForm = ({
                   value={data.audienceQa.audienceQaMethod}
                   onChange={(e) =>
                     onChange({
-                      audienceQa: { ...data.audienceQa, audienceQaMethod: e.target.value },
+                      audienceQa: {
+                        ...data.audienceQa,
+                        audienceQaMethod: e.target.value,
+                        // There is no separate Q&A yes/no control, so the method
+                        // carries that answer too. Downstream consumers (save
+                        // normalisation, room recommendations) read the flag.
+                        audienceQa: e.target.value
+                          ? /^No Q&A/i.test(e.target.value) ? "No" : "Yes"
+                          : "",
+                      },
                     })
                   }
                 >
@@ -1725,6 +1734,41 @@ const RoomCard = ({
   );
 };
 
+// ─── Step validation ──────────────────────────────────────────────────────────
+/**
+ * The required fields for one room, as a list of human labels. Kept here beside
+ * the inputs so the wizard's blocking check and the on-screen errors can never
+ * disagree about what "complete" means.
+ */
+export const missingRoomFields = (room: RoomByRoomData): string[] => {
+  const missing: string[] = [];
+  if (!room.roomLocation.trim()) missing.push("physical room name");
+  const schedules = room.functions.length > 0 ? room.functions : [];
+  if (schedules.length > 0) {
+    if (schedules.some((entry) => !entry.functionName.trim())) missing.push("function name");
+    if (schedules.some((entry) => !entry.estimatedAttendees.trim())) missing.push("number of attendees");
+  } else {
+    if (!room.roomFunction.trim()) missing.push("function name");
+    if (!room.estimatedAttendeesInRoom.trim()) missing.push("number of attendees");
+  }
+  if (room.showCrewNeeded.length === 0) missing.push("show crew");
+  return missing;
+};
+
+export const roomLabel = (room: RoomByRoomData, index: number): string =>
+  room.roomLocation.trim() || room.roomFunction.trim() || `Room ${index + 1}`;
+
+/** First room that still blocks the step, or null when every room is complete. */
+export const firstIncompleteRoom = (
+  rooms: RoomByRoomData[],
+): { index: number; label: string; missing: string[] } | null => {
+  for (const [index, room] of rooms.entries()) {
+    const missing = missingRoomFields(room);
+    if (missing.length) return { index, label: roomLabel(room, index), missing };
+  }
+  return null;
+};
+
 // ─── Main component ───────────────────────────────────────────────────────────
 interface Props {
   rooms: RoomByRoomData[];
@@ -1740,6 +1784,13 @@ interface Props {
   proposalId?: string | null;
   /** Re-seeds the wizard's local rooms from the saved proposal after an apply. */
   onRecommendationsApplied?: () => void | Promise<void>;
+  /**
+   * Room the wizard wants brought into view because it blocked Continue.
+   * Collapsed cards hide their own errors, so a blocked step is invisible
+   * until the offending room is opened and scrolled to. `token` changes on
+   * every blocked attempt so retrying the same room scrolls again.
+   */
+  focusRoom?: { index: number; token: number } | null;
 }
 
 const RoomAndProductionStep = ({
@@ -1754,11 +1805,27 @@ const RoomAndProductionStep = ({
   isInPersonOnly = false,
   proposalId = null,
   onRecommendationsApplied,
+  focusRoom = null,
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
   const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const roomCardRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const roomCount = Math.max(1, Number(numberOfEventRooms) || 1);
+
+  // Open and reveal the room that blocked Continue. Keyed on the parent's
+  // token so repeated attempts on the same room scroll again.
+  const focusIndex = focusRoom?.index ?? null;
+  const focusToken = focusRoom?.token ?? null;
+  useEffect(() => {
+    if (focusIndex === null) return;
+    setExpandedRooms((prev) => new Set(prev).add(focusIndex));
+    // Let the newly expanded card lay out before scrolling to it.
+    const timer = window.setTimeout(() => {
+      roomCardRefs.current[focusIndex]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [focusIndex, focusToken]);
 
   const toggleRoom = (i: number) =>
     setExpandedRooms((prev) => {
@@ -1961,7 +2028,12 @@ const RoomAndProductionStep = ({
       {/* Rooms */}
       <div className="flex-1 space-y-3 px-6 pb-6">
         {rooms.map((room, i) => (
-          <div key={i}>
+          <div
+            key={i}
+            ref={(node) => {
+              roomCardRefs.current[i] = node;
+            }}
+          >
             <RoomCard
               room={room}
               index={i}

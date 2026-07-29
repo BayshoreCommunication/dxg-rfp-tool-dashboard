@@ -32,6 +32,20 @@ type ApiResponse = {
 // Internal helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Backend validation failures carry the offending fields in `errors[]` while
+ * `message` is only the generic headline ("Validation failed"). Forwarding the
+ * headline alone leaves the planner with no idea which field to fix, so join
+ * the detail on when it is present.
+ */
+const failureMessage = (body: { message?: string; errors?: unknown }, fallback: string): string => {
+  const headline = typeof body.message === "string" && body.message ? body.message : fallback;
+  const details = Array.isArray(body.errors)
+    ? body.errors.map((entry) => String(entry).trim()).filter(Boolean)
+    : [];
+  return details.length ? `${headline}: ${details.join("; ")}` : headline;
+};
+
 const toSlug = (value: string): string =>
   value
     .toLowerCase()
@@ -145,7 +159,9 @@ export async function createProposalAction(
     if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Proposal created" : "Create failed"),
+      message: res.ok
+        ? data.message || "Proposal created"
+        : failureMessage(data, "Create failed"),
       data: withProposalMeta(data.data),
     };
   } catch (error: any) {
@@ -338,7 +354,9 @@ export async function updateProposalAction(
     if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Proposal updated" : "Update failed"),
+      message: res.ok
+        ? data.message || "Proposal updated"
+        : failureMessage(data, "Update failed"),
       data: withProposalMeta(data.data),
     };
   } catch (error: any) {
@@ -465,7 +483,9 @@ export async function updateProposalMetaAction(
     if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
-      message: data.message || (res.ok ? "Proposal updated" : "Update failed"),
+      message: res.ok
+        ? data.message || "Proposal updated"
+        : failureMessage(data, "Update failed"),
       data: withProposalMeta(data.data),
     };
   } catch (error: any) {
