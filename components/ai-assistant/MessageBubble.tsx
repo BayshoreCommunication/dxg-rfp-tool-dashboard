@@ -16,6 +16,7 @@ import AssistantSources, {
   safeAssistantHref,
 } from "./AssistantSources";
 import AssistantHandoffActions from "./AssistantHandoffActions";
+import AssistantFeedbackControls from "./AssistantFeedbackControls";
 import type { AssistantDisplayMessage } from "@/lib/aiAssistant/types";
 import { cn } from "@/lib/utils";
 
@@ -243,6 +244,9 @@ export default function MessageBubble({
               userDraft={handoffDraft}
               onNavigate={onNavigate}
             />
+          )}
+          {!user && !streaming && (
+            <AssistantFeedbackControls message={message} />
           )}
           <div
             className={cn(

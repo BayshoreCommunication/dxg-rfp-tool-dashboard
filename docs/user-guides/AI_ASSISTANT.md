@@ -82,6 +82,17 @@ rule-release versions preserve the basis of a historical estimate.
 Shift+Enter adds a new line. While a response is streaming, the stop button
 ends that response.
 
+## Rate a response
+
+Use **Helpful** or **Not helpful** below a completed assistant response.
+Not-helpful feedback can include one short reason such as incorrect, outdated,
+missing steps, or irrelevant. You can update the rating later. If saving
+fails, **Retry** safely repeats the same request without creating a duplicate.
+
+Feedback is reviewed as a quality signal. It never changes the Assistant's
+rules, knowledge, or answers automatically, and RFPilot does not store a
+second copy of your question or the response in the feedback record.
+
 ## Move the helper
 
 Drag the move control at the popup's upper-left to place the helper anywhere

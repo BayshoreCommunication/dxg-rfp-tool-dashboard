@@ -33,6 +33,38 @@ export type AssistantIntentSource =
   | "follow_up"
   | "fallback";
 export type AssistantIntentConfidence = "high" | "medium" | "low";
+export type AssistantResponseKind =
+  | "answer"
+  | "clarification"
+  | "refusal"
+  | "abstention";
+export const ASSISTANT_FEEDBACK_VALUES = [
+  "helpful",
+  "not_helpful",
+] as const;
+export const ASSISTANT_FEEDBACK_REASONS = [
+  "incorrect",
+  "outdated",
+  "did_not_understand",
+  "missing_steps",
+  "irrelevant",
+  "other",
+] as const;
+export type AssistantFeedbackValue =
+  (typeof ASSISTANT_FEEDBACK_VALUES)[number];
+export type AssistantFeedbackReason =
+  (typeof ASSISTANT_FEEDBACK_REASONS)[number];
+export type AssistantMessageFeedback = {
+  value: AssistantFeedbackValue;
+  reason: AssistantFeedbackReason | null;
+  updatedAt: string;
+};
+export type AssistantFeedback = AssistantMessageFeedback & {
+  id: string;
+  threadId: string;
+  messageId: string;
+  createdAt: string;
+};
 
 export type AssistantCitation = {
   sourceId: string;
@@ -68,7 +100,13 @@ export type AssistantMessage = {
   intentVersion?: string | null;
   intentSource?: AssistantIntentSource | null;
   intentConfidence?: AssistantIntentConfidence | null;
+  responseKind?: AssistantResponseKind | null;
+  promptVersion?: string | null;
+  knowledgeVersion?: string | null;
+  firstTokenMs?: number | null;
+  completionLatencyMs?: number | null;
   citations: AssistantCitation[];
+  feedback?: AssistantMessageFeedback | null;
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -189,6 +227,51 @@ const assistantIntentConfidence = (
     ? value
     : null;
 
+const assistantResponseKind = (
+  value: unknown,
+): AssistantResponseKind | null =>
+  value === "answer" ||
+  value === "clarification" ||
+  value === "refusal" ||
+  value === "abstention"
+    ? value
+    : null;
+
+const assistantFeedbackValue = (
+  value: unknown,
+): AssistantFeedbackValue | null =>
+  value === "helpful" || value === "not_helpful" ? value : null;
+
+const assistantFeedbackReason = (
+  value: unknown,
+): AssistantFeedbackReason | null =>
+  typeof value === "string" &&
+  ASSISTANT_FEEDBACK_REASONS.includes(value as AssistantFeedbackReason)
+    ? (value as AssistantFeedbackReason)
+    : null;
+
+const parseAssistantMessageFeedback = (
+  value: unknown,
+): AssistantMessageFeedback | null => {
+  if (!isRecord(value)) return null;
+  const feedbackValue = assistantFeedbackValue(value.value);
+  if (!feedbackValue || typeof value.updatedAt !== "string") return null;
+  const reason = assistantFeedbackReason(value.reason);
+  if (
+    value.reason !== null &&
+    value.reason !== undefined &&
+    reason === null
+  ) {
+    return null;
+  }
+  if (feedbackValue === "helpful" && reason !== null) return null;
+  return {
+    value: feedbackValue,
+    reason,
+    updatedAt: value.updatedAt,
+  };
+};
+
 export const parseAssistantCitation = (
   value: unknown,
 ): AssistantCitation | null => {
@@ -268,16 +351,56 @@ export const parseAssistantMessage = (
     intentVersion: nullableString(value.intentVersion),
     intentSource: assistantIntentSource(value.intentSource),
     intentConfidence: assistantIntentConfidence(value.intentConfidence),
+    responseKind: assistantResponseKind(value.responseKind),
+    promptVersion: nullableString(value.promptVersion),
+    knowledgeVersion: nullableString(value.knowledgeVersion),
+    firstTokenMs: finiteNumber(value.firstTokenMs),
+    completionLatencyMs: finiteNumber(value.completionLatencyMs),
     citations: Array.isArray(value.citations)
       ? value.citations.flatMap((citation) => {
           const parsed = parseAssistantCitation(citation);
           return parsed ? [parsed] : [];
         })
       : [],
+    feedback: parseAssistantMessageFeedback(value.feedback),
     createdAt: nullableString(value.createdAt) ?? "",
     updatedAt: nullableString(value.updatedAt) ?? "",
     completedAt: nullableString(value.completedAt),
   };
+};
+
+export const parseAssistantFeedback = (
+  value: unknown,
+): AssistantFeedback | null => {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    typeof value.threadId !== "string" ||
+    typeof value.messageId !== "string" ||
+    typeof value.createdAt !== "string"
+  ) {
+    return null;
+  }
+  const feedback = parseAssistantMessageFeedback(value);
+  return feedback
+    ? {
+        id: value.id,
+        threadId: value.threadId,
+        messageId: value.messageId,
+        createdAt: value.createdAt,
+        ...feedback,
+      }
+    : null;
+};
+
+export const parseAssistantFeedbackResult = (
+  value: unknown,
+): { created: boolean; feedback: AssistantFeedback } | null => {
+  if (!isRecord(value)) return null;
+  const feedback = parseAssistantFeedback(value.feedback);
+  return feedback
+    ? { created: value.created === true, feedback }
+    : null;
 };
 
 export const parseAssistantThreadList = (
