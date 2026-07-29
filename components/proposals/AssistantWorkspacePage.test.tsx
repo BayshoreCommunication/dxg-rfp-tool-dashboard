@@ -1508,6 +1508,24 @@ describe("AssistantWorkspacePage", () => {
     expect(mockedCloseSegment).toHaveBeenCalledWith(PROPOSAL_ID);
   });
 
+  test("the use-my-messages task is offered only while chat extraction is switched on", async () => {
+    const saved = process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED;
+    process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED = "false";
+    try {
+      mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+      // Spending a click to learn the feature is off is worse than saying so.
+      const task = await screen.findByRole("button", { name: /Use what/i });
+      expect(task).toBeDisabled();
+      expect(task).toHaveAttribute("title", expect.stringMatching(/isn't switched on/i));
+      fireEvent.click(task);
+      expect(mockedCloseSegment).not.toHaveBeenCalled();
+    } finally {
+      process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED = saved;
+    }
+  });
+
   test("nothing new to use is reported as a normal outcome, not an error", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
     mockedCloseSegment.mockResolvedValue({ success: true, correlationId: "c", data: { created: false, reason: "insufficient" } });

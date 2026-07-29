@@ -61,6 +61,13 @@ type LocalCard =
 // Why a "use what I've told you" request produced nothing. Deliberately plain:
 // none of these are failures, and the planner should not be made to feel one
 // happened.
+// Mirrors the backend's CONVERSATION_EXTRACTION_ENABLED gate. Offering the
+// task while the gate is closed spends a planner's click to tell them the
+// feature is off; the reason belongs on the control instead. Read per render
+// so the flag can be flipped without a rebuild.
+const isChatExtractionEnabled = () =>
+  process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED === "true";
+
 const segmentSkipReasons: Record<string, string> = {
   open: "I'll use these once you pause or add a bit more.",
   insufficient: "There isn't enough detail in your messages yet for me to pull requirements from.",
@@ -1992,8 +1999,14 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
               <button
                 type="button"
                 onClick={() => void runUseMessages()}
-                disabled={segmentBusy || sending || messages.length === 0}
-                title={messages.length === 0 ? "Tell me about your event first." : "Turn what you've typed into a source and pull requirements from it."}
+                disabled={segmentBusy || sending || messages.length === 0 || !isChatExtractionEnabled()}
+                title={
+                  !isChatExtractionEnabled()
+                    ? segmentSkipReasons.disabled
+                    : messages.length === 0
+                      ? "Tell me about your event first."
+                      : "Turn what you've typed into a source and pull requirements from it."
+                }
                 aria-busy={segmentBusy}
                 className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
               >
