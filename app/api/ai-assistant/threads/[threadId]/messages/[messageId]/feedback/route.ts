@@ -78,6 +78,12 @@ export async function PUT(
     isRecord(payload) && typeof payload.idempotencyKey === "string"
       ? payload.idempotencyKey.trim()
       : "";
+  const analyticsSessionId =
+    isRecord(payload) &&
+    typeof payload.analyticsSessionId === "string" &&
+    uuidPattern.test(payload.analyticsSessionId)
+      ? payload.analyticsSessionId.toLowerCase()
+      : null;
   if (
     !ASSISTANT_FEEDBACK_VALUES.includes(
       value as (typeof ASSISTANT_FEEDBACK_VALUES)[number],
@@ -101,6 +107,17 @@ export async function PUT(
       "A valid feedback request key is required.",
     );
   }
+  if (
+    isRecord(payload) &&
+    payload.analyticsSessionId !== undefined &&
+    !analyticsSessionId
+  ) {
+    return problem(
+      422,
+      "INVALID_ASSISTANT_ANALYTICS_SESSION",
+      "The assistant analytics session is invalid.",
+    );
+  }
 
   const correlationId = crypto.randomUUID();
   let upstream: Response;
@@ -112,6 +129,9 @@ export async function PUT(
         headers: {
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey,
+          ...(analyticsSessionId
+            ? { "Assistant-Analytics-Session-ID": analyticsSessionId }
+            : {}),
           "X-Correlation-ID": correlationId,
         },
         body: JSON.stringify({ value, reason }),

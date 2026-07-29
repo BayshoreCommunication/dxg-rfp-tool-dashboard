@@ -14,6 +14,10 @@ import {
   FilePenLine,
   Mail,
 } from "lucide-react";
+import {
+  markAssistantHandoffPending,
+  trackAssistantProductEvent,
+} from "@/lib/aiAssistant/analytics";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -175,6 +179,33 @@ export default function AssistantHandoffActions({
     if (carryDraft && userDraft && selectedId) {
       storeProposalHandoffDraft(selectedId, userDraft);
     }
+    if (assistantHref) beginProposalHandoff(assistantHref);
+    else onNavigate?.();
+  };
+
+  const beginProposalHandoff = (href: string) => {
+    const destinationPath = href.split("?", 1)[0] || href;
+    markAssistantHandoffPending({
+      threadId: message.threadId,
+      messageId: message.id,
+      routeCategory: "proposals",
+      destinationPath,
+    });
+    void trackAssistantProductEvent({
+      eventType: "proposal_handoff_started",
+      threadId: message.threadId,
+      messageId: message.id,
+      routeCategory: "proposals",
+    });
+    onNavigate?.();
+  };
+
+  const openInternalRoute = () => {
+    void trackAssistantProductEvent({
+      eventType: "internal_route_opened",
+      threadId: message.threadId,
+      messageId: message.id,
+    });
     onNavigate?.();
   };
 
@@ -215,7 +246,7 @@ export default function AssistantHandoffActions({
                   No active proposal is available.{" "}
                   <Link
                     href="/proposals/add-new-proposal"
-                    onClick={onNavigate}
+                    onClick={openInternalRoute}
                     className="font-semibold text-[#087f69] underline underline-offset-2"
                   >
                     Start a proposal
@@ -266,7 +297,7 @@ export default function AssistantHandoffActions({
                     {editorHref && (
                       <Link
                         href={editorHref}
-                        onClick={onNavigate}
+                        onClick={() => beginProposalHandoff(editorHref)}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-semibold text-slate-700 hover:border-[#00c2c9]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                       >
                         <FilePenLine size={12} aria-hidden />
@@ -276,7 +307,7 @@ export default function AssistantHandoffActions({
                     {selected?.canEmail && emailHref ? (
                       <Link
                         href={emailHref}
-                        onClick={onNavigate}
+                        onClick={() => beginProposalHandoff(emailHref)}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-semibold text-slate-700 hover:border-[#00c2c9]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                       >
                         <Mail size={12} aria-hidden />
@@ -309,7 +340,7 @@ export default function AssistantHandoffActions({
             <Link
               key={action.href}
               href={action.href}
-              onClick={onNavigate}
+              onClick={openInternalRoute}
               className="inline-flex items-center gap-1 rounded-lg border border-[#00c2c9]/25 bg-white px-2.5 py-1.5 font-semibold text-[#087f69] hover:border-[#00c2c9]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
             >
               {action.label}

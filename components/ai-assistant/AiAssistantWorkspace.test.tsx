@@ -13,6 +13,12 @@ import {
   listAssistantThreadsAction,
 } from "@/app/actions/aiAssistant";
 
+jest.mock("@/lib/aiAssistant/analytics", () => ({
+  assistantAnalyticsSessionId: () =>
+    "00000000-0000-4000-8000-000000000001",
+  trackAssistantProductEvent: jest.fn().mockResolvedValue(true),
+}));
+
 jest.mock("@/app/actions/aiAssistant", () => ({
   archiveAssistantThreadAction: jest.fn(),
   createAssistantThreadAction: jest.fn(),

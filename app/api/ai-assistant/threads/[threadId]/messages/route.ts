@@ -135,6 +135,12 @@ export async function POST(
     isRecord(payload) && payload.uiContext !== undefined
       ? normalizeAssistantUiContext(payload.uiContext)
       : null;
+  const analyticsSessionId =
+    isRecord(payload) &&
+    typeof payload.analyticsSessionId === "string" &&
+    threadIdPattern.test(payload.analyticsSessionId)
+      ? payload.analyticsSessionId.toLowerCase()
+      : null;
   if (!content) {
     return problem(
       422,
@@ -166,6 +172,17 @@ export async function POST(
       "The assistant page context is invalid.",
     );
   }
+  if (
+    isRecord(payload) &&
+    payload.analyticsSessionId !== undefined &&
+    !analyticsSessionId
+  ) {
+    return problem(
+      422,
+      "INVALID_ASSISTANT_ANALYTICS_SESSION",
+      "The assistant analytics session is invalid.",
+    );
+  }
 
   const correlationId = crypto.randomUUID();
   let upstream: Response;
@@ -179,6 +196,9 @@ export async function POST(
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey,
           "Assistant-Response-Idempotency-Key": responseIdempotencyKey,
+          ...(analyticsSessionId
+            ? { "Assistant-Analytics-Session-ID": analyticsSessionId }
+            : {}),
           "X-Correlation-ID": correlationId,
         },
         body: JSON.stringify({

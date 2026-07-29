@@ -19,6 +19,7 @@ import AssistantHandoffActions from "./AssistantHandoffActions";
 import AssistantFeedbackControls from "./AssistantFeedbackControls";
 import type { AssistantDisplayMessage } from "@/lib/aiAssistant/types";
 import { cn } from "@/lib/utils";
+import { trackAssistantProductEvent } from "@/lib/aiAssistant/analytics";
 
 const escapeMarkdownLabel = (value: string): string =>
   value.replace(/([\\[\]])/g, "\\$1");
@@ -178,7 +179,14 @@ export default function MessageBubble({
                       return safe.startsWith("/") ? (
                         <Link
                           href={safe}
-                          onClick={onNavigate}
+                          onClick={() => {
+                            void trackAssistantProductEvent({
+                              eventType: "internal_route_opened",
+                              threadId: message.threadId,
+                              messageId: message.id,
+                            });
+                            onNavigate?.();
+                          }}
                           className="font-semibold text-[#087f69] underline decoration-[#00c2c9]/40 underline-offset-2 hover:text-[#009da4]"
                         >
                           {children}
@@ -234,6 +242,8 @@ export default function MessageBubble({
             {!user && (
               <AssistantSources
                 citations={message.citations}
+                threadId={message.threadId}
+                messageId={message.id}
                 onNavigate={onNavigate}
               />
             )}

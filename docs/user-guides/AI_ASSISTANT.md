@@ -93,6 +93,12 @@ Feedback is reviewed as a quality signal. It never changes the Assistant's
 rules, knowledge, or answers automatically, and RFPilot does not store a
 second copy of your question or the response in the feedback record.
 
+RFPilot may record privacy-safe product events such as opening the helper,
+selecting a suggestion, completing a response, opening an approved link, or
+starting a proposal handoff. These events contain bounded categories,
+versions, outcomes, and timing—not your question, the response, proposal
+content, contact details, or client identifiers.
+
 ## Move the helper
 
 Drag the move control at the popup's upper-left to place the helper anywhere

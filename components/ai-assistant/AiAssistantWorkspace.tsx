@@ -18,6 +18,7 @@ import {
   assistantStarterPromptsForContext,
   type AssistantUiContext,
 } from "@/lib/aiAssistant/uiContext";
+import { trackAssistantProductEvent } from "@/lib/aiAssistant/analytics";
 
 export default function AiAssistantWorkspace({
   initialThreads,
@@ -54,6 +55,7 @@ export default function AiAssistantWorkspace({
   const { state } = assistant;
   const [historyOpen, setHistoryOpen] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const suggestionShownRef = useRef<string | null>(null);
   const activeThreads = state.threads.filter(
     (thread) => thread.status === "active",
   );
@@ -114,6 +116,32 @@ export default function AiAssistantWorkspace({
   const embeddedPresentation = presentation !== "page";
   const popupPresentation = presentation === "popup";
   const starterPrompts = assistantStarterPromptsForContext(uiContext);
+  useEffect(() => {
+    if (hasConversation || starterPrompts.length === 0) return;
+    const key = `${state.selectedThreadId || "new"}:${uiContext.routeCategory}`;
+    if (suggestionShownRef.current === key) return;
+    suggestionShownRef.current = key;
+    void trackAssistantProductEvent({
+      eventType: "suggestion_shown",
+      threadId: state.selectedThreadId,
+      routeCategory: uiContext.routeCategory,
+    });
+  }, [
+    hasConversation,
+    starterPrompts.length,
+    state.selectedThreadId,
+    uiContext.routeCategory,
+  ]);
+
+  const selectSuggestion = (prompt: string) => {
+    void trackAssistantProductEvent({
+      eventType: "suggestion_selected",
+      threadId: state.selectedThreadId,
+      routeCategory: uiContext.routeCategory,
+    });
+    assistant.setDraft(prompt);
+    window.requestAnimationFrame(() => composerRef.current?.focus());
+  };
   const popupComposerDock = (
     <div
       data-testid="assistant-composer-dock"
@@ -202,12 +230,7 @@ export default function AiAssistantWorkspace({
                     compact
                     showSuggestions
                     suggestions={starterPrompts}
-                    onSuggestion={(prompt) => {
-                      assistant.setDraft(prompt);
-                      window.requestAnimationFrame(() =>
-                        composerRef.current?.focus(),
-                      );
-                    }}
+                    onSuggestion={selectSuggestion}
                   />
                 </div>
                 {popupComposerDock}
@@ -216,12 +239,7 @@ export default function AiAssistantWorkspace({
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <AssistantEmptyState
                   suggestions={starterPrompts}
-                  onSuggestion={(prompt) => {
-                    assistant.setDraft(prompt);
-                    window.requestAnimationFrame(() =>
-                      composerRef.current?.focus(),
-                    );
-                  }}
+                  onSuggestion={selectSuggestion}
                 >
                   {state.error && (
                     <div className="mb-3 text-left">

@@ -23,6 +23,7 @@ import type {
 import AiAssistantWorkspace from "./AiAssistantWorkspace";
 import useDraggablePopup from "./useDraggablePopup";
 import useAssistantUiContext from "./useAssistantUiContext";
+import { trackAssistantProductEvent } from "@/lib/aiAssistant/analytics";
 
 type BootstrapState =
   | { status: "idle" }
@@ -56,6 +57,7 @@ export default function AssistantPopup({
   onOpenChange: (open: boolean) => void;
 }) {
   const popupRef = useRef<HTMLElement | null>(null);
+  const openedTrackedRef = useRef(false);
   const uiContext = useAssistantUiContext();
   const [bootstrap, setBootstrap] = useState<BootstrapState>({
     status: "idle",
@@ -136,6 +138,20 @@ export default function AssistantPopup({
     }, 220);
     return () => window.clearTimeout(timer);
   }, [bootstrap.status, open]);
+
+  useEffect(() => {
+    if (!open) {
+      openedTrackedRef.current = false;
+      return;
+    }
+    if (bootstrap.status !== "ready" || openedTrackedRef.current) return;
+    openedTrackedRef.current = true;
+    void trackAssistantProductEvent({
+      eventType: "assistant_opened",
+      threadId: bootstrap.detail?.thread.id ?? null,
+      routeCategory: uiContext.routeCategory,
+    });
+  }, [bootstrap, open, uiContext.routeCategory]);
 
   return (
     <section

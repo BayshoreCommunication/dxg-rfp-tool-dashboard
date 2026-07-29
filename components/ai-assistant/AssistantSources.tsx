@@ -1,6 +1,7 @@
 import { BookOpen, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { AssistantCitation } from "@/lib/aiAssistant/types";
+import { trackAssistantProductEvent } from "@/lib/aiAssistant/analytics";
 
 export const safeAssistantHref = (href: string | undefined): string | null => {
   if (!href) return null;
@@ -21,9 +22,13 @@ export const safeAssistantHref = (href: string | undefined): string | null => {
 
 export default function AssistantSources({
   citations,
+  threadId,
+  messageId,
   onNavigate,
 }: {
   citations: AssistantCitation[];
+  threadId: string;
+  messageId: string;
   onNavigate?: () => void;
 }) {
   if (citations.length === 0) return null;
@@ -44,13 +49,21 @@ export default function AssistantSources({
               )}
             </>
           );
+          const opened = () => {
+            void trackAssistantProductEvent({
+              eventType: "citation_opened",
+              threadId,
+              messageId,
+            });
+            if (href?.startsWith("/")) onNavigate?.();
+          };
           return (
             <li key={`${citation.sourceId}:${citation.fragmentId || ""}`}>
               {href ? (
                 href.startsWith("/") ? (
                   <Link
                     href={href}
-                    onClick={onNavigate}
+                    onClick={opened}
                     className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                   >
                     {content}
@@ -60,6 +73,7 @@ export default function AssistantSources({
                     href={href}
                     target="_blank"
                     rel="noreferrer noopener"
+                    onClick={opened}
                     className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                   >
                     {content}

@@ -18,6 +18,10 @@ import {
 } from "@/lib/aiAssistant/types";
 import type { AssistantUiContext } from "@/lib/aiAssistant/uiContext";
 import {
+  assistantAnalyticsSessionId,
+  trackAssistantProductEvent,
+} from "@/lib/aiAssistant/analytics";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -731,6 +735,7 @@ export function useAiAssistant({
               idempotencyKey: pending.userIdempotencyKey,
               responseIdempotencyKey:
                 pending.responseIdempotencyKey,
+              analyticsSessionId: assistantAnalyticsSessionId(),
               uiContext: pending.uiContext,
             }),
             cache: "no-store",
@@ -821,6 +826,21 @@ export function useAiAssistant({
       return;
     }
     const explicitRetry = current.accepted;
+    const latestAssistant = [...stateRef.current.messages]
+      .reverse()
+      .find((message) => message.role === "assistant");
+    void trackAssistantProductEvent({
+      eventType: "response_retried",
+      threadId: current.threadId,
+      messageId:
+        latestAssistant &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          latestAssistant.id,
+        )
+          ? latestAssistant.id
+          : null,
+      routeCategory: current.uiContext.routeCategory,
+    });
     const pending = explicitRetry
       ? {
           ...current,

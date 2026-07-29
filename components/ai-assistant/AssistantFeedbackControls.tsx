@@ -12,6 +12,7 @@ import {
 import { Check, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { assistantAnalyticsSessionId } from "@/lib/aiAssistant/analytics";
 
 const reasonLabels: Record<AssistantFeedbackReason, string> = {
   incorrect: "Incorrect",
@@ -77,6 +78,7 @@ export default function AssistantFeedbackControls({
             value,
             reason,
             idempotencyKey: pending.idempotencyKey,
+            analyticsSessionId: assistantAnalyticsSessionId(),
           }),
         },
       );
