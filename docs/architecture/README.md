@@ -47,6 +47,40 @@ the legacy scalar schedule fields and peak function attendance is mirrored into
 functions as `room.scheduleEntries`.
 
 Assistant conversation messages can expose two allowlisted room-schedule
-actions: download the header-only workbook and open the existing proposal
-directly on Room Specifications. The dashboard renders only recognized action
-ids; the assistant cannot supply arbitrary URLs or execute an upload.
+actions: download the sample workbook and open the existing proposal directly
+on Room Specifications. The dashboard renders only recognized action ids; the
+assistant cannot supply arbitrary URLs or execute an upload.
+
+Spreadsheet import reads the first sheet carrying room and function columns
+rather than the leftmost sheet, because the shipped workbook also holds pivot,
+virtual-schedule and room tabs. That workbook ships with example rows, two of
+which share a Room Name so the multi-function grouping is demonstrated rather
+than only described.
+
+## Schedule times are venue wall-clock
+
+Schedule cells mean the time at the venue. Building a `Date` from those parts
+anchors them to the browser's zone, so a schedule uploaded from outside the
+venue's zone stored the wrong instant and the generated RFP quoted vendors the
+wrong times. `ProposalsProcess.tsx/eventTimeZone.ts` converts wall clock to and
+from the event's zone with DST resolved at the instant in question, the schedule
+pickers render back in that zone, and an unknown zone keeps the previous
+machine-local behaviour. Backend draft evidence performs the matching conversion
+before the model sees a time.
+
+## Draft persistence
+
+Saved drafts autosave a debounced snapshot as the planner works, with a status
+line and an unsaved-changes warning on unload; the previous model held every
+step in memory behind a single save on page 9. Autosave is confined to
+`status: "unsubmitted"` proposals so a background write can never alter what
+vendors already see — a published proposal still requires an explicit
+`Update RFP`. Explicit saves record the snapshot so the two paths cannot fight.
+
+## Evaluation weightings
+
+The weighting matrix ships pre-populated and vendors are scored against it, so
+the defaults are a suggestion until accepted. `budget.evaluationMatrixConfirmed`
+gates both the published RFP table and the backend's draft evidence; adjusting
+any weight counts as accepting. Unconfirmed, the RFP states that scoring
+criteria are not finalised rather than printing numbers nobody chose.
