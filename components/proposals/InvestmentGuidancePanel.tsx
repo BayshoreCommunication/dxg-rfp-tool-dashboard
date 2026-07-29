@@ -45,6 +45,20 @@ const confidencePresentation: Record<
   medium: { label: "Medium", chip: "bg-amber-100 text-amber-800" },
   low: { label: "Low", chip: "bg-rose-100 text-rose-800" },
 };
+const analysisStatus = {
+  exact_approved_value: {
+    label: "Exact approved value",
+    tone: "bg-emerald-100 text-emerald-800",
+  },
+  estimate_range: {
+    label: "Approved estimate range",
+    tone: "bg-cyan-100 text-cyan-800",
+  },
+  incomplete: {
+    label: "Incomplete estimate",
+    tone: "bg-amber-100 text-amber-800",
+  },
+} as const;
 
 const budgetTiers: Record<string, { label: string; low: number | null; high: number | null }> = {
   Essential: { label: "Essential · $10K–$25K", low: 1_000_000, high: 2_500_000 },
@@ -426,7 +440,10 @@ export default function InvestmentGuidancePanel({
   const basisLine = report?.basis ? basisSummary(report.basis) : "";
   const selectedBudget = estimatedAvBudget ? budgetTiers[estimatedAvBudget] : undefined;
   const budgetComparison =
-    report && selectedBudget?.low !== null && selectedBudget?.low !== undefined
+    report &&
+    !report.budgetAnalysis &&
+    selectedBudget?.low !== null &&
+    selectedBudget?.low !== undefined
       ? report.totalHighMinor !== null && report.totalHighMinor < selectedBudget.low
         ? "The current scope estimate is below the selected planning budget. This usually means important room, venue, labor, or production details are still missing."
         : selectedBudget.high !== null &&
@@ -501,6 +518,32 @@ export default function InvestmentGuidancePanel({
             />
           )}
 
+          {report.budgetAnalysis && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span
+                  className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                    analysisStatus[report.budgetAnalysis.status].tone
+                  }`}
+                >
+                  {analysisStatus[report.budgetAnalysis.status].label}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {report.budgetAnalysis.included.length} included ·{" "}
+                  {report.budgetAnalysis.missing.length} missing ·{" "}
+                  {report.budgetAnalysis.needsConfirmation.length} to confirm
+                </span>
+              </div>
+              {report.budgetAnalysis.status === "incomplete" && (
+                <p className="mt-2 text-sm text-slate-600">
+                  The calculated range excludes unavailable or unconfirmed
+                  components. No complete total is shown until those inputs
+                  have approved rates.
+                </p>
+              )}
+            </div>
+          )}
+
           {selectedBudget && (
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-cyan-800">
@@ -539,6 +582,167 @@ export default function InvestmentGuidancePanel({
               pricingBasis={basisLine}
             />
           )}
+
+          {report.budgetAnalysis?.warnings.length ? (
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900">
+                Budget checks ({report.budgetAnalysis.warnings.length})
+              </h4>
+              <ul className="mt-2 space-y-2">
+                {report.budgetAnalysis.warnings.map((warning) => (
+                  <li
+                    key={warning.code}
+                    className={`rounded-lg border p-3 ${
+                      warning.severity === "blocking"
+                        ? "border-red-200 bg-red-50"
+                        : "border-amber-200 bg-amber-50"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-slate-900">
+                      {warning.explanation}
+                    </p>
+                    {warning.estimatedImpact && (
+                      <p className="mt-1 text-xs font-medium text-slate-700">
+                        Estimated impact:{" "}
+                        {money(
+                          warning.estimatedImpact.lowMinor,
+                          warning.estimatedImpact.currency,
+                        )}{" "}
+                        –{" "}
+                        {money(
+                          warning.estimatedImpact.highMinor,
+                          warning.estimatedImpact.currency,
+                        )}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-slate-600">
+                      {warning.suggestedNextAction}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {report.budgetAnalysis && (
+            <Disclosure
+              title="Deterministic breakdown"
+              summary="Category, room, labor, equipment, and shared services"
+            >
+              <div className="grid gap-2 sm:grid-cols-3">
+                {[
+                  {
+                    label: "Equipment",
+                    amount: report.budgetAnalysis.equipmentSubtotal,
+                  },
+                  {
+                    label: "Labor",
+                    amount: report.budgetAnalysis.laborSubtotal,
+                  },
+                  {
+                    label: "Shared services",
+                    amount: report.budgetAnalysis.sharedServicesSubtotal,
+                  },
+                ].map(({ label, amount }) => (
+                    <div
+                      key={label}
+                      className="rounded-lg border border-slate-200 bg-white p-3"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {label}
+                      </p>
+                      <p className="mt-1 text-base font-bold text-slate-900">
+                        {money(
+                          amount?.midMinor,
+                          amount?.currency ?? report.currency,
+                        )}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+              {report.budgetAnalysis.categoryBreakdown.length > 0 && (
+                <div className="mt-4">
+                  <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Categories
+                  </h5>
+                  <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {report.budgetAnalysis.categoryBreakdown.map((item) => (
+                      <li
+                        key={item.category}
+                        className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-slate-200"
+                      >
+                        <span className="capitalize text-slate-700">
+                          {item.category.replaceAll("_", " ")}
+                        </span>
+                        <span className="font-semibold tabular-nums text-slate-900">
+                          {money(item.amount.midMinor, item.amount.currency)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {report.budgetAnalysis.roomBreakdown.length > 0 && (
+                <div className="mt-4">
+                  <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Rooms
+                  </h5>
+                  <ul className="mt-2 space-y-2">
+                    {report.budgetAnalysis.roomBreakdown.map((room) => (
+                      <li
+                        key={room.roomKey}
+                        className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200"
+                      >
+                        <div className="flex justify-between gap-3 text-sm">
+                          <span className="font-medium text-slate-800">
+                            {room.roomLabel}
+                          </span>
+                          <span className="font-semibold tabular-nums text-slate-900">
+                            {money(
+                              room.amount?.midMinor,
+                              room.amount?.currency ?? report.currency,
+                            )}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {room.allocationBasis}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Disclosure>
+          )}
+
+          {report.budgetAnalysis?.possibleSavings.length ? (
+            <Disclosure
+              title={`Possible savings (${report.budgetAnalysis.possibleSavings.length})`}
+              summary="Validate before changing scope"
+            >
+              <ul className="space-y-2">
+                {report.budgetAnalysis.possibleSavings.map((saving) => (
+                  <li
+                    key={saving.key}
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 p-3"
+                  >
+                    <p className="text-sm font-semibold text-emerald-900">
+                      {saving.label}
+                    </p>
+                    <p className="mt-1 text-xs text-emerald-800">
+                      {saving.reason}
+                    </p>
+                    {!saving.estimatedImpact && (
+                      <p className="mt-1 text-xs text-slate-600">
+                        Savings are not calculated until a supported allocation
+                        and approved rate are available.
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Disclosure>
+          ) : null}
 
           {report.scenarios.length > 0 && (
             <Disclosure title={`Scenarios (${report.scenarios.length})`} summary="Compare alternative labor and provider models">
@@ -693,7 +897,16 @@ export default function InvestmentGuidancePanel({
           <p className="border-t border-slate-100 pt-3 text-xs text-slate-500">
             Calculation trace available for each line item. Confidence,
             assumptions, and missing inputs determine whether this range is
-            suitable for quoting. Updated{" "}
+            suitable for quoting.
+            {report.budgetAnalysis && (
+              <>
+                {" "}
+                Calculation {report.budgetAnalysis.calculationVersion} · pricing{" "}
+                {report.budgetAnalysis.pricingReleaseVersion} · rules{" "}
+                {report.budgetAnalysis.ruleReleaseVersion}.
+              </>
+            )}{" "}
+            Updated{" "}
             {report.createdAt ? new Date(report.createdAt).toLocaleString() : ""}
           </p>
         </div>

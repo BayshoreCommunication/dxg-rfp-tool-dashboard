@@ -91,6 +91,60 @@ export type InvestmentBasis = {
   days: number;
   showDayEquipmentBasis: string;
 };
+export type InvestmentMoneyRange = {
+  currency: string;
+  lowMinor: number;
+  midMinor: number;
+  highMinor: number;
+};
+export type InvestmentBudgetAnalysis = {
+  calculationVersion: string;
+  pricingReleaseVersion: string;
+  ruleReleaseVersion: string;
+  status: "exact_approved_value" | "estimate_range" | "incomplete";
+  currency: string | null;
+  included: Array<{ key: string; label: string; source: string }>;
+  missing: Array<{ key: string; label: string; reason: string }>;
+  needsConfirmation: Array<{ key: string; label: string; reason: string }>;
+  optional: Array<{ key: string; label: string; reason: string }>;
+  possibleSavings: Array<{
+    key: string;
+    label: string;
+    reason: string;
+    estimatedImpact: InvestmentMoneyRange | null;
+  }>;
+  categoryBreakdown: Array<{
+    category: string;
+    amount: InvestmentMoneyRange;
+  }>;
+  roomBreakdown: Array<{
+    roomKey: string;
+    roomLabel: string;
+    status: "allocated_range" | "not_allocated";
+    amount: InvestmentMoneyRange | null;
+    allocationBasis: string;
+  }>;
+  laborSubtotal: InvestmentMoneyRange | null;
+  equipmentSubtotal: InvestmentMoneyRange | null;
+  sharedServicesSubtotal: InvestmentMoneyRange | null;
+  estimatedAncillarySubtotal: InvestmentMoneyRange | null;
+  calculatedTotal: InvestmentMoneyRange | null;
+  completeTotal: InvestmentMoneyRange | null;
+  budgetCeiling: {
+    amountMinor: number;
+    currency: string;
+    source: "explicit_amount" | "planning_band";
+    label: string;
+  } | null;
+  warnings: Array<{
+    code: string;
+    severity: "blocking" | "warning" | "info";
+    explanation: string;
+    suggestedNextAction: string;
+    paths: string[];
+    estimatedImpact: InvestmentMoneyRange | null;
+  }>;
+};
 export type InvestmentReport = {
   id: string;
   proposalVersion: number;
@@ -108,6 +162,10 @@ export type InvestmentReport = {
   assumptions: InvestmentAssumption[];
   scenarios: InvestmentScenario[];
   basis: InvestmentBasis | null;
+  calculationVersion: string;
+  pricingReleaseVersion: string;
+  ruleReleaseVersion: string;
+  budgetAnalysis: InvestmentBudgetAnalysis | null;
   createdAt: string;
 };
 
@@ -177,6 +235,134 @@ const parseBasis = (value: unknown): InvestmentBasis | null => {
     multiDayFactor: asFactor(value.multiDayFactor),
     days: days !== null && days > 0 ? Math.round(days) : 1,
     showDayEquipmentBasis: text(value.showDayEquipmentBasis),
+  };
+};
+
+const parseMoneyRange = (value: unknown): InvestmentMoneyRange | null => {
+  if (!isRecord(value) || typeof value.currency !== "string") return null;
+  const lowMinor = asMinor(value.lowMinor);
+  const midMinor = asMinor(value.midMinor);
+  const highMinor = asMinor(value.highMinor);
+  return lowMinor !== null && midMinor !== null && highMinor !== null
+    ? { currency: value.currency, lowMinor, midMinor, highMinor }
+    : null;
+};
+
+const parseBudgetAnalysis = (
+  value: unknown,
+): InvestmentBudgetAnalysis | null => {
+  if (!isRecord(value) || typeof value.calculationVersion !== "string")
+    return null;
+  const status = [
+    "exact_approved_value",
+    "estimate_range",
+    "incomplete",
+  ].includes(String(value.status))
+    ? (value.status as InvestmentBudgetAnalysis["status"])
+    : "incomplete";
+  const labeled = (
+    source: unknown,
+    reasonKey: "source" | "reason",
+  ): Array<{ key: string; label: string; source?: string; reason?: string }> =>
+    rows(source, (item) =>
+      typeof item.label === "string"
+        ? {
+            key: String(item.key ?? ""),
+            label: item.label,
+            [reasonKey]: text(item[reasonKey]),
+          }
+        : null,
+    );
+  const budgetCeiling = isRecord(value.budgetCeiling)
+    ? {
+        amountMinor: asMinor(value.budgetCeiling.amountMinor) ?? 0,
+        currency: text(value.budgetCeiling.currency),
+        source:
+          value.budgetCeiling.source === "explicit_amount"
+            ? ("explicit_amount" as const)
+            : ("planning_band" as const),
+        label: text(value.budgetCeiling.label),
+      }
+    : null;
+  return {
+    calculationVersion: value.calculationVersion,
+    pricingReleaseVersion: text(value.pricingReleaseVersion),
+    ruleReleaseVersion: text(value.ruleReleaseVersion),
+    status,
+    currency: typeof value.currency === "string" ? value.currency : null,
+    included: labeled(value.included, "source").map((item) => ({
+      key: item.key,
+      label: item.label,
+      source: item.source ?? "",
+    })),
+    missing: labeled(value.missing, "reason").map((item) => ({
+      key: item.key,
+      label: item.label,
+      reason: item.reason ?? "",
+    })),
+    needsConfirmation: labeled(value.needsConfirmation, "reason").map(
+      (item) => ({
+        key: item.key,
+        label: item.label,
+        reason: item.reason ?? "",
+      }),
+    ),
+    optional: labeled(value.optional, "reason").map((item) => ({
+      key: item.key,
+      label: item.label,
+      reason: item.reason ?? "",
+    })),
+    possibleSavings: rows(value.possibleSavings, (item) =>
+      typeof item.label === "string"
+        ? {
+            key: String(item.key ?? ""),
+            label: item.label,
+            reason: text(item.reason),
+            estimatedImpact: parseMoneyRange(item.estimatedImpact),
+          }
+        : null,
+    ),
+    categoryBreakdown: rows(value.categoryBreakdown, (item) => {
+      const amount = parseMoneyRange(item.amount);
+      return typeof item.category === "string" && amount
+        ? { category: item.category, amount }
+        : null;
+    }),
+    roomBreakdown: rows(value.roomBreakdown, (item) => ({
+      roomKey: String(item.roomKey ?? ""),
+      roomLabel: String(item.roomLabel || "Room"),
+      status:
+        item.status === "allocated_range"
+          ? ("allocated_range" as const)
+          : ("not_allocated" as const),
+      amount: parseMoneyRange(item.amount),
+      allocationBasis: text(item.allocationBasis),
+    })),
+    laborSubtotal: parseMoneyRange(value.laborSubtotal),
+    equipmentSubtotal: parseMoneyRange(value.equipmentSubtotal),
+    sharedServicesSubtotal: parseMoneyRange(value.sharedServicesSubtotal),
+    estimatedAncillarySubtotal: parseMoneyRange(
+      value.estimatedAncillarySubtotal,
+    ),
+    calculatedTotal: parseMoneyRange(value.calculatedTotal),
+    completeTotal: parseMoneyRange(value.completeTotal),
+    budgetCeiling,
+    warnings: rows(value.warnings, (item) =>
+      typeof item.explanation === "string"
+        ? {
+            code: String(item.code ?? ""),
+            severity: ["blocking", "warning", "info"].includes(
+              String(item.severity),
+            )
+              ? (item.severity as "blocking" | "warning" | "info")
+              : ("info" as const),
+            explanation: item.explanation,
+            suggestedNextAction: text(item.suggestedNextAction),
+            paths: strings(item.paths),
+            estimatedImpact: parseMoneyRange(item.estimatedImpact),
+          }
+        : null,
+    ),
   };
 };
 
@@ -273,6 +459,10 @@ const normalize = (raw: unknown): InvestmentReport | null => {
       };
     }),
     basis: parseBasis(raw.basis),
+    calculationVersion: text(raw.calculationVersion),
+    pricingReleaseVersion: text(raw.pricingReleaseVersion),
+    ruleReleaseVersion: text(raw.ruleReleaseVersion),
+    budgetAnalysis: parseBudgetAnalysis(raw.budgetAnalysis),
     createdAt: String(raw.createdAt ?? ""),
   };
 };

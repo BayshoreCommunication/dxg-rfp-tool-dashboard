@@ -172,6 +172,46 @@ describe("investment guidance normalizer", () => {
     });
   });
 
+  test("budget analysis preserves only validated ranges and release metadata", async () => {
+    const report = await load({
+      ...baseReport,
+      calculationVersion: "deterministic-budget.v1",
+      pricingReleaseVersion: "approved-pricing.v1:abc",
+      ruleReleaseVersion: "approved-rules.v1:def",
+      budgetAnalysis: {
+        calculationVersion: "deterministic-budget.v1",
+        pricingReleaseVersion: "approved-pricing.v1:abc",
+        ruleReleaseVersion: "approved-rules.v1:def",
+        status: "incomplete",
+        currency: "USD",
+        included: [{ key: "audio", label: "Audio", source: "approved_pricing_record" }],
+        missing: [{ key: "tax", label: "Tax", reason: "No approved rate." }],
+        needsConfirmation: [],
+        optional: [],
+        possibleSavings: [
+          {
+            key: "reuse",
+            label: "Reuse",
+            reason: "Validate it.",
+            estimatedImpact: { currency: "USD", lowMinor: 1, midMinor: 2 },
+          },
+        ],
+        categoryBreakdown: [
+          {
+            category: "audio",
+            amount: { currency: "USD", lowMinor: 1, midMinor: 2, highMinor: 3 },
+          },
+        ],
+        roomBreakdown: [],
+        warnings: [],
+      },
+    });
+    expect(report.budgetAnalysis?.status).toBe("incomplete");
+    expect(report.budgetAnalysis?.categoryBreakdown[0].amount.highMinor).toBe(3);
+    expect(report.budgetAnalysis?.possibleSavings[0].estimatedImpact).toBeNull();
+    expect(report.pricingReleaseVersion).toBe("approved-pricing.v1:abc");
+  });
+
   test("wholly unexpected shapes never throw", async () => {
     respondWith("not an object");
     const result = await getLatestInvestmentGuidanceAction("507f1f77bcf86cd799439011");

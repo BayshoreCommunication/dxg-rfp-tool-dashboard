@@ -34,6 +34,9 @@ const report: GuidanceReport = {
       category: "production",
       message: "Power drops are required but the count is not specified.",
       paths: ["/content/venue/numberOfPowerDrops"],
+      scopeCategory: "needs_confirmation",
+      scopeSeverity: "needs_venue_confirmation",
+      question: "How many power drops can the venue support?",
     },
     {
       code: "EVENT_DATES_REVERSED",
@@ -43,6 +46,42 @@ const report: GuidanceReport = {
       paths: ["/content/event/startDate", "/content/event/endDate"],
     },
   ],
+  roomSchedule: {
+    version: "room-schedule-analysis.v1",
+    roomCount: 2,
+    confidence: "medium",
+    rooms: [
+      {
+        roomKey: "main",
+        roomLabel: "General Session",
+        showStartAt: "2026-10-01T09:00:00.000Z",
+        showEndAt: "2026-10-01T10:00:00.000Z",
+        findingCount: 1,
+        confidence: "high",
+      },
+      {
+        roomKey: "breakout",
+        roomLabel: "Breakout",
+        showStartAt: null,
+        showEndAt: null,
+        findingCount: 1,
+        confidence: "low",
+      },
+    ],
+    roomLevelGapIds: ["gap-1"],
+    scheduleConflictIds: ["schedule-1"],
+    crewConflictIds: ["crew-1"],
+    reusableEquipmentOpportunityIds: ["reuse-1"],
+    duplicateRentalIds: ["reuse-1"],
+    missingInputIds: ["missing-1"],
+    roomSubtotals: [],
+    sharedServicesSubtotal: {
+      status: "pricing_not_evaluated",
+      amountMinor: null,
+      currency: null,
+      reason: "Authoritative pricing is calculated separately.",
+    },
+  },
   findingCount: 2,
   blockingCount: 1,
   createdAt: "2026-07-21T10:00:00.000Z",
@@ -115,5 +154,45 @@ describe("GuidancePanel", () => {
       screen.getByRole("button", { name: "Fix in Venue & Technical" }),
     );
     expect(onNavigateToStep).toHaveBeenCalledWith(7);
+    expect(screen.getByText("Needs Venue Confirmation")).toBeInTheDocument();
+    expect(
+      screen.getByText("How many power drops can the venue support?"),
+    ).toBeInTheDocument();
+  });
+
+  test("shows the bounded proposal summary, next action, and stale warning", async () => {
+    mockedLatest.mockResolvedValue({
+      success: true,
+      data: {
+        ...report,
+        currentProposalVersion: 4,
+        stale: true,
+        analysisVersion: "proposal-analysis.v2",
+        summary: {
+          eventName: "Leadership Summit",
+          eventFormat: "Hybrid",
+          dateRange: "2026-10-01 to 2026-10-03",
+          attendeeCount: 1500,
+          roomCount: 6,
+        },
+        findings: report.findings.map((finding) => ({
+          ...finding,
+          suggestedNextStep: "Correct the event date range before pricing.",
+        })),
+      },
+    });
+    render(<GuidancePanel proposalId={proposalId} />);
+
+    expect(await screen.findByText("Leadership Summit")).toBeInTheDocument();
+    expect(screen.getByText("1,500 attendees")).toBeInTheDocument();
+    expect(
+      screen.getByText(/proposal is now version 4/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Correct the event date range before pricing.").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("2 rooms analyzed")).toBeInTheDocument();
+    expect(screen.getByText("2 conflicts")).toBeInTheDocument();
+    expect(screen.getByText("1 reuse opportunity")).toBeInTheDocument();
   });
 });

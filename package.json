@@ -9,6 +9,7 @@
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "test": "jest --passWithNoTests",
+    "test:e2e": "playwright test",
     "test:watch": "jest --watch",
     "contracts:generate": "node scripts/generateContracts.mjs",
     "contracts:check": "node scripts/generateContracts.mjs --check",
@@ -27,11 +28,15 @@
     "react": "19.2.3",
     "react-datepicker": "^9.1.0",
     "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
     "react-toastify": "^11.0.5",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.62.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

@@ -1,0 +1,35 @@
+import { render, screen } from "@testing-library/react";
+import DashboardTableList, {
+  formatDashboardDate,
+} from "./DashboardTableList";
+
+describe("DashboardTableList", () => {
+  test("formats proposal dates identically in every runtime locale", () => {
+    expect(formatDashboardDate("2026-07-27T00:00:00.000Z")).toBe(
+      "27/07/2026",
+    );
+    expect(formatDashboardDate("2026-07-27T23:30:00-05:00")).toBe(
+      "28/07/2026",
+    );
+    expect(formatDashboardDate("not-a-date")).toBe("-");
+    expect(formatDashboardDate()).toBe("-");
+  });
+
+  test("renders the deterministic date in the proposal row", () => {
+    render(
+      <DashboardTableList
+        proposals={[
+          {
+            _id: "proposal-1",
+            status: "unsubmitted",
+            isDraft: true,
+            createdAt: "2026-07-27T00:00:00.000Z",
+            event: { eventName: "Annual Summit" },
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("27/07/2026")).toBeInTheDocument();
+  });
+});

@@ -1,0 +1,370 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import type {
+  AssistantThread,
+  AssistantThreadDetail,
+  AssistantUiError,
+} from "@/lib/aiAssistant/types";
+import AssistantEmptyState from "./AssistantEmptyState";
+import AssistantFloatingControls from "./AssistantFloatingControls";
+import AssistantHeader from "./AssistantHeader";
+import AssistantHistory from "./AssistantHistory";
+import ChatComposer from "./ChatComposer";
+import ConversationError from "./ConversationError";
+import MessageList from "./MessageList";
+import { useAiAssistant } from "./useAiAssistant";
+import {
+  assistantStarterPromptsForContext,
+  type AssistantUiContext,
+} from "@/lib/aiAssistant/uiContext";
+import { trackAssistantProductEvent } from "@/lib/aiAssistant/analytics";
+
+export default function AiAssistantWorkspace({
+  initialThreads,
+  initialDetail,
+  initialError = null,
+  presentation = "page",
+  onClose,
+  onResetPosition,
+  onResetSize,
+  positionModified = false,
+  sizeModified = false,
+  uiContext = {
+    schemaVersion: "assistant-ui-context.v1",
+    routeCategory: "other",
+  },
+}: {
+  initialThreads: AssistantThread[];
+  initialDetail: AssistantThreadDetail | null;
+  initialError?: AssistantUiError | null;
+  presentation?: "page" | "dialog" | "popup";
+  onClose?: () => void;
+  onResetPosition?: () => void;
+  onResetSize?: () => void;
+  positionModified?: boolean;
+  sizeModified?: boolean;
+  uiContext?: AssistantUiContext;
+}) {
+  const assistant = useAiAssistant({
+    initialThreads,
+    initialDetail,
+    initialError,
+    uiContext,
+  });
+  const { refreshThreads, state } = assistant;
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const suggestionShownRef = useRef<string | null>(null);
+  const activeThreads = state.threads.filter(
+    (thread) => thread.status === "active" && !thread.deletedAt,
+  );
+  const historyAvailable =
+    activeThreads.length > 0 ||
+    state.threads.some((thread) => Boolean(thread.deletedAt));
+  const selectedThread = state.threads.find(
+    (thread) => thread.id === state.selectedThreadId,
+  );
+  const loading = state.conversationStatus === "loading";
+  const hasConversation =
+    loading ||
+    state.messages.length > 0 ||
+    Boolean(state.streamingAssistant) ||
+    state.conversationStatus === "sending" ||
+    state.conversationStatus === "streaming";
+
+  useEffect(() => {
+    if (state.conversationStatus === "sending") {
+      composerRef.current?.focus();
+    }
+  }, [state.conversationStatus]);
+
+  useEffect(() => {
+    void refreshThreads();
+  }, [refreshThreads]);
+
+  const selectThread = (threadId: string) => {
+    setHistoryOpen(false);
+    void assistant.selectThread(threadId);
+    window.requestAnimationFrame(() => composerRef.current?.focus());
+  };
+
+  const newChat = () => {
+    setHistoryOpen(false);
+    assistant.newChat();
+    window.requestAnimationFrame(() => composerRef.current?.focus());
+  };
+
+  const retry = () => {
+    if (state.pendingRequest) {
+      void assistant.retry();
+    } else if (state.selectedThreadId) {
+      void assistant.selectThread(state.selectedThreadId);
+    } else {
+      void refreshThreads();
+    }
+    window.requestAnimationFrame(() => composerRef.current?.focus());
+  };
+
+  const closeHistory = useCallback(() => {
+    setHistoryOpen(false);
+    window.requestAnimationFrame(() => {
+      (
+        document.getElementById("ai-assistant-options") ??
+        document.getElementById("ai-assistant-history-trigger")
+      )?.focus();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!historyOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(
+          '[data-assistant-history="open"] [data-history-close="true"]',
+        )
+        ?.focus();
+    });
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeHistory();
+    };
+    window.addEventListener("keydown", closeWithEscape);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", closeWithEscape);
+    };
+  }, [closeHistory, historyOpen]);
+
+  const composer = (
+    <ChatComposer
+      value={state.draft}
+      busy={assistant.busy}
+      canSend={assistant.canSend}
+      retryAfterSeconds={assistant.retryAfterSeconds}
+      textareaRef={composerRef}
+      onChange={assistant.setDraft}
+      onSend={() => void assistant.send()}
+      onAbort={assistant.abort}
+      compact={hasConversation || presentation === "popup"}
+      showKeyboardHint={presentation !== "popup"}
+    />
+  );
+  const embeddedPresentation = presentation !== "page";
+  const popupPresentation = presentation === "popup";
+  const starterPrompts = assistantStarterPromptsForContext(uiContext);
+  useEffect(() => {
+    if (hasConversation || starterPrompts.length === 0) return;
+    const key = `${state.selectedThreadId || "new"}:${uiContext.routeCategory}`;
+    if (suggestionShownRef.current === key) return;
+    suggestionShownRef.current = key;
+    void trackAssistantProductEvent({
+      eventType: "suggestion_shown",
+      threadId: state.selectedThreadId,
+      routeCategory: uiContext.routeCategory,
+    });
+  }, [
+    hasConversation,
+    starterPrompts.length,
+    state.selectedThreadId,
+    uiContext.routeCategory,
+  ]);
+
+  const selectSuggestion = (prompt: string) => {
+    void trackAssistantProductEvent({
+      eventType: "suggestion_selected",
+      threadId: state.selectedThreadId,
+      routeCategory: uiContext.routeCategory,
+    });
+    assistant.setDraft(prompt);
+    window.requestAnimationFrame(() => composerRef.current?.focus());
+  };
+  const popupComposerDock = (
+    <div
+      data-testid="assistant-composer-dock"
+      className="mt-auto shrink-0 bg-white/95 px-3 pb-3 pt-2 backdrop-blur"
+    >
+      {state.error && (
+        <div className="mb-2">
+          <ConversationError
+            error={state.error}
+            retryAfterSeconds={assistant.retryAfterSeconds}
+            onRetry={retry}
+            onDismiss={assistant.clearError}
+            compact
+          />
+        </div>
+      )}
+      {composer}
+    </div>
+  );
+
+  return (
+    <div
+      className={
+        embeddedPresentation
+          ? "relative flex h-full min-h-0 w-full flex-col"
+          : "-mx-3 flex min-h-[calc(100vh-3rem)] w-auto max-w-[1152px] flex-col sm:mx-auto sm:w-full"
+      }
+    >
+      {!embeddedPresentation && (
+        <p className="mb-3 shrink-0 text-sm font-semibold text-slate-600">
+          AI Assistant
+        </p>
+      )}
+      <section
+        aria-label="AI Assistant workspace"
+        className={
+          embeddedPresentation
+            ? "flex min-h-0 flex-1 overflow-hidden bg-white"
+            : "flex min-h-[620px] flex-1 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_22px_70px_-50px_rgba(15,23,42,0.65)] sm:rounded-[26px]"
+        }
+      >
+        {historyAvailable && !popupPresentation && (
+          <AssistantHistory
+            threads={state.threads}
+            selectedThreadId={state.selectedThreadId}
+            loading={state.threadListStatus === "loading"}
+            onSelect={selectThread}
+            onArchive={(threadId) => {
+              void assistant.archiveThread(threadId);
+            }}
+            onDelete={assistant.deleteThread}
+            onRestore={assistant.restoreThread}
+          />
+        )}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {popupPresentation && (
+            <div
+              data-testid="assistant-control-scrim"
+              aria-hidden
+              className="pointer-events-none absolute inset-x-px top-px z-20 h-14 rounded-t-[19px] bg-linear-to-b from-white via-white/95 to-transparent"
+            />
+          )}
+          {popupPresentation && onClose ? (
+            <AssistantFloatingControls
+              hasHistory={historyAvailable}
+              onOpenHistory={() => setHistoryOpen(true)}
+              onNewChat={newChat}
+              onClose={onClose}
+              onResetPosition={onResetPosition}
+              onResetSize={onResetSize}
+              positionModified={positionModified}
+              sizeModified={sizeModified}
+            />
+          ) : (
+            <AssistantHeader
+              title={selectedThread?.title || "New conversation"}
+              hasHistory={historyAvailable}
+              onOpenHistory={() => setHistoryOpen(true)}
+              onNewChat={newChat}
+              onClose={onClose}
+            />
+          )}
+          {!hasConversation ? (
+            popupPresentation ? (
+              <>
+                <div className="min-h-0 flex-1 overflow-y-auto pt-10">
+                  <AssistantEmptyState
+                    compact
+                    showSuggestions
+                    suggestions={starterPrompts}
+                    onSuggestion={selectSuggestion}
+                  />
+                </div>
+                {popupComposerDock}
+              </>
+            ) : (
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <AssistantEmptyState
+                  suggestions={starterPrompts}
+                  onSuggestion={selectSuggestion}
+                >
+                  {state.error && (
+                    <div className="mb-3 text-left">
+                      <ConversationError
+                        error={state.error}
+                        retryAfterSeconds={assistant.retryAfterSeconds}
+                        onRetry={retry}
+                        onDismiss={assistant.clearError}
+                      />
+                    </div>
+                  )}
+                  {composer}
+                </AssistantEmptyState>
+              </div>
+            )
+          ) : (
+            <>
+              <MessageList
+                messages={state.messages}
+                streamingAssistant={state.streamingAssistant}
+                loading={loading}
+                responding={assistant.busy}
+                isNearBottom={state.isNearBottom}
+                onNearBottomChange={assistant.setNearBottom}
+                compact={popupPresentation}
+                onNavigate={popupPresentation ? onClose : undefined}
+              />
+              {popupPresentation ? (
+                popupComposerDock
+              ) : (
+                <div className="assistant-safe-bottom shrink-0 border-t border-slate-100 bg-white/95 px-4 pt-3 backdrop-blur sm:px-7">
+                  <div className="mx-auto max-w-3xl">
+                    {state.error && (
+                      <div className="mb-3">
+                        <ConversationError
+                          error={state.error}
+                          retryAfterSeconds={assistant.retryAfterSeconds}
+                          onRetry={retry}
+                          onDismiss={assistant.clearError}
+                        />
+                      </div>
+                    )}
+                    {composer}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+
+      {historyOpen && (
+        <div
+          data-assistant-history="open"
+          className={
+            popupPresentation
+              ? "absolute inset-0 z-40"
+              : embeddedPresentation
+              ? "absolute inset-0 z-40 lg:hidden"
+              : "fixed bottom-0 left-[90px] right-0 top-0 z-40 lg:hidden"
+          }
+        >
+          <button
+            type="button"
+            aria-label="Close conversation history"
+            onClick={closeHistory}
+            className="absolute inset-0 bg-[#0e1b2b]/35 backdrop-blur-[2px]"
+          />
+          <div className="absolute bottom-0 left-0 top-0 w-[min(88vw,320px)] bg-white shadow-2xl motion-safe:animate-[assistant-message-in_180ms_ease-out]">
+            <AssistantHistory
+              mobile
+              threads={state.threads}
+              selectedThreadId={state.selectedThreadId}
+              loading={state.threadListStatus === "loading"}
+              onSelect={selectThread}
+              onArchive={(threadId) => {
+                void assistant.archiveThread(threadId);
+              }}
+              onDelete={assistant.deleteThread}
+              onRestore={assistant.restoreThread}
+              onClose={closeHistory}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

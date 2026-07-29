@@ -1,3 +1,4 @@
+import { getAssistantAccessAction } from "@/app/actions/aiAssistant";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import type { Metadata } from "next";
@@ -9,11 +10,17 @@ export const metadata: Metadata = {
   description: "RFP Dashboard",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const access =
+    process.env.NEXT_PUBLIC_AI_ASSISTANT_ENABLED === "true"
+      ? await getAssistantAccessAction()
+      : null;
+  const assistantEnabled = access?.success === true && access.data.enabled;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -25,7 +32,9 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <ToastProvider>
-          <LayoutWrapper>{children}</LayoutWrapper>
+          <LayoutWrapper assistantEnabled={assistantEnabled}>
+            {children}
+          </LayoutWrapper>
         </ToastProvider>
       </body>
     </html>

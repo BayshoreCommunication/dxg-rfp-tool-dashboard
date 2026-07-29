@@ -31,6 +31,42 @@ Architecture, API contracts, accessibility expectations, feature flags, error st
 
 - [Async status and recovery UX](./ASYNC_STATUS_UX.md)
 
+## Platform AI Assistant
+
+The customer-facing AI Assistant is a read-only compact helper popup
+launched from the sidebar footer above Notifications. It intentionally has no
+dedicated customer page route and remains separate from the proposal-specific
+assistant at `/proposals/{id}/assistant`:
+
+- the non-modal popup lazy-loads personal history on first open and preserves its
+  reducer state across close/reopen interactions;
+- thread reads and lifecycle changes use typed server actions;
+- streamed message posts use a same-origin Next.js BFF route;
+- backend bearer credentials and the OpenAI API key never enter browser state;
+- the browser consumes only versioned product SSE events, never provider
+  events;
+- PostgreSQL remains the durable message source of truth while a feature-local
+  reducer owns optimistic and streaming state;
+- retries reuse the user-message idempotency key and use a distinct stable
+  response-attempt key, avoiding duplicate user turns while preserving failed
+  assistant attempts;
+- rendered Markdown disables raw HTML and accepts only internal paths or HTTPS
+  links.
+- the client derives a bounded `assistant-ui-context.v1` envelope from the
+  pathname category and opt-in form markers. Raw URLs, query parameters, form
+  values, private notes, and proposal content are not forwarded;
+- page-aware starter prompts remain a small contextual set; focused
+  authoritative form fields can offer field-specific help without sending the
+  field value.
+
+`NEXT_PUBLIC_AI_ASSISTANT_ENABLED=true` is only the public build prerequisite.
+The authenticated layout also requires `enabled: true` from the backend
+organization-access endpoint before it renders the launcher. Backend
+authorization, `assistant:use`, organization cohort, feature flags, ownership
+checks, RLS, provider gates, and kill switches remain authoritative.
+
+User-facing operating help: [Using the AI Assistant](../user-guides/AI_ASSISTANT.md).
+
 ## Canonical proposal contract
 
 `contracts/proposal/v1/` contains the synchronized JSON Schema 2020-12 resource, public projection, extraction-candidate patch, runtime validators, and legacy adapter. `contracts/generated/` is deterministic generated output and its manifest. New proposal UI/API code must consume these generated contracts or an explicit compatibility projection rather than adding another handwritten proposal shape.

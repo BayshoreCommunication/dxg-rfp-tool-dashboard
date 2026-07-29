@@ -108,6 +108,16 @@ function toSlug(title: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+export function formatDashboardDate(value?: string): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getUTCFullYear()}`;
+}
+
 function IconButton({
   icon,
   tooltip,
@@ -133,9 +143,7 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
   const title = proposal.event?.eventName || "Untitled Proposal";
   const status = toStatus(proposal.status);
   const cfg = STATUS_CONFIG[status];
-  const created = proposal.createdAt
-    ? new Date(proposal.createdAt).toLocaleDateString()
-    : "-";
+  const created = formatDashboardDate(proposal.createdAt);
   const views = proposal.viewsCount || 0;
   const clientName = `${proposal.contact?.contactFirstName || ""} ${
     proposal.contact?.contactLastName || ""

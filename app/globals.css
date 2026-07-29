@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source not "../.next";
+@source not "../.next-*";
 
 @font-face {
   font-family: "Proxima Nova";
@@ -114,4 +116,123 @@ small,
 strong {
   font-family: var(--font-sans);
   font-weight: 400;
+}
+
+@keyframes assistant-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes assistant-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes assistant-popup-open {
+  0% {
+    opacity: 0;
+    visibility: visible;
+    transform: translateY(18px) scale(0.96);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.008);
+  }
+  100% {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes assistant-popup-close {
+  0% {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(0, 0) scale(1);
+  }
+  35% {
+    opacity: 0.32;
+    transform: translateY(8px) scale(0.975);
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(18px) scale(0.96);
+  }
+}
+
+.assistant-popup-closed {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(18px) scale(0.96);
+}
+
+.assistant-popup-open {
+  pointer-events: auto;
+  animation: assistant-popup-open 430ms cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.assistant-popup-closed[data-ever-opened="true"] {
+  animation: assistant-popup-close 240ms cubic-bezier(0.4, 0, 0.7, 0.2)
+    both;
+}
+
+.assistant-safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.assistant-composer-scrollbar {
+  scrollbar-color: #a8b1bd #eef2f6;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.assistant-composer-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.assistant-composer-scrollbar::-webkit-scrollbar-track {
+  margin-block: 4px;
+  border-radius: 9999px;
+  background: #eef2f6;
+}
+
+.assistant-composer-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 28px;
+  border: 2px solid #eef2f6;
+  border-radius: 9999px;
+  background: #a8b1bd;
+}
+
+.assistant-composer-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #7f8b99;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-popup-open {
+    animation: none;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .assistant-popup-closed[data-ever-opened="true"] {
+    animation: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: none;
+  }
 }

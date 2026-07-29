@@ -9,7 +9,7 @@ import { getSettingsAction } from "@/app/actions/settings";
 import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-import { BellDot, LogOut } from "lucide-react";
+import { BellDot, Bot, LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,7 +32,13 @@ type NotificationSocketPayload = {
   };
 };
 
-const Sidebar = () => {
+const Sidebar = ({
+  assistantOpen = false,
+  onOpenAssistant,
+}: {
+  assistantOpen?: boolean;
+  onOpenAssistant?: () => void;
+}) => {
   const pathname = usePathname();
   const [userData, setUserData] = useState<SidebarSettings | null>(null);
   const [showSignOut, setShowSignOut] = useState(false);
@@ -218,7 +224,12 @@ const Sidebar = () => {
               : null;
 
           return (
-            <Link key={item.id} href={item.href} className="block w-full">
+            <Link
+              key={item.id}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className="block w-full"
+            >
               <div
                 className={cn(
                   "group relative flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-3 transition-all duration-200",
@@ -252,7 +263,7 @@ const Sidebar = () => {
                     "text-[9.5px] font-bold leading-none tracking-wide",
                     isActive
                       ? "text-primary"
-                      : "text-gray-400 group-hover:text-primary",
+                      : "text-gray-500 group-hover:text-primary",
                   )}
                 >
                   {item.title}
@@ -263,7 +274,44 @@ const Sidebar = () => {
         })}
       </nav>
 
-      <div className="mx-4 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent" />
+      {onOpenAssistant && (
+        <div className="flex shrink-0 justify-center px-2.5 pb-3">
+          <button
+            id="ai-assistant-launcher"
+            type="button"
+            aria-label={
+              assistantOpen
+                ? "Hide AI Assistant popup"
+                : "Open AI Assistant"
+            }
+            aria-haspopup="dialog"
+            aria-expanded={assistantOpen}
+            title="AI Assistant"
+            onClick={onOpenAssistant}
+            className={cn(
+              "group relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-[background-color,border-color,color,box-shadow] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+              assistantOpen
+                ? "border-[#0e1b2b] bg-[#0e1b2b] text-white shadow-[0_14px_30px_-16px_rgba(14,27,43,0.9)]"
+                : "border-primary/25 bg-primary/10 text-[#009da4] shadow-[0_14px_30px_-18px_rgba(0,194,201,0.9)] hover:border-primary/45 hover:bg-primary/15",
+            )}
+          >
+            <span
+              className={cn(
+                "flex transition-transform duration-300 ease-out group-hover:-translate-y-0.5 motion-reduce:transform-none",
+                !assistantOpen &&
+                  "motion-safe:animate-[assistant-float_3.8s_ease-in-out_infinite]",
+              )}
+            >
+              <Bot size={21} strokeWidth={2.2} aria-hidden />
+            </span>
+          </button>
+        </div>
+      )}
+
+      <div
+        data-testid="sidebar-footer-divider"
+        className="mx-4 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent"
+      />
 
       <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3">
         <Link

@@ -213,7 +213,7 @@ const EventForm = ({
 
             {/* Row 1: Event Name + Edition/Year */}
             <div className="grid grid-cols-2 gap-5">
-              <div>
+              <div data-assistant-field-key="/content/event/name">
                 <label className={labelClass}>
                   Event Name <span className="text-red-500">*</span>
                   <InfoTooltip text="Enter the full official name of your event as it should appear on all RFP documents. Appears on the cover headline and every interior running header." />
@@ -235,7 +235,7 @@ const EventForm = ({
                 </div>
               </div>
 
-              <div>
+              <div data-assistant-field-key="/content/event/edition">
                 <label className={labelClass}>
                   Edition / Year
                   <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -253,7 +253,7 @@ const EventForm = ({
 
             {/* Row 2: Event Type + Theme/Tagline */}
             <div className="grid grid-cols-2 gap-5">
-              <div>
+              <div data-assistant-field-key="/content/event/type">
                 <label className={labelClass}>
                   Event Type <span className="text-red-500">*</span>
                   <InfoTooltip text="Choose the category that best describes your event. Helps vendors gauge scope and tone required and feeds the AI narrative paragraph 1 and Section 8 references." />
@@ -308,7 +308,7 @@ const EventForm = ({
                 )}
               </div>
 
-              <div>
+              <div data-assistant-field-key="/content/event/theme">
                 <label className={labelClass}>
                   Event Theme / Tagline
                   <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -326,7 +326,7 @@ const EventForm = ({
 
             {/* Row 3: Event Website */}
             <div className="grid grid-cols-2 gap-5">
-              <div>
+              <div data-assistant-field-key="/content/event/website">
                 <label className={labelClass}>
                   Event Website
                   <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -351,7 +351,7 @@ const EventForm = ({
           <div className="space-y-6">
 
             {/* Event Format */}
-            <div>
+            <div data-assistant-field-key="/content/event/format">
               <label className={labelClass}>
                 Event Format <span className="text-red-500">*</span>
                 <InfoTooltip text="Select your event delivery format. Hybrid and Virtual unlock additional streaming and platform specifications on Page 3." />
@@ -387,7 +387,7 @@ const EventForm = ({
             </div>
 
             {/* Primary Audience */}
-            <div>
+            <div data-assistant-field-key="/content/event/primaryAudiences/*">
               <label className={labelClass}>
                 Primary Audience <span className="text-red-500">*</span>
                 <InfoTooltip text="Select up to 4 primary audience groups. Helps vendors understand the production tone and gravitas required, and feeds the AI narrative paragraph 1." />
@@ -436,7 +436,7 @@ const EventForm = ({
           <div className="grid grid-cols-3 gap-5">
 
             {/* Start Date */}
-            <div>
+            <div data-assistant-field-key="/content/event/startDate">
               <label className={labelClass}>
                 Start Date <span className="text-red-500">*</span>
                 <InfoTooltip text="First day of the event (not load-in date). Populates the cover meta bar and is used to calculate total event days in the Scope Overview." />
@@ -468,7 +468,7 @@ const EventForm = ({
             </div>
 
             {/* End Date */}
-            <div>
+            <div data-assistant-field-key="/content/event/endDate">
               <label className={labelClass}>
                 End Date <span className="text-red-500">*</span>
                 <InfoTooltip text="Last day of the event (not strike date). Used with Start Date to calculate event duration on the cover meta bar and the Event Days stat card." />
@@ -504,7 +504,7 @@ const EventForm = ({
             </div>
 
             {/* Total Attendance */}
-            <div>
+            <div data-assistant-field-key="/content/event/attendeeCount">
               <label className={labelClass}>
                 Total Attendance <span className="text-red-500">*</span>
                 <InfoTooltip text="Estimated total in-person headcount across all days. Drives the Attendees stat card on the cover and informs crew count, audio system size, and screen placement recommendations." />
@@ -535,7 +535,7 @@ const EventForm = ({
           <div className="space-y-6">
 
             {/* Event Objectives */}
-            <div>
+            <div data-assistant-field-key="/content/event/objectives">
               <label className={labelClass}>
                 Event Objectives
                 <InfoTooltip text="In 2–4 sentences, describe what you're trying to accomplish. This feeds the AI narrative — the more specific, the better. Used verbatim as context for AI narrative generation." />
@@ -564,7 +564,7 @@ const EventForm = ({
             </div>
 
             {/* Tone / Brand Direction */}
-            <div>
+            <div data-assistant-field-key="/content/event/toneDirections/*">
               <label className={labelClass}>
                 Tone / Brand Direction
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -611,7 +611,7 @@ const EventForm = ({
             </div>
 
             {/* Sacred Constraints */}
-            <div>
+            <div data-assistant-field-key="/content/event/sacredConstraints">
               <label className={labelClass}>
                 Sacred Constraints / Special Considerations
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -633,7 +633,7 @@ const EventForm = ({
             </div>
 
             {/* About The Organization */}
-            <div>
+            <div data-assistant-field-key="/content/event/organizationBackground">
               <label className={labelClass}>
                 About The Organization
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -655,7 +655,7 @@ const EventForm = ({
             </div>
 
             {/* Statement of Work */}
-            <div>
+            <div data-assistant-field-key="/content/event/statementOfWork">
               <label className={labelClass}>
                 Statement of Work
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -677,7 +677,7 @@ const EventForm = ({
             </div>
 
             {/* Event Profile */}
-            <div>
+            <div data-assistant-field-key="/content/event/eventProfile">
               <label className={labelClass}>
                 Event Profile
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -699,7 +699,7 @@ const EventForm = ({
             </div>
 
             {/* RFP Timeline */}
-            <div>
+            <div data-assistant-field-key="/content/event/rfpTimelineNotes">
               <label className={labelClass}>
                 RFP Timeline
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
