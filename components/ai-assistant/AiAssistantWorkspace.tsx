@@ -14,6 +14,10 @@ import ChatComposer from "./ChatComposer";
 import ConversationError from "./ConversationError";
 import MessageList from "./MessageList";
 import { useAiAssistant } from "./useAiAssistant";
+import {
+  assistantStarterPromptsForContext,
+  type AssistantUiContext,
+} from "@/lib/aiAssistant/uiContext";
 
 export default function AiAssistantWorkspace({
   initialThreads,
@@ -25,6 +29,10 @@ export default function AiAssistantWorkspace({
   onResetSize,
   positionModified = false,
   sizeModified = false,
+  uiContext = {
+    schemaVersion: "assistant-ui-context.v1",
+    routeCategory: "other",
+  },
 }: {
   initialThreads: AssistantThread[];
   initialDetail: AssistantThreadDetail | null;
@@ -35,11 +43,13 @@ export default function AiAssistantWorkspace({
   onResetSize?: () => void;
   positionModified?: boolean;
   sizeModified?: boolean;
+  uiContext?: AssistantUiContext;
 }) {
   const assistant = useAiAssistant({
     initialThreads,
     initialDetail,
     initialError,
+    uiContext,
   });
   const { state } = assistant;
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -103,6 +113,7 @@ export default function AiAssistantWorkspace({
   );
   const embeddedPresentation = presentation !== "page";
   const popupPresentation = presentation === "popup";
+  const starterPrompts = assistantStarterPromptsForContext(uiContext);
   const popupComposerDock = (
     <div
       data-testid="assistant-composer-dock"
@@ -189,7 +200,8 @@ export default function AiAssistantWorkspace({
                 <div className="min-h-0 flex-1 overflow-y-auto pt-10">
                   <AssistantEmptyState
                     compact
-                    showSuggestions={false}
+                    showSuggestions
+                    suggestions={starterPrompts}
                     onSuggestion={(prompt) => {
                       assistant.setDraft(prompt);
                       window.requestAnimationFrame(() =>
@@ -203,6 +215,7 @@ export default function AiAssistantWorkspace({
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <AssistantEmptyState
+                  suggestions={starterPrompts}
                   onSuggestion={(prompt) => {
                     assistant.setDraft(prompt);
                     window.requestAnimationFrame(() =>

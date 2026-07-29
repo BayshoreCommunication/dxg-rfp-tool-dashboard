@@ -52,6 +52,12 @@ assistant at `/proposals/{id}/assistant`:
   assistant attempts;
 - rendered Markdown disables raw HTML and accepts only internal paths or HTTPS
   links.
+- the client derives a bounded `assistant-ui-context.v1` envelope from the
+  pathname category and opt-in form markers. Raw URLs, query parameters, form
+  values, private notes, and proposal content are not forwarded;
+- page-aware starter prompts remain a small contextual set; focused
+  authoritative form fields can offer field-specific help without sending the
+  field value.
 
 `NEXT_PUBLIC_AI_ASSISTANT_ENABLED=true` is only the public build prerequisite.
 The authenticated layout also requires `enabled: true` from the backend

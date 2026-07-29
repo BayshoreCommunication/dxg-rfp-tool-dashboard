@@ -5,6 +5,7 @@ import {
   ASSISTANT_MESSAGE_MAX_LENGTH,
   isRecord,
 } from "@/lib/aiAssistant/types";
+import { normalizeAssistantUiContext } from "@/lib/aiAssistant/uiContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,6 +131,10 @@ export async function POST(
     isRecord(payload) && typeof payload.responseIdempotencyKey === "string"
       ? payload.responseIdempotencyKey.trim()
       : "";
+  const uiContext =
+    isRecord(payload) && payload.uiContext !== undefined
+      ? normalizeAssistantUiContext(payload.uiContext)
+      : null;
   if (!content) {
     return problem(
       422,
@@ -154,6 +159,13 @@ export async function POST(
       "A valid assistant request key is required.",
     );
   }
+  if (isRecord(payload) && payload.uiContext !== undefined && !uiContext) {
+    return problem(
+      422,
+      "INVALID_ASSISTANT_UI_CONTEXT",
+      "The assistant page context is invalid.",
+    );
+  }
 
   const correlationId = crypto.randomUUID();
   let upstream: Response;
@@ -169,7 +181,10 @@ export async function POST(
           "Assistant-Response-Idempotency-Key": responseIdempotencyKey,
           "X-Correlation-ID": correlationId,
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          ...(uiContext ? { uiContext } : {}),
+        }),
         cache: "no-store",
         signal: request.signal,
       },

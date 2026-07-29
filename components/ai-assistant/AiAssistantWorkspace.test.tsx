@@ -543,7 +543,7 @@ describe("AiAssistantWorkspace", () => {
     expect(screen.queryByText("AI Assistant")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Create a proposal" }),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
     expect(screen.getByTestId("assistant-composer-dock")).toHaveClass(
       "mt-auto",
       "shrink-0",

@@ -1,5 +1,6 @@
 import { CalendarDays, Compass, FileText, Route } from "lucide-react";
 import AssistantOrb from "@/components/ai/shared/AssistantOrb";
+import type { AssistantStarterPrompt } from "@/lib/aiAssistant/uiContext";
 
 export const assistantSuggestions = [
   {
@@ -29,11 +30,15 @@ export default function AssistantEmptyState({
   children,
   compact = false,
   showSuggestions = true,
+  suggestions = assistantSuggestions,
 }: {
   onSuggestion: (prompt: string) => void;
   children?: React.ReactNode;
   compact?: boolean;
   showSuggestions?: boolean;
+  suggestions?: readonly (AssistantStarterPrompt & {
+    icon?: typeof FileText;
+  })[];
 }) {
   return (
     <div
@@ -88,8 +93,8 @@ export default function AssistantEmptyState({
           }
         >
           {(compact
-            ? assistantSuggestions.slice(0, 2)
-            : assistantSuggestions
+            ? suggestions.slice(0, 2)
+            : suggestions
           ).map(({ prompt, label, icon: Icon }) => (
             <button
               key={prompt}
@@ -101,11 +106,18 @@ export default function AssistantEmptyState({
                   : "min-h-12 gap-3 px-3.5 py-2.5 text-sm"
               }`}
             >
-              <Icon
-                size={compact ? 14 : 16}
-                aria-hidden
-                className="shrink-0 text-[#00aeb5] transition-transform group-hover:scale-105 motion-reduce:transform-none"
-              />
+              {Icon ? (
+                <Icon
+                  size={compact ? 14 : 16}
+                  aria-hidden
+                  className="shrink-0 text-[#00aeb5] transition-transform group-hover:scale-105 motion-reduce:transform-none"
+                />
+              ) : (
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#00b7be]"
+                />
+              )}
               <span>{compact ? label : prompt}</span>
             </button>
           ))}

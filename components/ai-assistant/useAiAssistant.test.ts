@@ -53,6 +53,11 @@ const state: AssistantUiState = {
     threadIdempotencyKey: "thread-key",
     optimisticId: "local:user-key",
     accepted: false,
+    uiContext: {
+      schemaVersion: "assistant-ui-context.v1",
+      routeCategory: "proposals",
+      workflow: "proposal_review",
+    },
   },
   retryAvailableAt: null,
 };

@@ -16,6 +16,7 @@ import {
   type AssistantThreadDetail,
   type AssistantUiError,
 } from "@/lib/aiAssistant/types";
+import type { AssistantUiContext } from "@/lib/aiAssistant/uiContext";
 import {
   useCallback,
   useEffect,
@@ -41,6 +42,7 @@ type PendingRequest = {
   threadIdempotencyKey: string;
   optimisticId: string | null;
   accepted: boolean;
+  uiContext: AssistantUiContext;
 };
 
 export type AssistantUiState = {
@@ -528,10 +530,12 @@ export function useAiAssistant({
   initialThreads,
   initialDetail,
   initialError = null,
+  uiContext,
 }: {
   initialThreads: AssistantThread[];
   initialDetail: AssistantThreadDetail | null;
   initialError?: AssistantUiError | null;
+  uiContext: AssistantUiContext;
 }) {
   const [state, dispatch] = useReducer(
     aiAssistantReducer,
@@ -727,6 +731,7 @@ export function useAiAssistant({
               idempotencyKey: pending.userIdempotencyKey,
               responseIdempotencyKey:
                 pending.responseIdempotencyKey,
+              uiContext: pending.uiContext,
             }),
             cache: "no-store",
             signal: controller.signal,
@@ -796,6 +801,7 @@ export function useAiAssistant({
       threadIdempotencyKey: `assistant-thread:${crypto.randomUUID()}`,
       optimisticId: `local:${userIdempotencyKey}`,
       accepted: false,
+      uiContext,
     };
     requestActiveRef.current = true;
     try {
@@ -803,7 +809,7 @@ export function useAiAssistant({
     } finally {
       requestActiveRef.current = false;
     }
-  }, [retryAfterSeconds, runRequest]);
+  }, [retryAfterSeconds, runRequest, uiContext]);
 
   const retry = useCallback(async () => {
     const current = stateRef.current.pendingRequest;

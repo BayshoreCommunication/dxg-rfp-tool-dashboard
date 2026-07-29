@@ -338,6 +338,19 @@ type AddNewProposalProps = {
   proposalId?: string;
 };
 
+const assistantSectionByStep = {
+  1: "event_overview",
+  2: "venue_schedule",
+  3: "room_specifications",
+  4: "hybrid_virtual",
+  5: "content_creative",
+  6: "video_recording",
+  7: "venue_technical",
+  8: "investment_evaluation",
+  9: "uploads_covendors",
+  10: "contact_submit",
+} as const;
+
 type ProposalSectionKey = {
   [K in keyof ProposalData]: ProposalData[K] extends object ? K : never;
 }[keyof ProposalData];
@@ -1972,7 +1985,16 @@ const AddNewProposal = ({
       {!loadingExisting && proposalProcessStep >= 1 && (
         <div className="flex w-full">
           {/* Form area — 70% */}
-          <div className="w-[80%] mr-4">
+          <div
+            className="w-[80%] mr-4"
+            data-assistant-current-section="true"
+            data-assistant-section-id={
+              assistantSectionByStep[
+                proposalProcessStep as keyof typeof assistantSectionByStep
+              ]
+            }
+            data-assistant-event-format={proposalData.event.eventFormat}
+          >
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED === "true" && (
               <ProposalWorkflowShell
                 proposalId={proposalId}

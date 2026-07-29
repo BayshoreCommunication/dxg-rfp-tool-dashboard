@@ -28,6 +28,12 @@ Useful examples:
 - “Update my event checklist for a three-day hybrid conference.”
 - “Where can I see vendor responses?”
 
+The empty helper shows a small set of suggestions for the page you are on.
+Inside the guided proposal form, it can also recognize the current section and
+supported focused fields. It sends only a category and field identifier—not
+the value you entered. Ask “What should I enter in this field?”, “Show me a
+good example,” or “Can I leave this blank?” for focused guidance.
+
 ## Start a conversation
 
 1. Select the robot icon in the sidebar.

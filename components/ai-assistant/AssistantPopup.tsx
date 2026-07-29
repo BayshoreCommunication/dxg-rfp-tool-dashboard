@@ -22,6 +22,7 @@ import type {
 } from "@/lib/aiAssistant/types";
 import AiAssistantWorkspace from "./AiAssistantWorkspace";
 import useDraggablePopup from "./useDraggablePopup";
+import useAssistantUiContext from "./useAssistantUiContext";
 
 type BootstrapState =
   | { status: "idle" }
@@ -55,6 +56,7 @@ export default function AssistantPopup({
   onOpenChange: (open: boolean) => void;
 }) {
   const popupRef = useRef<HTMLElement | null>(null);
+  const uiContext = useAssistantUiContext();
   const [bootstrap, setBootstrap] = useState<BootstrapState>({
     status: "idle",
   });
@@ -245,6 +247,7 @@ export default function AssistantPopup({
             onResetSize={resetSize}
             positionModified={positionModified}
             sizeModified={sizeModified}
+            uiContext={uiContext}
           />
         )}
       </div>
