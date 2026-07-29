@@ -111,11 +111,15 @@ export default function AssistantHandoffActions({
   const [carryDraft, setCarryDraft] = useState(Boolean(userDraft?.trim()));
   const [error, setError] = useState<string>();
 
+  const hasSelectedProposalContext = message.citations.some((citation) =>
+    citation.sourceId.startsWith("selected-proposal:"),
+  );
   const needsProposal =
     message.status === "complete" &&
     message.intent !== null &&
     message.intent !== undefined &&
-    proposalSelectionIntents.has(message.intent);
+    proposalSelectionIntents.has(message.intent) &&
+    !hasSelectedProposalContext;
 
   const directActions = useMemo(() => {
     if (needsProposal || message.status !== "complete") return [];

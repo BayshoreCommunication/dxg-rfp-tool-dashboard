@@ -33,6 +33,27 @@ const message = {
 };
 
 describe("AssistantHandoffActions", () => {
+  it("does not show a selector after the response already used authorized proposal context", () => {
+    render(
+      <AssistantHandoffActions
+        message={{
+          ...message,
+          citations: [
+            {
+              sourceId: "selected-proposal:overview",
+              title: "Momentum 2027 Sales Kickoff — overview",
+              href: "/proposals",
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(
+      screen.queryByText("Continue with one of your proposals"),
+    ).not.toBeInTheDocument();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     window.sessionStorage.clear();
