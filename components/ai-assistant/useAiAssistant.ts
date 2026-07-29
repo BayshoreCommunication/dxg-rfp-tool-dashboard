@@ -24,6 +24,10 @@ import {
   trackAssistantProductEvent,
 } from "@/lib/aiAssistant/analytics";
 import {
+  splitAssistantDeltaForReveal,
+  waitForAssistantRevealFrame,
+} from "@/lib/aiAssistant/reveal";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -243,7 +247,9 @@ export const aiAssistantReducer = (
     case "SET_DRAFT":
       return { ...state, draft: action.draft };
     case "SET_NEAR_BOTTOM":
-      return { ...state, isNearBottom: action.value };
+      return state.isNearBottom === action.value
+        ? state
+        : { ...state, isNearBottom: action.value };
     case "SEND_STARTED": {
       const optimistic = action.pending.optimisticId
         ? optimisticMessage(
@@ -815,6 +821,17 @@ export function useAiAssistant({
         const result = await consumeAssistantStream(
           response.body,
           async (event) => {
+            if (event.type === "response.delta") {
+              for (const delta of splitAssistantDeltaForReveal(event.delta)) {
+                controller.signal.throwIfAborted();
+                dispatch({
+                  type: "STREAM_EVENT",
+                  event: { ...event, delta },
+                });
+                await waitForAssistantRevealFrame(controller.signal);
+              }
+              return;
+            }
             dispatch({ type: "STREAM_EVENT", event });
           },
         );

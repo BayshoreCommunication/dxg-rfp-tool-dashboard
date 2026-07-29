@@ -56,6 +56,10 @@ describe("MessageList", () => {
       screen.getByRole("status", { name: "Assistant is responding" }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByText("Thinking")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("assistant-generating-indicator"),
+    ).toBeInTheDocument();
   });
 
   test("announces only newly streamed text through one polite region", () => {

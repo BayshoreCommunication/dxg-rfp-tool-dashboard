@@ -3,8 +3,8 @@
 import {
   GripVertical,
   LoaderCircle,
-  Maximize2,
   Move,
+  Scaling,
   X,
 } from "lucide-react";
 import {
@@ -176,7 +176,7 @@ export default function AssistantPopup({
           ? { width: size.width, height: size.height }
           : {}),
       }}
-      className={`fixed z-[60] h-[min(460px,calc(100dvh-24px))] w-[min(384px,calc(100vw-24px))] origin-bottom-left overflow-hidden rounded-[20px] border border-slate-200/90 bg-white text-left outline-none will-change-[transform,opacity] transition-[box-shadow,border-color] duration-200 ${
+      className={`fixed z-[60] h-[min(460px,calc(100dvh-24px))] w-[min(384px,calc(100vw-24px))] origin-bottom-left overflow-hidden rounded-[20px] border border-slate-200/90 bg-white text-left outline-none transition-[box-shadow,border-color] duration-200 ${
         dragging || resizing
           ? "cursor-grabbing border-[#00c2c9]/45 shadow-[0_30px_80px_-24px_rgba(14,27,43,0.68)]"
           : "shadow-[0_24px_64px_-24px_rgba(14,27,43,0.56)]"
@@ -230,13 +230,12 @@ export default function AssistantPopup({
         aria-label="Resize AI Assistant from lower right"
         aria-describedby="ai-assistant-resize-instructions"
         aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home"
-        title="Drag to resize · Arrow keys resize · Home resets size"
         data-testid="assistant-resize-bottom-right"
         {...resizeHandleProps("bottomRight")}
-        className="group absolute bottom-1 right-1 z-50 flex h-10 w-10 touch-none cursor-nwse-resize items-end justify-end rounded-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+        className="group absolute bottom-1 right-1 z-50 flex h-8 w-8 touch-none cursor-nwse-resize items-end justify-end rounded-lg opacity-70 transition duration-200 hover:bg-white/70 hover:opacity-100 focus-visible:bg-white/80 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9]"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 shadow-sm transition group-hover:text-[#00aeb5] group-focus-visible:text-[#00aeb5]">
-          <Maximize2 size={11} strokeWidth={2.2} aria-hidden />
+        <span className="flex h-5 w-5 items-center justify-center rounded-md border border-slate-200/90 bg-white/95 text-slate-400 shadow-[0_4px_12px_-6px_rgba(15,23,42,0.75)] transition duration-150 group-hover:border-[#00c2c9]/40 group-hover:bg-[#f0fdfe] group-hover:text-[#00aeb5] group-focus-visible:border-[#00c2c9]/40 group-focus-visible:text-[#00aeb5]">
+          <Scaling size={12} strokeWidth={2.2} aria-hidden />
         </span>
       </button>
       <div

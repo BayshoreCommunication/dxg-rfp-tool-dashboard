@@ -65,6 +65,22 @@ const state: AssistantUiState = {
 };
 
 describe("aiAssistantReducer", () => {
+  test("ignores repeated near-bottom updates during auto-scroll", () => {
+    expect(
+      aiAssistantReducer(state, {
+        type: "SET_NEAR_BOTTOM",
+        value: true,
+      }),
+    ).toBe(state);
+
+    expect(
+      aiAssistantReducer(state, {
+        type: "SET_NEAR_BOTTOM",
+        value: false,
+      }),
+    ).toMatchObject({ isNearBottom: false });
+  });
+
   test("reconciles an optimistic user message with the accepted durable row", () => {
     const next = aiAssistantReducer(state, {
       type: "STREAM_EVENT",

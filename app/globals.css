@@ -152,7 +152,7 @@ strong {
   100% {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
@@ -181,8 +181,12 @@ strong {
 }
 
 .assistant-popup-open {
+  visibility: visible;
+  opacity: 1;
   pointer-events: auto;
-  animation: assistant-popup-open 430ms cubic-bezier(0.2, 0.82, 0.2, 1) both;
+  transform: none;
+  animation: assistant-popup-open 430ms cubic-bezier(0.2, 0.82, 0.2, 1)
+    backwards;
 }
 
 .assistant-popup-closed[data-ever-opened="true"] {

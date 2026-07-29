@@ -592,6 +592,9 @@ describe("AiAssistantWorkspace", () => {
     expect(
       screen.getByRole("button", { name: "Assistant options" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Start new conversation" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("AI Assistant")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Create a proposal" }),
