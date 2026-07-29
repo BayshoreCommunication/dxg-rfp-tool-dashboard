@@ -1,6 +1,6 @@
 # Using the AI Assistant
 
-> User help. Last updated: 2026-07-27.
+> User help. Last updated: 2026-07-29.
 
 The AI Assistant is a small helper available from the robot icon near the
 bottom of the RFPilot sidebar, above Notifications. The icon appears only for
@@ -43,6 +43,19 @@ the value you entered. Ask “What should I enter in this field?”, “Show me 
 good example,” or “Can I leave this blank?” for focused guidance.
 
 ## Review an opened proposal
+
+The dedicated assistant can answer questions about the proposal you explicitly
+opened. On each chat turn, RFPilot rechecks access and supplies a fresh,
+bounded snapshot of the proposal's saved event, venue and schedule,
+room-by-room, production, hybrid/virtual, content/creative, recording,
+technical venue, and budget fields. Ask for a summary, a list of saved
+requirements, or which supported details are still missing.
+
+Contact details, uploads and attachment contents, private or internal notes,
+and storage/source identifiers are excluded from this snapshot. The assistant
+does not train on, permanently learn, or automatically reuse the proposal in
+other conversations. Use the explicit selected-proposal comparison described
+below when you want governed guidance from other proposals.
 
 Open a proposal’s dedicated assistant and run **Proposal readiness check** to
 see a concise event summary, section completeness, and deterministic findings.
