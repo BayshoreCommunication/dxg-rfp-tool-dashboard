@@ -80,6 +80,9 @@ export type AssistantThread = {
   status: AssistantThreadStatus;
   messageCount: number;
   lastMessageAt: string | null;
+  deletedAt: string | null;
+  purgeAfter: string | null;
+  recoverable: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -312,6 +315,9 @@ export const parseAssistantThread = (
     status: value.status,
     messageCount: finiteNumber(value.messageCount) ?? 0,
     lastMessageAt: nullableString(value.lastMessageAt),
+    deletedAt: nullableString(value.deletedAt),
+    purgeAfter: nullableString(value.purgeAfter),
+    recoverable: value.recoverable === true,
     createdAt: nullableString(value.createdAt) ?? "",
     updatedAt: nullableString(value.updatedAt) ?? "",
   };

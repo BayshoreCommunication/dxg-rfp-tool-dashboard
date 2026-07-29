@@ -3,8 +3,10 @@
 import {
   archiveAssistantThreadAction,
   createAssistantThreadAction,
+  deleteAssistantThreadAction,
   getAssistantThreadAction,
   listAssistantThreadsAction,
+  restoreAssistantThreadAction,
 } from "@/app/actions/aiAssistant";
 import { consumeAssistantStream } from "@/lib/aiAssistant/stream";
 import {
@@ -589,10 +591,24 @@ export function useAiAssistant({
 
   const refreshThreads = useCallback(async () => {
     dispatch({ type: "THREADS_LOADING" });
-    const result = await listAssistantThreadsAction();
+    const [result, deleted] = await Promise.all([
+      listAssistantThreadsAction(),
+      listAssistantThreadsAction(25, "deleted"),
+    ]);
+    const threads = result.success
+      ? [
+          ...result.data,
+          ...(deleted.success
+            ? deleted.data.filter(
+                (thread) =>
+                  !result.data.some((current) => current.id === thread.id),
+              )
+            : []),
+        ]
+      : [];
     dispatch(
       result.success
-        ? { type: "THREADS_LOADED", threads: result.data }
+        ? { type: "THREADS_LOADED", threads }
         : { type: "THREADS_FAILED" },
     );
   }, []);
@@ -659,6 +675,53 @@ export function useAiAssistant({
     });
     return true;
   }, []);
+
+  const deleteThread = useCallback(
+    async (threadId: string) => {
+      const result = await deleteAssistantThreadAction(threadId);
+      if (!result.success) {
+        dispatch({
+          type: "REQUEST_FAILED",
+          error: {
+            code: result.code,
+            message: result.message,
+            correlationId: result.correlationId,
+            retryable: result.retryable,
+          },
+        });
+        return false;
+      }
+      dispatch({
+        type: "ARCHIVED",
+        threadId,
+        draft: readDraft(null),
+      });
+      await refreshThreads();
+      return true;
+    },
+    [refreshThreads],
+  );
+
+  const restoreThread = useCallback(
+    async (threadId: string) => {
+      const result = await restoreAssistantThreadAction(threadId);
+      if (!result.success) {
+        dispatch({
+          type: "REQUEST_FAILED",
+          error: {
+            code: result.code,
+            message: result.message,
+            correlationId: result.correlationId,
+            retryable: result.retryable,
+          },
+        });
+        return false;
+      }
+      await refreshThreads();
+      return true;
+    },
+    [refreshThreads],
+  );
 
   const runRequest = useCallback(
     async (pendingInput: PendingRequest, explicitRetry = false) => {
@@ -894,6 +957,8 @@ export function useAiAssistant({
       selectThread,
       newChat,
       archiveThread,
+      deleteThread,
+      restoreThread,
       send,
       retry,
       abort,
@@ -910,6 +975,8 @@ export function useAiAssistant({
       selectThread,
       newChat,
       archiveThread,
+      deleteThread,
+      restoreThread,
       send,
       retry,
       abort,

@@ -82,6 +82,20 @@ rule-release versions preserve the basis of a historical estimate.
 Shift+Enter adds a new line. While a response is streaming, the stop button
 ends that response.
 
+## Delete or restore a conversation
+
+Open recent chats, then use the trash button beside a conversation. RFPilot
+asks for confirmation before removing it from your active history. Deleted
+conversations move to **Recently deleted**, where the displayed date shows how
+long recovery remains available. Select **Restore** before that date to return
+the conversation to active history.
+
+Archiving and deleting are different: archive only hides a conversation from
+the active list, while delete starts the approved recovery and retention
+process. An active legal hold may extend retention but never shortens the
+displayed recovery window. After the approved purge date, recovery is no longer
+available.
+
 ## Rate a response
 
 Use **Helpful** or **Not helpful** below a completed assistant response.

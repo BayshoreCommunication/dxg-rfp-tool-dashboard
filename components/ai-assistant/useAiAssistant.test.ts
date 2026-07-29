@@ -6,8 +6,10 @@ import {
 jest.mock("@/app/actions/aiAssistant", () => ({
   archiveAssistantThreadAction: jest.fn(),
   createAssistantThreadAction: jest.fn(),
+  deleteAssistantThreadAction: jest.fn(),
   getAssistantThreadAction: jest.fn(),
   listAssistantThreadsAction: jest.fn(),
+  restoreAssistantThreadAction: jest.fn(),
 }));
 
 const threadId = "01890b2e-58b1-7c7e-9b0a-1a2b3c4d5e6f";

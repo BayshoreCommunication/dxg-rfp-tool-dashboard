@@ -9,8 +9,10 @@ import AiAssistantWorkspace from "./AiAssistantWorkspace";
 import {
   archiveAssistantThreadAction,
   createAssistantThreadAction,
+  deleteAssistantThreadAction,
   getAssistantThreadAction,
   listAssistantThreadsAction,
+  restoreAssistantThreadAction,
 } from "@/app/actions/aiAssistant";
 
 jest.mock("@/lib/aiAssistant/analytics", () => ({
@@ -22,14 +24,18 @@ jest.mock("@/lib/aiAssistant/analytics", () => ({
 jest.mock("@/app/actions/aiAssistant", () => ({
   archiveAssistantThreadAction: jest.fn(),
   createAssistantThreadAction: jest.fn(),
+  deleteAssistantThreadAction: jest.fn(),
   getAssistantThreadAction: jest.fn(),
   listAssistantThreadsAction: jest.fn(),
+  restoreAssistantThreadAction: jest.fn(),
 }));
 
 const mockedCreateThread = jest.mocked(createAssistantThreadAction);
 const mockedGetThread = jest.mocked(getAssistantThreadAction);
 const mockedListThreads = jest.mocked(listAssistantThreadsAction);
 const mockedArchiveThread = jest.mocked(archiveAssistantThreadAction);
+const mockedDeleteThread = jest.mocked(deleteAssistantThreadAction);
+const mockedRestoreThread = jest.mocked(restoreAssistantThreadAction);
 
 const thread = {
   id: "01890b2e-58b1-7c7e-9b0a-1a2b3c4d5e6f",
@@ -37,6 +43,9 @@ const thread = {
   status: "active" as const,
   messageCount: 0,
   lastMessageAt: null,
+  deletedAt: null,
+  purgeAfter: null,
+  recoverable: false,
   createdAt: "2026-07-27T00:00:00.000Z",
   updatedAt: "2026-07-27T00:00:00.000Z",
 };
@@ -206,6 +215,22 @@ describe("AiAssistantWorkspace", () => {
       success: true,
       data: { ...thread, status: "archived" },
       correlationId: "corr-archive",
+    });
+    mockedDeleteThread.mockResolvedValue({
+      success: true,
+      data: {
+        ...thread,
+        status: "archived",
+        deletedAt: "2026-07-29T00:00:00.000Z",
+        purgeAfter: "2026-08-28T00:00:00.000Z",
+        recoverable: true,
+      },
+      correlationId: "corr-delete",
+    });
+    mockedRestoreThread.mockResolvedValue({
+      success: true,
+      data: thread,
+      correlationId: "corr-restore",
     });
   });
 

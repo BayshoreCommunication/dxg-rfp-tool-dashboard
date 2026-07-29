@@ -2,10 +2,12 @@
 
 import {
   createAssistantThreadAction,
+  deleteAssistantThreadAction,
   getAssistantAccessAction,
   getAssistantBootstrapAction,
   getAssistantThreadAction,
   listAssistantThreadsAction,
+  restoreAssistantThreadAction,
 } from "./aiAssistant";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
@@ -20,6 +22,9 @@ const thread = {
   status: "active",
   messageCount: 0,
   lastMessageAt: null,
+  deletedAt: null,
+  purgeAfter: null,
+  recoverable: false,
   createdAt: "2026-07-27T00:00:00.000Z",
   updatedAt: "2026-07-27T00:00:00.000Z",
 };
@@ -41,7 +46,9 @@ describe("AI Assistant server actions", () => {
       correlationId: "corr-list",
     });
     expect(mockedFetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/v1/assistant/threads?limit=25"),
+      expect.stringContaining(
+        "/api/v1/assistant/threads?limit=25&view=available",
+      ),
       expect.objectContaining({ cache: "no-store" }),
     );
   });
@@ -108,6 +115,31 @@ describe("AI Assistant server actions", () => {
       code: "INVALID_RESPONSE",
       retryable: true,
     });
+  });
+
+  test("requests recoverable deletion and restore through explicit methods", async () => {
+    const deleted = {
+      ...thread,
+      status: "archived",
+      deletedAt: "2026-07-29T00:00:00.000Z",
+      purgeAfter: "2026-08-28T00:00:00.000Z",
+      recoverable: true,
+    };
+    mockedFetch
+      .mockResolvedValueOnce(Response.json({ data: deleted }))
+      .mockResolvedValueOnce(Response.json({ data: thread }));
+
+    expect((await deleteAssistantThreadAction(thread.id)).success).toBe(true);
+    expect(mockedFetch.mock.calls[0]?.[1]?.method).toBe("DELETE");
+    expect(
+      String(mockedFetch.mock.calls[0]?.[0]),
+    ).toContain(`/assistant/threads/${thread.id}`);
+
+    expect((await restoreAssistantThreadAction(thread.id)).success).toBe(true);
+    expect(mockedFetch.mock.calls[1]?.[1]?.method).toBe("POST");
+    expect(
+      String(mockedFetch.mock.calls[1]?.[0]),
+    ).toContain(`/assistant/threads/${thread.id}/restore`);
   });
 
   test("maps rate limits without exposing arbitrary backend details", async () => {

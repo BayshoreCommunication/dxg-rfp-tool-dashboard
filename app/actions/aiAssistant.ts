@@ -22,6 +22,8 @@ const safeMessages: Record<string, string> = {
   AI_ASSISTANT_KILLED: "The AI Assistant is temporarily unavailable.",
   ASSISTANT_THREAD_NOT_FOUND: "This conversation is no longer available.",
   ASSISTANT_THREAD_ARCHIVED: "This conversation is archived.",
+  ASSISTANT_THREAD_RECOVERY_EXPIRED:
+    "This conversation's recovery window has expired.",
   INVALID_ASSISTANT_PAGINATION: "The requested conversation page is invalid.",
   INVALID_ASSISTANT_THREAD_UPDATE: "This conversation could not be updated.",
   ASSISTANT_IDEMPOTENCY_CONFLICT:
@@ -111,9 +113,10 @@ const request = async <T>(
 
 export const listAssistantThreadsAction = async (
   limit = 25,
+  view: "available" | "deleted" = "available",
 ): Promise<AssistantActionResult<AssistantThread[]>> =>
   request(
-    `/api/v1/assistant/threads?limit=${encodeURIComponent(String(limit))}`,
+    `/api/v1/assistant/threads?limit=${encodeURIComponent(String(limit))}&view=${view}`,
     undefined,
     parseAssistantThreadList,
   );
@@ -173,6 +176,24 @@ export const archiveAssistantThreadAction = async (
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "archived" }),
     },
+    parseAssistantThread,
+  );
+
+export const deleteAssistantThreadAction = async (
+  threadId: string,
+): Promise<AssistantActionResult<AssistantThread>> =>
+  request(
+    `/api/v1/assistant/threads/${encodeURIComponent(threadId)}`,
+    { method: "DELETE" },
+    parseAssistantThread,
+  );
+
+export const restoreAssistantThreadAction = async (
+  threadId: string,
+): Promise<AssistantActionResult<AssistantThread>> =>
+  request(
+    `/api/v1/assistant/threads/${encodeURIComponent(threadId)}/restore`,
+    { method: "POST" },
     parseAssistantThread,
   );
 

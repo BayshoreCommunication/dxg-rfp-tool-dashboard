@@ -52,13 +52,16 @@ export default function AiAssistantWorkspace({
     initialError,
     uiContext,
   });
-  const { state } = assistant;
+  const { refreshThreads, state } = assistant;
   const [historyOpen, setHistoryOpen] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const suggestionShownRef = useRef<string | null>(null);
   const activeThreads = state.threads.filter(
-    (thread) => thread.status === "active",
+    (thread) => thread.status === "active" && !thread.deletedAt,
   );
+  const historyAvailable =
+    activeThreads.length > 0 ||
+    state.threads.some((thread) => Boolean(thread.deletedAt));
   const selectedThread = state.threads.find(
     (thread) => thread.id === state.selectedThreadId,
   );
@@ -75,6 +78,10 @@ export default function AiAssistantWorkspace({
       composerRef.current?.focus();
     }
   }, [state.conversationStatus]);
+
+  useEffect(() => {
+    void refreshThreads();
+  }, [refreshThreads]);
 
   const selectThread = (threadId: string) => {
     setHistoryOpen(false);
@@ -94,7 +101,7 @@ export default function AiAssistantWorkspace({
     } else if (state.selectedThreadId) {
       void assistant.selectThread(state.selectedThreadId);
     } else {
-      void assistant.refreshThreads();
+      void refreshThreads();
     }
     window.requestAnimationFrame(() => composerRef.current?.focus());
   };
@@ -214,7 +221,7 @@ export default function AiAssistantWorkspace({
             : "flex min-h-[620px] flex-1 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_22px_70px_-50px_rgba(15,23,42,0.65)] sm:rounded-[26px]"
         }
       >
-        {activeThreads.length > 0 && !popupPresentation && (
+        {historyAvailable && !popupPresentation && (
           <AssistantHistory
             threads={state.threads}
             selectedThreadId={state.selectedThreadId}
@@ -223,6 +230,8 @@ export default function AiAssistantWorkspace({
             onArchive={(threadId) => {
               void assistant.archiveThread(threadId);
             }}
+            onDelete={assistant.deleteThread}
+            onRestore={assistant.restoreThread}
           />
         )}
         <div className="flex min-w-0 flex-1 flex-col">
@@ -235,7 +244,7 @@ export default function AiAssistantWorkspace({
           )}
           {popupPresentation && onClose ? (
             <AssistantFloatingControls
-              hasHistory={activeThreads.length > 0}
+              hasHistory={historyAvailable}
               onOpenHistory={() => setHistoryOpen(true)}
               onNewChat={newChat}
               onClose={onClose}
@@ -247,7 +256,7 @@ export default function AiAssistantWorkspace({
           ) : (
             <AssistantHeader
               title={selectedThread?.title || "New conversation"}
-              hasHistory={activeThreads.length > 0}
+              hasHistory={historyAvailable}
               onOpenHistory={() => setHistoryOpen(true)}
               onNewChat={newChat}
               onClose={onClose}
@@ -349,6 +358,8 @@ export default function AiAssistantWorkspace({
               onArchive={(threadId) => {
                 void assistant.archiveThread(threadId);
               }}
+              onDelete={assistant.deleteThread}
+              onRestore={assistant.restoreThread}
               onClose={closeHistory}
             />
           </div>
