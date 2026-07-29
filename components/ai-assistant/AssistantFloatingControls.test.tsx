@@ -7,13 +7,43 @@ import {
 import AssistantFloatingControls from "./AssistantFloatingControls";
 
 describe("AssistantFloatingControls", () => {
-  test("opens the menu and runs the selected action", () => {
+  test("starts a new conversation directly without opening the options menu", () => {
     const onNewChat = jest.fn();
     render(
       <AssistantFloatingControls
         hasHistory
         onOpenHistory={jest.fn()}
         onNewChat={onNewChat}
+        onClose={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Start new conversation" }),
+    );
+
+    expect(onNewChat).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("menu", { name: "Assistant options" }),
+    ).not.toBeInTheDocument();
+
+    const controls = screen
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label"));
+    expect(controls).toEqual([
+      "Start new conversation",
+      "Assistant options",
+      "Close AI Assistant",
+    ]);
+  });
+
+  test("keeps new conversation out of the menu and opens history", () => {
+    const onOpenHistory = jest.fn();
+    render(
+      <AssistantFloatingControls
+        hasHistory
+        onOpenHistory={onOpenHistory}
+        onNewChat={jest.fn()}
         onClose={jest.fn()}
         onResetPosition={jest.fn()}
         positionModified
@@ -27,12 +57,16 @@ describe("AssistantFloatingControls", () => {
       screen.getByRole("menu", { name: "Assistant options" }),
     ).toBeInTheDocument();
 
-    const newConversation = screen.getByRole("menuitem", {
-      name: "Start new conversation",
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "Start new conversation",
+      }),
+    ).not.toBeInTheDocument();
+    const conversationHistory = screen.getByRole("menuitem", {
+      name: "Open conversation history",
     });
-    expect(newConversation).toHaveClass("whitespace-nowrap");
-    fireEvent.click(newConversation);
-    expect(onNewChat).toHaveBeenCalledTimes(1);
+    fireEvent.click(conversationHistory);
+    expect(onOpenHistory).toHaveBeenCalledTimes(1);
     expect(
       screen.queryByRole("menu", { name: "Assistant options" }),
     ).not.toBeInTheDocument();
@@ -111,7 +145,7 @@ describe("AssistantFloatingControls", () => {
     });
     fireEvent.click(trigger);
     const first = screen.getByRole("menuitem", {
-      name: "Start new conversation",
+      name: "Open conversation history",
     });
     await waitFor(() => expect(first).toHaveFocus());
     fireEvent.keyDown(first.closest('[role="menu"]') as HTMLElement, {
@@ -119,7 +153,7 @@ describe("AssistantFloatingControls", () => {
     });
     expect(
       screen.getByRole("menuitem", {
-        name: "Open conversation history",
+        name: "Reset popup position",
       }),
     ).toHaveFocus();
 

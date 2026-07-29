@@ -3,7 +3,6 @@
 import {
   Check,
   Copy,
-  LoaderCircle,
   Sparkles,
   Square,
   Volume2,
@@ -231,10 +230,10 @@ export default function MessageBubble({
                   {renderedContent}
                 </ReactMarkdown>
                 {streaming && (
-                  <LoaderCircle
-                    size={14}
+                  <span
+                    data-testid="assistant-streaming-cursor"
                     aria-hidden
-                    className="ml-1 inline text-[#00aeb5] motion-safe:animate-spin"
+                    className="ml-1 inline-block h-[1em] w-0.5 rounded-full bg-[#00aeb5] align-[-0.12em] motion-safe:animate-pulse"
                   />
                 )}
               </div>

@@ -99,6 +99,9 @@ describe("AssistantPopup", () => {
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
     ).toHaveClass("h-[min(460px,calc(100dvh-24px))]");
+    expect(
+      screen.getByRole("dialog", { name: "AI Assistant" }),
+    ).not.toHaveClass("will-change-[transform,opacity]");
 
     fireEvent.click(
       screen.getByRole("button", { name: "Close mocked workspace" }),
@@ -283,6 +286,20 @@ describe("AssistantPopup", () => {
     ).toHaveStyle({ width: "384px", height: "460px" });
     expect(window.localStorage.getItem("rfpilot:ai-assistant-size:v1"))
       .toBeNull();
+  });
+
+  test("keeps the lower-right resize affordance compact and discoverable", async () => {
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+
+    const resize = screen.getByRole("button", {
+      name: "Resize AI Assistant from lower right",
+    });
+
+    expect(resize).not.toHaveAttribute("title");
+    expect(resize).toHaveClass("h-8", "w-8", "opacity-70");
+    expect(resize).not.toHaveClass("opacity-0");
+    expect(resize.querySelector(".lucide-scaling")).toBeInTheDocument();
   });
 
   test("limits resizing to twice the default size and the viewport", async () => {

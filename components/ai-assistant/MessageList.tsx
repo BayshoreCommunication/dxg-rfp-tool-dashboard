@@ -7,10 +7,10 @@ import {
   useRef,
   useState,
 } from "react";
-import TypingIndicator from "@/components/ai/shared/TypingIndicator";
 import type { AssistantDisplayMessage } from "@/lib/aiAssistant/types";
 import MessageBubble from "./MessageBubble";
 import JumpToLatest from "./JumpToLatest";
+import AssistantGeneratingIndicator from "./AssistantGeneratingIndicator";
 
 export default function MessageList({
   messages,
@@ -228,7 +228,7 @@ export default function MessageList({
             )}
             {responding && !streamingMessage && (
               <li className="flex justify-start">
-                <TypingIndicator announce={false} />
+                <AssistantGeneratingIndicator />
               </li>
             )}
           </ol>
