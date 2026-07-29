@@ -36,6 +36,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoExtraction, useConversation, useNotesScan, useProposalSources, useSourceUpload } from "./useConversation";
+import { takeProposalHandoffDraft } from "@/lib/aiAssistant/handoff";
 
 const ACCENT = "#00c2c9";
 const DEEP = "#087f69";
@@ -855,6 +856,17 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
   const creatingRef = useRef(false);
+
+  // A general-assistant handoff may carry the user's last question in
+  // sessionStorage. It is consumed once and remains an unsent composer draft;
+  // opening this workspace never submits it automatically.
+  useEffect(() => {
+    if (!initialProposalId) return;
+    const handoffDraft = takeProposalHandoffDraft(initialProposalId);
+    if (handoffDraft) {
+      setText((current) => current || handoffDraft);
+    }
+  }, [initialProposalId]);
 
   // Grow for both explicit newlines and browser-wrapped lines. Counting
   // newlines alone leaves long single-line messages hidden inside a one-row

@@ -14,6 +14,7 @@ import {
 import { createProposalAction, getProposalByIdAction } from "@/app/actions/proposals";
 import { getUserData } from "@/app/actions/user";
 import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
+import { storeProposalHandoffDraft } from "@/lib/aiAssistant/handoff";
 
 const replace = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
@@ -206,8 +207,7 @@ describe("AssistantWorkspacePage", () => {
       data: scanJob("succeeded"),
     });
     mockedGetProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID, event: { eventName: "" } } });
-    // Auto-apply stays silent by default: a review that cannot be loaded
-    // leaves the manual flow untouched.
+    // Candidate review remains an explicit editor workflow.
     mockedGetReview.mockResolvedValue({ success: false, code: "REVIEW_UNAVAILABLE", message: "none" });
     mockedGetLatestContext.mockResolvedValue({ success: false, code: "CONTEXT_RUN_UNAVAILABLE", message: "none" } as never);
     // The completion card's readiness check degrades quietly by default.
@@ -222,6 +222,21 @@ describe("AssistantWorkspacePage", () => {
     // No proposal exists yet, so nothing was created or loaded.
     expect(mockedCreateProposal).not.toHaveBeenCalled();
     expect(mockedGetConversation).not.toHaveBeenCalled();
+  });
+
+  test("consumes a general-assistant handoff as an unsent draft", async () => {
+    storeProposalHandoffDraft(
+      PROPOSAL_ID,
+      "What is missing from this proposal?",
+    );
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(
+      await screen.findByLabelText("Message the proposal assistant"),
+    ).toHaveValue("What is missing from this proposal?");
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+    expect(window.sessionStorage.length).toBe(0);
   });
 
   test("first send lazily creates the proposal, moves the URL to the assistant route, then posts the message", async () => {

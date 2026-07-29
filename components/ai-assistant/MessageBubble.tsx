@@ -15,6 +15,7 @@ import remarkGfm from "remark-gfm";
 import AssistantSources, {
   safeAssistantHref,
 } from "./AssistantSources";
+import AssistantHandoffActions from "./AssistantHandoffActions";
 import type { AssistantDisplayMessage } from "@/lib/aiAssistant/types";
 import { cn } from "@/lib/utils";
 
@@ -58,10 +59,12 @@ export default function MessageBubble({
   message,
   streaming = false,
   onNavigate,
+  handoffDraft,
 }: {
   message: AssistantDisplayMessage;
   streaming?: boolean;
   onNavigate?: () => void;
+  handoffDraft?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -234,6 +237,13 @@ export default function MessageBubble({
               />
             )}
           </div>
+          {!user && !streaming && (
+            <AssistantHandoffActions
+              message={message}
+              userDraft={handoffDraft}
+              onNavigate={onNavigate}
+            />
+          )}
           <div
             className={cn(
               "mt-1.5 flex min-h-6 items-center gap-2",

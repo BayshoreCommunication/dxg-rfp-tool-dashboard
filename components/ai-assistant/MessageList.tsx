@@ -95,6 +95,19 @@ export default function MessageList({
     return "";
   }, [messages]);
 
+  const handoffDraftByMessageId = useMemo(() => {
+    const drafts = new Map<string, string>();
+    let latestUserMessage = "";
+    for (const message of messages) {
+      if (message.role === "user" && message.status === "complete") {
+        latestUserMessage = message.content;
+      } else if (message.role === "assistant" && latestUserMessage) {
+        drafts.set(message.id, latestUserMessage);
+      }
+    }
+    return drafts;
+  }, [messages]);
+
   return (
     <div className="relative min-h-0 flex-1">
       <div
@@ -132,6 +145,7 @@ export default function MessageList({
                 key={message.id}
                 message={message}
                 onNavigate={onNavigate}
+                handoffDraft={handoffDraftByMessageId.get(message.id)}
               />
             ))}
             {streamingMessage && (

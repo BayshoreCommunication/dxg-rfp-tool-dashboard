@@ -20,6 +20,14 @@ perform one of those actions, it explains the boundary and gives you the
 relevant RFPilot page and user-operated steps. Use a proposal's dedicated
 assistant when you want to work with that proposal's information and sources.
 
+When a general question turns into work on a specific proposal, expand
+**Continue with one of your proposals**. The selector contains only proposals
+available to your account. You can continue in that proposal's assistant,
+open its editor, or prepare an email after the proposal is submitted. RFPilot
+checks access again at the destination. You can carry the question to the
+proposal assistant as an unsent draft; it is stored only for the current
+browser session and is never sent automatically.
+
 Useful examples:
 
 - “List the guided proposal intake sections.”

@@ -9,6 +9,31 @@ export type AssistantMessageStatus =
   | "failed"
   | "aborted";
 
+export const ASSISTANT_INTENTS = [
+  "greeting_or_thanks",
+  "platform_navigation",
+  "proposal_creation",
+  "proposal_review",
+  "pre_send_checklist",
+  "event_planning",
+  "form_field_help",
+  "proposal_specific_request",
+  "equipment_scope_review",
+  "budget_estimation",
+  "historical_reference_request",
+  "action_request",
+  "unsupported_or_off_topic",
+  "ambiguous",
+] as const;
+
+export type AssistantIntent = (typeof ASSISTANT_INTENTS)[number];
+export type AssistantIntentSource =
+  | "deterministic"
+  | "ui_context"
+  | "follow_up"
+  | "fallback";
+export type AssistantIntentConfidence = "high" | "medium" | "low";
+
 export type AssistantCitation = {
   sourceId: string;
   title: string;
@@ -39,6 +64,10 @@ export type AssistantMessage = {
   inputTokens: number | null;
   outputTokens: number | null;
   safeErrorCode: string | null;
+  intent?: AssistantIntent | null;
+  intentVersion?: string | null;
+  intentSource?: AssistantIntentSource | null;
+  intentConfidence?: AssistantIntentConfidence | null;
   citations: AssistantCitation[];
   createdAt: string;
   updatedAt: string;
@@ -137,6 +166,29 @@ const optionalString = (value: unknown): string | undefined =>
 const finiteNumber = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
+const assistantIntent = (value: unknown): AssistantIntent | null =>
+  typeof value === "string" &&
+  ASSISTANT_INTENTS.includes(value as AssistantIntent)
+    ? (value as AssistantIntent)
+    : null;
+
+const assistantIntentSource = (
+  value: unknown,
+): AssistantIntentSource | null =>
+  value === "deterministic" ||
+  value === "ui_context" ||
+  value === "follow_up" ||
+  value === "fallback"
+    ? value
+    : null;
+
+const assistantIntentConfidence = (
+  value: unknown,
+): AssistantIntentConfidence | null =>
+  value === "high" || value === "medium" || value === "low"
+    ? value
+    : null;
+
 export const parseAssistantCitation = (
   value: unknown,
 ): AssistantCitation | null => {
@@ -212,6 +264,10 @@ export const parseAssistantMessage = (
     inputTokens: finiteNumber(value.inputTokens),
     outputTokens: finiteNumber(value.outputTokens),
     safeErrorCode: nullableString(value.safeErrorCode),
+    intent: assistantIntent(value.intent),
+    intentVersion: nullableString(value.intentVersion),
+    intentSource: assistantIntentSource(value.intentSource),
+    intentConfidence: assistantIntentConfidence(value.intentConfidence),
     citations: Array.isArray(value.citations)
       ? value.citations.flatMap((citation) => {
           const parsed = parseAssistantCitation(citation);

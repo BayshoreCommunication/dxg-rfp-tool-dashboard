@@ -9,6 +9,11 @@ jest.mock("@/components/proposals/AssistantWorkspacePage", () => ({
   ),
 }));
 
+const mockGetProposalById = jest.fn();
+jest.mock("@/app/actions/proposals", () => ({
+  getProposalByIdAction: (...args: unknown[]) => mockGetProposalById(...args),
+}));
+
 // Declared outside the factory so its identity survives jest.resetModules().
 const mockNotFound = jest.fn(() => {
   throw new Error("NEXT_NOT_FOUND");
@@ -30,7 +35,13 @@ const loadPage = async (flag: string): Promise<AssistantRoute> => {
 describe("/proposals/[id]/assistant", () => {
   const savedFlag = process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED;
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetProposalById.mockResolvedValue({
+      success: true,
+      data: { _id: PROPOSAL_ID },
+    });
+  });
 
   afterAll(() => {
     if (savedFlag === undefined) delete process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED;
@@ -42,6 +53,7 @@ describe("/proposals/[id]/assistant", () => {
     render(await Page({ params: Promise.resolve({ id: PROPOSAL_ID }) }));
 
     expect(screen.getByTestId("assistant-workspace")).toHaveTextContent(PROPOSAL_ID);
+    expect(mockGetProposalById).toHaveBeenCalledWith(PROPOSAL_ID);
     expect(mockNotFound).not.toHaveBeenCalled();
   });
 
@@ -50,5 +62,29 @@ describe("/proposals/[id]/assistant", () => {
 
     await expect(Page({ params: Promise.resolve({ id: PROPOSAL_ID }) })).rejects.toThrow("NEXT_NOT_FOUND");
     expect(mockNotFound).toHaveBeenCalled();
+    expect(mockGetProposalById).not.toHaveBeenCalled();
+  });
+
+  test("404s when the proposal is unavailable at the destination", async () => {
+    mockGetProposalById.mockResolvedValueOnce({
+      success: false,
+      message: "Proposal not found",
+    });
+    const Page = await loadPage("true");
+
+    await expect(
+      Page({ params: Promise.resolve({ id: PROPOSAL_ID }) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(mockGetProposalById).toHaveBeenCalledWith(PROPOSAL_ID);
+    expect(mockNotFound).toHaveBeenCalled();
+  });
+
+  test("rejects an unsafe proposal identifier before backend access", async () => {
+    const Page = await loadPage("true");
+
+    await expect(
+      Page({ params: Promise.resolve({ id: "../../settings" }) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(mockGetProposalById).not.toHaveBeenCalled();
   });
 });
