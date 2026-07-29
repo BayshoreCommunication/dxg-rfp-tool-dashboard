@@ -69,6 +69,7 @@ export default function AssistantPopup({
     resizing,
     positionModified,
     sizeModified,
+    interactionAnnouncement,
     resetPosition,
     resetSize,
     dragHandleProps,
@@ -123,7 +124,10 @@ export default function AssistantPopup({
       const menuOpen = popupRef.current?.querySelector(
         '[data-assistant-menu="open"]',
       );
-      if (event.key === "Escape" && !menuOpen) close(true);
+      const historyOpen = popupRef.current?.querySelector(
+        '[data-assistant-history="open"]',
+      );
+      if (event.key === "Escape" && !menuOpen && !historyOpen) close(true);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -182,13 +186,26 @@ export default function AssistantPopup({
           : "assistant-popup-closed"
       }`}
     >
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {interactionAnnouncement}
+      </p>
+      <p id="ai-assistant-move-instructions" className="sr-only">
+        Use arrow keys to move the Assistant, Shift plus an arrow for a larger
+        step, and Home to reset its position.
+      </p>
+      <p id="ai-assistant-resize-instructions" className="sr-only">
+        Use arrow keys to resize the Assistant, Shift plus an arrow for a
+        larger step, and Home to reset its size.
+      </p>
       <button
         type="button"
         aria-label="Move AI Assistant"
+        aria-describedby="ai-assistant-move-instructions"
+        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home"
         title="Drag to move · Arrow keys to nudge · Home to reset"
         data-testid="assistant-drag-handle"
         {...dragHandleProps}
-        className={`absolute left-3 top-3 z-40 inline-flex h-8 w-9 touch-none items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-400 shadow-[0_10px_24px_-16px_rgba(15,23,42,0.75)] backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:bg-slate-100 hover:text-[#00aeb5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 motion-reduce:transform-none ${
+        className={`absolute left-3 top-3 z-40 inline-flex h-10 w-10 touch-none items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-500 shadow-[0_10px_24px_-16px_rgba(15,23,42,0.75)] backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:bg-slate-100 hover:text-[#00aeb5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 motion-reduce:transform-none ${
           dragging ? "cursor-grabbing text-[#00aeb5]" : "cursor-grab"
         }`}
       >
@@ -197,10 +214,12 @@ export default function AssistantPopup({
       <button
         type="button"
         aria-label="Resize AI Assistant from upper right"
+        aria-describedby="ai-assistant-resize-instructions"
+        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home"
         title="Drag to resize · Arrow keys resize · Home resets size"
         data-testid="assistant-resize-top-right"
         {...resizeHandleProps("topRight")}
-        className="group absolute right-0 top-14 z-50 flex h-16 w-4 touch-none cursor-nesw-resize items-center justify-center rounded-l-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9]"
+        className="group absolute right-0 top-14 z-50 flex h-16 w-6 touch-none cursor-nesw-resize items-center justify-center rounded-l-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9]"
       >
         <span className="flex h-9 w-2.5 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition group-hover:text-[#00aeb5] group-focus-visible:text-[#00aeb5]">
           <GripVertical size={10} strokeWidth={2.3} aria-hidden />
@@ -209,10 +228,12 @@ export default function AssistantPopup({
       <button
         type="button"
         aria-label="Resize AI Assistant from lower right"
+        aria-describedby="ai-assistant-resize-instructions"
+        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home"
         title="Drag to resize · Arrow keys resize · Home resets size"
         data-testid="assistant-resize-bottom-right"
         {...resizeHandleProps("bottomRight")}
-        className="group absolute bottom-1 right-1 z-50 flex h-8 w-8 touch-none cursor-nwse-resize items-end justify-end rounded-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+        className="group absolute bottom-1 right-1 z-50 flex h-10 w-10 touch-none cursor-nwse-resize items-end justify-end rounded-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
       >
         <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 shadow-sm transition group-hover:text-[#00aeb5] group-focus-visible:text-[#00aeb5]">
           <Maximize2 size={11} strokeWidth={2.2} aria-hidden />
@@ -230,8 +251,8 @@ export default function AssistantPopup({
             <button
               type="button"
               aria-label="Close AI Assistant"
-              onClick={() => close()}
-              className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-500 shadow-[0_10px_24px_-16px_rgba(15,23,42,0.75)] backdrop-blur transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              onClick={() => close(true)}
+              className="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-500 shadow-[0_10px_24px_-16px_rgba(15,23,42,0.75)] backdrop-blur transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <X size={17} aria-hidden />
             </button>
@@ -258,7 +279,7 @@ export default function AssistantPopup({
             initialDetail={bootstrap.detail}
             initialError={bootstrap.error}
             presentation="popup"
-            onClose={close}
+            onClose={() => close(true)}
             onResetPosition={resetPosition}
             onResetSize={resetSize}
             positionModified={positionModified}

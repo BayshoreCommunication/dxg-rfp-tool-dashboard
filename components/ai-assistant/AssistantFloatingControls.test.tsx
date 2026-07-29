@@ -1,4 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import AssistantFloatingControls from "./AssistantFloatingControls";
 
 describe("AssistantFloatingControls", () => {
@@ -85,6 +90,41 @@ describe("AssistantFloatingControls", () => {
       screen.queryByRole("menu", { name: "Assistant options" }),
     ).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  test("moves focus through menu items and restores it on Escape", async () => {
+    render(
+      <AssistantFloatingControls
+        hasHistory
+        onOpenHistory={jest.fn()}
+        onNewChat={jest.fn()}
+        onClose={jest.fn()}
+        onResetPosition={jest.fn()}
+        onResetSize={jest.fn()}
+        positionModified
+        sizeModified
+      />,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Assistant options",
+    });
+    fireEvent.click(trigger);
+    const first = screen.getByRole("menuitem", {
+      name: "Start new conversation",
+    });
+    await waitFor(() => expect(first).toHaveFocus());
+    fireEvent.keyDown(first.closest('[role="menu"]') as HTMLElement, {
+      key: "ArrowDown",
+    });
+    expect(
+      screen.getByRole("menuitem", {
+        name: "Open conversation history",
+      }),
+    ).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   test("resets a moved popup from the options menu", () => {

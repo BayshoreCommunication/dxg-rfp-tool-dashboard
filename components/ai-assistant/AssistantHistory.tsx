@@ -42,6 +42,7 @@ export default function AssistantHistory({
         {mobile && (
           <button
             type="button"
+            data-history-close="true"
             aria-label="Close conversation history"
             onClick={onClose}
             className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"

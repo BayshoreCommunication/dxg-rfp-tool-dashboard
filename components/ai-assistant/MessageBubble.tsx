@@ -234,7 +234,7 @@ export default function MessageBubble({
                   <LoaderCircle
                     size={14}
                     aria-hidden
-                    className="ml-1 inline animate-spin text-[#00aeb5]"
+                    className="ml-1 inline text-[#00aeb5] motion-safe:animate-spin"
                   />
                 )}
               </div>

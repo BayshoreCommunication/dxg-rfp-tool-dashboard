@@ -34,7 +34,7 @@ export default function AssistantSources({
   if (citations.length === 0) return null;
   return (
     <div className="mt-2.5 border-t border-slate-100 pt-2.5">
-      <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">
+      <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500">
         <BookOpen size={11} aria-hidden />
         Sources
       </p>
@@ -64,7 +64,7 @@ export default function AssistantSources({
                   <Link
                     href={href}
                     onClick={opened}
-                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                    className="inline-flex min-h-7 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                   >
                     {content}
                   </Link>
@@ -74,7 +74,7 @@ export default function AssistantSources({
                     target="_blank"
                     rel="noreferrer noopener"
                     onClick={opened}
-                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                    className="inline-flex min-h-7 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                   >
                     {content}
                   </a>

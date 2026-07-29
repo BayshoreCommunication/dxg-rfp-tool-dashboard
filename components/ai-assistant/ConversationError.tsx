@@ -51,7 +51,7 @@ export default function ConversationError({
                   : "Retry"
               }
               title="Retry"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-rose-900 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-50"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-900 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-50"
             >
               <RefreshCw size={11} aria-hidden />
             </button>
@@ -61,7 +61,7 @@ export default function ConversationError({
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss error"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-100 hover:text-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-600 hover:bg-rose-100 hover:text-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
         >
           <X size={14} aria-hidden />
         </button>

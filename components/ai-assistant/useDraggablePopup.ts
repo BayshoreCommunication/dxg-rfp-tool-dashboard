@@ -54,6 +54,16 @@ const MAX_HEIGHT = DEFAULT_HEIGHT * 2;
 const POSITION_STORAGE_KEY = "rfpilot:ai-assistant-position:v1";
 const SIZE_STORAGE_KEY = "rfpilot:ai-assistant-size:v1";
 
+const visibleViewport = () => {
+  const viewport = window.visualViewport;
+  return {
+    left: viewport?.offsetLeft ?? 0,
+    top: viewport?.offsetTop ?? 0,
+    width: viewport?.width ?? window.innerWidth,
+    height: viewport?.height ?? window.innerHeight,
+  };
+};
+
 const positionsMatch = (
   first: PopupPosition | null,
   second: PopupPosition,
@@ -142,6 +152,8 @@ export default function useDraggablePopup(
   const [resizing, setResizing] = useState(false);
   const [positionModified, setPositionModified] = useState(false);
   const [sizeModified, setSizeModified] = useState(false);
+  const [interactionAnnouncement, setInteractionAnnouncement] =
+    useState("");
 
   const popupSize = useCallback(() => {
     const rect = popupRef.current?.getBoundingClientRect();
@@ -150,13 +162,13 @@ export default function useDraggablePopup(
         rect?.width ||
         Math.min(
           DEFAULT_WIDTH,
-          Math.max(0, window.innerWidth - VIEWPORT_MARGIN * 2),
+          Math.max(0, visibleViewport().width - VIEWPORT_MARGIN * 2),
         ),
       height:
         rect?.height ||
         Math.min(
           DEFAULT_HEIGHT,
-          Math.max(0, window.innerHeight - VIEWPORT_MARGIN * 2),
+          Math.max(0, visibleViewport().height - VIEWPORT_MARGIN * 2),
         ),
     };
   }, [popupRef]);
@@ -167,11 +179,11 @@ export default function useDraggablePopup(
       maximum: PopupSize = {
         width: Math.min(
           MAX_WIDTH,
-          Math.max(0, window.innerWidth - VIEWPORT_MARGIN * 2),
+          Math.max(0, visibleViewport().width - VIEWPORT_MARGIN * 2),
         ),
         height: Math.min(
           MAX_HEIGHT,
-          Math.max(0, window.innerHeight - VIEWPORT_MARGIN * 2),
+          Math.max(0, visibleViewport().height - VIEWPORT_MARGIN * 2),
         ),
       },
     ): PopupSize => {
@@ -203,20 +215,27 @@ export default function useDraggablePopup(
       measuredSize: PopupSize = popupSize(),
     ): PopupPosition => {
       const { width, height } = measuredSize;
+      const viewport = visibleViewport();
       const maxX = Math.max(
-        VIEWPORT_MARGIN,
-        window.innerWidth - width - VIEWPORT_MARGIN,
+        viewport.left + VIEWPORT_MARGIN,
+        viewport.left + viewport.width - width - VIEWPORT_MARGIN,
       );
       const maxY = Math.max(
-        VIEWPORT_MARGIN,
-        window.innerHeight - height - VIEWPORT_MARGIN,
+        viewport.top + VIEWPORT_MARGIN,
+        viewport.top + viewport.height - height - VIEWPORT_MARGIN,
       );
       return {
         x: Math.round(
-          Math.min(maxX, Math.max(VIEWPORT_MARGIN, candidate.x)),
+          Math.min(
+            maxX,
+            Math.max(viewport.left + VIEWPORT_MARGIN, candidate.x),
+          ),
         ),
         y: Math.round(
-          Math.min(maxY, Math.max(VIEWPORT_MARGIN, candidate.y)),
+          Math.min(
+            maxY,
+            Math.max(viewport.top + VIEWPORT_MARGIN, candidate.y),
+          ),
         ),
       };
     },
@@ -224,17 +243,20 @@ export default function useDraggablePopup(
   );
 
   const defaultPosition = useCallback(
-    (measuredSize: PopupSize = popupSize()): PopupPosition =>
-      clamp(
+    (measuredSize: PopupSize = popupSize()): PopupPosition => {
+      const viewport = visibleViewport();
+      return clamp(
         {
           x: DEFAULT_LEFT,
           y:
-            window.innerHeight -
+            viewport.top +
+            viewport.height -
             measuredSize.height -
             DEFAULT_BOTTOM,
         },
         measuredSize,
-      ),
+      );
+    },
     [clamp, popupSize],
   );
 
@@ -283,6 +305,7 @@ export default function useDraggablePopup(
     setPositionModified(false);
     persistPosition(null);
     updatePosition(defaultPosition());
+    setInteractionAnnouncement("Assistant position reset.");
   }, [defaultPosition, updatePosition]);
 
   const resetSize = useCallback(() => {
@@ -296,6 +319,7 @@ export default function useDraggablePopup(
       ? clamp(positionRef.current ?? defaultPosition(nextSize), nextSize)
       : defaultPosition(nextSize);
     updatePosition(nextPosition, modifiedRef.current, nextSize);
+    setInteractionAnnouncement("Assistant size reset.");
   }, [
     clamp,
     defaultPosition,
@@ -335,9 +359,13 @@ export default function useDraggablePopup(
       updatePosition(next, modifiedRef.current, safeSize);
     };
     window.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("scroll", handleResize);
     return () => {
       window.cancelAnimationFrame(initializeFrame);
       window.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
     };
   }, [
     clamp,
@@ -401,6 +429,9 @@ export default function useDraggablePopup(
       setDragging(false);
       if (drag.moved && positionRef.current) {
         updatePosition(positionRef.current, true);
+        setInteractionAnnouncement(
+          `Assistant moved to ${positionRef.current.x} pixels from the left and ${positionRef.current.y} pixels from the top.`,
+        );
       }
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
@@ -429,12 +460,15 @@ export default function useDraggablePopup(
       event.preventDefault();
       const step = event.shiftKey ? 32 : 12;
       const current = positionRef.current ?? defaultPosition();
-      updatePosition(
+      const nextPosition = updatePosition(
         {
           x: current.x + direction.x * step,
           y: current.y + direction.y * step,
         },
         true,
+      );
+      setInteractionAnnouncement(
+        `Assistant position ${nextPosition.x} pixels from the left, ${nextPosition.y} pixels from the top.`,
       );
     },
     [defaultPosition, resetPosition, updatePosition],
@@ -450,16 +484,23 @@ export default function useDraggablePopup(
       >,
       remember = false,
     ) => {
+      const viewport = visibleViewport();
       const safeSize = clampSize(candidate, {
         width: Math.min(
           MAX_WIDTH,
-          window.innerWidth - frame.startLeft - VIEWPORT_MARGIN,
+          viewport.left +
+            viewport.width -
+            frame.startLeft -
+            VIEWPORT_MARGIN,
         ),
         height: Math.min(
           MAX_HEIGHT,
           edge === "topRight"
-            ? frame.startBottom - VIEWPORT_MARGIN
-            : window.innerHeight -
+            ? frame.startBottom -
+              viewport.top -
+              VIEWPORT_MARGIN
+            : viewport.top +
+                viewport.height -
                 frame.startTop -
                 VIEWPORT_MARGIN,
         ),
@@ -546,6 +587,9 @@ export default function useDraggablePopup(
         if (resize.edge === "topRight" && positionRef.current) {
           updatePosition(positionRef.current, true, sizeRef.current);
         }
+        setInteractionAnnouncement(
+          `Assistant resized to ${sizeRef.current.width} by ${sizeRef.current.height} pixels.`,
+        );
       }
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
@@ -597,7 +641,7 @@ export default function useDraggablePopup(
                 : -step
               : 0),
       };
-      applyResize(
+      const resized = applyResize(
         edge,
         next,
         {
@@ -606,6 +650,9 @@ export default function useDraggablePopup(
           startBottom: currentPosition.y + currentSize.height,
         },
         true,
+      );
+      setInteractionAnnouncement(
+        `Assistant size ${resized.width} by ${resized.height} pixels.`,
       );
     },
     [applyResize, defaultPosition, popupSize, resetSize],
@@ -638,6 +685,7 @@ export default function useDraggablePopup(
     resizing,
     positionModified,
     sizeModified,
+    interactionAnnouncement,
     resetPosition,
     resetSize,
     resizeHandleProps,

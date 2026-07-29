@@ -54,6 +54,10 @@ describe("AssistantPopup", () => {
       configurable: true,
       value: 768,
     });
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: undefined,
+    });
     mockedBootstrap.mockResolvedValue({
       success: true,
       data: { threads: [], detail: null },
@@ -132,10 +136,52 @@ describe("AssistantPopup", () => {
 
   test("closes with Escape", async () => {
     const onOpenChange = jest.fn();
+    const launcher = document.createElement("button");
+    launcher.id = "ai-assistant-launcher";
+    document.body.append(launcher);
     render(<AssistantPopup open onOpenChange={onOpenChange} />);
     await screen.findByText("Workspace presentation: popup");
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    await waitFor(() => expect(launcher).toHaveFocus(), {
+      timeout: 700,
+    });
+    launcher.remove();
+  });
+
+  test("fits within a 320px viewport and a reduced visual viewport", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 320,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 640,
+    });
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: {
+        width: 320,
+        height: 480,
+        offsetLeft: 0,
+        offsetTop: 40,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      },
+    });
+
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("dialog", { name: "AI Assistant" }),
+      ).toHaveStyle({
+        left: "12px",
+        top: "52px",
+        width: "296px",
+        height: "456px",
+      }),
+    );
   });
 
   test("moves with the keyboard, remembers the position, and resets it", async () => {

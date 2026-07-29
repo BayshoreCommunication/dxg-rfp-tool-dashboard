@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import TypingIndicator from "@/components/ai/shared/TypingIndicator";
 import type { AssistantDisplayMessage } from "@/lib/aiAssistant/types";
 import MessageBubble from "./MessageBubble";
@@ -31,6 +37,10 @@ export default function MessageList({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const announcedStreamRef = useRef({ id: "", length: 0 });
+  const lastCompletedIdRef = useRef<string | null>(null);
+  const mountedRef = useRef(false);
+  const [screenReaderStatus, setScreenReaderStatus] = useState("");
 
   const scrollToLatest = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -89,11 +99,60 @@ export default function MessageList({
         message.status === "complete" &&
         message.content
       ) {
-        return message.content;
+        return message;
       }
     }
-    return "";
+    return null;
   }, [messages]);
+
+  useEffect(() => {
+    if (
+      !streamingAssistant?.receivedFirstDelta ||
+      !streamingAssistant.content
+    ) {
+      return;
+    }
+    if (announcedStreamRef.current.id !== streamingAssistant.messageId) {
+      announcedStreamRef.current = {
+        id: streamingAssistant.messageId,
+        length: 0,
+      };
+    }
+    const start = announcedStreamRef.current.length;
+    const next = streamingAssistant.content.slice(start).trim();
+    if (!next) return;
+    const timer = window.setTimeout(() => {
+      announcedStreamRef.current.length = streamingAssistant.content.length;
+      setScreenReaderStatus(`Assistant: ${next}`);
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [
+    streamingAssistant?.content,
+    streamingAssistant?.messageId,
+    streamingAssistant?.receivedFirstDelta,
+  ]);
+
+  useEffect(() => {
+    const currentId = latestCompleted?.id ?? null;
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      lastCompletedIdRef.current = currentId;
+      return;
+    }
+    if (!currentId || currentId === lastCompletedIdRef.current) return;
+    lastCompletedIdRef.current = currentId;
+    const streamed =
+      announcedStreamRef.current.id === currentId &&
+      announcedStreamRef.current.length > 0;
+    const timer = window.setTimeout(() => {
+      setScreenReaderStatus(
+        streamed
+          ? "Assistant response complete."
+          : `Assistant: ${latestCompleted?.content ?? ""}`,
+      );
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [latestCompleted]);
 
   const handoffDraftByMessageId = useMemo(() => {
     const drafts = new Map<string, string>();
@@ -107,6 +166,10 @@ export default function MessageList({
     }
     return drafts;
   }, [messages]);
+  const liveStatus =
+    responding && !streamingAssistant?.receivedFirstDelta
+      ? "Assistant is responding"
+      : screenReaderStatus;
 
   return (
     <div className="relative min-h-0 flex-1">
@@ -125,8 +188,15 @@ export default function MessageList({
         }
         aria-label="AI Assistant conversation"
       >
-        <p aria-live="polite" className="sr-only">
-          {latestCompleted}
+        <p
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label={liveStatus || undefined}
+          className="sr-only"
+          data-testid="assistant-screen-reader-status"
+        >
+          {liveStatus}
         </p>
         {loading && (
           <div
@@ -134,8 +204,8 @@ export default function MessageList({
             aria-label="Loading conversation"
             className="mx-auto max-w-3xl space-y-5"
           >
-            <div className="ml-auto h-16 w-2/3 animate-pulse rounded-2xl bg-slate-200" />
-            <div className="h-28 w-4/5 animate-pulse rounded-2xl bg-slate-100" />
+            <div className="ml-auto h-16 w-2/3 rounded-2xl bg-slate-200 motion-safe:animate-pulse" />
+            <div className="h-28 w-4/5 rounded-2xl bg-slate-100 motion-safe:animate-pulse" />
           </div>
         )}
         {!loading && (
@@ -158,7 +228,7 @@ export default function MessageList({
             )}
             {responding && !streamingMessage && (
               <li className="flex justify-start">
-                <TypingIndicator />
+                <TypingIndicator announce={false} />
               </li>
             )}
           </ol>

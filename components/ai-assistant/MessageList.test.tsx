@@ -1,4 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import MessageList from "./MessageList";
 
 describe("MessageList", () => {
@@ -50,6 +55,52 @@ describe("MessageList", () => {
     expect(
       screen.getByRole("status", { name: "Assistant is responding" }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+  });
+
+  test("announces only newly streamed text through one polite region", () => {
+    jest.useFakeTimers();
+    const { rerender } = render(
+      <MessageList
+        messages={[]}
+        streamingAssistant={{
+          messageId: "assistant-1",
+          content: "First sentence.",
+          receivedFirstDelta: true,
+        }}
+        loading={false}
+        responding
+        isNearBottom
+        onNearBottomChange={jest.fn()}
+      />,
+    );
+    act(() => jest.advanceTimersByTime(700));
+    expect(
+      screen.getByTestId("assistant-screen-reader-status"),
+    ).toHaveTextContent("Assistant: First sentence.");
+
+    rerender(
+      <MessageList
+        messages={[]}
+        streamingAssistant={{
+          messageId: "assistant-1",
+          content: "First sentence. Second sentence.",
+          receivedFirstDelta: true,
+        }}
+        loading={false}
+        responding
+        isNearBottom
+        onNearBottomChange={jest.fn()}
+      />,
+    );
+    act(() => jest.advanceTimersByTime(700));
+    expect(
+      screen.getByTestId("assistant-screen-reader-status"),
+    ).toHaveTextContent("Assistant: Second sentence.");
+    expect(
+      screen.getByTestId("assistant-screen-reader-status"),
+    ).not.toHaveTextContent("First sentence. Second sentence.");
+    jest.useRealTimers();
   });
 
   test("announces typing while a request is waiting for acceptance", () => {

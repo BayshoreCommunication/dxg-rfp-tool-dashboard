@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AssistantThread,
   AssistantThreadDetail,
@@ -79,6 +79,7 @@ export default function AiAssistantWorkspace({
   const selectThread = (threadId: string) => {
     setHistoryOpen(false);
     void assistant.selectThread(threadId);
+    window.requestAnimationFrame(() => composerRef.current?.focus());
   };
 
   const newChat = () => {
@@ -90,14 +91,44 @@ export default function AiAssistantWorkspace({
   const retry = () => {
     if (state.pendingRequest) {
       void assistant.retry();
-      return;
-    }
-    if (state.selectedThreadId) {
+    } else if (state.selectedThreadId) {
       void assistant.selectThread(state.selectedThreadId);
-      return;
+    } else {
+      void assistant.refreshThreads();
     }
-    void assistant.refreshThreads();
+    window.requestAnimationFrame(() => composerRef.current?.focus());
   };
+
+  const closeHistory = useCallback(() => {
+    setHistoryOpen(false);
+    window.requestAnimationFrame(() => {
+      (
+        document.getElementById("ai-assistant-options") ??
+        document.getElementById("ai-assistant-history-trigger")
+      )?.focus();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!historyOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(
+          '[data-assistant-history="open"] [data-history-close="true"]',
+        )
+        ?.focus();
+    });
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeHistory();
+    };
+    window.addEventListener("keydown", closeWithEscape);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", closeWithEscape);
+    };
+  }, [closeHistory, historyOpen]);
 
   const composer = (
     <ChatComposer
@@ -293,6 +324,7 @@ export default function AiAssistantWorkspace({
 
       {historyOpen && (
         <div
+          data-assistant-history="open"
           className={
             popupPresentation
               ? "absolute inset-0 z-40"
@@ -304,7 +336,7 @@ export default function AiAssistantWorkspace({
           <button
             type="button"
             aria-label="Close conversation history"
-            onClick={() => setHistoryOpen(false)}
+            onClick={closeHistory}
             className="absolute inset-0 bg-[#0e1b2b]/35 backdrop-blur-[2px]"
           />
           <div className="absolute bottom-0 left-0 top-0 w-[min(88vw,320px)] bg-white shadow-2xl motion-safe:animate-[assistant-message-in_180ms_ease-out]">
@@ -317,7 +349,7 @@ export default function AiAssistantWorkspace({
               onArchive={(threadId) => {
                 void assistant.archiveThread(threadId);
               }}
-              onClose={() => setHistoryOpen(false)}
+              onClose={closeHistory}
             />
           </div>
         </div>

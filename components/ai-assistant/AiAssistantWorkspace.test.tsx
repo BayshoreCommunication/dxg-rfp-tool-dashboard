@@ -251,9 +251,8 @@ describe("AiAssistantWorkspace", () => {
       ).toBeInTheDocument(),
     );
     expect(
-      await screen.findAllByText(/Open \[Proposals\]/),
-    ).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Proposals" })).toHaveAttribute(
+      await screen.findByRole("link", { name: "Proposals" }),
+    ).toHaveAttribute(
       "href",
       "/proposals",
     );
@@ -303,8 +302,8 @@ describe("AiAssistantWorkspace", () => {
       });
     });
     expect(
-      await screen.findAllByText(/Open \[Proposals\]/),
-    ).toHaveLength(2);
+      await screen.findByRole("link", { name: "Proposals" }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("How do proposals work?")).toHaveLength(1);
   });
 
@@ -516,21 +515,43 @@ describe("AiAssistantWorkspace", () => {
     ).toHaveLength(1);
   });
 
-  test("opens recent history as a mobile sheet", () => {
+  test("opens recent history with focus, closes on Escape, and restores focus", async () => {
     render(
       <AiAssistantWorkspace
         initialThreads={[thread]}
         initialDetail={{ thread, messages: [] }}
+        presentation="popup"
+        onClose={jest.fn()}
       />,
     );
+    const options = screen.getByRole("button", {
+      name: "Assistant options",
+    });
+    fireEvent.click(options);
     fireEvent.click(
-      screen.getByRole("button", { name: "Open conversation history" }),
+      screen.getByRole("menuitem", {
+        name: "Open conversation history",
+      }),
     );
     expect(
       screen.getAllByRole("button", {
         name: "Close conversation history",
       }),
     ).toHaveLength(2);
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("button", {
+            name: "Close conversation history",
+          })
+          .find((button) => button.dataset.historyClose === "true"),
+      ).toHaveFocus(),
+    );
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(options).toHaveFocus());
+    expect(
+      screen.queryByLabelText("Recent AI Assistant conversations"),
+    ).not.toBeInTheDocument();
   });
 
   test("keeps the popup minimal and docks the composer at the bottom", () => {
