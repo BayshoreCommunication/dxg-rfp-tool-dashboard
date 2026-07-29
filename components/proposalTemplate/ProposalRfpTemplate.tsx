@@ -291,7 +291,10 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     { cat: "Photography", company: p((cvs.photographer as RD)?.companyName), contact: p((cvs.photographer as RD)?.contactName), scope: "Coordinate stage access windows" },
   ].filter((v) => v.company || v.contact);
 
-  /* Eval matrix */
+  /* Eval matrix. Published only once the planner has accepted the weightings:
+     they ship pre-populated, and vendors are scored against them, so an
+     untouched default set must not go out as the client's stated criteria. */
+  const evaluationMatrixConfirmed = bud.evaluationMatrixConfirmed === true;
   const em = (bud.evaluationMatrix || {}) as RD;
   const matrixRows: { label: string; weight: number; guide: string }[] = [
     { label: "Technical Approach", weight: Number(em.technicalApproach) || 25, guide: "Spec compliance" },
@@ -1044,24 +1047,32 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         </div>
 
         <div className="section-subtitle">Weighted Evaluation Matrix</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Evaluation Criterion</th>
-              <th style={{ width: "10%", textAlign: "center" }}>Weight</th>
-              <th>Scoring Guide</th>
-            </tr>
-          </thead>
-          <tbody>
-            {matrixRows.map((row, i) => (
-              <tr key={i}>
-                <td>{row.label}</td>
-                <td style={{ textAlign: "center", fontWeight: 800, color: "#222628" }}>{row.weight}%</td>
-                <td>{row.guide}</td>
+        {evaluationMatrixConfirmed ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Evaluation Criterion</th>
+                <th style={{ width: "10%", textAlign: "center" }}>Weight</th>
+                <th>Scoring Guide</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {matrixRows.map((row, i) => (
+                <tr key={i}>
+                  <td>{row.label}</td>
+                  <td style={{ textAlign: "center", fontWeight: 800, color: "#222628" }}>{row.weight}%</td>
+                  <td>{row.guide}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p>
+            Scoring criteria have not been finalised. Proposals will be evaluated on overall fit
+            against the requirements in this document; the client will confirm weightings before
+            award.
+          </p>
+        )}
 
         {p(bud.sustainabilityDeiNotes) && (
           <div className="callout" style={{ marginTop: 9 }}>

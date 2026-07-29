@@ -238,6 +238,12 @@ export type BudgetData = {
     responsiveness: number;
     sustainabilityDei: number;
   };
+  /**
+   * Whether the planner has actually accepted the weighting. Vendors are scored
+   * on these numbers, so the shipped defaults must not reach the RFP as though
+   * they were chosen — they apply only once confirmed or edited.
+   */
+  evaluationMatrixConfirmed: boolean;
   sustainabilityDeiNotes: string;
   vendorQuestionsDueDate: string;
   responseToVendorQuestionsDate: string;
@@ -454,6 +460,7 @@ const defaultProposalData: ProposalData = {
       responsiveness: 7,
       sustainabilityDei: 3,
     },
+    evaluationMatrixConfirmed: false,
     sustainabilityDeiNotes: "",
     vendorQuestionsDueDate: "",
     responseToVendorQuestionsDate: "",
@@ -768,6 +775,7 @@ const normalizeExtracted = (
                 sustainabilityDei: Number(rm.sustainabilityDei ?? 0),
               }
             : defM,
+          evaluationMatrixConfirmed: rb.evaluationMatrixConfirmed === true,
           sustainabilityDeiNotes: (rb.sustainabilityDeiNotes as string) ?? "",
           vendorQuestionsDueDate: (rb.vendorQuestionsDueDate as string) ?? "",
           responseToVendorQuestionsDate: (rb.responseToVendorQuestionsDate as string) ?? "",

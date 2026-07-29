@@ -273,6 +273,7 @@ const BudgetProposalPreferences = ({
     budgetFlexibility: data.budgetFlexibility ?? "",
     proposalFormatPreferences: data.proposalFormatPreferences ?? [],
     evaluationMatrix: { ...defMatrix, ...(data.evaluationMatrix ?? {}) },
+    evaluationMatrixConfirmed: data.evaluationMatrixConfirmed === true,
     sustainabilityDeiNotes: data.sustainabilityDeiNotes ?? "",
     vendorQuestionsDueDate: data.vendorQuestionsDueDate ?? "",
     responseToVendorQuestionsDate: data.responseToVendorQuestionsDate ?? "",
@@ -335,12 +336,16 @@ const BudgetProposalPreferences = ({
         }
       });
     }
-    onChange({ evaluationMatrix: newM });
+    // Touching the weights is itself a decision about them.
+    onChange({ evaluationMatrix: newM, evaluationMatrixConfirmed: true });
   };
 
   const updateMatrix = (key: MK, raw: string) => {
     const v = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
-    onChange({ evaluationMatrix: { ...safeData.evaluationMatrix, [key]: v } });
+    onChange({
+      evaluationMatrix: { ...safeData.evaluationMatrix, [key]: v },
+      evaluationMatrixConfirmed: true,
+    });
   };
 
   /* ─── Budget signals ─── */
@@ -632,6 +637,33 @@ const BudgetProposalPreferences = ({
               </p>
             </div>
           </div>
+        )}
+
+        {/* Vendors are scored on these weights, so the shipped defaults must be
+            a starting point the planner accepts, not a silent decision that
+            reaches the RFP as though they had chosen it. */}
+        {!safeData.evaluationMatrixConfirmed && (
+          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-sm font-semibold text-amber-900">
+              These are DXG&apos;s suggested weightings — not yet your choice.
+            </p>
+            <p className="mt-1 text-xs text-amber-800">
+              Vendors are scored against them, so they stay out of the RFP until you accept or adjust
+              them. Change any weight to make it yours, or confirm the suggestion as it stands.
+            </p>
+            <button
+              type="button"
+              onClick={() => onChange({ evaluationMatrixConfirmed: true })}
+              className="mt-2 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100"
+            >
+              Use these weightings
+            </button>
+          </div>
+        )}
+        {safeData.evaluationMatrixConfirmed && (
+          <p className="mb-3 px-1 text-xs font-semibold text-emerald-700">
+            ✓ Weightings confirmed — these will be published to vendors.
+          </p>
         )}
 
         {/* Matrix table */}
