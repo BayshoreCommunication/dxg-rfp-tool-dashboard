@@ -9,13 +9,24 @@ organizations included in the current Assistant rollout.
 ## What it can help with
 
 - finding your way around RFPilot;
-- understanding proposal creation and review;
+- understanding proposal creation and review, including the guided intake
+  sections and what the main form fields mean;
 - explaining event-planning information and workflows;
 - onboarding and general platform questions.
 
-The Assistant is read-only. It cannot edit, publish, send, archive, or delete
-anything for you. Use a proposal's dedicated assistant when you want to work
-with that proposal's information and sources.
+The Assistant is read-only. It cannot edit, publish, send, archive, delete,
+book, reserve, schedule, or contact someone for you. When you ask it to
+perform one of those actions, it explains the boundary and gives you the
+relevant RFPilot page and user-operated steps. Use a proposal's dedicated
+assistant when you want to work with that proposal's information and sources.
+
+Useful examples:
+
+- “List the guided proposal intake sections.”
+- “What should I enter in Event Overview?”
+- “What should I check before sending this proposal?”
+- “Update my event checklist for a three-day hybrid conference.”
+- “Where can I see vendor responses?”
 
 ## Start a conversation
 
