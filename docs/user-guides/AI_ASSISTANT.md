@@ -34,6 +34,14 @@ supported focused fields. It sends only a category and field identifier—not
 the value you entered. Ask “What should I enter in this field?”, “Show me a
 good example,” or “Can I leave this blank?” for focused guidance.
 
+## Review an opened proposal
+
+Open a proposal’s dedicated assistant and run **Proposal readiness check** to
+see a concise event summary, section completeness, and deterministic findings.
+Each finding identifies the affected fields and a suggested next step. If the
+proposal changes after a check, RFPilot marks the report as out of date and
+asks you to refresh it. The check never changes proposal fields automatically.
+
 ## Start a conversation
 
 1. Select the robot icon in the sidebar.

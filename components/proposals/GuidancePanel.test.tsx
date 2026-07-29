@@ -116,4 +116,37 @@ describe("GuidancePanel", () => {
     );
     expect(onNavigateToStep).toHaveBeenCalledWith(7);
   });
+
+  test("shows the bounded proposal summary, next action, and stale warning", async () => {
+    mockedLatest.mockResolvedValue({
+      success: true,
+      data: {
+        ...report,
+        currentProposalVersion: 4,
+        stale: true,
+        analysisVersion: "proposal-analysis.v2",
+        summary: {
+          eventName: "Leadership Summit",
+          eventFormat: "Hybrid",
+          dateRange: "2026-10-01 to 2026-10-03",
+          attendeeCount: 1500,
+          roomCount: 6,
+        },
+        findings: report.findings.map((finding) => ({
+          ...finding,
+          suggestedNextStep: "Correct the event date range before pricing.",
+        })),
+      },
+    });
+    render(<GuidancePanel proposalId={proposalId} />);
+
+    expect(await screen.findByText("Leadership Summit")).toBeInTheDocument();
+    expect(screen.getByText("1,500 attendees")).toBeInTheDocument();
+    expect(
+      screen.getByText(/proposal is now version 4/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Correct the event date range before pricing.").length,
+    ).toBeGreaterThan(0);
+  });
 });

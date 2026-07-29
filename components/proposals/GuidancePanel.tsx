@@ -105,6 +105,12 @@ const FindingItem = ({
       className={`rounded-lg border p-3 ${severityPresentation[finding.severity].container}`}
     >
       <p className="text-sm text-slate-800">{finding.message}</p>
+      {finding.suggestedNextStep && (
+        <p className="mt-1.5 text-xs text-slate-600">
+          <span className="font-semibold text-slate-700">Next:</span>{" "}
+          {finding.suggestedNextStep}
+        </p>
+      )}
       {finding.paths.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {finding.paths.map((path) => (
@@ -220,6 +226,16 @@ export default function GuidancePanel({
           {error}
         </p>
       )}
+      {report?.stale && (
+        <div
+          role="status"
+          className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          This check is from proposal version {report.proposalVersion}. The
+          proposal is now version {report.currentProposalVersion ?? "a newer version"}. Refresh the
+          readiness check before relying on these findings.
+        </div>
+      )}
       {!loading && !report && !error && (
         <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
           Run the readiness check to see completeness and risk findings.
@@ -227,6 +243,42 @@ export default function GuidancePanel({
       )}
       {report && (
         <div className="mt-5 space-y-5">
+          {(report.summary?.eventName ||
+            report.summary?.eventFormat ||
+            report.summary?.dateRange ||
+            report.summary?.attendeeCount != null ||
+            report.summary?.roomCount != null) && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Current proposal
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">
+                {report.summary?.eventName ?? "Untitled event"}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-xs text-slate-600">
+                {report.summary?.eventFormat && (
+                  <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">
+                    {report.summary.eventFormat}
+                  </span>
+                )}
+                {report.summary?.dateRange && (
+                  <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">
+                    {report.summary.dateRange}
+                  </span>
+                )}
+                {report.summary?.attendeeCount != null && (
+                  <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">
+                    {report.summary.attendeeCount.toLocaleString()} attendees
+                  </span>
+                )}
+                {report.summary?.roomCount != null && (
+                  <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">
+                    {report.summary.roomCount} rooms
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           <div>
             <div className="flex items-baseline justify-between">
               <p className="text-sm font-semibold text-slate-900">
@@ -290,8 +342,9 @@ export default function GuidancePanel({
             ))}
           </div>
           <p className="border-t border-slate-100 pt-3 text-xs text-slate-500">
-            Deterministic checks based on your proposal fields — no
-            AI-generated numbers. Updated{" "}
+            Deterministic checks based on proposal version{" "}
+            {report.proposalVersion} ({report.analysisVersion || report.engineVersion}) —
+            no AI-generated findings or numbers. Updated{" "}
             {report.createdAt
               ? new Date(report.createdAt).toLocaleString()
               : ""}
