@@ -96,3 +96,12 @@ been moved.
 
 The Assistant may ask for clarification or explain that a request is outside
 its supported knowledge. That is safer than guessing.
+
+## Learn from selected proposals
+
+In **See Guidance**, explicitly select up to five of your other active
+proposals to compare their planning structure with the current proposal. Every
+idea is labelled with selected-reference provenance and remains a suggestion.
+Client details, private notes, exact values, and exact historical pricing are
+excluded, and no field is copied automatically. A report becomes unavailable
+if any selected reference is archived, deleted, or no longer accessible.
