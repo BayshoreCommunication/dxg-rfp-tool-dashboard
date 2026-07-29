@@ -60,10 +60,13 @@ const ProcessList = ({
   activeStep = 1,
   hideStepIds = [],
   onStepChange,
+  completedStepIds,
 }: {
   activeStep?: number;
   hideStepIds?: number[];
   onStepChange?: (step: number) => void;
+  /** Steps whose required fields are actually filled. Omit for positional. */
+  completedStepIds?: number[];
 }) => {
   const visibleSteps = steps.filter((s) => !hideStepIds.includes(s.id));
 
@@ -86,7 +89,12 @@ const ProcessList = ({
       <div className="relative flex flex-col gap-0">
         {badgedSteps.map((step, index) => {
           const isActive    = activeStep === step.id;
-          const isCompleted = activeStep > step.id;
+          // A green check reads as "this is done". Derived from position alone,
+          // jumping to the last page marked every earlier step complete —
+          // including steps whose required fields were still empty.
+          const isCompleted = completedStepIds
+            ? completedStepIds.includes(step.id) && !isActive
+            : activeStep > step.id;
           const isLast      = index === badgedSteps.length - 1;
           const isNavigable = typeof onStepChange === "function";
 

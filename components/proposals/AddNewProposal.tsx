@@ -1530,6 +1530,28 @@ const AddNewProposal = ({
     );
   };
 
+  /**
+   * Steps whose required fields are genuinely filled, for the sidebar's green
+   * checks. Steps with no required fields of their own count once the planner
+   * has moved past them; the rest must actually validate.
+   */
+  const completedStepIds = (() => {
+    const validators: Record<number, () => boolean> = {
+      1: isEventStepValid,
+      3: isRoomAndProductionStepValid,
+      7: isVenueStepValid,
+      8: isBudgetStepValid,
+      9: isUploadsStepValid,
+      10: isContactStepValid,
+    };
+    const done: number[] = [];
+    for (let step = 1; step <= 10; step++) {
+      const validator = validators[step];
+      if (validator ? validator() : proposalProcessStep > step) done.push(step);
+    }
+    return done;
+  })();
+
   const normalizeRoomByRoomForSubmit = (
     roomByRoom: RoomByRoomData,
   ): RoomByRoomData => {
@@ -2337,6 +2359,7 @@ const AddNewProposal = ({
               activeStep={proposalProcessStep}
               hideStepIds={isInPersonOnly ? [4] : []}
               onStepChange={isEditMode ? navigateToStep : undefined}
+              completedStepIds={completedStepIds}
             />
           </div>
         </div>
