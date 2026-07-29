@@ -34,6 +34,9 @@ const report: GuidanceReport = {
       category: "production",
       message: "Power drops are required but the count is not specified.",
       paths: ["/content/venue/numberOfPowerDrops"],
+      scopeCategory: "needs_confirmation",
+      scopeSeverity: "needs_venue_confirmation",
+      question: "How many power drops can the venue support?",
     },
     {
       code: "EVENT_DATES_REVERSED",
@@ -115,6 +118,10 @@ describe("GuidancePanel", () => {
       screen.getByRole("button", { name: "Fix in Venue & Technical" }),
     );
     expect(onNavigateToStep).toHaveBeenCalledWith(7);
+    expect(screen.getByText("Needs Venue Confirmation")).toBeInTheDocument();
+    expect(
+      screen.getByText("How many power drops can the venue support?"),
+    ).toBeInTheDocument();
   });
 
   test("shows the bounded proposal summary, next action, and stale warning", async () => {

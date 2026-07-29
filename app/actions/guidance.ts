@@ -17,6 +17,18 @@ export type GuidanceCategory =
   | "production"
   | "budget"
   | "risk";
+export type GuidanceScopeCategory =
+  | "missing_dependency"
+  | "quantity_mismatch"
+  | "possible_duplication"
+  | "needs_confirmation";
+export type GuidanceScopeSeverity =
+  | "blocking"
+  | "high_confidence_gap"
+  | "review_recommended"
+  | "optional_optimization"
+  | "needs_venue_confirmation"
+  | "insufficient_information";
 export type GuidanceFinding = {
   id?: string;
   code: string;
@@ -33,7 +45,7 @@ export type GuidanceFinding = {
   }>;
   explanation?: string;
   suggestedNextStep?: string;
-  confidence?: "high";
+  confidence?: "high" | "medium" | "low";
   provenance?: {
     source: "current_proposal";
     ruleId: string;
@@ -41,6 +53,9 @@ export type GuidanceFinding = {
   };
   proposalVersion?: number;
   analysisVersion?: string;
+  scopeCategory?: GuidanceScopeCategory;
+  scopeSeverity?: GuidanceScopeSeverity;
+  question?: string;
 };
 export type GuidanceSectionCompleteness = {
   section: string;
@@ -142,7 +157,9 @@ const normalize = (raw: GuidanceReport): GuidanceReport => {
           typeof f.suggestedNextStep === "string"
             ? f.suggestedNextStep
             : "Review the affected proposal fields.",
-        confidence: "high" as const,
+        confidence: ["high", "medium", "low"].includes(String(f.confidence))
+          ? (f.confidence as "high" | "medium" | "low")
+          : ("high" as const),
         provenance: {
           source: "current_proposal" as const,
           ruleId:
@@ -158,6 +175,25 @@ const normalize = (raw: GuidanceReport): GuidanceReport => {
           f.proposalVersion ?? raw.proposalVersion,
         ),
         analysisVersion,
+        scopeCategory: [
+          "missing_dependency",
+          "quantity_mismatch",
+          "possible_duplication",
+          "needs_confirmation",
+        ].includes(String(f.scopeCategory))
+          ? (f.scopeCategory as GuidanceScopeCategory)
+          : undefined,
+        scopeSeverity: [
+          "blocking",
+          "high_confidence_gap",
+          "review_recommended",
+          "optional_optimization",
+          "needs_venue_confirmation",
+          "insufficient_information",
+        ].includes(String(f.scopeSeverity))
+          ? (f.scopeSeverity as GuidanceScopeSeverity)
+          : undefined,
+        question: typeof f.question === "string" ? f.question : undefined,
       };
     });
   const summary: Record<string, unknown> =

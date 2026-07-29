@@ -42,6 +42,12 @@ Each finding identifies the affected fields and a suggested next step. If the
 proposal changes after a check, RFPilot marks the report as out of date and
 asks you to refresh it. The check never changes proposal fields automatically.
 
+The same report can label equipment and production-scope findings such as a
+missing dependency, quantity mismatch, possible duplicate rental, or a venue
+confirmation. A confirmation question means RFPilot does not have enough
+authoritative information; confirm it with the venue or production owner
+instead of treating the suggestion as a fact.
+
 ## Start a conversation
 
 1. Select the robot icon in the sidebar.

@@ -70,6 +70,8 @@ const stepForFinding = (finding: GuidanceFinding) => {
 };
 
 const percent = (score: number) => Math.round(score * 100);
+const scopeLabel = (value: string) =>
+  value.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
 
 const Bar = ({ score, tone }: { score: number; tone: string }) => (
   <div
@@ -105,10 +107,21 @@ const FindingItem = ({
       className={`rounded-lg border p-3 ${severityPresentation[finding.severity].container}`}
     >
       <p className="text-sm text-slate-800">{finding.message}</p>
+      {finding.scopeSeverity && (
+        <span className="mt-2 inline-flex rounded-full border border-current/10 bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+          {scopeLabel(finding.scopeSeverity)}
+        </span>
+      )}
       {finding.suggestedNextStep && (
         <p className="mt-1.5 text-xs text-slate-600">
           <span className="font-semibold text-slate-700">Next:</span>{" "}
           {finding.suggestedNextStep}
+        </p>
+      )}
+      {finding.question && (
+        <p className="mt-1.5 text-xs text-slate-600">
+          <span className="font-semibold text-slate-700">Confirm:</span>{" "}
+          {finding.question}
         </p>
       )}
       {finding.paths.length > 0 && (
