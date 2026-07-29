@@ -87,6 +87,69 @@ white artifact.
 
 final result: passed
 
+## 2026-07-29 — Sidebar logout affordance
+
+### Comparison target and evidence
+
+- Source visual truth: `/tmp/rfpilot-sidebar-logout-reference.png`
+  (user-supplied sidebar screenshot).
+- Browser-rendered implementation:
+  `/tmp/rfpilot-sidebar-logout-final-90x875.png`.
+- Combined comparison:
+  `/tmp/rfpilot-sidebar-logout-reference-vs-implementation.png`.
+- Browser viewport: 1250 × 875 CSS pixels at device scale 1.
+- Source pixels: 253 × 875; the sidebar was normalized to a 90 × 875 crop.
+- Implementation pixels: 90 × 875 at native 1× density.
+- State: authenticated Proposals page with the Assistant closed, Notifications
+  visible, and the new Sign out control idle.
+
+### Full-view and focused comparison evidence
+
+- The full sidebar remains 90 pixels wide with the existing logo, navigation,
+  Assistant launcher, divider, and Notifications control unchanged.
+- The focused 90 × 875 comparison confirms that the ambiguous avatar/status
+  control is replaced by a visible logout icon and `Sign out` label.
+- The source shows Dashboard active while the implementation shows Proposals
+  active because the QA route is `/proposals`; this is an intentional
+  navigation-state difference and does not affect the footer comparison.
+
+### Findings and comparison history
+
+- [P1] The original avatar and online dot did not communicate logout behavior.
+  - Replaced the hover-only popover with an always-visible, directly actionable
+    Sign out control based on the existing admin-dashboard pattern.
+  - Added an explicit accessible name, hover/focus feedback, disabled state,
+    spinner, and `Signing out` progress copy.
+  - Post-fix browser evidence shows the action without requiring hover or
+    discovery; no actionable P0, P1, or P2 issue remains.
+
+### Fidelity surfaces
+
+- Fonts and typography: the 9.5px bold label matches the existing sidebar
+  navigation scale and remains legible without wrapping.
+- Spacing and layout rhythm: the control uses the same centered icon/label
+  rhythm and rounded geometry as the admin sidebar while preserving footer
+  spacing.
+- Colors and visual tokens: idle slate styling fits the sidebar; destructive
+  rose feedback is reserved for hover/focus.
+- Image quality and asset fidelity: no raster assets changed; the existing
+  RFPilot logo remains untouched and the logout mark uses the installed icon
+  library.
+- Copy and content: `Sign out` is explicit and the progress state uses
+  `Signing out`.
+
+### Interaction, accessibility, and console checks
+
+- Exactly one `Sign out of your account` button is exposed in the rendered DOM.
+- The focused component test verifies the action call, disabled state, and
+  progress copy.
+- Browser console errors during the visual check: 0.
+- The live logout action was not invoked during visual QA so the authenticated
+  test session remained intact; its handler behavior is covered by the
+  component test.
+
+final result: passed
+
 ## 2026-07-27 — Message density refinement
 
 ### Comparison target and evidence

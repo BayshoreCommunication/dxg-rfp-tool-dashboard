@@ -5,23 +5,15 @@ import {
   getNotificationSocketConfigAction,
   getUnreadNotificationCountAction,
 } from "@/app/actions/notification";
-import { getSettingsAction } from "@/app/actions/settings";
 import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-import { BellDot, Bot, LogOut } from "lucide-react";
+import { BellDot, Bot, LoaderCircle, LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-
-type SidebarSettings = {
-  branding?: {
-    brandName?: string;
-    logoFile?: string | null;
-  };
-};
 
 type NotificationSocketPayload = {
   event: "connected" | "notification:new" | "notification:unread-count";
@@ -40,8 +32,6 @@ const Sidebar = ({
   onOpenAssistant?: () => void;
 }) => {
   const pathname = usePathname();
-  const [userData, setUserData] = useState<SidebarSettings | null>(null);
-  const [showSignOut, setShowSignOut] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [vendorUnreadCount, setVendorUnreadCount] = useState(0);
   const [socketUrl, setSocketUrl] = useState("");
@@ -59,28 +49,6 @@ const Sidebar = ({
       setSigningOut(false);
     }
   };
-
-  useEffect(() => {
-    let mounted = true;
-
-    const loadUser = async () => {
-      const res = await getSettingsAction();
-      if (!mounted) return;
-
-      const nextData =
-        res?.success && res.data && typeof res.data === "object"
-          ? (res.data as SidebarSettings)
-          : null;
-
-      setUserData(nextData);
-    };
-
-    void loadUser();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -188,8 +156,6 @@ const Sidebar = ({
   }, [pathname, socketUrl]);
 
   const avatarUrl = "/assets/logo/rfpilot-primary-logo.png"; // Replace with your actual logo URL or logic to fetch it
-  const brandInitial =
-    userData?.branding?.brandName?.charAt(0)?.toUpperCase() || "U";
 
   return (
     <aside className="fixed left-0 top-0 z-50 flex h-screen w-[90px] flex-col border-r border-gray-200 bg-white">
@@ -332,52 +298,25 @@ const Sidebar = ({
           )}
         </Link>
 
-        <div
-          className="relative mb-4 mt-2"
-          onMouseEnter={() => setShowSignOut(true)}
-          onMouseLeave={() => setShowSignOut(false)}
+        <button
+          type="button"
+          onClick={() => void signOutHandler()}
+          disabled={signingOut}
+          aria-label="Sign out of your account"
+          title="Sign out"
+          className="group flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 disabled:cursor-wait disabled:opacity-60"
         >
-          <button
-            type="button"
-            onClick={() => setShowSignOut((prev) => !prev)}
-            className="block cursor-pointer"
-          >
-            <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-primary/20 transition-all duration-200 hover:scale-105 hover:ring-primary/40">
-              <div
-                className="flex h-full w-full items-center justify-center text-sm font-black text-white"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)",
-                }}
-              >
-                {brandInitial}
-              </div>
-            </div>
-          </button>
-
-          <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
-          <div className="pointer-events-none absolute left-full top-1/2 h-12 w-2 -translate-y-1/2" />
-
-          <div
-            className={cn(
-              "absolute left-full top-1/2 z-10 -translate-y-1/2 pl-2 transition-all duration-200 ease-out",
-              showSignOut
-                ? "pointer-events-auto translate-x-0 opacity-100"
-                : "pointer-events-none -translate-x-1 opacity-0",
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white transition group-hover:border-rose-200 group-hover:bg-rose-50">
+            {signingOut ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <LogOut className="h-4 w-4" aria-hidden />
             )}
-          >
-            <button
-              type="button"
-              onClick={() => void signOutHandler()}
-              disabled={signingOut}
-              className="relative flex w-24 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-3 text-[12px] font-semibold text-gray-700 shadow-md hover:bg-gray-50"
-            >
-              <span className="absolute -left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-b border-l border-gray-200 bg-white" />
-              <LogOut size={12} className="text-gray-500" />
-              {signingOut ? "Signing Out…" : "Sign Out"}
-            </button>
-          </div>
-        </div>
+          </span>
+          <span className="text-[9.5px] font-bold leading-none tracking-wide">
+            {signingOut ? "Signing out" : "Sign out"}
+          </span>
+        </button>
       </div>
     </aside>
   );

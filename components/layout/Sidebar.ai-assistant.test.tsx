@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { signOutAction } from "@/app/actions/auth";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Sidebar from "./Sidebar";
 
 jest.mock("next/navigation", () => ({
@@ -6,9 +7,6 @@ jest.mock("next/navigation", () => ({
 }));
 jest.mock("@/app/actions/auth", () => ({
   signOutAction: jest.fn(),
-}));
-jest.mock("@/app/actions/settings", () => ({
-  getSettingsAction: jest.fn().mockResolvedValue({ success: false }),
 }));
 jest.mock("@/app/actions/notification", () => ({
   getNotificationSocketConfigAction: jest
@@ -33,6 +31,10 @@ jest.mock("@/config/navigation", () => ({
 }));
 
 describe("Sidebar AI Assistant launcher", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   test("opens the dialog from above notifications without adding a route link", () => {
     const onOpenAssistant = jest.fn();
     render(
@@ -58,5 +60,28 @@ describe("Sidebar AI Assistant launcher", () => {
       launcher.compareDocumentPosition(divider) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  test("shows a direct, meaningful sign-out control and its progress state", async () => {
+    const mockedSignOutAction = jest.mocked(signOutAction);
+    mockedSignOutAction.mockResolvedValue({
+      success: true,
+      message: "Signed out successfully",
+    });
+
+    render(<Sidebar />);
+
+    const signOutButton = screen.getByRole("button", {
+      name: "Sign out of your account",
+    });
+    expect(signOutButton).toHaveTextContent("Sign out");
+
+    fireEvent.click(signOutButton);
+
+    await waitFor(() => {
+      expect(mockedSignOutAction).toHaveBeenCalledTimes(1);
+      expect(signOutButton).toBeDisabled();
+      expect(signOutButton).toHaveTextContent("Signing out");
+    });
   });
 });
