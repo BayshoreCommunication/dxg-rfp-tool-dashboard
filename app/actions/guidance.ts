@@ -29,6 +29,13 @@ export type GuidanceScopeSeverity =
   | "optional_optimization"
   | "needs_venue_confirmation"
   | "insufficient_information";
+export type GuidanceRoomCategory =
+  | "room_gap"
+  | "schedule_conflict"
+  | "crew_conflict"
+  | "reuse_opportunity"
+  | "duplicate_rental"
+  | "missing_input";
 export type GuidanceFinding = {
   id?: string;
   code: string;
@@ -55,6 +62,8 @@ export type GuidanceFinding = {
   analysisVersion?: string;
   scopeCategory?: GuidanceScopeCategory;
   scopeSeverity?: GuidanceScopeSeverity;
+  roomCategory?: GuidanceRoomCategory;
+  roomKeys?: string[];
   question?: string;
 };
 export type GuidanceSectionCompleteness = {
@@ -77,6 +86,39 @@ export type GuidanceReport = {
     dateRange: string | null;
     attendeeCount: number | null;
     roomCount: number | null;
+  };
+  roomSchedule?: {
+    version: string;
+    roomCount: number;
+    confidence: "high" | "medium" | "low";
+    rooms: Array<{
+      roomKey: string;
+      roomLabel: string;
+      showStartAt: string | null;
+      showEndAt: string | null;
+      findingCount: number;
+      confidence: "high" | "medium" | "low";
+    }>;
+    roomLevelGapIds: string[];
+    scheduleConflictIds: string[];
+    crewConflictIds: string[];
+    reusableEquipmentOpportunityIds: string[];
+    duplicateRentalIds: string[];
+    missingInputIds: string[];
+    roomSubtotals: Array<{
+      roomKey: string;
+      roomLabel: string;
+      status: "pricing_not_evaluated";
+      amountMinor: null;
+      currency: null;
+      reason: string;
+    }>;
+    sharedServicesSubtotal: {
+      status: "pricing_not_evaluated";
+      amountMinor: null;
+      currency: null;
+      reason: string;
+    };
   };
   overallCompleteness: number;
   completeness: GuidanceSectionCompleteness[];
@@ -193,6 +235,21 @@ const normalize = (raw: GuidanceReport): GuidanceReport => {
         ].includes(String(f.scopeSeverity))
           ? (f.scopeSeverity as GuidanceScopeSeverity)
           : undefined,
+        roomCategory: [
+          "room_gap",
+          "schedule_conflict",
+          "crew_conflict",
+          "reuse_opportunity",
+          "duplicate_rental",
+          "missing_input",
+        ].includes(String(f.roomCategory))
+          ? (f.roomCategory as GuidanceRoomCategory)
+          : undefined,
+        roomKeys: Array.isArray(f.roomKeys)
+          ? f.roomKeys
+              .filter((key): key is string => typeof key === "string")
+              .slice(0, 2)
+          : undefined,
         question: typeof f.question === "string" ? f.question : undefined,
       };
     });
@@ -201,6 +258,59 @@ const normalize = (raw: GuidanceReport): GuidanceReport => {
       ? (raw.summary as unknown as Record<string, unknown>)
       : {};
   const proposalVersion = asCount(raw.proposalVersion);
+  const rawRoomSchedule: Record<string, unknown> =
+    raw.roomSchedule && typeof raw.roomSchedule === "object"
+      ? (raw.roomSchedule as unknown as Record<string, unknown>)
+      : {};
+  const stringIds = (value: unknown) =>
+    Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === "string")
+      : [];
+  const confidence = (value: unknown): "high" | "medium" | "low" =>
+    ["high", "medium", "low"].includes(String(value))
+      ? (value as "high" | "medium" | "low")
+      : "low";
+  const normalizedRooms = (
+    Array.isArray(rawRoomSchedule.rooms) ? rawRoomSchedule.rooms : []
+  ).flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const room = item as Record<string, unknown>;
+    return [{
+      roomKey: String(room.roomKey ?? ""),
+      roomLabel: String(room.roomLabel || "Room"),
+      showStartAt:
+        typeof room.showStartAt === "string" ? room.showStartAt : null,
+      showEndAt:
+        typeof room.showEndAt === "string" ? room.showEndAt : null,
+      findingCount: asCount(room.findingCount),
+      confidence: confidence(room.confidence),
+    }];
+  });
+  const roomSchedule =
+    typeof rawRoomSchedule.version === "string"
+      ? {
+          version: rawRoomSchedule.version,
+          roomCount: asCount(rawRoomSchedule.roomCount),
+          confidence: confidence(rawRoomSchedule.confidence),
+          rooms: normalizedRooms,
+          roomLevelGapIds: stringIds(rawRoomSchedule.roomLevelGapIds),
+          scheduleConflictIds: stringIds(rawRoomSchedule.scheduleConflictIds),
+          crewConflictIds: stringIds(rawRoomSchedule.crewConflictIds),
+          reusableEquipmentOpportunityIds: stringIds(
+            rawRoomSchedule.reusableEquipmentOpportunityIds,
+          ),
+          duplicateRentalIds: stringIds(rawRoomSchedule.duplicateRentalIds),
+          missingInputIds: stringIds(rawRoomSchedule.missingInputIds),
+          roomSubtotals: [],
+          sharedServicesSubtotal: {
+            status: "pricing_not_evaluated" as const,
+            amountMinor: null,
+            currency: null,
+            reason:
+              "Authoritative pricing is calculated separately from room analysis.",
+          },
+        }
+      : undefined;
   return {
     id: String(raw.id ?? ""),
     proposalVersion,
@@ -225,6 +335,7 @@ const normalize = (raw: GuidanceReport): GuidanceReport => {
           ? Number(summary.roomCount)
           : null,
     },
+    roomSchedule,
     overallCompleteness: asScore(raw.overallCompleteness),
     completeness,
     findings,

@@ -48,6 +48,13 @@ confirmation. A confirmation question means RFPilot does not have enough
 authoritative information; confirm it with the venue or production owner
 instead of treating the suggestion as a fact.
 
+The **Room & schedule** summary shows how many room specifications were
+analyzed, conflicts or missing inputs found, and conditional equipment-reuse
+opportunities. A reuse opportunity is a prompt to request and validate an
+alternative—not permission to share equipment. Transport, reset, testing,
+venue rules, and non-overlap must all be confirmed. Room and shared-service
+prices are not calculated by this schedule check.
+
 ## Start a conversation
 
 1. Select the robot icon in the sidebar.

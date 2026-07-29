@@ -46,6 +46,42 @@ const report: GuidanceReport = {
       paths: ["/content/event/startDate", "/content/event/endDate"],
     },
   ],
+  roomSchedule: {
+    version: "room-schedule-analysis.v1",
+    roomCount: 2,
+    confidence: "medium",
+    rooms: [
+      {
+        roomKey: "main",
+        roomLabel: "General Session",
+        showStartAt: "2026-10-01T09:00:00.000Z",
+        showEndAt: "2026-10-01T10:00:00.000Z",
+        findingCount: 1,
+        confidence: "high",
+      },
+      {
+        roomKey: "breakout",
+        roomLabel: "Breakout",
+        showStartAt: null,
+        showEndAt: null,
+        findingCount: 1,
+        confidence: "low",
+      },
+    ],
+    roomLevelGapIds: ["gap-1"],
+    scheduleConflictIds: ["schedule-1"],
+    crewConflictIds: ["crew-1"],
+    reusableEquipmentOpportunityIds: ["reuse-1"],
+    duplicateRentalIds: ["reuse-1"],
+    missingInputIds: ["missing-1"],
+    roomSubtotals: [],
+    sharedServicesSubtotal: {
+      status: "pricing_not_evaluated",
+      amountMinor: null,
+      currency: null,
+      reason: "Authoritative pricing is calculated separately.",
+    },
+  },
   findingCount: 2,
   blockingCount: 1,
   createdAt: "2026-07-21T10:00:00.000Z",
@@ -155,5 +191,8 @@ describe("GuidancePanel", () => {
     expect(
       screen.getAllByText("Correct the event date range before pricing.").length,
     ).toBeGreaterThan(0);
+    expect(screen.getByText("2 rooms analyzed")).toBeInTheDocument();
+    expect(screen.getByText("2 conflicts")).toBeInTheDocument();
+    expect(screen.getByText("1 reuse opportunity")).toBeInTheDocument();
   });
 });

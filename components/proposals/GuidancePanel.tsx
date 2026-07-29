@@ -292,6 +292,47 @@ export default function GuidancePanel({
               </div>
             </div>
           )}
+          {report.roomSchedule && report.roomSchedule.roomCount > 0 && (
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Room & schedule
+                  </p>
+                  <p className="mt-1 text-sm text-slate-700">
+                    {report.roomSchedule.roomCount} room
+                    {report.roomSchedule.roomCount === 1 ? "" : "s"} analyzed
+                  </p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold capitalize text-slate-600">
+                  {report.roomSchedule.confidence} confidence
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                <span className="rounded-full bg-red-50 px-2 py-1 text-red-700 ring-1 ring-red-100">
+                  {report.roomSchedule.scheduleConflictIds.length +
+                    report.roomSchedule.crewConflictIds.length}{" "}
+                  conflicts
+                </span>
+                <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-700 ring-1 ring-amber-100">
+                  {report.roomSchedule.missingInputIds.length +
+                    report.roomSchedule.roomLevelGapIds.length}{" "}
+                  gaps
+                </span>
+                <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 ring-1 ring-emerald-100">
+                  {
+                    report.roomSchedule.reusableEquipmentOpportunityIds
+                      .length
+                  }{" "}
+                  reuse{" "}
+                  {report.roomSchedule.reusableEquipmentOpportunityIds
+                    .length === 1
+                    ? "opportunity"
+                    : "opportunities"}
+                </span>
+              </div>
+            </div>
+          )}
           <div>
             <div className="flex items-baseline justify-between">
               <p className="text-sm font-semibold text-slate-900">
