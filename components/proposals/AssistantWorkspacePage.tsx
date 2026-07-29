@@ -36,7 +36,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoExtraction, useConversation, useNotesScan, useProposalSources, useSourceUpload } from "./useConversation";
-import { useAutoApply } from "./useAutoApply";
 
 const ACCENT = "#00c2c9";
 const DEEP = "#087f69";
@@ -652,7 +651,7 @@ function OverviewCard({ proposalId, eventName, rows, detailCount, detailSource, 
       )}
       {pendingReview > 0 && (
         <p className="mt-1 text-xs text-slate-600">
-          {pendingReview} suggestion{pendingReview === 1 ? "" : "s"} need{pendingReview === 1 ? "s" : ""} your review.{" "}
+          Extracted suggestions are ready for explicit review.{" "}
           <Link href={editorHref} className="font-semibold text-[#087f69] underline underline-offset-2">Review suggestions</Link>
         </p>
       )}
@@ -870,7 +869,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   }, [text]);
 
   const {
-    data, loading, loadError, refresh, pending, sendMessage, retrySend,
+    data, loading, loadError, pending, sendMessage, retrySend,
     resolveQuestion, questionBusyId, questionError,
   } = useConversation(proposalId);
   const { notesJob, notesJobId, notesError, notesBusy, submitNotes } = useNotesScan(proposalId);
@@ -895,31 +894,11 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const started = !!proposalId || messages.length > 0 || pending.length > 0 || localCards.length > 0;
   const completedContextRuns = messages.filter(m => m.runType === "proposal_context" && m.status === "complete").length;
 
-  // Auto-apply after extraction: the latest completed proposal_context run is
-  // handed to useAutoApply, which fires once per runId (sessionStorage guard),
-  // accepts only empty + high-confidence candidates, and polls the application
-  // job. A successful application refreshes the conversation and breadcrumb
-  // (the event name typically populates from the applied fields).
-  const latestContextRunId = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const message = messages[index];
-      if (message.runType === "proposal_context" && message.status === "complete" && message.runId) return message.runId;
-    }
-    return null;
-  }, [messages]);
-  const [autoApplyRefreshes, setAutoApplyRefreshes] = useState(0);
-  const onAutoApplied = useCallback(() => {
-    setAutoApplyRefreshes(count => count + 1);
-    void refresh();
-  }, [refresh]);
-  const autoApply = useAutoApply(proposalId, latestContextRunId, onAutoApplied);
-
   // Captured-details overview: shown once an extraction has completed, no open
-  // clarification question is waiting (the guided flow always goes first), and
-  // auto-apply has either finished or had nothing to apply. It retires as soon
-  // as a draft run exists — from then on the thread shows the draft itself.
+  // clarification question is waiting (the guided flow always goes first).
+  // Extracted candidates remain read-only until the user reviews them in the
+  // editor; this workspace never saves review decisions or applies fields.
   const hasDraftRun = messages.some(message => message.runType === "proposal_draft");
-  const autoApplySettled = !autoApply || autoApply.phase !== "applying";
   const overviewRows = useMemo(() => buildOverviewRows(proposal), [proposal]);
   // A proposal built by conversation alone never has an extraction run, so the
   // hand-off also opens once questions have been answered or the proposal has
@@ -927,9 +906,9 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const answeredQuestions = (data?.questions ?? []).filter(question => question.status === "answered").length;
   const hasCapturedContent = completedContextRuns > 0 || answeredQuestions > 0 || overviewRows.length > 0;
   const showOverview = hasCapturedContent && !loading && !!data
-    && openQuestions.length === 0 && autoApplySettled && !hasDraftRun;
-  const overviewDetailCount = autoApply?.phase === "applied" ? autoApply.added : overviewRows.length;
-  const overviewPendingReview = autoApply?.phase === "applied" ? autoApply.needsReview : 0;
+    && openQuestions.length === 0 && !hasDraftRun;
+  const overviewDetailCount = overviewRows.length;
+  const overviewPendingReview = completedContextRuns > 0 ? 1 : 0;
   // Details reach a proposal by extraction, by answered questions, or both.
   const overviewDetailSource: "sources" | "answers" | "both" =
     completedContextRuns > 0 && answeredQuestions > 0 ? "both" : completedContextRuns > 0 ? "sources" : "answers";
@@ -971,7 +950,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       if (name) setEventName(name);
     });
     return () => { active = false; };
-  }, [proposalId, data?.conversation?.updatedAt, completedContextRuns, autoApplyRefreshes]);
+  }, [proposalId, data?.conversation?.updatedAt, completedContextRuns]);
 
   // The proposal document carries its own version, so a draft can be generated
   // from a conversation-only proposal that has no extraction run at all. The
@@ -985,8 +964,8 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     return review.success ? review.data.proposalVersion : undefined;
   }, []);
 
-  // The version is re-read after auto-apply (which bumps autoApplyRefreshes) so
-  // a draft is never generated against a stale version.
+  // Re-read the proposal version whenever extraction or conversation state
+  // changes so draft generation never relies on a stale version.
   useEffect(() => {
     if (!proposalId) return;
     let active = true;
@@ -994,11 +973,11 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       if (active && typeof version === "number") setProposalVersion(version);
     });
     return () => { active = false; };
-  }, [proposalId, completedContextRuns, autoApplyRefreshes, data?.conversation?.updatedAt, fetchProposalVersion]);
+  }, [proposalId, completedContextRuns, data?.conversation?.updatedAt, fetchProposalVersion]);
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView?.({ block: "end" });
-  }, [messages.length, pending.length, localCards.length, autoScanning, failedNotices.length, openQuestions.length, lastConfirmed, autoApply, showOverview]);
+  }, [messages.length, pending.length, localCards.length, autoScanning, failedNotices.length, openQuestions.length, lastConfirmed, showOverview]);
 
   // Lazy creation: the proposal only exists once the user contributes content.
   const ensureProposal = useCallback(async (): Promise<string | null> => {
@@ -1488,54 +1467,6 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                 {loading && <p role="status" className="text-sm text-slate-500">Loading the conversation…</p>}
                 <ol className="space-y-3">
                   {messages.map(renderMessage)}
-                  {autoApply?.phase === "applying" && (
-                    <li className="flex justify-start">
-                      <p role="status" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-500 shadow-sm">
-                        Filling your proposal with {autoApply.count} extracted field{autoApply.count === 1 ? "" : "s"}…
-                        <span aria-hidden className="ml-0.5 flex items-center gap-0.5">
-                          {[0, 1, 2].map(dot => (
-                            <span
-                              key={dot}
-                              className="h-1 w-1 rounded-full bg-[#00c2c9] motion-safe:animate-[typing-bounce_1.2s_ease-in-out_infinite]"
-                              style={{ animationDelay: `${dot * 150}ms` }}
-                            />
-                          ))}
-                        </span>
-                      </p>
-                    </li>
-                  )}
-                  {autoApply?.phase === "applied" && proposalId && (
-                    <li className="flex justify-start">
-                      <div className="max-w-[85%] rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 shadow-sm">
-                        <p role="status" className="text-sm font-semibold text-emerald-900">
-                          Added {autoApply.added} field{autoApply.added === 1 ? "" : "s"} to your proposal ✓{autoApply.needsReview > 0 ? ` — ${autoApply.needsReview} need${autoApply.needsReview === 1 ? "s" : ""} your review` : ""}
-                        </p>
-                        {autoApply.needsReview > 0 && (
-                          <Link
-                            href={`/proposals/proposal-edit?proposalId=${proposalId}`}
-                            className="mt-1.5 inline-block text-xs font-semibold text-[#087f69] underline underline-offset-2"
-                          >
-                            Review &amp; apply
-                          </Link>
-                        )}
-                      </div>
-                    </li>
-                  )}
-                  {autoApply?.phase === "failed" && proposalId && (
-                    <li className="flex justify-start">
-                      {/* Quiet notice — auto-application never retries; the
-                          manual review surface stays the recovery path. */}
-                      <p className="max-w-[85%] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                        {autoApply.message}{" "}
-                        <Link
-                          href={`/proposals/proposal-edit?proposalId=${proposalId}`}
-                          className="font-semibold text-[#087f69] underline underline-offset-2"
-                        >
-                          Review &amp; apply
-                        </Link>
-                      </p>
-                    </li>
-                  )}
                   {showOverview && proposalId && (
                     <li className="flex justify-start">
                       <OverviewCard

@@ -13,7 +13,7 @@ import {
 } from "@/app/actions/durableJobs";
 import { createProposalAction, getProposalByIdAction } from "@/app/actions/proposals";
 import { getUserData } from "@/app/actions/user";
-import { applyCandidatesAction, getCandidateReviewAction, saveCandidateReviewAction } from "@/app/actions/candidateApplication";
+import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
 
 const replace = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
@@ -48,8 +48,6 @@ jest.mock("@/app/actions/proposalContext", () => ({
 jest.mock("@/app/actions/proposalDraft", () => ({ getProposalDraftAction: jest.fn() }));
 jest.mock("@/app/actions/candidateApplication", () => ({
   getCandidateReviewAction: jest.fn(),
-  saveCandidateReviewAction: jest.fn(),
-  applyCandidatesAction: jest.fn(),
 }));
 
 class EventSourceStub {
@@ -87,8 +85,6 @@ const mockedPatchQuestion = patchConversationQuestionAction as jest.MockedFuncti
 const mockedGetProposalContext = getProposalContextAction as jest.MockedFunction<typeof getProposalContextAction>;
 const mockedGetLatestContext = getLatestProposalContextAction as jest.MockedFunction<typeof getLatestProposalContextAction>;
 const mockedGetReview = getCandidateReviewAction as jest.MockedFunction<typeof getCandidateReviewAction>;
-const mockedSaveReview = saveCandidateReviewAction as jest.MockedFunction<typeof saveCandidateReviewAction>;
-const mockedApplyCandidates = applyCandidatesAction as jest.MockedFunction<typeof applyCandidatesAction>;
 const mockedGenerateGuidance = generateGuidanceAction as jest.MockedFunction<typeof generateGuidanceAction>;
 const mockedGetDraft = getProposalDraftAction as jest.MockedFunction<typeof getProposalDraftAction>;
 
@@ -960,7 +956,7 @@ describe("AssistantWorkspacePage", () => {
     ));
   });
 
-  // ── Auto-apply after extraction ─────────────────────────────────────────────
+  // ── Explicit review after extraction ───────────────────────────────────────
 
   const conversationWithCompletedRun = (questions: Array<Record<string, unknown>> = []) => ({
     success: true as const,
@@ -975,124 +971,25 @@ describe("AssistantWorkspacePage", () => {
     },
   }) as never;
 
-  const candidate = (id: string, path: string, value: string, confidence: number) => ({
-    id, ordinal: 0, path, value, confidence, evidence_ids: [], decision: "pending" as const, modified_value: null, reason: null,
-  });
-
-  // op-a is the only safe candidate: empty current value, confidence >= 0.8 and
-  // no competing candidate on its path. op-low is low confidence, op-filled
-  // targets a field that already has a value, op-c1/op-c2 conflict on one path.
-  const reviewFixture = {
-    success: true as const,
-    correlationId: "test-correlation",
-    data: {
-      reviewId: null,
-      revision: 3,
-      proposalVersion: 7,
-      canonicalPaths: {
-        "op-a": "/content/event/eventName",
-        "op-low": "/content/event/startDate",
-        "op-filled": "/content/event/city",
-        "op-c1": "/content/venueSchedule/numberOfEventRooms",
-        "op-c2": "/content/venueSchedule/numberOfEventRooms",
-      },
-      currentValues: { "/content/event/city": "Berlin" },
-      appliedOperationIds: [],
-      operations: [
-        candidate("op-a", "/content/event/eventName", "Annual Gala", 0.95),
-        candidate("op-low", "/content/event/startDate", "2026-09-01", 0.5),
-        candidate("op-filled", "/content/event/city", "Munich", 0.9),
-        candidate("op-c1", "/content/venueSchedule/numberOfEventRooms", "6", 0.9),
-        candidate("op-c2", "/content/venueSchedule/numberOfEventRooms", "8", 0.85),
-      ],
-    },
-  } as never;
-
   const contextRunResult = {
     success: true as const,
     correlationId: "test-correlation",
     data: { run: { id: "run-1", model: "gpt-test" }, evidence: [], operations: [{}, {}, {}, {}, {}] },
   } as never;
 
-  const applyJob = (status: "succeeded" | "failed", errorCode: string | null = null) => ({
-    ...scanJob("succeeded"),
-    id: "22222222-2222-4222-8222-222222222222",
-    type: "candidate_application",
-    status,
-    errorCode,
-  });
-
-  test("auto-apply accepts only empty high-confidence fields, applies them once, and reports the rest", async () => {
+  test("a completed extraction stays read-only and sends the user to explicit review", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
-    mockedGetReview.mockResolvedValue(reviewFixture);
-    mockedSaveReview.mockResolvedValue({ success: true, data: { reviewId: "rev-1", revision: 4, savedCount: 5 } } as never);
-    mockedApplyCandidates.mockResolvedValue({ success: true, data: { applicationId: "app-1", jobId: "job-apply", status: "queued" } } as never);
-    mockedGetDurableJob.mockResolvedValue({ success: true, correlationId: "test-correlation", data: applyJob("succeeded") });
-
-    const { unmount } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-
-    expect(await screen.findByText("Added 1 field to your proposal ✓ — 4 need your review")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review & apply" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
-
-    // The saved review accepts ONLY the safe candidate; conflicts, filled
-    // fields, and low-confidence candidates stay pending.
-    expect(mockedSaveReview).toHaveBeenCalledTimes(1);
-    expect(mockedSaveReview).toHaveBeenCalledWith(PROPOSAL_ID, "run-1", 3, [
-      { operationId: "op-a", decision: "accepted" },
-      { operationId: "op-low", decision: "pending" },
-      { operationId: "op-filled", decision: "pending" },
-      { operationId: "op-c1", decision: "pending" },
-      { operationId: "op-c2", decision: "pending" },
-    ]);
-    // The application job uses the review's proposal version and NEVER
-    // confirms overwrites.
-    expect(mockedApplyCandidates).toHaveBeenCalledTimes(1);
-    expect(mockedApplyCandidates).toHaveBeenCalledWith(PROPOSAL_ID, "run-1", 7, ["op-a"], []);
-    expect(mockedSaveReview.mock.invocationCallOrder[0]).toBeLessThan(mockedApplyCandidates.mock.invocationCallOrder[0]);
-    expect(window.sessionStorage.getItem("rfpilot:auto-apply:run-1")).toBe("started");
-
-    // The sessionStorage guard prevents a re-fire for the same run.
-    unmount();
-    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByRole("link", { name: /Review & apply 5 extracted fields/ });
-    expect(mockedApplyCandidates).toHaveBeenCalledTimes(1);
-    expect(mockedSaveReview).toHaveBeenCalledTimes(1);
-  });
-
-  test("a proposal version conflict shows a quiet notice with the manual review link and never retries", async () => {
-    mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
-    mockedGetProposalContext.mockResolvedValue(contextRunResult);
-    mockedGetReview.mockResolvedValue(reviewFixture);
-    mockedSaveReview.mockResolvedValue({ success: true, data: { reviewId: "rev-1", revision: 4, savedCount: 5 } } as never);
-    mockedApplyCandidates.mockResolvedValue({ success: false, code: "PROPOSAL_VERSION_CONFLICT", message: "The proposal changed." } as never);
+    mockedGetProposal.mockResolvedValue({
+      success: true,
+      data: { _id: PROPOSAL_ID, version: 7, event: { eventName: "Annual Gala" } },
+    } as never);
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-
-    expect(await screen.findByText(/Your proposal changed while I was filling it in, so nothing was applied automatically\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review & apply" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
-    // Quiet notice: no alert, no success message, and no automatic retry.
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Added .* to your proposal/)).not.toBeInTheDocument();
-    await act(async () => { await Promise.resolve(); });
-    expect(mockedApplyCandidates).toHaveBeenCalledTimes(1);
-    expect(mockedGetDurableJob).not.toHaveBeenCalled();
-  });
-
-  test("a failed application job shows the quiet notice instead of retrying", async () => {
-    mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
-    mockedGetProposalContext.mockResolvedValue(contextRunResult);
-    mockedGetReview.mockResolvedValue(reviewFixture);
-    mockedSaveReview.mockResolvedValue({ success: true, data: { reviewId: "rev-1", revision: 4, savedCount: 5 } } as never);
-    mockedApplyCandidates.mockResolvedValue({ success: true, data: { applicationId: "app-1", jobId: "job-apply", status: "queued" } } as never);
-    mockedGetDurableJob.mockResolvedValue({ success: true, correlationId: "test-correlation", data: applyJob("failed") });
-
-    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-
-    expect(await screen.findByText(/I couldn’t fill your proposal automatically\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review & apply" })).toBeInTheDocument();
-    expect(mockedApplyCandidates).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText(/Added .* to your proposal/)).not.toBeInTheDocument();
+    expect(await screen.findByText("I reviewed your sources and extracted the requirements below.")).toBeInTheDocument();
+    expect(screen.queryByText(/Added .* field.* to your proposal/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review suggestions" }))
+      .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
   });
 
   // ── Captured-details overview ───────────────────────────────────────────────
@@ -1141,9 +1038,9 @@ describe("AssistantWorkspacePage", () => {
     // isUnionVenue is "NO", so no union row.
     expect(screen.queryByText("Union venue")).not.toBeInTheDocument();
     expect(screen.getByText("10 details captured from your sources.")).toBeInTheDocument();
-    // Nothing is pending review, so no review link inside the card.
-    expect(screen.queryByText(/suggestions? need/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
+    // Extraction output stays read-only and links to the explicit review.
+    expect(screen.getByText(/ready for explicit review/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review suggestions" })).toBeInTheDocument();
     // The explicit next step plus the softer alternatives.
     expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
     expect(screen.getByText("Or add more details — upload another file, paste notes, or ask me anything.")).toBeInTheDocument();
@@ -1208,7 +1105,7 @@ describe("AssistantWorkspacePage", () => {
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
     mockedGetProposal.mockResolvedValue(capturedProposal);
     mockedGetLatestContext.mockResolvedValue({ success: true, correlationId: "test-correlation", data: { run: { id: "run-1" } } } as never);
-    // No candidates left, so auto-apply stays silent while the version is read.
+    // Candidate review is read-only here and only supplies the fallback version.
     mockedGetReview.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1230,50 +1127,18 @@ describe("AssistantWorkspacePage", () => {
     ));
   });
 
-  test("the overview reports the auto-applied field count and the suggestions still needing review", async () => {
+  test("the overview sends extracted suggestions to explicit review without applying them", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
     mockedGetProposal.mockResolvedValue(capturedProposal);
-    mockedGetReview.mockResolvedValue(reviewFixture);
-    mockedSaveReview.mockResolvedValue({ success: true, data: { reviewId: "rev-1", revision: 4, savedCount: 5 } } as never);
-    mockedApplyCandidates.mockResolvedValue({ success: true, data: { applicationId: "app-1", jobId: "job-apply", status: "queued" } } as never);
-    mockedGetDurableJob.mockResolvedValue({ success: true, correlationId: "test-correlation", data: applyJob("succeeded") });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    // The applied-field count wins over the row count once auto-apply reports.
-    expect(await screen.findByText("1 detail captured from your sources.")).toBeInTheDocument();
-    expect(screen.getByText(/4 suggestions need your review\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review suggestions" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
-  });
-
-  test("the overview omits the review line when auto-apply left nothing pending", async () => {
-    const cleanReview = {
-      success: true as const,
-      correlationId: "test-correlation",
-      data: {
-        reviewId: null,
-        revision: 3,
-        proposalVersion: 7,
-        canonicalPaths: { "op-a": "/content/event/eventName" },
-        currentValues: {},
-        appliedOperationIds: [],
-        operations: [candidate("op-a", "/content/event/eventName", "Annual Leadership Summit", 0.95)],
-      },
-    } as never;
-    mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
-    mockedGetProposalContext.mockResolvedValue(contextRunResult);
-    mockedGetProposal.mockResolvedValue(capturedProposal);
-    mockedGetReview.mockResolvedValue(cleanReview);
-    mockedSaveReview.mockResolvedValue({ success: true, data: { reviewId: "rev-1", revision: 4, savedCount: 1 } } as never);
-    mockedApplyCandidates.mockResolvedValue({ success: true, data: { applicationId: "app-1", jobId: "job-apply", status: "queued" } } as never);
-    mockedGetDurableJob.mockResolvedValue({ success: true, correlationId: "test-correlation", data: applyJob("succeeded") });
-
-    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-
-    expect(await screen.findByText("1 detail captured from your sources.")).toBeInTheDocument();
-    expect(screen.queryByText(/suggestions? need/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
+    expect(await screen.findByText(/details captured from your sources/)).toBeInTheDocument();
+    expect(screen.getByText(/ready for explicit review/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review suggestions" }))
+      .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+    expect(screen.queryByText(/Added .* field.* to your proposal/)).not.toBeInTheDocument();
   });
 
   // ── Draft staleness ─────────────────────────────────────────────────────────

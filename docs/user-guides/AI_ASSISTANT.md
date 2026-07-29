@@ -105,3 +105,14 @@ idea is labelled with selected-reference provenance and remains a suggestion.
 Client details, private notes, exact values, and exact historical pricing are
 excluded, and no field is copied automatically. A report becomes unavailable
 if any selected reference is archived, deleted, or no longer accessible.
+
+## Review extracted field changes
+
+Extracted suggestions never change the proposal automatically. Open the
+proposal editor, review each suggestion's current value, proposed value,
+reason, and citation provenance, then choose Accept, Edit, Reject, or leave it
+Pending. **Review selected changes** opens a second confirmation summary.
+Only **Confirm and apply** queues the version-checked change. Existing values
+also require an explicit overwrite checkbox. Applied changes keep an audit
+record and before/after checksums; restore a prior value through the editor or
+contact an administrator with the application time.

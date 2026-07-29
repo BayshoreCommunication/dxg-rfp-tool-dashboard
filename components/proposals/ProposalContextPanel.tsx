@@ -13,14 +13,24 @@ import {
   saveCandidateReviewAction,
   type CandidateReview,
 } from "@/app/actions/candidateApplication";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AiRunEvidence from "./AiRunEvidence";
 type Decision = {
   decision: "pending" | "accepted" | "modified" | "rejected";
   value?: unknown;
   overwrite?: boolean;
+  reason?: string;
 };
+const displayValue = (value: unknown) => {
+  if (value === undefined || value === null || value === "") return "Not provided";
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
+};
+const hasMaterialValue = (value: unknown) =>
+  value !== undefined &&
+  value !== null &&
+  value !== "" &&
+  !(typeof value === "string" && value.trim().toLowerCase() === "untitled proposal");
 export default function ProposalContextPanel({
   proposalId,
 }: {
@@ -38,7 +48,9 @@ export default function ProposalContextPanel({
     [error, setError] = useState<string>(),
     [notice, setNotice] = useState<string>(),
     [jobPurpose, setJobPurpose] = useState<"extract" | "apply">("extract"),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [confirming, setConfirming] = useState(false);
+  const applicationKey = useRef<string | null>(null);
   const router = useRouter();
   const [sources,setSources]=useState<PrivateDocumentSource[]>([]),[sourceIds,setSourceIds]=useState<string[]>([]);
   const loadReview = async (id: string) => {
@@ -56,6 +68,7 @@ export default function ProposalContextPanel({
             decision: x.decision,
             value: x.modified_value ?? x.value,
             overwrite: false,
+            reason: x.reason ?? "",
           },
         ]),
       ),
@@ -136,6 +149,8 @@ export default function ProposalContextPanel({
     setNotice(undefined);
     setResult(undefined);
     setReview(undefined);
+    setConfirming(false);
+    applicationKey.current = null;
     const response = sourceIds.length ? await createSourceProposalContextAction(proposalId,sourceIds) : await createProposalContextAction(proposalId, fixture);
     setBusy(false);
     if (!response.success) {
@@ -155,6 +170,9 @@ export default function ProposalContextPanel({
         ...(decisions[x.id]?.decision === "modified"
           ? { value: decisions[x.id].value }
           : {}),
+        ...(decisions[x.id]?.reason?.trim()
+          ? { reason: decisions[x.id].reason?.trim() }
+          : {}),
       })),
       response = await saveCandidateReviewAction(
         proposalId,
@@ -170,7 +188,7 @@ export default function ProposalContextPanel({
     setNotice("Review saved.");
     await loadReview(runId);
   };
-  const apply = async () => {
+  const selectedForApplication = () => {
     if (!runId || !review) return;
     const selected = review.operations.filter(
         (x) =>
@@ -182,16 +200,25 @@ export default function ProposalContextPanel({
       setError("Choose a new, unapplied suggestion first.");
       return;
     }
+    if (
+      review.invalidOperations?.some((operation) =>
+        ids.includes(operation.operationId),
+      )
+    ) {
+      setError("One or more selected suggestions are not valid for their fields.");
+      return;
+    }
     const selectedPaths=selected.map(x=>review.canonicalPaths[x.id]);
     if(new Set(selectedPaths).size!==selectedPaths.length){setError("Select only one candidate for each conflicting proposal field.");return;}
     const missingConfirmation = selected.some((x) => {
       const current = review.currentValues[review.canonicalPaths[x.id]];
-      return (
-        current !== undefined &&
-        current !== null &&
-        current !== "" &&
-        !decisions[x.id]?.overwrite
-      );
+      const proposed =
+        decisions[x.id]?.decision === "modified"
+          ? decisions[x.id]?.value
+          : x.value;
+      return hasMaterialValue(current) &&
+        displayValue(current) !== displayValue(proposed) &&
+        !decisions[x.id]?.overwrite;
     });
     if (missingConfirmation) {
       setError(
@@ -199,6 +226,17 @@ export default function ProposalContextPanel({
       );
       return;
     }
+    return selected;
+  };
+  const reviewApplication = () => {
+    setError(undefined);
+    if (selectedForApplication()) setConfirming(true);
+  };
+  const apply = async () => {
+    if (!runId || !review) return;
+    const selected = selectedForApplication();
+    if (!selected) return;
+    const ids = selected.map((item) => item.id);
     setBusy(true);
     setError(undefined);
     const saved = await saveCandidateReviewAction(
@@ -211,6 +249,9 @@ export default function ProposalContextPanel({
         ...(decisions[x.id]?.decision === "modified"
           ? { value: decisions[x.id].value }
           : {}),
+        ...(decisions[x.id]?.reason?.trim()
+          ? { reason: decisions[x.id].reason?.trim() }
+          : {}),
       })),
     );
     if (!saved.success) {
@@ -218,21 +259,25 @@ export default function ProposalContextPanel({
       setError(saved.message);
       return;
     }
+    applicationKey.current ??= crypto.randomUUID();
     const response = await applyCandidatesAction(
       proposalId,
       runId,
       review.proposalVersion,
       ids,
       ids.filter((id) => decisions[id]?.overwrite),
+      applicationKey.current,
     );
     setBusy(false);
     if (!response.success) {
+      if (response.code !== "NETWORK_ERROR") applicationKey.current = null;
       setError(response.message);
       return;
     }
     setJobId(response.data.jobId);
     setJobPurpose("apply");
     setStatus(response.data.status);
+    setConfirming(false);
     setNotice("Selected fields queued for controlled application.");
   };
   return (
@@ -314,7 +359,10 @@ export default function ProposalContextPanel({
               const d = decisions[item.id] ?? { decision: "pending" },
                 applied = review.appliedOperationIds.includes(item.id);
               const canonical = review.canonicalPaths[item.id],
-                current = review.currentValues[canonical];
+                current = review.currentValues[canonical],
+                invalid = review.invalidOperations?.find(
+                  (operation) => operation.operationId === item.id,
+                );
               return (
                 <li
                   key={item.id}
@@ -331,14 +379,26 @@ export default function ProposalContextPanel({
                     )}
                   </div>
                   <div className="mt-1">
-                    <strong>Suggested:</strong> {String(item.value)}
+                    <strong>Suggested:</strong> {displayValue(item.value)}
                   </div>
                   <div>
-                    <strong>Current:</strong>{" "}
-                    {current === undefined || current === ""
-                      ? "Not provided"
-                      : String(current)}
+                    <strong>Current:</strong> {displayValue(current)}
                   </div>
+                  <div className="mt-1 text-xs text-slate-600">
+                    <strong>Reason:</strong> Extracted as a possible value from
+                    the selected, reviewed source evidence.
+                  </div>
+                  <div className="text-xs text-slate-600">
+                    <strong>Provenance:</strong>{" "}
+                    {item.evidence_ids.length
+                      ? item.evidence_ids.map((id) => `citation ${id}`).join(", ")
+                      : "No usable citation — keep pending or reject"}
+                  </div>
+                  {invalid && (
+                    <p role="alert" className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">
+                      {invalid.reason} This suggestion cannot be applied.
+                    </p>
+                  )}
                   {!applied && (
                     <div className="mt-2 flex flex-wrap gap-3">
                       <label>
@@ -346,7 +406,10 @@ export default function ProposalContextPanel({
                         <select
                           className="ml-1 rounded border p-1"
                           value={d.decision}
-                          onChange={(e) =>
+                          disabled={Boolean(invalid)}
+                          onChange={(e) => {
+                            setConfirming(false);
+                            applicationKey.current = null;
                             setDecisions((v) => ({
                               ...v,
                               [item.id]: {
@@ -354,8 +417,8 @@ export default function ProposalContextPanel({
                                 decision: e.target
                                   .value as Decision["decision"],
                               },
-                            }))
-                          }
+                            }));
+                          }}
                         >
                           <option value="pending">Pending</option>
                           <option value="accepted">Accept</option>
@@ -369,31 +432,52 @@ export default function ProposalContextPanel({
                           <input
                             className="ml-1 rounded border p-1"
                             value={String(d.value ?? "")}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              setConfirming(false);
+                              applicationKey.current = null;
                               setDecisions((v) => ({
                                 ...v,
                                 [item.id]: { ...d, value: e.target.value },
-                              }))
-                            }
+                              }));
+                            }}
                           />
                         </label>
                       )}
-                      {current !== undefined &&
-                        current !== "" &&
+                      {d.decision === "rejected" && (
+                        <label className="w-full text-xs text-slate-700">
+                          Optional rejection reason
+                          <input
+                            className="mt-1 block w-full rounded border p-2 text-sm"
+                            maxLength={500}
+                            value={d.reason ?? ""}
+                            onChange={(e) => {
+                              setConfirming(false);
+                              applicationKey.current = null;
+                              setDecisions((value) => ({
+                                ...value,
+                                [item.id]: { ...d, reason: e.target.value },
+                              }));
+                            }}
+                          />
+                        </label>
+                      )}
+                      {hasMaterialValue(current) &&
                         ["accepted", "modified"].includes(d.decision) && (
                           <label>
                             <input
                               type="checkbox"
                               checked={d.overwrite ?? false}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                setConfirming(false);
+                                applicationKey.current = null;
                                 setDecisions((v) => ({
                                   ...v,
                                   [item.id]: {
                                     ...d,
                                     overwrite: e.target.checked,
                                   },
-                                }))
-                              }
+                                }));
+                              }}
                             />{" "}
                             Confirm overwrite
                           </label>
@@ -401,8 +485,7 @@ export default function ProposalContextPanel({
                     </div>
                   )}
                   <div className="mt-1 text-xs text-slate-500">
-                    Confidence {Math.round(item.confidence * 100)}% ·{" "}
-                    {item.evidence_ids.length} citation(s)
+                    Confidence {Math.round(item.confidence * 100)}%
                   </div>
                 </li>
               );
@@ -423,11 +506,83 @@ export default function ProposalContextPanel({
               <button
                 type="button"
                 disabled={busy}
-                onClick={apply}
+                onClick={reviewApplication}
                 className="rounded bg-[#087f69] px-4 py-2 text-sm font-semibold text-white"
               >
-                Apply selected fields
+                Review selected changes
               </button>
+            </div>
+          )}
+          {confirming && review && (
+            <div
+              role="region"
+              aria-labelledby="field-change-confirmation-title"
+              className="mt-4 rounded-xl border-2 border-[#087f69]/30 bg-emerald-50/50 p-4"
+            >
+              <h4 id="field-change-confirmation-title" className="font-semibold text-slate-900">
+                Confirm field changes
+              </h4>
+              <p className="mt-1 text-xs text-slate-600">
+                Check every current and proposed value. Nothing changes until
+                you choose Confirm and apply.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {review.operations
+                  .filter((item) =>
+                    !review.appliedOperationIds.includes(item.id) &&
+                    ["accepted", "modified"].includes(decisions[item.id]?.decision),
+                  )
+                  .map((item) => {
+                    const canonical = review.canonicalPaths[item.id];
+                    const proposed =
+                      decisions[item.id]?.decision === "modified"
+                        ? decisions[item.id]?.value
+                        : item.value;
+                    return (
+                      <li key={item.id} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                        <p className="font-mono text-xs text-slate-500">{canonical}</p>
+                        <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+                          <div>
+                            <dt className="text-xs font-semibold text-slate-500">Current</dt>
+                            <dd className="break-words text-slate-800">{displayValue(review.currentValues[canonical])}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-semibold text-slate-500">Proposed</dt>
+                            <dd className="break-words text-slate-800">{displayValue(proposed)}</dd>
+                          </div>
+                        </dl>
+                        <p className="mt-2 text-xs text-slate-500">
+                          Reason: extracted from selected source evidence ·
+                          Provenance: {item.evidence_ids.length} citation(s)
+                        </p>
+                      </li>
+                    );
+                  })}
+              </ul>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setConfirming(false)}
+                  className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800"
+                >
+                  Back to review
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void apply()}
+                  className="rounded bg-[#087f69] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {busy ? "Applying…" : "Confirm and apply"}
+                </button>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                A proposal-version check, audit record, and before/after
+                checksums protect this operation. To recover, edit the affected
+                fields back to their prior values or contact an administrator
+                with the application time.
+              </p>
             </div>
           )}
           <p className="mt-3 text-xs text-slate-500">
