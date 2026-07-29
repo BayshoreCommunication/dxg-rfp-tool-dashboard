@@ -39,7 +39,7 @@ const humanizePath = (path: string) => {
     .toLowerCase();
 };
 
-const stepForPath = (path: string) => {
+export const stepForPath = (path: string) => {
   if (path.includes("/event/")) return { step: 1, label: "Event Overview" };
   if (path.includes("/venueSchedule/")) return { step: 2, label: "Venue & Schedule" };
   if (path.includes("/roomByRoom/")) return { step: 3, label: "Room Specifications" };

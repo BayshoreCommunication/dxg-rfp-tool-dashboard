@@ -493,6 +493,14 @@ const EventForm = ({
               {showErrors && !data.endDate.trim() && (
                 <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
               )}
+              {/* A date before the start is discarded by the picker, which just
+                  empties the field. State the rule so a date that vanishes is
+                  explained rather than mysterious. */}
+              {startDateValue && !data.endDate.trim() && (
+                <p className="mt-1 text-xs text-slate-500 normal-case">
+                  Must be on or after the start date ({startDateValue.toLocaleDateString()}).
+                </p>
+              )}
             </div>
 
             {/* Total Attendance */}

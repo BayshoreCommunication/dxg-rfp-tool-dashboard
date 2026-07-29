@@ -3,7 +3,7 @@ import AssistantWorkspacePage, { displayQuestionPrompt, isBeforeLocalToday, maxi
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
-import { generateGuidanceAction } from "@/app/actions/guidance";
+import { generateGuidanceAction, getLatestGuidanceAction } from "@/app/actions/guidance";
 import {
   completePrivateUpload,
   createPrivateUploadSession,
@@ -40,8 +40,15 @@ jest.mock("@/app/actions/proposals", () => ({
 }));
 
 jest.mock("@/app/actions/user", () => ({ getUserData: jest.fn() }));
-jest.mock("@/app/actions/guidance", () => ({ generateGuidanceAction: jest.fn() }));
-jest.mock("@/app/actions/investment", () => ({ generateInvestmentGuidanceAction: jest.fn() }));
+jest.mock("@/app/actions/guidance", () => ({
+  generateGuidanceAction: jest.fn(),
+  // Restored on load so a refresh keeps the findings; default to none stored.
+  getLatestGuidanceAction: jest.fn().mockResolvedValue({ success: false, code: "GUIDANCE_NOT_FOUND", message: "none" }),
+}));
+jest.mock("@/app/actions/investment", () => ({
+  generateInvestmentGuidanceAction: jest.fn(),
+  getLatestInvestmentGuidanceAction: jest.fn().mockResolvedValue({ success: false, code: "INVESTMENT_NOT_FOUND", message: "none" }),
+}));
 jest.mock("@/app/actions/proposalContext", () => ({
   getLatestProposalContextAction: jest.fn().mockResolvedValue({ success: false, code: "CONTEXT_RUN_UNAVAILABLE", message: "none" }),
   getProposalContextAction: jest.fn(),
@@ -1537,6 +1544,19 @@ describe("AssistantWorkspacePage", () => {
     expect(notice).toBeInTheDocument();
     // A skip is a status, not an alert: nothing failed.
     expect(notice.getAttribute("role")).toBe("status");
+  });
+
+  test("a stored readiness check is restored on load instead of having to be re-run", async () => {
+    // Both reports are persisted server-side, but the thread only ever held the
+    // copy produced in this tab, so a refresh silently discarded them.
+    (getLatestGuidanceAction as jest.MockedFunction<typeof getLatestGuidanceAction>)
+      .mockResolvedValueOnce({ success: true, data: guidanceReport });
+    mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByText("Results — Readiness check")).toBeInTheDocument();
+    expect(screen.getByText("The venue is missing.")).toBeInTheDocument();
   });
 
   test("the primary action reads Regenerate draft once a draft exists", async () => {

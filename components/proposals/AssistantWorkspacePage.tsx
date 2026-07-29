@@ -20,8 +20,8 @@ import {
 import { deletePrivateDocumentSource, type PrivateDocumentSource } from "@/app/actions/durableJobs";
 import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
-import { generateGuidanceAction, type GuidanceReport, type GuidanceSectionCompleteness } from "@/app/actions/guidance";
-import { generateInvestmentGuidanceAction, type InvestmentReport } from "@/app/actions/investment";
+import { generateGuidanceAction, getLatestGuidanceAction, type GuidanceReport, type GuidanceSectionCompleteness } from "@/app/actions/guidance";
+import { generateInvestmentGuidanceAction, getLatestInvestmentGuidanceAction, type InvestmentReport } from "@/app/actions/investment";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction, type ProposalDraftSection } from "@/app/actions/proposalDraft";
 import { createProposalAction, getProposalByIdAction } from "@/app/actions/proposals";
@@ -32,6 +32,7 @@ import {
   ArrowUp, Download, FileText, Loader2, Paperclip, PencilLine, Sparkles, StickyNote, Upload, X,
 } from "lucide-react";
 import Link from "next/link";
+import { stepForPath } from "./GuidancePanel";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoExtraction, useConversation, useNotesScan, useProposalSources, useSourceUpload } from "./useConversation";
@@ -56,6 +57,9 @@ type LocalCard =
   // Extraction from typed messages happens in the background, so without a
   // card the planner sees sources and applied fields appear from nowhere.
   | { id: string; kind: "segment"; created: boolean; reason?: string }
+  // A skipped question otherwise vanishes: nothing records it and the only way
+  // back is to know which editor page owns the field.
+  | { id: string; kind: "skipped"; label: string; step?: number; stepLabel?: string }
   | { id: string; kind: "error"; message: string };
 
 // Why a "use what I've told you" request produced nothing. Deliberately plain:
@@ -241,6 +245,23 @@ const money = (minor: number | null | undefined, currency: string | null) => {
     return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(minor / 100);
   } catch {
     return `${(minor / 100).toLocaleString()} ${currency}`;
+  }
+};
+
+/**
+ * Headline range figures, rounded to the nearest thousand. A band as wide as
+ * "$48,697 – $121,981" claims a precision it does not have; the exact numbers
+ * still appear on the individual line items.
+ */
+const roundedMoney = (minor: number | null | undefined, currency: string | null) => {
+  if (minor === null || minor === undefined || !currency) return "—";
+  const major = minor / 100;
+  if (major < 1000) return money(minor, currency);
+  const thousands = Math.round(major / 1000);
+  try {
+    return `${new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(thousands * 1000)}`;
+  } catch {
+    return `${(thousands * 1000).toLocaleString()} ${currency}`;
   }
 };
 
@@ -882,7 +903,7 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
 
 function InvestmentCard({ report, declaredBudget }: { report: InvestmentReport; declaredBudget: string }) {
   const summary = report.totalMidMinor !== null && report.currency
-    ? `Estimated investment ${money(report.totalLowMinor, report.currency)} – ${money(report.totalHighMinor, report.currency)} (mid ${money(report.totalMidMinor, report.currency)}).`
+    ? `Estimated investment ${roundedMoney(report.totalLowMinor, report.currency)} – ${roundedMoney(report.totalHighMinor, report.currency)} (mid ${roundedMoney(report.totalMidMinor, report.currency)}).`
     : "Investment guidance generated — some categories need more information before an estimate is possible.";
   return (
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -997,6 +1018,14 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const readySources = sources.filter(item => item.status === "ready" && item.confidentiality === "non_confidential");
   const sourcesById = useMemo(() => new Map(sources.map(source => [source.id, source])), [sources]);
   const sending = pending.some(item => item.state === "sending");
+  // A refresh can land the persisted message before the optimistic entry is
+  // retired, briefly showing the planner their own message twice. Hide an
+  // in-flight entry once its text is already in the thread; a failed entry
+  // always stays, because it carries the retry.
+  const unsentPending = useMemo(() => {
+    const sentContent = new Set(messages.filter(m => m.role === "user").map(m => m.content.trim()));
+    return pending.filter(entry => entry.state === "failed" || !sentContent.has(entry.content.trim()));
+  }, [pending, messages]);
   const started = !!proposalId || messages.length > 0 || pending.length > 0 || localCards.length > 0;
   const completedContextRuns = messages.filter(m => m.runType === "proposal_context" && m.status === "complete").length;
 
@@ -1273,6 +1302,33 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     if (result.success && result.data.created) await refreshSources();
   };
 
+  // Both reports are persisted server-side, but the thread only ever held the
+  // copy produced in this tab, so a refresh silently discarded findings and the
+  // investment estimate and the planner had to run them again. Restore the
+  // latest of each on load, once.
+  const restoredReportsRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!proposalId || restoredReportsRef.current === proposalId) return;
+    restoredReportsRef.current = proposalId;
+    let active = true;
+    void (async () => {
+      const [guidance, investment] = await Promise.all([
+        getLatestGuidanceAction(proposalId),
+        getLatestInvestmentGuidanceAction(proposalId),
+      ]);
+      if (!active) return;
+      setLocalCards(prev => {
+        const restored: LocalCard[] = [];
+        if (guidance.success && guidance.data && !prev.some(card => card.kind === "guidance"))
+          restored.push({ id: `restored-guidance-${proposalId}`, kind: "guidance", report: guidance.data });
+        if (investment.success && investment.data && !prev.some(card => card.kind === "investment"))
+          restored.push({ id: `restored-investment-${proposalId}`, kind: "investment", report: investment.data });
+        return restored.length ? [...restored, ...prev] : prev;
+      });
+    })();
+    return () => { active = false; };
+  }, [proposalId]);
+
   const runGuidance = async () => {
     if (!proposalId || guidanceBusy) return;
     setGuidanceBusy(true);
@@ -1352,8 +1408,20 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
 
   const skipCurrentQuestion = async () => {
     if (!currentQuestion) return;
-    const resolved = await resolveQuestion(currentQuestion.id, { status: "dismissed" });
-    if (resolved) setSkippedCount(count => count + 1);
+    const question = currentQuestion;
+    const resolved = await resolveQuestion(question.id, { status: "dismissed" });
+    if (!resolved) return;
+    setSkippedCount(count => count + 1);
+    // Leave a trace with a way back, so skipping is deferral rather than a
+    // silent, unrecoverable decision.
+    const target = question.paths.length === 1 ? stepForPath(question.paths[0]) : undefined;
+    setLocalCards(prev => [...prev, {
+      id: crypto.randomUUID(),
+      kind: "skipped",
+      label: questionFieldLabel(question),
+      step: target?.step,
+      stepLabel: target?.label,
+    }]);
   };
 
   // A readiness report already on screen (the completion card's own numbers, or
@@ -1718,10 +1786,26 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                             : segmentSkipReasons[card.reason ?? ""] ?? "There's nothing new for me to read yet."}
                         </p>
                       )}
+                      {card.kind === "skipped" && (
+                        <p role="status" className="max-w-[85%] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                          Skipped <strong>{card.label}</strong> — you can add it later.
+                          {card.step && proposalId && (
+                            <>
+                              {" "}
+                              <Link
+                                href={`/proposals/proposal-edit?proposalId=${proposalId}&step=${card.step}`}
+                                className="font-semibold text-[#008ad2] underline underline-offset-2"
+                              >
+                                Open {card.stepLabel}
+                              </Link>
+                            </>
+                          )}
+                        </p>
+                      )}
                       {card.kind === "error" && <p role="alert" className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{card.message}</p>}
                     </li>
                   ))}
-                  {pending.map(entry => (
+                  {unsentPending.map(entry => (
                     <li key={entry.localId} className="flex justify-end">
                       <div className="max-w-[75%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 opacity-90">
                         <p className="whitespace-pre-wrap">{entry.content}</p>
