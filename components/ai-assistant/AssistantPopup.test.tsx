@@ -15,6 +15,8 @@ jest.mock("./AiAssistantWorkspace", () => ({
     onResetSize,
     positionModified,
     sizeModified,
+    uiContext,
+    draftRequest,
   }: {
     presentation: string;
     onClose: () => void;
@@ -22,11 +24,16 @@ jest.mock("./AiAssistantWorkspace", () => ({
     onResetSize: () => void;
     positionModified: boolean;
     sizeModified: boolean;
+    uiContext: { fieldKey?: string; sectionId?: string };
+    draftRequest?: { id: string; prompt: string };
   }) => (
     <div>
       <span>Workspace presentation: {presentation}</span>
       <span>Position changed: {String(positionModified)}</span>
       <span>Size changed: {String(sizeModified)}</span>
+      <span>Workspace field: {uiContext.fieldKey ?? "none"}</span>
+      <span>Workspace section: {uiContext.sectionId ?? "none"}</span>
+      <span>Workspace draft: {draftRequest?.prompt ?? "none"}</span>
       <button type="button" onClick={onClose}>
         Close mocked workspace
       </button>
@@ -107,6 +114,38 @@ describe("AssistantPopup", () => {
       screen.getByRole("button", { name: "Close mocked workspace" }),
     );
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  test("pins field context and passes an editable field-help draft", async () => {
+    render(
+      <AssistantPopup
+        open
+        onOpenChange={jest.fn()}
+        fieldHelpRequest={{
+          id: "field-help-1",
+          prompt:
+            'What should I enter for the "Event Name" field? Explain it simply and give me one short example.',
+          context: {
+            fieldKey: "/content/event/name",
+            sectionId: "event_overview",
+          },
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "Workspace field: /content/event/name",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Workspace section: event_overview"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Workspace draft: What should I enter for the "Event Name" field? Explain it simply and give me one short example.',
+      ),
+    ).toBeInTheDocument();
   });
 
   test("starts fully hidden without playing the close animation", () => {

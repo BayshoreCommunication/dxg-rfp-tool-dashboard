@@ -1,6 +1,14 @@
-﻿import { Info } from "lucide-react";
+﻿import { Info, Sparkles } from "lucide-react";
 import { useEffect, useState, useRef, RefObject } from "react";
 import { createPortal } from "react-dom";
+import { useAssistantLauncher } from "@/components/ai-assistant/AssistantLauncherContext";
+import {
+  ASSISTANT_EVENT_FORMATS,
+  ASSISTANT_FORM_SECTION_IDS,
+  type AssistantEventFormat,
+  type AssistantFormSectionId,
+} from "@/lib/aiAssistant/uiContext";
+import { normalizeAssistantFieldLabel } from "@/lib/aiAssistant/fieldHelp";
 
 export const PillRadio = ({
   name,
@@ -88,7 +96,10 @@ export function useClickOutside<T extends HTMLElement>(
 
 export const InfoTooltip = ({ text }: { text: string }) => {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-  const iconRef = useRef<SVGSVGElement>(null);
+  const iconRef = useRef<HTMLButtonElement>(null);
+  const lastTouchActivation = useRef(0);
+  const { enabled: assistantEnabled, requestFieldHelp } =
+    useAssistantLauncher();
 
   const show = () => {
     if (!iconRef.current) return;
@@ -96,19 +107,102 @@ export const InfoTooltip = ({ text }: { text: string }) => {
     setPos({ top: r.top - 8, left: r.left + r.width / 2 });
   };
 
+  const toggle = () => {
+    if (pos) {
+      setPos(null);
+      return;
+    }
+    show();
+  };
+
+  const askAssistant = (button: HTMLButtonElement) => {
+    const field = button.closest<HTMLElement>(
+      "[data-assistant-field-key]",
+    );
+    const section = button.closest<HTMLElement>(
+      '[data-assistant-current-section="true"]',
+    );
+    const room = button.closest<HTMLElement>(
+      "[data-assistant-room-identifier]",
+    );
+    const label = button.closest("label");
+    const labelClone = label?.cloneNode(true) as HTMLElement | undefined;
+    labelClone
+      ?.querySelectorAll("button, svg")
+      .forEach((item) => item.remove());
+    const fieldLabel = normalizeAssistantFieldLabel(
+      labelClone?.textContent ?? "",
+    );
+    const fieldKey = field?.dataset.assistantFieldKey;
+    const rawSectionId = section?.dataset.assistantSectionId;
+    const sectionId = ASSISTANT_FORM_SECTION_IDS.find(
+      (item) => item === rawSectionId,
+    ) as AssistantFormSectionId | undefined;
+    const rawEventFormat = section?.dataset.assistantEventFormat
+      ?.trim()
+      .toLocaleLowerCase("en-US")
+      .replace(/[-\s]+/g, "_");
+    const eventFormat = ASSISTANT_EVENT_FORMATS.find(
+      (item) => item === rawEventFormat,
+    ) as AssistantEventFormat | undefined;
+    const roomIdentifier = room?.dataset.assistantRoomIdentifier;
+    requestFieldHelp({
+      fieldLabel,
+      ...(fieldKey ? { fieldKey } : {}),
+      ...(sectionId ? { sectionId } : {}),
+      ...(eventFormat ? { eventFormat } : {}),
+      ...(roomIdentifier ? { roomIdentifier } : {}),
+    });
+  };
+
   return (
-    <span
-      style={{ display: "inline-flex", alignItems: "center", marginLeft: "6px", verticalAlign: "middle" }}
-      onMouseEnter={show}
-      onMouseLeave={() => setPos(null)}
-    >
-      <Info
+    <span className="ml-1.5 inline-flex items-center gap-1 align-middle">
+      <button
+        type="button"
         ref={iconRef}
-        size={13}
-        style={{ cursor: "help", flexShrink: 0, color: pos ? "#008ad2" : "#b0b9d1", transition: "color 0.15s" }}
-      />
+        aria-label="About this field"
+        onMouseEnter={show}
+        onMouseLeave={() => setPos(null)}
+        onFocus={show}
+        onBlur={() => setPos(null)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          toggle();
+        }}
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2]/40 ${
+          pos ? "text-[#008ad2]" : "text-[#b0b9d1] hover:text-[#008ad2]"
+        }`}
+      >
+        <Info size={13} aria-hidden />
+      </button>
+      {assistantEnabled && (
+        <button
+          type="button"
+          aria-label="Ask AI about this field"
+          onTouchStart={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            lastTouchActivation.current = Date.now();
+            askAssistant(event.currentTarget);
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            // A touch normally emits a synthetic click after touch-end.
+            // Ignore only that duplicate; mouse and keyboard clicks launch.
+            if (Date.now() - lastTouchActivation.current < 700) return;
+            askAssistant(event.currentTarget);
+          }}
+          className="relative z-10 inline-flex h-8 touch-manipulation items-center gap-1 rounded-full border border-[#00b8bf]/25 bg-[#00b8bf]/[0.06] px-2 text-[10px] font-semibold normal-case tracking-normal text-[#008f96] transition hover:border-[#00b8bf]/45 hover:bg-[#00b8bf]/10 hover:text-[#007d83] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00b8bf]/35 sm:h-5 sm:px-1.5 sm:text-[9px]"
+        >
+          <Sparkles size={10} strokeWidth={2.1} aria-hidden />
+          Ask AI
+        </button>
+      )}
       {pos && createPortal(
         <div
+          role="tooltip"
           style={{
             position: "fixed",
             top: pos.top,
@@ -149,4 +243,3 @@ export const InfoTooltip = ({ text }: { text: string }) => {
     </span>
   );
 };
-

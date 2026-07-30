@@ -16,11 +16,17 @@ export default function ConversationError({
   compact?: boolean;
 }) {
   const authentication = error.code === "AUTHENTICATION_REQUIRED";
+  const busy =
+    error.code === "RATE_LIMITED" ||
+    error.code === "ASSISTANT_RATE_LIMITED" ||
+    error.code === "ASSISTANT_CONCURRENCY_LIMITED";
   if (compact) {
     const compactMessage = authentication
       ? "Sign in to use the Assistant"
-      : error.code === "RATE_LIMITED"
-        ? "Assistant is busy right now"
+      : busy
+        ? error.code === "ASSISTANT_CONCURRENCY_LIMITED"
+          ? "Finishing another response"
+          : "Assistant is busy right now"
         : "Assistant is unavailable";
     return (
       <div

@@ -256,6 +256,44 @@ describe("AiAssistantWorkspace", () => {
     ).toHaveValue("How do I create and send a proposal?");
   });
 
+  test("applies a field-help draft once and returns focus to the composer", async () => {
+    const { rerender } = render(
+      <AiAssistantWorkspace
+        initialThreads={[]}
+        initialDetail={null}
+        draftRequest={{
+          id: "field-help-1",
+          prompt:
+            'What should I enter for the "Event Name" field?',
+        }}
+      />,
+    );
+    const composer = screen.getByLabelText("Message the AI Assistant");
+
+    await waitFor(() => {
+      expect(composer).toHaveValue(
+        'What should I enter for the "Event Name" field?',
+      );
+      expect(composer).toHaveFocus();
+    });
+
+    fireEvent.change(composer, {
+      target: { value: "My edited field question" },
+    });
+    rerender(
+      <AiAssistantWorkspace
+        initialThreads={[]}
+        initialDetail={null}
+        draftRequest={{
+          id: "field-help-1",
+          prompt:
+            'What should I enter for the "Event Name" field?',
+        }}
+      />,
+    );
+    expect(composer).toHaveValue("My edited field question");
+  });
+
   test("creates a thread, consumes product SSE, and renders safe Markdown", async () => {
     jest.mocked(global.fetch).mockResolvedValue(completedStream());
     render(

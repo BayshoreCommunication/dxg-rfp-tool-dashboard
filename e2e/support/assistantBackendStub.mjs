@@ -66,8 +66,10 @@ const streamAssistantResponse = async (request, response, thread) => {
     completedAt: stamp,
   };
   const assistantMessageId = crypto.randomUUID();
-  const assistantContent =
-    "Open [Proposals](/proposals) to create or review proposals. Publication and sending remain explicit actions that you control.";
+  const fieldHelp = content.includes('"Event Name" field');
+  const assistantContent = fieldHelp
+    ? "**Event Overview: Event Name**\n\nEnter the clear, public-facing name people will recognize. Example: `2027 Sales Kickoff`."
+    : "Open [Proposals](/proposals) to create or review proposals. Publication and sending remain explicit actions that you control.";
   const assistantMessage = {
     id: assistantMessageId,
     threadId: thread.id,
@@ -80,13 +82,22 @@ const streamAssistantResponse = async (request, response, thread) => {
     inputTokens: 120,
     outputTokens: 28,
     safeErrorCode: null,
-    citations: [
-      {
-        sourceId: "platform:navigation:proposals",
-        title: "Proposals",
-        href: "/proposals",
-      },
-    ],
+    citations: fieldHelp
+      ? [
+          {
+            sourceId:
+              "form-field:event_overview:/content/event/name",
+            title: "Event Overview: Event Name",
+            href: "/proposals/add-new-proposal",
+          },
+        ]
+      : [
+          {
+            sourceId: "platform:navigation:proposals",
+            title: "Proposals",
+            href: "/proposals",
+          },
+        ],
     createdAt: stamp,
     updatedAt: stamp,
     completedAt: stamp,

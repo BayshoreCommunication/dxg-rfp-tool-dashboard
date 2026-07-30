@@ -11,6 +11,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -20,6 +21,7 @@ import type {
   AssistantThreadDetail,
   AssistantUiError,
 } from "@/lib/aiAssistant/types";
+import type { AssistantFieldHelpRequest } from "@/lib/aiAssistant/fieldHelp";
 import AiAssistantWorkspace from "./AiAssistantWorkspace";
 import useDraggablePopup from "./useDraggablePopup";
 import useAssistantUiContext from "./useAssistantUiContext";
@@ -52,13 +54,22 @@ const toUiError = (
 export default function AssistantPopup({
   open,
   onOpenChange,
+  fieldHelpRequest = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  fieldHelpRequest?: AssistantFieldHelpRequest | null;
 }) {
   const popupRef = useRef<HTMLElement | null>(null);
   const openedTrackedRef = useRef(false);
-  const uiContext = useAssistantUiContext();
+  const detectedUiContext = useAssistantUiContext();
+  const uiContext = useMemo(
+    () => ({
+      ...detectedUiContext,
+      ...(fieldHelpRequest?.context ?? {}),
+    }),
+    [detectedUiContext, fieldHelpRequest],
+  );
   const [bootstrap, setBootstrap] = useState<BootstrapState>({
     status: "idle",
   });
@@ -284,6 +295,14 @@ export default function AssistantPopup({
             positionModified={positionModified}
             sizeModified={sizeModified}
             uiContext={uiContext}
+            draftRequest={
+              fieldHelpRequest
+                ? {
+                    id: fieldHelpRequest.id,
+                    prompt: fieldHelpRequest.prompt,
+                  }
+                : undefined
+            }
           />
         )}
       </div>

@@ -30,6 +30,7 @@ export default function AiAssistantWorkspace({
   onResetSize,
   positionModified = false,
   sizeModified = false,
+  draftRequest,
   uiContext = {
     schemaVersion: "assistant-ui-context.v1",
     routeCategory: "other",
@@ -44,6 +45,7 @@ export default function AiAssistantWorkspace({
   onResetSize?: () => void;
   positionModified?: boolean;
   sizeModified?: boolean;
+  draftRequest?: { id: string; prompt: string };
   uiContext?: AssistantUiContext;
 }) {
   const assistant = useAiAssistant({
@@ -52,10 +54,11 @@ export default function AiAssistantWorkspace({
     initialError,
     uiContext,
   });
-  const { refreshThreads, state } = assistant;
+  const { refreshThreads, setDraft, state } = assistant;
   const [historyOpen, setHistoryOpen] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const suggestionShownRef = useRef<string | null>(null);
+  const appliedDraftRequestRef = useRef<string | null>(null);
   const activeThreads = state.threads.filter(
     (thread) => thread.status === "active" && !thread.deletedAt,
   );
@@ -78,6 +81,21 @@ export default function AiAssistantWorkspace({
       composerRef.current?.focus();
     }
   }, [state.conversationStatus]);
+
+  useEffect(() => {
+    if (
+      !draftRequest ||
+      appliedDraftRequestRef.current === draftRequest.id
+    ) {
+      return;
+    }
+    appliedDraftRequestRef.current = draftRequest.id;
+    setDraft(draftRequest.prompt);
+    const frame = window.requestAnimationFrame(() =>
+      composerRef.current?.focus(),
+    );
+    return () => window.cancelAnimationFrame(frame);
+  }, [draftRequest, setDraft]);
 
   useEffect(() => {
     void refreshThreads();

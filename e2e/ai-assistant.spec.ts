@@ -49,6 +49,71 @@ test.beforeEach(async ({ page }) => {
   await signIn(page);
 });
 
+test("opens contextual AI help from a proposal field and streams the answer", async ({
+  page,
+}, testInfo) => {
+  await page.getByRole("button", { name: "Close AI Assistant" }).click();
+  await expect(
+    page.getByRole("button", { name: "Open AI Assistant" }),
+  ).toBeFocused();
+  await page.goto("/proposals/add-new-proposal");
+  await expect(page).toHaveURL(/\/proposals\/add-new-proposal$/);
+  await page
+    .getByRole("button", { name: "Continue without upload" })
+    .click();
+
+  const eventNameField = page.locator(
+    '[data-assistant-field-key="/content/event/name"]',
+  );
+  await expect(eventNameField).toBeVisible();
+  const askAi = eventNameField.getByRole("button", {
+    name: "Ask AI about this field",
+  });
+  await expect(askAi).toHaveCount(1);
+  if (testInfo.project.name.includes("mobile")) {
+    await askAi.tap();
+  } else {
+    await askAi.click();
+  }
+
+  const dialog = page.getByRole("dialog", { name: "AI Assistant" });
+  await expect(dialog).toBeVisible();
+  const composer = dialog.getByLabel("Message the AI Assistant");
+  await expect(composer).toHaveValue(
+    'What should I enter for the "Event Name" field? Explain it simply and give me one short example.',
+  );
+  await expect(composer).toBeFocused();
+
+  await composer.press("Enter");
+  await expect(composer).toHaveValue("");
+  await expect(composer).toBeFocused();
+  await expect(
+    dialog.getByText(
+      'What should I enter for the "Event Name" field? Explain it simply and give me one short example.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("status", {
+      name: "Assistant is responding",
+    }),
+  ).toBeVisible();
+  await expect(
+    dialog
+      .getByLabel("AI Assistant conversation")
+      .locator("ol")
+      .getByText(/Enter the clear, public-facing name/),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("link", {
+      name: "Event Overview: Event Name",
+    }),
+  ).toHaveAttribute("href", "/proposals/add-new-proposal");
+  await expect(
+    dialog.getByText("Assistant is unavailable"),
+  ).toHaveCount(0);
+});
+
 test("streams a response, persists history, starts a new chat, and remains responsive", async ({
   page,
 }, testInfo) => {
@@ -62,16 +127,16 @@ test("streams a response, persists history, starts a new chat, and remains respo
     page.getByRole("heading", { name: "How can I help?" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Assistant options" }).click();
-  const newConversationAction = page.getByRole("menuitem", {
+  const newConversationAction = page.getByRole("button", {
     name: "Start new conversation",
   });
-  await expect(newConversationAction).toHaveCSS("white-space", "nowrap");
-  expect(
-    await newConversationAction.evaluate(
-      (element) => element.scrollHeight <= element.clientHeight,
-    ),
-  ).toBe(true);
+  await expect(newConversationAction).toBeVisible();
+  await page.getByRole("button", { name: "Assistant options" }).click();
+  await expect(
+    page.getByRole("menuitem", {
+      name: "Start new conversation",
+    }),
+  ).toHaveCount(0);
   await page.keyboard.press("Escape");
 
   const composer = page.getByLabel("Message the AI Assistant");
@@ -175,10 +240,7 @@ test("streams a response, persists history, starts a new chat, and remains respo
   );
   expect(fitsViewport).toBe(true);
 
-  await page.getByRole("button", { name: "Assistant options" }).click();
-  await page
-    .getByRole("menuitem", { name: "Start new conversation" })
-    .click();
+  await newConversationAction.click();
   await expect(
     page.getByRole("heading", { name: "How can I help?" }),
   ).toBeVisible();

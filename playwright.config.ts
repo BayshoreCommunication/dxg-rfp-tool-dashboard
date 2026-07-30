@@ -56,6 +56,7 @@ export default defineConfig({
         NEXT_PUBLIC_FRONTEND_URL: dashboardOrigin,
         NEXT_PUBLIC_APP_URL: dashboardOrigin,
         NEXT_PUBLIC_AI_ASSISTANT_ENABLED: "true",
+        NEXT_PUBLIC_CONVERSATIONS_ENABLED: "false",
         NEXT_DIST_DIR: ".next-e2e",
         AUTH_SECRET: "assistant-e2e-auth-secret-32-characters-minimum",
         NEXTAUTH_SECRET: "assistant-e2e-auth-secret-32-characters-minimum",

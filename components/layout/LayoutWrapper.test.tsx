@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { useAssistantLauncher } from "@/components/ai-assistant/AssistantLauncherContext";
 import LayoutWrapper from "./LayoutWrapper";
 
 jest.mock("@/components/layout/Sidebar", () => ({
@@ -24,10 +25,42 @@ jest.mock("@/components/layout/Sidebar", () => ({
 
 jest.mock("@/components/ai-assistant/AssistantPopup", () => ({
   __esModule: true,
-  default: ({ open }: { open: boolean }) => (
-    <div data-testid="assistant-popup" data-open={String(open)} />
+  default: ({
+    open,
+    fieldHelpRequest,
+  }: {
+    open: boolean;
+    fieldHelpRequest?: {
+      prompt: string;
+      context: { fieldKey?: string };
+    } | null;
+  }) => (
+    <div
+      data-testid="assistant-popup"
+      data-open={String(open)}
+      data-prompt={fieldHelpRequest?.prompt}
+      data-field-key={fieldHelpRequest?.context.fieldKey}
+    />
   ),
 }));
+
+const FieldHelpTrigger = () => {
+  const assistant = useAssistantLauncher();
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        assistant.requestFieldHelp({
+          fieldLabel: "Event Name",
+          fieldKey: "/content/event/name",
+          sectionId: "event_overview",
+        })
+      }
+    >
+      Help with Event Name
+    </button>
+  );
+};
 
 describe("LayoutWrapper", () => {
   test("omits assistant controls when organization access is disabled", () => {
@@ -60,6 +93,31 @@ describe("LayoutWrapper", () => {
     expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
       "data-open",
       "true",
+    );
+  });
+
+  test("opens the assistant with a pinned, editable field-help request", () => {
+    render(
+      <LayoutWrapper assistantEnabled>
+        <FieldHelpTrigger />
+      </LayoutWrapper>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Help with Event Name" }),
+    );
+
+    expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
+      "data-open",
+      "true",
+    );
+    expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
+      "data-field-key",
+      "/content/event/name",
+    );
+    expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
+      "data-prompt",
+      'What should I enter for the "Event Name" field? Explain it simply and give me one short example.',
     );
   });
 });
