@@ -56,29 +56,49 @@ export const assistantSpeechText = (content: string): string =>
     .replace(/\s+/g, " ")
     .trim();
 
+export const formatAssistantMessageTime = (
+  value: string,
+  timeZone?: string,
+): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    ...(timeZone ? { timeZone } : {}),
+  }).format(date);
+};
+
 export default function MessageBubble({
   message,
   streaming = false,
+  compact = false,
   onNavigate,
   handoffDraft,
 }: {
   message: AssistantDisplayMessage;
   streaming?: boolean;
+  compact?: boolean;
   onNavigate?: () => void;
   handoffDraft?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [localTimeReady, setLocalTimeReady] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(
       () =>
-        setSpeechSupported(
-          "speechSynthesis" in window &&
-            typeof window.SpeechSynthesisUtterance !== "undefined",
-        ),
+        {
+          setLocalTimeReady(true);
+          setSpeechSupported(
+            "speechSynthesis" in window &&
+              typeof window.SpeechSynthesisUtterance !== "undefined",
+          );
+        },
       0,
     );
     return () => {
@@ -100,6 +120,9 @@ export default function MessageBubble({
   const renderedContent = user
     ? message.content
     : normalizeAssistantMarkdownLinks(message.content, message.citations);
+  const displayTime = localTimeReady
+    ? formatAssistantMessageTime(message.createdAt)
+    : "";
 
   const copy = async () => {
     if (!message.content || !navigator.clipboard) return;
@@ -136,32 +159,64 @@ export default function MessageBubble({
   return (
     <li
       className={cn(
-        "flex w-full motion-safe:animate-[assistant-message-in_180ms_ease-out]",
-        user ? "justify-end" : "justify-start",
+        "relative flex w-full motion-safe:animate-[assistant-message-in_180ms_ease-out]",
+        compact ? "justify-start" : user ? "justify-end" : "justify-start",
       )}
     >
       <div
         className={cn(
-          "group flex max-w-[92%] items-start gap-2.5 sm:max-w-[84%]",
-          user && "flex-row-reverse",
+          "group flex items-start gap-2.5",
+          compact
+            ? "relative z-10 w-full max-w-full"
+            : "max-w-[92%] sm:max-w-[84%]",
+          user && !compact && "flex-row-reverse",
         )}
       >
+        {compact && user && (
+          <div
+            aria-hidden
+            className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-100 bg-[#edf1f5] text-[9px] font-bold text-[#24364b]"
+          >
+            You
+          </div>
+        )}
         {!user && (
           <div
             aria-hidden
-            className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#e0f9fa] text-[#009da4]"
+            className={cn(
+              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center bg-[#e0f9fa] text-[#009da4]",
+              compact ? "rounded-full" : "rounded-xl",
+            )}
           >
             <Sparkles size={15} />
           </div>
         )}
-        <div className="min-w-0">
+        <div className={cn("min-w-0", compact && "flex-1")}>
+          {compact && (
+            <div className="mb-1.5 flex h-4 items-center gap-2 px-0.5 text-[9.5px]">
+              <span className="font-bold text-[#0e1b2b]">
+                {user ? "You" : "RFPilot"}
+              </span>
+              {displayTime && (
+                <time
+                  dateTime={message.createdAt}
+                  className="font-medium text-slate-400"
+                >
+                  {displayTime}
+                </time>
+              )}
+            </div>
+          )}
           <div
             className={cn(
-              "relative rounded-2xl px-3 py-2.5 text-[14px] leading-5",
-              user
-                ? "rounded-br-md bg-[#0e1b2b] text-white shadow-[0_10px_28px_-22px_rgba(14,27,43,0.9)]"
-                : "rounded-bl-md border border-slate-200 bg-white text-slate-700 shadow-[0_10px_28px_-24px_rgba(15,23,42,0.55)]",
-              message.optimistic && "opacity-70",
+              "relative w-fit max-w-full px-3 py-2.5 text-[14px] leading-5",
+              compact
+                ? user
+                  ? "ml-0 rounded-xl bg-[#f0f3f6] text-[#31445a]"
+                  : "rounded-xl border border-slate-200 bg-white text-slate-700 shadow-[0_10px_28px_-24px_rgba(15,23,42,0.48)]"
+                : user
+                  ? "rounded-2xl rounded-br-md bg-[#0e1b2b] text-white shadow-[0_10px_28px_-22px_rgba(14,27,43,0.9)]"
+                  : "rounded-2xl rounded-bl-md border border-slate-200 bg-white text-slate-700 shadow-[0_10px_28px_-24px_rgba(15,23,42,0.55)]",
               interrupted && !user && "border-amber-200 bg-amber-50/50",
             )}
           >
@@ -243,6 +298,7 @@ export default function MessageBubble({
                 citations={message.citations}
                 threadId={message.threadId}
                 messageId={message.id}
+                compact={compact}
                 onNavigate={onNavigate}
               />
             )}
@@ -255,61 +311,102 @@ export default function MessageBubble({
             />
           )}
           {!user && !streaming && (
-            <AssistantFeedbackControls message={message} />
-          )}
-          <div
-            className={cn(
-              "mt-1.5 flex min-h-6 items-center gap-2",
-              user ? "justify-end" : "justify-start",
-            )}
-          >
-            {message.optimistic && (
-              <span className="text-[11px] text-slate-400">Sending…</span>
-            )}
-            {interrupted && (
-              <span className="text-[11px] font-semibold text-amber-700">
-                {message.status === "aborted"
-                  ? "Response stopped"
-                  : "Response interrupted"}
-              </span>
-            )}
-            {!user && message.content && !streaming && (
-              <div className="flex items-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
-                <button
-                  type="button"
-                  onClick={() => void copy()}
-                  aria-label="Copy assistant response"
-                  className="flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] text-slate-400 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
-                >
-                  {copied ? (
-                    <Check size={12} aria-hidden />
-                  ) : (
-                    <Copy size={12} aria-hidden />
-                  )}
-                  {copied ? "Copied" : "Copy"}
-                </button>
-                {speechSupported && message.status === "complete" && (
+            <AssistantFeedbackControls message={message} compact={compact}>
+              {compact && message.content && (
+                <>
+                  <span
+                    aria-hidden
+                    className="mx-0.5 h-3.5 w-px bg-slate-200"
+                  />
                   <button
                     type="button"
-                    onClick={toggleReadAloud}
-                    aria-label={
-                      speaking
-                        ? "Stop reading assistant response"
-                        : "Read assistant response aloud"
-                    }
+                    onClick={() => void copy()}
+                    aria-label="Copy assistant response"
+                    className="flex h-7 items-center gap-1 rounded-lg px-1.5 text-[10px] text-slate-400 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                  >
+                    {copied ? (
+                      <Check size={12} aria-hidden />
+                    ) : (
+                      <Copy size={12} aria-hidden />
+                    )}
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                  {speechSupported && message.status === "complete" && (
+                    <button
+                      type="button"
+                      onClick={toggleReadAloud}
+                      aria-label={
+                        speaking
+                          ? "Stop reading assistant response"
+                          : "Read assistant response aloud"
+                      }
+                      className="flex h-7 items-center gap-1 rounded-lg px-1.5 text-[10px] text-slate-400 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                    >
+                      {speaking ? (
+                        <Square size={11} fill="currentColor" aria-hidden />
+                      ) : (
+                        <Volume2 size={12} aria-hidden />
+                      )}
+                      {speaking ? "Stop" : "Listen"}
+                    </button>
+                  )}
+                </>
+              )}
+            </AssistantFeedbackControls>
+          )}
+          {(interrupted ||
+            (!compact && !user && message.content && !streaming)) && (
+            <div
+              className={cn(
+                "mt-1.5 flex min-h-6 items-center gap-2",
+                user ? "justify-end" : "justify-start",
+              )}
+            >
+              {interrupted && (
+                <span className="text-[11px] font-semibold text-amber-700">
+                  {message.status === "aborted"
+                    ? "Response stopped"
+                    : "Response interrupted"}
+                </span>
+              )}
+              {!compact && !user && message.content && !streaming && (
+                <div className="flex items-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => void copy()}
+                    aria-label="Copy assistant response"
                     className="flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] text-slate-400 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                   >
-                    {speaking ? (
-                      <Square size={11} fill="currentColor" aria-hidden />
+                    {copied ? (
+                      <Check size={12} aria-hidden />
                     ) : (
-                      <Volume2 size={12} aria-hidden />
+                      <Copy size={12} aria-hidden />
                     )}
-                    {speaking ? "Stop" : "Listen"}
+                    {copied ? "Copied" : "Copy"}
                   </button>
-                )}
-              </div>
-            )}
-          </div>
+                  {speechSupported && message.status === "complete" && (
+                    <button
+                      type="button"
+                      onClick={toggleReadAloud}
+                      aria-label={
+                        speaking
+                          ? "Stop reading assistant response"
+                          : "Read assistant response aloud"
+                      }
+                      className="flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] text-slate-400 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                    >
+                      {speaking ? (
+                        <Square size={11} fill="currentColor" aria-hidden />
+                      ) : (
+                        <Volume2 size={12} aria-hidden />
+                      )}
+                      {speaking ? "Stop" : "Listen"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </li>

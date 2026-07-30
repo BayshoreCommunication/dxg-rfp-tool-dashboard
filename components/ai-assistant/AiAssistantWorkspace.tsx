@@ -1,5 +1,6 @@
 "use client";
 
+import { Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AssistantThread,
@@ -212,13 +213,13 @@ export default function AiAssistantWorkspace({
       threadId: state.selectedThreadId,
       routeCategory: uiContext.routeCategory,
     });
-    assistant.setDraft(prompt);
+    void assistant.send(prompt);
     window.requestAnimationFrame(() => composerRef.current?.focus());
   };
   const popupComposerDock = (
     <div
       data-testid="assistant-composer-dock"
-      className="mt-auto shrink-0 bg-white/95 px-3 pb-3 pt-2 backdrop-blur"
+      className="mt-auto shrink-0 border-t border-slate-100 bg-white/95 px-4 pb-4 pt-3 shadow-[0_-4px_12px_-12px_rgba(15,23,42,0.18)] backdrop-blur"
     >
       {state.error && (
         <div className="mb-2">
@@ -269,12 +270,12 @@ export default function AiAssistantWorkspace({
             onRestore={assistant.restoreThread}
           />
         )}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {popupPresentation && (
             <div
               data-testid="assistant-control-scrim"
               aria-hidden
-              className="pointer-events-none absolute inset-x-px top-px z-20 h-14 rounded-t-[19px] bg-linear-to-b from-white via-white/95 to-transparent"
+              className="pointer-events-none absolute inset-x-px top-px z-20 h-16 rounded-t-[23px] bg-linear-to-b from-white/95 via-white/80 to-white/20 backdrop-blur-md"
             />
           )}
           {popupPresentation && onClose ? (
@@ -297,10 +298,33 @@ export default function AiAssistantWorkspace({
               onClose={onClose}
             />
           )}
+          {popupPresentation && hasConversation && (
+            <div
+              data-testid="assistant-popup-identity"
+              className="pointer-events-none absolute left-[68px] top-3 z-20 flex h-10 items-center gap-2 whitespace-nowrap text-[11px]"
+            >
+              <Sparkles
+                size={15}
+                strokeWidth={2.2}
+                aria-hidden
+                className="text-[#00aeb5]"
+              />
+              <span className="font-bold text-[#0e1b2b]">RFPilot</span>
+              <span
+                aria-hidden
+                data-testid="assistant-active-dot"
+                className="assistant-active-dot h-1.5 w-1.5 rounded-full bg-[#13b9c0]"
+                style={{
+                  animation:
+                    "assistant-active-pulse 1.4s ease-in-out infinite",
+                }}
+              />
+            </div>
+          )}
           {!hasConversation ? (
             popupPresentation ? (
               <>
-                <div className="min-h-0 flex-1 overflow-y-auto pt-10">
+                <div className="min-h-0 flex-1 overflow-y-auto pt-14">
                   <AssistantEmptyState
                     compact
                     showSuggestions

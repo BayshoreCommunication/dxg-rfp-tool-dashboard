@@ -87,6 +87,11 @@ export type AssistantThread = {
   updatedAt: string;
 };
 
+export type AssistantThreadDeletion = {
+  id: string;
+  deleted: true;
+};
+
 export type AssistantMessage = {
   id: string;
   threadId: string;
@@ -322,6 +327,15 @@ export const parseAssistantThread = (
     updatedAt: nullableString(value.updatedAt) ?? "",
   };
 };
+
+export const parseAssistantThreadDeletion = (
+  value: unknown,
+): AssistantThreadDeletion | null =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  value.deleted === true
+    ? { id: value.id, deleted: true }
+    : null;
 
 export const parseAssistantMessage = (
   value: unknown,

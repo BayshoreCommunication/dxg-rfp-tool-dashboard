@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import MessageBubble, {
   assistantSpeechText,
+  formatAssistantMessageTime,
   normalizeAssistantMarkdownLinks,
 } from "./MessageBubble";
 import { safeAssistantHref } from "./AssistantSources";
@@ -31,6 +32,18 @@ const message = {
 };
 
 describe("MessageBubble", () => {
+  test("formats message timestamps in the requested local timezone", () => {
+    const timestamp = "2026-07-27T00:00:00.000Z";
+
+    expect(
+      formatAssistantMessageTime(timestamp, "Asia/Dhaka"),
+    ).toBe("6:00 AM");
+    expect(
+      formatAssistantMessageTime(timestamp, "America/New_York"),
+    ).toBe("8:00 PM");
+    expect(formatAssistantMessageTime("not-a-date")).toBe("");
+  });
+
   test("renders Markdown but only activates safe routes", () => {
     render(
       <ol>
@@ -116,6 +129,28 @@ describe("MessageBubble", () => {
         ],
       ),
     ).toBe("Open [Create a proposal](/proposals/add-new-proposal).");
+  });
+
+  test("shows an optimistic user message immediately without a sending label", () => {
+    render(
+      <ol>
+        <MessageBubble
+          compact
+          message={{
+            ...message,
+            id: "optimistic-user-message",
+            role: "user",
+            content: "Help me review this proposal.",
+            optimistic: true,
+          }}
+        />
+      </ol>,
+    );
+
+    const content = screen.getByText("Help me review this proposal.");
+    expect(content).toBeVisible();
+    expect(content.closest("div")).not.toHaveClass("opacity-70");
+    expect(screen.queryByText("Sending…")).not.toBeInTheDocument();
   });
 
   test("reads a completed response aloud and can stop playback", async () => {

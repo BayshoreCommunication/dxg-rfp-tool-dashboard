@@ -89,6 +89,11 @@ describe("AssistantHandoffActions", () => {
         name: "Continue with one of your proposals",
       }),
     );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Proposal: Annual Summit",
+      }),
+    );
     expect(
       await screen.findByRole("option", { name: "Annual Summit" }),
     ).toBeInTheDocument();
@@ -124,6 +129,117 @@ describe("AssistantHandoffActions", () => {
     expect(takeProposalHandoffDraft(PROPOSAL_ID)).toBe(
       "What is missing from my proposal?",
     );
+  });
+
+  test("filters and selects a proposal from the custom picker", async () => {
+    const secondProposalId = "def456def456def456def456";
+    (global.fetch as jest.Mock).mockResolvedValueOnce(
+      {
+        ok: true,
+        json: async () => ({
+          data: [
+            {
+              id: PROPOSAL_ID,
+              label: "Annual Summit",
+              canEmail: true,
+            },
+            {
+              id: secondProposalId,
+              label: "Momentum 2027 Sales Kickoff",
+              canEmail: false,
+            },
+          ],
+        }),
+      } as Response,
+    );
+    render(
+      <AssistantHandoffActions
+        message={message}
+        proposalAssistantEnabled
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Continue with one of your proposals",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Proposal: Annual Summit",
+      }),
+    );
+    fireEvent.change(screen.getByRole("searchbox", {
+      name: "Search proposals",
+    }), {
+      target: { value: "momentum" },
+    });
+
+    expect(
+      screen.queryByRole("option", { name: "Annual Summit" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("option", {
+        name: "Momentum 2027 Sales Kickoff",
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "Proposal: Momentum 2027 Sales Kickoff",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open editor" })).toHaveAttribute(
+      "href",
+      `/proposals/proposal-edit?proposalId=${secondProposalId}`,
+    );
+    expect(screen.queryByRole("link", { name: "Prepare email" })).toBeNull();
+  });
+
+  test("supports keyboard selection in the proposal picker", async () => {
+    const secondProposalId = "def456def456def456def456";
+    (global.fetch as jest.Mock).mockResolvedValueOnce(
+      {
+        ok: true,
+        json: async () => ({
+          data: [
+            {
+              id: PROPOSAL_ID,
+              label: "Annual Summit",
+              canEmail: true,
+            },
+            {
+              id: secondProposalId,
+              label: "Momentum 2027 Sales Kickoff",
+              canEmail: false,
+            },
+          ],
+        }),
+      } as Response,
+    );
+    render(<AssistantHandoffActions message={message} />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Continue with one of your proposals",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Proposal: Annual Summit",
+      }),
+    );
+    const search = screen.getByRole("searchbox", {
+      name: "Search proposals",
+    });
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    expect(
+      screen.getByRole("button", {
+        name: "Proposal: Momentum 2027 Sales Kickoff",
+      }),
+    ).toBeInTheDocument();
   });
 
   test("handles unavailable proposals without guessing a destination", async () => {

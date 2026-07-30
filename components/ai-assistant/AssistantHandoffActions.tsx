@@ -9,17 +9,27 @@ import type {
   AssistantIntent,
 } from "@/lib/aiAssistant/types";
 import {
+  Check,
+  ChevronDown,
   ArrowRight,
   Bot,
   FilePenLine,
   Mail,
+  Search,
 } from "lucide-react";
 import {
   markAssistantHandoffPending,
   trackAssistantProductEvent,
 } from "@/lib/aiAssistant/analytics";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 type ProposalOption = {
   id: string;
@@ -110,6 +120,13 @@ export default function AssistantHandoffActions({
   const [selectedId, setSelectedId] = useState("");
   const [carryDraft, setCarryDraft] = useState(Boolean(userDraft?.trim()));
   const [error, setError] = useState<string>();
+  const [proposalMenuOpen, setProposalMenuOpen] = useState(false);
+  const [proposalQuery, setProposalQuery] = useState("");
+  const [activeOptionIndex, setActiveOptionIndex] = useState(0);
+  const proposalPickerRef = useRef<HTMLDivElement>(null);
+  const proposalTriggerRef = useRef<HTMLButtonElement>(null);
+  const proposalSearchRef = useRef<HTMLInputElement>(null);
+  const proposalListboxId = useId();
 
   const hasSelectedProposalContext = message.citations.some((citation) =>
     citation.sourceId.startsWith("selected-proposal:"),
@@ -132,11 +149,46 @@ export default function AssistantHandoffActions({
     }).slice(0, 2);
   }, [message.citations, message.status, needsProposal]);
 
+  const filteredOptions = useMemo(() => {
+    const query = proposalQuery.trim().toLocaleLowerCase();
+    if (!query) return options;
+    return options.filter((option) =>
+      option.label.toLocaleLowerCase().includes(query),
+    );
+  }, [options, proposalQuery]);
+
+  useEffect(() => {
+    if (!proposalMenuOpen) return;
+
+    const handleOutsidePointer = (event: MouseEvent) => {
+      if (
+        event.target instanceof Node &&
+        !proposalPickerRef.current?.contains(event.target)
+      ) {
+        setProposalMenuOpen(false);
+        setProposalQuery("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsidePointer);
+    return () => document.removeEventListener("mousedown", handleOutsidePointer);
+  }, [proposalMenuOpen]);
+
+  useEffect(() => {
+    if (!proposalMenuOpen) return;
+    const selectedIndex = filteredOptions.findIndex(
+      (option) => option.id === selectedId,
+    );
+    setActiveOptionIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [filteredOptions, proposalMenuOpen, selectedId]);
+
   if (!needsProposal && directActions.length === 0) return null;
 
   const openSelector = async () => {
     if (selectorOpen) {
       setSelectorOpen(false);
+      setProposalMenuOpen(false);
+      setProposalQuery("");
       return;
     }
     setSelectorOpen(true);
@@ -213,6 +265,54 @@ export default function AssistantHandoffActions({
     onNavigate?.();
   };
 
+  const closeProposalMenu = (restoreFocus = false) => {
+    setProposalMenuOpen(false);
+    setProposalQuery("");
+    if (restoreFocus) proposalTriggerRef.current?.focus();
+  };
+
+  const openProposalMenu = () => {
+    setProposalMenuOpen(true);
+    const selectedIndex = filteredOptions.findIndex(
+      (option) => option.id === selectedId,
+    );
+    setActiveOptionIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    window.requestAnimationFrame(() => proposalSearchRef.current?.focus());
+  };
+
+  const selectProposal = (option: ProposalOption) => {
+    setSelectedId(option.id);
+    closeProposalMenu(true);
+  };
+
+  const handleProposalMenuKeyDown = (
+    event: ReactKeyboardEvent<HTMLElement>,
+  ) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeProposalMenu(true);
+      return;
+    }
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+      if (
+        event.key === "Enter" &&
+        filteredOptions[activeOptionIndex]
+      ) {
+        event.preventDefault();
+        selectProposal(filteredOptions[activeOptionIndex]);
+      }
+      return;
+    }
+
+    event.preventDefault();
+    setActiveOptionIndex((current) => {
+      if (filteredOptions.length === 0) return 0;
+      const movement = event.key === "ArrowDown" ? 1 : -1;
+      return (current + movement + filteredOptions.length) %
+        filteredOptions.length;
+    });
+  };
+
   return (
     <div
       aria-label="Suggested next step"
@@ -260,20 +360,136 @@ export default function AssistantHandoffActions({
               )}
               {options.length > 0 && (
                 <>
-                  <label className="block font-semibold text-slate-600">
-                    Proposal
-                    <select
-                      value={selectedId}
-                      onChange={(event) => setSelectedId(event.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-800 focus:border-[#00c2c9] focus:outline-none focus:ring-2 focus:ring-[#00c2c9]/20"
+                  <div
+                    ref={proposalPickerRef}
+                    className="relative"
+                  >
+                    <span className="block font-semibold text-slate-600">
+                      Proposal
+                    </span>
+                    <button
+                      ref={proposalTriggerRef}
+                      type="button"
+                      aria-label={`Proposal: ${selected?.label ?? "Choose a proposal"}`}
+                      aria-expanded={proposalMenuOpen}
+                      aria-haspopup="listbox"
+                      aria-controls={proposalListboxId}
+                      onClick={() => {
+                        if (proposalMenuOpen) closeProposalMenu();
+                        else openProposalMenu();
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          !proposalMenuOpen &&
+                          (event.key === "ArrowDown" ||
+                            event.key === "ArrowUp")
+                        ) {
+                          event.preventDefault();
+                          openProposalMenu();
+                        }
+                      }}
+                      className="group mt-1 flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-xs text-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#00c2c9]/55 hover:bg-[#fbffff] focus-visible:border-[#00c2c9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]/20"
                     >
-                      {options.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      <span className="min-w-0 truncate font-medium">
+                        {selected?.label ?? "Choose a proposal"}
+                      </span>
+                      <ChevronDown
+                        size={15}
+                        aria-hidden
+                        className={`shrink-0 text-slate-500 transition-transform duration-200 group-hover:text-[#087f69] ${
+                          proposalMenuOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {proposalMenuOpen && (
+                      <div className="absolute inset-x-0 top-full z-40 mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_14px_32px_-12px_rgba(15,23,42,0.3)]">
+                        <div className="relative mb-1.5">
+                          <Search
+                            size={13}
+                            aria-hidden
+                            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                          />
+                          <input
+                            ref={proposalSearchRef}
+                            type="search"
+                            role="searchbox"
+                            value={proposalQuery}
+                            onChange={(event) => {
+                              setProposalQuery(event.target.value);
+                              setActiveOptionIndex(0);
+                            }}
+                            onKeyDown={handleProposalMenuKeyDown}
+                            placeholder="Search proposals"
+                            aria-label="Search proposals"
+                            aria-controls={proposalListboxId}
+                            aria-activedescendant={
+                              filteredOptions[activeOptionIndex]
+                                ? `${proposalListboxId}-${filteredOptions[activeOptionIndex].id}`
+                                : undefined
+                            }
+                            className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/80 pl-8 pr-2.5 text-[11px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#00c2c9]/60 focus:bg-white focus:ring-2 focus:ring-[#00c2c9]/15"
+                          />
+                        </div>
+                        <div
+                          id={proposalListboxId}
+                          role="listbox"
+                          aria-label="Available proposals"
+                          className="assistant-select-scrollbar max-h-40 space-y-0.5 overflow-y-auto overscroll-contain pr-0.5"
+                        >
+                          {filteredOptions.length > 0 ? (
+                            filteredOptions.map((option, index) => {
+                              const selectedOption =
+                                option.id === selectedId;
+                              const activeOption =
+                                index === activeOptionIndex;
+                              return (
+                                <button
+                                  key={option.id}
+                                  id={`${proposalListboxId}-${option.id}`}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={selectedOption}
+                                  title={option.label}
+                                  onMouseEnter={() =>
+                                    setActiveOptionIndex(index)
+                                  }
+                                  onClick={() => selectProposal(option)}
+                                  className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] transition ${
+                                    selectedOption
+                                      ? "bg-[#e9fbfb] font-semibold text-[#087f69]"
+                                      : activeOption
+                                        ? "bg-slate-100 text-slate-900"
+                                        : "text-slate-700 hover:bg-slate-50"
+                                  }`}
+                                >
+                                  <span className="min-w-0 truncate">
+                                    {option.label}
+                                  </span>
+                                  <span
+                                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${
+                                      selectedOption
+                                        ? "bg-[#18b8be] text-white"
+                                        : "text-transparent"
+                                    }`}
+                                  >
+                                    <Check size={10} aria-hidden />
+                                  </span>
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <p
+                              role="status"
+                              className="px-2.5 py-5 text-center text-[11px] text-slate-500"
+                            >
+                              No matching proposal found.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {userDraft?.trim() && (
                     <label className="mt-2 flex items-start gap-2 text-[11px] text-slate-600">
                       <input

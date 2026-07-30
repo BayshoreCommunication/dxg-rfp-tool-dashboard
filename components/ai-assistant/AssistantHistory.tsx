@@ -36,7 +36,9 @@ export default function AssistantHistory({
   const activeThreads = threads.filter(
     (thread) => thread.status === "active" && !thread.deletedAt,
   );
-  const deletedThreads = threads.filter((thread) => Boolean(thread.deletedAt));
+  const archivedThreads = threads.filter((thread) =>
+    Boolean(thread.deletedAt),
+  );
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
@@ -45,10 +47,47 @@ export default function AssistantHistory({
     if (confirmDeleteId) cancelRef.current?.focus();
   }, [confirmDeleteId]);
 
-  const recoveryLabel = (thread: AssistantThread) => {
-    if (!thread.purgeAfter) return "Recovery date unavailable";
-    return `Restore before ${dateLabel(thread.purgeAfter)}`;
+  const archiveDeadlineLabel = (thread: AssistantThread) => {
+    if (!thread.purgeAfter) return "Deletion date unavailable";
+    return `Deletes automatically on ${dateLabel(thread.purgeAfter)}`;
   };
+
+  const deleteConfirmation = (thread: AssistantThread) =>
+    confirmDeleteId === thread.id ? (
+      <div
+        role="group"
+        aria-label={`Confirm deletion of ${thread.title}`}
+        className="mx-1 mt-1 rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-950"
+      >
+        <p>
+          Permanently delete this conversation now? This cannot be undone.
+        </p>
+        <div className="mt-2 flex justify-end gap-2">
+          <button
+            ref={cancelRef}
+            type="button"
+            onClick={() => setConfirmDeleteId(null)}
+            className="min-h-9 rounded-lg px-3 font-semibold text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={pendingId === thread.id}
+            onClick={async () => {
+              setPendingId(thread.id);
+              const deleted = await onDelete(thread.id);
+              setPendingId(null);
+              if (deleted) setConfirmDeleteId(null);
+            }}
+            className="min-h-9 rounded-lg bg-rose-700 px-3 font-semibold text-white hover:bg-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-60"
+          >
+            {pendingId === thread.id ? "Deleting…" : "Delete permanently"}
+          </button>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <aside
       aria-label="Recent AI Assistant conversations"
@@ -123,7 +162,7 @@ export default function AssistantHistory({
                   <button
                     type="button"
                     aria-label={`Archive ${thread.title}`}
-                    title="Archive conversation"
+                    title="Archive conversation for 30 days"
                     onClick={(event) => {
                       event.stopPropagation();
                       onArchive(thread.id);
@@ -144,79 +183,57 @@ export default function AssistantHistory({
                   >
                     <Trash2 size={14} aria-hidden />
                   </button>
-                  {confirmDeleteId === thread.id && (
-                    <div
-                      role="group"
-                      aria-label={`Confirm deletion of ${thread.title}`}
-                      className="mx-1 mt-1 rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-950"
-                    >
-                      <p>
-                        Delete this conversation? You can restore it during the
-                        recovery window.
-                      </p>
-                      <div className="mt-2 flex justify-end gap-2">
-                        <button
-                          ref={cancelRef}
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="min-h-9 rounded-lg px-3 font-semibold text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          disabled={pendingId === thread.id}
-                          onClick={async () => {
-                            setPendingId(thread.id);
-                            const deleted = await onDelete(thread.id);
-                            setPendingId(null);
-                            if (deleted) setConfirmDeleteId(null);
-                          }}
-                          className="min-h-9 rounded-lg bg-rose-700 px-3 font-semibold text-white hover:bg-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-60"
-                        >
-                          {pendingId === thread.id ? "Deleting…" : "Delete"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  {deleteConfirmation(thread)}
                 </li>
               );
             })}
           </ul>
         )}
-        {!loading && deletedThreads.length > 0 && (
+        {!loading && archivedThreads.length > 0 && (
           <div className="mt-4 border-t border-slate-200 pt-3">
             <h3 className="px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-              Recently deleted
+              Archived
             </h3>
             <ul className="mt-1 space-y-1">
-              {deletedThreads.map((thread) => (
+              {archivedThreads.map((thread) => (
                 <li
                   key={thread.id}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-slate-500"
+                  className="rounded-xl px-1 py-1 text-slate-500"
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-semibold">
-                      {thread.title}
-                    </span>
-                    <span className="mt-0.5 block text-[10px] text-slate-400">
-                      {recoveryLabel(thread)}
-                    </span>
+                  <div className="flex items-center gap-1 rounded-xl px-2 py-1">
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold">
+                        {thread.title}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] text-slate-400">
+                        {archiveDeadlineLabel(thread)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!thread.recoverable || pendingId === thread.id}
+                      aria-label={`Restore ${thread.title}`}
+                      onClick={async () => {
+                        setPendingId(thread.id);
+                        await onRestore(thread.id);
+                        setPendingId(null);
+                      }}
+                      className="flex min-h-9 items-center gap-1 rounded-lg px-2 text-[11px] font-semibold text-[#087f69] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:text-slate-300"
+                    >
+                      <RotateCcw size={13} aria-hidden />
+                      Restore
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${thread.title}`}
+                      title="Delete permanently"
+                      onClick={() => setConfirmDeleteId(thread.id)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                    >
+                      <Trash2 size={14} aria-hidden />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    disabled={!thread.recoverable || pendingId === thread.id}
-                    aria-label={`Restore ${thread.title}`}
-                    onClick={async () => {
-                      setPendingId(thread.id);
-                      await onRestore(thread.id);
-                      setPendingId(null);
-                    }}
-                    className="flex min-h-9 items-center gap-1 rounded-lg px-2 text-[11px] font-semibold text-[#087f69] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:text-slate-300"
-                  >
-                    <RotateCcw size={13} aria-hidden />
-                    Restore
-                  </button>
+                  {deleteConfirmation(thread)}
                 </li>
               ))}
             </ul>
@@ -224,8 +241,8 @@ export default function AssistantHistory({
         )}
       </div>
       <p className="shrink-0 border-t border-slate-100 px-4 py-3 text-[10px] leading-relaxed text-slate-400">
-        Conversations are private to your account. Deleted chats remain
-        recoverable only until the date shown.
+        Archived chats are deleted automatically after 30 days. Delete removes
+        a chat immediately and cannot be undone.
       </p>
     </aside>
   );

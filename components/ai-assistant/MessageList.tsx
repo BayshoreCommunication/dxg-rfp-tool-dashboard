@@ -172,7 +172,7 @@ export default function MessageList({
       : screenReaderStatus;
 
   return (
-    <div className="relative min-h-0 flex-1">
+    <div className="relative min-h-0 flex-1 overflow-hidden">
       <div
         ref={containerRef}
         onScroll={(event) => {
@@ -183,7 +183,7 @@ export default function MessageList({
         }}
         className={
           compact
-            ? "h-full overflow-y-auto overscroll-contain px-3 pb-4 pt-14"
+            ? "assistant-conversation-scrollbar absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-4 pt-[72px]"
             : "h-full overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6"
         }
         aria-label="AI Assistant conversation"
@@ -209,11 +209,18 @@ export default function MessageList({
           </div>
         )}
         {!loading && (
-          <ol className="mx-auto max-w-3xl space-y-4">
+          <ol
+            className={
+              compact
+                ? "relative mx-auto max-w-3xl space-y-4 before:absolute before:bottom-4 before:left-4 before:top-4 before:w-px before:bg-slate-200"
+                : "mx-auto max-w-3xl space-y-4"
+            }
+          >
             {messages.map((message) => (
               <MessageBubble
                 key={message.id}
                 message={message}
+                compact={compact}
                 onNavigate={onNavigate}
                 handoffDraft={handoffDraftByMessageId.get(message.id)}
               />
@@ -223,12 +230,13 @@ export default function MessageList({
                 key={streamingMessage.id}
                 message={streamingMessage}
                 streaming
+                compact={compact}
                 onNavigate={onNavigate}
               />
             )}
             {responding && !streamingMessage && (
               <li className="flex justify-start">
-                <AssistantGeneratingIndicator />
+                <AssistantGeneratingIndicator compact={compact} />
               </li>
             )}
           </ol>

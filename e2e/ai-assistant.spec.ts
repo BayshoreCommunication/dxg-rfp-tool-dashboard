@@ -119,7 +119,9 @@ test("streams a response, persists history, starts a new chat, and remains respo
     page.getByRole("link", { name: "AI Assistant" }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "How can I help?" }),
+    page.getByRole("heading", {
+      name: "Hi — how can I help with your proposal?",
+    }),
   ).toBeVisible();
 
   const newConversationAction = page.getByRole("button", {
@@ -137,8 +139,33 @@ test("streams a response, persists history, starts a new chat, and remains respo
   const composer = page.getByLabel("Message the AI Assistant");
   await expect(composer).toHaveAttribute(
     "placeholder",
-    "Ask about RFPilot…",
+    "Message RFPilot Assistant…",
   );
+  await page
+    .getByRole("button", { name: "Help me start a proposal" })
+    .click();
+  await expect(
+    page.getByText(
+      "How do I create a new proposal? Give me the exact navigation steps.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(composer).toHaveValue("");
+  await expect(
+    page.getByRole("status", { name: "Assistant is responding" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByLabel("AI Assistant conversation")
+      .locator("ol")
+      .getByText(/Publication and sending remain explicit actions/),
+  ).toBeVisible();
+  await newConversationAction.click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Hi — how can I help with your proposal?",
+    }),
+  ).toBeVisible();
   expect(
     await composer.evaluate(
       (element) => element.scrollHeight <= element.clientHeight,
@@ -237,7 +264,9 @@ test("streams a response, persists history, starts a new chat, and remains respo
 
   await newConversationAction.click();
   await expect(
-    page.getByRole("heading", { name: "How can I help?" }),
+    page.getByRole("heading", {
+      name: "Hi — how can I help with your proposal?",
+    }),
   ).toBeVisible();
   await expect(composer).toBeFocused();
 });

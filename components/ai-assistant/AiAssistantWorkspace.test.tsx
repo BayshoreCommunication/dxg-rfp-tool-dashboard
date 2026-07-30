@@ -218,13 +218,7 @@ describe("AiAssistantWorkspace", () => {
     });
     mockedDeleteThread.mockResolvedValue({
       success: true,
-      data: {
-        ...thread,
-        status: "archived",
-        deletedAt: "2026-07-29T00:00:00.000Z",
-        purgeAfter: "2026-08-28T00:00:00.000Z",
-        recoverable: true,
-      },
+      data: { id: thread.id, deleted: true },
       correlationId: "corr-delete",
     });
     mockedRestoreThread.mockResolvedValue({
@@ -238,7 +232,8 @@ describe("AiAssistantWorkspace", () => {
     global.fetch = originalFetch;
   });
 
-  test("renders the premium empty state and fills a suggested prompt", () => {
+  test("renders the premium empty state and sends a suggested prompt directly", async () => {
+    jest.mocked(global.fetch).mockResolvedValue(completedStream());
     render(
       <AiAssistantWorkspace
         initialThreads={[]}
@@ -253,7 +248,17 @@ describe("AiAssistantWorkspace", () => {
     );
     expect(
       screen.getByLabelText("Message the AI Assistant"),
-    ).toHaveValue("How do I create and send a proposal?");
+    ).toHaveValue("");
+    expect(
+      screen.getByText("How do I create and send a proposal?"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Assistant is responding" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockedCreateThread).toHaveBeenCalledTimes(1),
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   test("submits field help once, preserves an existing draft, and returns focus", async () => {
@@ -656,15 +661,32 @@ describe("AiAssistantWorkspace", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("AI Assistant")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Create a proposal" }),
+      screen.queryByRole("button", { name: "Help me start a proposal" }),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("assistant-compact-empty-state")).toHaveClass(
+      "h-full",
+      "min-h-0",
+      "py-2",
+    );
+    expect(
+      screen.getByRole("button", { name: "Help me start a proposal" }),
+    ).toHaveClass("min-h-[38px]", "py-1.5");
     expect(screen.getByTestId("assistant-composer-dock")).toHaveClass(
       "mt-auto",
       "shrink-0",
+      "shadow-[0_-4px_12px_-12px_rgba(15,23,42,0.18)]",
     );
     expect(
       screen.getByTestId("assistant-control-scrim"),
-    ).toBeInTheDocument();
+    ).toHaveClass(
+      "h-16",
+      "backdrop-blur-md",
+      "from-white/95",
+      "via-white/80",
+    );
+    expect(
+      screen.queryByTestId("assistant-popup-identity"),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByLabelText("Message the AI Assistant"),
     ).toBeInTheDocument();
@@ -684,6 +706,29 @@ describe("AiAssistantWorkspace", () => {
       />,
     );
 
+    expect(screen.getByTestId("assistant-popup-identity")).toHaveTextContent(
+      "RFPilot",
+    );
+    expect(screen.getByTestId("assistant-popup-identity")).not.toHaveTextContent(
+      "Active",
+    );
+    expect(screen.getByTestId("assistant-popup-identity")).toHaveClass(
+      "left-[68px]",
+      "top-3",
+    );
+    expect(screen.getByTestId("assistant-popup-identity")).not.toHaveClass(
+      "left-1/2",
+      "-translate-x-1/2",
+    );
+    expect(
+      screen.getByTestId("assistant-popup-identity"),
+    ).not.toHaveClass("border-b", "bg-white/95");
+    expect(screen.getByTestId("assistant-active-dot")).toHaveClass(
+      "assistant-active-dot",
+    );
+    expect(screen.getByTestId("assistant-active-dot")).toHaveStyle({
+      animation: "assistant-active-pulse 1.4s ease-in-out infinite",
+    });
     fireEvent.click(
       screen.getAllByRole("link", { name: "Proposals" })[0],
     );

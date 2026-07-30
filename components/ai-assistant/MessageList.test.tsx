@@ -35,6 +35,9 @@ describe("MessageList", () => {
     );
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
     expect(onNearBottomChange).toHaveBeenCalledWith(true);
+    expect(
+      screen.getByLabelText("AI Assistant conversation").parentElement,
+    ).toHaveClass("overflow-hidden");
   });
 
   test("announces one typing status before the first delta", () => {
@@ -60,6 +63,32 @@ describe("MessageList", () => {
     expect(
       screen.getByTestId("assistant-generating-indicator"),
     ).toBeInTheDocument();
+  });
+
+  test("lets compact content scroll beneath the floating glass controls", () => {
+    render(
+      <MessageList
+        messages={[]}
+        streamingAssistant={null}
+        loading={false}
+        responding={false}
+        isNearBottom
+        onNearBottomChange={jest.fn()}
+        compact
+      />,
+    );
+
+    const conversation = screen.getByLabelText(
+      "AI Assistant conversation",
+    );
+    expect(conversation).toHaveClass(
+      "absolute",
+      "inset-0",
+      "overflow-y-auto",
+      "pt-[72px]",
+      "assistant-conversation-scrollbar",
+    );
+    expect(conversation).not.toHaveClass("top-14");
   });
 
   test("announces only newly streamed text through one polite region", () => {

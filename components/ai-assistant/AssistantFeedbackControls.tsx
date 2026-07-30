@@ -31,8 +31,12 @@ type PendingFeedback = {
 
 export default function AssistantFeedbackControls({
   message,
+  compact = false,
+  children,
 }: {
   message: AssistantDisplayMessage;
+  compact?: boolean;
+  children?: React.ReactNode;
 }) {
   const [feedback, setFeedback] = useState<AssistantMessageFeedback | null>(
     message.feedback ?? null,
@@ -121,11 +125,14 @@ export default function AssistantFeedbackControls({
   };
 
   return (
-    <div className="mt-1.5">
+    <div className={compact ? "mt-2" : "mt-1.5"}>
       <div
         role="group"
         aria-label="Rate this response"
-        className="flex min-h-7 items-center gap-1"
+        className={cn(
+          "flex min-h-7 flex-wrap items-center gap-1",
+          compact && "gap-x-0.5",
+        )}
       >
         <button
           type="button"
@@ -135,6 +142,7 @@ export default function AssistantFeedbackControls({
           onClick={() => void submit("helpful", null)}
           className={cn(
             "inline-flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]",
+            compact && "px-1.5 text-[10px]",
             feedback?.value === "helpful"
               ? "bg-emerald-50 font-semibold text-emerald-700"
               : "text-slate-400 hover:bg-white hover:text-slate-700",
@@ -159,6 +167,7 @@ export default function AssistantFeedbackControls({
           }}
           className={cn(
             "inline-flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]",
+            compact && "px-1.5 text-[10px]",
             feedback?.value === "not_helpful"
               ? "bg-amber-50 font-semibold text-amber-700"
               : "text-slate-400 hover:bg-white hover:text-slate-700",
@@ -167,6 +176,7 @@ export default function AssistantFeedbackControls({
           <ThumbsDown size={12} aria-hidden />
           Not helpful
         </button>
+        {children}
         {busy && (
           <span role="status" className="text-[10px] text-slate-400">
             Saving…

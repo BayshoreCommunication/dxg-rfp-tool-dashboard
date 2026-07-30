@@ -97,7 +97,7 @@ export default function ChatComposer({
           }
           placeholder={
             compact
-              ? "Ask about RFPilot…"
+              ? "Message RFPilot Assistant…"
               : "Ask about proposals, events, or using the platform…"
           }
           onChange={(event) => onChange(event.target.value)}
@@ -111,7 +111,7 @@ export default function ChatComposer({
           className={cn(
             "assistant-composer-scrollbar block max-h-36 min-h-10 w-full min-w-0 resize-none bg-transparent pl-2 pr-[68px] leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400",
             compact
-              ? "py-1.5 text-[13px] placeholder-shown:min-h-10"
+              ? "py-1.5 text-[12.5px] placeholder-shown:min-h-10"
               : "py-2.5 text-[15px] placeholder-shown:min-h-20 sm:placeholder-shown:min-h-10",
           )}
         />

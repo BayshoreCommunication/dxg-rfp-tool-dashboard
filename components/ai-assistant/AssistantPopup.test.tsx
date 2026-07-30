@@ -102,10 +102,10 @@ describe("AssistantPopup", () => {
     ).toHaveClass("z-[60]");
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
-    ).toHaveClass("w-[min(384px,calc(100vw-24px))]");
+    ).toHaveClass("w-[min(420px,calc(100vw-24px))]");
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
-    ).toHaveClass("h-[min(460px,calc(100dvh-24px))]");
+    ).toHaveClass("h-[min(540px,calc(100dvh-24px))]");
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
     ).not.toHaveClass("will-change-[transform,opacity]");
@@ -237,15 +237,15 @@ describe("AssistantPopup", () => {
       name: "Move AI Assistant",
     });
     await waitFor(() =>
-      expect(dialog).toHaveStyle({ left: "102px", top: "173px" }),
+      expect(dialog).toHaveStyle({ left: "102px", top: "93px" }),
     );
     expect(screen.getByText("Position changed: false")).toBeInTheDocument();
 
     fireEvent.keyDown(handle, { key: "ArrowRight" });
-    expect(dialog).toHaveStyle({ left: "114px", top: "173px" });
+    expect(dialog).toHaveStyle({ left: "114px", top: "93px" });
     expect(screen.getByText("Position changed: true")).toBeInTheDocument();
     expect(window.localStorage.getItem("rfpilot:ai-assistant-position:v1"))
-      .toBe('{"x":114,"y":173}');
+      .toBe('{"x":114,"y":93}');
 
     unmount();
     render(<AssistantPopup open onOpenChange={jest.fn()} />);
@@ -253,7 +253,7 @@ describe("AssistantPopup", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("dialog", { name: "AI Assistant" }),
-      ).toHaveStyle({ left: "114px", top: "173px" }),
+      ).toHaveStyle({ left: "114px", top: "93px" }),
     );
 
     fireEvent.click(
@@ -261,7 +261,7 @@ describe("AssistantPopup", () => {
     );
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
-    ).toHaveStyle({ left: "102px", top: "173px" });
+    ).toHaveStyle({ left: "102px", top: "93px" });
     expect(window.localStorage.getItem("rfpilot:ai-assistant-position:v1"))
       .toBeNull();
   });
@@ -274,14 +274,14 @@ describe("AssistantPopup", () => {
       name: "Move AI Assistant",
     });
     await waitFor(() =>
-      expect(dialog).toHaveStyle({ left: "102px", top: "173px" }),
+      expect(dialog).toHaveStyle({ left: "102px", top: "93px" }),
     );
     for (let index = 0; index < 100; index += 1) {
       fireEvent.keyDown(handle, { key: "ArrowRight", shiftKey: true });
       fireEvent.keyDown(handle, { key: "ArrowDown", shiftKey: true });
     }
 
-    expect(dialog).toHaveStyle({ left: "628px", top: "296px" });
+    expect(dialog).toHaveStyle({ left: "592px", top: "216px" });
   });
 
   test("resizes from the lower right, remembers size, and resets it", async () => {
@@ -297,16 +297,16 @@ describe("AssistantPopup", () => {
       name: "Resize AI Assistant from lower right",
     });
     await waitFor(() =>
-      expect(dialog).toHaveStyle({ width: "384px", height: "460px" }),
+      expect(dialog).toHaveStyle({ width: "420px", height: "540px" }),
     );
     expect(screen.getByText("Size changed: false")).toBeInTheDocument();
 
     fireEvent.keyDown(resize, { key: "ArrowRight" });
     fireEvent.keyDown(resize, { key: "ArrowDown" });
-    expect(dialog).toHaveStyle({ width: "400px", height: "476px" });
+    expect(dialog).toHaveStyle({ width: "436px", height: "556px" });
     expect(screen.getByText("Size changed: true")).toBeInTheDocument();
     expect(window.localStorage.getItem("rfpilot:ai-assistant-size:v1"))
-      .toBe('{"width":400,"height":476}');
+      .toBe('{"width":436,"height":556}');
 
     unmount();
     render(<AssistantPopup open onOpenChange={jest.fn()} />);
@@ -314,7 +314,7 @@ describe("AssistantPopup", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("dialog", { name: "AI Assistant" }),
-      ).toHaveStyle({ width: "400px", height: "476px" }),
+      ).toHaveStyle({ width: "436px", height: "556px" }),
     );
 
     fireEvent.click(
@@ -322,7 +322,7 @@ describe("AssistantPopup", () => {
     );
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
-    ).toHaveStyle({ width: "384px", height: "460px" });
+    ).toHaveStyle({ width: "420px", height: "540px" });
     expect(window.localStorage.getItem("rfpilot:ai-assistant-size:v1"))
       .toBeNull();
   });
@@ -336,9 +336,18 @@ describe("AssistantPopup", () => {
     });
 
     expect(resize).not.toHaveAttribute("title");
-    expect(resize).toHaveClass("h-8", "w-8", "opacity-70");
+    expect(resize).toHaveClass("h-9", "w-9");
     expect(resize).not.toHaveClass("opacity-0");
-    expect(resize.querySelector(".lucide-scaling")).toBeInTheDocument();
+    expect(screen.getByTestId("assistant-resize-grip-art")).toHaveAttribute(
+      "src",
+      "/assets/ai-assistant/resize-grip-3-line.png",
+    );
+    expect(screen.getByTestId("assistant-resize-grip-art")).toHaveClass(
+      "bottom-[6px]",
+      "right-[6px]",
+      "h-[18px]",
+      "w-[18px]",
+    );
   });
 
   test("limits resizing to twice the default size and the viewport", async () => {
@@ -370,7 +379,7 @@ describe("AssistantPopup", () => {
       });
     }
 
-    expect(dialog).toHaveStyle({ width: "768px", height: "920px" });
+    expect(dialog).toHaveStyle({ width: "840px", height: "1053px" });
   });
 
   test("resizes upward from the upper-right handle", async () => {
@@ -384,11 +393,11 @@ describe("AssistantPopup", () => {
       name: "Resize AI Assistant from upper right",
     });
     await waitFor(() =>
-      expect(dialog).toHaveStyle({ top: "173px", height: "460px" }),
+      expect(dialog).toHaveStyle({ top: "93px", height: "540px" }),
     );
     fireEvent.keyDown(resize, { key: "ArrowUp" });
 
-    expect(dialog).toHaveStyle({ top: "157px", height: "476px" });
+    expect(dialog).toHaveStyle({ top: "77px", height: "556px" });
   });
 
   test("resizes with a pointer drag from the lower-right handle", async () => {
@@ -402,13 +411,13 @@ describe("AssistantPopup", () => {
       configurable: true,
       value: () => ({
         x: 102,
-        y: 173,
+        y: 93,
         left: 102,
-        top: 173,
-        right: 486,
+        top: 93,
+        right: 522,
         bottom: 633,
-        width: 384,
-        height: 460,
+        width: 420,
+        height: 540,
         toJSON: () => ({}),
       }),
     });
@@ -442,12 +451,12 @@ describe("AssistantPopup", () => {
       fireEvent(resize, event);
     };
 
-    dispatchPointer("pointerdown", 486, 633);
-    dispatchPointer("pointermove", 550, 681);
-    dispatchPointer("pointerup", 550, 681);
+    dispatchPointer("pointerdown", 522, 633);
+    dispatchPointer("pointermove", 586, 681);
+    dispatchPointer("pointerup", 586, 681);
 
-    expect(dialog).toHaveStyle({ width: "448px", height: "508px" });
+    expect(dialog).toHaveStyle({ width: "484px", height: "588px" });
     expect(window.localStorage.getItem("rfpilot:ai-assistant-size:v1"))
-      .toBe('{"width":448,"height":508}');
+      .toBe('{"width":484,"height":588}');
   });
 });

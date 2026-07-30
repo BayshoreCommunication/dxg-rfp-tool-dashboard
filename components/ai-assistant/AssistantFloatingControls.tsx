@@ -115,6 +115,7 @@ export default function AssistantFloatingControls({
         id="ai-assistant-new-chat"
         type="button"
         aria-label="Start new conversation"
+        title="New conversation"
         onClick={() => runAndClose(onNewChat)}
         className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#0e1b2b] bg-[#0e1b2b] text-white shadow-[0_12px_28px_-14px_rgba(15,23,42,0.9)] transition duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 active:translate-y-0 motion-reduce:transform-none"
       >

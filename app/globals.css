@@ -225,7 +225,78 @@ strong {
   background: #7f8b99;
 }
 
+.assistant-conversation-scrollbar {
+  scrollbar-color: #a8b1bd transparent;
+  scrollbar-width: thin;
+}
+
+.assistant-conversation-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.assistant-conversation-scrollbar::-webkit-scrollbar-track {
+  margin-block: 60px 8px;
+  background: transparent;
+}
+
+.assistant-conversation-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 32px;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.78);
+}
+
+.assistant-conversation-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.9);
+}
+
+.assistant-select-scrollbar {
+  scrollbar-color: rgba(148, 163, 184, 0.72) transparent;
+  scrollbar-width: thin;
+}
+
+.assistant-select-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.assistant-select-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.assistant-select-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.72);
+}
+
+.assistant-select-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.88);
+}
+
+@keyframes assistant-active-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(19, 185, 192, 0);
+    opacity: 0.6;
+    transform: scale(0.62);
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px rgba(19, 185, 192, 0.12);
+    opacity: 1;
+    transform: scale(1.42);
+  }
+}
+
+.assistant-active-dot {
+  animation: assistant-active-pulse 1.4s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .assistant-active-dot {
+    animation: none !important;
+  }
+
   .assistant-popup-open {
     animation: none;
     opacity: 1;

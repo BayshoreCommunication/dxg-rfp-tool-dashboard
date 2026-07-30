@@ -4,6 +4,7 @@ import { BACKEND_URL } from "@/lib/config";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 import {
   parseAssistantThread,
+  parseAssistantThreadDeletion,
   parseAssistantThreadDetail,
   parseAssistantThreadList,
   parseCreateAssistantThreadResult,
@@ -24,6 +25,8 @@ const safeMessages: Record<string, string> = {
   ASSISTANT_THREAD_ARCHIVED: "This conversation is archived.",
   ASSISTANT_THREAD_RECOVERY_EXPIRED:
     "This conversation's recovery window has expired.",
+  ASSISTANT_THREAD_LEGAL_HOLD:
+    "This conversation cannot be deleted while a legal hold is active.",
   INVALID_ASSISTANT_PAGINATION: "The requested conversation page is invalid.",
   INVALID_ASSISTANT_THREAD_UPDATE: "This conversation could not be updated.",
   ASSISTANT_IDEMPOTENCY_CONFLICT:
@@ -181,11 +184,11 @@ export const archiveAssistantThreadAction = async (
 
 export const deleteAssistantThreadAction = async (
   threadId: string,
-): Promise<AssistantActionResult<AssistantThread>> =>
+): Promise<AssistantActionResult<{ id: string; deleted: true }>> =>
   request(
     `/api/v1/assistant/threads/${encodeURIComponent(threadId)}`,
     { method: "DELETE" },
-    parseAssistantThread,
+    parseAssistantThreadDeletion,
   );
 
 export const restoreAssistantThreadAction = async (

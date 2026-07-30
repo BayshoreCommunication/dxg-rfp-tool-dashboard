@@ -117,19 +117,17 @@ describe("AI Assistant server actions", () => {
     });
   });
 
-  test("requests recoverable deletion and restore through explicit methods", async () => {
-    const deleted = {
-      ...thread,
-      status: "archived",
-      deletedAt: "2026-07-29T00:00:00.000Z",
-      purgeAfter: "2026-08-28T00:00:00.000Z",
-      recoverable: true,
-    };
+  test("requests permanent deletion and restore through explicit methods", async () => {
     mockedFetch
-      .mockResolvedValueOnce(Response.json({ data: deleted }))
+      .mockResolvedValueOnce(
+        Response.json({ data: { id: thread.id, deleted: true } }),
+      )
       .mockResolvedValueOnce(Response.json({ data: thread }));
 
-    expect((await deleteAssistantThreadAction(thread.id)).success).toBe(true);
+    expect(await deleteAssistantThreadAction(thread.id)).toMatchObject({
+      success: true,
+      data: { id: thread.id, deleted: true },
+    });
     expect(mockedFetch.mock.calls[0]?.[1]?.method).toBe("DELETE");
     expect(
       String(mockedFetch.mock.calls[0]?.[0]),

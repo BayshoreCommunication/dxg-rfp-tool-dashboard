@@ -683,8 +683,9 @@ export function useAiAssistant({
       threadId,
       draft: readDraft(null),
     });
+    await refreshThreads();
     return true;
-  }, []);
+  }, [refreshThreads]);
 
   const deleteThread = useCallback(
     async (threadId: string) => {

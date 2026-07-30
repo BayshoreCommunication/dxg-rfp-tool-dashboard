@@ -68,7 +68,7 @@ describe("ChatComposer", () => {
     renderComposer({ value: "", compact: true });
     expect(
       screen.getByLabelText("Message the AI Assistant"),
-    ).toHaveAttribute("placeholder", "Ask about RFPilot…");
+    ).toHaveAttribute("placeholder", "Message RFPilot Assistant…");
   });
 
   test("keeps the rounded scrollbar to the right of the send control", () => {
