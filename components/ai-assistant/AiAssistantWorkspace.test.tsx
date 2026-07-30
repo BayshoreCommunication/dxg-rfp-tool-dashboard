@@ -256,42 +256,63 @@ describe("AiAssistantWorkspace", () => {
     ).toHaveValue("How do I create and send a proposal?");
   });
 
-  test("applies a field-help draft once and returns focus to the composer", async () => {
+  test("submits field help once, preserves an existing draft, and returns focus", async () => {
+    jest.mocked(global.fetch).mockResolvedValue(completedStream());
+    const prompt =
+      'What should I enter for the "Event Name" field?';
     const { rerender } = render(
       <AiAssistantWorkspace
-        initialThreads={[]}
-        initialDetail={null}
-        draftRequest={{
-          id: "field-help-1",
-          prompt:
-            'What should I enter for the "Event Name" field?',
-        }}
+        initialThreads={[thread]}
+        initialDetail={{ thread, messages: [] }}
       />,
     );
     const composer = screen.getByLabelText("Message the AI Assistant");
-
-    await waitFor(() => {
-      expect(composer).toHaveValue(
-        'What should I enter for the "Event Name" field?',
-      );
-      expect(composer).toHaveFocus();
-    });
-
     fireEvent.change(composer, {
-      target: { value: "My edited field question" },
+      target: { value: "My unfinished manual question" },
     });
+
     rerender(
       <AiAssistantWorkspace
-        initialThreads={[]}
-        initialDetail={null}
+        initialThreads={[thread]}
+        initialDetail={{ thread, messages: [] }}
         draftRequest={{
           id: "field-help-1",
-          prompt:
-            'What should I enter for the "Event Name" field?',
+          prompt,
         }}
       />,
     );
-    expect(composer).toHaveValue("My edited field question");
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      JSON.parse(
+        String(
+          jest.mocked(global.fetch).mock.calls[0]?.[1]?.body,
+        ),
+      ),
+    ).toMatchObject({ content: prompt });
+    const activeComposer = screen.getByLabelText(
+      "Message the AI Assistant",
+    );
+    expect(activeComposer).toHaveValue(
+      "My unfinished manual question",
+    );
+    expect(activeComposer).toHaveFocus();
+
+    rerender(
+      <AiAssistantWorkspace
+        initialThreads={[thread]}
+        initialDetail={{ thread, messages: [] }}
+        draftRequest={{
+          id: "field-help-1",
+          prompt,
+        }}
+      />,
+    );
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledTimes(1),
+    );
   });
 
   test("creates a thread, consumes product SSE, and renders safe Markdown", async () => {

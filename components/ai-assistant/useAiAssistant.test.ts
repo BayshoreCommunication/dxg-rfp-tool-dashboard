@@ -117,13 +117,42 @@ describe("aiAssistantReducer", () => {
         conversationStatus: "ready",
         pendingRequest: null,
       },
-      { type: "SEND_STARTED", pending },
+      { type: "SEND_STARTED", pending, draftAfterSend: "" },
     );
 
     expect(next.draft).toBe("");
     expect(next.messages).toHaveLength(1);
     expect(next.messages[0]).toMatchObject({
       id: pending.optimisticId,
+      content: pending.content,
+      optimistic: true,
+    });
+  });
+
+  test("preserves an unfinished draft when explicit shortcut content is sent", () => {
+    const pending = {
+      ...state.pendingRequest!,
+      optimisticId: "local:field-help-key",
+      userIdempotencyKey: "field-help-key",
+      content: "Explain the Event Name field",
+    };
+    const next = aiAssistantReducer(
+      {
+        ...state,
+        messages: [],
+        draft: "My unfinished manual question",
+        conversationStatus: "ready",
+        pendingRequest: null,
+      },
+      {
+        type: "SEND_STARTED",
+        pending,
+        draftAfterSend: "My unfinished manual question",
+      },
+    );
+
+    expect(next.draft).toBe("My unfinished manual question");
+    expect(next.messages[0]).toMatchObject({
       content: pending.content,
       optimistic: true,
     });

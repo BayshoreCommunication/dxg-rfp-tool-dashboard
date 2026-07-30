@@ -96,7 +96,7 @@ describe("LayoutWrapper", () => {
     );
   });
 
-  test("opens the assistant with a pinned, editable field-help request", () => {
+  test("opens the assistant with a pinned field-help submission request", () => {
     render(
       <LayoutWrapper assistantEnabled>
         <FieldHelpTrigger />

@@ -79,14 +79,9 @@ test("opens contextual AI help from a proposal field and streams the answer", as
   const dialog = page.getByRole("dialog", { name: "AI Assistant" });
   await expect(dialog).toBeVisible();
   const composer = dialog.getByLabel("Message the AI Assistant");
-  await expect(composer).toHaveValue(
-    'What should I enter for the "Event Name" field? Explain it simply and give me one short example.',
-  );
-  await expect(composer).toBeFocused();
-
-  await composer.press("Enter");
   await expect(composer).toHaveValue("");
   await expect(composer).toBeFocused();
+
   await expect(
     dialog.getByText(
       'What should I enter for the "Event Name" field? Explain it simply and give me one short example.',

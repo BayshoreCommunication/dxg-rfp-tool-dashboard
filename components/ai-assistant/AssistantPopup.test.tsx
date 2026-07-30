@@ -116,7 +116,7 @@ describe("AssistantPopup", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  test("pins field context and passes an editable field-help draft", async () => {
+  test("pins field context and passes a field-help submission request", async () => {
     render(
       <AssistantPopup
         open

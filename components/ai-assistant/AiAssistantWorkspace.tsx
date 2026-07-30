@@ -54,7 +54,14 @@ export default function AiAssistantWorkspace({
     initialError,
     uiContext,
   });
-  const { refreshThreads, setDraft, state } = assistant;
+  const {
+    busy,
+    refreshThreads,
+    retryAfterSeconds,
+    send,
+    setDraft,
+    state,
+  } = assistant;
   const [historyOpen, setHistoryOpen] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const suggestionShownRef = useRef<string | null>(null);
@@ -90,12 +97,22 @@ export default function AiAssistantWorkspace({
       return;
     }
     appliedDraftRequestRef.current = draftRequest.id;
-    setDraft(draftRequest.prompt);
+    if (busy || retryAfterSeconds > 0) {
+      setDraft(draftRequest.prompt);
+    } else {
+      void send(draftRequest.prompt);
+    }
     const frame = window.requestAnimationFrame(() =>
       composerRef.current?.focus(),
     );
     return () => window.cancelAnimationFrame(frame);
-  }, [draftRequest, setDraft]);
+  }, [
+    busy,
+    draftRequest,
+    retryAfterSeconds,
+    send,
+    setDraft,
+  ]);
 
   useEffect(() => {
     void refreshThreads();

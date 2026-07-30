@@ -83,7 +83,11 @@ type Action =
   | { type: "NEW_CHAT"; draft: string }
   | { type: "SET_DRAFT"; draft: string }
   | { type: "SET_NEAR_BOTTOM"; value: boolean }
-  | { type: "SEND_STARTED"; pending: PendingRequest }
+  | {
+      type: "SEND_STARTED";
+      pending: PendingRequest;
+      draftAfterSend: string;
+    }
   | {
       type: "THREAD_CREATED";
       thread: AssistantThread;
@@ -271,7 +275,7 @@ export const aiAssistantReducer = (
             : state.messages,
         conversationStatus: "sending",
         error: null,
-        draft: "",
+        draft: action.draftAfterSend,
         pendingRequest: action.pending,
         retryAvailableAt: null,
       };
@@ -730,9 +734,13 @@ export function useAiAssistant({
   );
 
   const runRequest = useCallback(
-    async (pendingInput: PendingRequest, explicitRetry = false) => {
+    async (
+      pendingInput: PendingRequest,
+      explicitRetry = false,
+      draftAfterSend = "",
+    ) => {
       let pending = pendingInput;
-      dispatch({ type: "SEND_STARTED", pending });
+      dispatch({ type: "SEND_STARTED", pending, draftAfterSend });
       let threadId =
         pending.threadId || stateRef.current.selectedThreadId;
 
@@ -865,8 +873,10 @@ export function useAiAssistant({
     [refreshThreads],
   );
 
-  const send = useCallback(async () => {
-    const content = stateRef.current.draft.trim();
+  const send = useCallback(async (contentOverride?: string) => {
+    const content = (
+      contentOverride ?? stateRef.current.draft
+    ).trim();
     if (
       requestActiveRef.current ||
       !content ||
@@ -890,7 +900,13 @@ export function useAiAssistant({
     };
     requestActiveRef.current = true;
     try {
-      await runRequest(pending);
+      await runRequest(
+        pending,
+        false,
+        contentOverride === undefined
+          ? ""
+          : stateRef.current.draft,
+      );
     } finally {
       requestActiveRef.current = false;
     }
