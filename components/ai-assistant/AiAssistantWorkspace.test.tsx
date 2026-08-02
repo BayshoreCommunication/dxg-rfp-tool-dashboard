@@ -729,6 +729,7 @@ describe("AiAssistantWorkspace", () => {
     expect(screen.getByTestId("assistant-active-dot")).toHaveStyle({
       animation: "assistant-active-pulse 1.4s ease-in-out infinite",
     });
+    fireEvent.click(screen.getByRole("button", { name: "View source" }));
     fireEvent.click(
       screen.getAllByRole("link", { name: "Proposals" })[0],
     );
