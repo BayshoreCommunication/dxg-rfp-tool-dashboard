@@ -5,12 +5,13 @@ import { ArrowLeft, ArrowRight, Building2, CheckCircle2, KeyRound, Mail, Phone, 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const SignupPage = () => {
   const router = useRouter();
 
   const [step, setStep] = useState(1);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
@@ -36,6 +37,28 @@ const SignupPage = () => {
     if (res.success) {
       setSuccessMsg(res.message);
       setStep(2);
+    } else {
+      setError(res.message);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleResendOtp = async () => {
+    setLoading(true);
+    setError("");
+    setSuccessMsg("");
+
+    const res = await sendSignupOtpAction(email);
+    if (res.success) {
+      setSuccessMsg("A new code has been sent to your email.");
+      setOtp("");
+      setResendCooldown(60);
     } else {
       setError(res.message);
     }
@@ -193,6 +216,17 @@ const SignupPage = () => {
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
       </button>
+      <p className="mb-8 -mt-4 text-center text-sm text-gray-500">
+        Didn&apos;t receive the code?{" "}
+        <button
+          type="button"
+          onClick={handleResendOtp}
+          disabled={loading || resendCooldown > 0}
+          className="cursor-pointer font-semibold text-gray-800 hover:underline disabled:cursor-default disabled:text-gray-400 disabled:no-underline"
+        >
+          {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
+        </button>
+      </p>
     </form>
   );
 
