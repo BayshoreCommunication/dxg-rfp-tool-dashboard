@@ -99,6 +99,10 @@ test("opens contextual AI help from a proposal field and streams the answer", as
       .locator("ol")
       .getByText(/Enter the clear, public-facing name/),
   ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "View source" }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await dialog.getByRole("button", { name: "View source" }).click();
   const longSourceLink = dialog.getByRole("link", {
     name: "Event Overview: Event Name — Public-Facing Event Identity and Proposal Guidance",
   });

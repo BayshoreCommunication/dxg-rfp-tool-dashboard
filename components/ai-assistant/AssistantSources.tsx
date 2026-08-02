@@ -1,5 +1,8 @@
-import { BookOpen, ExternalLink, FileText } from "lucide-react";
+"use client";
+
+import { BookOpen, ChevronDown, ExternalLink, FileText } from "lucide-react";
 import Link from "next/link";
+import { useId, useState } from "react";
 import type { AssistantCitation } from "@/lib/aiAssistant/types";
 import { trackAssistantProductEvent } from "@/lib/aiAssistant/analytics";
 
@@ -20,6 +23,36 @@ export const safeAssistantHref = (href: string | undefined): string | null => {
   }
 };
 
+const CURRENT_RENDERED_FIELD_SOURCE_ID =
+  "form-field:current-rendered-control";
+
+export const assistantDisplayCitations = (
+  citations: readonly AssistantCitation[],
+): AssistantCitation[] => {
+  const hasCanonicalFieldSource = citations.some(
+    (citation) =>
+      citation.sourceId.startsWith("form-field:") &&
+      citation.sourceId !== CURRENT_RENDERED_FIELD_SOURCE_ID,
+  );
+  const seen = new Set<string>();
+
+  return citations.flatMap((citation) => {
+    if (
+      hasCanonicalFieldSource &&
+      citation.sourceId === CURRENT_RENDERED_FIELD_SOURCE_ID
+    ) {
+      return [];
+    }
+    const title = citation.title
+      .replace(/\s+[—-]\s+current form control$/i, "")
+      .trim();
+    const key = `${citation.sourceId}:${citation.fragmentId || ""}:${citation.href || ""}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ ...citation, title }];
+  });
+};
+
 export default function AssistantSources({
   citations,
   threadId,
@@ -33,7 +66,14 @@ export default function AssistantSources({
   compact?: boolean;
   onNavigate?: () => void;
 }) {
-  if (citations.length === 0) return null;
+  const [expanded, setExpanded] = useState(false);
+  const sourceListId = useId();
+  const displayCitations = assistantDisplayCitations(citations);
+  if (displayCitations.length === 0) return null;
+  const sourceCount = displayCitations.length;
+  const sourceLabel = sourceCount === 1 ? "source" : `${sourceCount} sources`;
+  const showList = !compact || expanded;
+
   return (
     <div
       className={
@@ -42,18 +82,40 @@ export default function AssistantSources({
           : "mt-2.5 min-w-0 max-w-full overflow-hidden border-t border-slate-100 pt-2.5"
       }
     >
-      <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500">
-        <BookOpen size={11} aria-hidden />
-        Sources
-      </p>
+      {compact ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={sourceListId}
+          onClick={() => setExpanded((current) => !current)}
+          className="flex min-h-6 max-w-full items-center gap-1.5 rounded-md px-1 text-[9.5px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]/60"
+        >
+          <BookOpen size={11} aria-hidden className="shrink-0" />
+          <span>{expanded ? `Hide ${sourceLabel}` : `View ${sourceLabel}`}</span>
+          <ChevronDown
+            size={11}
+            aria-hidden
+            className={`shrink-0 transition-transform ${
+              expanded ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+      ) : (
+        <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500">
+          <BookOpen size={11} aria-hidden />
+          Sources
+        </p>
+      )}
       <ul
+        id={sourceListId}
+        hidden={!showList}
         className={
           compact
             ? "mt-1.5 grid min-w-0 max-w-full gap-1.5"
             : "mt-1.5 flex min-w-0 max-w-full flex-wrap gap-1"
         }
       >
-        {citations.map((citation) => {
+        {displayCitations.map((citation) => {
           const href = safeAssistantHref(citation.href);
           const content = (
             <>
@@ -134,7 +196,13 @@ export default function AssistantSources({
                       className="shrink-0 text-slate-500"
                     />
                   )}
-                  <span className={compact ? "min-w-0 flex-1 truncate" : "max-w-[13rem] truncate"}>
+                  <span
+                    className={
+                      compact
+                        ? "min-w-0 flex-1 truncate"
+                        : "max-w-[13rem] truncate"
+                    }
+                  >
                     {citation.title}
                   </span>
                 </span>

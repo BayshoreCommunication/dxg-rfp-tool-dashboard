@@ -4,7 +4,10 @@ import MessageBubble, {
   formatAssistantMessageTime,
   normalizeAssistantMarkdownLinks,
 } from "./MessageBubble";
-import { safeAssistantHref } from "./AssistantSources";
+import {
+  assistantDisplayCitations,
+  safeAssistantHref,
+} from "./AssistantSources";
 
 const message = {
   id: "message-1",
@@ -80,6 +83,12 @@ describe("MessageBubble", () => {
       </ol>,
     );
 
+    expect(
+      screen.queryByRole("link", {
+        name: /Does Your Contract With the Venue/,
+      }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View source" }));
     const sourceLink = screen.getByRole("link", {
       name: /Does Your Contract With the Venue/,
     });
@@ -94,6 +103,54 @@ describe("MessageBubble", () => {
       "flex-1",
       "truncate",
     );
+    expect(screen.getByRole("button", { name: "Hide source" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  test("collapses compact sources and removes redundant rendered-field evidence", () => {
+    const citations = assistantDisplayCitations([
+      {
+        sourceId: "form-field:current-rendered-control",
+        title: "Investment Flexibility — current form control",
+        href: "/proposals/add-new-proposal",
+      },
+      {
+        sourceId:
+          "form-field:investment_evaluation:/content/budgetPreferences/flexibility",
+        title: "Investment & Evaluation: Flexibility",
+        href: "/proposals/add-new-proposal",
+      },
+    ]);
+
+    expect(citations).toHaveLength(1);
+    expect(citations[0]?.title).toBe("Investment & Evaluation: Flexibility");
+
+    render(
+      <ol>
+        <MessageBubble compact message={{ ...message, citations }} />
+      </ol>,
+    );
+
+    expect(screen.getByRole("button", { name: "View source" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(
+      screen.queryByRole("link", {
+        name: "Investment & Evaluation: Flexibility",
+      }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View source" }));
+    expect(
+      screen.getByRole("link", {
+        name: "Investment & Evaluation: Flexibility",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/current form control/i),
+    ).not.toBeInTheDocument();
   });
 
   test("accepts internal paths and HTTPS only", () => {
