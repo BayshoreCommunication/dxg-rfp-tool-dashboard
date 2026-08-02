@@ -60,6 +60,42 @@ describe("MessageBubble", () => {
     ).toBeInTheDocument();
   });
 
+  test("keeps long compact source titles inside the message width", () => {
+    render(
+      <ol>
+        <MessageBubble
+          compact
+          message={{
+            ...message,
+            citations: [
+              {
+                sourceId: "form-field:long-source",
+                title:
+                  "Does Your Contract With the Venue Require You to Use Union, Teamster, or Other Labor?",
+                href: "/proposals/add-new-proposal",
+              },
+            ],
+          }}
+        />
+      </ol>,
+    );
+
+    const sourceLink = screen.getByRole("link", {
+      name: /Does Your Contract With the Venue/,
+    });
+    expect(sourceLink).toHaveClass("min-w-0", "max-w-full", "overflow-hidden");
+    expect(sourceLink.parentElement).toHaveClass(
+      "min-w-0",
+      "max-w-full",
+      "overflow-hidden",
+    );
+    expect(sourceLink.querySelector("span")).toHaveClass(
+      "min-w-0",
+      "flex-1",
+      "truncate",
+    );
+  });
+
   test("accepts internal paths and HTTPS only", () => {
     expect(safeAssistantHref("/settings")).toBe("/settings");
     expect(safeAssistantHref("https://example.com/help")).toBe(

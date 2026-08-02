@@ -5,6 +5,15 @@ import { useCallback, useRef } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, toggleItem, useClickOutside } from "./shared";
 import { ArrowRight } from "lucide-react";
+import {
+  audienceOptions,
+  eventOverviewFieldHelper,
+  eventTypeOptions,
+  formatOptions,
+  maximumAudienceSelections,
+  maximumToneSelections,
+  toneGroups,
+} from "@/lib/proposals/eventOverviewFieldUi";
 
 /* ─── Shared style constants ─── */
 const labelClass =
@@ -13,81 +22,6 @@ const inputClass =
   "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
-
-const eventTypeOptions = [
-  "Corporate Conference",
-  "User / Customer Summit",
-  "Sales Kickoff (SKO)",
-  "Annual Meeting / Shareholder Event",
-  "Product Launch",
-  "Awards Show / Gala",
-  "Trade Show / Exhibition",
-  "Internal Town Hall",
-  "Training / Certification Event",
-  "Association / Member Conference",
-  "Industry Symposium",
-  "Hybrid Broadcast / Studio Production",
-  "Other",
-];
-
-const formatOptions = [
-  { value: "In-Person", label: "In-Person Only" },
-  { value: "Hybrid", label: "Hybrid (In-Person + Virtual)" },
-  { value: "Virtual", label: "Virtual Only" },
-] as const;
-
-const audienceOptions = [
-  "C-Suite Executives",
-  "Senior Leadership / VPs",
-  "Sales Team / Field Reps",
-  "Customers / End Users",
-  "Prospects / Leads",
-  "Partners / Channel / Resellers",
-  "Employees (All-Hands)",
-  "Investors / Shareholders",
-  "Press / Media / Analysts",
-  "Industry Professionals",
-  "Developers / Technical",
-  "Members (Association)",
-  "Students / Academic",
-  "General Public",
-];
-
-const toneGroups = [
-  {
-    label: "Energy",
-    options: ["High-Energy", "Polished & Refined", "Intimate", "Celebratory"],
-  },
-  {
-    label: "Style",
-    options: [
-      "Bold & Cinematic",
-      "Editorial & Minimal",
-      "Tech-Forward",
-      "Classic Corporate",
-      "Premium Luxury",
-    ],
-  },
-  {
-    label: "Mood",
-    options: [
-      "Inspirational",
-      "Authoritative",
-      "Conversational",
-      "Innovative",
-      "Heritage / Legacy",
-    ],
-  },
-  {
-    label: "Color Direction",
-    options: [
-      "Dark / Cinematic",
-      "Light / Bright",
-      "Brand-Forward",
-      "Neutral / Editorial",
-    ],
-  },
-];
 
 const normalizeDateFormat = (format: string) =>
   (format || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
@@ -216,7 +150,7 @@ const EventForm = ({
               <div data-assistant-field-key="/content/event/name">
                 <label className={labelClass}>
                   Event Name <span className="text-red-500">*</span>
-                  <InfoTooltip text="Enter the full official name of your event as it should appear on all RFP documents. Appears on the cover headline and every interior running header." />
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/name")} />
                 </label>
                 <input
                   className={`${inputClass} ${showErrors && !data.eventName.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
@@ -239,7 +173,7 @@ const EventForm = ({
                 <label className={labelClass}>
                   Edition / Year
                   <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                  <InfoTooltip text="If this is a recurring event, indicate which edition (e.g. '12th Annual' or 'Year 5'). Leave blank if this is a one-time event. Helps contextualize event maturity in the AI-generated narrative." />
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/edition")} />
                 </label>
                 <input
                   className={inputClass}
@@ -256,7 +190,7 @@ const EventForm = ({
               <div data-assistant-field-key="/content/event/type">
                 <label className={labelClass}>
                   Event Type <span className="text-red-500">*</span>
-                  <InfoTooltip text="Choose the category that best describes your event. Helps vendors gauge scope and tone required and feeds the AI narrative paragraph 1 and Section 8 references." />
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/type")} />
                 </label>
                 <div ref={typeRef}>
                   <select
@@ -312,7 +246,7 @@ const EventForm = ({
                 <label className={labelClass}>
                   Event Theme / Tagline
                   <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                  <InfoTooltip text="If your event has an official theme, tagline, or campaign line, enter it here. Leave blank if not yet finalized. Feeds AI narrative paragraph 2." />
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/theme")} />
                 </label>
                 <input
                   className={inputClass}
@@ -330,7 +264,7 @@ const EventForm = ({
                 <label className={labelClass}>
                   Event Website
                   <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                  <InfoTooltip text="Link to the event's official website, if one exists. Gives vendors quick access to branding, past editions, and public-facing details." />
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/website")} />
                 </label>
                 <input
                   type="url"
@@ -354,7 +288,7 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/format">
               <label className={labelClass}>
                 Event Format <span className="text-red-500">*</span>
-                <InfoTooltip text="Select your event delivery format. Hybrid and Virtual unlock additional streaming and platform specifications on Page 3." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/format")} />
               </label>
               <p className="mb-3 text-xs text-slate-500 normal-case">
                 Your selection unlocks Step 3 — Hybrid &amp; Virtual Production if applicable.
@@ -390,16 +324,17 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/primaryAudiences/*">
               <label className={labelClass}>
                 Primary Audience <span className="text-red-500">*</span>
-                <InfoTooltip text="Select up to 4 primary audience groups. Helps vendors understand the production tone and gravitas required, and feeds the AI narrative paragraph 1." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/primaryAudiences/*")} />
               </label>
               <p className="mb-3 text-xs text-slate-500 normal-case">
-                Select up to 4 audience types.
-                {audienceSelected.length > 0 && ` ${audienceSelected.length}/4 selected.`}
+                Select up to {maximumAudienceSelections} audience types.
+                {audienceSelected.length > 0 && ` ${audienceSelected.length}/${maximumAudienceSelections} selected.`}
               </p>
               <div className="flex flex-wrap gap-3">
                 {audienceOptions.map((opt) => {
                   const checked = audienceSelected.includes(opt);
-                  const maxReached = audienceSelected.length >= 4 && !checked;
+                  const maxReached =
+                    audienceSelected.length >= maximumAudienceSelections && !checked;
                   return (
                     <PillCheckbox
                       key={opt}
@@ -416,9 +351,9 @@ const EventForm = ({
                   );
                 })}
               </div>
-              {audienceSelected.length >= 4 && (
+              {audienceSelected.length >= maximumAudienceSelections && (
                 <p className="mt-2 text-xs text-amber-600 normal-case">
-                  Maximum 4 audience types selected.
+                  Maximum {maximumAudienceSelections} audience types selected.
                 </p>
               )}
               {showErrors && audienceSelected.length === 0 && (
@@ -439,7 +374,7 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/startDate">
               <label className={labelClass}>
                 Start Date <span className="text-red-500">*</span>
-                <InfoTooltip text="First day of the event (not load-in date). Populates the cover meta bar and is used to calculate total event days in the Scope Overview." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/startDate")} />
               </label>
               <GlobalDateInput
                 id="startDate"
@@ -471,7 +406,7 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/endDate">
               <label className={labelClass}>
                 End Date <span className="text-red-500">*</span>
-                <InfoTooltip text="Last day of the event (not strike date). Used with Start Date to calculate event duration on the cover meta bar and the Event Days stat card." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/endDate")} />
               </label>
               <GlobalDateInput
                 id="endDate"
@@ -507,7 +442,7 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/attendeeCount">
               <label className={labelClass}>
                 Total Attendance <span className="text-red-500">*</span>
-                <InfoTooltip text="Estimated total in-person headcount across all days. Drives the Attendees stat card on the cover and informs crew count, audio system size, and screen placement recommendations." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/attendeeCount")} />
               </label>
               <input
                 type="number"
@@ -538,7 +473,7 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/objectives">
               <label className={labelClass}>
                 Event Objectives
-                <InfoTooltip text="In 2–4 sentences, describe what you're trying to accomplish. This feeds the AI narrative — the more specific, the better. Used verbatim as context for AI narrative generation." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
               </label>
               <p className="mb-2 text-xs text-slate-500 normal-case">
                 In 2–4 sentences: describe what success looks like. What outcomes are you driving?
@@ -568,11 +503,11 @@ const EventForm = ({
               <label className={labelClass}>
                 Tone / Brand Direction
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text="Pick up to 5 tags that capture the feel of this event. Vendors will use this to gauge creative direction. Feeds AI narrative paragraph 2 (creative context)." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/toneDirections/*")} />
               </label>
               <p className="mb-3 text-xs text-slate-500 normal-case">
-                Select up to 5 tags.
-                {toneSelected.length > 0 && ` ${toneSelected.length}/5 selected.`}
+                Select up to {maximumToneSelections} tags.
+                {toneSelected.length > 0 && ` ${toneSelected.length}/${maximumToneSelections} selected.`}
               </p>
               <div className="space-y-4">
                 {toneGroups.map((group) => (
@@ -583,7 +518,8 @@ const EventForm = ({
                     <div className="flex flex-wrap gap-2">
                       {group.options.map((opt) => {
                         const checked = toneSelected.includes(opt);
-                        const maxReached = toneSelected.length >= 5 && !checked;
+                        const maxReached =
+                          toneSelected.length >= maximumToneSelections && !checked;
                         return (
                           <PillCheckbox
                             key={opt}
@@ -615,7 +551,7 @@ const EventForm = ({
               <label className={labelClass}>
                 Sacred Constraints / Special Considerations
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text="List any non-negotiable requirements vendors absolutely must honor — timing rules, brand restrictions, cultural sensitivities, executive preferences, or anything that has caused friction at past events. Appears verbatim in the Scope Overview special notes row." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/sacredConstraints")} />
               </label>
               <textarea
                 rows={3}
@@ -637,7 +573,7 @@ const EventForm = ({
               <label className={labelClass}>
                 About The Organization
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text="Give vendors context on who the requesting organization is — mission, industry, size, and any background that helps them understand who they'd be working with." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/organizationBackground")} />
               </label>
               <textarea
                 rows={4}
@@ -659,7 +595,7 @@ const EventForm = ({
               <label className={labelClass}>
                 Statement of Work
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text="Summarize the scope of work being requested from vendors — deliverables, responsibilities, and any boundaries on what's in or out of scope." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/statementOfWork")} />
               </label>
               <textarea
                 rows={4}
@@ -681,7 +617,7 @@ const EventForm = ({
               <label className={labelClass}>
                 Event Profile
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text="Describe the profile of the event itself — history, significance, past attendance, or anything that helps vendors understand its stature." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/eventProfile")} />
               </label>
               <textarea
                 rows={4}
@@ -703,7 +639,7 @@ const EventForm = ({
               <label className={labelClass}>
                 RFP Timeline
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text="Outline the key dates in the RFP process — submission deadline, vendor selection date, and any other milestones vendors need to plan around." />
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/rfpTimelineNotes")} />
               </label>
               <textarea
                 rows={4}

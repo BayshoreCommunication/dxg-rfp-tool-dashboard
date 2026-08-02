@@ -41,6 +41,41 @@ export type AssistantFormSectionId =
   (typeof ASSISTANT_FORM_SECTION_IDS)[number];
 export type AssistantEventFormat = (typeof ASSISTANT_EVENT_FORMATS)[number];
 
+export const ASSISTANT_FIELD_CONTROL_TYPES = [
+  "text",
+  "long_text",
+  "number",
+  "date",
+  "email",
+  "phone",
+  "select",
+  "radio",
+  "multi_select",
+  "option_buttons",
+  "file",
+] as const;
+export const ASSISTANT_FIELD_REQUIREMENTS = [
+  "required",
+  "optional",
+  "conditional",
+] as const;
+
+export type AssistantFieldControlType =
+  (typeof ASSISTANT_FIELD_CONTROL_TYPES)[number];
+export type AssistantFieldRequirement =
+  (typeof ASSISTANT_FIELD_REQUIREMENTS)[number];
+
+export type AssistantFieldControlContext = {
+  label: string;
+  helperText: string;
+  requirement?: AssistantFieldRequirement;
+  controlType?: AssistantFieldControlType;
+  options?: string[];
+  minimumSelections?: number;
+  maximumSelections?: number;
+  placeholder?: string;
+};
+
 export type AssistantUiContext = {
   schemaVersion: "assistant-ui-context.v1";
   routeCategory: AssistantRouteCategory;
@@ -49,12 +84,106 @@ export type AssistantUiContext = {
   fieldKey?: string;
   eventFormat?: AssistantEventFormat;
   roomIdentifier?: string;
+  fieldControl?: AssistantFieldControlContext;
 };
 
 const includes = <T extends string>(
   values: readonly T[],
   value: unknown,
 ): value is T => typeof value === "string" && values.includes(value as T);
+
+const normalizedFieldControl = (
+  value: unknown,
+): AssistantFieldControlContext | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const input = value as Record<string, unknown>;
+  if (
+    typeof input.label !== "string" ||
+    !input.label.trim() ||
+    input.label.length > 120 ||
+    typeof input.helperText !== "string" ||
+    !input.helperText.trim() ||
+    input.helperText.length > 600
+  ) {
+    return null;
+  }
+  if (
+    input.requirement !== undefined &&
+    !includes(ASSISTANT_FIELD_REQUIREMENTS, input.requirement)
+  ) {
+    return null;
+  }
+  if (
+    input.controlType !== undefined &&
+    !includes(ASSISTANT_FIELD_CONTROL_TYPES, input.controlType)
+  ) {
+    return null;
+  }
+  if (
+    input.placeholder !== undefined &&
+    (typeof input.placeholder !== "string" || input.placeholder.length > 160)
+  ) {
+    return null;
+  }
+  if (
+    input.options !== undefined &&
+    (!Array.isArray(input.options) ||
+      input.options.length > 30 ||
+      input.options.some(
+        (option) =>
+          typeof option !== "string" ||
+          !option.trim() ||
+          option.length > 100,
+      ))
+  ) {
+    return null;
+  }
+  const validSelectionLimit = (candidate: unknown): candidate is number =>
+    Number.isInteger(candidate) && Number(candidate) >= 0 && Number(candidate) <= 30;
+  if (
+    input.minimumSelections !== undefined &&
+    !validSelectionLimit(input.minimumSelections)
+  ) {
+    return null;
+  }
+  if (
+    input.maximumSelections !== undefined &&
+    (!validSelectionLimit(input.maximumSelections) ||
+      Number(input.maximumSelections) < 1)
+  ) {
+    return null;
+  }
+  if (
+    input.minimumSelections !== undefined &&
+    input.maximumSelections !== undefined &&
+    Number(input.minimumSelections) > Number(input.maximumSelections)
+  ) {
+    return null;
+  }
+
+  return {
+    label: input.label.trim(),
+    helperText: input.helperText.trim(),
+    ...(input.requirement
+      ? { requirement: input.requirement as AssistantFieldRequirement }
+      : {}),
+    ...(input.controlType
+      ? { controlType: input.controlType as AssistantFieldControlType }
+      : {}),
+    ...(input.options
+      ? { options: (input.options as string[]).map((option) => option.trim()) }
+      : {}),
+    ...(input.minimumSelections !== undefined
+      ? { minimumSelections: Number(input.minimumSelections) }
+      : {}),
+    ...(input.maximumSelections !== undefined
+      ? { maximumSelections: Number(input.maximumSelections) }
+      : {}),
+    ...(input.placeholder
+      ? { placeholder: input.placeholder.trim() }
+      : {}),
+  };
+};
 
 export const assistantUiContextForPathname = (
   pathname: string | null | undefined,
@@ -165,6 +294,11 @@ export const normalizeAssistantUiContext = (
   ) {
     return null;
   }
+  const fieldControl =
+    input.fieldControl === undefined
+      ? undefined
+      : normalizedFieldControl(input.fieldControl);
+  if (input.fieldControl !== undefined && !fieldControl) return null;
   return {
     schemaVersion: "assistant-ui-context.v1",
     routeCategory: input.routeCategory,
@@ -179,6 +313,7 @@ export const normalizeAssistantUiContext = (
     ...(input.roomIdentifier
       ? { roomIdentifier: input.roomIdentifier as string }
       : {}),
+    ...(fieldControl ? { fieldControl } : {}),
   };
 };
 

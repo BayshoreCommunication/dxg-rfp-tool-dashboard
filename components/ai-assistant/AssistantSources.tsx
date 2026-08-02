@@ -38,8 +38,8 @@ export default function AssistantSources({
     <div
       className={
         compact
-          ? "mt-3 border-t border-slate-100 pt-2.5"
-          : "mt-2.5 border-t border-slate-100 pt-2.5"
+          ? "mt-3 min-w-0 max-w-full overflow-hidden border-t border-slate-100 pt-2.5"
+          : "mt-2.5 min-w-0 max-w-full overflow-hidden border-t border-slate-100 pt-2.5"
       }
     >
       <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -49,8 +49,8 @@ export default function AssistantSources({
       <ul
         className={
           compact
-            ? "mt-1.5 grid gap-1.5"
-            : "mt-1.5 flex flex-wrap gap-1"
+            ? "mt-1.5 grid min-w-0 max-w-full gap-1.5"
+            : "mt-1.5 flex min-w-0 max-w-full flex-wrap gap-1"
         }
       >
         {citations.map((citation) => {
@@ -74,7 +74,7 @@ export default function AssistantSources({
                 {citation.title}
               </span>
               {href?.startsWith("https://") && (
-                <ExternalLink size={10} aria-hidden />
+                <ExternalLink size={10} aria-hidden className="shrink-0" />
               )}
             </>
           );
@@ -87,7 +87,10 @@ export default function AssistantSources({
             if (href?.startsWith("/")) onNavigate?.();
           };
           return (
-            <li key={`${citation.sourceId}:${citation.fragmentId || ""}`}>
+            <li
+              key={`${citation.sourceId}:${citation.fragmentId || ""}`}
+              className="min-w-0 max-w-full overflow-hidden"
+            >
               {href ? (
                 href.startsWith("/") ? (
                   <Link
@@ -95,8 +98,8 @@ export default function AssistantSources({
                     onClick={opened}
                     className={
                       compact
-                        ? "flex min-h-7 w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 text-[9.5px] font-medium leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
-                        : "inline-flex min-h-7 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                        ? "flex min-h-7 w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 text-[9.5px] font-medium leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                        : "inline-flex min-h-7 min-w-0 max-w-full items-center gap-1 overflow-hidden rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                     }
                   >
                     {content}
@@ -109,8 +112,8 @@ export default function AssistantSources({
                     onClick={opened}
                     className={
                       compact
-                        ? "flex min-h-7 w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 text-[9.5px] font-medium leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
-                        : "inline-flex min-h-7 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                        ? "flex min-h-7 w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 text-[9.5px] font-medium leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
+                        : "inline-flex min-h-7 min-w-0 max-w-full items-center gap-1 overflow-hidden rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-600 transition-colors hover:border-[#00c2c9]/40 hover:bg-[#e0f9fa]/60 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]"
                     }
                   >
                     {content}
@@ -120,8 +123,8 @@ export default function AssistantSources({
                 <span
                   className={
                     compact
-                      ? "flex min-h-7 w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 text-[9.5px] font-medium leading-4 text-slate-500"
-                      : "inline-flex max-w-full items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-500"
+                      ? "flex min-h-7 w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 text-[9.5px] font-medium leading-4 text-slate-500"
+                      : "inline-flex min-w-0 max-w-full items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold leading-4 text-slate-500"
                   }
                 >
                   {compact && (

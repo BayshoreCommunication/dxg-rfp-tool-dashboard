@@ -4,6 +4,7 @@ import http from "node:http";
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
 const threads = new Map();
 const messages = new Map();
+const messageRequests = [];
 
 const now = () => new Date().toISOString();
 
@@ -42,6 +43,7 @@ const wait = (milliseconds) =>
 
 const streamAssistantResponse = async (request, response, thread) => {
   const body = await readJson(request);
+  messageRequests.push(body);
   const content =
     typeof body.content === "string" && body.content.trim()
       ? body.content.trim()
@@ -87,7 +89,8 @@ const streamAssistantResponse = async (request, response, thread) => {
           {
             sourceId:
               "form-field:event_overview:/content/event/name",
-            title: "Event Overview: Event Name",
+            title:
+              "Event Overview: Event Name — Public-Facing Event Identity and Proposal Guidance",
             href: "/proposals/add-new-proposal",
           },
         ]
@@ -164,7 +167,16 @@ const server = http.createServer(async (request, response) => {
   if (request.method === "POST" && pathname === "/__e2e/reset") {
     threads.clear();
     messages.clear();
+    messageRequests.length = 0;
     json(response, 200, { reset: true });
+    return;
+  }
+
+  if (
+    request.method === "GET" &&
+    pathname === "/__e2e/message-requests"
+  ) {
+    json(response, 200, { requests: messageRequests });
     return;
   }
 

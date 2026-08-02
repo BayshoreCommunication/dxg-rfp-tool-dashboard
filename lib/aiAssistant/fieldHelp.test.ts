@@ -10,6 +10,12 @@ describe("assistant field help", () => {
     ).toBe("Event Name");
   });
 
+  test("removes requirement badges from the editable question", () => {
+    expect(
+      normalizeAssistantFieldLabel("Tone / Brand Direction(optional)"),
+    ).toBe("Tone / Brand Direction");
+  });
+
   test("uses a safe fallback for an empty label", () => {
     expect(normalizeAssistantFieldLabel("  ** ")).toBe(
       "this proposal field",

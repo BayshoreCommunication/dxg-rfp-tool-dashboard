@@ -1,5 +1,6 @@
 import type {
   AssistantEventFormat,
+  AssistantFieldControlContext,
   AssistantFormSectionId,
 } from "./uiContext";
 
@@ -9,6 +10,7 @@ export type AssistantFieldHelpInput = {
   sectionId?: AssistantFormSectionId;
   eventFormat?: AssistantEventFormat;
   roomIdentifier?: string;
+  fieldControl?: AssistantFieldControlContext;
 };
 
 export type AssistantFieldHelpRequest = {
@@ -20,6 +22,7 @@ export type AssistantFieldHelpRequest = {
 export const normalizeAssistantFieldLabel = (value: string): string => {
   const normalized = value
     .replace(/\*/g, " ")
+    .replace(/\(\s*(?:optional|required|conditional)\s*\)/gi, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 120);

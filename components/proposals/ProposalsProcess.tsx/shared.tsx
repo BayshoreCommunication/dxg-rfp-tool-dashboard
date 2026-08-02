@@ -9,6 +9,7 @@ import {
   type AssistantFormSectionId,
 } from "@/lib/aiAssistant/uiContext";
 import { normalizeAssistantFieldLabel } from "@/lib/aiAssistant/fieldHelp";
+import { collectAssistantFieldControlContext } from "@/lib/aiAssistant/fieldControlContext";
 
 export const PillRadio = ({
   name,
@@ -148,6 +149,11 @@ export const InfoTooltip = ({ text }: { text: string }) => {
     const roomIdentifier = room?.dataset.assistantRoomIdentifier;
     requestFieldHelp({
       fieldLabel,
+      fieldControl: collectAssistantFieldControlContext(
+        button,
+        fieldLabel,
+        text,
+      ),
       ...(fieldKey ? { fieldKey } : {}),
       ...(sectionId ? { sectionId } : {}),
       ...(eventFormat ? { eventFormat } : {}),

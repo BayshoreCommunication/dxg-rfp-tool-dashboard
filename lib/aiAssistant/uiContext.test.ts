@@ -42,6 +42,14 @@ describe("Assistant UI context", () => {
         fieldKey: "/content/event/name",
         eventFormat: "in_person",
         roomIdentifier: "room:1",
+        fieldControl: {
+          label: "Tone / Brand Direction",
+          helperText: "Select up to 5 tags.",
+          requirement: "optional",
+          controlType: "multi_select",
+          options: ["Polished & Refined", "Tech-Forward"],
+          maximumSelections: 5,
+        },
         fullForm: { eventName: "Private event" },
       }),
     ).toEqual({
@@ -52,12 +60,32 @@ describe("Assistant UI context", () => {
       fieldKey: "/content/event/name",
       eventFormat: "in_person",
       roomIdentifier: "room:1",
+      fieldControl: {
+        label: "Tone / Brand Direction",
+        helperText: "Select up to 5 tags.",
+        requirement: "optional",
+        controlType: "multi_select",
+        options: ["Polished & Refined", "Tech-Forward"],
+        maximumSelections: 5,
+      },
     });
     expect(
       normalizeAssistantUiContext({
         schemaVersion: "assistant-ui-context.v1",
         routeCategory: "proposal_creation",
         fieldKey: "https://example.com/private",
+      }),
+    ).toBeNull();
+
+    expect(
+      normalizeAssistantUiContext({
+        schemaVersion: "assistant-ui-context.v1",
+        routeCategory: "proposal_creation",
+        fieldControl: {
+          label: "Event Type",
+          helperText: "Choose one.",
+          options: Array.from({ length: 31 }, (_, index) => `Option ${index}`),
+        },
       }),
     ).toBeNull();
   });

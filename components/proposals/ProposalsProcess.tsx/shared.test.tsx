@@ -33,6 +33,11 @@ describe("InfoTooltip field help", () => {
 
     expect(requestFieldHelp).toHaveBeenCalledWith({
       fieldLabel: "Event Name",
+      fieldControl: {
+        label: "Event Name",
+        helperText: "Use the public event name.",
+        requirement: "required",
+      },
       fieldKey: "/content/event/name",
       sectionId: "event_overview",
       eventFormat: "hybrid",
@@ -61,7 +66,89 @@ describe("InfoTooltip field help", () => {
 
     expect(requestFieldHelp).toHaveBeenCalledWith({
       fieldLabel: "Venue Name",
+      fieldControl: {
+        label: "Venue Name",
+        helperText: "Enter the venue.",
+      },
     });
+  });
+
+  test("captures visible choices and limits from the current rendered field", () => {
+    const requestFieldHelp = jest.fn();
+
+    render(
+      <AssistantLauncherProvider value={{ enabled: true, requestFieldHelp }}>
+        <div>
+          <label>
+            Tone / Brand Direction (optional)
+            <InfoTooltip text="Select up to 5 tags that describe the intended style." />
+          </label>
+          <label>
+            <input type="checkbox" value="Polished & Refined" />
+            Polished &amp; Refined
+          </label>
+          <label>
+            <input type="checkbox" value="Tech-Forward" />
+            Tech-Forward
+          </label>
+        </div>
+      </AssistantLauncherProvider>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ask AI about this field" }),
+    );
+
+    expect(requestFieldHelp).toHaveBeenCalledWith({
+      fieldLabel: "Tone / Brand Direction",
+      fieldControl: {
+        label: "Tone / Brand Direction",
+        helperText: "Select up to 5 tags that describe the intended style.",
+        requirement: "optional",
+        controlType: "multi_select",
+        options: ["Polished & Refined", "Tech-Forward"],
+        maximumSelections: 5,
+      },
+    });
+  });
+
+  test("captures select options without sending the current field value", () => {
+    const requestFieldHelp = jest.fn();
+
+    render(
+      <AssistantLauncherProvider value={{ enabled: true, requestFieldHelp }}>
+        <div>
+          <label>
+            Event Type *
+            <InfoTooltip text="Choose the event type that best matches the program." />
+          </label>
+          <select defaultValue="Conference">
+            <option value="">Select event type...</option>
+            <option value="Conference">Conference</option>
+            <option value="Sales Kickoff">Sales Kickoff</option>
+          </select>
+        </div>
+      </AssistantLauncherProvider>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ask AI about this field" }),
+    );
+
+    expect(requestFieldHelp).toHaveBeenCalledWith({
+      fieldLabel: "Event Type",
+      fieldControl: {
+        label: "Event Type",
+        helperText: "Choose the event type that best matches the program.",
+        requirement: "required",
+        controlType: "select",
+        options: ["Conference", "Sales Kickoff"],
+        maximumSelections: 1,
+      },
+    });
+    expect(JSON.stringify(requestFieldHelp.mock.calls)).not.toContain(
+      '"value":"Conference"',
+    );
   });
 
   test("keeps normal field information available when assistant access is disabled", () => {

@@ -50,6 +50,9 @@ export default function LayoutWrapper({
           ...(input.roomIdentifier
             ? { roomIdentifier: input.roomIdentifier }
             : {}),
+          ...(input.fieldControl
+            ? { fieldControl: input.fieldControl }
+            : {}),
         },
       });
       setAssistantOpen(true);

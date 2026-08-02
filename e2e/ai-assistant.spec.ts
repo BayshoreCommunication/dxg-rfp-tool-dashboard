@@ -99,13 +99,120 @@ test("opens contextual AI help from a proposal field and streams the answer", as
       .locator("ol")
       .getByText(/Enter the clear, public-facing name/),
   ).toBeVisible();
-  await expect(
-    dialog.getByRole("link", {
-      name: "Event Overview: Event Name",
-    }),
-  ).toHaveAttribute("href", "/proposals/add-new-proposal");
+  const longSourceLink = dialog.getByRole("link", {
+    name: "Event Overview: Event Name — Public-Facing Event Identity and Proposal Guidance",
+  });
+  await expect(longSourceLink).toHaveAttribute(
+    "href",
+    "/proposals/add-new-proposal",
+  );
+  await expect
+    .poll(async () =>
+      longSourceLink.evaluate((element) => {
+        const bubble = element.closest<HTMLElement>("[class*='w-fit']");
+        if (!bubble) return false;
+        return (
+          element.getBoundingClientRect().right <=
+          bubble.getBoundingClientRect().right + 0.5
+        );
+      }),
+    )
+    .toBe(true);
   await expect(
     dialog.getByText("Assistant is unavailable"),
+  ).toHaveCount(0);
+
+  const eventRequestResponse = await page.request.get(
+    `${backendOrigin}/__e2e/message-requests`,
+  );
+  expect(eventRequestResponse.ok()).toBe(true);
+  const eventRequests = (await eventRequestResponse.json()) as {
+    requests: Array<{
+      uiContext?: {
+        fieldControl?: {
+          label?: string;
+          helperText?: string;
+          requirement?: string;
+          controlType?: string;
+          options?: string[];
+          maximumSelections?: number;
+          placeholder?: string;
+        };
+      };
+    }>;
+  };
+  expect(eventRequests.requests[0]?.uiContext?.fieldControl).toMatchObject({
+    label: "Event Name",
+    requirement: "required",
+    controlType: "text",
+    placeholder: "e.g. Apex Dynamics Global Summit 2026",
+  });
+
+  await page.getByRole("button", { name: "Close AI Assistant" }).click();
+  const toneField = page.locator(
+    '[data-assistant-field-key="/content/event/toneDirections/*"]',
+  );
+  await expect(toneField).toBeVisible();
+  const toneAskAi = toneField.getByRole("button", {
+    name: "Ask AI about this field",
+  });
+  await expect(toneAskAi).toHaveCount(1);
+  if (testInfo.project.name.includes("mobile")) {
+    await toneAskAi.tap();
+  } else {
+    await toneAskAi.click();
+  }
+  await expect(
+    dialog.getByText(
+      'What should I enter for the "Tone / Brand Direction" field? Explain it simply and give me one short example.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(
+        `${backendOrigin}/__e2e/message-requests`,
+      );
+      const payload = (await response.json()) as typeof eventRequests;
+      return payload.requests.length;
+    })
+    .toBe(2);
+  const toneRequestResponse = await page.request.get(
+    `${backendOrigin}/__e2e/message-requests`,
+  );
+  const toneRequests = (await toneRequestResponse.json()) as typeof eventRequests;
+  expect(toneRequests.requests[1]?.uiContext?.fieldControl).toMatchObject({
+    label: "Tone / Brand Direction",
+    requirement: "optional",
+    controlType: "multi_select",
+    maximumSelections: 5,
+  });
+  expect(toneRequests.requests[1]?.uiContext?.fieldControl?.options).toEqual([
+    "High-Energy",
+    "Polished & Refined",
+    "Intimate",
+    "Celebratory",
+    "Bold & Cinematic",
+    "Editorial & Minimal",
+    "Tech-Forward",
+    "Classic Corporate",
+    "Premium Luxury",
+    "Inspirational",
+    "Authoritative",
+    "Conversational",
+    "Innovative",
+    "Heritage / Legacy",
+    "Dark / Cinematic",
+    "Light / Bright",
+    "Brand-Forward",
+    "Neutral / Editorial",
+  ]);
+  await expect(
+    dialog.getByRole("link", { name: "Proposals" }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("status", { name: "Assistant is responding" }),
   ).toHaveCount(0);
 });
 
