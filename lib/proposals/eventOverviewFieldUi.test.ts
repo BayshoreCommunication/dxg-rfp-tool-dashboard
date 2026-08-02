@@ -13,7 +13,9 @@ import {
 describe("event overview field UI contract", () => {
   test("exposes every Ask AI-enabled Event Overview field", () => {
     expect(proposalFormUi.schemaVersion).toBe("proposal-form-ui.v1");
-    expect(eventOverviewFieldKeys).toHaveLength(17);
+    expect(eventOverviewFieldKeys).toHaveLength(19);
+    expect(eventOverviewFieldKeys).toContain("/content/event/edition");
+    expect(eventOverviewFieldKeys).toContain("/content/event/theme");
     expect(eventOverviewFieldKeys).toContain("/content/event/toneDirections/*");
   });
 
