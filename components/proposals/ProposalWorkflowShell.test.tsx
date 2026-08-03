@@ -121,10 +121,11 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.queryByText(/Private document security check/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Reference file")).not.toBeInTheDocument();
 
-    // Stepper, assistant banner and the step-1 guidance copy all stay.
+    // Stepper and assistant banner stay. The old technical-details duplicate is
+    // intentionally removed so the actual intake form begins immediately.
     expect(screen.getByRole("list", { name: "Proposal creation steps" })).toBeInTheDocument();
     expect(screen.getByText(/The assistant is the easiest place/)).toBeInTheDocument();
-    expect(screen.getByText(/You can upload more than one source/)).toBeInTheDocument();
+    expect(screen.queryByText(/You can upload more than one source/)).not.toBeInTheDocument();
 
     // The other panels are untouched.
     fireEvent.click(screen.getByRole("button", { name: /Review the Draft/ }));

@@ -1,4 +1,6 @@
-﻿interface Step {
+﻿import { Check } from "lucide-react";
+
+interface Step {
   id: number;       // numeric id used for activeStep comparison
   badge: string;    // displayed in the circle: "1", "2", "2B", etc.
   label: string;
@@ -19,42 +21,29 @@ const steps: Step[] = [
 ];
 
 const circleClass = (isActive: boolean, isCompleted: boolean): string => {
-  const base = "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-all duration-300";
-  if (isCompleted) return `${base} bg-[#10B981] border-[#10B981] text-white`;
-  if (isActive)    return `${base} bg-white border-white text-black scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)]`;
-  return `${base} bg-transparent border-[#1F2937] text-slate-500`;
+  const base = "relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all duration-200";
+  if (isCompleted) return `${base} border-[#10B981] bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.2)]`;
+  if (isActive)    return `${base} border-[#0786cf] bg-[#0786cf] text-white shadow-[0_0_0_4px_rgba(7,134,207,0.12),0_5px_14px_rgba(7,134,207,0.22)]`;
+  return `${base} border-[#dce3e8] bg-white text-[#66727d] shadow-sm`;
 };
 
 const labelClass = (isActive: boolean, isCompleted: boolean): string => {
-  if (isCompleted) return "text-sm font-semibold text-[#10B981] leading-tight";
-  if (isActive)    return "text-sm font-semibold text-white leading-tight";
-  return "text-sm font-semibold text-slate-500 leading-tight";
+  if (isCompleted) return "text-[13px] font-semibold text-[#10B981] leading-tight";
+  if (isActive)    return "text-[13px] font-bold text-[#102a43] leading-tight";
+  return "text-[13px] font-semibold text-[#596773] leading-tight";
 };
 
 const subClass = (isActive: boolean, isCompleted: boolean): string => {
-  if (isCompleted) return "text-xs text-[#10B981]/70 mt-0.5";
-  if (isActive)    return "text-xs text-slate-400 mt-0.5";
-  return "text-xs text-slate-600 mt-0.5";
+  if (isCompleted) return "mt-1 text-[11px] leading-tight text-[#10B981]/80";
+  if (isActive)    return "mt-1 text-[11px] leading-tight text-[#527089]";
+  return "mt-1 text-[11px] leading-tight text-[#98a2aa]";
 };
 
 const lineClass = (isCompleted: boolean, isActive: boolean): string => {
-  if (isCompleted) return "absolute left-[15px] top-9 w-[2px] h-8 bg-[#10B981] transition-colors duration-300";
-  if (isActive)    return "absolute left-[15px] top-9 w-[2px] h-8 bg-[#22D3EE] transition-colors duration-300";
-  return "absolute left-[15px] top-9 w-[2px] h-8 bg-[#1F2937] transition-colors duration-300";
+  if (isCompleted) return "absolute bottom-[-11px] left-[17px] top-9 w-px bg-[#49cfa4] transition-colors duration-200";
+  if (isActive)    return "absolute bottom-[-11px] left-[17px] top-9 w-px bg-[#8ac9ed] transition-colors duration-200";
+  return "absolute bottom-[-11px] left-[17px] top-9 w-px bg-[#dfe6ea] transition-colors duration-200";
 };
-
-const CheckIcon = () => (
-  <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
-    <path d="M1.5 5.5L5 9L12.5 1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const CheckBadge = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-    <circle cx="8" cy="8" r="8" fill="#10B981" />
-    <path d="M4.5 8L6.8 10.5L11.5 5.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 const ProcessList = ({
   activeStep = 1,
@@ -79,14 +68,36 @@ const ProcessList = ({
     return { ...step, badge: String(counter) };
   });
 
-  return (
-    <div className="w-full min-h-screen bg-[#0F1113] px-6 py-8 font-sans">
-      {/* Intake Form label */}
-      <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-500">
-        Intake Form
-      </p>
+  const completedCount = badgedSteps.filter((step) =>
+    completedStepIds
+      ? completedStepIds.includes(step.id) && step.id !== activeStep
+      : activeStep > step.id,
+  ).length;
+  const progress = Math.round((completedCount / badgedSteps.length) * 100);
 
-      <div className="relative flex flex-col gap-0">
+  return (
+    <aside className="min-h-screen w-full border-l border-[#e1e8ed] bg-[#fbfdfe] px-5 py-7 font-sans shadow-[-10px_0_30px_rgba(15,42,67,0.025)]">
+      <div className="mb-7 rounded-2xl border border-[#e5edf2] bg-white p-4 shadow-[0_6px_20px_rgba(15,42,67,0.05)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#647582]">
+              Intake form
+            </p>
+            <p className="mt-1 text-xs text-[#8a98a3]">Proposal progress</p>
+          </div>
+          <span className="rounded-full bg-[#eef8fd] px-2.5 py-1 text-[10px] font-bold text-[#0786cf]">
+            {completedCount}/{badgedSteps.length} done
+          </span>
+        </div>
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#edf2f5]" aria-hidden="true">
+          <div
+            className="h-full rounded-full bg-[#10B981] transition-[width] duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="relative flex flex-col gap-2">
         {badgedSteps.map((step, index) => {
           const isActive    = activeStep === step.id;
           // A green check reads as "this is done". Derived from position alone,
@@ -99,7 +110,7 @@ const ProcessList = ({
           const isNavigable = typeof onStepChange === "function";
 
           return (
-            <div key={step.id} className="relative flex items-start gap-4 pb-8">
+            <div key={step.id} className="relative flex items-start">
               {/* Connecting Line */}
               {!isLast && (
                 <div className={lineClass(isCompleted, isActive)} />
@@ -111,17 +122,19 @@ const ProcessList = ({
                 aria-label={`Go to ${step.label}`}
                 disabled={!isNavigable}
                 onClick={() => onStepChange?.(step.id)}
-                className={`group -m-2 flex flex-1 items-start gap-4 rounded-xl p-2 text-left transition ${
+                className={`group flex min-h-[60px] flex-1 items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-all duration-200 ${
+                  isActive ? "bg-white shadow-[0_4px_16px_rgba(15,42,67,0.08)] ring-1 ring-[#dcebf4]" : ""}
+                  ${
                   isNavigable
-                    ? "cursor-pointer hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                    ? "cursor-pointer hover:bg-white hover:shadow-[0_3px_12px_rgba(15,42,67,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0786cf]"
                     : "cursor-default"
                 }`}
               >
                 <div className={circleClass(isActive, isCompleted)}>
-                  {isCompleted ? <CheckIcon /> : step.badge}
+                  {isCompleted ? <Check size={16} strokeWidth={3} /> : step.badge}
                 </div>
 
-                <div className="flex flex-1 flex-col">
+                <div className="flex min-w-0 flex-1 flex-col">
                   <span className={labelClass(isActive, isCompleted)}>{step.label}</span>
                   <span className={subClass(isActive, isCompleted)}>{step.sub}</span>
                 </div>
@@ -137,7 +150,7 @@ const ProcessList = ({
           );
         })}
       </div>
-    </div>
+    </aside>
   );
 };
 

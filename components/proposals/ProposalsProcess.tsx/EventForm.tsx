@@ -1,9 +1,10 @@
 ﻿"use client";
 
 import GlobalDateInput from "@/components/shared/GlobalDateInput";
+import GlobalSelect from "@/components/shared/GlobalSelect";
 import { useCallback, useRef } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
-import { InfoTooltip, PillCheckbox, toggleItem, useClickOutside } from "./shared";
+import { InfoTooltip, PillCheckbox, RadioIndicator, toggleItem, useClickOutside } from "./shared";
 import { ArrowRight } from "lucide-react";
 import {
   audienceOptions,
@@ -17,11 +18,11 @@ import {
 
 /* ─── Shared style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-2 text-sm font-semibold text-[#263744]";
 const inputClass =
-  "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
+  "h-12 w-full rounded-lg border border-[#dce3e8] bg-white px-4 text-sm text-[#263744] shadow-[0_1px_2px_rgba(15,42,67,0.03)] outline-none transition hover:border-[#c7d3da] focus:border-[#1DBFD3] focus:ring-4 focus:ring-[#1DBFD3]/15";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
+  "mb-6 text-base font-semibold text-[#222628]";
 
 const normalizeDateFormat = (format: string) =>
   (format || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
@@ -70,6 +71,7 @@ interface EventFormProps {
   onChange: (updates: Partial<EventData>) => void;
   onContinue: () => void;
   onBack: () => void;
+  onSaveDraft?: () => void;
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
 }
@@ -79,6 +81,7 @@ const EventForm = ({
   onChange,
   onContinue,
   onBack,
+  onSaveDraft,
   showErrors = false,
   proposalSettings,
 }: EventFormProps) => {
@@ -120,25 +123,20 @@ const EventForm = ({
   const rfpTimelineLen = (data.rfpTimeline ?? "").length;
 
   return (
-    <section className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white">
+    <section className="flex min-h-screen flex-col bg-white">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
-            Page 1 of 9
-          </span>
-        </div>
-        <h2 className="text-[22px] font-bold text-[#222628]">
+      <div className="border-t border-[#edf0f2] bg-[#fbfcfd] px-8 pb-6 pt-7">
+        <h2 className="text-[30px] font-extrabold tracking-tight text-[#172b3a]">
           Event Overview &amp; Narrative
         </h2>
-        <p className="mt-1 text-sm text-[#969798]">
+        <p className="mt-2 max-w-4xl text-[15px] leading-6 text-[#687782]">
           These fields power the auto-generated narrative on your RFP cover page
           and set the tone for every section that follows.
         </p>
       </div>
 
       {/* Form Body */}
-      <div className="flex-1 px-8 py-8 space-y-10">
+      <div className="flex-1 space-y-12 px-8 py-8">
 
         {/* ── Group: Event Information ── */}
         <div>
@@ -146,7 +144,7 @@ const EventForm = ({
           <div className="space-y-5">
 
             {/* Row 1: Event Name + Edition/Year */}
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
               <div data-assistant-field-key="/content/event/name">
                 <label className={labelClass}>
                   Event Name <span className="text-red-500">*</span>
@@ -185,6 +183,27 @@ const EventForm = ({
               </div>
             </div>
 
+            <div data-assistant-field-key="/content/event/objectives">
+              <label className={labelClass}>
+                Event summary / Narrative <span className="text-red-500">*</span>
+                <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
+              </label>
+              <p className="mb-2 text-sm text-[#565859] normal-case">
+                Provide a short summary of the event goals, audience, and key outcomes. This narrative will appear on your RFP cover page.
+              </p>
+              <textarea
+                rows={4}
+                maxLength={800}
+                className="w-full resize-none rounded-lg border border-[#dce3e8] bg-white px-4 py-3 text-sm text-[#263744] shadow-[0_1px_2px_rgba(15,42,67,0.03)] outline-none transition hover:border-[#c7d3da] focus:border-[#1DBFD3] focus:ring-4 focus:ring-[#1DBFD3]/15"
+                placeholder="Start typing or use Ask AI to generate..."
+                value={objectives}
+                onChange={(e) => onChange({ eventObjectives: e.target.value })}
+              />
+              <div className="mt-1 flex justify-end">
+                <span className={`text-xs ${objLen > 720 ? "text-amber-600" : "text-[#969798]"}`}>{objLen}/800</span>
+              </div>
+            </div>
+
             {/* Row 2: Event Type + Theme/Tagline */}
             <div className="grid grid-cols-2 gap-5">
               <div data-assistant-field-key="/content/event/type">
@@ -193,7 +212,7 @@ const EventForm = ({
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/type")} />
                 </label>
                 <div ref={typeRef}>
-                  <select
+                  <GlobalSelect
                     className={`${inputClass} appearance-none ${
                       showErrors && !data.eventType.eventType
                         ? "border-red-500 focus:border-red-500"
@@ -218,7 +237,7 @@ const EventForm = ({
                         {opt}
                       </option>
                     ))}
-                  </select>
+                  </GlobalSelect>
                 </div>
                 {data.eventType.eventType === "Other" && (
                   <input
@@ -304,14 +323,15 @@ const EventForm = ({
                       name="eventFormat"
                       checked={data.eventFormat === fmt.value}
                       onChange={() => onChange({ eventFormat: fmt.value })}
-                      className="accent-[#008ad2] h-4 w-4"
+                      className="peer sr-only"
                     />
+                    <RadioIndicator checked={data.eventFormat === fmt.value} />
                     {fmt.label}
                   </label>
                 ))}
               </div>
               {(data.eventFormat === "Hybrid" || data.eventFormat === "Virtual") && (
-                <div className="mt-3 flex items-start gap-2 rounded-md border border-[#008ad2]/30 bg-[#008ad2]/5 px-4 py-3 text-sm text-brand-dark">
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-4 py-3 text-sm text-brand-dark">
                   <span className="font-bold">⚡</span>
                   <span>
                     <strong>Step 3 Unlocked:</strong> Hybrid &amp; Virtual Production fields are now active.
@@ -469,35 +489,6 @@ const EventForm = ({
           <p className={groupLabelClass}>Company Information</p>
           <div className="space-y-6">
 
-            {/* Event Objectives */}
-            <div data-assistant-field-key="/content/event/objectives">
-              <label className={labelClass}>
-                Event Objectives
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
-              </label>
-              <p className="mb-2 text-xs text-slate-500 normal-case">
-                In 2–4 sentences: describe what success looks like. What outcomes are you driving?
-              </p>
-              <textarea
-                rows={3}
-                maxLength={800}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
-                placeholder='Describe what success looks like for this event. Examples: "Drive pipeline through 30 customer meetings," "Launch our Q2 product to 1,200 partners," "Celebrate our 25th anniversary with brand-defining moments."'
-                value={objectives}
-                onChange={(e) => onChange({ eventObjectives: e.target.value })}
-              />
-              <div className="mt-1 flex justify-between items-start gap-2">
-                {!objectives.trim() ? (
-                  <p className="text-xs text-amber-600 normal-case">
-                    Leaving this blank will limit the quality of your auto-generated Event Overview narrative.
-                  </p>
-                ) : <span />}
-                <span className={`text-xs shrink-0 ${objLen > 720 ? "text-amber-600" : "text-[#969798]"}`}>
-                  {objLen}/800
-                </span>
-              </div>
-            </div>
-
             {/* Tone / Brand Direction */}
             <div data-assistant-field-key="/content/event/toneDirections/*">
               <label className={labelClass}>
@@ -556,7 +547,7 @@ const EventForm = ({
               <textarea
                 rows={3}
                 maxLength={500}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
                 placeholder="e.g. CEO keynote must run exactly 22 minutes. No standing ovations during memorial segment. Sponsor logos cannot appear on main stage screens."
                 value={data.sacredConstraints ?? ""}
                 onChange={(e) => onChange({ sacredConstraints: e.target.value })}
@@ -578,7 +569,7 @@ const EventForm = ({
               <textarea
                 rows={4}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
                 placeholder="Describe the organization: who you are, what you do, and any relevant background vendors should know."
                 value={data.aboutOrganization ?? ""}
                 onChange={(e) => onChange({ aboutOrganization: e.target.value })}
@@ -600,7 +591,7 @@ const EventForm = ({
               <textarea
                 rows={4}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
                 placeholder="Describe the scope of work: what deliverables and responsibilities vendors are being asked to provide."
                 value={data.statementOfWork ?? ""}
                 onChange={(e) => onChange({ statementOfWork: e.target.value })}
@@ -622,7 +613,7 @@ const EventForm = ({
               <textarea
                 rows={4}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
                 placeholder="Describe the event's profile: history, significance, past editions, or stature."
                 value={data.eventProfile ?? ""}
                 onChange={(e) => onChange({ eventProfile: e.target.value })}
@@ -644,7 +635,7 @@ const EventForm = ({
               <textarea
                 rows={4}
                 maxLength={1000}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
                 placeholder="e.g. RFP issued July 1, questions due July 10, proposals due July 24, vendor selected August 5."
                 value={data.rfpTimeline ?? ""}
                 onChange={(e) => onChange({ rfpTimeline: e.target.value })}
@@ -660,7 +651,8 @@ const EventForm = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-end px-8 py-5 border-t border-[#e4e4e4]">
+      <div className="sticky bottom-0 flex items-center justify-between border-t border-[#e4e4e4] bg-white/95 px-8 py-4 backdrop-blur">
+        <button type="button" onClick={onSaveDraft ?? onBack} className="text-sm font-semibold text-[#1DBFD3] hover:text-[#0069a0]">Save draft</button>
         {/* <button
           type="button"
           onClick={onBack}
@@ -672,11 +664,10 @@ const EventForm = ({
         <button
           type="button"
           onClick={onContinue}
-          className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          className="group relative flex items-center gap-3 overflow-hidden rounded-md bg-[#1DBFD3] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#0069a0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1DBFD3]"
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-          Venue &amp; Schedule
+          Save &amp; continue
           <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>

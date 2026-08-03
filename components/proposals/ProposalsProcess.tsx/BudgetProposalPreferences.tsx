@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
+import GlobalDateInput from "@/components/shared/GlobalDateInput";
+import GlobalSelect from "@/components/shared/GlobalSelect";
 import type { BudgetData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip, toggleItem } from "./shared";
 
@@ -8,12 +10,36 @@ import { InfoTooltip, toggleItem } from "./shared";
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const subPanelClass =
   "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
 const errorClass = "mt-1 text-sm text-red-500 normal-case";
+
+type DatePickerFormat = "dd-MM-yyyy" | "yyyy-MM-dd" | "MM-dd-yyyy";
+
+const toPickerFormat = (displayFormat: string): DatePickerFormat => {
+  const format = (displayFormat || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
+  if (format === "DD/MM/YYYY" || format === "DD-MM-YYYY") return "dd-MM-yyyy";
+  if (format === "YYYY/MM/DD" || format === "YYYY-MM-DD") return "yyyy-MM-dd";
+  return "MM-dd-yyyy";
+};
+
+const fromIsoToDate = (value?: string) => {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const fromDateToIso = (value: Date | null) => {
+  if (!value) return "";
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 /* ─── Yes/No buttons ─── */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
@@ -62,7 +88,7 @@ const SelectField = ({
   placeholder: string;
   hasError?: boolean;
 }) => (
-  <select
+  <GlobalSelect
     value={value}
     onChange={(e) => onChange(e.target.value)}
     className={`${inputClass} ${hasError && !value ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
@@ -73,7 +99,7 @@ const SelectField = ({
         {o}
       </option>
     ))}
-  </select>
+  </GlobalSelect>
 );
 
 /* ─── Budget tier cards ─── */
@@ -90,8 +116,8 @@ const BUDGET_TIERS = [
 const tierCardCls = (val: string, selected: string): string => {
   const base =
     "relative flex flex-col rounded-xl border-2 px-3 py-3 cursor-pointer transition-all select-none text-left";
-  if (selected === val) return `${base} border-[#008ad2] bg-[#008ad2]/5`;
-  return `${base} border-[#e4e4e4] bg-white hover:border-[#008ad2]/40`;
+  if (selected === val) return `${base} border-[#1DBFD3] bg-[#1DBFD3]/5`;
+  return `${base} border-[#e4e4e4] bg-white hover:border-[#1DBFD3]/40`;
 };
 
 /* ─── Budget flexibility pills ─── */
@@ -106,7 +132,7 @@ const flexPillCls = (opt: string, selected: string): string => {
   const base =
     "rounded-full border px-4 py-1.5 text-xs font-semibold cursor-pointer transition-all";
   if (selected === opt)
-    return `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#222628]`;
+    return `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]`;
   return `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
 };
 
@@ -163,14 +189,14 @@ const FORMAT_OPTIONS: {
 const formatCardCls = (checked: boolean): string => {
   const base =
     "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all cursor-pointer";
-  if (checked) return `${base} border-[#008ad2] bg-[#008ad2]/5`;
+  if (checked) return `${base} border-[#1DBFD3] bg-[#1DBFD3]/5`;
   return `${base} border-[#e4e4e4] bg-white hover:border-slate-300`;
 };
 
 const formatCheckCls = (checked: boolean): string => {
   const base =
     "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all";
-  if (checked) return `${base} border-[#008ad2] bg-[#008ad2]`;
+  if (checked) return `${base} border-[#1DBFD3] bg-[#1DBFD3]`;
   return `${base} border-[#e4e4e4]`;
 };
 
@@ -265,6 +291,7 @@ const BudgetProposalPreferences = ({
   contentServicesNeeded,
   venueName,
 }: Props) => {
+  const pickerFormat = toPickerFormat(proposalSettings.proposals.dateFormat);
   /* ─── Safe data ─── */
   const defMatrix = defaultEvalMatrix();
   const safeData: BudgetData = {
@@ -410,7 +437,7 @@ const BudgetProposalPreferences = ({
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 7 of 9
           </span>
         </div>
@@ -454,7 +481,7 @@ const BudgetProposalPreferences = ({
                 </span>
                 <span className="mt-0.5 text-xs text-slate-500">{tier.range}</span>
                 {safeData.estimatedAvBudget === tier.value && (
-                  <span className="absolute right-2 top-2 text-xs font-bold text-[#008ad2]">
+                  <span className="absolute right-2 top-2 text-xs font-bold text-[#1DBFD3]">
                     ✓
                   </span>
                 )}
@@ -560,7 +587,7 @@ const BudgetProposalPreferences = ({
                         {opt.label}
                       </span>
                       {suggested && (
-                        <span className="rounded-full bg-[#008ad2]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#008ad2]">
+                        <span className="rounded-full bg-[#1DBFD3]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#1DBFD3]">
                           Suggested
                         </span>
                       )}
@@ -581,7 +608,7 @@ const BudgetProposalPreferences = ({
               <div className="space-y-2">
                 {autoAddedFormats.map((f) => (
                   <div key={f.label} className="flex items-start gap-2">
-                    <span className="mt-0.5 shrink-0 text-xs text-[#008ad2]">⚡</span>
+                    <span className="mt-0.5 shrink-0 text-xs text-[#1DBFD3]">⚡</span>
                     <div>
                       <span className="text-xs font-semibold text-[#222628]">{f.label}</span>
                       <span className="ml-1 text-xs text-slate-500">— {f.desc}</span>
@@ -712,10 +739,10 @@ const BudgetProposalPreferences = ({
                     max={100}
                     value={w}
                     onChange={(e) => updateMatrix(crit.key, e.target.value)}
-                    className={`w-14 rounded-lg border px-2 py-1.5 text-center text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20 ${
+                    className={`w-14 rounded-lg border px-2 py-1.5 text-center text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20 ${
                       warnZero
                         ? "border-red-400 focus:border-red-400"
-                        : "border-[#e4e4e4] focus:border-[#008ad2]"
+                        : "border-[#e4e4e4] focus:border-[#1DBFD3]"
                     }`}
                   />
                   <span className="text-xs text-slate-400">%</span>
@@ -750,7 +777,7 @@ const BudgetProposalPreferences = ({
             <button
               type="button"
               onClick={quickBalance}
-              className="ml-auto rounded-lg border border-[#008ad2] px-3 py-1.5 text-xs font-semibold text-[#008ad2] transition-colors hover:bg-[#008ad2]/5"
+              className="ml-auto rounded-lg border border-[#1DBFD3] px-3 py-1.5 text-xs font-semibold text-[#1DBFD3] transition-colors hover:bg-[#1DBFD3]/5"
             >
               Auto-balance {remaining > 0 ? `+${remaining}%` : `${remaining}%`}
             </button>
@@ -806,11 +833,16 @@ const BudgetProposalPreferences = ({
               Vendor Questions Due <span className="text-red-500">*</span>
               <InfoTooltip text="The deadline for vendors to submit clarifying questions about the RFP." />
             </label>
-            <input
-              type="date"
-              value={safeData.vendorQuestionsDueDate}
-              onChange={(e) => onChange({ vendorQuestionsDueDate: e.target.value })}
-              className={`${inputClass} ${showErrors && !safeData.vendorQuestionsDueDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            <GlobalDateInput
+              id="vendorQuestionsDueDate"
+              label="Vendor Questions Due"
+              hideLabel
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              format={pickerFormat}
+              value={fromIsoToDate(safeData.vendorQuestionsDueDate)}
+              onChange={(value) => onChange({ vendorQuestionsDueDate: fromDateToIso(value) })}
+              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.vendorQuestionsDueDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.vendorQuestionsDueDate && (
               <p className={errorClass}>Required.</p>
@@ -821,11 +853,16 @@ const BudgetProposalPreferences = ({
               Response to Vendor Questions <span className="text-red-500">*</span>
               <InfoTooltip text="The date by which you'll respond to vendor questions submitted above." />
             </label>
-            <input
-              type="date"
-              value={safeData.responseToVendorQuestionsDate}
-              onChange={(e) => onChange({ responseToVendorQuestionsDate: e.target.value })}
-              className={`${inputClass} ${showErrors && !safeData.responseToVendorQuestionsDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            <GlobalDateInput
+              id="responseToVendorQuestionsDate"
+              label="Response to Vendor Questions"
+              hideLabel
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              format={pickerFormat}
+              value={fromIsoToDate(safeData.responseToVendorQuestionsDate)}
+              onChange={(value) => onChange({ responseToVendorQuestionsDate: fromDateToIso(value) })}
+              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.responseToVendorQuestionsDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.responseToVendorQuestionsDate && (
               <p className={errorClass}>Required.</p>
@@ -840,11 +877,16 @@ const BudgetProposalPreferences = ({
               Proposal Submission Due <span className="text-red-500">*</span>
               <InfoTooltip text="The deadline for vendors to submit their completed proposals." />
             </label>
-            <input
-              type="date"
-              value={safeData.proposalSubmissionDueDate}
-              onChange={(e) => onChange({ proposalSubmissionDueDate: e.target.value })}
-              className={`${inputClass} ${showErrors && !safeData.proposalSubmissionDueDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            <GlobalDateInput
+              id="proposalSubmissionDueDate"
+              label="Proposal Submission Due"
+              hideLabel
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              format={pickerFormat}
+              value={fromIsoToDate(safeData.proposalSubmissionDueDate)}
+              onChange={(value) => onChange({ proposalSubmissionDueDate: fromDateToIso(value) })}
+              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.proposalSubmissionDueDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.proposalSubmissionDueDate && (
               <p className={errorClass}>Required.</p>
@@ -855,11 +897,16 @@ const BudgetProposalPreferences = ({
               Shortlist Notification <span className="text-red-500">*</span>
               <InfoTooltip text="The date by which shortlisted vendors will be notified." />
             </label>
-            <input
-              type="date"
-              value={safeData.shortlistNotificationDate}
-              onChange={(e) => onChange({ shortlistNotificationDate: e.target.value })}
-              className={`${inputClass} ${showErrors && !safeData.shortlistNotificationDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            <GlobalDateInput
+              id="shortlistNotificationDate"
+              label="Shortlist Notification"
+              hideLabel
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              format={pickerFormat}
+              value={fromIsoToDate(safeData.shortlistNotificationDate)}
+              onChange={(value) => onChange({ shortlistNotificationDate: fromDateToIso(value) })}
+              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.shortlistNotificationDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.shortlistNotificationDate && (
               <p className={errorClass}>Required.</p>
@@ -891,13 +938,19 @@ const BudgetProposalPreferences = ({
               <label className={`${labelClass} mt-0`}>
                 Presentation Date <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
-                value={safeData.vendorPresentationDate}
-                onChange={(e) => onChange({ vendorPresentationDate: e.target.value })}
-                className={`${inputClass} ${showErrors && !safeData.vendorPresentationDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
-                style={{ maxWidth: 240 }}
-              />
+              <div className="max-w-60">
+                <GlobalDateInput
+                  id="vendorPresentationDate"
+                  label="Presentation Date"
+                  hideLabel
+                  showFormatInLabel={false}
+                  showErrorMessage={false}
+                  format={pickerFormat}
+                  value={fromIsoToDate(safeData.vendorPresentationDate)}
+                  onChange={(value) => onChange({ vendorPresentationDate: fromDateToIso(value) })}
+                  inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.vendorPresentationDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+                />
+              </div>
               {showErrors && !safeData.vendorPresentationDate && (
                 <p className={errorClass}>Required.</p>
               )}
@@ -911,13 +964,19 @@ const BudgetProposalPreferences = ({
             Vendor Selection <span className="text-red-500">*</span>
             <InfoTooltip text="The date by which the vendor will be selected." />
           </label>
-          <input
-            type="date"
-            value={safeData.vendorSelectionDate}
-            onChange={(e) => onChange({ vendorSelectionDate: e.target.value })}
-            className={inputClass}
-            style={{ maxWidth: 240 }}
-          />
+          <div className="max-w-60">
+            <GlobalDateInput
+              id="vendorSelectionDate"
+              label="Vendor Selection"
+              hideLabel
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              format={pickerFormat}
+              value={fromIsoToDate(safeData.vendorSelectionDate)}
+              onChange={(value) => onChange({ vendorSelectionDate: fromDateToIso(value) })}
+              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.vendorSelectionDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+            />
+          </div>
           {showErrors && !safeData.vendorSelectionDate && (
             <p className={errorClass}>Required.</p>
           )}
@@ -929,13 +988,19 @@ const BudgetProposalPreferences = ({
             Target Decision Date
             <InfoTooltip text="The date by which you plan to award or select a vendor. Helps us schedule follow-ups appropriately." />
           </label>
-          <input
-            type="date"
-            value={safeData.decisionDate}
-            onChange={(e) => onChange({ decisionDate: e.target.value })}
-            className={inputClass}
-            style={{ maxWidth: 240 }}
-          />
+          <div className="max-w-60">
+            <GlobalDateInput
+              id="decisionDate"
+              label="Target Decision Date"
+              hideLabel
+              showFormatInLabel={false}
+              showErrorMessage={false}
+              format={pickerFormat}
+              value={fromIsoToDate(safeData.decisionDate)}
+              onChange={(value) => onChange({ decisionDate: fromDateToIso(value) })}
+              inputClassName={`${inputClass} pr-12`}
+            />
+          </div>
         </div>
 
         {/* Competitive Bid */}
@@ -987,7 +1052,7 @@ const BudgetProposalPreferences = ({
             <div className={subPanelClass}>
               <a
                 href="#"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#008ad2] hover:underline"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1DBFD3] hover:underline"
               >
                 Schedule a call with your DXG producer
                 <ExternalLink size={13} />
@@ -1059,7 +1124,7 @@ const BudgetProposalPreferences = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Uploads &amp; Co-Vendors

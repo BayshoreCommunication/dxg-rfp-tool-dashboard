@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, PlusCircle, X } from "lucide-react";
 import { useState } from "react";
+import GlobalSelect from "@/components/shared/GlobalSelect";
 import type { AdditionalContact, ContactData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip } from "./shared";
 
@@ -9,7 +10,7 @@ import { InfoTooltip } from "./shared";
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20 placeholder:text-[#b0bace]";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20 placeholder:text-[#b0bace]";
 const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const errorClass = "mt-1 text-sm text-red-500 normal-case";
 
@@ -59,14 +60,14 @@ const pillCls = (active: boolean): string => {
   const base =
     "flex h-10 cursor-pointer items-center justify-center rounded-md border px-4 text-sm font-semibold transition-all";
   return active
-    ? `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#222628]`
+    ? `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]`
     : `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
 };
 
 const phoneTypePillCls = (opt: string, selected: string): string => {
   const base = "rounded-full border px-4 py-1.5 text-xs font-semibold cursor-pointer transition-all";
   return selected === opt
-    ? `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#222628]`
+    ? `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]`
     : `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
 };
 
@@ -102,7 +103,7 @@ const AdditionalContactCard = ({
         className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#008ad2]/10 text-xs font-bold text-[#008ad2]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1DBFD3]/10 text-xs font-bold text-[#1DBFD3]">
             {index + 1}
           </span>
           <div>
@@ -169,7 +170,7 @@ const AdditionalContactCard = ({
 
           <div className="mt-4">
             <label className={labelClass}>Role in RFP Process</label>
-            <select
+            <GlobalSelect
               value={contact.role}
               onChange={(e) => up({ role: e.target.value })}
               className={inputClass}
@@ -180,7 +181,7 @@ const AdditionalContactCard = ({
                   {r.label}
                 </option>
               ))}
-            </select>
+            </GlobalSelect>
           </div>
 
           <div className="mt-4 flex justify-end">
@@ -284,7 +285,7 @@ const ContactInfo = ({
       {/* ── Header ── */}
       <div className="border-b border-[#e4e4e4] px-8 py-6">
         <div className="mb-1 flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 9 of 9
           </span>
         </div>
@@ -425,7 +426,7 @@ const ContactInfo = ({
               value={safeData.contactPhoneExt}
               onChange={(e) => onChange({ contactPhoneExt: e.target.value })}
               placeholder="Ext."
-              className="w-24 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20 placeholder:text-[#b0bace]"
+              className="w-24 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20 placeholder:text-[#b0bace]"
             />
           </div>
           {showErrors && !safeData.contactPhone.trim() && (
@@ -511,7 +512,7 @@ const ContactInfo = ({
           <button
             type="button"
             onClick={addAdditionalContact}
-            className="flex items-center gap-1.5 text-sm font-semibold text-[#008ad2] hover:underline"
+            className="flex items-center gap-1.5 text-sm font-semibold text-[#1DBFD3] hover:underline"
           >
             <PlusCircle size={16} /> Add additional contact
           </button>
@@ -638,8 +639,8 @@ const ContactInfo = ({
         )}
 
         {/* ── Submit banner ── */}
-        <div className="rounded-xl border border-[#008ad2]/30 bg-[#f0fbff] p-5">
-          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+        <div className="rounded-xl border border-[#1DBFD3]/30 bg-[#f0fbff] p-5">
+          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             {isEditMode ? "Ready to update your RFP?" : "Ready to generate your RFP?"}
           </p>
           <p className="text-sm text-[#4a5a8a]">
@@ -679,7 +680,7 @@ const ContactInfo = ({
             onClick={onContinue}
             disabled={isSubmitting || isSavingDraft}
             className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
           >
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
             {isSubmitting ? "Submitting…" : isEditMode ? "Update RFP" : "Generate RFP"}

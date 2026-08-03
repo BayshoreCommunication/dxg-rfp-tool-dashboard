@@ -3,12 +3,13 @@
 import type { HybridVirtualData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import GlobalSelect from "@/components/shared/GlobalSelect";
 
 /* ─── Shared style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
+  "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
 
@@ -168,7 +169,7 @@ const HybridVirtualStep = ({
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 3 of 9
           </span>
         </div>
@@ -212,7 +213,7 @@ const HybridVirtualStep = ({
                   Streaming Platform
                   <InfoTooltip text="The platform delivering the virtual experience to remote attendees. If unsure, select 'Vendor Recommendation Needed' — DXG will suggest the best fit based on your scope." />
                 </label>
-                <select
+                <GlobalSelect
                   className={`${inputClass} appearance-none`}
                   value={safeData.streamingPlatform}
                   onChange={(e) =>
@@ -230,7 +231,7 @@ const HybridVirtualStep = ({
                       {opt}
                     </option>
                   ))}
-                </select>
+                </GlobalSelect>
                 {safeData.streamingPlatform === "Other" && (
                   <input
                     type="text"
@@ -264,7 +265,7 @@ const HybridVirtualStep = ({
                   Stream Ownership
                   <InfoTooltip text="Clarifies who operates and manages the live stream. 'AV Vendor Owns Full Stream' means DXG handles everything end-to-end. 'Client Owns Platform' means DXG provides the feed but the client manages delivery." />
                 </label>
-                <select
+                <GlobalSelect
                   className={`${inputClass} appearance-none`}
                   value={safeData.streamOwnership}
                   onChange={(e) =>
@@ -277,7 +278,7 @@ const HybridVirtualStep = ({
                       {opt}
                     </option>
                   ))}
-                </select>
+                </GlobalSelect>
               </div>
             </div>
           </div>
@@ -340,7 +341,7 @@ const HybridVirtualStep = ({
                           Remote Feed Platform
                           <InfoTooltip text="The app remote speakers will use to connect. StreamYard and Riverside are most AV-friendly for broadcast integration; Zoom and Teams require NDI or hardware bridging." />
                         </label>
-                        <select
+                        <GlobalSelect
                           className={`${inputClass} appearance-none`}
                           value={safeData.remoteSpeakers.remoteFeedPlatform}
                           onChange={(e) =>
@@ -358,7 +359,7 @@ const HybridVirtualStep = ({
                               {opt}
                             </option>
                           ))}
-                        </select>
+                        </GlobalSelect>
                       </div>
                     </div>
                     <div>
@@ -366,7 +367,7 @@ const HybridVirtualStep = ({
                         Tech Rehearsal Owner
                         <InfoTooltip text="Who is responsible for running the pre-event tech rehearsal with remote speakers. Affects producer scheduling and pre-show call sheet." />
                       </label>
-                      <select
+                      <GlobalSelect
                         className={`${inputClass} appearance-none`}
                         value={safeData.remoteSpeakers.techRehearsalOwner}
                         onChange={(e) =>
@@ -384,7 +385,7 @@ const HybridVirtualStep = ({
                             {opt}
                           </option>
                         ))}
-                      </select>
+                      </GlobalSelect>
                     </div>
                   </SubPanel>
                 )}
@@ -496,7 +497,7 @@ const HybridVirtualStep = ({
                                     },
                                   });
                                 }}
-                                className="accent-[#008ad2] h-4 w-4"
+                                className="accent-[#1DBFD3] h-4 w-4"
                               />
                               {lang}
                             </label>
@@ -524,7 +525,7 @@ const HybridVirtualStep = ({
                           Caption Source
                           <InfoTooltip text="AI auto-captions are fast and affordable but have accuracy limitations. 'AI with Human Review' balances cost and accuracy. Human CART captioners provide near-perfect accuracy — required for legal, medical, or government events." />
                         </label>
-                        <select
+                        <GlobalSelect
                           className={`${inputClass} appearance-none`}
                           value={safeData.closedCaptions.captionType}
                           onChange={(e) =>
@@ -540,7 +541,7 @@ const HybridVirtualStep = ({
                           <option>AI Auto-Captions Acceptable</option>
                           <option>AI with Human Review</option>
                           <option>Human Captioner Required</option>
-                        </select>
+                        </GlobalSelect>
                       </div>
                     </div>
                   </SubPanel>
@@ -604,7 +605,7 @@ const HybridVirtualStep = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Content &amp; Creative

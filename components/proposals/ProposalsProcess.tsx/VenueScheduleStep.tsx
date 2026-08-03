@@ -1,5 +1,6 @@
 ﻿"use client";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
+import GlobalSelect from "@/components/shared/GlobalSelect";
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
@@ -227,9 +228,9 @@ const unionVenueCls = (opt: "YES" | "NO" | "NOT_SURE", value: string): string =>
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
 const selectClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20 appearance-none";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20 appearance-none";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 
@@ -274,7 +275,7 @@ const VenueScheduleStep = ({
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 2 of 9
           </span>
         </div>
@@ -324,7 +325,7 @@ const VenueScheduleStep = ({
                 State <span className="text-red-500">*</span>
                 <InfoTooltip text="State or region. Used for jurisdiction context, union market detection, and time zone auto-detection. Selecting a state automatically suggests the correct time zone below." />
               </label>
-              <select
+              <GlobalSelect
                 value={safeData.venueState}
                 onChange={(e) => handleStateChange(e.target.value)}
                 className={`${selectClass} ${showErrors && !safeData.venueState ? "border-red-400 focus:border-red-400" : ""}`}
@@ -333,7 +334,7 @@ const VenueScheduleStep = ({
                 {US_STATES.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
-              </select>
+              </GlobalSelect>
               {showErrors && !safeData.venueState && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
@@ -376,7 +377,7 @@ const VenueScheduleStep = ({
                 Venue Type <span className="text-red-500">*</span>
                 <InfoTooltip text="Convention centers and arenas typically have union labor requirements; hotels and resorts vary. Helps vendors gauge infrastructure and labor expectations." />
               </label>
-              <select
+              <GlobalSelect
                 value={safeData.venueType}
                 onChange={(e) => onChange({ venueType: e.target.value })}
                 className={`${selectClass} ${showErrors && !safeData.venueType ? "border-red-400 focus:border-red-400" : ""}`}
@@ -385,7 +386,7 @@ const VenueScheduleStep = ({
                 {VENUE_TYPE_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>{opt}</option>
                 ))}
-              </select>
+              </GlobalSelect>
               {showErrors && !safeData.venueType && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
@@ -395,7 +396,7 @@ const VenueScheduleStep = ({
                 Venue Confirmed Status <span className="text-red-500">*</span>
                 <InfoTooltip text="Is your venue locked in? Vendors use this to gauge how firmly location specs can be relied upon. Unconfirmed venues may surface as a flag chip on the cover." />
               </label>
-              <select
+              <GlobalSelect
                 value={safeData.venueConfirmedStatus}
                 onChange={(e) => onChange({ venueConfirmedStatus: e.target.value })}
                 className={`${selectClass} ${showErrors && !safeData.venueConfirmedStatus ? "border-red-400 focus:border-red-400" : ""}`}
@@ -405,7 +406,7 @@ const VenueScheduleStep = ({
                 <option value="VERBAL_CONFIRM">Verbally confirmed — contract pending</option>
                 <option value="STRONG_PREF">Strong preference — still finalizing</option>
                 <option value="NOT_SELECTED">Not yet selected — vendor recommendations welcome</option>
-              </select>
+              </GlobalSelect>
               {showErrors && !safeData.venueConfirmedStatus && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
@@ -433,7 +434,7 @@ const VenueScheduleStep = ({
                 Time Zone <span className="text-red-500">*</span>
                 <InfoTooltip text="Time zone of the venue. Appended to all times in the Section 1 timeline, Section 9 proposal deadline, and venue section. Auto-detected when you select a state above." />
               </label>
-              <select
+              <GlobalSelect
                 value={safeData.timeZone}
                 onChange={(e) => onChange({ timeZone: e.target.value })}
                 className={`${selectClass} ${showErrors && !safeData.timeZone ? "border-red-400 focus:border-red-400" : ""}`}
@@ -442,12 +443,12 @@ const VenueScheduleStep = ({
                 {TIME_ZONE_OPTIONS.map((tz) => (
                   <option key={tz} value={tz}>{tz}</option>
                 ))}
-              </select>
+              </GlobalSelect>
               {showErrors && !safeData.timeZone && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
               {safeData.venueState && STATE_TIMEZONES[safeData.venueState] && safeData.timeZone === STATE_TIMEZONES[safeData.venueState] && (
-                <p className="mt-1 text-xs text-[#008ad2] normal-case">
+                <p className="mt-1 text-xs text-[#1DBFD3] normal-case">
                   Auto-detected from {safeData.venueState}
                 </p>
               )}
@@ -558,7 +559,7 @@ const VenueScheduleStep = ({
                     value={safeData.unionLaborDetails}
                     onChange={(e) => onChange({ unionLaborDetails: e.target.value })}
                     placeholder="e.g. IATSE Local 720 required for all rigging and electrical work per venue contract."
-                    className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008ad2] focus:ring-2 focus:ring-[#008ad2]/20"
+                    className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#1DBFD3] focus:ring-2 focus:ring-[#1DBFD3]/20"
                   />
                 </div>
               </div>
@@ -589,7 +590,7 @@ const VenueScheduleStep = ({
                   onChange({ loadInDate: date, loadInTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12${safeData.loadInDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -611,7 +612,7 @@ const VenueScheduleStep = ({
                   onChange({ rehearsalDate: date, rehearsalTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time (optional)"
               />
               {!safeData.rehearsalDate && (
@@ -641,7 +642,7 @@ const VenueScheduleStep = ({
                   onChange({ showStartDate: date, showStartTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12${safeData.showStartDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
               {showErrors && !safeData.showStartDate.trim() && (
@@ -666,7 +667,7 @@ const VenueScheduleStep = ({
                   onChange({ showEndDate: date, showEndTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12${safeData.showEndDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
               {showErrors && !safeData.showEndDate.trim() && (
@@ -694,7 +695,7 @@ const VenueScheduleStep = ({
                   onChange({ strikeDate: date, strikeTime: time });
                 }}
                 inputClassName={`${inputClass} pr-12${safeData.strikeDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -716,7 +717,7 @@ const VenueScheduleStep = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Room Specifications

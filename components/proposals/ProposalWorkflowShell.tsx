@@ -7,6 +7,7 @@
 
 import { getProposalWorkflowAction, setProposalWorkflowStepAction, type ProposalWorkflow } from "@/app/actions/proposalWorkflow";
 import Link from "next/link";
+import { ArrowRight, MoreHorizontal, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import GuidancePanel from "./GuidancePanel";
 import InvestmentGuidancePanel from "./InvestmentGuidancePanel";
@@ -16,15 +17,15 @@ import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
 
 const labels = ["Provide Information", "Review the Draft", "Answer Key Questions", "See Guidance", "Publish"];
-const tones = { complete: "border-emerald-500 bg-emerald-50", in_progress: "border-cyan-500 bg-cyan-50", available: "border-slate-300 bg-white", gated: "border-slate-200 bg-slate-50" };
-
 export default function ProposalWorkflowShell({
   proposalId,
+  proposalName,
   estimatedAvBudget,
   onNavigateToFormStep,
   onQuestionResolved,
 }: {
   proposalId: string;
+  proposalName?: string;
   estimatedAvBudget?: string;
   onNavigateToFormStep?: (step: number) => void;
   onQuestionResolved?: () => void | Promise<void>;
@@ -73,33 +74,52 @@ export default function ProposalWorkflowShell({
   // — a second definition of "answered" whose only possible contribution was to
   // disagree. Every status and summary now comes from one place.
   const steps = data?.steps ?? ([1, 2, 3, 4, 5] as const).map((id) => ({ id, key: "", label: labels[id - 1], status: "available" as const, summary: "Loading…" }));
-  return <section aria-label="Assisted proposal workflow" className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+  const isPublished = data?.state?.headline?.toLowerCase().includes("sent to vendors") ?? false;
+  return <section aria-label="Assisted proposal workflow" className="mb-0 border-b border-[#e5eaee] bg-white">
+    <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-[#edf0f2] px-8 py-5">
+      <div>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-[22px] font-bold tracking-tight text-[#172b3a]">{proposalName || "Proposal"}</h1>
+          {isPublished && <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">Published</span>}
+        </div>
+        <p className="mt-1 text-sm text-[#687782]">{isPublished ? "Sent to vendors" : "Build and review your proposal"}</p>
+      </div>
+      <div className="flex items-center gap-4">
+        <button type="button" aria-label="More proposal actions" className="grid h-10 w-10 place-items-center rounded-full border border-[#e5eaee] bg-white text-[#687782] shadow-sm transition hover:bg-[#f4f7f9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]"><MoreHorizontal size={20} /></button>
+        <a href="#manual-proposal-details" className="rounded-lg bg-[#0786cf] px-5 py-3 text-sm font-semibold text-white shadow-[0_5px_14px_rgba(7,134,207,0.22)] transition hover:bg-[#066fae] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]">Open advanced editor</a>
+      </div>
+    </header>
     {/* The conversation itself lives on one surface only: this editor links out
         to it rather than embedding a second copy. */}
-    {conversationsEnabled && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#087f69]/30 bg-emerald-50/60 px-4 py-3">
+    {conversationsEnabled && <div className="mx-8 mt-6 grid gap-6 rounded-2xl border border-[#dceef8] bg-[#f1f9fd] px-6 py-6 shadow-[0_8px_24px_rgba(7,134,207,0.06)] lg:grid-cols-[72px_1.3fr_1fr_.65fr] lg:items-center">
+      <div className="grid h-16 w-16 place-items-center rounded-full bg-white text-[#0786cf] shadow-[0_6px_18px_rgba(7,134,207,0.12)]"><Send size={34} strokeWidth={1.7} /></div>
       <div>
-        <p className="text-sm font-semibold text-slate-900">{data?.state?.headline ?? "Build your proposal with the assistant"}</p>
-        <p className="mt-0.5 text-xs text-slate-600">The assistant is the easiest place to answer questions, review the draft, and decide what to improve.</p>
+        <p className="text-lg font-semibold text-[#222628]">{isPublished ? "Your proposal is live." : "Build your proposal with confidence."}</p>
+        <p className="mt-2 text-sm font-semibold text-[#222628]">{data?.state?.headline ?? "Your assistant is ready."}</p>
+        <p className="mt-1 text-sm text-[#565859]">{isPublished ? "Vendors can view and submit their proposals." : "The assistant is the easiest place to answer questions, review the draft, and decide what to improve."}</p>
       </div>
+      <div className="border-l border-[#cbdde6] pl-8">
+        <p className="text-base font-semibold text-[#222628]">Next action</p>
+        <p className="mt-1 max-w-xs text-sm leading-5 text-[#565859]">Monitor responses and answer vendor questions to keep your event on track.</p>
       {/* A published RFP has no next action. Offering one that still reads
           "Answer the next question" would invite work that is already over. */}
-      {data?.state?.nextAction !== "none" && <Link href={`/proposals/${proposalId}/assistant`} className="rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#066553]">{data?.state?.nextActionLabel ?? "Open the assistant"} →</Link>}
+        <Link href={`/proposals/${proposalId}/assistant`} className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#0786cf] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#066fae]">{data?.state?.nextAction !== "none" ? (data?.state?.nextActionLabel ?? "Open the assistant") : "Go to Key Questions"}<ArrowRight size={15} /></Link>
+      </div>
+      <div className="border-l border-[#cbdde6] pl-8">
+        <p className="text-sm font-semibold text-[#222628]">Status</p>
+        <p className="mt-2 text-sm text-[#565859]">{isPublished ? "Sent to vendors" : "In progress"}</p>
+      </div>
     </div>}
-    <div className="mt-4 flex items-center justify-between gap-3">
-      <p className="text-xs text-slate-500">Advanced editor · all proposal fields</p>
-      <a href="#manual-proposal-details" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800">Open advanced editor</a>
-    </div>
     {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-    <ol aria-label="Proposal creation steps" className="mt-5 grid gap-3 md:grid-cols-5">{steps.map((item) => <li key={item.id}><button type="button" disabled={busy} aria-current={step === item.id ? "step" : undefined} onClick={() => void choose(item.id)} className={`h-full w-full rounded-xl border-2 p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 ${step === item.id ? "ring-2 ring-[#087f69] ring-offset-2" : tones[item.status]}`}><span className="text-xs font-bold text-slate-500">0{item.id}</span><span className="mt-2 block font-semibold text-slate-900">{item.label}</span><span className="mt-2 block text-xs text-slate-600">{item.summary}</span></button></li>)}</ol>
-    <div className="mt-5" aria-live="polite">
-      {conversationsEnabled && step <= 3 && <div className="space-y-5">
+    <ol aria-label="Proposal creation steps" className="mx-8 my-6 grid gap-2 md:grid-cols-5">{steps.map((item) => <li key={item.id}><button type="button" disabled={busy} aria-current={step === item.id ? "step" : undefined} onClick={() => void choose(item.id)} className={`relative flex h-full w-full gap-3 rounded-xl border px-3 py-4 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] ${step === item.id ? "border-[#b9def2] bg-[#f1f9fd] text-[#0786cf] shadow-[0_4px_14px_rgba(7,134,207,0.08)]" : "border-transparent bg-white text-[#263744] hover:border-[#e5eaee] hover:bg-[#fafcfd]"}`}><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border text-sm font-semibold ${step === item.id ? "border-[#0786cf] bg-[#0786cf] text-white" : item.status === "complete" ? "border-emerald-500 bg-emerald-500 text-white" : "border-[#d6dfe4] bg-white text-[#687782]"}`}>{item.id}</span><span className="min-w-0"><span className="block text-sm font-semibold leading-snug">{item.label}</span><span className="mt-1 block text-[11px] leading-4 text-[#687782]">{item.summary}</span></span></button></li>)}</ol>
+    <div className={step === 1 ? "" : "px-8 py-5"} aria-live="polite">
+      {conversationsEnabled && step >= 2 && step <= 3 && <div className="space-y-5">
         <h2 className="text-lg font-semibold">{labels[step - 1]}</h2>
         <details open={detailsOpen} onToggle={(event) => setDetailsOpen((event.target as HTMLDetailsElement).open)} className="rounded-xl border border-slate-200 bg-white">
           <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-slate-700">Technical details</summary>
           <div className="space-y-5 p-5 pt-0">
             {/* Files are added and monitored on the assistant surface; this
                 editor no longer carries a second upload/status panel. */}
-            {step === 1 && <><p className="rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-sm text-slate-700">You can upload more than one source. Each file is privately quarantined and checked independently. Pasted notes and previous-proposal reuse will be enabled only through the same approved source boundary.</p></>}
             {step === 2 && <><ProposalContextPanel proposalId={proposalId} /><ProposalDraftPanel proposalId={proposalId} /></>}
             {/* The panel no longer reports its own count up: answering a question
                 already refreshes the workflow, and the server fact is what the
@@ -108,7 +128,6 @@ export default function ProposalWorkflowShell({
           </div>
         </details>
       </div>}
-      {!conversationsEnabled && step === 1 && <div><h2 className="mb-3 text-lg font-semibold">Provide information</h2><p className="rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-sm text-slate-700">You can upload more than one source. Each file is privately quarantined and checked independently. Pasted notes and previous-proposal reuse will be enabled only through the same approved source boundary.</p></div>}
       {!conversationsEnabled && step === 2 && <div className="space-y-5"><ProposalContextPanel proposalId={proposalId} /><ProposalDraftPanel proposalId={proposalId} /></div>}
       {!conversationsEnabled && step === 3 && <div><h2 className="text-lg font-semibold">Answer key questions</h2><p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Key questions are available when the assisted proposal workflow is enabled.</p></div>}
       {step === 4 && <div className="space-y-3"><h2 className="text-lg font-semibold">See Guidance</h2>{conversationsEnabled && data?.steps.some((item) => item.id === 4 && item.status !== "gated") ? <><GuidancePanel proposalId={proposalId} onNavigateToStep={onNavigateToFormStep} /><InvestmentGuidancePanel proposalId={proposalId} estimatedAvBudget={estimatedAvBudget} /><HistoricalInsightsPanel proposalId={proposalId} /></> : <p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700"><strong>Investment guidance is not enabled.</strong> It requires separate DXG approval, pricing methodology, and evidence controls. No price or equipment recommendation is being generated.</p>}</div>}

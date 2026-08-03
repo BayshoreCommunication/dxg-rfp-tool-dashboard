@@ -64,9 +64,9 @@ const ownershipCls = (opt: string, value: string): string => {
   if (value !== opt)
     return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
   if (opt === "Client / Internal Team")
-    return `${base} border-[#008ad2] bg-[#008ad2]/5 text-brand-dark`;
+    return `${base} border-[#1DBFD3] bg-[#1DBFD3]/5 text-brand-dark`;
   if (opt === "AV Vendor")
-    return `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#0097cc]`;
+    return `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#0097cc]`;
   if (opt === "TBD")
     return `${base} border-amber-400 bg-amber-50 text-amber-700`;
   return `${base} border-slate-300 bg-slate-100 text-slate-500`;
@@ -134,21 +134,21 @@ const GatewayCard = ({
     onClick={onClick}
     className={`flex w-full flex-col rounded-xl border-2 p-5 text-left transition-all ${
       isSelected
-        ? "border-[#008ad2] bg-[#008ad2]/5"
-        : "border-[#e4e4e4] bg-white hover:border-[#008ad2]/40"
+        ? "border-[#1DBFD3] bg-[#1DBFD3]/5"
+        : "border-[#e4e4e4] bg-white hover:border-[#1DBFD3]/40"
     }`}
   >
     <div className="flex items-center gap-3 mb-2">
       <div
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-          isSelected ? "border-[#008ad2] bg-[#008ad2]" : "border-[#e4e4e4]"
+          isSelected ? "border-[#1DBFD3] bg-[#1DBFD3]" : "border-[#e4e4e4]"
         }`}
       >
         {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
       </div>
       <span
         className={`text-sm font-bold ${
-          isSelected ? "text-[#008ad2]" : "text-[#222628]"
+          isSelected ? "text-[#1DBFD3]" : "text-[#222628]"
         }`}
       >
         {title}
@@ -204,7 +204,7 @@ const ContentCreativeStep = ({
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 4 of 9
           </span>
         </div>
@@ -427,7 +427,7 @@ const ContentCreativeStep = ({
               <textarea
                 rows={5}
                 maxLength={1000}
-                className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
+                className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
                 placeholder={`e.g., "The Summit visual identity uses a dark navy and electric teal palette with bold, kinetic typography. The 2026 theme is 'Velocity' — content should feel forward-momentum, cinematic, with high-contrast graphics. Brand guide attached on Page 8."`}
                 value={safeData.creativeDirectionNotes}
                 onChange={(e) => onChange({ creativeDirectionNotes: e.target.value })}
@@ -457,7 +457,7 @@ const ContentCreativeStep = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Video Recording
