@@ -1269,6 +1269,7 @@ const AddNewProposal = ({
   const [copyingSaving, setCopyingSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+
   // Room the step should open and scroll to after it blocked Continue. The
   // token makes a repeat attempt on the same room re-trigger the scroll.
   const [focusRoom, setFocusRoom] = useState<{ index: number; token: number } | null>(null);
@@ -2189,10 +2190,10 @@ const AddNewProposal = ({
 
       {/* ── Steps 1–7: Multi-step form ── */}
       {!loadingExisting && proposalProcessStep >= 1 && (
-        <div className="flex w-full">
-          {/* Form area — 70% */}
+        <div className="flex w-full items-start gap-5 bg-[#f4f7f9] p-5">
+          {/* Form area */}
           <div
-            className="w-[80%] mr-4"
+            className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e2e8ec] bg-white shadow-[0_10px_35px_rgba(15,42,67,0.06)]"
             data-assistant-current-section="true"
             data-assistant-section-id={
               assistantSectionByStep[
@@ -2204,6 +2205,7 @@ const AddNewProposal = ({
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED === "true" && (
               <ProposalWorkflowShell
                 proposalId={proposalId}
+                proposalName={proposalData.event.eventName}
                 estimatedAvBudget={proposalData.budget.estimatedAvBudget}
                 onNavigateToFormStep={navigateToStep}
                 onQuestionResolved={refreshProposalAfterQuestion}
@@ -2218,6 +2220,7 @@ const AddNewProposal = ({
                 onChange={(updates) => updateProposalSection("event", updates)}
                 onContinue={continueHandler}
                 onBack={backHandler}
+                onSaveDraft={() => void handleSubmit(undefined, true)}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
               />
@@ -2371,8 +2374,8 @@ const AddNewProposal = ({
               />
             )}
           </div>
-          {/* Sidebar � 20% */}
-          <div className="w-[20%] sticky top-0 self-start">
+          {/* Proposal progress sidebar */}
+          <div className="sticky top-0 w-[288px] shrink-0 self-start">
             {autosaveEligible && (
               <p
                 role="status"

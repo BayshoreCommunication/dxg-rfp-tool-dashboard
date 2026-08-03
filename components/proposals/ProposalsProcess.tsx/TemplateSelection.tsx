@@ -54,8 +54,8 @@ export default function TemplateSelection({
             onClick={() => onSelect("template-one")}
             className={`${cardBaseClass} ${
               templateId === "template-one"
-                ? "border-[#008ad2] bg-[#008ad2]/5 shadow-[0_0_0_2px_rgba(0,138,210,0.2)]"
-                : "border-slate-200 bg-white hover:border-[#008ad2]/50"
+                ? "border-[#1DBFD3] bg-[#1DBFD3]/5 shadow-[0_0_0_2px_rgba(0,138,210,0.2)]"
+                : "border-slate-200 bg-white hover:border-[#1DBFD3]/50"
             }`}
           >
             <div className="relative h-40 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -79,8 +79,8 @@ export default function TemplateSelection({
             onClick={() => onSelect("template-two")}
             className={`${cardBaseClass} ${
               templateId === "template-two"
-                ? "border-[#008ad2] bg-[#008ad2]/5 shadow-[0_0_0_2px_rgba(0,138,210,0.2)]"
-                : "border-slate-200 bg-white hover:border-[#008ad2]/50"
+                ? "border-[#1DBFD3] bg-[#1DBFD3]/5 shadow-[0_0_0_2px_rgba(0,138,210,0.2)]"
+                : "border-slate-200 bg-white hover:border-[#1DBFD3]/50"
             }`}
           >
             <div className="relative h-40 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -128,7 +128,7 @@ export default function TemplateSelection({
           type="button"
           onClick={() => onCreate("submitted")}
           className="h-10 px-8 rounded-md text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(14,165,233,0.35)] transition-all hover:opacity-90 active:scale-95"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           {liveActionLabel}

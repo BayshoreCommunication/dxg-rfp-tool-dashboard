@@ -2,20 +2,21 @@
 
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Loader2, PlusCircle, X } from "lucide-react";
 import { useRef, useState } from "react";
+import GlobalSelect from "@/components/shared/GlobalSelect";
 import type {
   CoVendorEntry,
   ProposalSettings,
   ReferenceUrl,
   UploadsData,
 } from "../AddNewProposal";
-import { InfoTooltip } from "./shared";
+import { InfoTooltip, RadioIndicator } from "./shared";
 import { uploadProposalFilesAction } from "@/app/actions/proposals";
 
 /* ─── Style constants ─── */
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
 const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const subPanelClass = "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
 const errorClass = "mt-1 text-sm text-red-500 normal-case";
@@ -121,7 +122,7 @@ const UploadBox = ({
         </p>
       ) : (
         <label
-          className={`flex cursor-pointer items-center gap-2 rounded-lg bg-[#008ad2] px-7 py-2.5 text-xs font-bold tracking-wide text-white transition-colors hover:bg-[#0069a0] ${
+          className={`flex cursor-pointer items-center gap-2 rounded-lg bg-[#1DBFD3] px-7 py-2.5 text-xs font-bold tracking-wide text-white transition-colors hover:bg-[#0069a0] ${
             busy ? "pointer-events-none opacity-70" : ""
           }`}
         >
@@ -311,7 +312,7 @@ const CoVendorCard = ({
 
           <div className="mt-4">
             <label className={labelClass}>Status</label>
-            <select
+            <GlobalSelect
               value={value.status}
               onChange={(e) => up({ status: e.target.value })}
               className={inputClass}
@@ -322,7 +323,7 @@ const CoVendorCard = ({
                   {s.label}
                 </option>
               ))}
-            </select>
+            </GlobalSelect>
           </div>
 
           <div className="mt-4">
@@ -360,7 +361,7 @@ const CoVendorCard = ({
 /* ─── NDA type card style ─── */
 const ndaTypeCls = (opt: string, selected: string): string =>
   selected === opt
-    ? "flex items-start gap-3 rounded-lg border border-[#008ad2] bg-[#008ad2]/5 px-4 py-3 cursor-pointer"
+    ? "flex items-start gap-3 rounded-lg border border-[#1DBFD3] bg-[#1DBFD3]/5 px-4 py-3 cursor-pointer"
     : "flex items-start gap-3 rounded-lg border border-[#e4e4e4] bg-white px-4 py-3 cursor-pointer hover:border-slate-300";
 
 /* ─── Props ─── */
@@ -546,7 +547,7 @@ const UploadsReferenceMaterials = ({
       {/* ── Header ── */}
       <div className="border-b border-[#e4e4e4] px-8 py-6">
         <div className="mb-1 flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 8 of 9
           </span>
         </div>
@@ -639,7 +640,7 @@ const UploadsReferenceMaterials = ({
                   onChange={(e) => updateRefUrl(i, { url: e.target.value })}
                 />
                 <input
-                  className="w-44 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
+                  className="w-44 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
                   placeholder="Label (optional)"
                   value={u.label}
                   onChange={(e) => updateRefUrl(i, { label: e.target.value })}
@@ -657,7 +658,7 @@ const UploadsReferenceMaterials = ({
               <button
                 type="button"
                 onClick={addRefUrl}
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#008ad2] hover:underline"
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#1DBFD3] hover:underline"
               >
                 <PlusCircle size={14} /> Add reference URL
               </button>
@@ -699,7 +700,7 @@ const UploadsReferenceMaterials = ({
 
         {/* Pre-fill banner for In-House AV */}
         {prefillAvailable && (
-          <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#008ad2]/30 bg-[#008ad2]/5 px-4 py-3">
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-4 py-3">
             <span className="mt-0.5 shrink-0">🏛</span>
             <div className="flex-1">
               <p className="text-sm font-bold text-brand-dark">
@@ -716,7 +717,7 @@ const UploadsReferenceMaterials = ({
             <button
               type="button"
               onClick={applyPrefill}
-              className="shrink-0 rounded-lg border border-[#008ad2]/30 bg-white px-3 py-1.5 text-xs font-bold text-brand-dark hover:bg-[#008ad2]/5"
+              className="shrink-0 rounded-lg border border-[#1DBFD3]/30 bg-white px-3 py-1.5 text-xs font-bold text-brand-dark hover:bg-[#1DBFD3]/5"
             >
               Apply ✓
             </button>
@@ -879,7 +880,7 @@ const UploadsReferenceMaterials = ({
           {safeData.ndaRequired === "YES" && (
             <div className={subPanelClass}>
               {/* Vendor experience flow */}
-              <div className="mb-5 rounded-lg border border-[#008ad2]/30 bg-[#008ad2]/5 px-4 py-3">
+              <div className="mb-5 rounded-lg border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-4 py-3">
                 <p className="mb-2 text-xs font-bold uppercase tracking-widest text-brand-dark">
                   Vendor Experience
                 </p>
@@ -920,8 +921,11 @@ const UploadsReferenceMaterials = ({
                       value={opt.value}
                       checked={safeData.ndaType === opt.value}
                       onChange={() => onChange({ ndaType: opt.value })}
-                      className="mt-0.5 shrink-0"
+                      className="peer sr-only"
                     />
+                    <span className="mt-0.5">
+                      <RadioIndicator checked={safeData.ndaType === opt.value} />
+                    </span>
                     <div>
                       <p className="text-sm font-semibold text-[#222628]">{opt.label}</p>
                       <p className="text-xs text-slate-500">{opt.desc}</p>
@@ -970,7 +974,7 @@ const UploadsReferenceMaterials = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Contact &amp; Submit

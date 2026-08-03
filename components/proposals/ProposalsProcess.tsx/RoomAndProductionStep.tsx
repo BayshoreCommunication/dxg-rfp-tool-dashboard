@@ -8,6 +8,7 @@ import type { ProposalSettings, RoomByRoomData, RoomFunctionSchedule } from "../
 import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
 import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
+import GlobalSelect from "@/components/shared/GlobalSelect";
 import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./eventTimeZone";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
 import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
@@ -291,7 +292,7 @@ export const parseScheduleWorkbook = async (
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const subPanelClass =
@@ -630,20 +631,20 @@ const RoomForm = ({
                     updateFunction(functionIndex, { scheduleDate: iso, scheduleDay: dayOfWeekFromDate(iso) });
                   }}
                   inputClassName={`${inputClass} pr-12`}
-                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2]"
+                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3]"
                   placeholder="Select date"
                 />
               </div>
               <div>
                 <label className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
-                <select
+                <GlobalSelect
                   className={inputClass}
                   value={entry.roomSetup}
                   onChange={(event) => updateFunction(functionIndex, { roomSetup: event.target.value })}
                 >
                   <option value="">Select room setup…</option>
                   {ROOM_SETUP_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
+                </GlobalSelect>
               </div>
               <div>
                 <label className={labelClass}>Start Time <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
@@ -657,7 +658,7 @@ const RoomForm = ({
                   value={toEventZoneDisplay(entry.showStartDateTime, eventTimeZone)}
                   onChange={(date) => updateFunction(functionIndex, { showStartDateTime: fromEventZoneDisplay(date, eventTimeZone) })}
                   inputClassName={`${inputClass} pr-12`}
-                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2]"
+                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3]"
                   placeholder="Select date & time"
                 />
               </div>
@@ -673,7 +674,7 @@ const RoomForm = ({
                   value={toEventZoneDisplay(entry.showEndDateTime, eventTimeZone)}
                   onChange={(date) => updateFunction(functionIndex, { showEndDateTime: fromEventZoneDisplay(date, eventTimeZone) })}
                   inputClassName={`${inputClass} pr-12`}
-                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2]"
+                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3]"
                   placeholder="Select date & time"
                 />
               </div>
@@ -683,7 +684,7 @@ const RoomForm = ({
         <button
           type="button"
           onClick={() => updateFunctionSchedules([...functionSchedules, defaultFunctionSchedule()])}
-          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#008ad2] hover:text-[#0069a0] transition-colors"
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#1DBFD3] hover:text-[#0069a0] transition-colors"
         >
           <Plus size={14} /> Add another function
         </button>
@@ -694,7 +695,7 @@ const RoomForm = ({
         <button
           type="button"
           onClick={() => setShowManualTimes((value) => !value)}
-          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#008ad2] hover:text-[#0069a0]"
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#1DBFD3] hover:text-[#0069a0]"
         >
           <Plus size={14} className={showManualTimes ? "rotate-45" : ""} />
           Add room load-in &amp; rehearsal times
@@ -713,7 +714,7 @@ const RoomForm = ({
                 value={toEventZoneDisplay(data.loadInDateTime, eventTimeZone)}
                 onChange={(d) => onChange({ loadInDateTime: fromEventZoneDisplay(d, eventTimeZone) })}
                 inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -729,7 +730,7 @@ const RoomForm = ({
                 value={toEventZoneDisplay(data.rehearsalDateTime, eventTimeZone)}
                 onChange={(d) => onChange({ rehearsalDateTime: fromEventZoneDisplay(d, eventTimeZone) })}
                 inputClassName={`${inputClass} pr-12`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#008ad2] hover:text-[#0069a0]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
             </div>
@@ -792,7 +793,7 @@ const RoomForm = ({
                   <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span>
                   <InfoTooltip text="How will audience questions be taken? Passed handheld is most common under 500 people; floor mics for larger rooms; digital tools work best for hybrid events." />
                 </label>
-                <select
+                <GlobalSelect
                   className={inputClass}
                   value={data.audienceQa.audienceQaMethod}
                   onChange={(e) =>
@@ -816,7 +817,7 @@ const RoomForm = ({
                   <option>Fixed Floor Mics — Stationary mics in aisles</option>
                   <option>Digital / App-Based (Slido, Mentimeter, etc.)</option>
                   <option>Combination — Multiple methods</option>
-                </select>
+                </GlobalSelect>
               </div>
             </div>
 
@@ -857,7 +858,7 @@ const RoomForm = ({
                   </div>
                   <div>
                     <label className={`${labelClass} mt-0`}>Type</label>
-                    <select
+                    <GlobalSelect
                       className={inputClass}
                       value={data.wirelessMics.wirelessMicsType}
                       onChange={(e) =>
@@ -876,7 +877,7 @@ const RoomForm = ({
                       <option>Lavalier (Lav) Mics</option>
                       <option>Both</option>
                       <option value="Other">Other — Specify</option>
-                    </select>
+                    </GlobalSelect>
                     {data.wirelessMics.wirelessMicsType === "Other" && (
                       <input
                         className={`${inputClass} mt-2`}
@@ -970,7 +971,7 @@ const RoomForm = ({
                   Shape
                   <InfoTooltip text="Curved LED walls require specialized rigging and content production — flag this early as it significantly impacts budget." />
                 </label>
-                <select
+                <GlobalSelect
                   className={inputClass}
                   value={data.ledWallShape ?? ""}
                   onChange={(e) => onChange({ ledWallShape: e.target.value })}
@@ -980,7 +981,7 @@ const RoomForm = ({
                   <option>Curved</option>
                   <option>Multi-Panel / Segmented</option>
                   <option>Wraparound</option>
-                </select>
+                </GlobalSelect>
                 {data.ledWallShape === "Curved" && (
                   <p className="mt-1 text-xs text-amber-600 normal-case">
                     Curved LED may trigger a Producer Insight consultation.
@@ -992,7 +993,7 @@ const RoomForm = ({
                   Pixel Pitch Preference
                   <InfoTooltip text="Finer pixel pitch = sharper image at close range. 1.9mm is premium for stages under 30ft. 3.9mm is acceptable for large arenas." />
                 </label>
-                <select
+                <GlobalSelect
                   className={inputClass}
                   value={data.ledWallPixelPitch ?? ""}
                   onChange={(e) => onChange({ ledWallPixelPitch: e.target.value })}
@@ -1002,7 +1003,7 @@ const RoomForm = ({
                   <option>2.6mm (Standard)</option>
                   <option>3.9mm (Acceptable for distance)</option>
                   <option>Vendor Recommendation</option>
-                </select>
+                </GlobalSelect>
               </div>
             </div>
 
@@ -1012,7 +1013,7 @@ const RoomForm = ({
                 Switcher / Processor Requirement
                 <InfoTooltip text="The video processor that drives the LED wall. Specify preference or defer to vendor." />
               </label>
-              <select
+              <GlobalSelect
                 className={inputClass}
                 value={data.ledWallSwitcher ?? ""}
                 onChange={(e) => onChange({ ledWallSwitcher: e.target.value })}
@@ -1021,7 +1022,7 @@ const RoomForm = ({
                 {LED_SWITCHER_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>{opt}</option>
                 ))}
-              </select>
+              </GlobalSelect>
             </div>
 
             {/* Notes */}
@@ -1032,7 +1033,7 @@ const RoomForm = ({
               </label>
               <textarea
                 rows={2}
-                className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
+                className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
                 placeholder="e.g. Center I-MAG playback, lower-third overlays, integration with timecode..."
                 value={data.ledWallNotes ?? ""}
                 onChange={(e) => onChange({ ledWallNotes: e.target.value })}
@@ -1114,7 +1115,7 @@ const RoomForm = ({
             {Number(data.largeMonitorsOrScreenProjector.numberOfMonitors) > 0 && (
               <div>
                 <label className={`${labelClass} mt-0`}>Monitor Size</label>
-                <select
+                <GlobalSelect
                   className={inputClass}
                   value={data.largeMonitorsOrScreenProjector.monitorSize}
                   onChange={(e) =>
@@ -1130,13 +1131,13 @@ const RoomForm = ({
                   {MONITOR_SIZE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
-                </select>
+                </GlobalSelect>
               </div>
             )}
             {Number(data.largeMonitorsOrScreenProjector.numberOfScreens) > 0 && (
               <div>
                 <label className={`${labelClass} mt-0`}>Screen Size</label>
-                <select
+                <GlobalSelect
                   className={inputClass}
                   value={data.largeMonitorsOrScreenProjector.screenSize}
                   onChange={(e) =>
@@ -1152,7 +1153,7 @@ const RoomForm = ({
                   {SCREEN_SIZE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
-                </select>
+                </GlobalSelect>
               </div>
             )}
           </div>
@@ -1211,7 +1212,7 @@ const RoomForm = ({
             <textarea
               rows={3}
               maxLength={600}
-              className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
+              className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
               placeholder='e.g. "Custom branded scenic wall flanking the LED, integrated lighting, illuminated logo above stage. Reference: minimalist editorial style, dark navy palette."'
               value={data.scenicStageDesignNotes ?? ""}
               onChange={(e) => onChange({ scenicStageDesignNotes: e.target.value })}
@@ -1395,7 +1396,7 @@ const RoomForm = ({
         <p className="mb-3 text-xs text-slate-500 normal-case">
           Select all that apply, or select &quot;None / Minimal&quot; if house lighting only.
           {lighting.includes("Moving Lights / Programmable Effects") && (
-            <span className="ml-1 text-[#008ad2] font-semibold">
+            <span className="ml-1 text-[#1DBFD3] font-semibold">
               L1 (Lighting Director) will be auto-suggested in crew below.
             </span>
           )}
@@ -1580,7 +1581,7 @@ const RoomForm = ({
 
       {/* Auto-suggestions banner */}
       {unaddedSuggestions.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-[#008ad2]/30 bg-[#008ad2]/5 p-3 text-xs text-[#0069a0]">
+        <div className="flex items-start gap-2 rounded-lg border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 p-3 text-xs text-[#0069a0]">
           <span className="shrink-0 font-bold">⚡</span>
           <div>
             <strong>Auto-suggestions based on your selections:</strong>
@@ -1592,7 +1593,7 @@ const RoomForm = ({
                   onClick={() =>
                     onChange({ showCrewNeeded: [...data.showCrewNeeded, role] })
                   }
-                  className="rounded-full border border-[#008ad2]/30 bg-white px-2.5 py-0.5 text-xs font-semibold text-[#0069a0] hover:bg-[#008ad2]/10 transition-colors"
+                  className="rounded-full border border-[#1DBFD3]/30 bg-white px-2.5 py-0.5 text-xs font-semibold text-[#0069a0] hover:bg-[#1DBFD3]/10 transition-colors"
                 >
                   + {role}
                 </button>
@@ -1641,7 +1642,7 @@ const RoomForm = ({
                   type="number"
                   min={1}
                   max={20}
-                  className="h-8 w-14 rounded-md border border-[#e4e4e4] bg-white text-center text-sm font-bold text-[#222628] outline-none focus:border-[#008ad2] focus:ring-1 focus:ring-[#008ad2]/20"
+                  className="h-8 w-14 rounded-md border border-[#e4e4e4] bg-white text-center text-sm font-bold text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20"
                   placeholder="qty"
                   value={crewQty[role] ?? ""}
                   onChange={(e) =>
@@ -1666,7 +1667,7 @@ const RoomForm = ({
         </label>
         <textarea
           rows={3}
-          className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
+          className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
           placeholder="Write here…"
           value={data.otherRolesNeeded}
           onChange={(e) => onChange({ otherRolesNeeded: e.target.value })}
@@ -1715,7 +1716,7 @@ const RoomCard = ({
         <div className="flex items-center gap-3">
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
           >
             {index + 1}
           </span>
@@ -1739,7 +1740,7 @@ const RoomCard = ({
             type="button"
             onClick={onDuplicate}
             title="Copy this room's details to start a new room"
-            className="flex items-center gap-1.5 rounded-full border border-[#e4e4e4] bg-white px-3 py-1 text-xs font-semibold text-[#222628] hover:border-[#008ad2] hover:text-[#008ad2] transition-colors"
+            className="flex items-center gap-1.5 rounded-full border border-[#e4e4e4] bg-white px-3 py-1 text-xs font-semibold text-[#222628] hover:border-[#1DBFD3] hover:text-[#1DBFD3] transition-colors"
           >
             <Copy size={13} className="shrink-0" />
             Copy Room
@@ -1962,7 +1963,7 @@ const RoomAndProductionStep = ({
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 2B of 9
           </span>
           <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-600">
@@ -2008,7 +2009,7 @@ const RoomAndProductionStep = ({
                   String(Math.max(1, Number(e.target.value) || 1)),
                 )
               }
-              className="h-10 w-16 rounded-lg border border-[#e4e4e4] bg-white text-center text-sm font-bold text-[#222628] outline-none focus:border-[#008ad2] focus:ring-2 focus:ring-[#008ad2]/20"
+              className="h-10 w-16 rounded-lg border border-[#e4e4e4] bg-white text-center text-sm font-bold text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-2 focus:ring-[#1DBFD3]/20"
             />
             <button
               type="button"
@@ -2019,7 +2020,7 @@ const RoomAndProductionStep = ({
             </button>
           </div>
           {numberOfEventRooms && Number(numberOfEventRooms) > 0 && (
-            <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#008ad2]/30 bg-[#008ad2]/5 p-3 text-xs text-brand-dark">
+            <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 p-3 text-xs text-brand-dark">
               <span className="mt-0.5 shrink-0">⚙️</span>
               <span>
                 <strong>System:</strong> This generates{" "}
@@ -2051,7 +2052,7 @@ const RoomAndProductionStep = ({
               type="button"
               disabled={isUploadingSchedule}
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 rounded-lg border border-[#e4e4e4] bg-white px-4 py-2 text-sm font-semibold text-[#222628] hover:border-[#008ad2] hover:text-[#008ad2] transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg border border-[#e4e4e4] bg-white px-4 py-2 text-sm font-semibold text-[#222628] hover:border-[#1DBFD3] hover:text-[#1DBFD3] transition-colors disabled:opacity-50"
             >
               <Upload size={15} className="shrink-0" />
               {isUploadingSchedule ? "Reading file…" : "Upload Schedule (Excel)"}
@@ -2059,7 +2060,7 @@ const RoomAndProductionStep = ({
             <a
               href="/files/RFPilot%20schedule-example-sheet.xlsx"
               download
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-[#008ad2] hover:text-[#0069a0] transition-colors"
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-[#1DBFD3] hover:text-[#0069a0] transition-colors"
             >
               <Download size={15} className="shrink-0" />
               Download Sample Sheet
@@ -2108,7 +2109,7 @@ const RoomAndProductionStep = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           {isInPersonOnly ? "Content & Creative" : "Hybrid & Virtual"}

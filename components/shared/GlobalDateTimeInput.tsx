@@ -87,7 +87,7 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
   showErrorMessage = true,
   labelClassName = "mb-2 block text-sm font-medium text-gray-700",
   inputClassName,
-  buttonClassName = "absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black",
+  buttonClassName = "absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg bg-[#eafafd] text-[#1DBFD3] transition hover:bg-[#d8f6fa] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35",
   showTime = false,
   use12Hours = false,
   timeIntervals = 15,
@@ -107,7 +107,7 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
     `w-full rounded-lg border px-4 py-3 pr-12 outline-none transition ${
       error
         ? "border-red-500 focus:border-red-500"
-        : "border-gray-300 focus:border-black"
+        : "border-gray-300 hover:border-[#9adfe8] focus:border-[#1DBFD3] focus:ring-4 focus:ring-[#1DBFD3]/15"
     } ${disabled ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`;
 
   const labelText = formatLabelMap[resolvedFormat] ?? resolvedFormat.toUpperCase();
@@ -143,11 +143,14 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
           popperPlacement="bottom-start"
           className={resolvedInputClassName}
           wrapperClassName="w-full"
+          popperClassName="dxg-datepicker-popper"
           showPopperArrow={false}
+          calendarClassName="dxg-datepicker"
         />
 
         <button
           type="button"
+          aria-label={`Open ${label || "date and time"} calendar`}
           onClick={() => dateRef.current?.setFocus()}
           className={buttonClassName}
         >

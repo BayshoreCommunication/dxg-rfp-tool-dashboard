@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
 const subPanelClass =
@@ -72,7 +72,7 @@ const amperagePillCls = (opt: string, selected: string): string => {
   const base =
     "rounded-full border px-4 py-1.5 text-xs font-semibold transition-all";
   if (selected === opt)
-    return `${base} border-[#008ad2] bg-[#008ad2]/10 text-[#222628]`;
+    return `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]`;
   return `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
 };
 
@@ -197,7 +197,7 @@ const VenueTechnicalRequirements = ({
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 6 of 9
           </span>
         </div>
@@ -408,7 +408,7 @@ const VenueTechnicalRequirements = ({
                       onClick={() => onChange({ powerDropAmperage: opt })}
                       className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
                         data.powerDropAmperage === opt
-                          ? "border-[#008ad2] bg-[#008ad2]/10 text-[#222628]"
+                          ? "border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]"
                           : "border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300"
                       }`}
                     >
@@ -489,7 +489,7 @@ const VenueTechnicalRequirements = ({
           <textarea
             rows={4}
             maxLength={500}
-            className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
+            className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
             placeholder="Paste the venue's COI requirements, additional insured language, or submission deadline…"
             value={data.coiRequirements}
             onChange={(e) => onChange({ coiRequirements: e.target.value })}
@@ -507,7 +507,7 @@ const VenueTechnicalRequirements = ({
           <textarea
             rows={3}
             maxLength={400}
-            className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20"
+            className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
             placeholder="e.g. Load-in after 6am only, freight elevator reservations required 48hrs in advance, all crew must badge in at security…"
             value={data.venueAccessRequirements}
             onChange={(e) =>
@@ -535,7 +535,7 @@ const VenueTechnicalRequirements = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Investment &amp; Evaluation

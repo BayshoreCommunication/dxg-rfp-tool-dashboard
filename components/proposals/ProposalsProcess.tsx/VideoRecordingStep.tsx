@@ -2,6 +2,7 @@
 
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import GlobalSelect from "@/components/shared/GlobalSelect";
 
 type ProposalSettings = {
   branding: { linkPrefix: string; defaultFont: "Inter" | "Poppins" | "Roboto" };
@@ -57,7 +58,7 @@ export const defaultVideoRecording = (): VideoRecordingData => ({
 const labelClass =
   "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#008ad2] focus:outline-none focus:ring-2 focus:ring-[#008ad2]/20";
+  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
 const groupLabelClass =
   "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
 const subPanelClass =
@@ -122,20 +123,20 @@ const GatewayCard = ({
     onClick={onClick}
     className={`flex w-full flex-col rounded-xl border-2 p-5 text-left transition-all ${
       isSelected
-        ? "border-[#008ad2] bg-[#008ad2]/5"
-        : "border-[#e4e4e4] bg-white hover:border-[#008ad2]/40"
+        ? "border-[#1DBFD3] bg-[#1DBFD3]/5"
+        : "border-[#e4e4e4] bg-white hover:border-[#1DBFD3]/40"
     }`}
   >
     <div className="flex items-center gap-3 mb-2">
       <div
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-          isSelected ? "border-[#008ad2] bg-[#008ad2]" : "border-[#e4e4e4]"
+          isSelected ? "border-[#1DBFD3] bg-[#1DBFD3]" : "border-[#e4e4e4]"
         }`}
       >
         {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
       </div>
       <span
-        className={`text-sm font-bold ${isSelected ? "text-[#008ad2]" : "text-[#222628]"}`}
+        className={`text-sm font-bold ${isSelected ? "text-[#1DBFD3]" : "text-[#222628]"}`}
       >
         {title}
       </span>
@@ -214,7 +215,7 @@ const VideoRecordingStep = ({
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#008ad2]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#008ad2]">
+          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
             Page 5 of 9
           </span>
         </div>
@@ -357,7 +358,7 @@ const VideoRecordingStep = ({
                       Camera Operators <span className="text-red-500">*</span>
                       <InfoTooltip text="Dedicated operators provide the highest production quality — they frame shots, follow speakers, and react to action. Robotic cameras (PTZ) are operated remotely by a single technician and cost less. Most professional broadcasts use dedicated operators for stage cameras and robotics for audience/wide shots." />
                     </label>
-                    <select
+                    <GlobalSelect
                       className={`${inputClass} appearance-none`}
                       value={safeData.cameraOperators}
                       onChange={(e) => onChange({ cameraOperators: e.target.value })}
@@ -366,7 +367,7 @@ const VideoRecordingStep = ({
                       <option>Dedicated Operator Per Camera</option>
                       <option>Robotic Cameras Acceptable</option>
                       <option>Mixed — Operators on key cameras, robotic on auxiliary</option>
-                    </select>
+                    </GlobalSelect>
                   </div>
 
                   <div>
@@ -374,7 +375,7 @@ const VideoRecordingStep = ({
                       ISO Recordings Per Camera <span className="text-red-500">*</span>
                       <InfoTooltip text="ISO (isolated) = individual recording per camera. Program cut = single switched live output. Most professional productions capture BOTH — ISO gives editing flexibility post-event; program cut gives you a ready-to-publish version immediately." />
                     </label>
-                    <select
+                    <GlobalSelect
                       className={`${inputClass} appearance-none`}
                       value={safeData.isoRecordings}
                       onChange={(e) => onChange({ isoRecordings: e.target.value })}
@@ -384,7 +385,7 @@ const VideoRecordingStep = ({
                       <option>ISO Per Camera Only</option>
                       <option>Both ISO + Switched Program Cut</option>
                       <option>Vendor Recommendation</option>
-                    </select>
+                    </GlobalSelect>
                   </div>
                 </div>
 
@@ -403,7 +404,7 @@ const VideoRecordingStep = ({
                       Recording Resolution <span className="text-red-500">*</span>
                       <InfoTooltip text="4K is now the standard for professional events and future-proofs your footage. 1080p is sufficient if files will only be used for internal review or social clips. 4K dramatically increases storage needs." />
                     </label>
-                    <select
+                    <GlobalSelect
                       className={`${inputClass} appearance-none`}
                       value={safeData.recordingResolution}
                       onChange={(e) => onChange({ recordingResolution: e.target.value })}
@@ -412,7 +413,7 @@ const VideoRecordingStep = ({
                       <option>4K (Preferred)</option>
                       <option>1080p</option>
                       <option>Either Acceptable</option>
-                    </select>
+                    </GlobalSelect>
                   </div>
 
                   <div>
@@ -420,7 +421,7 @@ const VideoRecordingStep = ({
                       Recording Media / Backup <span className="text-red-500">*</span>
                       <InfoTooltip text="Who provides and manages recording media (SD cards, SSDs)? Cloud backup is strongly recommended — media failures happen, and losing a CEO keynote is unacceptable. Vendor-managed with cloud backup is the safest option but adds cost." />
                     </label>
-                    <select
+                    <GlobalSelect
                       className={`${inputClass} appearance-none`}
                       value={safeData.recordingMedia}
                       onChange={(e) => onChange({ recordingMedia: e.target.value })}
@@ -430,7 +431,7 @@ const VideoRecordingStep = ({
                       <option>Client-Provided Media</option>
                       <option>Vendor-Managed with Cloud Backup</option>
                       <option>Client-Provided + Cloud Backup</option>
-                    </select>
+                    </GlobalSelect>
                   </div>
                 </div>
 
@@ -441,7 +442,7 @@ const VideoRecordingStep = ({
                     <InfoTooltip text="Do you need edited video deliverables — highlight reels or polished session edits — in addition to raw footage? Edited deliverables require a video editor, time, and an approval workflow." />
                   </label>
                   {suggestEdited && (
-                    <p className="mb-2 text-xs font-medium text-[#008ad2]">
+                    <p className="mb-2 text-xs font-medium text-[#1DBFD3]">
                       ⚡ You assigned Sizzle/Recap Video to the AV vendor on Page 4 — enabling an edited deliverable here is recommended.
                     </p>
                   )}
@@ -504,7 +505,7 @@ const VideoRecordingStep = ({
                             Turnaround Time <span className="text-red-500">*</span>
                             <InfoTooltip text="Same-day editing requires an on-site editor working in parallel with the live show — significantly increases cost. 48-hour turnaround is the sweet spot for fast-but-polished." />
                           </label>
-                          <select
+                          <GlobalSelect
                             className={`${inputClass} appearance-none`}
                             value={safeData.editedDeliverable.turnaroundTime}
                             onChange={(e) =>
@@ -521,7 +522,7 @@ const VideoRecordingStep = ({
                             <option>48 Hours</option>
                             <option>1 Week</option>
                             <option>Post-Event (2–4 weeks)</option>
-                          </select>
+                          </GlobalSelect>
                           {safeData.editedDeliverable.turnaroundTime === "Same-Day" && (
                             <p className="mt-1 text-xs font-medium text-amber-600">
                               ⚡ Same-day editing requires an on-site editor — adds significant cost.
@@ -630,7 +631,7 @@ const VideoRecordingStep = ({
           type="button"
           onClick={onContinue}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Venue &amp; Technical

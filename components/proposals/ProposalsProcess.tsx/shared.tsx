@@ -25,27 +25,32 @@ export const PillRadio = ({
   <label
     className={`flex items-center gap-2 px-5 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
       checked
-        ? "border-[#008ad2] bg-white text-[#222628]"
-        : "border-[#e4e4e4] bg-white text-[#969798] hover:border-[#008ad2]/60"
+        ? "border-[#1DBFD3] bg-white text-[#222628]"
+        : "border-[#e4e4e4] bg-white text-[#969798] hover:border-[#1DBFD3]/60"
     }`}
   >
-    <span
-      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        checked ? "border-[#008ad2]" : "border-[#e4e4e4]"
-      }`}
-    >
-      {checked && <span className="w-2 h-2 rounded-full bg-[#008ad2]" />}
-    </span>
     <input
       type="radio"
       name={name}
       value={value}
       checked={checked}
       onChange={onChange}
-      className="sr-only"
+      className="peer sr-only"
     />
+    <RadioIndicator checked={checked} />
     {value}
   </label>
+);
+
+export const RadioIndicator = ({ checked }: { checked: boolean }) => (
+  <span
+    aria-hidden="true"
+    className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border transition-all peer-focus-visible:ring-4 peer-focus-visible:ring-[#1DBFD3]/15 ${
+      checked ? "border-[#1DBFD3]" : "border-[#8b989f]"
+    }`}
+  >
+    {checked && <span className="h-2 w-2 rounded-full bg-[#1DBFD3]" />}
+  </span>
 );
 
 export const PillCheckbox = ({
@@ -60,16 +65,16 @@ export const PillCheckbox = ({
   <label
     className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
       checked
-        ? "border-[#008ad2] bg-white text-[#222628]"
-        : "border-[#e4e4e4] bg-white text-[#969798] hover:border-[#008ad2]/60"
+        ? "border-[#1DBFD3] bg-white text-[#222628]"
+        : "border-[#e4e4e4] bg-white text-[#969798] hover:border-[#1DBFD3]/60"
     }`}
   >
     <span
       className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        checked ? "border-[#008ad2]" : "border-[#e4e4e4]"
+        checked ? "border-[#1DBFD3]" : "border-[#e4e4e4]"
       }`}
     >
-      {checked && <span className="w-2 h-2 rounded-full bg-[#008ad2]" />}
+      {checked && <span className="w-2 h-2 rounded-full bg-[#1DBFD3]" />}
     </span>
     <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
     {label}
@@ -176,8 +181,8 @@ export const InfoTooltip = ({ text }: { text: string }) => {
           event.stopPropagation();
           toggle();
         }}
-        className={`inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2]/40 ${
-          pos ? "text-[#008ad2]" : "text-[#b0b9d1] hover:text-[#008ad2]"
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/40 ${
+          pos ? "text-[#1DBFD3]" : "text-[#b0b9d1] hover:text-[#1DBFD3]"
         }`}
       >
         <Info size={13} aria-hidden />
@@ -200,9 +205,9 @@ export const InfoTooltip = ({ text }: { text: string }) => {
             if (Date.now() - lastTouchActivation.current < 700) return;
             askAssistant(event.currentTarget);
           }}
-          className="relative z-10 inline-flex h-8 touch-manipulation items-center gap-1 rounded-full border border-[#00b8bf]/25 bg-[#00b8bf]/[0.06] px-2 text-[10px] font-semibold normal-case tracking-normal text-[#008f96] transition hover:border-[#00b8bf]/45 hover:bg-[#00b8bf]/10 hover:text-[#007d83] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00b8bf]/35 sm:h-5 sm:px-1.5 sm:text-[9px]"
+          className="relative z-10 inline-flex h-7 touch-manipulation items-center gap-1.5 rounded-md px-1 text-[13px] font-semibold normal-case tracking-normal text-[#1DBFD3] transition hover:bg-[#eafafd] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35"
         >
-          <Sparkles size={10} strokeWidth={2.1} aria-hidden />
+          <Sparkles size={17} strokeWidth={2.25} aria-hidden />
           Ask AI
         </button>
       )}
