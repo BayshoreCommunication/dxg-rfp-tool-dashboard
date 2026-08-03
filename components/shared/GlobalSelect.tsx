@@ -71,10 +71,6 @@ const GlobalSelect = ({
     return () => document.removeEventListener("mousedown", closeOnOutsideClick);
   }, []);
 
-  useEffect(() => {
-    if (open) setActiveIndex(selectedIndex);
-  }, [open, selectedIndex]);
-
   const selectOption = (nextValue: string) => {
     if (!controlled) setUncontrolledValue(nextValue);
     onChange?.({
@@ -90,6 +86,9 @@ const GlobalSelect = ({
       const spaceBelow = window.innerHeight - rect.bottom;
       setOpenUp(spaceBelow < 280 && rect.top > spaceBelow);
     }
+    // Highlight the current selection at the moment the menu opens (rather
+    // than in an effect, which the set-state-in-effect lint rule forbids).
+    setActiveIndex(selectedIndex);
     setOpen(true);
   };
 
