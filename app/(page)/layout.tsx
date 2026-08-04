@@ -1,6 +1,7 @@
 import { getAssistantAccessAction } from "@/app/actions/aiAssistant";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import "../globals.css";
 
@@ -36,6 +37,7 @@ export default async function RootLayout({
             {children}
           </LayoutWrapper>
         </ToastProvider>
+        <Analytics />
       </body>
     </html>
   );

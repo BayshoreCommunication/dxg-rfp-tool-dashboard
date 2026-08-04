@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import AssistantWorkspacePage, { displayQuestionPrompt, isBeforeLocalToday, maximumDateForQuestion, minimumDateForQuestion } from "./AssistantWorkspacePage";
+import AssistantWorkspacePage, { displayQuestionPrompt, isBeforeLocalToday, maximumDateForQuestion, minimumDateForQuestion, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
@@ -126,6 +126,7 @@ const conversationWithQuestion = {
   correlationId: "test-correlation",
   data: {
     conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 1, updatedAt: "2026-07-21T10:00:00.000Z" },
+    capabilities: { conversationExtraction: true },
     messages: [
       {
         id: "msg-1", ordinal: 1, role: "user" as const, kind: "instruction" as const, content: "Please review the venue requirements.",
@@ -146,7 +147,7 @@ const guidedQuestion = (
   prompt: string,
   path: string,
   impact: "schedule" | "cost" | "production" | "scope",
-  control: { answerType?: "date" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string } = {},
+  control: { answerType?: "date" | "time" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string } = {},
 ) => ({
   id,
   code: `MISSING_FIELD:${path}`,
@@ -167,7 +168,7 @@ const roomsQuestion = guidedQuestion("q-rooms", "How many event rooms are requir
 const datePickerQuestion = guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date" });
 const endDatePickerQuestion = guidedQuestion("q-end", "When does the event end? (YYYY-MM-DD)", "/content/event/endDate", "schedule", { answerType: "date" });
 const loadInDatePickerQuestion = guidedQuestion("q-load-in", "When can production load in? (YYYY-MM-DD)", "/content/venueSchedule/loadInDate", "schedule", { answerType: "date" });
-const loadInTimePickerQuestion = guidedQuestion("q-load-in-time", "What time can production load in? (HH:MM)", "/content/venueSchedule/loadInTime", "schedule");
+const loadInTimePickerQuestion = guidedQuestion("q-load-in-time", "What time can production load in? (HH:MM)", "/content/venueSchedule/loadInTime", "schedule", { answerType: "time" });
 // Mirrors streamingPlatformOptions in the wizard step and the backend whitelist.
 const STREAMING_PLATFORMS = [
   "Client-Owned Platform",
@@ -324,7 +325,7 @@ describe("AssistantWorkspacePage", () => {
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([startDateQuestion, roomsQuestion]));
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    expect(await screen.findByText("Question 1 of 2")).toBeInTheDocument();
+    expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
     expect(screen.getByText("When does the event start? (YYYY-MM-DD)")).toBeInTheDocument();
     expect(screen.getByText("affects schedule")).toBeInTheDocument();
     expect(screen.getByLabelText("Answer this question")).toBeInTheDocument();
@@ -332,7 +333,7 @@ describe("AssistantWorkspacePage", () => {
     // Only ONE question card — the second question is not rendered yet.
     expect(screen.queryByText("How many event rooms are required?")).not.toBeInTheDocument();
     // The rail no longer lists prompts; it shows the remaining count.
-    expect(await screen.findByText(/2 questions remaining/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 questions are open now/)).toBeInTheDocument();
     // Nothing was answered yet, so no completion card.
     expect(screen.queryByText(/All key questions answered/)).not.toBeInTheDocument();
   });
@@ -377,7 +378,7 @@ describe("AssistantWorkspacePage", () => {
     expect(timeInput).toHaveAttribute("type", "time");
     expect(timeInput).toHaveAttribute("step", "300");
 
-    fireEvent.change(timeInput, { target: { value: "07:30" } });
+    fireEvent.input(timeInput, { target: { value: "07:30" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
@@ -410,7 +411,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Question 1 of 2");
+    await screen.findByText("Guided question 1");
     const initialLoads = mockedGetConversation.mock.calls.length;
 
     // Ported from the retired ConversationWorkspace suite: the Answer control
@@ -430,7 +431,7 @@ describe("AssistantWorkspacePage", () => {
     await waitFor(() => expect(mockedGetConversation.mock.calls.length).toBeGreaterThan(initialLoads));
     // The confirmed value shows and the flow advances to the next question.
     expect(await screen.findByText("Start date: 2026-09-01 ✓")).toBeInTheDocument();
-    expect(await screen.findByText("Question 2 of 2")).toBeInTheDocument();
+    expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
     expect(screen.getByText("How many event rooms are required?")).toBeInTheDocument();
     expect(screen.getByText("affects cost")).toBeInTheDocument();
   });
@@ -445,7 +446,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Question 1 of 1");
+    await screen.findByText("Guided question 1");
     const answerInput = screen.getByLabelText("Answer this question");
     fireEvent.change(answerInput, { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
@@ -493,11 +494,11 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Question 1 of 2");
+    await screen.findByText("Guided question 1");
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(PROPOSAL_ID, "q-start", { status: "dismissed" }));
-    expect(await screen.findByText("Question 2 of 2")).toBeInTheDocument();
+    expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
     // Skipping never shows a confirmed value and never completes the flow.
     expect(screen.queryByText(/✓/)).not.toBeInTheDocument();
   });
@@ -513,7 +514,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Question 1 of 2");
+    await screen.findByText("Guided question 1");
     // The date control is the shared react-datepicker wrapper, not a bare text box.
     expect(container.querySelector(".react-datepicker__input-container")).not.toBeNull();
     const input = screen.getByLabelText("Answer this question");
@@ -541,7 +542,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Question 1 of 2");
+    await screen.findByText("Guided question 1");
     for (const option of ["In-Person", "Hybrid", "Virtual"])
       expect(screen.getByRole("button", { name: option })).toBeInTheDocument();
     // A closed option set answers in one tap: no separate Answer control.
@@ -556,7 +557,7 @@ describe("AssistantWorkspacePage", () => {
       { status: "answered", answer: "Hybrid" },
     ));
     expect(await screen.findByText("Event format: Hybrid ✓")).toBeInTheDocument();
-    expect(await screen.findByText("Question 2 of 2")).toBeInTheDocument();
+    expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
   });
 
   test("a long choice list renders every option as a pill and submits the clicked one", async () => {
@@ -574,7 +575,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Question 1 of 1");
+    await screen.findByText("Guided question 1");
     for (const option of STREAMING_PLATFORMS)
       expect(screen.getByRole("button", { name: option })).toBeInTheDocument();
 
@@ -600,7 +601,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Question 1 of 1");
+    await screen.findByText("Guided question 1");
     const input = screen.getByLabelText("Answer this question");
     expect(input).toHaveAttribute("type", "text");
     expect(container.querySelector(".react-datepicker__input-container")).toBeNull();
@@ -680,7 +681,7 @@ describe("AssistantWorkspacePage", () => {
   };
 
   const answerLastQuestion = async () => {
-    await screen.findByText("Question 1 of 1");
+    await screen.findByText("Guided question 1");
     fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "6" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
     await screen.findByText("Number of event rooms: 6 ✓");
@@ -1292,6 +1293,7 @@ describe("AssistantWorkspacePage", () => {
     correlationId: "test-correlation",
     data: {
       conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 2, updatedAt: "2026-07-21T10:05:00.000Z" },
+      capabilities: { conversationExtraction: true },
       messages: [...conversationWithQuestion.data.messages, draftMessage],
       questions,
     },
@@ -1393,22 +1395,42 @@ describe("AssistantWorkspacePage", () => {
     expect(mockedCloseSegment).toHaveBeenCalledWith(PROPOSAL_ID);
   });
 
-  test("the use-my-messages task is offered only while chat extraction is switched on", async () => {
-    const saved = process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED;
-    process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED = "false";
-    try {
-      mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
-      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+  test("the backend capability prevents the dashboard from offering unavailable chat extraction", async () => {
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        ...conversationWithQuestion.data,
+        capabilities: { conversationExtraction: false },
+      },
+    } as never);
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-      // Spending a click to learn the feature is off is worse than saying so.
-      const task = await screen.findByRole("button", { name: /Use what/i });
-      expect(task).toBeDisabled();
-      expect(task).toHaveAttribute("title", expect.stringMatching(/isn't switched on/i));
-      fireEvent.click(task);
-      expect(mockedCloseSegment).not.toHaveBeenCalled();
-    } finally {
-      process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED = saved;
-    }
+    // The runtime API is authoritative, preventing the mismatch seen in the
+    // live workflow.
+    const task = await screen.findByRole("button", { name: /Use what/i });
+    expect(task).toBeDisabled();
+    expect(task).toHaveAttribute("title", expect.stringMatching(/isn't switched on/i));
+    fireEvent.click(task);
+    expect(mockedCloseSegment).not.toHaveBeenCalled();
+  });
+
+  test("a successful retry retires the earlier failed-run alert", () => {
+    const messages = [
+      {
+        id: "draft-failed", ordinal: 1, role: "assistant", kind: "run_result", content: "failed",
+        intent: null, runType: "proposal_draft", runId: "run-1", jobId: "job-1", status: "failed",
+        createdAt: "2026-07-21T10:00:00.000Z", attachments: [],
+      },
+      {
+        id: "draft-complete", ordinal: 2, role: "assistant", kind: "run_result", content: "complete",
+        intent: null, runType: "proposal_draft", runId: "run-2", jobId: "job-2", status: "complete",
+        createdAt: "2026-07-21T10:01:00.000Z", attachments: [],
+      },
+    ] as Parameters<typeof visibleRunMessages>[0];
+
+    expect(visibleRunMessages(messages).map(message => message.id)).toEqual(["draft-complete"]);
+    expect(visibleRunMessages([messages[0]])).toEqual([messages[0]]);
   });
 
   test("nothing new to use is reported as a normal outcome, not an error", async () => {

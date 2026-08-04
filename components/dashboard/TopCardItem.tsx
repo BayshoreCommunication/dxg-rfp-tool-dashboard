@@ -1,6 +1,7 @@
 import {
   Eye,
   FileText,
+  MessageSquareText,
   MousePointerClick,
   Send,
   TrendingUp,
@@ -23,6 +24,8 @@ interface TopCardItemProps {
     totalEmailSent: number;
     totalEmailClicked: number;
     totalProposalViews: number;
+    totalVendorResponses: number;
+    unreadVendorResponses: number;
   };
 }
 
@@ -63,8 +66,8 @@ const StatCard = ({ title, value, icon, gradient, trendValue }: StatMetric) => {
 
 export const TopCardItemSkeleton = () => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {[1, 2, 3, 4].map((i) => (
+    <div className="grid grid-cols-1 gap-6 px-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {[1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
           className="relative overflow-hidden rounded-xl p-6 bg-slate-100 shadow border border-slate-200"
@@ -121,10 +124,18 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       trendValue: "+12%",
       icon: <Eye strokeWidth={2} />,
     },
+    {
+      id: "vendor-responses",
+      title: "Vendor Responses",
+      value: totals?.totalVendorResponses ?? 0,
+      gradient: "linear-gradient(135deg, #a855f7, #7e22ce)",
+      trendValue: `${totals?.unreadVendorResponses ?? 0} unread`,
+      icon: <MessageSquareText strokeWidth={2} />,
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-6">
+    <div className="grid grid-cols-1 gap-6 px-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {statsData.map((stat) => (
         <StatCard key={stat.id} {...stat} />
       ))}
