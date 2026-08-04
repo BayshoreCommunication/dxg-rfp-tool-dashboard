@@ -40,9 +40,10 @@ const subClass = (isActive: boolean, isCompleted: boolean): string => {
 };
 
 const lineClass = (isCompleted: boolean, isActive: boolean): string => {
-  if (isCompleted) return "absolute bottom-[-11px] left-[17px] top-9 w-px bg-[#49cfa4] transition-colors duration-200";
-  if (isActive)    return "absolute bottom-[-11px] left-[17px] top-9 w-px bg-[#8ac9ed] transition-colors duration-200";
-  return "absolute bottom-[-11px] left-[17px] top-9 w-px bg-[#dfe6ea] transition-colors duration-200";
+  const base = "pointer-events-none absolute left-7 top-1/2 z-[1] hidden h-[calc(100%+0.5rem)] w-px transition-colors duration-200 @min-[1000px]:block";
+  if (isCompleted) return `${base} bg-[#49cfa4]`;
+  if (isActive)    return `${base} bg-[#8ac9ed]`;
+  return `${base} bg-[#dfe6ea]`;
 };
 
 const ProcessList = ({
@@ -76,8 +77,8 @@ const ProcessList = ({
   const progress = Math.round((completedCount / badgedSteps.length) * 100);
 
   return (
-    <aside className="min-h-screen w-full border-l border-[#e1e8ed] bg-[#fbfdfe] px-5 py-7 font-sans shadow-[-10px_0_30px_rgba(15,42,67,0.025)]">
-      <div className="mb-7 rounded-2xl border border-[#e5edf2] bg-white p-4 shadow-[0_6px_20px_rgba(15,42,67,0.05)]">
+    <aside data-testid="proposal-process-list" className="w-full border-b border-[#e1e8ed] bg-[#fbfdfe] px-3 py-4 font-sans shadow-[0_8px_24px_rgba(15,42,67,0.035)] sm:px-4 @min-[1000px]:min-h-screen @min-[1000px]:border-b-0 @min-[1000px]:border-l @min-[1000px]:px-5 @min-[1000px]:py-7 @min-[1000px]:shadow-[-10px_0_30px_rgba(15,42,67,0.025)]">
+      <div className="mb-4 rounded-2xl border border-[#e5edf2] bg-white p-4 shadow-[0_6px_20px_rgba(15,42,67,0.05)] @min-[1000px]:mb-7">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#647582]">
@@ -97,7 +98,7 @@ const ProcessList = ({
         </div>
       </div>
 
-      <div className="relative flex flex-col gap-2">
+      <div data-testid="proposal-step-scroller" className="relative flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 [scrollbar-width:thin] @min-[1000px]:flex-col @min-[1000px]:overflow-visible @min-[1000px]:pb-0">
         {badgedSteps.map((step, index) => {
           const isActive    = activeStep === step.id;
           // A green check reads as "this is done". Derived from position alone,
@@ -110,10 +111,14 @@ const ProcessList = ({
           const isNavigable = typeof onStepChange === "function";
 
           return (
-            <div key={step.id} className="relative flex items-start">
+            <div key={step.id} className="relative flex min-w-[180px] snap-start items-start @min-[1000px]:min-w-0">
               {/* Connecting Line */}
               {!isLast && (
-                <div className={lineClass(isCompleted, isActive)} />
+                <div
+                  data-step-connector
+                  aria-hidden="true"
+                  className={lineClass(isCompleted, isActive)}
+                />
               )}
 
               <button

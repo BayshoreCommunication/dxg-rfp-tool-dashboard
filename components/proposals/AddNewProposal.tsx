@@ -2112,15 +2112,16 @@ const AddNewProposal = ({
 
   return (
     <div
+      data-testid="proposal-editor-root"
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
-      className="space-y-6 px-6"
+      className="@container space-y-6 px-0 sm:px-2 lg:px-6"
     >
       {loadingExisting && (
-        <div className="flex w-full gap-4">
+        <div className="flex w-full flex-col gap-4 @min-[1000px]:flex-row">
           {/* Form card skeleton � 80% */}
-          <div className="w-[80%] space-y-6">
+          <div className="min-w-0 flex-1 space-y-6">
             <div className="flex min-h-screen flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #2fc6f5, #008ad2)" }} />
               <div className="flex-1 space-y-6 p-8">
@@ -2153,7 +2154,7 @@ const AddNewProposal = ({
             </div>
           </div>
           {/* Step sidebar skeleton � 20% */}
-          <div className="w-[20%] space-y-2">
+          <div className="w-full shrink-0 space-y-2 @min-[1000px]:w-[288px]">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               {Array.from({ length: 9 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 py-2.5">
@@ -2190,10 +2191,11 @@ const AddNewProposal = ({
 
       {/* ── Steps 1–7: Multi-step form ── */}
       {!loadingExisting && proposalProcessStep >= 1 && (
-        <div className="flex w-full items-start gap-5 bg-[#f4f7f9] p-5">
+        <div data-testid="proposal-editor-layout" className="flex w-full flex-col items-stretch gap-4 bg-[#f4f7f9] p-0 sm:p-3 lg:p-5 @min-[1000px]:flex-row @min-[1000px]:items-start @min-[1000px]:gap-5">
           {/* Form area */}
           <div
-            className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e2e8ec] bg-white shadow-[0_10px_35px_rgba(15,42,67,0.06)]"
+            data-testid="proposal-editor-form"
+            className="order-2 min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e2e8ec] bg-white shadow-[0_10px_35px_rgba(15,42,67,0.06)] @min-[1000px]:order-1"
             data-assistant-current-section="true"
             data-assistant-section-id={
               assistantSectionByStep[
@@ -2375,7 +2377,7 @@ const AddNewProposal = ({
             )}
           </div>
           {/* Proposal progress sidebar */}
-          <div className="sticky top-0 w-[288px] shrink-0 self-start">
+          <div data-testid="proposal-editor-progress" className="order-1 w-full shrink-0 @min-[1000px]:sticky @min-[1000px]:top-0 @min-[1000px]:order-2 @min-[1000px]:w-[288px] @min-[1000px]:self-start">
             {autosaveEligible && (
               <p
                 role="status"

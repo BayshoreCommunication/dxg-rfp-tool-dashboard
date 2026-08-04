@@ -1,5 +1,127 @@
 # AI Assistant Design QA
 
+## Proposal Editor Responsive Layout — Verification Status
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-b65361e3-3b3d-413e-9a71-5cd3a6632c50.png` (970 × 814 px), showing a 768 px emulated app viewport where the fixed 288 px Intake Form rail crushes and clips the proposal content.
+- Browser implementation capture: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-editor-responsive-desktop.png` (1265 × 712 px).
+- Combined comparison: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-editor-responsive-comparison.png` (2255 × 814 px).
+- Viewport and density: source contains a 768 px emulated app viewport; the available in-app browser is fixed at 1280 × 720 CSS px with `devicePixelRatio: 1`, producing a 1265 × 712 px capture after browser chrome. These are not density-normalized because they are different responsive states.
+- State: authenticated published proposal `Testing Proposal`, Event Overview active, Intake progress visible.
+- Full-view comparison evidence: the source demonstrates the P1 failure—proposal content is reduced to roughly 230 px and clipped behind the vertical rail. At the verified 1280 px desktop state, the revised container remains a row with a 731 px form, 288 px rail, and zero document overflow.
+- Focused implementation evidence: the responsive implementation now uses the proposal editor's actual container width, not only the viewport. Below a 1000 px content width, the form and progress navigator change order, the form fills the available width, the Intake rail loses its fixed/sticky width, connectors hide, and steps become a compact horizontal snap/scroll navigator. At or above 1000 px, the existing vertical sticky rail remains.
+- Required fidelity surfaces: typography, live copy, colors, icons, proposal cards, form content, completion states, and desktop rail styling are unchanged. Responsive changes are limited to width, order, padding, borders, overflow, and connector visibility.
+- Interaction verification: desktop `Venue & Schedule` activated on one click and `Event Overview` was restored. No browser console errors were present.
+- Comparison history: the reported P1 clipping came from combining nested 24 px gutters with a permanently horizontal form/288 px rail layout. Outer gutters were reduced progressively, the editor became container-aware, and the progress rail gained a compact narrow-state presentation. Automated class coverage confirms both responsive modes.
+- Automated verification: 14/14 focused Jest tests passed; ESLint, TypeScript, route rendering, and `git diff --check` passed.
+- Blocker: the selected in-app browser cannot resize below 1280 px, and browser policy rejected the attempted isolated 768 px preview. Exact browser-rendered 970/768/390 visual evidence therefore still requires user approval to use the local Playwright CLI.
+- Findings: the responsive implementation and desktop regression checks pass, but same-viewport tablet/mobile visual QA is unavailable in the permitted browser surface.
+
+final result: blocked
+
+---
+
+## Proposal Journey Equal Card Heights — Verification Status
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-3d9f3c48-3298-485f-990b-db36147db1b0.png` (318 × 195 px), showing the selected `See Guidance` card taller than its neighboring stage.
+- Implementation capture: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-journey-equal-height-full.png` (1265 × 712 px), with the live journey at `/proposals/proposal-edit?proposalId=6a71b6e26b4873eff69fcf49`.
+- Focused implementation crop: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-journey-equal-height-crop.png` (665 × 165 px).
+- Combined comparison: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-journey-equal-height-comparison.png` (665 × 380 px).
+- Viewport and density: authenticated proposal editor at 1280 × 720 CSS px with `devicePixelRatio: 1`; the browser capture is 1265 × 712 px after browser chrome. No density scaling was applied.
+- State: published proposal with `See Guidance` selected and its three-line summary visible.
+- Full-view comparison evidence: the journey remains integrated with the existing proposal summary, status, detail panel, and Intake Form rail. No surrounding layout or interaction changed.
+- Focused comparison evidence: every stage button now fills its grid cell. Live browser measurements report the same `165.25 px` height for stages 1 through 5, including the longer `See Guidance` card.
+- Required fidelity surfaces: font size, weight, line height, copy, numbering, neutral/selected colors, card width, padding, radius, and shadow are unchanged. No image or icon assets are introduced; only vertical fill behavior changed.
+- Interaction verification: selected `See Guidance` with one click; it became `aria-current="step"`, retained the blue treatment, and all five cards measured equal height. No browser console errors were present.
+- Comparison history: the reported P2 rhythm mismatch came from buttons using only `min-height`, so the longest summary set one card's height while shorter cards did not fill the row. Adding `h-full` to every stage button removed the uneven baseline without reducing text readability.
+- Findings: no actionable P0, P1, or P2 issue remains.
+- Automated verification: focused Jest suite passed 9/9 tests; ESLint, TypeScript, and `git diff --check` passed.
+
+final result: passed
+
+---
+
+## Proposal Journey Neutral and Selected Indicators — Verification Status
+
+- Source visual truths: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-88f24d3b-1357-42b6-ab98-36ac78093bad.png` (160 × 192 px), showing the requested white neutral stage, and `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-5ccb676c-2740-4330-9abd-d45ae62a2334.png` (221 × 256 px), showing the requested blue selected stage.
+- Implementation capture: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-journey-neutral-selected-full.png` (1265 × 712 px), with the live journey at `/proposals/proposal-edit?proposalId=6a71b6e26b4873eff69fcf49`.
+- Focused implementation crop: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-journey-neutral-selected-crop.png` (665 × 165 px).
+- Combined comparison: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-journey-neutral-selected-comparison.png` (665 × 441 px).
+- Viewport and density: authenticated proposal editor at 1280 × 720 CSS px with `devicePixelRatio: 1`; the browser capture is 1265 × 712 px after browser chrome. No density scaling was applied. The implementation crop is narrower because the live Intake Form rail remains visible.
+- State: published proposal with `Answer Key Questions` selected. The focused capture includes all five numbered stages and the selected, completed, gated, and published data states.
+- Full-view comparison evidence: the existing five-card layout, numbering, typography, summaries, spacing, radii, shadows, and one-click stage selection remain unchanged.
+- Focused comparison evidence: stages 1, 2, 4, and 5 all use the reference's white circle, neutral border, and muted number. Only selected stage 3 uses the reference's blue circle, white number, pale-blue card, and blue label. The journey contains no green classes, check icons, or SVG icons.
+- Required fidelity surfaces: the existing font family, weights, line heights, card dimensions, spacing rhythm, blue/white/neutral tokens, and live copy are preserved. No raster, generated, or replacement icon assets are introduced; green completion styling is intentionally removed from this journey only.
+- Interaction verification: clicked `Answer Key Questions` once; it became `aria-current="step"`, remained enabled, and rendered `rgb(7, 134, 207)` while every other circle rendered white with the same neutral border. No browser console errors were present.
+- Comparison history: the previous P2 mismatch used green circles and green connectors for completed stages, creating a third visual state the user did not want. Completed-stage green and connector green were removed; the post-fix comparison now has exactly two visual treatments—neutral and selected.
+- Findings: no actionable P0, P1, or P2 issue remains.
+- Automated verification: focused Jest suite passed 9/9 tests; ESLint, TypeScript, and `git diff --check` passed.
+
+final result: passed
+
+---
+
+## Co-Vendor Professional Icon System — Verification Status
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/TemporaryItems/NSIRD_screencaptureui_e5dnBJ/Screenshot 2026-08-04 at 4.02.18 PM.png` (1054 × 623 px), showing the emoji-based before-state.
+- Implementation capture: `/Users/bayshorecommunication/.codex/visualizations/2026/08/04/019fcb21-8ec0-7f61-8615-3ac8ca395787/co-vendor-professional-icons-prefill.png` (1265 × 712 px).
+- Combined focused comparison: `/Users/bayshorecommunication/.codex/visualizations/2026/08/04/019fcb21-8ec0-7f61-8615-3ac8ca395787/co-vendor-icons-comparison.png` (1655 × 575 px).
+- Viewport and density: authenticated proposal editor at 1280 × 720 CSS px with `devicePixelRatio: 1`. Source and implementation were cropped to their visible co-vendor regions without density scaling, then placed in one comparison canvas.
+- State: Uploads & Co-Vendors → Co-Vendor Coordination, with the Page 6 venue-contact pre-fill banner visible and every accordion card collapsed.
+- Full-view comparison evidence: the original card order, banner, labels, chevrons, card spacing, borders, radii, PDF preview row, typography, and surrounding workflow remain unchanged.
+- Focused comparison evidence: emoji glyphs were replaced by one coherent Lucide stroke system—Building2 for the venue pre-fill, AudioLines for AV, Palette for scenic, BadgeCheck for registration technology, BriefcaseBusiness for agency, Camera for photography, and FileText for the PDF preview.
+- Required fidelity surfaces: the existing font and copy are untouched; layout rhythm remains compact; neutral slate icon surfaces and the existing cyan brand token provide consistent color hierarchy; vector library icons render sharply at 16 px with 1.9 stroke width and no raster or placeholder assets.
+- Interaction verification: expanded and collapsed the In-House Venue AV accordion after the icon replacement; its contact, status, notes, and PDF preview fields remained functional. No browser console errors were present.
+- Comparison history: the reported P2 polish issue was a mixed platform-emoji set with inconsistent weight, color, baseline, and visual meaning. Replacing it with semantic vector icons in consistent 32 px containers removed the mismatch; the post-fix comparison shows a unified professional icon language with no layout regression.
+- Findings: no actionable P0, P1, or P2 issue remains.
+- Automated verification: TypeScript passed and `git diff --check` passed.
+
+final result: passed
+
+---
+
+## Published Proposal Workflow Refresh — Verification Status
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-5a57552b-aaf1-43c5-a194-606f0c041383.png` (1061 × 434 px), used as the before-state for the published workflow section.
+- Implementation evidence: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-workflow-after.jpg` (724 × 668 px).
+- Side-by-side comparison: `/Users/bayshorecommunication/Desktop/dxg/dxg-rfp-tool-dashboard/design-qa-assets/proposal-workflow-comparison.jpg` (1809 × 668 px).
+- Viewport and density: authenticated proposal editor at 1280 × 720 CSS px and device scale factor 1. The source is a wide component crop; the implementation crop is 724 px wide because the live 288 px Intake Form rail is present. The refreshed summary uses a container query: it stacks below an 800 px content width and returns to a two-column layout above it.
+- State: live proposal `Testing Proposal`, published, sent to vendors, with Publish selected as the current workflow stage.
+- Full-view evidence: the header, live summary, next action, proposal journey, and Intake Form rail remain visually integrated in the real editor instead of being verified in an isolated mock.
+- Focused comparison evidence: the new surface replaces the flat three-column status strip with one clear live-state message and one contextual action; the five workflow stages now read as a connected journey with completion checks, a distinct current state, and a compact sent status.
+- Typography and hierarchy: the existing application font is retained. Published state, headline, supporting copy, next action, and journey labels now use distinct size, weight, and casing levels.
+- Spacing and layout: consistent 24–32 px outer gutters, 20–24 px card padding, 16 px radii, aligned action heights, and container-aware stacking remove the cramped and detached appearance of the previous layout.
+- Colors and tokens: the existing proposal blue and completion green remain the semantic anchors; pale blue, white, and neutral border surfaces provide separation without introducing a new visual language.
+- Icon and asset fidelity: existing Lucide `Radio`, `Send`, `Check`, `ArrowRight`, and `ExternalLink` icons are used. No placeholder, generated, or simulated assets were added.
+- Copy and data: all proposal status and step summaries continue to come from live workflow data. Published helper copy is clearer, and the published action now says `View vendor responses` and routes to `/vendor-responses` instead of sending users back to key questions.
+- Interaction verification: `See Guidance` activated and loaded its existing panels; Publish was restored; `View vendor responses` successfully navigated to `/vendor-responses`; the proposal editor route was restored afterward.
+- Runtime verification: no browser console errors. One pre-existing Next.js LCP warning remains for `/assets/logo/rfpilot-primary-logo.png` and is unrelated to this component.
+- Comparison history: the first browser pass kept the summary in two columns at a narrow content width, causing excessive wrapping. The breakpoint was changed from viewport-based behavior to an 800 px container query. The final comparison shows the corrected stacked state alongside the wide before-state.
+- Automated verification: focused Jest suite passed 6/6 tests; ESLint passed for both changed component files; TypeScript passed with `tsc --noEmit`.
+- Findings: no actionable P0, P1, or P2 issue remains in the refreshed portion.
+
+final result: passed
+
+---
+
+## Calendar Contrast Fix — Verification Status
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-d685dcd3-97d8-4aec-aa8e-d3acd55254a4.png` (418 × 490 px), showing the reported low-contrast calendar state.
+- Implementation capture: `/Users/bayshorecommunication/.codex/visualizations/2026/08/04/019fcb21-8ec0-7f61-8615-3ac8ca395787/calendar-contrast-implementation-crop.png` (418 × 428 px).
+- Combined comparison: `/Users/bayshorecommunication/.codex/visualizations/2026/08/04/019fcb21-8ec0-7f61-8615-3ac8ca395787/calendar-contrast-comparison.png` (844 × 428 px).
+- Viewport and density: authenticated proposal editor at 1280 × 720 CSS px, `devicePixelRatio: 1`; the browser capture was 1265 × 712 px and both focused comparison regions were normalized to 418 × 428 px.
+- State: Investment & Evaluation → Procurement Timeline, `Response to Vendor Questions` calendar open on August 2026.
+- Full-view comparison evidence: the calendar retains the existing compact cyan surface, placement, sizing, spacing, radius, shadow, month navigation, and surrounding proposal-form layout.
+- Focused comparison evidence: weekday labels now use a darker 700-weight muted tone; current-month dates use a stronger neutral with medium weight; adjacent-month dates remain semantically muted but are visibly darker; the active/today state now has a solid cyan surface and white text instead of a faint outline.
+- Required fidelity surfaces: the existing font family, copy, component dimensions, layout rhythm, icon assets, and calendar interaction are unchanged. Only calendar text weight and semantic color tokens were strengthened; no image, icon, or content substitutions were introduced.
+- Interaction verification: opened the exact response-date calendar using its labeled trigger and confirmed current-month, adjacent-month, weekday, and active-day computed styles. No browser console errors were present.
+- Comparison history: the initial visual showed washed-out weekday and overflow-date colors plus a weak active-day treatment. The CSS tokens were strengthened, the active state was made unambiguous, and the post-fix capture shows the corrected hierarchy without altering layout or behavior.
+- Findings: no actionable P0, P1, or P2 issue remains. The intentional muted hierarchy for adjacent-month dates is preserved while remaining readable.
+- Automated verification: TypeScript passed, 10 focused date-input tests passed, and `git diff --check` passed.
+
+final result: passed
+
+---
+
 ## Result
 
 final result: passed

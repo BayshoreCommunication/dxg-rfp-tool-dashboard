@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import ProposalWorkflowShell from "./ProposalWorkflowShell";
 import { getProposalWorkflowAction, setProposalWorkflowStepAction } from "@/app/actions/proposalWorkflow";
 
@@ -79,6 +79,28 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });
 
+  test("sends published proposals to the vendor response inbox", async () => {
+    mockedGetWorkflow.mockResolvedValue({
+      success: true,
+      data: {
+        ...workflow.data,
+        workflow: { currentStep: 5 },
+        state: {
+          phase: "published",
+          headline: "Sent to vendors",
+          nextAction: "none",
+          nextActionLabel: "No next action",
+        },
+      },
+    } as never);
+
+    render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} proposalName="Testing Proposal" />);
+
+    expect(await screen.findByText("Your proposal is live and accepting responses.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /View vendor responses/ }))
+      .toHaveAttribute("href", "/vendor-responses");
+  });
+
   test("step statuses and summaries are rendered, not recomputed", async () => {
     // The panel reported its own question count up into local state and the
     // stepper patched step 3 with it, so two definitions of "answered" could
@@ -88,6 +110,74 @@ describe("ProposalWorkflowShell", () => {
     expect(await screen.findByText("2 key question(s) remaining")).toBeInTheDocument();
     for (const summary of ["2 sources ready", "No draft yet", "Not enabled", "Not ready"])
       expect(screen.getByText(summary)).toBeInTheDocument();
+  });
+
+  test("keeps completed stages neutral and only highlights the selected stage", async () => {
+    mockedGetWorkflow.mockResolvedValue({
+      success: true,
+      data: {
+        ...workflow.data,
+        steps: workflow.data.steps.map((item) => ({ ...item, status: "complete" as const })),
+      },
+    } as never);
+
+    render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
+    await screen.findByText("2 sources ready");
+
+    const journey = screen.getByRole("list", { name: "Proposal creation steps" });
+    for (const [index, label] of ["Provide Information", "Review the Draft", "Answer Key Questions", "See Guidance", "Publish"].entries()) {
+      const stage = screen.getByRole("button", { name: new RegExp(label) });
+      const indicator = stage.firstElementChild;
+      expect(stage).toHaveClass("h-full");
+      expect(within(stage).getByText(String(index + 1))).toBeInTheDocument();
+      expect(stage.querySelector("svg")).not.toBeInTheDocument();
+      if (index === 0) expect(indicator).toHaveClass("bg-[#0786cf]", "text-white");
+      else expect(indicator).toHaveClass("bg-white", "text-[#687782]");
+    }
+    expect(journey.querySelector('[class*="bg-emerald"]')).not.toBeInTheDocument();
+  });
+
+  test("one click remains selected when the initial workflow load resolves late", async () => {
+    let resolveInitialLoad!: (value: typeof workflow) => void;
+    mockedGetWorkflow.mockImplementation(() => new Promise<typeof workflow>((resolve) => {
+      resolveInitialLoad = resolve;
+    }) as never);
+
+    render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
+
+    const draftStage = screen.getByRole("button", { name: /Review the Draft/ });
+    expect(draftStage).toHaveClass("bg-[#f8fafb]");
+    fireEvent.click(draftStage);
+
+    await waitFor(() => expect(draftStage).toHaveAttribute("aria-current", "step"));
+    await act(async () => { resolveInitialLoad(workflow); });
+
+    expect(draftStage).toHaveAttribute("aria-current", "step");
+    expect(mockedSetStep).toHaveBeenCalledTimes(1);
+  });
+
+  test("a stage clicked while another stage is saving is not dropped", async () => {
+    let resolveFirstSave!: (value: typeof workflow) => void;
+    mockedSetStep.mockImplementationOnce(() => new Promise<typeof workflow>((resolve) => {
+      resolveFirstSave = resolve;
+    }) as never);
+
+    render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
+    await screen.findByText("2 sources ready");
+
+    const draftStage = screen.getByRole("button", { name: /Review the Draft/ });
+    const questionsStage = screen.getByRole("button", { name: /Answer Key Questions/ });
+    fireEvent.click(draftStage);
+    fireEvent.click(questionsStage);
+
+    expect(questionsStage).toHaveAttribute("aria-current", "step");
+    expect(questionsStage).not.toBeDisabled();
+
+    await act(async () => { resolveFirstSave(workflow); });
+    await waitFor(() => expect(mockedSetStep).toHaveBeenCalledTimes(2));
+
+    expect(mockedSetStep).toHaveBeenNthCalledWith(2, PROPOSAL_ID, 3);
+    expect(questionsStage).toHaveAttribute("aria-current", "step");
   });
 
   test("drops the workflow framing above the stepper", async () => {
