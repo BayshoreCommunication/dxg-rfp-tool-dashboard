@@ -78,3 +78,23 @@ it("renders real response content without a demo label", () => {
   expect(screen.getAllByText("Our proposal is ready for review.")).toHaveLength(2);
   expect(screen.queryByText("Demo")).not.toBeInTheDocument();
 });
+
+it("shows a meaningful empty state when no vendor has responded", () => {
+  render(
+    <VendorResponsesView
+      initialResponses={[]}
+      initialUnreadCount={0}
+      currentPage={1}
+      totalPages={1}
+      totalCount={0}
+    />,
+  );
+
+  expect(screen.getByText("No vendor responses yet")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "When a vendor submits a proposal response, it will appear here for you to review.",
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Responses will appear here")).toBeInTheDocument();
+});

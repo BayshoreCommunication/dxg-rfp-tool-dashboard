@@ -6,6 +6,8 @@ const mockTotals = {
   totalEmailSent: 15,
   totalEmailClicked: 7,
   totalProposalViews: 100,
+  totalVendorResponses: 9,
+  unreadVendorResponses: 3,
 }
 
 describe('TopCardItem', () => {
@@ -14,12 +16,13 @@ describe('TopCardItem', () => {
     expect(screen.queryByText('Total Proposals')).not.toBeInTheDocument()
   })
 
-  it('renders all four stat card titles', () => {
+  it('renders all five stat card titles', () => {
     render(<TopCardItem totals={mockTotals} />)
     expect(screen.getByText('Total Proposals')).toBeInTheDocument()
     expect(screen.getByText('Total Email Sent')).toBeInTheDocument()
     expect(screen.getByText('Total Email Clicked')).toBeInTheDocument()
     expect(screen.getByText('Total Proposal Views')).toBeInTheDocument()
+    expect(screen.getByText('Vendor Responses')).toBeInTheDocument()
   })
 
   it('renders correct values from totals prop', () => {
@@ -28,11 +31,13 @@ describe('TopCardItem', () => {
     expect(screen.getByText('15')).toBeInTheDocument()
     expect(screen.getByText('7')).toBeInTheDocument()
     expect(screen.getByText('100')).toBeInTheDocument()
+    expect(screen.getByText('9')).toBeInTheDocument()
+    expect(screen.getByText('3 unread')).toBeInTheDocument()
   })
 
   it('defaults to 0 when totals are not provided', () => {
     render(<TopCardItem />)
-    expect(screen.getAllByText('0')).toHaveLength(4)
+    expect(screen.getAllByText('0')).toHaveLength(5)
   })
 
   it('renders trend values for each stat card', () => {

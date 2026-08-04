@@ -226,7 +226,7 @@ const Sidebar = ({
 
                 <span
                   className={cn(
-                    "text-[9.5px] font-bold leading-none tracking-wide",
+                    "mt-0.5 w-full whitespace-normal break-normal text-center text-[9.5px] font-bold leading-[1.08] tracking-wide",
                     isActive
                       ? "text-primary"
                       : "text-gray-500 group-hover:text-primary",

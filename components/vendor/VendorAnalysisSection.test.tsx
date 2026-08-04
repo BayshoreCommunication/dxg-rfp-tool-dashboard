@@ -92,6 +92,7 @@ const completedRun: VendorAnalysisResult = {
 
 beforeAll(() => {
   process.env.NEXT_PUBLIC_VENDOR_ANALYSIS_ENABLED = "true";
+  process.env.NEXT_PUBLIC_VENDOR_ANALYSIS_VISIBLE = "true";
 });
 
 beforeEach(() => {

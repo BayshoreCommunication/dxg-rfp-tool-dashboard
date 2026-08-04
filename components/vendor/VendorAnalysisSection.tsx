@@ -397,6 +397,10 @@ export default function VendorAnalysisSection(props: {
   responseId: string;
   proposalId: string;
 }) {
-  if (process.env.NEXT_PUBLIC_VENDOR_ANALYSIS_ENABLED !== "true") return null;
+  if (
+    process.env.NEXT_PUBLIC_VENDOR_ANALYSIS_ENABLED !== "true" ||
+    process.env.NEXT_PUBLIC_VENDOR_ANALYSIS_VISIBLE !== "true"
+  )
+    return null;
   return <VendorAnalysisSectionInner {...props} />;
 }

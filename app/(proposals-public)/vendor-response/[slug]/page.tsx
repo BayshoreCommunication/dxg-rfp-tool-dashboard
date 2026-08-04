@@ -6,13 +6,14 @@ type PageProps = {
   searchParams: Promise<{ source?: string; email?: string; tid?: string; accessGrant?: string }>;
 };
 
+export const proposalIdFromSlug = (slug: string): string =>
+  /([a-f0-9]{24})$/i.exec(slug)?.[1] ?? "";
+
 const fetchProposalInfo = async (
-  slug: string,
+  proposalId: string,
   accessGrant?: string,
 ): Promise<{ title: string; proposalId: string } | null> => {
-  const match = /([a-f0-9]{24})$/i.exec(slug);
-  if (!match) return null;
-  const proposalId = match[1];
+  if (!proposalId) return null;
 
   try {
     const query = accessGrant ? `?accessGrant=${encodeURIComponent(accessGrant)}` : "";
@@ -34,12 +35,13 @@ export default async function VendorResponsePage({
 }: PageProps) {
   const { slug } = await params;
   const { email, tid, accessGrant } = await searchParams;
-  const info = await fetchProposalInfo(slug, accessGrant);
+  const proposalId = proposalIdFromSlug(slug);
+  const info = await fetchProposalInfo(proposalId, accessGrant);
 
   return (
     <VendorResponseForm
       slug={slug}
-      proposalId={info?.proposalId ?? ""}
+      proposalId={proposalId}
       proposalTitle={info?.title ?? ""}
       initialEmail={email ?? ""}
       initialTrackingId={tid ?? ""}

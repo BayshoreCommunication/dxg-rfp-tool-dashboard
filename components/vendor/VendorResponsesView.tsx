@@ -187,14 +187,26 @@ export default function VendorResponsesView({
             {visibleResponses.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-                  <Search size={22} className="text-slate-400" />
+                  {query.trim() ? (
+                    <Search size={22} className="text-slate-400" />
+                  ) : (
+                    <Inbox size={22} className="text-[#008ad2]" />
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-bold text-slate-700">
-                    No responses found
+                    {query.trim()
+                      ? "No matching responses"
+                      : unreadOnly
+                        ? "You’re all caught up"
+                        : "No vendor responses yet"}
                   </p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Try another vendor or proposal name.
+                  <p className="mx-auto mt-1 max-w-[260px] text-xs leading-5 text-slate-400">
+                    {query.trim()
+                      ? "Try a different vendor, contact, or proposal name."
+                      : unreadOnly
+                        ? "There are no unread responses right now. New submissions will appear here."
+                        : "When a vendor submits a proposal response, it will appear here for you to review."}
                   </p>
                 </div>
               </div>
@@ -414,10 +426,14 @@ export default function VendorResponsesView({
                 <Mail size={25} />
               </div>
               <h2 className="mt-5 text-lg font-extrabold text-slate-800">
-                Select a vendor response
+                {totalCount === 0
+                  ? "Responses will appear here"
+                  : "Select a vendor response"}
               </h2>
               <p className="mx-auto mt-1 max-w-xs text-sm leading-6 text-slate-500">
-                Choose a response from the inbox to review its proposal details.
+                {totalCount === 0
+                  ? "Once a vendor submits their proposal, you’ll be able to review the message, contact details, and attachments here."
+                  : "Choose a response from the inbox to review its proposal details."}
               </p>
             </div>
           </div>
