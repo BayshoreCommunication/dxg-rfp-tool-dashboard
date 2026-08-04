@@ -2,6 +2,12 @@ import AssistantWorkspacePage from "@/components/proposals/AssistantWorkspacePag
 import ProposalsCreateProcess from "@/components/proposals/ProposalsCreateProcess";
 import { redirect } from "next/navigation";
 
+// Live-AI calls (conversation replies, requirement extraction, draft
+// generation) routinely run 10-30s. Vercel's default function timeout is
+// well below that and kills the request before the API answers, which the
+// UI surfaces as an unresponsive backend. 60s is the Hobby-plan ceiling.
+export const maxDuration = 60;
+
 const conversationsEnabled = process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED === "true";
 
 const Page = async ({
