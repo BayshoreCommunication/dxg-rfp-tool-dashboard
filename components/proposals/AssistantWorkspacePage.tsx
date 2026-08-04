@@ -71,8 +71,22 @@ type LocalCard =
 // task while the gate is closed spends a planner's click to tell them the
 // feature is off; the reason belongs on the control instead. Read per render
 // so the flag can be flipped without a rebuild.
-const isChatExtractionEnabled = () =>
-  process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED === "true";
+// A successful retry supersedes an earlier failed attempt of the same run
+// type. Keeping the old red alert beside the finished draft makes the current
+// state look contradictory even though the audit history remains persisted.
+export const visibleRunMessages = (messages: ConversationMessage[]): ConversationMessage[] => {
+  const latestComplete = new Map<ConversationRunType, number>();
+  for (const message of messages) {
+    if (message.runType && message.status === "complete") {
+      latestComplete.set(message.runType, Math.max(latestComplete.get(message.runType) ?? -1, message.ordinal));
+    }
+  }
+  return messages.filter(message => !(
+    message.runType
+    && message.status === "failed"
+    && (latestComplete.get(message.runType) ?? -1) > message.ordinal
+  ));
+};
 
 const segmentSkipReasons: Record<string, string> = {
   open: "I'll use these once you pause or add a bit more.",
@@ -438,10 +452,9 @@ export function maximumDateForQuestion(
   return start ? new Date(start.year, start.month, start.day) : undefined;
 }
 
-function GuidedQuestionCard({ question, current, total, busy, error, minimumDate, maximumDate, onAnswer, onSkip }: {
+function GuidedQuestionCard({ question, current, busy, error, minimumDate, maximumDate, onAnswer, onSkip }: {
   question: ConversationQuestion;
   current: number;
-  total: number;
   busy: boolean;
   error: string | null;
   minimumDate: Date;
@@ -456,6 +469,7 @@ function GuidedQuestionCard({ question, current, total, busy, error, minimumDate
   const [pendingOption, setPendingOption] = useState<string | null>(null);
   const impactLabel = question.impact ? impactLabels[question.impact] : null;
   const answerType = question.answerType;
+  const isTimeAnswer = answerType === "time" || isLoadInTimeQuestion(question);
   const inputId = `guided-answer-${question.id}`;
   const errorId = `guided-answer-error-${question.id}`;
   const displayError = dateError || error;
@@ -476,7 +490,7 @@ function GuidedQuestionCard({ question, current, total, busy, error, minimumDate
   return (
     <div className="w-full max-w-[85%] rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">Question {current} of {total}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">Guided question {current}</p>
         {impactLabel && (
           <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-800">{impactLabel}</span>
         )}
@@ -560,16 +574,17 @@ function GuidedQuestionCard({ question, current, total, busy, error, minimumDate
             </div>
           ) : (
             <input
-              type={isLoadInTimeQuestion(question) ? "time" : answerType === "number" ? "number" : "text"}
+              type={isTimeAnswer ? "time" : answerType === "number" ? "number" : "text"}
               {...(answerType === "number"
                 ? { min: 0, inputMode: "numeric" as const, step: 1 }
-                : isLoadInTimeQuestion(question)
+                : isTimeAnswer
                   ? { step: 300 }
                   : {})}
               value={value}
               onChange={event => setValue(event.target.value)}
+              onInput={event => setValue(event.currentTarget.value)}
               disabled={busy}
-              placeholder={answerType === "number" ? "Enter a number…" : isLoadInTimeQuestion(question) ? "HH:MM" : "Type your answer…"}
+              placeholder={answerType === "number" ? "Enter a number…" : isTimeAnswer ? "HH:MM" : "Type your answer…"}
               aria-label="Answer this question"
               aria-invalid={displayError ? true : undefined}
               aria-describedby={displayError ? errorId : undefined}
@@ -1021,6 +1036,8 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const { sources, refresh: refreshSources } = useProposalSources(proposalId, `${notesJobId ?? ""}:${uploadJobId ?? ""}:${notesJob?.status ?? ""}:${uploadJob?.status ?? ""}:${autoScanning}`);
 
   const messages = useMemo(() => data?.messages ?? [], [data]);
+  const displayedMessages = useMemo(() => visibleRunMessages(messages), [messages]);
+  const chatExtractionEnabled = data?.capabilities?.conversationExtraction === true;
   const openQuestions = (data?.questions ?? []).filter(item => item.status === "open");
   // answer message id -> the question it answered, so the thread can replay the
   // question above the answer instead of showing a bare value.
@@ -1046,7 +1063,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   // clarification question is waiting (the guided flow always goes first).
   // Extracted candidates remain read-only until the user reviews them in the
   // editor; this workspace never saves review decisions or applies fields.
-  const hasDraftRun = messages.some(message => message.runType === "proposal_draft");
+  const hasDraftRun = messages.some(message => message.runType === "proposal_draft" && message.status === "complete");
   const overviewRows = useMemo(() => buildOverviewRows(proposal), [proposal]);
   // A proposal built by conversation alone never has an extraction run, so the
   // hand-off also opens once questions have been answered or the proposal has
@@ -1350,7 +1367,6 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   // a proposal whose questions were all answered earlier.
   const resolvedQuestions = (data?.questions ?? []).filter(question => question.status !== "open").length;
   const answeredTotal = Math.max(answeredCount + skippedCount, resolvedQuestions);
-  const questionProgressTotal = answeredTotal + openQuestions.length;
   const questionProgressCurrent = answeredTotal + 1;
   const questionsComplete = answeredTotal > 0 && !loading && !!data && openQuestions.length === 0;
 
@@ -1690,7 +1706,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                 {loadError && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{loadError}</p>}
                 {loading && <p role="status" className="text-sm text-slate-500">Loading the conversation…</p>}
                 <ol className="space-y-3">
-                  {messages.map(renderMessage)}
+                  {displayedMessages.map(renderMessage)}
                   {showOverview && proposalId && (
                     <li className="flex justify-start">
                       <OverviewCard
@@ -1806,7 +1822,6 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                         key={currentQuestion.id}
                         question={currentQuestion}
                         current={questionProgressCurrent}
-                        total={questionProgressTotal}
                         busy={questionBusyId === currentQuestion.id}
                         error={questionError}
                         minimumDate={minimumDateForQuestion(currentQuestion, proposal)}
@@ -2010,9 +2025,9 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
               <button
                 type="button"
                 onClick={() => void runUseMessages()}
-                disabled={segmentBusy || sending || messages.length === 0 || !isChatExtractionEnabled()}
+                disabled={segmentBusy || sending || messages.length === 0 || !chatExtractionEnabled}
                 title={
-                  !isChatExtractionEnabled()
+                  !chatExtractionEnabled
                     ? segmentSkipReasons.disabled
                     : messages.length === 0
                       ? "Tell me about your event first."
@@ -2075,7 +2090,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
               </p>
             ) : (
               <p className="mt-2 text-xs text-slate-600">
-                {`${openQuestions.length} ${openQuestions.length === 1 ? "question" : "questions"} remaining — answer them one at a time in the conversation.`}
+                {`${openQuestions.length} ${openQuestions.length === 1 ? "question is" : "questions are"} open now. Follow-up questions may appear as earlier answers unlock venue details.`}
               </p>
             )}
           </section>

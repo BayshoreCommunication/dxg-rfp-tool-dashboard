@@ -82,7 +82,7 @@ export type ConversationMessage = {
 export type ConversationQuestionImpact = "schedule" | "cost" | "production" | "scope";
 // The control the guided question card renders. Anything the backend does not
 // recognise (and every free-form question) falls back to a plain text box.
-export type ConversationAnswerType = "date" | "choice" | "number" | "text";
+export type ConversationAnswerType = "date" | "time" | "choice" | "number" | "text";
 export type ConversationQuestion = {
   id: string;
   code: string;
@@ -100,7 +100,12 @@ export type ConversationQuestion = {
   createdAt: string;
 };
 export type ConversationSummary = { id: string; title: string; status: string; messageCount: number; updatedAt: string };
-export type ConversationData = { conversation: ConversationSummary | null; messages: ConversationMessage[]; questions: ConversationQuestion[] };
+export type ConversationData = {
+  conversation: ConversationSummary | null;
+  messages: ConversationMessage[];
+  questions: ConversationQuestion[];
+  capabilities?: { conversationExtraction: boolean };
+};
 export type ConversationRunRef = { runType: ConversationRunType; runId: string; jobId: string };
 export type PostConversationMessageResult = { created: boolean; message: ConversationMessage | null; assistantMessageId: string | null; run: ConversationRunRef | null };
 export type ConversationIntent = "chat" | "extract_requirements" | "generate_draft";
@@ -147,7 +152,7 @@ const parseMessage = (value: unknown): ConversationMessage | null => {
   };
 };
 
-const ANSWER_TYPES = ["date", "choice", "number", "text"] as const;
+const ANSWER_TYPES = ["date", "time", "choice", "number", "text"] as const;
 
 const parseQuestion = (value: unknown): ConversationQuestion | null => {
   if (!isRecord(value) || typeof value.id !== "string") return null;
@@ -188,6 +193,9 @@ const parseConversationData = (value: unknown): ConversationData | null => {
     conversation,
     messages: Array.isArray(value.messages) ? value.messages.flatMap(item => { const parsed = parseMessage(item); return parsed ? [parsed] : []; }) : [],
     questions: Array.isArray(value.questions) ? value.questions.flatMap(item => { const parsed = parseQuestion(item); return parsed ? [parsed] : []; }) : [],
+    capabilities: isRecord(value.capabilities)
+      ? { conversationExtraction: value.capabilities.conversationExtraction === true }
+      : undefined,
   };
 };
 
