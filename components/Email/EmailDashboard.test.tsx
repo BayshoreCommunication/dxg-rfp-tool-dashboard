@@ -146,21 +146,6 @@ describe('EmailDashboard — metrics', () => {
     expect(screen.getByText('2')).toBeInTheDocument()
   })
 
-  it('shows the Responses metric count', async () => {
-    render(<EmailDashboard />)
-    await waitFor(() => screen.getByText('Responses'), LOAD_TIMEOUT)
-    // vendorResponseCount is 1 — may also show as unread badge, so allow multiple
-    expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('shows unread badge on Responses metric when unread count > 0', async () => {
-    render(<EmailDashboard />)
-    await waitFor(() => screen.getByText('Responses'), LOAD_TIMEOUT)
-    // unreadResponseCount is 1 — badge should show "1"
-    const badges = screen.getAllByText('1')
-    expect(badges.length).toBeGreaterThanOrEqual(1)
-  })
-
   it('shows zero counts when metric values are absent', async () => {
     mockGetCampaigns.mockResolvedValue(successPage([makeCampaign({ sentCount: 0, clickedCount: 0, vendorResponseClickCount: 0, vendorResponseCount: 0, unreadResponseCount: 0 })]))
     render(<EmailDashboard />)
@@ -201,25 +186,6 @@ describe('EmailDashboard — delete campaign', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Server error'))
     // wait for setDeletingCampaignId(null) to settle (handleDelete returns early on failure)
     await waitFor(() => screen.getByText('Delete'), LOAD_TIMEOUT)
-  })
-})
-
-describe('EmailDashboard — responses modal', () => {
-  it('opens responses modal when Responses metric is clicked', async () => {
-    render(<EmailDashboard />)
-    await waitFor(() => screen.getByText('Responses'), LOAD_TIMEOUT)
-    // Responses metric is a button when vendorResponseCount > 0
-    fireEvent.click(screen.getByRole('button', { name: /responses/i }))
-    await waitFor(() => expect(screen.getByTestId('responses-modal')).toBeInTheDocument())
-  })
-
-  it('closes the responses modal when Close is clicked', async () => {
-    render(<EmailDashboard />)
-    await waitFor(() => screen.getByText('Responses'), LOAD_TIMEOUT)
-    fireEvent.click(screen.getByRole('button', { name: /responses/i }))
-    await waitFor(() => screen.getByTestId('responses-modal'))
-    fireEvent.click(screen.getByText('Close Modal'))
-    expect(screen.queryByTestId('responses-modal')).not.toBeInTheDocument()
   })
 })
 

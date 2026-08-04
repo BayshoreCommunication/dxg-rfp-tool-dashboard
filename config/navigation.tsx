@@ -1,6 +1,7 @@
 import {
   House,
   Mail,
+  MessageSquareText,
   NotepadTextDashed,
   Settings,
 } from "lucide-react";
@@ -31,6 +32,12 @@ export const navigationConfig: NavItem[] = [
     title: "Email",
     href: "/email",
     icon: <Mail size={22} />,
+  },
+  {
+    id: "vendor-responses",
+    title: "Vendor Response",
+    href: "/vendor-responses",
+    icon: <MessageSquareText size={22} />,
   },
   {
     id: "settings",

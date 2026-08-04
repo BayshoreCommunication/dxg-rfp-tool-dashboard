@@ -16,12 +16,14 @@ export default async function VendorResponsesPage({
   const { page: pageParam, unreadOnly: unreadParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam || "1", 10));
   const unreadOnly = unreadParam === "true";
+  const limit = 20;
 
-  const res = await getVendorResponsesAction({ page, limit: 20, unreadOnly });
+  const res = await getVendorResponsesAction({ page, limit, unreadOnly });
   const pagination = res.pagination as Pagination | undefined;
 
   return (
     <VendorResponsesView
+      key={`${page}-${unreadOnly}`}
       initialResponses={
         res.success && Array.isArray(res.data)
           ? (res.data as VendorResponseItem[])

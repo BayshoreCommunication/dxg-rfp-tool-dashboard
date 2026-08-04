@@ -4,14 +4,12 @@ import {
   deleteEmailCampaignAction,
   getEmailCampaignsAction,
 } from "@/app/actions/email";
-import CampaignResponsesModal from "@/components/vendor/CampaignResponsesModal";
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
   Eye,
-  MessageSquare,
   MousePointerClick,
   Send,
   Trash2,
@@ -92,11 +90,6 @@ export default function EmailDashboard() {
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(
     null,
   );
-  const [responsesModal, setResponsesModal] = useState<{
-    campaignId: string;
-    title: string;
-  } | null>(null);
-
   const loadData = useCallback(async (page = 1) => {
     setLoading(true);
     const campaignsRes = await getEmailCampaignsAction({
@@ -175,14 +168,6 @@ export default function EmailDashboard() {
   }
 
   return (
-    <>
-    {responsesModal && (
-      <CampaignResponsesModal
-        campaignId={responsesModal.campaignId}
-        campaignTitle={responsesModal.title}
-        onClose={() => setResponsesModal(null)}
-      />
-    )}
     <div className="space-y-6 px-6">
       {campaigns.map((campaign) => {
         const title = campaign.subject?.trim() || FALLBACK_TITLE;
@@ -246,23 +231,6 @@ export default function EmailDashboard() {
                   value={campaign.vendorResponseClickCount || 0}
                   icon={<MousePointerClick size={16} />}
                   tooltip="Number of times recipients clicked the submit button"
-                />
-                <MetricCard
-                  label="Responses"
-                  value={campaign.vendorResponseCount || 0}
-                  icon={<MessageSquare size={16} />}
-                  tooltip="Total vendor responses received — click to view"
-                  highlight={!!campaign.vendorResponseCount}
-                  unreadCount={campaign.unreadResponseCount || 0}
-                  onClick={
-                    campaign.vendorResponseCount && campaign._id
-                      ? () =>
-                          setResponsesModal({
-                            campaignId: campaign._id,
-                            title: campaign.subject?.trim() || campaign.proposalTitle,
-                          })
-                      : undefined
-                  }
                 />
               </div>
 
@@ -345,7 +313,6 @@ export default function EmailDashboard() {
         </div>
       </div>
     </div>
-    </>
   );
 }
 
