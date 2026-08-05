@@ -196,9 +196,12 @@ const conversationWithGuidedQuestions = (questions: Array<ReturnType<typeof guid
   },
 });
 
+let replaceStateSpy: jest.SpyInstance;
+
 describe("AssistantWorkspacePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    replaceStateSpy = jest.spyOn(window.history, "replaceState").mockImplementation(() => undefined);
     window.sessionStorage.clear();
     window.localStorage.clear();
     EventSourceStub.instances = [];
@@ -227,6 +230,10 @@ describe("AssistantWorkspacePage", () => {
     mockedGetLatestContext.mockResolvedValue({ success: false, code: "CONTEXT_RUN_UNAVAILABLE", message: "none" } as never);
     // The completion card's readiness check degrades quietly by default.
     mockedGenerateGuidance.mockResolvedValue({ success: false, code: "GUIDANCE_DISABLED", message: "Proposal guidance is not enabled for this environment yet." });
+  });
+
+  afterEach(() => {
+    replaceStateSpy.mockRestore();
   });
 
   test("empty state greets the signed-in user by first name", async () => {
@@ -280,9 +287,64 @@ describe("AssistantWorkspacePage", () => {
     );
     // The proposal must exist before the message is sent.
     expect(mockedCreateProposal.mock.invocationCallOrder[0]).toBeLessThan(mockedPostMessage.mock.invocationCallOrder[0]);
-    // One canonical URL for an existing proposal's assistant.
-    expect(replace).toHaveBeenCalledWith(`/proposals/${PROPOSAL_ID}/assistant`);
-    expect(replace).not.toHaveBeenCalledWith(expect.stringContaining("add-new-proposal"));
+    // One canonical URL for an existing proposal's assistant — moved with a
+    // shallow history swap. A router.replace() here would start a real
+    // navigation that races the send and can abort its server action POST
+    // mid-flight, leaving the composer stuck on "Sending…".
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, "", `/proposals/${PROPOSAL_ID}/assistant`);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  test("a send whose action rejects marks the message failed with a retry and frees the composer", async () => {
+    mockedCreateProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID } });
+    // An aborted server action POST rejects without a structured result —
+    // exactly what happens when a navigation cancels the request mid-flight.
+    mockedPostMessage.mockRejectedValue(new Error("net::ERR_ABORTED"));
+
+    render(<AssistantWorkspacePage />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "A corporate town hall in Dhaka for 300 attendees." } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    // The failure is visible and actionable instead of an eternal "Sending…".
+    expect(await screen.findByText(/didn't go through/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText("Sending…")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("The assistant is responding")).not.toBeInTheDocument();
+    // The composer recovers: typing again re-enables Send. (Re-query the
+    // textarea — the workspace re-rendered into the started layout once the
+    // proposal was created.)
+    fireEvent.change(screen.getByLabelText("Message the proposal assistant"), { target: { value: "second try" } });
+    expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
+    // The proposal created before the failed send is preserved.
+    expect(mockedCreateProposal).toHaveBeenCalledTimes(1);
+  });
+
+  test("retrying a failed send reuses the idempotency key and never creates a second proposal", async () => {
+    mockedCreateProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID } });
+    mockedPostMessage
+      .mockRejectedValueOnce(new Error("net::ERR_ABORTED"))
+      .mockResolvedValueOnce({
+        success: true,
+        correlationId: "test-correlation",
+        data: { created: true, message: null, assistantMessageId: null, run: null },
+      });
+
+    render(<AssistantWorkspacePage />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "A corporate town hall in Dhaka for 300 attendees." } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Retry" }));
+
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledTimes(2));
+    // Retry replays the SAME idempotency key so the backend can deduplicate a
+    // send that actually reached it before the client saw the failure.
+    expect(mockedPostMessage.mock.calls[0][2]).toBe(mockedPostMessage.mock.calls[1][2]);
+    expect(mockedPostMessage.mock.calls[0][0]).toBe(PROPOSAL_ID);
+    expect(mockedCreateProposal).toHaveBeenCalledTimes(1);
+    // The failed bubble clears once the retry lands.
+    await waitFor(() => expect(screen.queryByText(/didn't go through/)).not.toBeInTheDocument());
   });
 
   test("room schedule guidance renders allowlisted download and upload workflow actions", async () => {

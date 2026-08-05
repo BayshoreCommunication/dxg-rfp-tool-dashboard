@@ -30,12 +30,26 @@ const detailMessageCodes = new Set(["INVALID_CANDIDATE_VALUE", "INVALID_QUESTION
 const unknownFailureMessage = (correlationId: string) =>
   `We couldn't complete that request. Please try again. Reference: ${correlationId}`;
 
+// Hard ceiling on any single backend call from these actions. The slowest
+// legitimate path (segment intake plus a live chat reply) stays well under
+// this; without a bound, a hung backend socket pins the whole server action
+// until the platform kills the function, which the client cannot distinguish
+// from a lost request.
+const BACKEND_REQUEST_TIMEOUT_MS = 45_000;
+
+// Structured failure log: the path (which embeds the proposal id) and the
+// correlation id only — never message content, headers, or tokens.
+const logActionFailure = (path: string, correlationId: string, code: string, status?: number) => {
+  console.error(JSON.stringify({ event: "conversation_action_failed", path, correlationId, code, ...(typeof status === "number" ? { status } : {}) }));
+};
+
 const request = async <T>(path: string, init?: RequestInit, parse?: (value: unknown) => T | null): Promise<ActionResult<T>> => {
   const correlationId = crypto.randomUUID();
   try {
     const response = await authenticatedBackendFetch(`${BACKEND_URL}${path}`, {
       ...init,
       cache: "no-store",
+      signal: AbortSignal.timeout(BACKEND_REQUEST_TIMEOUT_MS),
       headers: { "X-Correlation-ID": correlationId, ...(init?.headers ?? {}) },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -43,6 +57,7 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
     const responseCorrelation = response.headers.get("x-correlation-id") || correlationId;
     if (!response.ok) {
       const code = typeof body.code === "string" ? body.code : `HTTP_${response.status}`;
+      logActionFailure(path, responseCorrelation, code, response.status);
       // Field-validation problems carry a friendly, user-facing title from the
       // backend (e.g. "Candidate date must use the YYYY-MM-DD format.") that
       // the guided question flow shows verbatim so it can re-ask.
@@ -52,8 +67,18 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
     const value = parse ? parse(body.data) : body.data as T;
     if (value === null || value === undefined) return { success: false, code: "INVALID_RESPONSE", message: "The service returned an unexpected response.", correlationId: responseCorrelation };
     return { success: true, data: value, correlationId: responseCorrelation };
-  } catch {
-    return { success: false, code: "NETWORK_ERROR", message: "The service could not be reached. Try again shortly.", correlationId };
+  } catch (error) {
+    const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    const code = timedOut ? "BACKEND_TIMEOUT" : "NETWORK_ERROR";
+    logActionFailure(path, correlationId, code);
+    return {
+      success: false,
+      code,
+      message: timedOut
+        ? "The assistant took too long to respond. Your message was not delivered — please try again."
+        : "The service could not be reached. Try again shortly.",
+      correlationId,
+    };
   }
 };
 

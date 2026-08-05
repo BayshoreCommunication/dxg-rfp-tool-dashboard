@@ -35,7 +35,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { stepForPath } from "./GuidancePanel";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoExtraction, useConversation, useNotesScan, useProposalSources, useSourceUpload } from "./useConversation";
 import { takeProposalHandoffDraft } from "@/lib/aiAssistant/handoff";
@@ -954,7 +953,6 @@ function InvestmentCard({ report, declaredBudget }: { report: InvestmentReport; 
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function AssistantWorkspacePage({ initialProposalId }: { initialProposalId?: string }) {
-  const router = useRouter();
   const [proposalId, setProposalId] = useState<string | null>(initialProposalId ?? null);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string | null>(null);
@@ -1163,10 +1161,14 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     }
     setProposalId(id);
     // Stay in place; only move the URL to the proposal's canonical assistant
-    // route so resume/share links land on one surface.
-    router.replace(`/proposals/${id}/assistant`);
+    // route so resume/share links land on one surface. This must be a shallow
+    // history swap, not router.replace(): a router navigation started here
+    // races the message send dispatched right after it, and when the
+    // navigation wins Next aborts the in-flight server action POST — the send
+    // never reaches the backend and the composer hangs on "Sending…" forever.
+    window.history.replaceState(null, "", `/proposals/${id}/assistant`);
     return id;
-  }, [proposalId, router]);
+  }, [proposalId]);
 
   const handleSend = async () => {
     const value = text.trim();

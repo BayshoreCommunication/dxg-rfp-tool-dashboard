@@ -27,6 +27,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const uuidPattern = /^[0-9a-f-]{36}$/i;
 
+// Upper bound on how long a message send may stay in "sending". The backend
+// reply path is bounded (~45s worst case through the action layer), so a send
+// still pending after this is considered lost and surfaces as retryable.
+export const SEND_TIMEOUT_MS = 60_000;
+
 export const notesScanKey = (proposalId: string) => `rfpilot:notes-scan:${proposalId}`;
 export const sourceScanKey = (proposalId: string) => `rfpilot:source-scan:${proposalId}`;
 export const autoExtractKey = (proposalId: string) => `rfpilot:auto-extract:${proposalId}`;
@@ -164,15 +169,37 @@ export function useConversation(proposalId: string | null) {
   }, [proposalId, refresh]);
 
   const performSend = useCallback(async (entry: PendingSend) => {
-    const result = await postConversationMessageAction(entry.proposalId, {
-      content: entry.content,
-      intent: entry.intent,
-      // Attachments ride along on any intent that has them (chat messages with
-      // staged files, extraction with selected sources). The backend accepts up
-      // to five source ids per message regardless of intent.
-      ...(entry.sourceIds.length > 0 ? { sourceIds: entry.sourceIds } : {}),
-      ...(entry.intent === "generate_draft" ? { expectedProposalVersion: entry.expectedProposalVersion } : {}),
-    }, entry.idempotencyKey);
+    let result: Awaited<ReturnType<typeof postConversationMessageAction>>;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      result = await Promise.race([
+        postConversationMessageAction(entry.proposalId, {
+          content: entry.content,
+          intent: entry.intent,
+          // Attachments ride along on any intent that has them (chat messages
+          // with staged files, extraction with selected sources). The backend
+          // accepts up to five source ids per message regardless of intent.
+          ...(entry.sourceIds.length > 0 ? { sourceIds: entry.sourceIds } : {}),
+          ...(entry.intent === "generate_draft" ? { expectedProposalVersion: entry.expectedProposalVersion } : {}),
+        }, entry.idempotencyKey),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error("SEND_TIMED_OUT")), SEND_TIMEOUT_MS);
+        }),
+      ]);
+    } catch {
+      // A server action call can reject without ever producing a structured
+      // result — most commonly when its POST is aborted mid-flight (e.g. by a
+      // navigation) or the connection drops — and it can also hang past any
+      // useful wait. Both must land in "failed" so the composer recovers and
+      // the planner gets a retry; the retry reuses the same idempotency key,
+      // so a send that actually reached the backend is never duplicated.
+      setPending(prev => prev.map(item => item.localId === entry.localId
+        ? { ...item, state: "failed", errorMessage: "The message didn't go through. Retrying is safe — it won't send twice." }
+        : item));
+      return false;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
     if (!result.success) {
       setPending(prev => prev.map(item => item.localId === entry.localId ? { ...item, state: "failed", errorMessage: result.message } : item));
       return false;
