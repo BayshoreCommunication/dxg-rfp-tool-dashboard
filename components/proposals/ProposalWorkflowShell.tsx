@@ -10,7 +10,6 @@ import Link from "next/link";
 import { ArrowRight, Check, ExternalLink, MoreHorizontal, Radio, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import GuidancePanel from "./GuidancePanel";
-import InvestmentGuidancePanel from "./InvestmentGuidancePanel";
 import HistoricalInsightsPanel from "./HistoricalInsightsPanel";
 import KeyQuestionsPanel from "./KeyQuestionsPanel";
 import ProposalContextPanel from "./ProposalContextPanel";
@@ -21,13 +20,11 @@ type WorkflowStep = 1 | 2 | 3 | 4 | 5;
 export default function ProposalWorkflowShell({
   proposalId,
   proposalName,
-  estimatedAvBudget,
   onNavigateToFormStep,
   onQuestionResolved,
 }: {
   proposalId: string;
   proposalName?: string;
-  estimatedAvBudget?: string;
   onNavigateToFormStep?: (step: number) => void;
   onQuestionResolved?: () => void | Promise<void>;
 }) {
@@ -202,7 +199,7 @@ export default function ProposalWorkflowShell({
       </div>}
       {!conversationsEnabled && step === 2 && <div className="space-y-5"><ProposalContextPanel proposalId={proposalId} /><ProposalDraftPanel proposalId={proposalId} /></div>}
       {!conversationsEnabled && step === 3 && <div><h2 className="text-lg font-semibold">Answer key questions</h2><p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Key questions are available when the assisted proposal workflow is enabled.</p></div>}
-      {step === 4 && <div className="space-y-3"><h2 className="text-lg font-semibold">See Guidance</h2>{conversationsEnabled && data?.steps.some((item) => item.id === 4 && item.status !== "gated") ? <><GuidancePanel proposalId={proposalId} onNavigateToStep={onNavigateToFormStep} /><InvestmentGuidancePanel proposalId={proposalId} estimatedAvBudget={estimatedAvBudget} /><HistoricalInsightsPanel proposalId={proposalId} /></> : <p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700"><strong>Investment guidance is not enabled.</strong> It requires separate DXG approval, pricing methodology, and evidence controls. No price or equipment recommendation is being generated.</p>}</div>}
+      {step === 4 && <div className="space-y-3"><div><h2 className="text-lg font-semibold">See Guidance</h2><p className="mt-1 text-sm text-slate-600">Review the most important changes before you send this proposal to vendors.</p></div>{conversationsEnabled && data?.steps.some((item) => item.id === 4 && item.status !== "gated") ? <><GuidancePanel proposalId={proposalId} onNavigateToStep={onNavigateToFormStep} /><HistoricalInsightsPanel proposalId={proposalId} /></> : <p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700"><strong>Proposal readiness is not available yet.</strong> Continue completing the proposal and check again before publishing.</p>}</div>}
       {step === 5 && <div><h2 className="text-lg font-semibold">Publish</h2><p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Complete the detailed proposal form and use the existing final validation and publish controls below. This workflow cannot automatically publish or send a proposal.</p><a href="#manual-proposal-details" className="mt-3 inline-block rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white">Continue to final details</a></div>}
     </div>
   </section>;

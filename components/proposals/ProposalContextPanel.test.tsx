@@ -2,7 +2,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import ProposalContextPanel from "./ProposalContextPanel";
 import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
 
-jest.mock("next/navigation", () => ({ useRouter: () => ({ refresh: jest.fn() }) }));
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: jest.fn() }),
+}));
 
 jest.mock("@/app/actions/proposalContext", () => ({
   createProposalContextAction: jest.fn(),
@@ -19,7 +21,9 @@ jest.mock("@/app/actions/proposalContext", () => ({
 
 jest.mock("@/app/actions/durableJobs", () => ({
   getDurableJob: jest.fn(),
-  listPrivateDocumentSources: jest.fn().mockResolvedValue({ success: true, data: [] }),
+  listPrivateDocumentSources: jest
+    .fn()
+    .mockResolvedValue({ success: true, data: [] }),
 }));
 
 jest.mock("@/app/actions/candidateApplication", () => ({
@@ -86,16 +90,26 @@ test("unsupported candidates are shown with their reason instead of vanishing", 
 
   render(<ProposalContextPanel proposalId="proposal-1" />);
 
-  expect(await screen.findByText("1 suggestion could not be used")).toBeInTheDocument();
+  expect(
+    await screen.findByText("1 detail needs manual review"),
+  ).toBeInTheDocument();
   expect(
     screen.getByText("Candidate date must be an ISO calendar date."),
   ).toBeInTheDocument();
 
-  // The invalid candidate must not also appear as a reviewable row, where it
-  // previously rendered with a blank path label and an unusable decision
-  // control. Exactly one Decision select remains — for the valid candidate.
+  // The invalid candidate must not also appear as a reviewable row. The one
+  // valid suggestion is shown with a plain-language field label and action.
   expect(screen.queryByText("sometime the day before")).not.toBeInTheDocument();
   expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  expect(
+    screen.getByRole("heading", { name: "Event Name" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Use suggestion" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText("/content/event/eventName"),
+  ).not.toBeInTheDocument();
   expect(screen.getByText("Northstar Summit")).toBeInTheDocument();
 });
 
@@ -104,6 +118,8 @@ test("no unsupported section is rendered when every candidate mapped cleanly", a
 
   render(<ProposalContextPanel proposalId="proposal-1" />);
 
-  await waitFor(() => expect(screen.getByText("Northstar Summit")).toBeInTheDocument());
-  expect(screen.queryByText(/could not be used/)).not.toBeInTheDocument();
+  await waitFor(() =>
+    expect(screen.getByText("Northstar Summit")).toBeInTheDocument(),
+  );
+  expect(screen.queryByText(/manual review/)).not.toBeInTheDocument();
 });

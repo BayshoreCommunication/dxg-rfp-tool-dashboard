@@ -25,7 +25,13 @@ const report: GuidanceReport = {
   engineVersion: "1.0.0",
   overallCompleteness: 0.62,
   completeness: [
-    { section: "event", label: "Event overview", filled: 5, total: 8, score: 0.625 },
+    {
+      section: "event",
+      label: "Event overview",
+      filled: 5,
+      total: 8,
+      score: 0.625,
+    },
   ],
   findings: [
     {
@@ -103,14 +109,12 @@ describe("GuidancePanel", () => {
     // GUIDANCE_NOT_FOUND is a normal empty state, not an error.
     expect(
       await screen.findByText(
-        "Run the readiness check to see completeness and risk findings.",
+        "Check whether your proposal is ready for vendors",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Run readiness check" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Check readiness" }));
     expect(await screen.findByText("62%")).toBeInTheDocument();
     expect(mockedGenerate).toHaveBeenCalledWith(proposalId);
     expect(
@@ -130,8 +134,7 @@ describe("GuidancePanel", () => {
     // Blocking findings appear above info findings even though the report
     // lists the info finding first.
     expect(
-      blocking.compareDocumentPosition(info) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      blocking.compareDocumentPosition(info) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -145,16 +148,18 @@ describe("GuidancePanel", () => {
       />,
     );
 
-    expect(await screen.findByText("number of power drops")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Number Of Power Drops"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByText("/content/venue/numberOfPowerDrops"),
     ).not.toBeInTheDocument();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Fix in Venue & Technical" }),
+      screen.getByRole("button", { name: "Update Venue & Technical" }),
     );
     expect(onNavigateToStep).toHaveBeenCalledWith(7);
-    expect(screen.getByText("Needs Venue Confirmation")).toBeInTheDocument();
+    expect(screen.getByText("Needs venue confirmation")).toBeInTheDocument();
     expect(
       screen.getByText("How many power drops can the venue support?"),
     ).toBeInTheDocument();
@@ -186,12 +191,13 @@ describe("GuidancePanel", () => {
     expect(await screen.findByText("Leadership Summit")).toBeInTheDocument();
     expect(screen.getByText("1,500 attendees")).toBeInTheDocument();
     expect(
-      screen.getByText(/proposal is now version 4/i),
+      screen.getByText(/proposal changed after this check/i),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByText("Correct the event date range before pricing.").length,
+      screen.getAllByText("Correct the event date range before pricing.")
+        .length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText("2 rooms analyzed")).toBeInTheDocument();
+    expect(screen.getByText("2 rooms reviewed")).toBeInTheDocument();
     expect(screen.getByText("2 conflicts")).toBeInTheDocument();
     expect(screen.getByText("1 reuse opportunity")).toBeInTheDocument();
   });

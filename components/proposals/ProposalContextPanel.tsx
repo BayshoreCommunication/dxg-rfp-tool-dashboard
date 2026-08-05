@@ -6,16 +6,30 @@ import {
   getProposalContextAction,
   type ProposalContextRun,
 } from "@/app/actions/proposalContext";
-import { getDurableJob, listPrivateDocumentSources, type PrivateDocumentSource } from "@/app/actions/durableJobs";
+import {
+  getDurableJob,
+  listPrivateDocumentSources,
+  type PrivateDocumentSource,
+} from "@/app/actions/durableJobs";
 import {
   applyCandidatesAction,
   getCandidateReviewAction,
   saveCandidateReviewAction,
   type CandidateReview,
 } from "@/app/actions/candidateApplication";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Check,
+  CheckCircle2,
+  FileSearch,
+  FileText,
+  PencilLine,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
 import AiRunEvidence from "./AiRunEvidence";
+import { proposalFieldLabel } from "@/lib/proposals/proposalFieldLabel";
 type Decision = {
   decision: "pending" | "accepted" | "modified" | "rejected";
   value?: unknown;
@@ -23,14 +37,34 @@ type Decision = {
   reason?: string;
 };
 const displayValue = (value: unknown) => {
-  if (value === undefined || value === null || value === "") return "Not provided";
+  if (value === undefined || value === null || value === "")
+    return "Not provided";
   return typeof value === "object" ? JSON.stringify(value) : String(value);
 };
 const hasMaterialValue = (value: unknown) =>
   value !== undefined &&
   value !== null &&
   value !== "" &&
-  !(typeof value === "string" && value.trim().toLowerCase() === "untitled proposal");
+  !(
+    typeof value === "string" &&
+    value.trim().toLowerCase() === "untitled proposal"
+  );
+const confidenceLabel = (confidence: number) => {
+  if (confidence >= 0.9) return "High confidence";
+  if (confidence >= 0.7) return "Medium confidence";
+  return "Low confidence";
+};
+const statusLabel = (status: string) =>
+  ({
+    idle: "Ready",
+    queued: "Starting…",
+    running: "Reviewing sources…",
+    retry_scheduled: "Trying again…",
+    succeeded: "Suggestions ready",
+    failed: "Needs attention",
+    dead_letter: "Needs attention",
+    cancelled: "Cancelled",
+  })[status] ?? status.replaceAll("_", " ");
 export default function ProposalContextPanel({
   proposalId,
 }: {
@@ -52,28 +86,32 @@ export default function ProposalContextPanel({
     [confirming, setConfirming] = useState(false);
   const applicationKey = useRef<string | null>(null);
   const router = useRouter();
-  const [sources,setSources]=useState<PrivateDocumentSource[]>([]),[sourceIds,setSourceIds]=useState<string[]>([]);
-  const loadReview = async (id: string) => {
-    const response = await getCandidateReviewAction(proposalId, id);
-    if (!response.success) {
-      setError(response.message);
-      return;
-    }
-    setReview(response.data);
-    setDecisions(
-      Object.fromEntries(
-        response.data.operations.map((x) => [
-          x.id,
-          {
-            decision: x.decision,
-            value: x.modified_value ?? x.value,
-            overwrite: false,
-            reason: x.reason ?? "",
-          },
-        ]),
-      ),
-    );
-  };
+  const [sources, setSources] = useState<PrivateDocumentSource[]>([]),
+    [sourceIds, setSourceIds] = useState<string[]>([]);
+  const loadReview = useCallback(
+    async (id: string) => {
+      const response = await getCandidateReviewAction(proposalId, id);
+      if (!response.success) {
+        setError(response.message);
+        return;
+      }
+      setReview(response.data);
+      setDecisions(
+        Object.fromEntries(
+          response.data.operations.map((x) => [
+            x.id,
+            {
+              decision: x.decision,
+              value: x.modified_value ?? x.value,
+              overwrite: false,
+              reason: x.reason ?? "",
+            },
+          ]),
+        ),
+      );
+    },
+    [proposalId],
+  );
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -90,8 +128,23 @@ export default function ProposalContextPanel({
     return () => {
       active = false;
     };
+  }, [loadReview, proposalId]);
+  useEffect(() => {
+    let active = true;
+    void listPrivateDocumentSources(proposalId).then((response) => {
+      if (!active || !response.success) return;
+      const eligible = response.data.filter(
+        (x) => x.status === "ready" && x.confidentiality === "non_confidential",
+      );
+      setSources(eligible);
+      setSourceIds((current) =>
+        current.length ? current : eligible[0] ? [eligible[0].id] : [],
+      );
+    });
+    return () => {
+      active = false;
+    };
   }, [proposalId]);
-  useEffect(()=>{let active=true;void listPrivateDocumentSources(proposalId).then(response=>{if(!active||!response.success)return;const eligible=response.data.filter(x=>x.status==="ready"&&x.confidentiality==="non_confidential");setSources(eligible);setSourceIds(current=>current.length?current:eligible[0]?[eligible[0].id]:[]);});return()=>{active=false;};},[proposalId]);
   useEffect(() => {
     if (!jobId || !["queued", "running", "retry_scheduled"].includes(status))
       return;
@@ -104,7 +157,11 @@ export default function ProposalContextPanel({
       }
       setStatus(response.data.status);
       if (response.data.status === "succeeded" && runId) {
-        setNotice(jobPurpose === "apply" ? "Selected fields applied successfully." : "Requirements extracted successfully. Review the cited candidates below.");
+        setNotice(
+          jobPurpose === "apply"
+            ? "Your selected details were added to the proposal."
+            : "Suggestions are ready. Review them below.",
+        );
         const context = await getProposalContextAction(proposalId, runId);
         if (context.success) {
           setResult(context.data);
@@ -125,12 +182,12 @@ export default function ProposalContextPanel({
             : response.data.errorCode === "LIVE_AI_CLASSIFICATION_DENIED"
               ? "Live AI is disabled for this data classification."
               : response.data.errorCode === "OVERWRITE_CONFIRMATION_REQUIRED"
-            ? "Confirm overwrite for every selected field that already has a value."
-            : response.data.errorCode === "PROPOSAL_VERSION_CONFLICT"
-              ? "The proposal changed. Refresh before applying the review."
-              : jobPurpose === "extract"
-                ? "Requirement extraction did not complete. Try again or contact an administrator with the run time."
-                : "The controlled application did not complete. Review the selections and try again.",
+                ? "Confirm overwrite for every selected field that already has a value."
+                : response.data.errorCode === "PROPOSAL_VERSION_CONFLICT"
+                  ? "The proposal changed. Refresh before applying the review."
+                  : jobPurpose === "extract"
+                    ? "Requirement extraction did not complete. Try again or contact an administrator with the run time."
+                    : "The controlled application did not complete. Review the selections and try again.",
         );
       }
       if (
@@ -141,7 +198,7 @@ export default function ProposalContextPanel({
         clearInterval(timer);
     }, 1000);
     return () => clearInterval(timer);
-  }, [jobId, jobPurpose, proposalId, router, runId, status]);
+  }, [jobId, jobPurpose, loadReview, proposalId, router, runId, status]);
   const start = async () => {
     setJobPurpose("extract");
     setBusy(true);
@@ -151,7 +208,9 @@ export default function ProposalContextPanel({
     setReview(undefined);
     setConfirming(false);
     applicationKey.current = null;
-    const response = sourceIds.length ? await createSourceProposalContextAction(proposalId,sourceIds) : await createProposalContextAction(proposalId, fixture);
+    const response = sourceIds.length
+      ? await createSourceProposalContextAction(proposalId, sourceIds)
+      : await createProposalContextAction(proposalId, fixture);
     setBusy(false);
     if (!response.success) {
       setError(response.message);
@@ -185,7 +244,7 @@ export default function ProposalContextPanel({
       setError(response.message);
       return;
     }
-    setNotice("Review saved.");
+    setNotice("Your review was saved.");
     await loadReview(runId);
   };
   const selectedForApplication = () => {
@@ -205,20 +264,29 @@ export default function ProposalContextPanel({
         ids.includes(operation.operationId),
       )
     ) {
-      setError("One or more selected suggestions are not valid for their fields.");
+      setError(
+        "One or more selected suggestions are not valid for their fields.",
+      );
       return;
     }
-    const selectedPaths=selected.map(x=>review.canonicalPaths[x.id]);
-    if(new Set(selectedPaths).size!==selectedPaths.length){setError("Select only one candidate for each conflicting proposal field.");return;}
+    const selectedPaths = selected.map((x) => review.canonicalPaths[x.id]);
+    if (new Set(selectedPaths).size !== selectedPaths.length) {
+      setError(
+        "Select only one candidate for each conflicting proposal field.",
+      );
+      return;
+    }
     const missingConfirmation = selected.some((x) => {
       const current = review.currentValues[review.canonicalPaths[x.id]];
       const proposed =
         decisions[x.id]?.decision === "modified"
           ? decisions[x.id]?.value
           : x.value;
-      return hasMaterialValue(current) &&
+      return (
+        hasMaterialValue(current) &&
         displayValue(current) !== displayValue(proposed) &&
-        !decisions[x.id]?.overwrite;
+        !decisions[x.id]?.overwrite
+      );
     });
     if (missingConfirmation) {
       setError(
@@ -278,7 +346,7 @@ export default function ProposalContextPanel({
     setJobPurpose("apply");
     setStatus(response.data.status);
     setConfirming(false);
-    setNotice("Selected fields queued for controlled application.");
+    setNotice("Updating your proposal…");
   };
   // The API reports candidates whose value could not be normalized onto their
   // target field, with a human-readable reason. Nothing consumed it, so those
@@ -286,342 +354,543 @@ export default function ProposalContextPanel({
   // the AI had proposed something the system rejected.
   const invalid = review?.invalidOperations ?? [];
   const invalidById = new Set(invalid.map((item) => item.operationId));
+  const validOperations = (review?.operations ?? []).filter(
+    (item) => !invalidById.has(item.id),
+  );
+  const matchingOperations = validOperations.filter((item) => {
+    if (!review || review.appliedOperationIds.includes(item.id)) return false;
+    const canonical = review.canonicalPaths[item.id];
+    return (
+      displayValue(review.currentValues[canonical]) === displayValue(item.value)
+    );
+  });
+  const appliedOperations = validOperations.filter((item) =>
+    review?.appliedOperationIds.includes(item.id),
+  );
+  const actionableOperations = validOperations.filter((item) => {
+    if (!review || review.appliedOperationIds.includes(item.id)) return false;
+    const canonical = review.canonicalPaths[item.id];
+    return (
+      displayValue(review.currentValues[canonical]) !== displayValue(item.value)
+    );
+  });
+  const reviewedCount = actionableOperations.filter(
+    (item) => (decisions[item.id]?.decision ?? "pending") !== "pending",
+  ).length;
+  const selectedCount = actionableOperations.filter((item) =>
+    ["accepted", "modified"].includes(decisions[item.id]?.decision),
+  ).length;
   return (
     <section
       aria-labelledby="proposal-context-title"
-      className="rounded-xl border border-slate-200 bg-white p-5"
+      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
     >
-      <h2
-        id="proposal-context-title"
-        className="text-lg font-semibold text-slate-900"
-      >
-        Live AI requirement extraction
-      </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        OpenAI extracts cited candidates from an explicitly approved, non-confidential proposal source. Synthetic evidence remains available when no eligible source exists.
-        Review is required before any separate structured-field application.
-      </p>
-      <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm font-medium">
-          {sources.length?"Approved proposal source":"Synthetic example"}
-          <select
-            className="mt-1 block rounded-md border px-3 py-2"
-            multiple={sources.length>0}
-            size={sources.length?Math.min(sources.length,5):1}
-            value={sources.length?sourceIds:fixture}
-            onChange={(e) => sources.length?setSourceIds([...e.target.selectedOptions].map(option=>option.value).slice(0,5)):setFixture(e.target.value as typeof fixture)}
-          >
-            {sources.map(source=><option key={source.id} value={source.id}>{source.originalFilename}</option>)}
-            {!sources.length&&<>
-            <option value="synthetic-conference-simple">
-              Simple conference
-            </option>
-            <option value="synthetic-conference-medium">
-              Detailed conference
-            </option>
-            </>}
-          </select>
-          {sources.length>0&&<span className="mt-1 block text-xs font-normal text-slate-500">Select up to five sources. Use Ctrl/Cmd to select multiple.</span>}
-        </label>
-        <button
-          type="button"
-          disabled={busy || ["queued", "running"].includes(status)}
-          onClick={start}
-          className="rounded-md bg-[#087f69] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          {busy ? "Working…" : "Extract with OpenAI"}
-        </button>
-        <span
-          role="status"
-          aria-live="polite"
-          className="text-sm text-slate-600"
-        >
-          {status !== "idle" ? `Status: ${status.replaceAll("_", " ")}` : ""}
-        </span>
-      </div>
-      {error && (
-        <p
-          role="alert"
-          className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
-      {notice && (
-        <p
-          role="status"
-          className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-800"
-        >
-          {notice}
-        </p>
-      )}
-      {result?.issues.some(issue=>issue.code==="CROSS_SOURCE_CONFLICT")&&<div role="alert" className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Sources disagree on one or more fields. Review each conflicting candidate; no value was selected or applied automatically.</div>}
-      {result && review && (
-        <div className="mt-5">
-          <AiRunEvidence run={result.run} />
-          {invalid.length > 0 && (
-            <div className="mt-3 rounded-md border border-slate-300 bg-slate-50 p-3">
-              <h4 className="text-sm font-semibold text-slate-800">
-                {invalid.length} suggestion{invalid.length === 1 ? "" : "s"} could not be used
-              </h4>
-              <p className="mt-1 text-xs text-slate-600">
-                The AI proposed these, but they do not fit the proposal field
-                they target. They have not been applied and need no action —
-                enter the value yourself if it matters.
+      <div className="border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-[#087f69]">
+            <Sparkles aria-hidden="true" className="size-5" />
+          </span>
+          <div>
+            <h2
+              id="proposal-context-title"
+              className="text-lg font-semibold text-slate-950"
+            >
+              Review AI suggestions
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+              Choose a source and let RFPilot suggest proposal details it finds.
+              Nothing is added until you review and confirm it.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+          {sources.length ? (
+            <fieldset>
+              <legend className="text-sm font-semibold text-slate-900">
+                Source files
+              </legend>
+              <p className="mt-1 text-xs text-slate-500">
+                Choose up to five files to review.
               </p>
-              <ul className="mt-2 space-y-2">
-                {invalid.map((item) => (
-                  <li key={item.operationId} className="text-sm text-slate-700">
-                    <span className="font-mono text-xs text-slate-500">{item.path}</span>
-                    <div>{item.reason}</div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <h3 className="font-semibold">Review suggested information</h3>
-          <ul className="mt-2 space-y-3">
-            {review.operations.map((item) => {
-              // Candidates the backend could not map to a proposal field have
-              // no canonical path, so they used to render as a blank label with
-              // an unusable decision control. They are listed separately below
-              // with the reason the API already supplies.
-              if (invalidById.has(item.id)) return null;
-              const d = decisions[item.id] ?? { decision: "pending" },
-                applied = review.appliedOperationIds.includes(item.id);
-              const canonical = review.canonicalPaths[item.id],
-                current = review.currentValues[canonical],
-                invalid = review.invalidOperations?.find(
-                  (operation) => operation.operationId === item.id,
-                );
-              return (
-                <li
-                  key={item.id}
-                  className="rounded-md bg-slate-50 p-3 text-sm"
-                >
-                  <div className="flex justify-between gap-2">
-                    <div className="font-mono text-xs text-slate-500">
-                      {canonical}
-                    </div>
-                    {applied && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
-                        Applied
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {sources.map((source) => {
+                  const checked = sourceIds.includes(source.id);
+                  return (
+                    <label
+                      key={source.id}
+                      className={`flex min-w-0 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${checked ? "border-emerald-300 bg-emerald-50" : "border-slate-200 hover:border-slate-300"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={!checked && sourceIds.length >= 5}
+                        onChange={(event) =>
+                          setSourceIds((current) =>
+                            event.target.checked
+                              ? [...current, source.id].slice(0, 5)
+                              : current.filter((id) => id !== source.id),
+                          )
+                        }
+                        className="size-4 accent-[#087f69]"
+                      />
+                      <FileText
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-slate-500"
+                      />
+                      <span className="min-w-0 flex-1 truncate font-medium text-slate-800">
+                        {source.originalFilename}
                       </span>
-                    )}
-                  </div>
-                  <div className="mt-1">
-                    <strong>Suggested:</strong> {displayValue(item.value)}
-                  </div>
-                  <div>
-                    <strong>Current:</strong> {displayValue(current)}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-600">
-                    <strong>Reason:</strong> Extracted as a possible value from
-                    the selected, reviewed source evidence.
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    <strong>Provenance:</strong>{" "}
-                    {item.evidence_ids.length
-                      ? item.evidence_ids.map((id) => `citation ${id}`).join(", ")
-                      : "No usable citation — keep pending or reject"}
-                  </div>
-                  {invalid && (
-                    <p role="alert" className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">
-                      {invalid.reason} This suggestion cannot be applied.
-                    </p>
-                  )}
-                  {!applied && (
-                    <div className="mt-2 flex flex-wrap gap-3">
-                      <label>
-                        Decision{" "}
-                        <select
-                          className="ml-1 rounded border p-1"
-                          value={d.decision}
-                          disabled={Boolean(invalid)}
-                          onChange={(e) => {
+                      <span className="text-xs font-medium text-emerald-700">
+                        Ready
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          ) : (
+            <label className="block text-sm font-semibold text-slate-900">
+              Example source
+              <select
+                className="mt-2 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-800 sm:max-w-sm"
+                value={fixture}
+                onChange={(event) =>
+                  setFixture(event.target.value as typeof fixture)
+                }
+              >
+                <option value="synthetic-conference-simple">
+                  Conference example — basic
+                </option>
+                <option value="synthetic-conference-medium">
+                  Conference example — detailed
+                </option>
+              </select>
+            </label>
+          )}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={
+                busy ||
+                ["queued", "running"].includes(status) ||
+                (sources.length > 0 && sourceIds.length === 0)
+              }
+              onClick={start}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#087f69] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#066b59] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FileSearch aria-hidden="true" className="size-4" />
+              {busy
+                ? "Reviewing…"
+                : result
+                  ? "Review again"
+                  : "Find proposal details"}
+            </button>
+            <span
+              role="status"
+              aria-live="polite"
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+            >
+              {status === "succeeded" && (
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="size-3.5 text-emerald-600"
+                />
+              )}
+              {statusLabel(status)}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="p-5 sm:p-6">
+        {error && (
+          <p
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          >
+            {error}
+          </p>
+        )}
+        {notice && (
+          <p
+            role="status"
+            className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+          >
+            {notice}
+          </p>
+        )}
+        {result?.issues.some(
+          (issue) => issue.code === "CROSS_SOURCE_CONFLICT",
+        ) && (
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+          >
+            Some sources disagree. Review the affected suggestions carefully;
+            RFPilot did not choose a value for you.
+          </div>
+        )}
+        {result && review && (
+          <div>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950">
+                  {actionableOperations.length
+                    ? `${actionableOperations.length} suggestion${actionableOperations.length === 1 ? "" : "s"} to review`
+                    : "Your proposal is up to date"}
+                </h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  {actionableOperations.length
+                    ? "Compare each suggestion with your current proposal, then choose what to use."
+                    : "The details found in this source already match your proposal."}
+                </p>
+              </div>
+              {matchingOperations.length > 0 && (
+                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  {matchingOperations.length} already match
+                </span>
+              )}
+            </div>
+            {invalid.length > 0 && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <h4 className="text-sm font-semibold text-slate-800">
+                  {invalid.length} detail
+                  {invalid.length === 1 ? " needs" : "s need"} manual review
+                </h4>
+                <p className="mt-1 text-xs text-slate-600">
+                  RFPilot could not safely fit these into the proposal. Nothing
+                  was changed.
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {invalid.map((item) => (
+                    <li
+                      key={item.operationId}
+                      className="text-sm text-slate-700"
+                    >
+                      <span className="font-semibold">
+                        {proposalFieldLabel(item.path)}
+                      </span>
+                      <div className="mt-0.5 text-xs text-slate-600">
+                        {item.reason}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <ul className="mt-4 space-y-4">
+              {actionableOperations.map((item) => {
+                const d = decisions[item.id] ?? { decision: "pending" };
+                const canonical = review.canonicalPaths[item.id],
+                  current = review.currentValues[canonical];
+                const choose = (decision: Decision["decision"]) => {
+                  const value =
+                    decision === "modified"
+                      ? (d.value ?? item.value)
+                      : item.value;
+                  const overwrite =
+                    ["accepted", "modified"].includes(decision) &&
+                    hasMaterialValue(current) &&
+                    displayValue(current) !== displayValue(value);
+                  setConfirming(false);
+                  applicationKey.current = null;
+                  setDecisions((existing) => ({
+                    ...existing,
+                    [item.id]: { ...d, decision, value, overwrite },
+                  }));
+                };
+                return (
+                  <li
+                    key={item.id}
+                    className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="font-semibold text-slate-950">
+                        {proposalFieldLabel(canonical)}
+                      </h4>
+                      <span
+                        aria-label={`${confidenceLabel(item.confidence)}, ${Math.round(item.confidence * 100)} percent`}
+                        className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
+                      >
+                        {confidenceLabel(item.confidence)}
+                      </span>
+                    </div>
+                    <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Current value
+                        </dt>
+                        <dd className="mt-1 break-words text-slate-800">
+                          {displayValue(current)}
+                        </dd>
+                      </div>
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                          Suggested value
+                        </dt>
+                        <dd className="mt-1 break-words font-medium text-slate-950">
+                          {displayValue(item.value)}
+                        </dd>
+                      </div>
+                    </dl>
+                    <details className="mt-3 text-xs text-slate-600">
+                      <summary className="cursor-pointer font-medium text-slate-600">
+                        Why this was suggested
+                      </summary>
+                      <p className="mt-1.5 leading-5">
+                        Found in {item.evidence_ids.length || "no"} selected
+                        source{" "}
+                        {item.evidence_ids.length === 1
+                          ? "reference"
+                          : "references"}
+                        .
+                        {item.evidence_ids.length === 0 &&
+                          " Keep this pending or keep your current value."}
+                      </p>
+                    </details>
+                    <fieldset className="mt-4">
+                      <legend className="text-xs font-semibold text-slate-700">
+                        Choose an action
+                      </legend>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          aria-pressed={d.decision === "accepted"}
+                          onClick={() => choose("accepted")}
+                          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${d.decision === "accepted" ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-emerald-400 hover:text-emerald-700"}`}
+                        >
+                          <Check aria-hidden="true" className="size-4" /> Use
+                          suggestion
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={d.decision === "modified"}
+                          onClick={() => choose("modified")}
+                          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${d.decision === "modified" ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:text-blue-700"}`}
+                        >
+                          <PencilLine aria-hidden="true" className="size-4" />{" "}
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={d.decision === "rejected"}
+                          onClick={() => choose("rejected")}
+                          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${d.decision === "rejected" ? "border-slate-700 bg-slate-700 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-slate-500"}`}
+                        >
+                          <RotateCcw aria-hidden="true" className="size-4" />{" "}
+                          Keep current
+                        </button>
+                      </div>
+                    </fieldset>
+                    {d.decision === "modified" && (
+                      <label className="mt-3 block text-xs font-semibold text-slate-700">
+                        Your value
+                        <input
+                          className="mt-1.5 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                          value={String(d.value ?? "")}
+                          onChange={(event) => {
+                            const value = event.target.value;
                             setConfirming(false);
                             applicationKey.current = null;
-                            setDecisions((v) => ({
-                              ...v,
+                            setDecisions((existing) => ({
+                              ...existing,
                               [item.id]: {
                                 ...d,
-                                decision: e.target
-                                  .value as Decision["decision"],
+                                value,
+                                overwrite:
+                                  hasMaterialValue(current) &&
+                                  displayValue(current) !== displayValue(value),
                               },
                             }));
                           }}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="accepted">Accept</option>
-                          <option value="modified">Edit</option>
-                          <option value="rejected">Reject</option>
-                        </select>
+                        />
                       </label>
-                      {d.decision === "modified" && (
-                        <label>
-                          Value{" "}
-                          <input
-                            className="ml-1 rounded border p-1"
-                            value={String(d.value ?? "")}
-                            onChange={(e) => {
-                              setConfirming(false);
-                              applicationKey.current = null;
-                              setDecisions((v) => ({
-                                ...v,
-                                [item.id]: { ...d, value: e.target.value },
-                              }));
-                            }}
-                          />
-                        </label>
-                      )}
-                      {d.decision === "rejected" && (
-                        <label className="w-full text-xs text-slate-700">
-                          Optional rejection reason
-                          <input
-                            className="mt-1 block w-full rounded border p-2 text-sm"
-                            maxLength={500}
-                            value={d.reason ?? ""}
-                            onChange={(e) => {
-                              setConfirming(false);
-                              applicationKey.current = null;
-                              setDecisions((value) => ({
-                                ...value,
-                                [item.id]: { ...d, reason: e.target.value },
-                              }));
-                            }}
-                          />
-                        </label>
-                      )}
-                      {hasMaterialValue(current) &&
-                        ["accepted", "modified"].includes(d.decision) && (
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={d.overwrite ?? false}
-                              onChange={(e) => {
-                                setConfirming(false);
-                                applicationKey.current = null;
-                                setDecisions((v) => ({
-                                  ...v,
-                                  [item.id]: {
-                                    ...d,
-                                    overwrite: e.target.checked,
-                                  },
-                                }));
-                              }}
-                            />{" "}
-                            Confirm overwrite
-                          </label>
-                        )}
-                    </div>
-                  )}
-                  <div className="mt-1 text-xs text-slate-500">
-                    Confidence {Math.round(item.confidence * 100)}%
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          {review.operations.some(
-            (item) => !review.appliedOperationIds.includes(item.id),
-          ) && (
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={save}
-                className="rounded border px-4 py-2 text-sm font-semibold"
-              >
-                Save review
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={reviewApplication}
-                className="rounded bg-[#087f69] px-4 py-2 text-sm font-semibold text-white"
-              >
-                Review selected changes
-              </button>
-            </div>
-          )}
-          {confirming && review && (
-            <div
-              role="region"
-              aria-labelledby="field-change-confirmation-title"
-              className="mt-4 rounded-xl border-2 border-[#087f69]/30 bg-emerald-50/50 p-4"
-            >
-              <h4 id="field-change-confirmation-title" className="font-semibold text-slate-900">
-                Confirm field changes
-              </h4>
-              <p className="mt-1 text-xs text-slate-600">
-                Check every current and proposed value. Nothing changes until
-                you choose Confirm and apply.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {review.operations
-                  .filter((item) =>
-                    !review.appliedOperationIds.includes(item.id) &&
-                    ["accepted", "modified"].includes(decisions[item.id]?.decision),
-                  )
-                  .map((item) => {
-                    const canonical = review.canonicalPaths[item.id];
-                    const proposed =
-                      decisions[item.id]?.decision === "modified"
-                        ? decisions[item.id]?.value
-                        : item.value;
-                    return (
-                      <li key={item.id} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                        <p className="font-mono text-xs text-slate-500">{canonical}</p>
-                        <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-                          <div>
-                            <dt className="text-xs font-semibold text-slate-500">Current</dt>
-                            <dd className="break-words text-slate-800">{displayValue(review.currentValues[canonical])}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs font-semibold text-slate-500">Proposed</dt>
-                            <dd className="break-words text-slate-800">{displayValue(proposed)}</dd>
-                          </div>
-                        </dl>
-                        <p className="mt-2 text-xs text-slate-500">
-                          Reason: extracted from selected source evidence ·
-                          Provenance: {item.evidence_ids.length} citation(s)
-                        </p>
-                      </li>
-                    );
-                  })}
-              </ul>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setConfirming(false)}
-                  className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800"
-                >
-                  Back to review
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void apply()}
-                  className="rounded bg-[#087f69] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {busy ? "Applying…" : "Confirm and apply"}
-                </button>
+                    )}
+                    {d.decision === "rejected" && (
+                      <label className="mt-3 block text-xs font-semibold text-slate-700">
+                        Note for your team{" "}
+                        <span className="font-normal text-slate-500">
+                          (optional)
+                        </span>
+                        <input
+                          className="mt-1.5 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal"
+                          maxLength={500}
+                          value={d.reason ?? ""}
+                          onChange={(event) => {
+                            setConfirming(false);
+                            applicationKey.current = null;
+                            setDecisions((existing) => ({
+                              ...existing,
+                              [item.id]: { ...d, reason: event.target.value },
+                            }));
+                          }}
+                        />
+                      </label>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {matchingOperations.length > 0 && (
+              <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700">
+                  {matchingOperations.length} detail
+                  {matchingOperations.length === 1 ? "" : "s"} already match
+                  your proposal
+                </summary>
+                <ul className="grid gap-2 border-t border-slate-200 p-4 sm:grid-cols-2">
+                  {matchingOperations.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center gap-2 text-sm text-slate-700"
+                    >
+                      <CheckCircle2
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-emerald-600"
+                      />
+                      {proposalFieldLabel(review.canonicalPaths[item.id])}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            {appliedOperations.length > 0 && (
+              <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700">
+                  {appliedOperations.length} previously applied suggestion
+                  {appliedOperations.length === 1 ? "" : "s"}
+                </summary>
+                <ul className="grid gap-2 border-t border-slate-200 p-4 sm:grid-cols-2">
+                  {appliedOperations.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center gap-2 text-sm text-slate-700"
+                    >
+                      <CheckCircle2
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-emerald-600"
+                      />
+                      {proposalFieldLabel(review.canonicalPaths[item.id])}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            {actionableOperations.length > 0 && (
+              <div className="mt-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-slate-600">
+                  {selectedCount
+                    ? `${selectedCount} change${selectedCount === 1 ? "" : "s"} selected`
+                    : "Choose which suggestions you want to use."}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy || reviewedCount === 0}
+                    onClick={save}
+                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Save for later
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || selectedCount === 0}
+                    onClick={reviewApplication}
+                    className="rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Review {selectedCount || "selected"} change
+                    {selectedCount === 1 ? "" : "s"}
+                  </button>
+                </div>
               </div>
-              <p className="mt-3 text-xs text-slate-500">
-                A proposal-version check, audit record, and before/after
-                checksums protect this operation. To recover, edit the affected
-                fields back to their prior values or contact an administrator
-                with the application time.
-              </p>
-            </div>
-          )}
-          <p className="mt-3 text-xs text-slate-500">
-            Applied suggestions remain visible for audit but cannot be applied
-            again.
-          </p>
-        </div>
-      )}
+            )}
+            {confirming && review && (
+              <div
+                role="region"
+                aria-labelledby="field-change-confirmation-title"
+                className="mt-5 rounded-xl border-2 border-emerald-300 bg-emerald-50/60 p-4"
+              >
+                <h4
+                  id="field-change-confirmation-title"
+                  className="font-semibold text-slate-900"
+                >
+                  Review before updating your proposal
+                </h4>
+                <p className="mt-1 text-sm text-slate-600">
+                  Check the values below. Your proposal will only change when
+                  you apply them.
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {review.operations
+                    .filter(
+                      (item) =>
+                        !review.appliedOperationIds.includes(item.id) &&
+                        ["accepted", "modified"].includes(
+                          decisions[item.id]?.decision,
+                        ),
+                    )
+                    .map((item) => {
+                      const canonical = review.canonicalPaths[item.id];
+                      const proposed =
+                        decisions[item.id]?.decision === "modified"
+                          ? decisions[item.id]?.value
+                          : item.value;
+                      return (
+                        <li
+                          key={item.id}
+                          className="rounded-lg border border-slate-200 bg-white p-3 text-sm"
+                        >
+                          <h5 className="font-semibold text-slate-900">
+                            {proposalFieldLabel(canonical)}
+                          </h5>
+                          <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+                            <div>
+                              <dt className="text-xs font-semibold text-slate-500">
+                                Current
+                              </dt>
+                              <dd className="break-words text-slate-800">
+                                {displayValue(review.currentValues[canonical])}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs font-semibold text-emerald-700">
+                                New value
+                              </dt>
+                              <dd className="break-words text-slate-800">
+                                {displayValue(proposed)}
+                              </dd>
+                            </div>
+                          </dl>
+                        </li>
+                      );
+                    })}
+                </ul>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setConfirming(false)}
+                    className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800"
+                  >
+                    Back to review
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void apply()}
+                    className="rounded bg-[#087f69] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {busy
+                      ? "Applying…"
+                      : `Apply ${selectedCount} change${selectedCount === 1 ? "" : "s"}`}
+                  </button>
+                </div>
+              </div>
+            )}
+            <AiRunEvidence run={result.run} />
+          </div>
+        )}
+      </div>
     </section>
   );
 }

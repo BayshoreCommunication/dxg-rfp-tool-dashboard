@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import ProposalContextPanel from "./ProposalContextPanel";
 import {
   applyCandidatesAction,
@@ -55,17 +61,19 @@ const reviewData = {
   currentValues: { [currentPath]: "Current event" },
   appliedOperationIds: [],
   invalidOperations: [],
-  operations: [{
-    id: operationId,
-    ordinal: 1,
-    path: "/content/event/eventName",
-    value: "Proposed event",
-    confidence: 0.94,
-    evidence_ids: ["evidence-1"],
-    decision: "pending" as const,
-    modified_value: null,
-    reason: null,
-  }],
+  operations: [
+    {
+      id: operationId,
+      ordinal: 1,
+      path: "/content/event/eventName",
+      value: "Proposed event",
+      confidence: 0.94,
+      evidence_ids: ["evidence-1"],
+      decision: "pending" as const,
+      modified_value: null,
+      reason: null,
+    },
+  ],
 };
 
 describe("ProposalContextPanel explicit field review", () => {
@@ -96,32 +104,41 @@ describe("ProposalContextPanel explicit field review", () => {
     });
     mockedApply.mockResolvedValue({
       success: true,
-      data: { applicationId: "application-1", jobId: "job-1", status: "queued", created: true },
+      data: {
+        applicationId: "application-1",
+        jobId: "job-1",
+        status: "queued",
+        created: true,
+      },
     });
   });
 
-  test("shows reason and provenance, then requires a second explicit confirmation", async () => {
+  test("shows a human field label and source summary, then requires a second explicit confirmation", async () => {
     render(<ProposalContextPanel proposalId={proposalId} />);
     expect(await screen.findByText("Proposed event")).toBeInTheDocument();
-    expect(screen.getByText(/selected, reviewed source evidence/)).toBeInTheDocument();
-    expect(screen.getByText(/citation evidence-1/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Event Name" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(currentPath)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Found in 1 selected source reference/),
+    ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Decision/), {
-      target: { value: "accepted" },
-    });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Confirm overwrite" }));
-    fireEvent.click(screen.getByRole("button", { name: "Review selected changes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Use suggestion" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review 1 change" }));
 
     const confirmation = screen.getByRole("region", {
-      name: "Confirm field changes",
+      name: "Review before updating your proposal",
     });
     expect(within(confirmation).getByText("Current event")).toBeInTheDocument();
-    expect(within(confirmation).getByText("Proposed event")).toBeInTheDocument();
+    expect(
+      within(confirmation).getByText("Proposed event"),
+    ).toBeInTheDocument();
     expect(mockedSave).not.toHaveBeenCalled();
     expect(mockedApply).not.toHaveBeenCalled();
 
     fireEvent.click(
-      within(confirmation).getByRole("button", { name: "Confirm and apply" }),
+      within(confirmation).getByRole("button", { name: "Apply 1 change" }),
     );
     await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(mockedApply).toHaveBeenCalledTimes(1));
@@ -142,19 +159,25 @@ describe("ProposalContextPanel explicit field review", () => {
       success: true,
       data: {
         ...reviewData,
-        invalidOperations: [{
-          operationId,
-          path: "/content/event/eventName",
-          reason: "The suggested value is invalid.",
-        }],
+        invalidOperations: [
+          {
+            operationId,
+            path: "/content/event/eventName",
+            reason: "The suggested value is invalid.",
+          },
+        ],
       },
     } as never);
     render(<ProposalContextPanel proposalId={proposalId} />);
-    expect(await screen.findByText("1 suggestion could not be used"))
-      .toBeInTheDocument();
-    expect(screen.getByText("The suggested value is invalid."))
-      .toBeInTheDocument();
-    expect(screen.queryByLabelText(/Decision/)).not.toBeInTheDocument();
+    expect(
+      await screen.findByText("1 detail needs manual review"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("The suggested value is invalid."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Use suggestion" }),
+    ).not.toBeInTheDocument();
     expect(mockedApply).not.toHaveBeenCalled();
   });
 });
