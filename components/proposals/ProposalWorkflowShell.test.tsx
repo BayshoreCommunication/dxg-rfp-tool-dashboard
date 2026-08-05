@@ -15,7 +15,6 @@ function panel(testId: string) {
 jest.mock("./ProposalContextPanel", () => panel("proposal-context"));
 jest.mock("./ProposalDraftPanel", () => panel("proposal-draft"));
 jest.mock("./GuidancePanel", () => panel("guidance"));
-jest.mock("./InvestmentGuidancePanel", () => panel("investment-guidance"));
 jest.mock("./HistoricalInsightsPanel", () => panel("historical-insights"));
 jest.mock("./KeyQuestionsPanel", () => panel("key-questions"));
 
@@ -199,6 +198,26 @@ describe("ProposalWorkflowShell", () => {
     await waitFor(() => expect(screen.getByTestId("proposal-context")).toHaveTextContent(PROPOSAL_ID));
     expect(screen.getByTestId("proposal-draft")).toHaveTextContent(PROPOSAL_ID);
     expect(document.querySelector("details")).toHaveAttribute("open");
+  });
+
+  test("shows readiness guidance without investment guidance", async () => {
+    mockedGetWorkflow.mockResolvedValue({
+      success: true,
+      data: {
+        ...workflow.data,
+        workflow: { currentStep: 4 },
+        steps: workflow.data.steps.map((item) => item.id === 4
+          ? { ...item, status: "available" as const, summary: "Ready to check" }
+          : item),
+      },
+    } as never);
+
+    render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByTestId("guidance")).toBeInTheDocument();
+    expect(screen.getByTestId("historical-insights")).toBeInTheDocument();
+    expect(screen.queryByText("Investment guidance")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("investment-guidance")).not.toBeInTheDocument();
   });
 
   test("no longer renders the private document panel, but keeps the banner and the remaining panels", async () => {

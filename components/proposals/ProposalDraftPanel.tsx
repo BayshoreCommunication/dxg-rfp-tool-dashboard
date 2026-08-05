@@ -13,6 +13,7 @@ import {
 } from "@/app/actions/proposalDraft";
 import { getDurableJob } from "@/app/actions/durableJobs";
 import { nextPollDelay } from "@/lib/asyncOperations";
+import { proposalFieldLabel } from "@/lib/proposals/proposalFieldLabel";
 import AiRunEvidence from "./AiRunEvidence";
 
 type Overlay = {
@@ -23,6 +24,16 @@ type Overlay = {
 
 const versionConflictMessage =
   "The proposal changed — regenerate from the latest draft.";
+const draftStatusLabel = (status: string) =>
+  ({
+    queued: "Starting…",
+    running: "Creating your draft…",
+    retry_scheduled: "Trying again…",
+    succeeded: "Draft ready",
+    failed: "Needs attention",
+    dead_letter: "Needs attention",
+    cancelled: "Cancelled",
+  })[status] ?? status.replaceAll("_", " ");
 
 export default function ProposalDraftPanel({
   proposalId,
@@ -73,7 +84,10 @@ export default function ProposalDraftPanel({
           ? child.data.sections.find((s) => s.key === key)
           : undefined;
         return section
-          ? ([key, { runId: childRunId, section, showOriginal: false }] as const)
+          ? ([
+              key,
+              { runId: childRunId, section, showOriginal: false },
+            ] as const)
           : undefined;
       }),
     );
@@ -129,7 +143,16 @@ export default function ProposalDraftPanel({
         } else setError(d.message);
       }
       if (["failed", "dead_letter", "cancelled"].includes(j.data.status)) {
-        setError(j.data.errorCode === "LIVE_AI_KILLED" ? "Live AI was blocked by the emergency kill switch. No provider call was made." : ["PROPOSAL_VERSION_CONFLICT", "PROPOSAL_VERSION_OR_LIFECYCLE_CONFLICT"].includes(String(j.data.errorCode)) ? "Drafting was blocked because the proposal changed or is no longer an eligible draft. No new AI draft was created." : "Live proposal drafting did not complete safely. Try again after checking pilot readiness.");
+        setError(
+          j.data.errorCode === "LIVE_AI_KILLED"
+            ? "Live AI was blocked by the emergency kill switch. No provider call was made."
+            : [
+                  "PROPOSAL_VERSION_CONFLICT",
+                  "PROPOSAL_VERSION_OR_LIFECYCLE_CONFLICT",
+                ].includes(String(j.data.errorCode))
+              ? "Drafting was blocked because the proposal changed or is no longer an eligible draft. No new AI draft was created."
+              : "Live proposal drafting did not complete safely. Try again after checking pilot readiness.",
+        );
       }
       if (
         ["failed", "dead_letter", "cancelled", "succeeded"].includes(
@@ -308,10 +331,10 @@ export default function ProposalDraftPanel({
   const reviewable = draft?.run.status === "succeeded";
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <h2 className="text-lg font-semibold">Live AI proposal draft</h2>
+      <h2 className="text-lg font-semibold">Review AI draft</h2>
       <p className="mt-1 text-sm text-slate-600">
-        OpenAI generates a cited, read-only candidate from non-confidential
-        proposal fields. It does not change or publish the proposal.
+        RFPilot turns your approved proposal details into a draft. Review each
+        section before it is included in your downloadable RFP.
       </p>
       <div className="mt-3 flex gap-3">
         <button
@@ -320,10 +343,10 @@ export default function ProposalDraftPanel({
           onClick={generate}
           className="rounded bg-[#087f69] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {busy ? "Starting…" : "Draft with OpenAI"}
+          {busy ? "Starting…" : draft ? "Refresh draft" : "Create draft"}
         </button>
         <span role="status" className="py-2 text-sm text-slate-600">
-          {status !== "idle" ? `Status: ${status}` : ""}
+          {status !== "idle" ? draftStatusLabel(status) : ""}
         </span>
       </div>
       {error && (
@@ -340,11 +363,17 @@ export default function ProposalDraftPanel({
           {(() => {
             // Only accepted sections are exported, so the control says so
             // rather than letting the planner discover it from a 409.
-            const acceptedCount = draft.sections.filter(s => s.decision === "accepted").length;
+            const acceptedCount = draft.sections.filter(
+              (s) => s.decision === "accepted",
+            ).length;
             return (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <a
-                  href={acceptedCount ? `/api/proposals/${encodeURIComponent(proposalId)}/draft-export` : undefined}
+                  href={
+                    acceptedCount
+                      ? `/api/proposals/${encodeURIComponent(proposalId)}/draft-export`
+                      : undefined
+                  }
                   aria-disabled={acceptedCount === 0}
                   className={`rounded px-4 py-2 text-sm font-semibold ${acceptedCount ? "bg-[#087f69] text-white" : "pointer-events-none bg-slate-200 text-slate-500"}`}
                 >
@@ -514,7 +543,8 @@ export default function ProposalDraftPanel({
                       <p>{p.text}</p>
                       {fieldCitations.length > 0 && (
                         <p className="mt-2 text-xs text-slate-500">
-                          Evidence: {fieldCitations.join(", ")}
+                          Based on:{" "}
+                          {fieldCitations.map(proposalFieldLabel).join(", ")}
                         </p>
                       )}
                       {knowledgeCitations.length > 0 && (
@@ -522,10 +552,9 @@ export default function ProposalDraftPanel({
                           {knowledgeCitations.map((c) => (
                             <span
                               key={c}
-                              title={c}
                               className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800"
                             >
-                              DXG knowledge
+                              Reference library
                             </span>
                           ))}
                         </p>
@@ -549,7 +578,8 @@ export default function ProposalDraftPanel({
             </div>
           )}
           <p className="text-xs text-slate-500">
-            Read-only AI candidate — proposal content was not changed.
+            Your proposal has not been changed. Only accepted sections are
+            included in the download.
           </p>
         </div>
       )}

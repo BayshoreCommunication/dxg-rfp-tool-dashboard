@@ -2208,7 +2208,6 @@ const AddNewProposal = ({
               <ProposalWorkflowShell
                 proposalId={proposalId}
                 proposalName={proposalData.event.eventName}
-                estimatedAvBudget={proposalData.budget.estimatedAvBudget}
                 onNavigateToFormStep={navigateToStep}
                 onQuestionResolved={refreshProposalAfterQuestion}
               />

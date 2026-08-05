@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import * as XLSX from "xlsx";
 import { parseScheduleWorkbook } from "./RoomAndProductionStep";
 
@@ -54,5 +56,18 @@ describe("parseScheduleWorkbook", () => {
     expect(new Date(result.rooms[0].functions[0].showStartDateTime).getHours()).toBe(9);
     expect(new Date(result.rooms[0].functions[1].showStartDateTime).getHours()).toBe(11);
     expect(result.rooms[0].estimatedAttendeesInRoom).toBe("500");
+  });
+
+  it("ships the downloadable schedule template without sample records", () => {
+    const template = readFileSync(
+      path.join(process.cwd(), "public/files/RFPilot schedule-example-sheet.xlsx"),
+    );
+    const workbook = XLSX.read(template, { type: "buffer" });
+    const scheduleSheet = workbook.Sheets["in person schedule"];
+
+    expect(scheduleSheet).toBeDefined();
+    expect(
+      XLSX.utils.sheet_to_json(scheduleSheet, { defval: "" }),
+    ).toEqual([]);
   });
 });

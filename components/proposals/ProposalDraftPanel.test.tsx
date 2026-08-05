@@ -65,7 +65,12 @@ const section = (
 const draftFixture: { success: true; data: ProposalDraft } = {
   success: true,
   data: {
-    run: { id: "run-1", status: "succeeded", provider: "openai", model: "gpt-4o-mini" },
+    run: {
+      id: "run-1",
+      status: "succeeded",
+      provider: "openai",
+      model: "gpt-4o-mini",
+    },
     sections: [
       section("summary", "Summary", 1, "accepted"),
       section("approach", "Approach", 2, "rejected", "Too vague"),
@@ -81,9 +86,12 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockedLatestDraft.mockResolvedValue(draftFixture);
   if (typeof globalThis.crypto?.randomUUID !== "function")
-    Object.assign(globalThis.crypto ?? (globalThis as { crypto: object }).crypto, {
-      randomUUID: () => "00000000-0000-4000-8000-000000000000",
-    });
+    Object.assign(
+      globalThis.crypto ?? (globalThis as { crypto: object }).crypto,
+      {
+        randomUUID: () => "00000000-0000-4000-8000-000000000000",
+      },
+    );
 });
 
 describe("ProposalDraftPanel section review", () => {
@@ -114,9 +122,14 @@ describe("ProposalDraftPanel section review", () => {
       await screen.findByRole("button", { name: "Accept Timeline" }),
     );
     await waitFor(() =>
-      expect(mockedDecide).toHaveBeenCalledWith(proposalId, "run-1", "timeline", {
-        decision: "accepted",
-      }),
+      expect(mockedDecide).toHaveBeenCalledWith(
+        proposalId,
+        "run-1",
+        "timeline",
+        {
+          decision: "accepted",
+        },
+      ),
     );
     await waitFor(() =>
       expect(screen.getAllByText("Accepted ✓")).toHaveLength(2),
@@ -159,7 +172,7 @@ describe("ProposalDraftPanel section review", () => {
     ).toBeDisabled();
   });
 
-  test("renders a DXG knowledge chip for /knowledge/ citations alongside field-path evidence", async () => {
+  test("renders a reference library chip alongside user-facing field labels", async () => {
     const knowledgeId = "/knowledge/frag-42";
     mockedLatestDraft.mockResolvedValue({
       success: true,
@@ -179,10 +192,10 @@ describe("ProposalDraftPanel section review", () => {
       },
     });
     render(<ProposalDraftPanel proposalId={proposalId} />);
-    const chip = await screen.findByText("DXG knowledge");
-    expect(chip).toHaveAttribute("title", knowledgeId);
-    // Field-path citations keep the plain evidence treatment.
-    expect(screen.getByText("Evidence: /eventName")).toBeInTheDocument();
+    const chip = await screen.findByText("Reference library");
+    expect(chip).not.toHaveAttribute("title");
+    // Field-path citations are translated into user-facing labels.
+    expect(screen.getByText("Based on: Event Name")).toBeInTheDocument();
   });
 
   test("the download offers only what was accepted, and says so", async () => {
@@ -197,8 +210,12 @@ describe("ProposalDraftPanel section review", () => {
       `/api/proposals/${proposalId}/draft-export`,
     );
     expect(link.getAttribute("aria-disabled")).toBe("false");
-    expect(screen.getByText(/1 accepted section will be included/)).toBeInTheDocument();
-    expect(screen.getByText(/Rejected and undecided sections are left out/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/1 accepted section will be included/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Rejected and undecided sections are left out/),
+    ).toBeInTheDocument();
   });
 
   test("with nothing accepted the download is inert rather than an error to discover", async () => {
@@ -206,7 +223,10 @@ describe("ProposalDraftPanel section review", () => {
       ...draftFixture,
       data: {
         ...draftFixture.data,
-        sections: [section("summary", "Summary", 1), section("approach", "Approach", 2, "rejected")],
+        sections: [
+          section("summary", "Summary", 1),
+          section("approach", "Approach", 2, "rejected"),
+        ],
       },
     });
     render(<ProposalDraftPanel proposalId={proposalId} />);
@@ -216,6 +236,8 @@ describe("ProposalDraftPanel section review", () => {
     // find that out is worse than saying it up front.
     expect(link).not.toHaveAttribute("href");
     expect(link.getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByText("Accept at least one section to download the RFP.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Accept at least one section to download the RFP."),
+    ).toBeInTheDocument();
   });
 });
