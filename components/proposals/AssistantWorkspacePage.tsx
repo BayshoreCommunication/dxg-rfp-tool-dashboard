@@ -462,12 +462,31 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
   onSkip: () => void;
 }) {
   // The caller keys this card by question id, so the control resets per question.
-  const [value, setValue] = useState("");
-  const [day, setDay] = useState<Date | null>(null);
+  const answerType = question.answerType;
+  // Extraction-sourced prefill: the control is seeded with what the planner's
+  // own message already contained, so confirming is one action. Nothing is
+  // written until they answer — the confirmation IS the per-field review.
+  const suggested = question.suggestedAnswer ?? null;
+  const suggestedDay = (() => {
+    if (answerType !== "date" || !suggested) return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(suggested);
+    if (!match) return null;
+    const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    // A suggestion outside this question's date bounds is not seeded; the
+    // planner picks manually under the same rules as an unassisted answer.
+    if (isBeforeLocalToday(parsed, minimumDate)) return null;
+    if (maximumDate && parsed > maximumDate) return null;
+    return parsed;
+  })();
+  const [value, setValue] = useState(() => (answerType === "date" || answerType === "choice" ? "" : suggested ?? ""));
+  const [day, setDay] = useState<Date | null>(suggestedDay);
   const [dateError, setDateError] = useState<string | null>(null);
   const [pendingOption, setPendingOption] = useState<string | null>(null);
   const impactLabel = question.impact ? impactLabels[question.impact] : null;
-  const answerType = question.answerType;
+  const suggestedOption = answerType === "choice" && suggested && question.options.includes(suggested) ? suggested : null;
+  // The caption only shows while the control still holds the untouched
+  // suggestion (the seeded Date is compared by reference on purpose).
+  const prefilled = answerType === "choice" ? !!suggestedOption : answerType === "date" ? !!suggestedDay && day === suggestedDay : !!suggested && value === suggested;
   const isTimeAnswer = answerType === "time" || isLoadInTimeQuestion(question);
   const inputId = `guided-answer-${question.id}`;
   const errorId = `guided-answer-error-${question.id}`;
@@ -507,21 +526,27 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {question.options.map(option => {
             // Only the in-flight pill is highlighted, so a rejected answer (422)
-            // never leaves an option looking accepted.
+            // never leaves an option looking accepted. The extraction-suggested
+            // pill gets a distinct (non-active) accent so it reads as "found in
+            // your message", not "already chosen".
             const active = busy && pendingOption === option;
+            const isSuggested = !active && option === suggestedOption;
             return (
               <button
                 key={option}
                 type="button"
                 disabled={busy}
                 aria-busy={active}
+                {...(isSuggested ? { "aria-description": "Suggested from your message" } : {})}
                 onClick={() => { if (busy) return; setPendingOption(option); onAnswer(option); }}
                 className={`max-w-full whitespace-normal break-words rounded-full border text-left text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
                   question.options.length > 5 ? "px-3 py-1.5" : "px-4 py-2"
                 } ${
                   active
                     ? "border-[#087f69] bg-[#087f69] text-white"
-                    : "border-slate-300 bg-white text-slate-700 hover:border-[#00c2c9] hover:bg-[#00c2c9]/10 hover:text-[#087f69]"
+                    : isSuggested
+                      ? "border-[#00c2c9] bg-[#00c2c9]/10 text-[#087f69] hover:border-[#087f69]"
+                      : "border-slate-300 bg-white text-slate-700 hover:border-[#00c2c9] hover:bg-[#00c2c9]/10 hover:text-[#087f69]"
                 }`}
               >
                 {active ? "Saving…" : option}
@@ -599,6 +624,13 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
           </button>
           {skipButton}
         </form>
+      )}
+      {prefilled && !displayError && (
+        <p role="note" className="mt-2 text-xs text-slate-600">
+          {answerType === "choice"
+            ? "The highlighted option comes from your message — tap it to confirm."
+            : "Pre-filled from your message — confirm or edit."}
+        </p>
       )}
       {displayError && <p id={errorId} role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{displayError}</p>}
     </div>
@@ -1046,6 +1078,9 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   const readySources = sources.filter(item => item.status === "ready" && item.confidentiality === "non_confidential");
   const sourcesById = useMemo(() => new Map(sources.map(source => [source.id, source])), [sources]);
   const sending = pending.some(item => item.state === "sending");
+  const assistantResponding = messages.some(message =>
+    message.role === "assistant" && !message.runType && message.status === "pending");
+  const chatBusy = sending || assistantResponding;
   // A refresh can land the persisted message before the optimistic entry is
   // retired, briefly showing the planner their own message twice. Hide an
   // in-flight entry once its text is already in the thread; a failed entry
@@ -1172,7 +1207,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
 
   const handleSend = async () => {
     const value = text.trim();
-    if (sending || sendBusy) return;
+    if (chatBusy || sendBusy) return;
     if (!value && staged.length === 0) return;
     setSendError(null);
     const id = await ensureProposal();
@@ -1488,6 +1523,18 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
       );
     }
     const labels = message.runType ? runLabels[message.runType] : null;
+    if (!labels && message.status === "pending") {
+      return <li key={message.id} className="flex justify-start"><TypingIndicator label="The assistant is responding" /></li>;
+    }
+    if (!labels && message.status === "failed") {
+      return (
+        <li key={message.id} className="flex justify-start">
+          <p role="alert" className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {message.content || "The assistant could not complete this response. Please try again."}
+          </p>
+        </li>
+      );
+    }
     if (labels && message.status === "pending") {
       return <li key={message.id} className="flex justify-start"><SkeletonCard label={labels.pending} /></li>;
     }
@@ -1508,7 +1555,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
             proposalId={proposalId}
             message={message}
             currentProposalVersion={proposalVersion}
-            draftBusy={draftBusy || sending}
+            draftBusy={draftBusy || chatBusy}
             onRegenerate={() => void runDraftFromCard()}
           />
         </li>
@@ -1623,7 +1670,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
             type="button"
             aria-label="Send message"
             onClick={() => void handleSend()}
-            disabled={(!text.trim() && staged.length === 0) || sending || sendBusy}
+            disabled={(!text.trim() && staged.length === 0) || chatBusy || sendBusy}
             className="shrink-0 rounded-full p-2.5 text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
             style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${DEEP} 100%)` }}
           >
@@ -1635,7 +1682,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     </div>
   );
 
-  const aiWorking = sending || autoScanning || draftBusy || guidanceBusy || investmentBusy;
+  const aiWorking = chatBusy || autoScanning || draftBusy || guidanceBusy || investmentBusy;
   const aiStatus = autoScanning
     ? { title: "Reading your sources", detail: "Checking evidence and preparing requirements." }
     : draftBusy
@@ -1644,7 +1691,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
         ? { title: "Checking readiness", detail: "Reviewing completeness, risks, and open decisions." }
         : investmentBusy
           ? { title: "Building investment guidance", detail: "Calculating a scope-based planning range." }
-          : sending
+          : chatBusy
             ? { title: "Thinking through your request", detail: "The assistant is preparing the next response." }
             : { title: "Ready to help", detail: "Add information or choose a suggested next step." };
 
@@ -1781,7 +1828,7 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                       </p>
                     </li>
                   ))}
-                  {sending && (
+                  {sending && !assistantResponding && (
                     <li className="flex justify-start">
                       <TypingIndicator label="The assistant is responding" />
                     </li>

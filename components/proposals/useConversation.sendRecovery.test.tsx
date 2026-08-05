@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { SEND_TIMEOUT_MS, useConversation } from "./useConversation";
+import { conversationPollDelay, SEND_TIMEOUT_MS, useConversation } from "./useConversation";
 import { getConversationAction, postConversationMessageAction } from "@/app/actions/conversation";
 
 // Recovery behaviour of the send pipeline: a server action call that rejects
@@ -99,5 +99,14 @@ describe("useConversation send recovery", () => {
     expect(mockedPostMessage).toHaveBeenCalledTimes(2);
     expect(mockedPostMessage.mock.calls[0][2]).toBe(mockedPostMessage.mock.calls[1][2]);
     await waitFor(() => expect(result.current.pending).toHaveLength(0));
+  });
+
+  test("durable conversation polling is fast while pending and backs off when idle", () => {
+    expect(conversationPollDelay(0, true)).toBe(1_000);
+    expect(conversationPollDelay(9, true)).toBe(1_000);
+    expect(conversationPollDelay(10, true)).toBe(2_000);
+    expect(conversationPollDelay(19, true)).toBe(2_000);
+    expect(conversationPollDelay(20, true)).toBe(5_000);
+    expect(conversationPollDelay(0, false)).toBe(10_000);
   });
 });

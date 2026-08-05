@@ -1,7 +1,7 @@
 "use client";
 
 // Shared conversation/session hooks behind the chat-first assistant workspace:
-// idempotent sends, SSE with polling fallback, notes-as-source scanning, and
+// idempotent sends, durable polling, notes-as-source scanning, and
 // private upload sessions. They stay a separate module so the conversation
 // mechanics can be reasoned about (and tested) apart from the page that renders
 // them.
@@ -27,10 +27,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const uuidPattern = /^[0-9a-f-]{36}$/i;
 
-// Upper bound on how long a message send may stay in "sending". The backend
-// reply path is bounded (~45s worst case through the action layer), so a send
-// still pending after this is considered lost and surfaces as retryable.
+// Slightly wider than the server action deadline so a lost request can never
+// leave the optimistic entry in "sending" indefinitely. The bound also keeps
+// the dashboard compatible while an older synchronous API image drains during
+// a rolling deployment.
 export const SEND_TIMEOUT_MS = 60_000;
+
+// Fast while an assistant generation is active, then progressively quieter.
+// Polling is deliberately the correctness path in production: unlike a
+// long-lived Vercel SSE proxy, every request is bounded and reconnect-safe.
+export const conversationPollDelay = (pollCount: number, pending: boolean) => {
+  if (!pending) return 10_000;
+  if (pollCount < 10) return 1_000;
+  if (pollCount < 20) return 2_000;
+  return 5_000;
+};
 
 export const notesScanKey = (proposalId: string) => `rfpilot:notes-scan:${proposalId}`;
 export const sourceScanKey = (proposalId: string) => `rfpilot:source-scan:${proposalId}`;
@@ -56,7 +67,7 @@ export type SendInput = {
 };
 
 // Loads the conversation for a proposal (when one exists), keeps it fresh via
-// SSE with a backoff polling fallback, and manages idempotent message sends
+// bounded polling, and manages idempotent message sends
 // plus clarification-question resolution. Passing null defers everything until
 // a proposal is lazily created.
 export function useConversation(proposalId: string | null) {
@@ -69,13 +80,12 @@ export function useConversation(proposalId: string | null) {
   const [pending, setPending] = useState<PendingSend[]>([]);
   const [questionBusyId, setQuestionBusyId] = useState<string | null>(null);
   const [questionFailure, setQuestionFailure] = useState<{ questionId: string; message: string } | null>(null);
-  const dataRef = useRef<ConversationData | null>(null);
+  const pendingMessageCount = data?.messages.filter(item => item.status === "pending").length ?? 0;
 
-  useEffect(() => { dataRef.current = data; }, [data]);
-
-  const refresh = useCallback(async () => {
-    if (!proposalId) return;
-    const result = await getConversationAction(proposalId);
+  const refresh = useCallback(async (targetProposalId?: string) => {
+    const target = targetProposalId ?? proposalId;
+    if (!target) return;
+    const result = await getConversationAction(target);
     if (!result.success) {
       setLoadError(result.message);
       return;
@@ -97,76 +107,40 @@ export function useConversation(proposalId: string | null) {
     return () => { active = false; };
   }, [proposalId]);
 
-  // Live updates: SSE through the local proxy, with a polling fallback that
-  // backs off exponentially and pauses while the tab is hidden. The stream is
-  // reopened on the next visibility change after a failure.
+  // Durable live updates. The database owns generation state; the browser
+  // periodically re-reads it with short, bounded requests. This survives
+  // Vercel function limits, navigation, reloads, and transient disconnects.
   useEffect(() => {
     if (!proposalId) return;
     let active = true;
-    let source: EventSource | null = null;
     let pollTimer: ReturnType<typeof setTimeout> | undefined;
     let pollCount = 0;
-
-    const stopPolling = () => { if (pollTimer) { clearTimeout(pollTimer); pollTimer = undefined; } };
-    const startPolling = () => {
-      if (!active || pollTimer) return;
-      const poll = async () => {
-        if (!active) return;
-        if (document.hidden) { pollTimer = setTimeout(poll, 2_000); return; }
-        await refresh();
-        if (!active) return;
-        pollCount += 1;
-        pollTimer = setTimeout(poll, nextPollDelay(pollCount));
-      };
-      pollTimer = setTimeout(poll, nextPollDelay(pollCount));
-    };
-
-    const connect = () => {
+    const schedule = () => {
       if (!active) return;
-      if (typeof EventSource === "undefined") { startPolling(); return; }
-      try {
-        source = new EventSource(`/api/proposals/${proposalId}/conversation/events`);
-      } catch {
-        startPolling();
-        return;
-      }
-      const fallback = () => {
-        source?.close();
-        source = null;
-        startPolling();
-      };
-      source.addEventListener("update", event => {
-        try {
-          const payload = JSON.parse((event as MessageEvent).data) as { messageCount?: number; pendingMessages?: number; openQuestions?: number };
-          const current = dataRef.current;
-          const changed = !current
-            || payload.messageCount !== current.messages.length
-            || (payload.pendingMessages ?? 0) !== current.messages.filter(item => item.status === "pending").length
-            || (payload.openQuestions ?? 0) !== current.questions.filter(item => item.status === "open").length;
-          if (changed) void refresh();
-        } catch {
-          void refresh();
-        }
-      });
-      source.addEventListener("reconnect", fallback);
-      source.onerror = fallback;
+      pollTimer = setTimeout(poll, conversationPollDelay(pollCount, pendingMessageCount > 0));
     };
-
+    const poll = async () => {
+      if (!active) return;
+      if (document.hidden) { pollTimer = setTimeout(poll, 2_000); return; }
+      await refresh();
+      if (!active) return;
+      pollCount += 1;
+      schedule();
+    };
     const onVisibility = () => {
-      if (document.hidden || source || !active) return;
-      stopPolling();
+      if (document.hidden || !active) return;
+      if (pollTimer) clearTimeout(pollTimer);
       pollCount = 0;
-      connect();
+      void poll();
     };
     document.addEventListener("visibilitychange", onVisibility);
-    connect();
+    schedule();
     return () => {
       active = false;
-      source?.close();
-      stopPolling();
+      if (pollTimer) clearTimeout(pollTimer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [proposalId, refresh]);
+  }, [pendingMessageCount, proposalId, refresh]);
 
   const performSend = useCallback(async (entry: PendingSend) => {
     let result: Awaited<ReturnType<typeof postConversationMessageAction>>;
@@ -206,7 +180,7 @@ export function useConversation(proposalId: string | null) {
     }
     // The send succeeded, so this idempotency key is retired with its entry.
     setPending(prev => prev.filter(item => item.localId !== entry.localId));
-    await refresh();
+    await refresh(entry.proposalId);
     return true;
   }, [refresh]);
 
