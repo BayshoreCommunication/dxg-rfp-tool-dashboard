@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  GripVertical,
   LoaderCircle,
   Move,
   X,
@@ -223,20 +222,6 @@ export default function AssistantPopup({
         }`}
       >
         <Move size={15} strokeWidth={2.2} aria-hidden />
-      </button>
-      <button
-        type="button"
-        aria-label="Resize AI Assistant from upper right"
-        aria-describedby="ai-assistant-resize-instructions"
-        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home"
-        title="Drag to resize · Arrow keys resize · Home resets size"
-        data-testid="assistant-resize-top-right"
-        {...resizeHandleProps("topRight")}
-        className="group absolute right-0 top-14 z-50 flex h-16 w-6 touch-none cursor-nesw-resize items-center justify-center rounded-l-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9]"
-      >
-        <span className="flex h-9 w-2.5 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition group-hover:text-[#00aeb5] group-focus-visible:text-[#00aeb5]">
-          <GripVertical size={10} strokeWidth={2.3} aria-hidden />
-        </span>
       </button>
       <button
         type="button"

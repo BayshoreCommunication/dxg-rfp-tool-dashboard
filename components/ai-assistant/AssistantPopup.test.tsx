@@ -358,6 +358,11 @@ describe("AssistantPopup", () => {
       name: "Resize AI Assistant from lower right",
     });
 
+    expect(
+      screen.queryByRole("button", {
+        name: "Resize AI Assistant from upper right",
+      }),
+    ).not.toBeInTheDocument();
     expect(resize).not.toHaveAttribute("title");
     expect(resize).toHaveClass("h-9", "w-9");
     expect(resize).not.toHaveClass("opacity-0");
@@ -389,7 +394,7 @@ describe("AssistantPopup", () => {
       name: "AI Assistant",
     });
     const resize = screen.getByRole("button", {
-      name: "Resize AI Assistant from upper right",
+      name: "Resize AI Assistant from lower right",
     });
     for (let index = 0; index < 100; index += 1) {
       fireEvent.keyDown(resize, {
@@ -397,30 +402,12 @@ describe("AssistantPopup", () => {
         shiftKey: true,
       });
       fireEvent.keyDown(resize, {
-        key: "ArrowUp",
+        key: "ArrowDown",
         shiftKey: true,
       });
     }
 
-    expect(dialog).toHaveStyle({ width: "840px", height: "1053px" });
-  });
-
-  test("resizes upward from the upper-right handle", async () => {
-    render(<AssistantPopup open onOpenChange={jest.fn()} />);
-    await screen.findByText("Workspace presentation: popup");
-
-    const dialog = screen.getByRole("dialog", {
-      name: "AI Assistant",
-    });
-    const resize = screen.getByRole("button", {
-      name: "Resize AI Assistant from upper right",
-    });
-    await waitFor(() =>
-      expect(dialog).toHaveStyle({ top: "93px", height: "540px" }),
-    );
-    fireEvent.keyDown(resize, { key: "ArrowUp" });
-
-    expect(dialog).toHaveStyle({ top: "77px", height: "556px" });
+    expect(dialog).toHaveStyle({ width: "840px", height: "1080px" });
   });
 
   test("resizes with a pointer drag from the lower-right handle", async () => {
