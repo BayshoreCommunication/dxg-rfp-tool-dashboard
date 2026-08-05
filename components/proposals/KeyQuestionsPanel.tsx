@@ -26,7 +26,10 @@ function QuestionControl({
   onAnswer: (answer: string) => void;
   onSkip: () => void;
 }) {
-  const [value, setValue] = useState("");
+  // Seeded from the extraction-sourced suggestion when one exists (the native
+  // date input accepts the same YYYY-MM-DD form the backend suggests).
+  // Submitting it is still the planner's explicit confirmation.
+  const [value, setValue] = useState(question.suggestedAnswer ?? "");
   const answer = value.trim();
 
   if (question.answerType === "choice") {

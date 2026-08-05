@@ -8,10 +8,12 @@ import {
 import { normalizeAssistantUiContext } from "@/lib/aiAssistant/uiContext";
 
 // Live-AI calls (conversation replies, requirement extraction, draft
-// generation) routinely run 10-30s. Vercel's default function timeout is
-// well below that and kills the request before the API answers, which the
-// UI surfaces as an unresponsive backend. 60s is the Hobby-plan ceiling.
-export const maxDuration = 60;
+// generation) routinely run 10-30s, and draft generation can exceed 60s in
+// production, which kills the request before the API answers and the UI
+// surfaces as an unresponsive backend. 300s requires Fluid Compute to be
+// enabled on the Vercel project (Settings -> Functions); without it the
+// Hobby-plan ceiling is 60s.
+export const maxDuration = 300;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

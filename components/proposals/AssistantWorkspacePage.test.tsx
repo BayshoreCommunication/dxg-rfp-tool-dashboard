@@ -59,20 +59,6 @@ jest.mock("@/app/actions/candidateApplication", () => ({
   getCandidateReviewAction: jest.fn(),
 }));
 
-class EventSourceStub {
-  static instances: EventSourceStub[] = [];
-  url: string;
-  onerror: ((event: unknown) => void) | null = null;
-  constructor(url: string) {
-    this.url = url;
-    EventSourceStub.instances.push(this);
-  }
-  addEventListener() {}
-  removeEventListener() {}
-  close() {}
-}
-(globalThis as unknown as { EventSource: unknown }).EventSource = EventSourceStub;
-
 if (typeof globalThis.crypto?.randomUUID !== "function") {
   Object.defineProperty(globalThis.crypto ?? (globalThis as unknown as { crypto: object }).crypto, "randomUUID", {
     value: () => "00000000-0000-4000-8000-000000000000",
@@ -147,7 +133,7 @@ const guidedQuestion = (
   prompt: string,
   path: string,
   impact: "schedule" | "cost" | "production" | "scope",
-  control: { answerType?: "date" | "time" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string } = {},
+  control: { answerType?: "date" | "time" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string; suggestedAnswer?: string } = {},
 ) => ({
   id,
   code: `MISSING_FIELD:${path}`,
@@ -158,6 +144,7 @@ const guidedQuestion = (
   impact,
   answerType: control.answerType ?? ("text" as const),
   options: control.options ?? [],
+  suggestedAnswer: control.suggestedAnswer ?? null,
   answeredMessageId: control.answeredMessageId ?? null,
   contextRunId: "run-1",
   createdAt: "2026-07-21T10:00:00.000Z",
@@ -196,12 +183,14 @@ const conversationWithGuidedQuestions = (questions: Array<ReturnType<typeof guid
   },
 });
 
+let replaceStateSpy: jest.SpyInstance;
+
 describe("AssistantWorkspacePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    replaceStateSpy = jest.spyOn(window.history, "replaceState").mockImplementation(() => undefined);
     window.sessionStorage.clear();
     window.localStorage.clear();
-    EventSourceStub.instances = [];
     mockedGetUser.mockResolvedValue({ ok: true, data: { name: "Travis Deployment" } });
     mockedGetConversation.mockResolvedValue(emptyConversation);
     mockedListSources.mockResolvedValue({ success: true, data: [], correlationId: "test-correlation" });
@@ -227,6 +216,10 @@ describe("AssistantWorkspacePage", () => {
     mockedGetLatestContext.mockResolvedValue({ success: false, code: "CONTEXT_RUN_UNAVAILABLE", message: "none" } as never);
     // The completion card's readiness check degrades quietly by default.
     mockedGenerateGuidance.mockResolvedValue({ success: false, code: "GUIDANCE_DISABLED", message: "Proposal guidance is not enabled for this environment yet." });
+  });
+
+  afterEach(() => {
+    replaceStateSpy.mockRestore();
   });
 
   test("empty state greets the signed-in user by first name", async () => {
@@ -280,9 +273,64 @@ describe("AssistantWorkspacePage", () => {
     );
     // The proposal must exist before the message is sent.
     expect(mockedCreateProposal.mock.invocationCallOrder[0]).toBeLessThan(mockedPostMessage.mock.invocationCallOrder[0]);
-    // One canonical URL for an existing proposal's assistant.
-    expect(replace).toHaveBeenCalledWith(`/proposals/${PROPOSAL_ID}/assistant`);
-    expect(replace).not.toHaveBeenCalledWith(expect.stringContaining("add-new-proposal"));
+    // One canonical URL for an existing proposal's assistant — moved with a
+    // shallow history swap. A router.replace() here would start a real
+    // navigation that races the send and can abort its server action POST
+    // mid-flight, leaving the composer stuck on "Sending…".
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, "", `/proposals/${PROPOSAL_ID}/assistant`);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  test("a send whose action rejects marks the message failed with a retry and frees the composer", async () => {
+    mockedCreateProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID } });
+    // An aborted server action POST rejects without a structured result —
+    // exactly what happens when a navigation cancels the request mid-flight.
+    mockedPostMessage.mockRejectedValue(new Error("net::ERR_ABORTED"));
+
+    render(<AssistantWorkspacePage />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "A corporate town hall in Dhaka for 300 attendees." } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    // The failure is visible and actionable instead of an eternal "Sending…".
+    expect(await screen.findByText(/didn't go through/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText("Sending…")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("The assistant is responding")).not.toBeInTheDocument();
+    // The composer recovers: typing again re-enables Send. (Re-query the
+    // textarea — the workspace re-rendered into the started layout once the
+    // proposal was created.)
+    fireEvent.change(screen.getByLabelText("Message the proposal assistant"), { target: { value: "second try" } });
+    expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
+    // The proposal created before the failed send is preserved.
+    expect(mockedCreateProposal).toHaveBeenCalledTimes(1);
+  });
+
+  test("retrying a failed send reuses the idempotency key and never creates a second proposal", async () => {
+    mockedCreateProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID } });
+    mockedPostMessage
+      .mockRejectedValueOnce(new Error("net::ERR_ABORTED"))
+      .mockResolvedValueOnce({
+        success: true,
+        correlationId: "test-correlation",
+        data: { created: true, message: null, assistantMessageId: null, run: null },
+      });
+
+    render(<AssistantWorkspacePage />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "A corporate town hall in Dhaka for 300 attendees." } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Retry" }));
+
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledTimes(2));
+    // Retry replays the SAME idempotency key so the backend can deduplicate a
+    // send that actually reached it before the client saw the failure.
+    expect(mockedPostMessage.mock.calls[0][2]).toBe(mockedPostMessage.mock.calls[1][2]);
+    expect(mockedPostMessage.mock.calls[0][0]).toBe(PROPOSAL_ID);
+    expect(mockedCreateProposal).toHaveBeenCalledTimes(1);
+    // The failed bubble clears once the retry lands.
+    await waitFor(() => expect(screen.queryByText(/didn't go through/)).not.toBeInTheDocument());
   });
 
   test("room schedule guidance renders allowlisted download and upload workflow actions", async () => {
@@ -529,6 +577,93 @@ describe("AssistantWorkspacePage", () => {
       { status: "answered", answer: "2026-09-01" },
     ));
     expect(await screen.findByText("Start date: 2026-09-01 ✓")).toBeInTheDocument();
+  });
+
+  test("an extraction-suggested date pre-fills the picker and one click confirms it", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([
+      guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date", suggestedAnswer: "2026-10-15" }),
+    ]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: "2026-10-15" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Guided question 1");
+    // The picker is seeded, the provenance note is visible, and Answer is
+    // enabled without any typing.
+    expect(screen.getByLabelText("Answer this question")).toHaveValue("2026-10-15");
+    expect(screen.getByText("Pre-filled from your message — confirm or edit.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-start",
+      { status: "answered", answer: "2026-10-15" },
+    ));
+  });
+
+  test("an extraction-suggested number pre-fills the input and submits unchanged", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([
+      guidedQuestion("q-attendees", "Roughly how many people will attend?", "/content/event/attendees", "scope", { answerType: "number", suggestedAnswer: "300" }),
+    ]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-attendees", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/attendees", mongoPath: "event.attendees", value: "300" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Guided question 1");
+    expect(screen.getByLabelText("Answer this question")).toHaveValue(300);
+    expect(screen.getByText("Pre-filled from your message — confirm or edit.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-attendees",
+      { status: "answered", answer: "300" },
+    ));
+  });
+
+  test("an extraction-suggested choice highlights its pill without auto-selecting it", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([
+      guidedQuestion("q-format", "Is the event in-person, hybrid, or virtual?", "/content/event/eventFormat", "scope", {
+        answerType: "choice",
+        options: ["In-Person", "Hybrid", "Virtual"],
+        suggestedAnswer: "In-Person",
+      }),
+    ]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-format", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/eventFormat", mongoPath: "event.eventFormat", value: "In-Person" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Guided question 1");
+    expect(screen.getByText("The highlighted option comes from your message — tap it to confirm.")).toBeInTheDocument();
+    const suggestedPill = screen.getByRole("button", { name: "In-Person" });
+    expect(suggestedPill).toHaveAccessibleDescription("Suggested from your message");
+    // Nothing was submitted by the highlight alone; the tap is the review.
+    expect(mockedPatchQuestion).not.toHaveBeenCalled();
+    fireEvent.click(suggestedPill);
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-format",
+      { status: "answered", answer: "In-Person" },
+    ));
+  });
+
+  test("a question without a suggestion renders no prefill note and an empty control", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([
+      guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope"),
+    ]));
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("Guided question 1");
+    expect(screen.getByLabelText("Answer this question")).toHaveValue("");
+    expect(screen.queryByText(/Pre-filled from your message/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/highlighted option comes from your message/)).not.toBeInTheDocument();
   });
 
   test("a choice question renders pills and clicking one submits that option immediately", async () => {
@@ -1070,6 +1205,56 @@ describe("AssistantWorkspacePage", () => {
     });
     await waitFor(() => expect(screen.queryByLabelText("The assistant is responding")).not.toBeInTheDocument());
     expect(await screen.findByText("What is the event date?")).toBeInTheDocument();
+  });
+
+  test("a persisted pending chat job remains visible after reload and blocks duplicate sends", async () => {
+    mockedGetConversation.mockResolvedValue({
+      ...conversationWithQuestion,
+      data: {
+        ...conversationWithQuestion.data,
+        messages: [
+          ...conversationWithQuestion.data.messages,
+          {
+            id: "assistant-pending", ordinal: 2, role: "assistant" as const, kind: "status" as const,
+            content: "The assistant is preparing a response.", intent: null, runType: null, runId: null,
+            jobId: "job-chat-1", status: "pending" as const, createdAt: "2026-07-21T10:00:00.000Z", attachments: [],
+          },
+        ],
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByLabelText("The assistant is responding")).toBeInTheDocument();
+    const composer = screen.getByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "Do not send this twice." } });
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+  });
+
+  test("a terminal persisted chat failure replaces responding and releases the composer", async () => {
+    mockedGetConversation.mockResolvedValue({
+      ...conversationWithQuestion,
+      data: {
+        ...conversationWithQuestion.data,
+        messages: [
+          ...conversationWithQuestion.data.messages,
+          {
+            id: "assistant-failed", ordinal: 2, role: "assistant" as const, kind: "status" as const,
+            content: "The assistant could not complete this response. Please try again.", intent: null,
+            runType: null, runId: null, jobId: "job-chat-1", status: "failed" as const,
+            createdAt: "2026-07-21T10:00:00.000Z", attachments: [],
+          },
+        ],
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("could not complete this response");
+    expect(screen.queryByLabelText("The assistant is responding")).not.toBeInTheDocument();
+    const composer = screen.getByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "Try a new message." } });
+    expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
   });
 
   test("saving notes needs no approval checkbox and stores them as non_confidential", async () => {

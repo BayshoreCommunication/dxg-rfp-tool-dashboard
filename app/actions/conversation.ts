@@ -30,12 +30,25 @@ const detailMessageCodes = new Set(["INVALID_CANDIDATE_VALUE", "INVALID_QUESTION
 const unknownFailureMessage = (correlationId: string) =>
   `We couldn't complete that request. Please try again. Reference: ${correlationId}`;
 
+// Hard ceiling on any single backend call from these actions. The new backend
+// returns chat acceptance immediately, but the wider bound preserves safe
+// rolling compatibility with the previous synchronous backend image. Once
+// accepted, model generation is outside the Vercel request entirely.
+const BACKEND_REQUEST_TIMEOUT_MS = 45_000;
+
+// Structured failure log: the path (which embeds the proposal id) and the
+// correlation id only — never message content, headers, or tokens.
+const logActionFailure = (path: string, correlationId: string, code: string, status?: number) => {
+  console.error(JSON.stringify({ event: "conversation_action_failed", path, correlationId, code, ...(typeof status === "number" ? { status } : {}) }));
+};
+
 const request = async <T>(path: string, init?: RequestInit, parse?: (value: unknown) => T | null): Promise<ActionResult<T>> => {
   const correlationId = crypto.randomUUID();
   try {
     const response = await authenticatedBackendFetch(`${BACKEND_URL}${path}`, {
       ...init,
       cache: "no-store",
+      signal: AbortSignal.timeout(BACKEND_REQUEST_TIMEOUT_MS),
       headers: { "X-Correlation-ID": correlationId, ...(init?.headers ?? {}) },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -43,6 +56,7 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
     const responseCorrelation = response.headers.get("x-correlation-id") || correlationId;
     if (!response.ok) {
       const code = typeof body.code === "string" ? body.code : `HTTP_${response.status}`;
+      logActionFailure(path, responseCorrelation, code, response.status);
       // Field-validation problems carry a friendly, user-facing title from the
       // backend (e.g. "Candidate date must use the YYYY-MM-DD format.") that
       // the guided question flow shows verbatim so it can re-ask.
@@ -52,8 +66,18 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
     const value = parse ? parse(body.data) : body.data as T;
     if (value === null || value === undefined) return { success: false, code: "INVALID_RESPONSE", message: "The service returned an unexpected response.", correlationId: responseCorrelation };
     return { success: true, data: value, correlationId: responseCorrelation };
-  } catch {
-    return { success: false, code: "NETWORK_ERROR", message: "The service could not be reached. Try again shortly.", correlationId };
+  } catch (error) {
+    const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    const code = timedOut ? "BACKEND_TIMEOUT" : "NETWORK_ERROR";
+    logActionFailure(path, correlationId, code);
+    return {
+      success: false,
+      code,
+      message: timedOut
+        ? "The assistant took too long to respond. Your message was not delivered — please try again."
+        : "The service could not be reached. Try again shortly.",
+      correlationId,
+    };
   }
 };
 
@@ -93,6 +117,11 @@ export type ConversationQuestion = {
   impact?: ConversationQuestionImpact | null;
   answerType: ConversationAnswerType;
   options: string[];
+  // Extraction-sourced prefill for the answer control: a value the planner's
+  // own message already contained, ready to submit as-is. Confirming it is
+  // still the explicit per-field review — nothing is applied automatically.
+  // Optional so payloads and fixtures that predate the field stay valid.
+  suggestedAnswer?: string | null;
   // The answer message this question produced, so the thread can show the
   // question above the answer it belongs to.
   answeredMessageId: string | null;
@@ -107,7 +136,7 @@ export type ConversationData = {
   capabilities?: { conversationExtraction: boolean };
 };
 export type ConversationRunRef = { runType: ConversationRunType; runId: string; jobId: string };
-export type PostConversationMessageResult = { created: boolean; message: ConversationMessage | null; assistantMessageId: string | null; run: ConversationRunRef | null };
+export type PostConversationMessageResult = { created: boolean; message: ConversationMessage | null; assistantMessageId: string | null; jobId?: string | null; run: ConversationRunRef | null };
 export type ConversationIntent = "chat" | "extract_requirements" | "generate_draft";
 export type NotesSource = { id: string; status: string };
 
@@ -172,6 +201,12 @@ const parseQuestion = (value: unknown): ConversationQuestion | null => {
     impact: value.impact === "schedule" || value.impact === "cost" || value.impact === "production" || value.impact === "scope" ? value.impact : null,
     answerType: answerType === "choice" && options.length === 0 ? "text" : answerType,
     options,
+    // Bounded like a typed answer (the backend caps answers at 4000 chars);
+    // anything else is dropped rather than seeding a control with junk.
+    suggestedAnswer:
+      typeof value.suggestedAnswer === "string" && value.suggestedAnswer.trim().length > 0 && value.suggestedAnswer.length <= 4000
+        ? value.suggestedAnswer
+        : null,
     answeredMessageId: typeof value.answeredMessageId === "string" && value.answeredMessageId ? value.answeredMessageId : null,
     contextRunId: typeof value.contextRunId === "string" ? value.contextRunId : null,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
@@ -226,6 +261,7 @@ export const postConversationMessageAction = async (
       created: value.created !== false,
       message: parseMessage(value.message),
       assistantMessageId: typeof value.assistantMessageId === "string" ? value.assistantMessageId : null,
+      jobId: typeof value.jobId === "string" ? value.jobId : null,
       run,
     };
   });
