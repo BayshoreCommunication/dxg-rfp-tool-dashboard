@@ -55,10 +55,12 @@ export default function AssistantPopup({
   open,
   onOpenChange,
   fieldHelpRequest = null,
+  sessionId = 0,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fieldHelpRequest?: AssistantFieldHelpRequest | null;
+  sessionId?: number;
 }) {
   const popupRef = useRef<HTMLElement | null>(null);
   const openedTrackedRef = useRef(false);
@@ -292,6 +294,7 @@ export default function AssistantPopup({
           </div>
         ) : (
           <AiAssistantWorkspace
+            key={`assistant-session-${sessionId}`}
             initialThreads={bootstrap.threads}
             initialDetail={bootstrap.detail}
             initialError={bootstrap.error}

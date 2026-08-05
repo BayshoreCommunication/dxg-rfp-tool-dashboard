@@ -28,18 +28,21 @@ jest.mock("@/components/ai-assistant/AssistantPopup", () => ({
   default: ({
     open,
     fieldHelpRequest,
+    sessionId,
   }: {
     open: boolean;
     fieldHelpRequest?: {
       prompt: string;
       context: { fieldKey?: string };
     } | null;
+    sessionId?: number;
   }) => (
     <div
       data-testid="assistant-popup"
       data-open={String(open)}
       data-prompt={fieldHelpRequest?.prompt}
       data-field-key={fieldHelpRequest?.context.fieldKey}
+      data-session-id={sessionId}
     />
   ),
 }));
@@ -94,6 +97,17 @@ describe("LayoutWrapper", () => {
       "data-open",
       "true",
     );
+    expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
+      "data-session-id",
+      "1",
+    );
+
+    fireEvent.click(launcher);
+    fireEvent.click(launcher);
+    expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
+      "data-session-id",
+      "2",
+    );
   });
 
   test("opens the assistant with a pinned field-help submission request", () => {
@@ -118,6 +132,18 @@ describe("LayoutWrapper", () => {
     expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
       "data-prompt",
       'What should I enter for the "Event Name" field? Explain it simply and give me one short example.',
+    );
+    expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
+      "data-session-id",
+      "1",
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Help with Event Name" }),
+    );
+    expect(screen.getByTestId("assistant-popup")).toHaveAttribute(
+      "data-session-id",
+      "2",
     );
   });
 });

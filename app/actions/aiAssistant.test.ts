@@ -165,27 +165,20 @@ describe("AI Assistant server actions", () => {
     });
   });
 
-  test("bootstraps the most recent active conversation for the popup", async () => {
-    mockedFetch
-      .mockResolvedValueOnce(
-        Response.json(
-          { data: [thread] },
-          { headers: { "X-Correlation-ID": "corr-list" } },
-        ),
-      )
-      .mockResolvedValueOnce(
-        Response.json(
-          { data: { thread, messages: [] } },
-          { headers: { "X-Correlation-ID": "corr-detail" } },
-        ),
-      );
+  test("bootstraps thread history without auto-opening an old conversation", async () => {
+    mockedFetch.mockResolvedValueOnce(
+      Response.json(
+        { data: [thread] },
+        { headers: { "X-Correlation-ID": "corr-list" } },
+      ),
+    );
 
     const result = await getAssistantBootstrapAction();
     expect(result).toEqual({
       success: true,
-      data: { threads: [thread], detail: { thread, messages: [] } },
-      correlationId: "corr-detail",
+      data: { threads: [thread], detail: null },
+      correlationId: "corr-list",
     });
-    expect(mockedFetch).toHaveBeenCalledTimes(2);
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
   });
 });
