@@ -26,6 +26,7 @@ export default function LayoutWrapper({
   assistantEnabled?: boolean;
 }) {
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantSessionId, setAssistantSessionId] = useState(0);
   const [fieldHelpRequest, setFieldHelpRequest] =
     useState<AssistantFieldHelpRequest | null>(null);
   const fieldHelpSequence = useRef(0);
@@ -55,6 +56,7 @@ export default function LayoutWrapper({
             : {}),
         },
       });
+      setAssistantSessionId((current) => current + 1);
       setAssistantOpen(true);
     },
     [assistantEnabled],
@@ -67,8 +69,13 @@ export default function LayoutWrapper({
 
   const toggleAssistant = useCallback(() => {
     setFieldHelpRequest(null);
-    setAssistantOpen((current) => !current);
-  }, []);
+    if (assistantOpen) {
+      setAssistantOpen(false);
+      return;
+    }
+    setAssistantSessionId((current) => current + 1);
+    setAssistantOpen(true);
+  }, [assistantOpen]);
 
   const launcherValue = useMemo(
     () => ({
@@ -95,6 +102,7 @@ export default function LayoutWrapper({
             open={assistantOpen}
             onOpenChange={setPopupOpen}
             fieldHelpRequest={fieldHelpRequest}
+            sessionId={assistantSessionId}
           />
         )}
       </div>

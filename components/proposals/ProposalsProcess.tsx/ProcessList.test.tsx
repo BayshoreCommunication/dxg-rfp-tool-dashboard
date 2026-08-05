@@ -45,4 +45,36 @@ describe("ProcessList", () => {
     expect(screen.getByText("Venue & Schedule").className).not.toContain("#10B981");
     expect(screen.getByText("Event Overview").className).toContain("#10B981");
   });
+
+  it("connects each step through the center of its status circle", () => {
+    const { container } = render(<ProcessList activeStep={2} />);
+    const connectors = container.querySelectorAll("[data-step-connector]");
+
+    expect(connectors).toHaveLength(
+      screen.getAllByRole("button", { name: /^Go to / }).length - 1,
+    );
+    connectors.forEach((connector) => {
+      expect(connector.className).toContain("left-7");
+      expect(connector.className).toContain("top-1/2");
+      expect(connector.className).toContain("h-[calc(100%+0.5rem)]");
+      expect(connector.className).toContain("@min-[1000px]:block");
+    });
+  });
+
+  it("uses a compact horizontal navigator before the desktop rail breakpoint", () => {
+    render(<ProcessList activeStep={1} />);
+
+    expect(screen.getByTestId("proposal-process-list")).toHaveClass(
+      "border-b",
+      "@min-[1000px]:min-h-screen",
+      "@min-[1000px]:border-l",
+    );
+    expect(screen.getByTestId("proposal-step-scroller")).toHaveClass(
+      "overflow-x-auto",
+      "@min-[1000px]:flex-col",
+      "@min-[1000px]:overflow-visible",
+    );
+    expect(screen.getByRole("button", { name: "Go to Event Overview" }).parentElement)
+      .toHaveClass("min-w-[180px]", "@min-[1000px]:min-w-0");
+  });
 });

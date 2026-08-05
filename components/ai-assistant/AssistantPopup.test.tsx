@@ -8,16 +8,7 @@ jest.mock("@/app/actions/aiAssistant", () => ({
 
 jest.mock("./AiAssistantWorkspace", () => ({
   __esModule: true,
-  default: ({
-    presentation,
-    onClose,
-    onResetPosition,
-    onResetSize,
-    positionModified,
-    sizeModified,
-    uiContext,
-    draftRequest,
-  }: {
+  default: function MockAiAssistantWorkspace(props: {
     presentation: string;
     onClose: () => void;
     onResetPosition: () => void;
@@ -26,25 +17,33 @@ jest.mock("./AiAssistantWorkspace", () => ({
     sizeModified: boolean;
     uiContext: { fieldKey?: string; sectionId?: string };
     draftRequest?: { id: string; prompt: string };
-  }) => (
-    <div>
-      <span>Workspace presentation: {presentation}</span>
-      <span>Position changed: {String(positionModified)}</span>
-      <span>Size changed: {String(sizeModified)}</span>
-      <span>Workspace field: {uiContext.fieldKey ?? "none"}</span>
-      <span>Workspace section: {uiContext.sectionId ?? "none"}</span>
-      <span>Workspace draft: {draftRequest?.prompt ?? "none"}</span>
-      <button type="button" onClick={onClose}>
-        Close mocked workspace
-      </button>
-      <button type="button" onClick={onResetPosition}>
-        Reset mocked position
-      </button>
-      <button type="button" onClick={onResetSize}>
-        Reset mocked size
-      </button>
-    </div>
-  ),
+  }) {
+    const React = jest.requireActual<typeof import("react")>("react");
+    const [workspaceState, setWorkspaceState] = React.useState("clean");
+    return (
+      <div>
+        <span>Workspace presentation: {props.presentation}</span>
+        <span>Position changed: {String(props.positionModified)}</span>
+        <span>Size changed: {String(props.sizeModified)}</span>
+        <span>Workspace field: {props.uiContext.fieldKey ?? "none"}</span>
+        <span>Workspace section: {props.uiContext.sectionId ?? "none"}</span>
+        <span>Workspace draft: {props.draftRequest?.prompt ?? "none"}</span>
+        <span>Workspace state: {workspaceState}</span>
+        <button type="button" onClick={() => setWorkspaceState("old chat")}>
+          Simulate old conversation
+        </button>
+        <button type="button" onClick={props.onClose}>
+          Close mocked workspace
+        </button>
+        <button type="button" onClick={props.onResetPosition}>
+          Reset mocked position
+        </button>
+        <button type="button" onClick={props.onResetSize}>
+          Reset mocked size
+        </button>
+      </div>
+    );
+  },
 }));
 
 const mockedBootstrap = jest.mocked(getAssistantBootstrapAction);
@@ -146,6 +145,30 @@ describe("AssistantPopup", () => {
         'Workspace draft: What should I enter for the "Event Name" field? Explain it simply and give me one short example.',
       ),
     ).toBeInTheDocument();
+  });
+
+  test("starts a clean workspace whenever a new popup session begins", async () => {
+    const { rerender } = render(
+      <AssistantPopup
+        open
+        onOpenChange={jest.fn()}
+        sessionId={1}
+      />,
+    );
+    await screen.findByText("Workspace state: clean");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Simulate old conversation" }),
+    );
+    expect(screen.getByText("Workspace state: old chat")).toBeInTheDocument();
+
+    rerender(
+      <AssistantPopup
+        open
+        onOpenChange={jest.fn()}
+        sessionId={2}
+      />,
+    );
+    expect(screen.getByText("Workspace state: clean")).toBeInTheDocument();
   });
 
   test("starts fully hidden without playing the close animation", () => {
@@ -335,6 +358,11 @@ describe("AssistantPopup", () => {
       name: "Resize AI Assistant from lower right",
     });
 
+    expect(
+      screen.queryByRole("button", {
+        name: "Resize AI Assistant from upper right",
+      }),
+    ).not.toBeInTheDocument();
     expect(resize).not.toHaveAttribute("title");
     expect(resize).toHaveClass("h-9", "w-9");
     expect(resize).not.toHaveClass("opacity-0");
@@ -366,7 +394,7 @@ describe("AssistantPopup", () => {
       name: "AI Assistant",
     });
     const resize = screen.getByRole("button", {
-      name: "Resize AI Assistant from upper right",
+      name: "Resize AI Assistant from lower right",
     });
     for (let index = 0; index < 100; index += 1) {
       fireEvent.keyDown(resize, {
@@ -374,30 +402,12 @@ describe("AssistantPopup", () => {
         shiftKey: true,
       });
       fireEvent.keyDown(resize, {
-        key: "ArrowUp",
+        key: "ArrowDown",
         shiftKey: true,
       });
     }
 
-    expect(dialog).toHaveStyle({ width: "840px", height: "1053px" });
-  });
-
-  test("resizes upward from the upper-right handle", async () => {
-    render(<AssistantPopup open onOpenChange={jest.fn()} />);
-    await screen.findByText("Workspace presentation: popup");
-
-    const dialog = screen.getByRole("dialog", {
-      name: "AI Assistant",
-    });
-    const resize = screen.getByRole("button", {
-      name: "Resize AI Assistant from upper right",
-    });
-    await waitFor(() =>
-      expect(dialog).toHaveStyle({ top: "93px", height: "540px" }),
-    );
-    fireEvent.keyDown(resize, { key: "ArrowUp" });
-
-    expect(dialog).toHaveStyle({ top: "77px", height: "556px" });
+    expect(dialog).toHaveStyle({ width: "840px", height: "1080px" });
   });
 
   test("resizes with a pointer drag from the lower-right handle", async () => {

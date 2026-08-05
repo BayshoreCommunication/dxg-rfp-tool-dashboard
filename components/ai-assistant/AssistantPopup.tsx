@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  GripVertical,
   LoaderCircle,
   Move,
   X,
@@ -55,10 +54,12 @@ export default function AssistantPopup({
   open,
   onOpenChange,
   fieldHelpRequest = null,
+  sessionId = 0,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fieldHelpRequest?: AssistantFieldHelpRequest | null;
+  sessionId?: number;
 }) {
   const popupRef = useRef<HTMLElement | null>(null);
   const openedTrackedRef = useRef(false);
@@ -224,20 +225,6 @@ export default function AssistantPopup({
       </button>
       <button
         type="button"
-        aria-label="Resize AI Assistant from upper right"
-        aria-describedby="ai-assistant-resize-instructions"
-        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home"
-        title="Drag to resize · Arrow keys resize · Home resets size"
-        data-testid="assistant-resize-top-right"
-        {...resizeHandleProps("topRight")}
-        className="group absolute right-0 top-14 z-50 flex h-16 w-6 touch-none cursor-nesw-resize items-center justify-center rounded-l-xl opacity-0 transition duration-200 hover:bg-white/90 hover:opacity-100 focus-visible:bg-white/95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9]"
-      >
-        <span className="flex h-9 w-2.5 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition group-hover:text-[#00aeb5] group-focus-visible:text-[#00aeb5]">
-          <GripVertical size={10} strokeWidth={2.3} aria-hidden />
-        </span>
-      </button>
-      <button
-        type="button"
         aria-label="Resize AI Assistant from lower right"
         aria-describedby="ai-assistant-resize-instructions"
         aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home"
@@ -292,6 +279,7 @@ export default function AssistantPopup({
           </div>
         ) : (
           <AiAssistantWorkspace
+            key={`assistant-session-${sessionId}`}
             initialThreads={bootstrap.threads}
             initialDetail={bootstrap.detail}
             initialError={bootstrap.error}

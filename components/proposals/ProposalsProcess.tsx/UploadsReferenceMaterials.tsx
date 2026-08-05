@@ -1,6 +1,21 @@
 ﻿"use client";
 
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Loader2, PlusCircle, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  AudioLines,
+  BadgeCheck,
+  BriefcaseBusiness,
+  Building2,
+  Camera,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Loader2,
+  Palette,
+  PlusCircle,
+  X,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import type {
@@ -213,7 +228,7 @@ const CoVendorCard = ({
   topBanner,
   advisory,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   companyPlaceholder: string;
   contactPlaceholder: string;
@@ -235,10 +250,15 @@ const CoVendorCard = ({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
+        className="group flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
       >
         <div className="flex items-center gap-3">
-          <span>{icon}</span>
+          <span
+            aria-hidden="true"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200/80 bg-slate-50 text-slate-500 transition-colors group-hover:border-[#1DBFD3]/35 group-hover:bg-[#1DBFD3]/5 group-hover:text-[#109aaf]"
+          >
+            {icon}
+          </span>
           <div>
             <span className="text-sm font-bold text-[#222628]">{title}</span>
             {hasData && !open && (
@@ -701,7 +721,12 @@ const UploadsReferenceMaterials = ({
         {/* Pre-fill banner for In-House AV */}
         {prefillAvailable && (
           <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-4 py-3">
-            <span className="mt-0.5 shrink-0">🏛</span>
+            <span
+              aria-hidden="true"
+              className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#1DBFD3]/25 bg-white text-[#109aaf] shadow-sm"
+            >
+              <Building2 size={16} strokeWidth={1.9} />
+            </span>
             <div className="flex-1">
               <p className="text-sm font-bold text-brand-dark">
                 Venue AV contact available from Page 6
@@ -726,7 +751,7 @@ const UploadsReferenceMaterials = ({
 
         <div className="space-y-3">
           <CoVendorCard
-            icon="🏢"
+            icon={<AudioLines size={16} strokeWidth={1.9} />}
             title="In-House Venue AV"
             companyPlaceholder="e.g. Encore, Freeman AV, PSAV"
             contactPlaceholder="e.g. James Whitfield"
@@ -741,7 +766,7 @@ const UploadsReferenceMaterials = ({
           />
 
           <CoVendorCard
-            icon="🎨"
+            icon={<Palette size={16} strokeWidth={1.9} />}
             title="Event Decorator / Scenic Company"
             companyPlaceholder="e.g. GES Events, Freeman Decorating, Becker Studios"
             contactPlaceholder="e.g. Maria Santos"
@@ -756,7 +781,7 @@ const UploadsReferenceMaterials = ({
           />
 
           <CoVendorCard
-            icon="📱"
+            icon={<BadgeCheck size={16} strokeWidth={1.9} />}
             title="Registration / Event Technology"
             companyPlaceholder="e.g. Cvent, Bizzabo, EventMobi, Splash"
             contactPlaceholder="e.g. David Chen"
@@ -771,7 +796,7 @@ const UploadsReferenceMaterials = ({
           />
 
           <CoVendorCard
-            icon="🏛️"
+            icon={<BriefcaseBusiness size={16} strokeWidth={1.9} />}
             title="Agency of Record"
             companyPlaceholder="e.g. Jack Morton, GPJ, MCI Group"
             contactPlaceholder="e.g. Rachel Kim"
@@ -785,7 +810,7 @@ const UploadsReferenceMaterials = ({
           />
 
           <CoVendorCard
-            icon="📷"
+            icon={<Camera size={16} strokeWidth={1.9} />}
             title="Photographer"
             companyPlaceholder="e.g. Smith Event Photography, Lens & Light Studios"
             contactPlaceholder="e.g. Tom Bradley"
@@ -806,8 +831,9 @@ const UploadsReferenceMaterials = ({
             onClick={() => setPdfPreviewOpen(!pdfPreviewOpen)}
             className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
           >
-            <span className="text-xs font-bold uppercase tracking-widest text-[#969798]">
-              📄 Section 7 PDF Preview — Co-Vendor Table
+            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
+              <FileText aria-hidden="true" size={15} strokeWidth={1.9} className="shrink-0 text-slate-400" />
+              <span>Section 7 PDF Preview — Co-Vendor Table</span>
             </span>
             {pdfPreviewOpen ? (
               <ChevronUp size={14} className="text-slate-400" />

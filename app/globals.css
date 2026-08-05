@@ -156,9 +156,9 @@ body {
 
 .dxg-datepicker .react-datepicker__day-name {
   margin-top: 8px;
-  color: #6f8a94;
+  color: #58727d;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -169,7 +169,8 @@ body {
 .dxg-datepicker .react-datepicker__day,
 .dxg-datepicker .react-datepicker__time-list-item {
   border-radius: 9px;
-  color: #28434e;
+  color: #1f3b46;
+  font-weight: 500;
   transition:
     background-color 150ms ease,
     box-shadow 150ms ease,
@@ -194,17 +195,19 @@ body {
 }
 
 .dxg-datepicker .react-datepicker__day--today:not(.react-datepicker__day--selected) {
+  background: #eafafd;
   box-shadow: inset 0 0 0 1.5px #1dbfd3;
-  color: #109aaf;
-  font-weight: 700;
+  color: #087f91;
+  font-weight: 800;
 }
 
 .dxg-datepicker .react-datepicker__day--outside-month {
-  color: #b5c2c7;
+  color: #5f7883;
+  font-weight: 500;
 }
 
 .dxg-datepicker .react-datepicker__day--disabled {
-  color: #d7dfe2;
+  color: #a6b5bb;
 }
 
 .dxg-datepicker .react-datepicker__navigation {

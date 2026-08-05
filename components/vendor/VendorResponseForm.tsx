@@ -337,6 +337,7 @@ export default function VendorResponseForm({
             <input
               ref={fileInputRef}
               type="file"
+              accept="*/*"
               multiple
               className="hidden"
               onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}

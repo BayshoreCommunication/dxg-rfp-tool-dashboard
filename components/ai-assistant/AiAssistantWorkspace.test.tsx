@@ -692,6 +692,34 @@ describe("AiAssistantWorkspace", () => {
     ).toBeInTheDocument();
   });
 
+  test("starts a fresh unsaved conversation from the popup plus button", async () => {
+    render(
+      <AiAssistantWorkspace
+        initialThreads={[thread]}
+        initialDetail={{
+          thread,
+          messages: [userMessage, assistantMessage],
+        }}
+        presentation="popup"
+        onClose={jest.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(mockedListThreads).toHaveBeenCalledTimes(2),
+    );
+    expect(screen.getByText(userMessage.content)).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Start new conversation" }),
+    );
+
+    expect(screen.queryByText(userMessage.content)).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("assistant-compact-empty-state"),
+    ).toBeInTheDocument();
+    expect(mockedCreateThread).not.toHaveBeenCalled();
+  });
+
   test("closes the popup when an internal Assistant link is followed", () => {
     const onClose = jest.fn();
     render(
