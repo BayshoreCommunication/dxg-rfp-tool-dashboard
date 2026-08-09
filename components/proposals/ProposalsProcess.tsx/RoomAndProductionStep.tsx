@@ -536,6 +536,7 @@ const RoomForm = ({
   showErrors,
   roomIndex,
   eventTimeZone,
+  onOpenScenicInspirations,
 }: {
   data: RoomByRoomData;
   onChange: (u: Partial<RoomByRoomData>) => void;
@@ -543,6 +544,7 @@ const RoomForm = ({
   roomIndex: number;
   /** Schedule times are wall-clock at the venue, so they render in its zone. */
   eventTimeZone?: string | null;
+  onOpenScenicInspirations?: () => void;
 }) => {
   const uid = `room-${roomIndex}`;
   const errCls = (v: string) =>
@@ -1317,6 +1319,13 @@ const RoomForm = ({
                 {(data.scenicStageDesignNotes ?? "").length}/600
               </span>
             </div>
+            <button
+              type="button"
+              onClick={onOpenScenicInspirations}
+              className="mt-2 text-xs font-semibold text-[#1DBFD3] hover:underline"
+            >
+              Add scenic inspiration files in Reference Materials →
+            </button>
           </div>
         )}
       </div>
@@ -1782,6 +1791,7 @@ const RoomCard = ({
   canDelete,
   showErrors,
   eventTimeZone,
+  onOpenScenicInspirations,
 }: {
   room: RoomByRoomData;
   index: number;
@@ -1794,6 +1804,7 @@ const RoomCard = ({
   canDelete: boolean;
   showErrors: boolean;
   eventTimeZone?: string | null;
+  onOpenScenicInspirations?: () => void;
 }) => {
   const roomLabel = room.roomLocation.trim() || room.roomFunction.trim() || `Room ${index + 1}`;
   const functionCount = schedulesForRoom(room).filter((entry) => entry.functionName.trim()).length;
@@ -1861,6 +1872,7 @@ const RoomCard = ({
           showErrors={showErrors}
           roomIndex={index}
           eventTimeZone={eventTimeZone}
+          onOpenScenicInspirations={onOpenScenicInspirations}
         />
       )}
     </div>
@@ -1948,6 +1960,7 @@ interface Props {
   focusRoom?: { index: number; token: number } | null;
   /** Venue & Schedule time-zone label; uploaded schedule times are wall-clock there. */
   eventTimeZone?: string | null;
+  onOpenScenicInspirations?: () => void;
 }
 
 const RoomAndProductionStep = ({
@@ -1964,6 +1977,7 @@ const RoomAndProductionStep = ({
   onRecommendationsApplied,
   focusRoom = null,
   eventTimeZone = null,
+  onOpenScenicInspirations,
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
   const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
@@ -2204,6 +2218,7 @@ const RoomAndProductionStep = ({
               canDelete={rooms.length > 1}
               showErrors={showErrors}
               eventTimeZone={eventTimeZone}
+              onOpenScenicInspirations={onOpenScenicInspirations}
             />
           </div>
         ))}

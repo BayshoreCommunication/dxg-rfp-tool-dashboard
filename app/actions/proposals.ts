@@ -529,6 +529,8 @@ export async function uploadProposalFilesAction(formData: FormData): Promise<{
   message?: string;
   supportDocumentUrls: string[];
   avQuoteFileUrls: string[];
+  scenicInspirationFileUrls: string[];
+  venueCoiFileUrls: string[];
 }> {
   try {
     const res = await authenticatedBackendFetch(
@@ -548,6 +550,8 @@ export async function uploadProposalFilesAction(formData: FormData): Promise<{
         message: json.message || "Upload failed",
         supportDocumentUrls: [],
         avQuoteFileUrls: [],
+        scenicInspirationFileUrls: [],
+        venueCoiFileUrls: [],
       };
     }
 
@@ -566,6 +570,12 @@ export async function uploadProposalFilesAction(formData: FormData): Promise<{
       avQuoteFileUrls: results
         .filter((r) => r.fieldname === "avQuoteFiles")
         .map((r) => r.url),
+      scenicInspirationFileUrls: results
+        .filter((r) => r.fieldname === "scenicInspirationFiles")
+        .map((r) => r.url),
+      venueCoiFileUrls: results
+        .filter((r) => r.fieldname === "venueCoiFiles")
+        .map((r) => r.url),
     };
   } catch (error: any) {
     return {
@@ -573,6 +583,8 @@ export async function uploadProposalFilesAction(formData: FormData): Promise<{
       message: error.message || "Network error",
       supportDocumentUrls: [],
       avQuoteFileUrls: [],
+      scenicInspirationFileUrls: [],
+      venueCoiFileUrls: [],
     };
   }
 }

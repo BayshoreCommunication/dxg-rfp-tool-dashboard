@@ -214,6 +214,8 @@ export type UploadsData = {
   referenceFiles: string[];
   referenceUrls: ReferenceUrl[];
   venueDocs: string[];
+  scenicInspirationFiles: string[];
+  venueCoiFiles: string[];
   coVendors: {
     inHouseVenueAv: CoVendorEntry;
     eventDecorator: CoVendorEntry;
@@ -450,6 +452,8 @@ const defaultProposalData: ProposalData = {
     referenceFiles: [],
     referenceUrls: [],
     venueDocs: [],
+    scenicInspirationFiles: [],
+    venueCoiFiles: [],
     coVendors: {
       inHouseVenueAv:  { companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
       eventDecorator:  { companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
@@ -842,6 +846,8 @@ const normalizeExtracted = (
           referenceFiles:   strArr(ru.referenceFiles),
           referenceUrls:    refUrls(ru.referenceUrls),
           venueDocs:        strArr(ru.venueDocs),
+          scenicInspirationFiles: strArr(ru.scenicInspirationFiles),
+          venueCoiFiles: strArr(ru.venueCoiFiles),
           coVendors: {
             inHouseVenueAv:   coV(cv.inHouseVenueAv),
             eventDecorator:   coV(cv.eventDecorator),
@@ -1228,6 +1234,8 @@ const mapApiProposalToFormData = (
       referenceFiles:   strArr(ru.referenceFiles).length   ? strArr(ru.referenceFiles)   : def.referenceFiles,
       referenceUrls:    refUrls(ru.referenceUrls),
       venueDocs:        strArr(ru.venueDocs).length        ? strArr(ru.venueDocs)        : def.venueDocs,
+      scenicInspirationFiles: strArr(ru.scenicInspirationFiles),
+      venueCoiFiles: strArr(ru.venueCoiFiles),
       coVendors: {
         inHouseVenueAv:   coV(cv.inHouseVenueAv),
         eventDecorator:   coV(cv.eventDecorator),
@@ -1266,6 +1274,9 @@ const AddNewProposal = ({
   const [proposalProcessStep, setProposalProcessStep] = useState(
     isEditMode ? initialEditStep : 0,
   );
+  const [referenceMaterialsTarget, setReferenceMaterialsTarget] = useState<
+    "scenic_inspiration" | "venue_coi" | null
+  >(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEditMode);
   const [showErrors, setShowErrors] = useState(false);
@@ -2268,6 +2279,10 @@ const AddNewProposal = ({
                 onRecommendationsApplied={refreshProposalAfterQuestion}
                 focusRoom={focusRoom}
                 eventTimeZone={proposalData.venueSchedule.timeZone}
+                onOpenScenicInspirations={() => {
+                  setReferenceMaterialsTarget("scenic_inspiration");
+                  setProposalProcessStep(9);
+                }}
               />
             )}
             {proposalProcessStep === 4 && (
@@ -2329,6 +2344,10 @@ const AddNewProposal = ({
                     .filter((w) => !isNaN(w) && w > 0);
                   return widths.length ? Math.max(...widths) : undefined;
                 })()}
+                onOpenVenueCoiDocuments={() => {
+                  setReferenceMaterialsTarget("venue_coi");
+                  setProposalProcessStep(9);
+                }}
               />
             )}
             {proposalProcessStep === 8 && (
@@ -2371,6 +2390,7 @@ const AddNewProposal = ({
                 )}
                 eventFormat={proposalData.event.eventFormat}
                 contentServicesNeeded={proposalData.contentCreative?.contentServicesNeeded}
+                focusTarget={referenceMaterialsTarget}
               />
             )}
             {proposalProcessStep === 10 && (

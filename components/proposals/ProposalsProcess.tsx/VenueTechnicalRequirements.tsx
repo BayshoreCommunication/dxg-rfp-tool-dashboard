@@ -143,6 +143,7 @@ interface Props {
   strikeDate?: string;
   numberOfEventRooms?: string;
   ledWallMaxWidth?: number;
+  onOpenVenueCoiDocuments?: () => void;
 }
 
 const defaultVT = (): VenueTechnicalData => ({
@@ -174,6 +175,7 @@ const VenueTechnicalRequirements = ({
   strikeDate,
   numberOfEventRooms,
   ledWallMaxWidth,
+  onOpenVenueCoiDocuments,
 }: Props) => {
   const def = defaultVT();
   const data: VenueTechnicalData = {
@@ -497,6 +499,9 @@ const VenueTechnicalRequirements = ({
           <p className={`mt-1 text-right text-xs ${coiLen >= 450 ? "text-amber-500" : "text-slate-400"}`}>
             {coiLen}/500
           </p>
+          <button type="button" onClick={onOpenVenueCoiDocuments} className="mt-2 text-xs font-semibold text-[#1DBFD3] hover:underline">
+            Upload COI or venue documents in Reference Materials →
+          </button>
         </div>
 
         <div className="mb-6">
@@ -517,6 +522,9 @@ const VenueTechnicalRequirements = ({
           <p className={`mt-1 text-right text-xs ${accessLen >= 360 ? "text-amber-500" : "text-slate-400"}`}>
             {accessLen}/400
           </p>
+          <button type="button" onClick={onOpenVenueCoiDocuments} className="mt-2 text-xs font-semibold text-[#1DBFD3] hover:underline">
+            Add venue access documents in Reference Materials →
+          </button>
         </div>
 
       </div>
