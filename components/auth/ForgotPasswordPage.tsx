@@ -1,7 +1,12 @@
 "use client";
 
 import { resetPasswordAction, sendForgotPasswordOtpAction, verifyForgotPasswordOtpAction } from "@/app/actions/auth";
-import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, Mail } from "lucide-react";
+import {
+  PASSWORD_MIN_LENGTH,
+  PasswordStrengthMeter,
+} from "@/components/auth/passwordStrength";
+import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, Mail } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,6 +19,7 @@ const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,6 +38,7 @@ const ForgotPasswordPage = () => {
     const res = await sendForgotPasswordOtpAction(email);
     if (res.success) {
       setSuccessMsg(res.message);
+      setResendCooldown(60);
       setStep(2);
     } else {
       setError(res.message);
@@ -83,8 +90,10 @@ const ForgotPasswordPage = () => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (!newPassword || newPassword.length < PASSWORD_MIN_LENGTH) {
+      setError(
+        `Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`,
+      );
       return;
     }
     setLoading(true);
@@ -210,14 +219,26 @@ const ForgotPasswordPage = () => {
             <KeyRound className="h-5 w-5" strokeWidth={2} />
           </div>
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="••••••••••"
             className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             disabled={loading}
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="px-4 flex items-center justify-center text-gray-400 hover:text-primary transition-colors focus:outline-none"
+          >
+            {showPassword ? (
+              <EyeOff className="h-5 w-5" strokeWidth={2} />
+            ) : (
+              <Eye className="h-5 w-5" strokeWidth={2} />
+            )}
+          </button>
         </div>
+        <PasswordStrengthMeter password={newPassword} />
       </div>
       <button
         type="submit"
@@ -238,9 +259,14 @@ const ForgotPasswordPage = () => {
         
         {/* Logo Section */}
         <div className="mb-6 flex justify-center">
-            <h3 className="text-primary text-2xl font-bold">
-               Logo.
-            </h3>
+          <Image
+            src="/assets/logo/rfpilot-primary-logo.png"
+            alt="RFPilot"
+            width={64}
+            height={64}
+            className="h-16 w-16 object-contain"
+            priority
+          />
         </div>
 
         {/* Header Section */}
@@ -277,7 +303,7 @@ const ForgotPasswordPage = () => {
 
         {/* Footer */}
         <p className="text-center text-[13.5px] font-bold text-gray-400">
-          Remember caching your password?{" "}
+          Remember your password?{" "}
           <Link href="/sign-in" className="text-primary hover:text-blue-500 transition-colors">
             Sign In
           </Link>
