@@ -7,7 +7,7 @@
 
 import { getProposalWorkflowAction, setProposalWorkflowStepAction, type ProposalWorkflow } from "@/app/actions/proposalWorkflow";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, Check, Radio, Send } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, Lock, Radio, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import GuidancePanel from "./GuidancePanel";
 import HistoricalInsightsPanel from "./HistoricalInsightsPanel";
@@ -126,7 +126,8 @@ export default function ProposalWorkflowShell({
     : data?.state?.nextAction !== "none"
       ? (data?.state?.nextActionLabel ?? "Open the assistant")
       : "Review key questions";
-  return <section aria-label="Assisted proposal workflow" className="@container mb-0 border-b border-[#e5eaee] bg-white">
+  const stagesComplete = data ? data.steps.filter((s) => s.status === "complete").length : 0;
+  return <section aria-label="Proposal assistance" className="@container mb-0 border-b border-[#e5eaee] bg-white">
     <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-[#edf0f2] px-6 py-5 sm:px-8">
       <div>
         <div className="flex flex-wrap items-center gap-3">
@@ -145,10 +146,24 @@ export default function ProposalWorkflowShell({
       <div className="grid @min-[800px]:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex items-start gap-4 p-5 sm:gap-5 sm:p-6">
           <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white bg-white text-[#0786cf] shadow-[0_6px_18px_rgba(7,134,207,0.12)] sm:h-14 sm:w-14"><Send size={27} strokeWidth={1.8} aria-hidden="true" /></div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "Proposal workspace"}</p>
-            <p className="mt-2 text-lg font-bold tracking-[-0.015em] text-[#172b3a] sm:text-xl">{isPublished ? "Your proposal is live and accepting responses." : "Build your proposal with confidence."}</p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#566a78]">{isPublished ? "Vendors can review the RFP and submit their proposals. Keep an eye on incoming activity and answer questions as they arrive." : "The assistant is the easiest place to answer questions, review the draft, and decide what to improve."}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "Proposal assistance"}</p>
+            <p className="mt-2 text-lg font-bold tracking-[-0.015em] text-[#172b3a] sm:text-xl">{isPublished ? "Your proposal is live and accepting responses." : "Answer a few questions — the assistant generates your proposal."}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#566a78]">{isPublished ? "Vendors can review the RFP and submit their proposals. Keep an eye on incoming activity and answer questions as they arrive." : "Tell the assistant about your event and it drafts the RFP for you. Review the draft, resolve its questions, and publish — or edit the form directly at any point."}</p>
+            {!isPublished && data && (
+              <div className="mt-4 max-w-2xl">
+                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.12em] text-[#718592]">
+                  <span>Progress</span>
+                  <span>{stagesComplete} of {data.steps.length} stages complete</span>
+                </div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#dcecf5]">
+                  <div
+                    className="h-full rounded-full bg-[#0786cf] transition-all duration-500"
+                    style={{ width: `${Math.max(4, (stagesComplete / data.steps.length) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="border-t border-[#d8eaf4] bg-white/70 p-5 sm:p-6 @min-[800px]:border-l @min-[800px]:border-t-0">
@@ -157,7 +172,7 @@ export default function ProposalWorkflowShell({
           <p className="mt-1.5 text-sm leading-5 text-[#687782]">{isPublished ? "Monitor responses and keep vendor questions moving." : (data?.state?.headline ?? "Continue from the most useful next step.")}</p>
           {/* A published RFP has no next action. Offering one that still reads
               "Answer the next question" would invite work that is already over. */}
-          <Link href={nextActionHref} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#0786cf] px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_12px_rgba(7,134,207,0.18)] transition-colors hover:bg-[#066fae] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]">{nextActionLabel}<ArrowRight size={15} aria-hidden="true" /></Link>
+          <Link href={nextActionHref} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0786cf] px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_12px_rgba(7,134,207,0.18)] transition-colors hover:bg-[#066fae] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]">{nextActionLabel}<ArrowRight size={15} aria-hidden="true" /></Link>
         </div>
       </div>
     </div>}
@@ -175,8 +190,16 @@ export default function ProposalWorkflowShell({
       return <li key={item.id} className="relative min-w-0">
         {hasNext && <span aria-hidden="true" className="pointer-events-none absolute left-8 top-8 z-0 h-[calc(100%+0.5rem)] w-px bg-[#dfe7ec] sm:bottom-auto sm:left-[calc(50%+20px)] sm:right-[calc(-50%+20px)] sm:top-8 sm:h-px sm:w-auto" />}
         <button type="button" aria-current={isActive ? "step" : undefined} onClick={() => choose(item.id)} className={`relative z-[1] flex h-full min-h-[76px] w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] sm:min-h-[112px] sm:flex-col sm:items-center sm:px-2 sm:text-center ${isActive ? "border-[#b9def2] bg-[#f3faff] text-[#0786cf] shadow-[0_6px_18px_rgba(7,134,207,0.08)]" : "border-[#edf2f5] bg-[#f8fafb] text-[#263744] hover:border-[#dce7ed] hover:bg-white"}`}>
-          <span className={`relative z-[2] grid h-10 w-10 shrink-0 place-items-center rounded-full border text-sm font-bold shadow-sm ${isActive ? "border-[#0786cf] bg-[#0786cf] text-white shadow-[0_0_0_4px_rgba(7,134,207,0.10)]" : "border-[#d6dfe4] bg-white text-[#687782]"}`}>{item.id}</span>
-          <span className="min-w-0 sm:max-w-[150px]"><span className="block text-sm font-bold leading-snug">{item.label}</span><span className="mt-1 block text-[11px] leading-4 text-[#71818d]">{item.summary}</span></span>
+          <span className={`relative z-[2] grid h-10 w-10 shrink-0 place-items-center rounded-full border text-sm font-bold shadow-sm ${
+            isActive
+              ? "border-[#0786cf] bg-[#0786cf] text-white shadow-[0_0_0_4px_rgba(7,134,207,0.10)]"
+              : item.status === "complete"
+                ? "border-emerald-500 bg-emerald-500 text-white"
+                : "border-[#d6dfe4] bg-white text-[#687782]"
+          }`}>
+            {item.status === "complete" ? <Check size={17} strokeWidth={3} aria-label={`${item.label} complete`} /> : item.status === "gated" ? <Lock size={15} aria-label={`${item.label} locked`} /> : item.id}
+          </span>
+          <span className={`min-w-0 sm:max-w-[150px] ${item.status === "gated" && !isActive ? "opacity-60" : ""}`}><span className="block text-sm font-bold leading-snug">{item.label}</span><span className="mt-1 block text-[11px] leading-4 text-[#71818d]">{item.summary}</span></span>
         </button>
       </li>;
     })}</ol>

@@ -74,7 +74,7 @@ describe("ProposalWorkflowShell", () => {
     // The assistant is reached by link, not by a second embedded copy.
     expect(screen.getByRole("link", { name: /Open the assistant/ }))
       .toHaveAttribute("href", `/proposals/${PROPOSAL_ID}/assistant`);
-    expect(screen.queryByText(/The assistant is the easiest place/)).toBeInTheDocument();
+    expect(screen.queryByText(/Tell the assistant about your event/)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });
 
@@ -111,7 +111,7 @@ describe("ProposalWorkflowShell", () => {
       expect(screen.getByText(summary)).toBeInTheDocument();
   });
 
-  test("keeps completed stages neutral and only highlights the selected stage", async () => {
+  test("marks completed stages with an emerald check and highlights the selected stage", async () => {
     mockedGetWorkflow.mockResolvedValue({
       success: true,
       data: {
@@ -123,17 +123,18 @@ describe("ProposalWorkflowShell", () => {
     render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
     await screen.findByText("2 sources ready");
 
-    const journey = screen.getByRole("list", { name: "Proposal creation steps" });
     for (const [index, label] of ["Provide Information", "Review the Draft", "Answer Key Questions", "See Guidance", "Publish"].entries()) {
       const stage = screen.getByRole("button", { name: new RegExp(label) });
       const indicator = stage.firstElementChild;
       expect(stage).toHaveClass("h-full");
-      expect(within(stage).getByText(String(index + 1))).toBeInTheDocument();
-      expect(stage.querySelector("svg")).not.toBeInTheDocument();
+      // Completed stages replace the number with a check icon.
+      expect(within(stage).queryByText(String(index + 1))).not.toBeInTheDocument();
+      expect(stage.querySelector("svg")).toBeInTheDocument();
+      // The selected stage keeps the blue highlight; other completed stages
+      // read as done in emerald.
       if (index === 0) expect(indicator).toHaveClass("bg-[#0786cf]", "text-white");
-      else expect(indicator).toHaveClass("bg-white", "text-[#687782]");
+      else expect(indicator).toHaveClass("bg-emerald-500", "text-white");
     }
-    expect(journey.querySelector('[class*="bg-emerald"]')).not.toBeInTheDocument();
   });
 
   test("one click remains selected when the initial workflow load resolves late", async () => {
@@ -233,7 +234,7 @@ describe("ProposalWorkflowShell", () => {
     // Stepper and assistant banner stay. The old technical-details duplicate is
     // intentionally removed so the actual intake form begins immediately.
     expect(screen.getByRole("list", { name: "Proposal creation steps" })).toBeInTheDocument();
-    expect(screen.getByText(/The assistant is the easiest place/)).toBeInTheDocument();
+    expect(screen.getByText(/Tell the assistant about your event/)).toBeInTheDocument();
     expect(screen.queryByText(/You can upload more than one source/)).not.toBeInTheDocument();
 
     // The other panels are untouched.
