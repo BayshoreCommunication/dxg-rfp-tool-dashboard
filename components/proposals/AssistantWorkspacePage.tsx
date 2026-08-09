@@ -1742,9 +1742,8 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900">
                   Good {dayPart()}{firstName ? `, ${firstName}` : ""}
                 </h1>
-                <p className="mt-2 text-xl text-slate-500">
-                  What&rsquo;s on{" "}
-                  <span className="font-semibold" style={{ color: ACCENT }}>your mind?</span>
+                <p className="mt-2 text-xl font-semibold" style={{ color: ACCENT }}>
+                  Tell me about your event?
                 </p>
               </div>
               <div className="w-full max-w-xl">{composer}</div>

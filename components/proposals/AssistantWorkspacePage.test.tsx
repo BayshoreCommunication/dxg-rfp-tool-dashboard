@@ -225,7 +225,8 @@ describe("AssistantWorkspacePage", () => {
   test("empty state greets the signed-in user by first name", async () => {
     render(<AssistantWorkspacePage />);
     expect(await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/)).toBeInTheDocument();
-    expect(screen.getByText("your mind?")).toBeInTheDocument();
+    expect(screen.getByText("Tell me about your event?")).toBeInTheDocument();
+    expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Describe your event or ask for help…")).toBeInTheDocument();
     // No proposal exists yet, so nothing was created or loaded.
     expect(mockedCreateProposal).not.toHaveBeenCalled();
