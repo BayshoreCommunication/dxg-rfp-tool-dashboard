@@ -95,11 +95,16 @@ const SIGN_IN_ERROR_MESSAGES: Record<string, string> = {
   server_unavailable: "Could not reach the server. Please try again.",
 };
 
-export async function signInAction(email: string, password: string) {
+export async function signInAction(
+  email: string,
+  password: string,
+  rememberMe = false,
+) {
   try {
     const resultUrl = await signIn("credentials", {
       email,
       password,
+      rememberMe: rememberMe ? "true" : "false",
       redirect: false,
     });
     // Defensive: some next-auth versions report failures via the returned

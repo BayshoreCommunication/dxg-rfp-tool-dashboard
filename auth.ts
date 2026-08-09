@@ -23,6 +23,11 @@ class DashboardCredentialsSignin extends CredentialsSignin {
   }
 }
 
+// Without "Remember me", the credentials session ends this long after sign-in
+// (enforced in the jwt callback). With it, the session runs the full
+// session.maxAge (30 days). OAuth sign-ins always get the full maxAge.
+const SHORT_SESSION_MS = 24 * 60 * 60 * 1000;
+
 const logSignInFailure = (
   provider: "credentials" | "google",
   email: unknown,
@@ -72,6 +77,7 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember me", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
@@ -143,6 +149,9 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
             refreshToken: data.refreshToken,
             refreshTokenExpiresAt: data.refreshExpiresAt,
             sessionId: data.sessionId,
+            ...(credentials.rememberMe === "true"
+              ? {}
+              : { sessionDeadline: Date.now() + SHORT_SESSION_MS }),
           } as Record<string, unknown>;
         } catch (error) {
           if (error instanceof CredentialsSignin) throw error;
@@ -249,6 +258,14 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
       // A rejected refresh token is terminal. Keep the marker until the user
       // signs in again instead of calling the refresh endpoint on every request.
       if (nextToken.authError === SESSION_EXPIRED_ERROR) return nextToken;
+      // "Remember me" left unticked: the sign-in stamped a deadline; past it,
+      // end the session even though the cookie itself lives session.maxAge.
+      if (
+        typeof nextToken.sessionDeadline === "number" &&
+        Date.now() >= nextToken.sessionDeadline
+      ) {
+        return expireBackendSession(nextToken);
+      }
       if (typeof nextToken.refreshToken !== "string") {
         const legacyExpiresAt =
           typeof nextToken.accessTokenExpiresAt === "number"

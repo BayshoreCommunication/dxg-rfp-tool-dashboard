@@ -1,7 +1,8 @@
 "use client";
 
 import { signInAction } from "@/app/actions/auth";
-import { ArrowRight, Check, Eye, EyeOff, KeyRound, Mail } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, KeyRound, Mail, Quote, Sparkles } from "lucide-react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
@@ -33,7 +34,7 @@ const SigninPage = ({ authError }: { authError?: string }) => {
     setError("");
 
     try {
-      const res = await signInAction(email, password);
+      const res = await signInAction(email, password, rememberMe);
       if (!res.success) {
         setError(res.message || "Login failed. Please try again.");
       } else {
@@ -47,24 +48,95 @@ const SigninPage = ({ authError }: { authError?: string }) => {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F0F2F5] p-4 text-[#000000]">
-      {/* 
-        The main card: 
-        Elevated with a very soft, diffuse shadow and a delicate glass-like border. 
-      */}
-      <div className="relative z-10 w-full max-w-[460px] rounded-[2.5rem] bg-white/90 px-10 py-12 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.06),0_0_0_1px_rgba(255,255,255,0.4)] backdrop-blur-xl ring-1 ring-gray-100/30 sm:px-14 sm:py-16">
-        {/* Logo Section */}
-        {/* <div className="mb-6 flex justify-center">
-          <h3 className="text-primary text-2xl font-bold">Logo.</h3>
-        </div> */}
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F0F2F5] p-4 text-[#000000] sm:p-8">
+      {/* Abstract Background Elements */}
+      <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 transform items-center justify-center">
+        <div className="absolute h-[600px] w-[600px] rounded-full bg-primary/20 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
+        <div className="absolute ml-40 mt-40 h-[500px] w-[500px] rounded-full bg-blue-300/30 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
+        <div className="absolute -ml-40 -mt-20 h-[550px] w-[550px] rounded-full bg-cyan-200/20 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
+      </div>
 
-        {/* Header Section */}
-        <h2 className="mb-3 text-center text-[32px] font-extrabold tracking-tight text-gray-900 leading-none">
-          Welcome Back
-        </h2>
-        <p className="mb-10 text-center text-[14px] font-medium text-gray-400">
-          Enter your details to access your account
-        </p>
+      <div className="relative z-10 flex w-full max-w-[1000px] overflow-hidden rounded-[2.5rem] bg-white/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] backdrop-blur-2xl ring-1 ring-black/5 sm:min-h-[640px]">
+        {/* Left Side: Branding / Showcase */}
+        <div className="hidden w-1/2 flex-col justify-between bg-primary p-12 text-white lg:flex relative overflow-hidden">
+          {/* Subtle overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+
+          {/* Top Logo */}
+          <div className="relative z-10">
+            <div className="inline-flex rounded-2xl bg-white p-2 shadow-lg shadow-black/10">
+              <Image
+                src="/assets/logo/rfpilot-primary-logo.png"
+                alt="RFPilot"
+                width={64}
+                height={64}
+                className="h-16 w-16 object-contain"
+                priority
+              />
+            </div>
+          </div>
+
+          {/* Testimonial + What's New */}
+          <div className="relative z-10 max-w-sm space-y-8">
+            <h2 className="text-[32px] font-extrabold leading-tight tracking-tight">
+              Pick up right where you left off.
+            </h2>
+
+            {/* TODO: replace with a real customer quote and attribution */}
+            <figure className="rounded-2xl bg-white/10 p-6 backdrop-blur-sm">
+              <Quote className="mb-3 h-5 w-5 text-white/60" />
+              <blockquote className="text-[15px] font-medium leading-relaxed text-white/90">
+                RFPilot cut our proposal turnaround from days to hours — and
+                clients notice the difference.
+              </blockquote>
+              <figcaption className="mt-3 text-[13px] font-semibold text-white/60">
+                Event Operations Lead
+              </figcaption>
+            </figure>
+
+            <div className="flex items-start gap-3 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-[13px] font-bold uppercase tracking-wide text-white/70">
+                  New
+                </p>
+                <p className="text-[14px] font-medium text-white/90">
+                  Sign in with Google — one click, no password.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom attribution */}
+          <div className="relative z-10 text-sm font-medium text-white/50">
+            © 2026 RFPilot.
+          </div>
+        </div>
+
+        {/* Right Side: Form */}
+        <div className="flex w-full flex-col justify-center bg-white px-8 py-16 sm:px-16 lg:w-1/2">
+          <div className="mx-auto w-full max-w-sm">
+            {/* Mobile Logo */}
+            <div className="mb-10 flex justify-center lg:hidden">
+              <Image
+                src="/assets/logo/rfpilot-primary-logo.png"
+                alt="RFPilot"
+                width={72}
+                height={72}
+                className="h-[72px] w-[72px] object-contain"
+                priority
+              />
+            </div>
+
+            {/* Header Section */}
+            <h2 className="mb-3 text-center text-[32px] font-extrabold tracking-tight text-gray-900 leading-none lg:text-left">
+              Welcome Back
+            </h2>
+            <p className="mb-10 text-center text-[14px] font-medium text-gray-400 lg:text-left">
+              Enter your details to access your account
+            </p>
 
         {error && (
           <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm font-medium text-red-600 border border-red-100/50 text-center">
@@ -206,16 +278,18 @@ const SigninPage = ({ authError }: { authError?: string }) => {
           <span>Continue with Google</span>
         </button>
 
-        {/* Footer */}
-        <p className="text-center text-[13.5px] font-bold text-gray-400">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/sign-up"
-            className="text-primary hover:text-blue-500 transition-colors"
-          >
-            Sign up
-          </Link>
-        </p>
+            {/* Footer */}
+            <p className="text-center text-[13.5px] font-bold text-gray-400">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/sign-up"
+                className="text-primary hover:text-blue-500 transition-colors"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
