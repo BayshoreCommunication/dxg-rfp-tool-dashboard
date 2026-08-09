@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarRangeIcon } from "lucide-react";
+import { CalendarRangeIcon, X } from "lucide-react";
 import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -48,6 +48,8 @@ interface GlobalDatePickerProps {
   use12Hours?: boolean;
   /** Minute interval for the time dropdown. Default: 15 */
   timeIntervals?: number;
+  /** Show an × button to clear the selected value. Default: true */
+  clearable?: boolean;
 }
 
 const formatLabelMap: Record<DateFormatType, string> = {
@@ -91,6 +93,7 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
   showTime = false,
   use12Hours = false,
   timeIntervals = 15,
+  clearable = true,
 }) => {
   const dateRef = useRef<DatePicker>(null);
 
@@ -156,6 +159,26 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
         >
           <CalendarRangeIcon size={20} />
         </button>
+
+        {clearable && value && !disabled && (
+          <button
+            type="button"
+            aria-label={`Clear ${label || "date and time"}`}
+            onMouseDown={(e) => {
+              // Keep focus (and the calendar popper) from engaging on the
+              // input while the user is clearing it.
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange(null);
+            }}
+            className="absolute right-10 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 transition hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {showErrorMessage && error && (
