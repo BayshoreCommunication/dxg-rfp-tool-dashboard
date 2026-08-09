@@ -33,10 +33,17 @@ export const metadata: Metadata = {
   },
 };
 
-const page = () => {
+const page = async ({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) => {
+  // Auth.js redirects here with ?error=AccessDenied (etc.) when an OAuth
+  // sign-in fails — surface it in the form's error banner.
+  const { error } = await searchParams;
   return (
     <div>
-      <SigninPage />
+      <SigninPage authError={error} />
     </div>
   );
 };

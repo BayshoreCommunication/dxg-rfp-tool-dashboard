@@ -5,13 +5,22 @@ import { ArrowRight, Check, Eye, EyeOff, KeyRound, Mail } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-const SigninPage = () => {
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  AccessDenied:
+    "Sign-in was denied. We couldn't verify your account with our server. Please try again or sign in with email and password.",
+};
+
+const SigninPage = ({ authError }: { authError?: string }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() =>
+    authError
+      ? AUTH_ERROR_MESSAGES[authError] || "Sign-in failed. Please try again."
+      : "",
+  );
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
