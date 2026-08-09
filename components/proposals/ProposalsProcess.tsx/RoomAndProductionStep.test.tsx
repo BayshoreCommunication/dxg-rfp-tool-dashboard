@@ -1,7 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import * as XLSX from "xlsx";
-import { parseScheduleWorkbook } from "./RoomAndProductionStep";
+import {
+  defaultRoom,
+  functionDateTimeValue,
+  functionScheduleEndIsAfterStart,
+  missingRoomFields,
+  parseScheduleWorkbook,
+  venueTimeValue,
+} from "./RoomAndProductionStep";
+import { SCREEN_SIZE_OTHER } from "../screenSize";
 
 jest.mock("@/app/actions/proposals", () => ({
   normalizeScheduleTimesAction: jest.fn(),
@@ -69,5 +77,88 @@ describe("parseScheduleWorkbook", () => {
     expect(
       XLSX.utils.sheet_to_json(scheduleSheet, { defval: "" }),
     ).toEqual([]);
+  });
+});
+
+describe("mandatory function schedules", () => {
+  const completeRoom = () => ({
+    ...defaultRoom(),
+    roomLocation: "Grand Ballroom",
+    showCrewNeeded: ["A1 (Audio Engineer)"],
+    functions: [{
+      functionName: "Opening keynote",
+      scheduleDate: "2026-08-10",
+      scheduleDay: "Monday",
+      showStartDateTime: "2026-08-10T13:00:00.000Z",
+      showEndDateTime: "2026-08-10T14:00:00.000Z",
+      roomSetup: "Theater",
+      estimatedAttendees: "500",
+    }],
+  });
+
+  it("requires the five critical values for every function", () => {
+    const room = completeRoom();
+    expect(missingRoomFields(room)).toEqual([]);
+
+    room.functions[0] = {
+      ...room.functions[0],
+      scheduleDate: "",
+      showStartDateTime: "",
+      showEndDateTime: "",
+      estimatedAttendees: "0",
+    };
+    expect(missingRoomFields(room)).toEqual([
+      "number of attendees",
+      "date",
+      "start time",
+      "end time",
+    ]);
+  });
+
+  it("requires each end time to be later than its start time", () => {
+    const room = completeRoom();
+    room.functions[0].showEndDateTime = room.functions[0].showStartDateTime;
+
+    expect(functionScheduleEndIsAfterStart(room.functions[0])).toBe(false);
+    expect(missingRoomFields(room)).toContain("end time after start time");
+  });
+
+  it("anchors time-only input to the function date in the venue time zone", () => {
+    const start = functionDateTimeValue("2026-08-10", "09:15", "Central Time (CT)");
+
+    expect(start).toBe("2026-08-10T14:15:00.000Z");
+    expect(venueTimeValue(start, "Central Time (CT)")).toBe("09:15");
+  });
+
+  it("applies the same validation to imported spreadsheet functions", async () => {
+    const buffer = workbookBuffer([{
+      Date: "2026-08-10",
+      "Start Time": "9:00 AM",
+      "Function Name": "Opening keynote",
+      "Room Name": "Grand Ballroom",
+      "# of Attendees": 500,
+    }]);
+    const result = await parseScheduleWorkbook(buffer, async (values) => values.map(() => null));
+
+    expect(missingRoomFields({
+      ...result.rooms[0],
+      showCrewNeeded: ["A1 (Audio Engineer)"],
+    })).toContain("end time");
+  });
+
+  it("blocks Continue when Other lacks an explicit custom screen size", () => {
+    const room = completeRoom();
+    room.largeMonitorsOrScreenProjector = {
+      largeMonitorsOrScreenProjector: "Yes",
+      numberOfMonitors: "0",
+      numberOfScreens: "2",
+      monitorSize: "",
+      screenSize: SCREEN_SIZE_OTHER,
+      screenSizeOther: "",
+    };
+
+    expect(missingRoomFields(room)).toContain("custom screen size");
+    room.largeMonitorsOrScreenProjector.screenSizeOther = "22' × 12' rear projection";
+    expect(missingRoomFields(room)).not.toContain("custom screen size");
   });
 });

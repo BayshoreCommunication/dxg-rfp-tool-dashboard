@@ -97,6 +97,7 @@ export type RoomByRoomData = {
     numberOfScreens: string;
     monitorSize: string;
     screenSize: string;
+    screenSizeOther: string;
   };
   ledWall: string;
   clientProvideOwnPresentationLaptop: {
@@ -213,6 +214,8 @@ export type UploadsData = {
   referenceFiles: string[];
   referenceUrls: ReferenceUrl[];
   venueDocs: string[];
+  scenicInspirationFiles: string[];
+  venueCoiFiles: string[];
   coVendors: {
     inHouseVenueAv: CoVendorEntry;
     eventDecorator: CoVendorEntry;
@@ -449,6 +452,8 @@ const defaultProposalData: ProposalData = {
     referenceFiles: [],
     referenceUrls: [],
     venueDocs: [],
+    scenicInspirationFiles: [],
+    venueCoiFiles: [],
     coVendors: {
       inHouseVenueAv:  { companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
       eventDecorator:  { companyName: "", contactName: "", contactEmail: "", contactPhone: "", status: "", notes: "" },
@@ -652,6 +657,7 @@ const normalizeExtracted = (
         numberOfScreens: (rRec.numberOfScreens as string) ?? "",
         monitorSize: (rRec.monitorSize as string) ?? "",
         screenSize: (rRec.screenSize as string) ?? "",
+        screenSizeOther: (rRec.screenSizeOther as string) ?? "",
       },
       presentationLaptops: {
         presentationLaptops: matchOption((rRec.presentationLaptops as string) ?? "", ["Yes", "No"]),
@@ -840,6 +846,8 @@ const normalizeExtracted = (
           referenceFiles:   strArr(ru.referenceFiles),
           referenceUrls:    refUrls(ru.referenceUrls),
           venueDocs:        strArr(ru.venueDocs),
+          scenicInspirationFiles: strArr(ru.scenicInspirationFiles),
+          venueCoiFiles: strArr(ru.venueCoiFiles),
           coVendors: {
             inHouseVenueAv:   coV(cv.inHouseVenueAv),
             eventDecorator:   coV(cv.eventDecorator),
@@ -1130,11 +1138,18 @@ const mapApiProposalToFormData = (
 
     return rawRooms.map((rawRoom, idx) => {
       const r = (rawRoom ?? {}) as Record<string, unknown>;
+      const display = r.largeMonitorsOrScreenProjector && typeof r.largeMonitorsOrScreenProjector === "object"
+        ? r.largeMonitorsOrScreenProjector as Partial<RoomByRoomData["largeMonitorsOrScreenProjector"]>
+        : {};
       // Merge legacy production fields only on the first room
       const isFirst = idx === 0;
       return {
         ...defaultRoom(),
         ...r,
+        largeMonitorsOrScreenProjector: {
+          ...defaultRoom().largeMonitorsOrScreenProjector,
+          ...display,
+        },
         functions: normalizeRoomFunctions(r),
         roomLocation: typeof r.roomLocation === "string" && r.roomLocation.trim()
           ? r.roomLocation
@@ -1219,6 +1234,8 @@ const mapApiProposalToFormData = (
       referenceFiles:   strArr(ru.referenceFiles).length   ? strArr(ru.referenceFiles)   : def.referenceFiles,
       referenceUrls:    refUrls(ru.referenceUrls),
       venueDocs:        strArr(ru.venueDocs).length        ? strArr(ru.venueDocs)        : def.venueDocs,
+      scenicInspirationFiles: strArr(ru.scenicInspirationFiles),
+      venueCoiFiles: strArr(ru.venueCoiFiles),
       coVendors: {
         inHouseVenueAv:   coV(cv.inHouseVenueAv),
         eventDecorator:   coV(cv.eventDecorator),
@@ -1257,6 +1274,9 @@ const AddNewProposal = ({
   const [proposalProcessStep, setProposalProcessStep] = useState(
     isEditMode ? initialEditStep : 0,
   );
+  const [referenceMaterialsTarget, setReferenceMaterialsTarget] = useState<
+    "scenic_inspiration" | "venue_coi" | null
+  >(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEditMode);
   const [showErrors, setShowErrors] = useState(false);
@@ -1619,6 +1639,7 @@ const AddNewProposal = ({
         numberOfScreens: "",
         monitorSize: "",
         screenSize: "",
+        screenSizeOther: "",
       };
     } else {
       normalized.largeMonitorsOrScreenProjector = {
@@ -1629,6 +1650,11 @@ const AddNewProposal = ({
         screenSize: Number(normalized.largeMonitorsOrScreenProjector.numberOfScreens) > 0
           ? normalized.largeMonitorsOrScreenProjector.screenSize
           : "",
+        screenSizeOther:
+          Number(normalized.largeMonitorsOrScreenProjector.numberOfScreens) > 0 &&
+          normalized.largeMonitorsOrScreenProjector.screenSize === "Other — Specify"
+            ? normalized.largeMonitorsOrScreenProjector.screenSizeOther
+            : "",
       };
     }
     if (
@@ -2253,6 +2279,10 @@ const AddNewProposal = ({
                 onRecommendationsApplied={refreshProposalAfterQuestion}
                 focusRoom={focusRoom}
                 eventTimeZone={proposalData.venueSchedule.timeZone}
+                onOpenScenicInspirations={() => {
+                  setReferenceMaterialsTarget("scenic_inspiration");
+                  setProposalProcessStep(9);
+                }}
               />
             )}
             {proposalProcessStep === 4 && (
@@ -2314,6 +2344,10 @@ const AddNewProposal = ({
                     .filter((w) => !isNaN(w) && w > 0);
                   return widths.length ? Math.max(...widths) : undefined;
                 })()}
+                onOpenVenueCoiDocuments={() => {
+                  setReferenceMaterialsTarget("venue_coi");
+                  setProposalProcessStep(9);
+                }}
               />
             )}
             {proposalProcessStep === 8 && (
@@ -2356,6 +2390,7 @@ const AddNewProposal = ({
                 )}
                 eventFormat={proposalData.event.eventFormat}
                 contentServicesNeeded={proposalData.contentCreative?.contentServicesNeeded}
+                focusTarget={referenceMaterialsTarget}
               />
             )}
             {proposalProcessStep === 10 && (

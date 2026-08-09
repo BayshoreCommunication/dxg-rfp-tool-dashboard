@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveScreenSize } from "@/components/proposals/screenSize";
+
 /* ─── CSS matching ProposalTemplate.html design ─── */
 const TEMPLATE_CSS = `
   @page { size: A4; margin: 0; }
@@ -356,9 +358,16 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     const lmVal = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).largeMonitorsOrScreenProjector) : p(lmRaw as string);
     const lmMonitors = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).numberOfMonitors) : "";
     const lmScreens = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).numberOfScreens) : "";
+    const lmMonitorSize = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).monitorSize) : "";
+    const lmScreenSize = lmRaw && typeof lmRaw === "object"
+      ? resolveScreenSize({
+          screenSize: p((lmRaw as RD).screenSize),
+          screenSizeOther: p((lmRaw as RD).screenSizeOther),
+        })
+      : "";
     const lmQty = [
-      lmMonitors ? `${lmMonitors} monitor${lmMonitors === "1" ? "" : "s"}` : "",
-      lmScreens ? `${lmScreens} screen${lmScreens === "1" ? "" : "s"}` : "",
+      lmMonitors ? `${lmMonitors} monitor${lmMonitors === "1" ? "" : "s"}${lmMonitorSize ? ` — ${lmMonitorSize}` : ""}` : "",
+      lmScreens ? `${lmScreens} screen${lmScreens === "1" ? "" : "s"}${lmScreenSize ? ` — ${lmScreenSize}` : ""}` : "",
     ].filter(Boolean).join(", ");
 
     const clRaw = room.clientProvideOwnPresentationLaptop;
@@ -1093,8 +1102,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
       {/* ══════════════ UPLOADS & CO-VENDORS ══════════════ */}
       {(() => {
-        const fname = (url: string): string => decodeURIComponent(url.split("/").pop() ?? url).replace(/^\d+-/, "");
-        const dlBtn = (url: string, name: string) => (
+        const fname = (url: string): string => decodeURIComponent(url.split("/").pop() ?? url).replace(/^\d+-\d+-/, "");
+        const hasPrivateLocation = (value: string): boolean => /^https?:\/\//i.test(value);
+        const dlBtn = (url: string, name: string) => hasPrivateLocation(url) ? (
           <td className="no-print" style={{ width: "12%", textAlign: "center", verticalAlign: "middle" }}>
             <button
               onClick={async () => {
@@ -1118,7 +1128,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
               ↓ Download
             </button>
           </td>
-        );
+        ) : <td className="no-print" />;
         const openBtn = (url: string) => (
           <td className="no-print" style={{ width: "12%", textAlign: "center", verticalAlign: "middle" }}>
             <a href={url} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#008ad2", color: "#fff", borderRadius: 5, padding: "4px 9px", fontSize: 10, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
@@ -1131,6 +1141,8 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         const refFiles = arr(up.referenceFiles);
         const refUrls = arr(up.referenceUrls);
         const venueDocs = arr(up.venueDocs);
+        const scenicFiles = arr(up.scenicInspirationFiles);
+        const venueCoiFiles = arr(up.venueCoiFiles);
         const ndaDocs = arr(up.ndaDocumentFiles);
         const ndaRequired = p(up.ndaRequired) === "YES";
         const cvEntries = [
@@ -1141,7 +1153,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           { cat: "Photography", raw: (cvs.photographer || {}) as RD },
         ].filter(({ raw }) => p(raw.companyName) || p(raw.contactName));
 
-        const hasFiles = brandFiles.length || logoFiles.length || refFiles.length || refUrls.length || venueDocs.length || ndaDocs.length || p(up.brandGuideUrl);
+        const hasFiles = brandFiles.length || logoFiles.length || refFiles.length || refUrls.length || scenicFiles.length || venueDocs.length || venueCoiFiles.length || ndaDocs.length || p(up.brandGuideUrl);
         if (!hasFiles && !cvEntries.length && !ndaRequired) return null;
 
         return (
@@ -1189,6 +1201,13 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
                         {dlBtn(f, fname(f))}
                       </tr>
                     ))}
+                    {scenicFiles.map((f, i) => (
+                      <tr key={`sc-${i}`}>
+                        <td>{i === 0 ? <b>Scenic Inspirations</b> : ""}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{fname(f)}</td>
+                        {dlBtn(f, fname(f))}
+                      </tr>
+                    ))}
                     {refUrls.map((u, i) => (
                       <tr key={`ru-${i}`}>
                         <td>{i === 0 && !refFiles.length ? <b>Reference URLs</b> : ""}</td>
@@ -1199,6 +1218,13 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
                     {venueDocs.map((f, i) => (
                       <tr key={`vd-${i}`}>
                         <td>{i === 0 ? <b>Venue Documents</b> : ""}</td>
+                        <td style={{ fontSize: 11, color: "#222628" }}>{fname(f)}</td>
+                        {dlBtn(f, fname(f))}
+                      </tr>
+                    ))}
+                    {venueCoiFiles.map((f, i) => (
+                      <tr key={`vc-${i}`}>
+                        <td>{i === 0 ? <b>Venue / COI Documents</b> : ""}</td>
                         <td style={{ fontSize: 11, color: "#222628" }}>{fname(f)}</td>
                         {dlBtn(f, fname(f))}
                       </tr>

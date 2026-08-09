@@ -16,7 +16,7 @@ import {
   PlusCircle,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import type {
   CoVendorEntry,
@@ -83,7 +83,7 @@ const UploadBox = ({
   accept?: string;
   hint?: string;
   maxFiles?: number;
-  uploadField?: "supportDocuments" | "avQuoteFiles";
+  uploadField?: "supportDocuments" | "avQuoteFiles" | "scenicInspirationFiles" | "venueCoiFiles";
 }) => {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -99,8 +99,13 @@ const UploadBox = ({
     try {
       const res = await uploadProposalFilesAction(fd);
       if (res.success) {
-        const urls =
-          uploadField === "supportDocuments" ? res.supportDocumentUrls : res.avQuoteFileUrls;
+        const urls = uploadField === "supportDocuments"
+          ? res.supportDocumentUrls
+          : uploadField === "avQuoteFiles"
+            ? res.avQuoteFileUrls
+            : uploadField === "scenicInspirationFiles"
+              ? res.scenicInspirationFileUrls
+              : res.venueCoiFileUrls;
         onFiles([...files, ...urls]);
       } else {
         alert(res.message || "Upload failed");
@@ -401,6 +406,7 @@ interface Props {
   hasScenicOnAnyRoom?: boolean;
   eventFormat?: string;
   contentServicesNeeded?: string;
+  focusTarget?: "scenic_inspiration" | "venue_coi" | null;
 }
 
 /* ─── Helpers ─── */
@@ -440,7 +446,16 @@ const UploadsReferenceMaterials = ({
   hasScenicOnAnyRoom,
   eventFormat,
   contentServicesNeeded,
+  focusTarget = null,
 }: Props) => {
+  const scenicRef = useRef<HTMLDivElement>(null);
+  const venueCoiRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const target = focusTarget === "scenic_inspiration" ? scenicRef.current : focusTarget === "venue_coi" ? venueCoiRef.current : null;
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.querySelector<HTMLElement>("input[type=file]")?.focus();
+  }, [focusTarget]);
   /* ─── Safe data ─── */
   const safeData: UploadsData = {
     ...data,
@@ -449,6 +464,8 @@ const UploadsReferenceMaterials = ({
     referenceFiles: data?.referenceFiles ?? [],
     referenceUrls: data?.referenceUrls ?? [],
     venueDocs: data?.venueDocs ?? [],
+    scenicInspirationFiles: data?.scenicInspirationFiles ?? [],
+    venueCoiFiles: data?.venueCoiFiles ?? [],
     ndaDocumentFiles: data?.ndaDocumentFiles ?? [],
     coVendors: { ...emptyCoVendors(), ...(data?.coVendors ?? {}) },
   };
@@ -686,6 +703,21 @@ const UploadsReferenceMaterials = ({
           </div>
         </div>
 
+        <div id="scenic-inspirations" ref={scenicRef} tabIndex={-1} className="mb-6 scroll-mt-6">
+          <label className={labelClass}>
+            Scenic Inspirations
+            <InfoTooltip text="Upload mood boards, sketches, reference photos, or renderings specifically for the scenic design scope." />
+          </label>
+          <UploadBox
+            files={safeData.scenicInspirationFiles}
+            onFiles={(files) => onChange({ scenicInspirationFiles: files })}
+            uploadField="scenicInspirationFiles"
+            accept=".pdf,.ppt,.pptx,.jpg,.jpeg,.png"
+            hint="PDF, PowerPoint, JPG, PNG — up to 10 files"
+            maxFiles={10}
+          />
+        </div>
+
         {/* Field 4 — Venue Documents */}
         <div className="mb-6">
           <label className={labelClass}>
@@ -704,6 +736,21 @@ const UploadsReferenceMaterials = ({
             accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png"
             hint="PDF, DWG, DXF, JPG, PNG — up to 5 files"
             maxFiles={5}
+          />
+        </div>
+
+        <div id="venue-coi-documents" ref={venueCoiRef} tabIndex={-1} className="mb-6 scroll-mt-6">
+          <label className={labelClass}>
+            Venue / COI Documents
+            <InfoTooltip text="Upload COI instructions, additional-insured language, access rules, dock details, or related venue documentation." />
+          </label>
+          <UploadBox
+            files={safeData.venueCoiFiles}
+            onFiles={(files) => onChange({ venueCoiFiles: files })}
+            uploadField="venueCoiFiles"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            hint="PDF, DOC, DOCX, JPG, PNG — up to 10 files"
+            maxFiles={10}
           />
         </div>
 

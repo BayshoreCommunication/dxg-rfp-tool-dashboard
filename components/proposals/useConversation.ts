@@ -13,6 +13,7 @@ import {
   postConversationMessageAction,
   type ConversationData,
   type ConversationIntent,
+  type ConversationQuestionAnswer,
 } from "@/app/actions/conversation";
 import {
   completePrivateUpload,
@@ -212,7 +213,7 @@ export function useConversation(proposalId: string | null) {
     await performSend({ ...entry, state: "sending" });
   }, [pending, performSend]);
 
-  const resolveQuestion = useCallback(async (questionId: string, input: { status: "answered" | "dismissed"; answer?: string }) => {
+  const resolveQuestion = useCallback(async (questionId: string, input: { status: "answered" | "dismissed"; answer?: ConversationQuestionAnswer }) => {
     if (!proposalId) return false;
     setQuestionBusyId(questionId);
     setQuestionFailure(null);

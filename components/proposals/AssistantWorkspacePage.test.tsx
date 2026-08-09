@@ -131,14 +131,14 @@ const conversationWithQuestion = {
 const guidedQuestion = (
   id: string,
   prompt: string,
-  path: string,
+  path: string | string[],
   impact: "schedule" | "cost" | "production" | "scope",
-  control: { answerType?: "date" | "time" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string; suggestedAnswer?: string } = {},
+  control: { answerType?: "date" | "time" | "date_time" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string; suggestedAnswer?: string } = {},
 ) => ({
   id,
   code: `MISSING_FIELD:${path}`,
   severity: "question" as const,
-  paths: [path],
+  paths: Array.isArray(path) ? path : [path],
   prompt,
   status: control.status ?? ("open" as const),
   impact,
@@ -156,6 +156,13 @@ const datePickerQuestion = guidedQuestion("q-start", "When does the event start?
 const endDatePickerQuestion = guidedQuestion("q-end", "When does the event end? (YYYY-MM-DD)", "/content/event/endDate", "schedule", { answerType: "date" });
 const loadInDatePickerQuestion = guidedQuestion("q-load-in", "When can production load in? (YYYY-MM-DD)", "/content/venueSchedule/loadInDate", "schedule", { answerType: "date" });
 const loadInTimePickerQuestion = guidedQuestion("q-load-in-time", "What time can production load in? (HH:MM)", "/content/venueSchedule/loadInTime", "schedule", { answerType: "time" });
+const combinedLoadInQuestion = guidedQuestion(
+  "q-load-in-combined",
+  "What date and time can production load-in?",
+  ["/content/venueSchedule/loadInDate", "/content/venueSchedule/loadInTime"],
+  "schedule",
+  { answerType: "date_time" },
+);
 // Mirrors streamingPlatformOptions in the wizard step and the backend whitelist.
 const STREAMING_PLATFORMS = [
   "Client-Owned Platform",
@@ -225,7 +232,8 @@ describe("AssistantWorkspacePage", () => {
   test("empty state greets the signed-in user by first name", async () => {
     render(<AssistantWorkspacePage />);
     expect(await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/)).toBeInTheDocument();
-    expect(screen.getByText("your mind?")).toBeInTheDocument();
+    expect(screen.getByText("Tell me about your event?")).toBeInTheDocument();
+    expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Describe your event or ask for help…")).toBeInTheDocument();
     // No proposal exists yet, so nothing was created or loaded.
     expect(mockedCreateProposal).not.toHaveBeenCalled();
@@ -434,6 +442,43 @@ describe("AssistantWorkspacePage", () => {
       "q-load-in-time",
       { status: "answered", answer: "07:30" },
     ));
+  });
+
+  test("production load-in uses one card with coordinated date and time controls", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([combinedLoadInQuestion]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        id: "q-load-in-combined",
+        status: "answered",
+        answeredMessageId: null,
+        appliedField: { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: "2026-09-01" },
+        appliedFields: [
+          { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: "2026-09-01" },
+          { path: "/content/venueSchedule/loadInTime", mongoPath: "venueSchedule.loadInTime", value: "07:30" },
+        ],
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await screen.findByText("What date and time can production load-in?");
+    const dateInput = screen.getByLabelText("Answer this question");
+    const timeInput = screen.getByLabelText("Load-in time");
+    expect(dateInput).toHaveAttribute("placeholder", "YYYY-MM-DD");
+    expect(timeInput).toHaveAttribute("type", "time");
+    expect(screen.getByRole("button", { name: "Answer" })).toBeDisabled();
+
+    fireEvent.change(dateInput, { target: { value: "2026-09-01" } });
+    fireEvent.input(timeInput, { target: { value: "07:30" } });
+    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-load-in-combined",
+      { status: "answered", answer: { date: "2026-09-01", time: "07:30" } },
+    ));
+    expect(await screen.findByText("Production load-in: 2026-09-01 at 07:30 ✓")).toBeInTheDocument();
   });
 
   test("venue-name guidance points undecided users to Skip, not a missing option", () => {
