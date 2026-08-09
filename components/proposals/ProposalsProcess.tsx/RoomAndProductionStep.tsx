@@ -18,6 +18,16 @@ import {
   customScreenSizeIsMissing,
   selectScreenSize,
 } from "../screenSize";
+import {
+  CAMERA_PLAN_SPECIFIC,
+  CAMERA_PLAN_VENDOR_RECOMMENDATION,
+  CAMERA_TYPE_BOTH,
+  CAMERA_TYPE_OTHER,
+  CAMERA_TYPE_PTZ,
+  CAMERA_TYPE_STUDIO,
+  cameraPlanMissingFields,
+  cameraPlanTotal,
+} from "../cameraPlan";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -466,7 +476,10 @@ export const defaultRoom = (): RoomByRoomData => ({
   presentationLaptops: { presentationLaptops: "", presentationLaptopQty: "" },
   videoPlayback: { videoPlayback: "", videoPlaybackCount: "", videoPlaybackFormat: "" },
   videoFormatAspectRatio: "",
-  cameras: { cameras: "", camerasQty: "" },
+  cameras: {
+    cameras: "", camerasQty: "", cameraPlanMode: "", cameraType: "",
+    ptzCameraQty: "", studioCameraQty: "", otherCameraType: "", otherCameraQty: "",
+  },
   videoRecording: { videoRecording: "", videoRecordingType: "" },
   lightingRequirements: [],
   stageWashLighting: { stageWashLighting: "", stageWashLightingStageSize: "" },
@@ -1389,28 +1402,82 @@ const RoomForm = ({
       <div>
         <label className={labelClass}>
           Cameras?
-          <InfoTooltip text="Camera coverage for IMAG (image magnification on screens) or for video recording. Specify quantity so the AV company can plan camera positions and operators." />
+          <InfoTooltip text="Camera coverage for IMAG or recording. Choose a specific typed plan, or ask the vendor to recommend the right plan for this room." />
         </label>
         <YesNo
           value={data.cameras.cameras}
           onChange={(v) =>
             onChange({
               cameras: {
+                ...data.cameras,
                 cameras: v,
-                camerasQty: v !== "Yes" ? "" : data.cameras.camerasQty,
+                ...(v !== "Yes" ? {
+                  camerasQty: "", cameraPlanMode: "", cameraType: "", ptzCameraQty: "",
+                  studioCameraQty: "", otherCameraType: "", otherCameraQty: "",
+                } : {}),
               },
             })
           }
         />
         {data.cameras.cameras === "Yes" && (
-          <input
-            className={`${inputClass} mt-3`}
-            placeholder="How many cameras?"
-            value={data.cameras.camerasQty}
-            onChange={(e) =>
-              onChange({ cameras: { ...data.cameras, camerasQty: e.target.value } })
-            }
-          />
+          <div className={subPanelClass}>
+            <label className={labelClass}>Camera Planning Approach <span className="text-red-500">*</span></label>
+            <div className="flex flex-wrap gap-3">
+              {[CAMERA_PLAN_SPECIFIC, CAMERA_PLAN_VENDOR_RECOMMENDATION].map((option) => (
+                <PillRadio
+                  key={option}
+                  name={`${uid}-camera-plan-mode`}
+                  value={option}
+                  checked={data.cameras.cameraPlanMode === option}
+                  onChange={() => onChange({ cameras: {
+                    ...data.cameras,
+                    cameraPlanMode: option,
+                    cameraType: option === CAMERA_PLAN_SPECIFIC ? data.cameras.cameraType : "",
+                    ptzCameraQty: option === CAMERA_PLAN_SPECIFIC ? data.cameras.ptzCameraQty : "",
+                    studioCameraQty: option === CAMERA_PLAN_SPECIFIC ? data.cameras.studioCameraQty : "",
+                    otherCameraType: option === CAMERA_PLAN_SPECIFIC ? data.cameras.otherCameraType : "",
+                    otherCameraQty: option === CAMERA_PLAN_SPECIFIC ? data.cameras.otherCameraQty : "",
+                    camerasQty: option === CAMERA_PLAN_SPECIFIC ? data.cameras.camerasQty : "",
+                  } })}
+                />
+              ))}
+            </div>
+            {data.cameras.cameraPlanMode === CAMERA_PLAN_SPECIFIC && (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className={labelClass}>Camera Type <span className="text-red-500">*</span></label>
+                  <GlobalSelect
+                    className={inputClass}
+                    value={data.cameras.cameraType}
+                    onChange={(event) => onChange({ cameras: {
+                      ...data.cameras,
+                      cameraType: event.target.value,
+                      ptzCameraQty: [CAMERA_TYPE_PTZ, CAMERA_TYPE_BOTH].includes(event.target.value) ? data.cameras.ptzCameraQty : "",
+                      studioCameraQty: [CAMERA_TYPE_STUDIO, CAMERA_TYPE_BOTH].includes(event.target.value) ? data.cameras.studioCameraQty : "",
+                      otherCameraType: event.target.value === CAMERA_TYPE_OTHER ? data.cameras.otherCameraType : "",
+                      otherCameraQty: event.target.value === CAMERA_TYPE_OTHER ? data.cameras.otherCameraQty : "",
+                    } })}
+                  >
+                    <option value="">Select camera type…</option>
+                    {[CAMERA_TYPE_PTZ, CAMERA_TYPE_STUDIO, CAMERA_TYPE_BOTH, CAMERA_TYPE_OTHER].map((option) => <option key={option}>{option}</option>)}
+                  </GlobalSelect>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[CAMERA_TYPE_PTZ, CAMERA_TYPE_BOTH].includes(data.cameras.cameraType) && (
+                    <div><label className={labelClass}>PTZ Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.ptzCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, ptzCameraQty: event.target.value } })} /></div>
+                  )}
+                  {[CAMERA_TYPE_STUDIO, CAMERA_TYPE_BOTH].includes(data.cameras.cameraType) && (
+                    <div><label className={labelClass}>Studio / Broadcast Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.studioCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, studioCameraQty: event.target.value } })} /></div>
+                  )}
+                  {data.cameras.cameraType === CAMERA_TYPE_OTHER && (
+                    <><div><label className={labelClass}>Other Camera Type <span className="text-red-500">*</span></label><input className={inputClass} value={data.cameras.otherCameraType} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraType: event.target.value } })} /></div><div><label className={labelClass}>Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.otherCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraQty: event.target.value } })} /></div></>
+                  )}
+                </div>
+                {cameraPlanTotal(data.cameras) > 0 && <p className="text-xs font-semibold text-[#0069a0]">Derived total: {cameraPlanTotal(data.cameras)} camera(s)</p>}
+              </div>
+            )}
+            {showErrors && cameraPlanMissingFields(data.cameras).length > 0 && <p className="mt-2 text-xs text-red-500">Complete: {cameraPlanMissingFields(data.cameras).join(", ")}.</p>}
+          </div>
         )}
       </div>
 
@@ -1913,6 +1980,7 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
     })) missing.push("end time after start time");
   }
   if (room.showCrewNeeded.length === 0) missing.push("show crew");
+  missing.push(...cameraPlanMissingFields(room.cameras));
   if (
     Number(room.largeMonitorsOrScreenProjector.numberOfScreens) > 0 &&
     customScreenSizeIsMissing(room.largeMonitorsOrScreenProjector)

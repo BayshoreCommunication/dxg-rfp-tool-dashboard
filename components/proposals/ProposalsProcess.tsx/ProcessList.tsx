@@ -13,7 +13,7 @@ const steps: Step[] = [
   { id: 3,  badge: "2B", label: "Room Specifications", sub: "AV per room" },
   { id: 4,  badge: "3",  label: "Hybrid & Virtual",    sub: "Conditional" },
   { id: 5,  badge: "4",  label: "Content & Creative",  sub: "Ownership matrix" },
-  { id: 6,  badge: "5",  label: "Video Recording",     sub: "Cameras & deliverables" },
+  { id: 6,  badge: "5",  label: "Video Recording",     sub: "Recording & deliverables" },
   { id: 7,  badge: "6",  label: "Venue & Technical",   sub: "Power, rigging, COI" },
   { id: 8,  badge: "7",  label: "Investment & Evaluation", sub: "Scoring & timeline" },
   { id: 9,  badge: "8",  label: "Uploads & Co-Vendors",sub: "Files & partners" },

@@ -1,6 +1,7 @@
 "use client";
 
 import { resolveScreenSize } from "@/components/proposals/screenSize";
+import { cameraPlanSummary, type CameraPlan } from "@/components/proposals/cameraPlan";
 
 /* ─── CSS matching ProposalTemplate.html design ─── */
 const TEMPLATE_CSS = `
@@ -348,7 +349,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
     const camRaw = room.cameras;
     const camVal = camRaw && typeof camRaw === "object" ? p((camRaw as RD).cameras) : p(camRaw as string);
-    const camQty = camRaw && typeof camRaw === "object" ? p((camRaw as RD).camerasQty) : "";
+    const camSummary = camRaw && typeof camRaw === "object"
+      ? cameraPlanSummary(camRaw as unknown as CameraPlan)
+      : camVal;
 
     const pmicRaw = room.podiumMic;
     const pmicVal = pmicRaw && typeof pmicRaw === "object" ? p((pmicRaw as RD).podiumMic) : p(pmicRaw as string);
@@ -458,7 +461,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           value={vpVal === "Yes" ? `Yes${vpCount ? ` (${vpCount})` : ""}${vpFormat ? ` — ${vpFormat}` : ""}` : vpVal}
         />
         <InfoRow label="Video Recording" value={vrVal === "Yes" && vrType ? `Yes — ${vrType}` : vrVal} />
-        <InfoRow label="Cameras" value={camVal === "Yes" && camQty ? `Yes (${camQty})` : camVal} />
+        <InfoRow label="Cameras" value={camSummary} />
 
         {/* Presentation */}
         <InfoRow label="Pres. Laptops" value={plVal === "Yes" && plQty ? `Yes (${plQty})` : plVal} />
@@ -876,13 +879,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           <IntHeader brand={brandName} title={headerTitle} />
           <SectionTitle num={nextSec()}>Video Recording &amp; Broadcast</SectionTitle>
 
-          <div className="section-subtitle">Camera Plan</div>
+          <div className="section-subtitle">Recording Strategy</div>
           <table>
             <tbody>
-              <InfoTd label="Total Cameras Required" value={p(vr.numberOfCameras)} />
-              <InfoTd label="Camera Positions" value={arr(vr.cameraPositions).join(", ")} />
-              <InfoTd label="IMAG" value={yn(vr.imagRequired)} />
-              <InfoTd label="Camera Operators" value={p(vr.cameraOperators)} />
               <InfoTd label="ISO Recordings" value={p(vr.isoRecordings)} />
             </tbody>
           </table>

@@ -27,6 +27,7 @@ import SaveCopyModal from "./SaveCopyModal";
 import ProposalWorkflowShell from "./ProposalWorkflowShell";
 import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
+import { CAMERA_PLAN_SPECIFIC, cameraPlanTotal } from "./cameraPlan";
 
 /* ─── Proposal data by step ─── */
 export type EventData = {
@@ -121,6 +122,12 @@ export type RoomByRoomData = {
   cameras: {
     cameras: string;
     camerasQty: string;
+    cameraPlanMode: string;
+    cameraType: string;
+    ptzCameraQty: string;
+    studioCameraQty: string;
+    otherCameraType: string;
+    otherCameraQty: string;
   };
   videoRecording: {
     videoRecording: string;
@@ -669,8 +676,14 @@ const normalizeExtracted = (
         videoPlaybackFormat: matchOption((rRec.videoPlaybackFormat as string) ?? "", ["4:3", "16:9", "Custom Wide Screen"]),
       },
       cameras: {
-        cameras: matchOption((rRec.cameras as string) ?? "", ["Yes", "No"]),
+        cameras: matchOption((rRec.cameras as string) ?? "", ["Yes", "No"]) || (rRec.camerasQty ? "Yes" : ""),
         camerasQty: (rRec.camerasQty as string) ?? "",
+        cameraPlanMode: (rRec.cameraPlanMode as string) || (rRec.camerasQty ? CAMERA_PLAN_SPECIFIC : ""),
+        cameraType: (rRec.cameraType as string) ?? "",
+        ptzCameraQty: (rRec.ptzCameraQty as string) ?? "",
+        studioCameraQty: (rRec.studioCameraQty as string) ?? "",
+        otherCameraType: (rRec.otherCameraType as string) ?? "",
+        otherCameraQty: (rRec.otherCameraQty as string) ?? "",
       },
       // ── Flat Yes/No fields ──
       audioRecording: matchOption((rRec.audioRecording as string) ?? "", ["Yes", "No"]) as RoomByRoomData["audioRecording"],
@@ -1141,6 +1154,20 @@ const mapApiProposalToFormData = (
       const display = r.largeMonitorsOrScreenProjector && typeof r.largeMonitorsOrScreenProjector === "object"
         ? r.largeMonitorsOrScreenProjector as Partial<RoomByRoomData["largeMonitorsOrScreenProjector"]>
         : {};
+      const rawCameras = r.cameras && typeof r.cameras === "object"
+        ? r.cameras as Partial<RoomByRoomData["cameras"]>
+        : {};
+      const standaloneLegacyCount = idx === 0 && raw.videoRecordingStep
+        ? String((raw.videoRecordingStep as Record<string, unknown>).numberOfCameras ?? "")
+        : "";
+      const legacyCameraCount = rawCameras.camerasQty || standaloneLegacyCount;
+      const normalizedCameras: RoomByRoomData["cameras"] = {
+        ...defaultRoom().cameras,
+        ...rawCameras,
+        cameras: rawCameras.cameras || (legacyCameraCount ? "Yes" : ""),
+        camerasQty: legacyCameraCount,
+        cameraPlanMode: rawCameras.cameraPlanMode || (legacyCameraCount ? CAMERA_PLAN_SPECIFIC : ""),
+      };
       // Merge legacy production fields only on the first room
       const isFirst = idx === 0;
       return {
@@ -1150,6 +1177,7 @@ const mapApiProposalToFormData = (
           ...defaultRoom().largeMonitorsOrScreenProjector,
           ...display,
         },
+        cameras: normalizedCameras,
         functions: normalizeRoomFunctions(r),
         roomLocation: typeof r.roomLocation === "string" && r.roomLocation.trim()
           ? r.roomLocation
@@ -1680,7 +1708,17 @@ const AddNewProposal = ({
       };
     }
     if (normalized.cameras.cameras !== "Yes") {
-      normalized.cameras = { ...normalized.cameras, camerasQty: "" };
+      normalized.cameras = {
+        cameras: "", camerasQty: "", cameraPlanMode: "", cameraType: "",
+        ptzCameraQty: "", studioCameraQty: "", otherCameraType: "", otherCameraQty: "",
+      };
+    } else {
+      normalized.cameras = {
+        ...normalized.cameras,
+        camerasQty: cameraPlanTotal(normalized.cameras) > 0
+          ? String(cameraPlanTotal(normalized.cameras))
+          : normalized.cameras.camerasQty,
+      };
     }
     // Audience Q&A has no separate yes/no control — the chosen method is the
     // whole answer — so the usual "clear the child when the parent isn't Yes"

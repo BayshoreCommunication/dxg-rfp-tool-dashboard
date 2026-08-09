@@ -44,7 +44,14 @@ const legacyProposal = {
       estimatedAttendeesInRoom: "500",
       podiumMic: { podiumMic: "Yes", podiumMicQty: "1" },
       wirelessMics: { wirelessMics: "Yes", wirelessMicsQty: "4", wirelessMicsType: "Lavalier" },
-      cameras: { cameras: "Yes", camerasQty: "3" },
+      cameras: {
+        cameras: "Yes",
+        camerasQty: "3",
+        cameraPlanMode: "Specific Camera Plan",
+        cameraType: "Both",
+        ptzCameraQty: "1",
+        studioCameraQty: "2",
+      },
       scenicStageDesign: "Yes",
       unionLabor: "Not Sure",
       showCrewNeeded: ["A1", "V1"],
@@ -176,6 +183,13 @@ describe("legacy proposal adapter", () => {
     expect(result.proposal.content.event.format).toBe("hybrid");
     expect(result.proposal.content.event.attendeeCount).toBe(500);
     expect(result.proposal.content.rooms[0].audio?.wirelessMicCount).toBe(4);
+    expect(result.proposal.content.rooms[0].video).toEqual(expect.objectContaining({
+      cameraPlanMode: "specific",
+      cameraType: "both",
+      ptzCameraCount: 1,
+      studioCameraCount: 2,
+      cameraCount: 3,
+    }));
     expect(result.proposal.content.rooms[0].scheduleEntries).toHaveLength(2);
     expect(result.proposal.content.rooms[0].scheduleEntries?.[1].function).toBe("Leadership Panel");
     expect(result.proposal.content.rooms[0].production?.unionLabor).toBeNull();
