@@ -23,9 +23,39 @@ class DashboardCredentialsSignin extends CredentialsSignin {
   }
 }
 
+const logSignInFailure = (
+  provider: "credentials" | "google",
+  email: unknown,
+  reason: string,
+  detail?: Record<string, unknown>,
+) => {
+  console.error(
+    `[auth][${provider}] sign-in failed for ${String(email)}: ${reason}`,
+    detail ?? "",
+  );
+};
+
 export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   trustHost: true,
+  logger: {
+    error(error) {
+      // Failed credential logins and google sign-in denials are expected and
+      // already logged with full context (status, errorCode, message) by
+      // logSignInFailure — skip Auth.js's generic stack traces for those.
+      // AccessDenied is thrown whenever the signIn callback returns false,
+      // which this app only does on google failures (each path logs first).
+      if (error instanceof CredentialsSignin) return;
+      if ((error as { type?: string }).type === "AccessDenied") return;
+      console.error(`[auth][error] ${error.name}: ${error.message}`);
+      const cause = error.cause as { err?: unknown } | undefined;
+      if (cause?.err instanceof Error) {
+        console.error(`[auth][cause]:`, cause.err.stack);
+      } else if (error.stack) {
+        console.error(error.stack);
+      }
+    },
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -45,6 +75,11 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
+          logSignInFailure(
+            "credentials",
+            credentials?.email ?? "<missing email>",
+            "email or password missing from request",
+          );
           return null;
         }
 
@@ -63,17 +98,37 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
 
           const data = await response.json().catch(() => ({}));
           if (!response.ok) {
-            throw new DashboardCredentialsSignin(
+            const errorCode =
               typeof data?.errorCode === "string"
                 ? data.errorCode
-                : "credentials",
+                : "credentials";
+            logSignInFailure(
+              "credentials",
+              credentials.email,
+              "backend rejected login",
+              {
+                status: response.status,
+                errorCode,
+                message: data?.message,
+              },
             );
+            throw new DashboardCredentialsSignin(errorCode);
           }
           if (
             !data?.user?._id ||
             !data?.accessToken ||
             typeof data?.refreshToken !== "string"
           ) {
+            logSignInFailure(
+              "credentials",
+              credentials.email,
+              "backend response missing user/accessToken/refreshToken",
+              {
+                hasUserId: Boolean(data?.user?._id),
+                hasAccessToken: Boolean(data?.accessToken),
+                hasRefreshToken: typeof data?.refreshToken === "string",
+              },
+            );
             return null;
           }
 
@@ -91,6 +146,15 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
           } as Record<string, unknown>;
         } catch (error) {
           if (error instanceof CredentialsSignin) throw error;
+          logSignInFailure(
+            "credentials",
+            credentials.email,
+            "auth backend unreachable",
+            {
+              url: `${AUTH_API_ORIGIN}/api/auth/login`,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          );
           throw new DashboardCredentialsSignin("server_unavailable");
         }
       },
@@ -105,6 +169,11 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
         const email = googleProfile?.email || user?.email;
 
         if (!email) {
+          logSignInFailure(
+            "google",
+            "<missing email>",
+            "google profile did not include an email address",
+          );
           return false;
         }
 
@@ -120,16 +189,31 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
             },
           );
 
+          const data = await response.json().catch(() => ({}));
           if (!response.ok) {
+            logSignInFailure("google", email, "backend rejected google login", {
+              status: response.status,
+              errorCode: data?.errorCode,
+              message: data?.message,
+            });
             return false;
           }
 
-          const data = await response.json();
           if (
             !data?.user?._id ||
             !data?.accessToken ||
             typeof data?.refreshToken !== "string"
           ) {
+            logSignInFailure(
+              "google",
+              email,
+              "backend response missing user/accessToken/refreshToken",
+              {
+                hasUserId: Boolean(data?.user?._id),
+                hasAccessToken: Boolean(data?.accessToken),
+                hasRefreshToken: typeof data?.refreshToken === "string",
+              },
+            );
             return false;
           }
 
@@ -145,7 +229,11 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
             refreshTokenExpiresAt: data.refreshExpiresAt,
             sessionId: data.sessionId,
           });
-        } catch {
+        } catch (error) {
+          logSignInFailure("google", email, "auth backend unreachable", {
+            url: `${AUTH_API_ORIGIN}/api/auth/google`,
+            error: error instanceof Error ? error.message : String(error),
+          });
           return false;
         }
       }

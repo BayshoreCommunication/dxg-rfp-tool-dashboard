@@ -1,5 +1,7 @@
 "use server";
 
+import { CredentialsSignin } from "next-auth";
+
 import { signIn, signOut } from "@/auth";
 import { authBffHeaders } from "@/lib/authRefresh";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
@@ -86,6 +88,13 @@ export async function signUpAction(payload: {
 /* ─────────────────────────────────────────
    SIGN IN
 ───────────────────────────────────────── */
+const SIGN_IN_ERROR_MESSAGES: Record<string, string> = {
+  USER_NOT_FOUND: "No account found with this email.",
+  WRONG_PASSWORD: "Incorrect password. Please try again.",
+  USER_BLOCKED: "Your account has been blocked. Please contact support.",
+  server_unavailable: "Could not reach the server. Please try again.",
+};
+
 export async function signInAction(email: string, password: string) {
   try {
     const resultUrl = await signIn("credentials", {
@@ -93,19 +102,15 @@ export async function signInAction(email: string, password: string) {
       password,
       redirect: false,
     });
+    // Defensive: some next-auth versions report failures via the returned
+    // redirect URL instead of throwing.
     const result = new URL(String(resultUrl), "http://auth.local");
     if (result.searchParams.has("error")) {
       const code = result.searchParams.get("code");
-      const messages: Record<string, string> = {
-        USER_NOT_FOUND: "No account found with this email.",
-        WRONG_PASSWORD: "Incorrect password. Please try again.",
-        USER_BLOCKED: "Your account has been blocked. Please contact support.",
-        server_unavailable: "Could not reach the server. Please try again.",
-      };
       return {
         success: false,
         message:
-          (code ? messages[code] : undefined) ||
+          (code ? SIGN_IN_ERROR_MESSAGES[code] : undefined) ||
           "Login failed. Please try again.",
       };
     }
@@ -113,7 +118,18 @@ export async function signInAction(email: string, password: string) {
       success: true,
       message: "Login successful",
     };
-  } catch {
+  } catch (error) {
+    // Server-side signIn (raw mode) throws CredentialsSignin with the code
+    // set by authorize() rather than returning an error URL.
+    if (error instanceof CredentialsSignin) {
+      return {
+        success: false,
+        message:
+          SIGN_IN_ERROR_MESSAGES[error.code] ||
+          "Login failed. Please try again.",
+      };
+    }
+    console.error("[auth][signInAction] unexpected sign-in failure:", error);
     return { success: false, message: "Login failed. Please try again." };
   }
 }

@@ -1,12 +1,41 @@
 "use client";
 
 import { sendSignupOtpAction, signUpAction, verifySignupOtpAction } from "@/app/actions/auth";
-import { ArrowLeft, ArrowRight, Building2, CheckCircle2, KeyRound, Mail, Phone, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, CheckCircle2, Eye, EyeOff, KeyRound, Mail, Phone, User } from "lucide-react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+// Backend requires a minimum of 6 characters (credentialAuthentication.ts);
+// everything beyond that only feeds the strength meter.
+const PASSWORD_MIN_LENGTH = 6;
+
+const passwordStrength = (password: string) => {
+  if (password.length < PASSWORD_MIN_LENGTH) return 0;
+  let score = 1;
+  if (password.length >= 10) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password) && /[^A-Za-z0-9]/.test(password)) score++;
+  return score;
+};
+
+const STRENGTH_LABELS = ["Too short", "Weak", "Fair", "Good", "Strong"];
+const STRENGTH_COLORS = [
+  "bg-gray-200",
+  "bg-red-400",
+  "bg-orange-400",
+  "bg-yellow-400",
+  "bg-green-500",
+];
+const STRENGTH_TEXT_COLORS = [
+  "text-gray-400",
+  "text-red-500",
+  "text-orange-500",
+  "text-yellow-600",
+  "text-green-600",
+];
 
 const SignupPage = () => {
   const router = useRouter();
@@ -19,6 +48,7 @@ const SignupPage = () => {
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -92,6 +122,12 @@ const SignupPage = () => {
       setError("Name and password are required.");
       return;
     }
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(
+        `Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`,
+      );
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -148,6 +184,40 @@ const SignupPage = () => {
         <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
       </button>
 
+      <div className="mb-6 -mt-2 flex items-center gap-4">
+        <div className="h-px flex-1 bg-gray-200" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          or
+        </span>
+        <div className="h-px flex-1 bg-gray-200" />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+        disabled={loading}
+        className="cursor-pointer mb-8 flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-4 text-[15px] font-bold text-gray-700 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:translate-y-0 disabled:opacity-70"
+      >
+        <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            fill="#4285F4"
+            d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.63h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.8Z"
+          />
+          <path
+            fill="#34A853"
+            d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.88-3c-1.07.72-2.45 1.14-4.06 1.14-3.13 0-5.78-2.11-6.72-4.95H1.27v3.09A12 12 0 0 0 12 24Z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M5.28 14.28a7.21 7.21 0 0 1 0-4.56V6.63H1.27a12 12 0 0 0 0 10.74l4.01-3.09Z"
+          />
+          <path
+            fill="#EA4335"
+            d="M12 4.77c1.76 0 3.34.61 4.59 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.63l4.01 3.09C6.22 6.88 8.87 4.77 12 4.77Z"
+          />
+        </svg>
+        <span>Continue with Google</span>
+      </button>
     </form>
   );
 
@@ -273,14 +343,50 @@ const SignupPage = () => {
               <KeyRound className="h-5 w-5" strokeWidth={2} />
             </div>
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="••••••••••"
               className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="px-4 flex items-center justify-center text-gray-400 hover:text-primary transition-colors focus:outline-none"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" strokeWidth={2} />
+              ) : (
+                <Eye className="h-5 w-5" strokeWidth={2} />
+              )}
+            </button>
           </div>
+          {password ? (
+            <div className="mt-2">
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4].map((segment) => (
+                  <div
+                    key={segment}
+                    className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                      passwordStrength(password) >= segment
+                        ? STRENGTH_COLORS[passwordStrength(password)]
+                        : "bg-gray-200"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p
+                className={`mt-1.5 text-xs font-semibold ${STRENGTH_TEXT_COLORS[passwordStrength(password)]}`}
+              >
+                {STRENGTH_LABELS[passwordStrength(password)]}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs font-medium text-gray-400">
+              Must be at least {PASSWORD_MIN_LENGTH} characters.
+            </p>
+          )}
         </div>
       </div>
 
@@ -414,7 +520,7 @@ const SignupPage = () => {
               .
             </p>
             
-            <p className="mt-8 mb-4 lg:mb-0 text-center text-[14px] font-bold text-gray-900 lg:hidden">
+            <p className="mt-8 mb-4 lg:mb-0 text-center text-[14px] font-bold text-gray-900">
               Already have an account?{" "}
               <Link href="/sign-in" className="text-primary hover:underline transition-colors">
                 Log in

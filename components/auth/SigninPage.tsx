@@ -2,16 +2,26 @@
 
 import { signInAction } from "@/app/actions/auth";
 import { ArrowRight, Check, Eye, EyeOff, KeyRound, Mail } from "lucide-react";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
 
-const SigninPage = () => {
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  AccessDenied:
+    "Sign-in was denied. We couldn't verify your account with our server. Please try again or sign in with email and password.",
+};
+
+const SigninPage = ({ authError }: { authError?: string }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() =>
+    authError
+      ? AUTH_ERROR_MESSAGES[authError] || "Sign-in failed. Please try again."
+      : "",
+  );
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,6 +170,41 @@ const SigninPage = () => {
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           </button>
         </form>
+
+        <div className="mb-6 -mt-2 flex items-center gap-4">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            or
+          </span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+          disabled={loading}
+          className="cursor-pointer mb-8 flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-4 text-[15px] font-bold text-gray-700 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:translate-y-0 disabled:opacity-70"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="#4285F4"
+              d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.63h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.8Z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.88-3c-1.07.72-2.45 1.14-4.06 1.14-3.13 0-5.78-2.11-6.72-4.95H1.27v3.09A12 12 0 0 0 12 24Z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.28 14.28a7.21 7.21 0 0 1 0-4.56V6.63H1.27a12 12 0 0 0 0 10.74l4.01-3.09Z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 4.77c1.76 0 3.34.61 4.59 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.63l4.01 3.09C6.22 6.88 8.87 4.77 12 4.77Z"
+            />
+          </svg>
+          <span>Continue with Google</span>
+        </button>
 
         {/* Footer */}
         <p className="text-center text-[13.5px] font-bold text-gray-400">
