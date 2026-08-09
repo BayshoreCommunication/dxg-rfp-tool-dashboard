@@ -121,6 +121,32 @@ const parse24HourTime = (val: string): { hours: number; minutes: number } | null
   return { hours: h, minutes: min };
 };
 
+/** HH:MM venue wall-clock value for a stored schedule instant. */
+export const venueTimeValue = (iso: string, timeZoneLabel?: string | null): string => {
+  const displayed = toEventZoneDisplay(iso, timeZoneLabel);
+  if (!displayed) return "";
+  return `${String(displayed.getHours()).padStart(2, "0")}:${String(displayed.getMinutes()).padStart(2, "0")}`;
+};
+
+/** Re-anchor a time-only control to the function's one authoritative date. */
+export const functionDateTimeValue = (
+  scheduleDate: string,
+  timeValue: string,
+  timeZoneLabel?: string | null,
+): string => {
+  const time = parse24HourTime(timeValue);
+  return scheduleDate && time ? wallClockToIso(scheduleDate, time, timeZoneLabel) : "";
+};
+
+const isPositiveIntegerText = (value: string): boolean => /^\d+$/.test(value.trim()) && Number(value) > 0;
+
+export const functionScheduleEndIsAfterStart = (entry: RoomFunctionSchedule): boolean => {
+  if (!entry.showStartDateTime || !entry.showEndDateTime) return true;
+  const start = new Date(entry.showStartDateTime).getTime();
+  const end = new Date(entry.showEndDateTime).getTime();
+  return Number.isFinite(start) && Number.isFinite(end) && end > start;
+};
+
 /** Combines an ISO date (YYYY-MM-DD) with a time-of-day cell into a full ISO datetime string. */
 const combineDateAndTime = (isoDate: string, val: unknown, timeZoneLabel?: string | null): string => {
   if (!isoDate) return "";
@@ -610,30 +636,45 @@ const RoomForm = ({
                   type="number"
                   min={1}
                   max={50000}
-                  className={`${inputClass} ${errCls(entry.estimatedAttendees)}`}
+                  className={`${inputClass} ${showErrors && !isPositiveIntegerText(entry.estimatedAttendees) ? "border-red-400 focus:border-red-400" : ""}`}
                   value={entry.estimatedAttendees}
                   onChange={(event) => updateFunction(functionIndex, { estimatedAttendees: event.target.value })}
                   placeholder="e.g. 160"
                 />
+                {showErrors && !isPositiveIntegerText(entry.estimatedAttendees) && (
+                  <p className="mt-1 text-xs text-red-500">Enter a whole number greater than zero.</p>
+                )}
               </div>
               <div>
-                <label className={labelClass}>Date <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                <label htmlFor={`${uid}-function-${functionIndex}-date`} className={labelClass}>Date <span className="text-red-500">*</span></label>
                 {/* A native date input renders in the browser's locale, so this
                     showed 10/03/2027 beside a start time reading 03/10/2027 —
                     the same day in two orders, one card apart. */}
                 <GlobalDateInput
+                  id={`${uid}-function-${functionIndex}-date`}
                   hideLabel
                   showFormatInLabel={false}
+                  showErrorMessage={false}
                   format="MM-dd-yyyy"
                   value={isoDateToLocalDate(entry.scheduleDate)}
                   onChange={(date) => {
                     const iso = localDateToIsoDate(date);
-                    updateFunction(functionIndex, { scheduleDate: iso, scheduleDay: dayOfWeekFromDate(iso) });
+                    updateFunction(functionIndex, {
+                      scheduleDate: iso,
+                      scheduleDay: dayOfWeekFromDate(iso),
+                      showStartDateTime: functionDateTimeValue(iso, venueTimeValue(entry.showStartDateTime, eventTimeZone), eventTimeZone),
+                      showEndDateTime: functionDateTimeValue(iso, venueTimeValue(entry.showEndDateTime, eventTimeZone), eventTimeZone),
+                    });
                   }}
-                  inputClassName={`${inputClass} pr-12`}
+                  error={showErrors && !entry.scheduleDate ? "Date is required." : undefined}
+                  ariaInvalid={showErrors && !entry.scheduleDate}
+                  inputClassName={`${inputClass} pr-12 ${showErrors && !entry.scheduleDate ? "border-red-400 focus:border-red-400" : ""}`}
                   buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3]"
                   placeholder="Select date"
                 />
+                {showErrors && !entry.scheduleDate && (
+                  <p className="mt-1 text-xs text-red-500">Date is required.</p>
+                )}
               </div>
               <div>
                 <label className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
@@ -647,36 +688,45 @@ const RoomForm = ({
                 </GlobalSelect>
               </div>
               <div>
-                <label className={labelClass}>Start Time <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
-                <GlobalDateTimeInput
-                  hideLabel
-                  showFormatInLabel={false}
-                  format="MM/dd/yyyy"
-                  showTime
-                  use12Hours
-                  timeIntervals={15}
-                  value={toEventZoneDisplay(entry.showStartDateTime, eventTimeZone)}
-                  onChange={(date) => updateFunction(functionIndex, { showStartDateTime: fromEventZoneDisplay(date, eventTimeZone) })}
-                  inputClassName={`${inputClass} pr-12`}
-                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3]"
-                  placeholder="Select date & time"
+                <label htmlFor={`${uid}-function-${functionIndex}-start-time`} className={labelClass}>Start Time <span className="text-red-500">*</span></label>
+                <input
+                  id={`${uid}-function-${functionIndex}-start-time`}
+                  type="time"
+                  step={300}
+                  disabled={!entry.scheduleDate}
+                  aria-invalid={showErrors && !entry.showStartDateTime ? true : undefined}
+                  aria-describedby={showErrors && !entry.showStartDateTime ? `${uid}-function-${functionIndex}-start-error` : undefined}
+                  value={venueTimeValue(entry.showStartDateTime, eventTimeZone)}
+                  onChange={(event) => updateFunction(functionIndex, {
+                    showStartDateTime: functionDateTimeValue(entry.scheduleDate, event.target.value, eventTimeZone),
+                  })}
+                  className={`${inputClass} ${showErrors && !entry.showStartDateTime ? "border-red-400 focus:border-red-400" : ""} disabled:cursor-not-allowed disabled:bg-slate-100`}
                 />
+                {showErrors && !entry.showStartDateTime && (
+                  <p id={`${uid}-function-${functionIndex}-start-error`} className="mt-1 text-xs text-red-500">Start Time is required.</p>
+                )}
               </div>
               <div>
-                <label className={labelClass}>End Time <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
-                <GlobalDateTimeInput
-                  hideLabel
-                  showFormatInLabel={false}
-                  format="MM/dd/yyyy"
-                  showTime
-                  use12Hours
-                  timeIntervals={15}
-                  value={toEventZoneDisplay(entry.showEndDateTime, eventTimeZone)}
-                  onChange={(date) => updateFunction(functionIndex, { showEndDateTime: fromEventZoneDisplay(date, eventTimeZone) })}
-                  inputClassName={`${inputClass} pr-12`}
-                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3]"
-                  placeholder="Select date & time"
+                <label htmlFor={`${uid}-function-${functionIndex}-end-time`} className={labelClass}>End Time <span className="text-red-500">*</span></label>
+                <input
+                  id={`${uid}-function-${functionIndex}-end-time`}
+                  type="time"
+                  step={300}
+                  disabled={!entry.scheduleDate}
+                  aria-invalid={showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? true : undefined}
+                  aria-describedby={showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? `${uid}-function-${functionIndex}-end-error` : undefined}
+                  value={venueTimeValue(entry.showEndDateTime, eventTimeZone)}
+                  onChange={(event) => updateFunction(functionIndex, {
+                    showEndDateTime: functionDateTimeValue(entry.scheduleDate, event.target.value, eventTimeZone),
+                  })}
+                  className={`${inputClass} ${showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? "border-red-400 focus:border-red-400" : ""} disabled:cursor-not-allowed disabled:bg-slate-100`}
                 />
+                {showErrors && !entry.showEndDateTime && (
+                  <p id={`${uid}-function-${functionIndex}-end-error`} className="mt-1 text-xs text-red-500">End Time is required.</p>
+                )}
+                {showErrors && entry.showStartDateTime && entry.showEndDateTime && !functionScheduleEndIsAfterStart(entry) && (
+                  <p id={`${uid}-function-${functionIndex}-end-error`} className="mt-1 text-xs text-red-500">End Time must be after Start Time.</p>
+                )}
               </div>
             </div>
           </div>
@@ -1787,10 +1837,26 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
   const schedules = room.functions.length > 0 ? room.functions : [];
   if (schedules.length > 0) {
     if (schedules.some((entry) => !entry.functionName.trim())) missing.push("function name");
-    if (schedules.some((entry) => !entry.estimatedAttendees.trim())) missing.push("number of attendees");
+    if (schedules.some((entry) => !isPositiveIntegerText(entry.estimatedAttendees))) missing.push("number of attendees");
+    if (schedules.some((entry) => !entry.scheduleDate.trim())) missing.push("date");
+    if (schedules.some((entry) => !entry.showStartDateTime.trim())) missing.push("start time");
+    if (schedules.some((entry) => !entry.showEndDateTime.trim())) missing.push("end time");
+    if (schedules.some((entry) => !functionScheduleEndIsAfterStart(entry))) missing.push("end time after start time");
   } else {
     if (!room.roomFunction.trim()) missing.push("function name");
-    if (!room.estimatedAttendeesInRoom.trim()) missing.push("number of attendees");
+    if (!isPositiveIntegerText(room.estimatedAttendeesInRoom)) missing.push("number of attendees");
+    if (!room.scheduleDate.trim()) missing.push("date");
+    if (!room.showStartDateTime.trim()) missing.push("start time");
+    if (!room.showEndDateTime.trim()) missing.push("end time");
+    if (!functionScheduleEndIsAfterStart({
+      functionName: room.roomFunction,
+      scheduleDate: room.scheduleDate,
+      scheduleDay: room.scheduleDay,
+      showStartDateTime: room.showStartDateTime,
+      showEndDateTime: room.showEndDateTime,
+      roomSetup: room.roomSetup,
+      estimatedAttendees: room.estimatedAttendeesInRoom,
+    })) missing.push("end time after start time");
   }
   if (room.showCrewNeeded.length === 0) missing.push("show crew");
   return missing;
