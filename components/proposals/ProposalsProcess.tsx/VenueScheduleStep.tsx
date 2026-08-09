@@ -94,6 +94,93 @@ export const venueScheduleOrderErrors = (
   return errors;
 };
 
+/* ─── Event date range checks ───
+   The show must happen during the event, so Show Start/Show End are hard
+   errors outside [event start, event end]. Load-In, Rehearsal, and Strike
+   legitimately fall outside the event window (load-in days before, strike
+   the morning after), so they only get a soft typo-catcher warning when
+   further out than EVENT_RANGE_WARN_DAYS. */
+const EVENT_RANGE_WARN_DAYS = 7;
+
+const HARD_RANGE_FIELDS: { dateKey: ScheduleDateKey; label: string }[] = [
+  { dateKey: "showStartDate", label: "Show Start" },
+  { dateKey: "showEndDate", label: "Show End" },
+];
+
+const SOFT_RANGE_FIELDS: { dateKey: ScheduleDateKey; label: string }[] = [
+  { dateKey: "loadInDate", label: "Load-In" },
+  { dateKey: "rehearsalDate", label: "Rehearsal" },
+  { dateKey: "strikeDate", label: "Strike" },
+];
+
+const eventWindow = (
+  eventStartDate?: string,
+  eventEndDate?: string,
+): { start: Date; end: Date } | null => {
+  const start = toDateObj(eventStartDate ?? "", "00:00");
+  const end = toDateObj(eventEndDate ?? "", "23:59");
+  if (!start || !end) return null;
+  return { start, end };
+};
+
+export const venueScheduleEventRangeErrors = (
+  data: VenueScheduleData,
+  eventStartDate?: string,
+  eventEndDate?: string,
+): Partial<Record<ScheduleDateKey, string>> => {
+  const window = eventWindow(eventStartDate, eventEndDate);
+  if (!window) return {};
+  const sameDay = eventStartDate === eventEndDate;
+  const rangeText = sameDay
+    ? `on the event date (${eventStartDate})`
+    : `within the event dates (${eventStartDate} – ${eventEndDate})`;
+  const errors: Partial<Record<ScheduleDateKey, string>> = {};
+  for (const field of HARD_RANGE_FIELDS) {
+    const entry = SCHEDULE_SEQUENCE.find((e) => e.dateKey === field.dateKey)!;
+    const at = scheduleInstant(data, entry);
+    if (at === null) continue;
+    if (at < window.start.getTime() || at > window.end.getTime()) {
+      errors[field.dateKey] = `${field.label} must fall ${rangeText}.`;
+    }
+  }
+  return errors;
+};
+
+export const venueScheduleEventRangeWarnings = (
+  data: VenueScheduleData,
+  eventStartDate?: string,
+  eventEndDate?: string,
+): Partial<Record<ScheduleDateKey, string>> => {
+  const window = eventWindow(eventStartDate, eventEndDate);
+  if (!window) return {};
+  const marginMs = EVENT_RANGE_WARN_DAYS * 24 * 60 * 60 * 1000;
+  const warnings: Partial<Record<ScheduleDateKey, string>> = {};
+  for (const field of SOFT_RANGE_FIELDS) {
+    const entry = SCHEDULE_SEQUENCE.find((e) => e.dateKey === field.dateKey)!;
+    const at = scheduleInstant(data, entry);
+    if (at === null) continue;
+    if (
+      at < window.start.getTime() - marginMs ||
+      at > window.end.getTime() + marginMs
+    ) {
+      warnings[field.dateKey] =
+        `${field.label} is more than a week outside the event dates (${eventStartDate} – ${eventEndDate}) — double-check it.`;
+    }
+  }
+  return warnings;
+};
+
+/** Everything that should block leaving the step: chronological order
+    violations plus Show Start/Show End outside the event date range. */
+export const venueScheduleValidationErrors = (
+  data: VenueScheduleData,
+  eventStartDate?: string,
+  eventEndDate?: string,
+): Partial<Record<ScheduleDateKey, string>> => ({
+  ...venueScheduleOrderErrors(data),
+  ...venueScheduleEventRangeErrors(data, eventStartDate, eventEndDate),
+});
+
 /** Calendar bounds for one field: min = latest filled field before it,
     max = earliest filled field after it. Day-granularity (the picker
     constrains dates, not times — same-day time conflicts are caught by
@@ -303,6 +390,9 @@ interface Props {
   onBack: () => void;
   showErrors: boolean;
   proposalSettings: ProposalSettings;
+  /** Event Overview dates (YYYY-MM-DD) bounding the show window */
+  eventStartDate?: string;
+  eventEndDate?: string;
 }
 
 const VenueScheduleStep = ({
@@ -311,6 +401,8 @@ const VenueScheduleStep = ({
   onContinue,
   onBack,
   showErrors,
+  eventStartDate,
+  eventEndDate,
 }: Props) => {
   const safeData: VenueScheduleData = { ...defaultVenueSchedule(), ...data };
 
@@ -323,11 +415,36 @@ const VenueScheduleStep = ({
       ? "border-red-400 focus:border-red-400 focus:ring-red-200"
       : "";
 
-  const orderErrors = venueScheduleOrderErrors(safeData);
+  const fieldErrors = venueScheduleValidationErrors(
+    safeData,
+    eventStartDate,
+    eventEndDate,
+  );
+  const rangeWarnings = venueScheduleEventRangeWarnings(
+    safeData,
+    eventStartDate,
+    eventEndDate,
+  );
   const orderErr = (key: ScheduleDateKey) =>
-    orderErrors[key]
+    fieldErrors[key]
       ? " border-red-400 focus:border-red-400 focus:ring-red-200"
       : "";
+
+  /* Show Start/End calendars are additionally clamped to the event window */
+  const showFieldBounds = (key: ScheduleDateKey) => {
+    const bounds = scheduleBounds(safeData, key);
+    const window = eventWindow(eventStartDate, eventEndDate);
+    if (!window) return bounds;
+    const minDate =
+      bounds.minDate && bounds.minDate > window.start
+        ? bounds.minDate
+        : window.start;
+    const maxDate =
+      bounds.maxDate && bounds.maxDate < window.end
+        ? bounds.maxDate
+        : window.end;
+    return { minDate, maxDate };
+  };
 
   const handleStateChange = (state: string) => {
     const tz = STATE_TIMEZONES[state] ?? "";
@@ -662,9 +779,14 @@ const VenueScheduleStep = ({
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
-              {orderErrors.loadInDate && (
+              {fieldErrors.loadInDate && (
                 <p className="mt-1 text-xs text-red-500 normal-case">
-                  {orderErrors.loadInDate}
+                  {fieldErrors.loadInDate}
+                </p>
+              )}
+              {!fieldErrors.loadInDate && rangeWarnings.loadInDate && (
+                <p className="mt-1 text-xs text-amber-600 normal-case">
+                  {rangeWarnings.loadInDate}
                 </p>
               )}
             </div>
@@ -690,9 +812,14 @@ const VenueScheduleStep = ({
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time (optional)"
               />
-              {orderErrors.rehearsalDate && (
+              {fieldErrors.rehearsalDate && (
                 <p className="mt-1 text-xs text-red-500 normal-case">
-                  {orderErrors.rehearsalDate}
+                  {fieldErrors.rehearsalDate}
+                </p>
+              )}
+              {!fieldErrors.rehearsalDate && rangeWarnings.rehearsalDate && (
+                <p className="mt-1 text-xs text-amber-600 normal-case">
+                  {rangeWarnings.rehearsalDate}
                 </p>
               )}
               {!safeData.rehearsalDate && (
@@ -721,14 +848,14 @@ const VenueScheduleStep = ({
                   const { date, time } = fromDateObj(d);
                   onChange({ showStartDate: date, showStartTime: time });
                 }}
-                {...scheduleBounds(safeData, "showStartDate")}
+                {...showFieldBounds("showStartDate")}
                 inputClassName={`${inputClass} pr-12${safeData.showStartDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("showStartDate")}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
-              {orderErrors.showStartDate && (
+              {fieldErrors.showStartDate && (
                 <p className="mt-1 text-xs text-red-500 normal-case">
-                  {orderErrors.showStartDate}
+                  {fieldErrors.showStartDate}
                 </p>
               )}
               {showErrors && !safeData.showStartDate.trim() && (
@@ -752,14 +879,14 @@ const VenueScheduleStep = ({
                   const { date, time } = fromDateObj(d);
                   onChange({ showEndDate: date, showEndTime: time });
                 }}
-                {...scheduleBounds(safeData, "showEndDate")}
+                {...showFieldBounds("showEndDate")}
                 inputClassName={`${inputClass} pr-12${safeData.showEndDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("showEndDate")}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
-              {orderErrors.showEndDate && (
+              {fieldErrors.showEndDate && (
                 <p className="mt-1 text-xs text-red-500 normal-case">
-                  {orderErrors.showEndDate}
+                  {fieldErrors.showEndDate}
                 </p>
               )}
               {showErrors && !safeData.showEndDate.trim() && (
@@ -791,9 +918,14 @@ const VenueScheduleStep = ({
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
-              {orderErrors.strikeDate && (
+              {fieldErrors.strikeDate && (
                 <p className="mt-1 text-xs text-red-500 normal-case">
-                  {orderErrors.strikeDate}
+                  {fieldErrors.strikeDate}
+                </p>
+              )}
+              {!fieldErrors.strikeDate && rangeWarnings.strikeDate && (
+                <p className="mt-1 text-xs text-amber-600 normal-case">
+                  {rangeWarnings.strikeDate}
                 </p>
               )}
             </div>

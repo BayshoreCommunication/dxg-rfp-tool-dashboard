@@ -17,7 +17,7 @@ import EventForm from "./ProposalsProcess.tsx/EventForm";
 import ProcessList from "./ProposalsProcess.tsx/ProcessList";
 import RoomAndProductionStep, { defaultRoom, firstIncompleteRoom } from "./ProposalsProcess.tsx/RoomAndProductionStep";
 import HybridVirtualStep from "./ProposalsProcess.tsx/HybridVirtualStep";
-import VenueScheduleStep, { defaultVenueSchedule, venueScheduleOrderErrors, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
+import VenueScheduleStep, { defaultVenueSchedule, venueScheduleValidationErrors, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
 import ContentCreativeStep, { defaultContentCreative, type ContentCreativeData } from "./ProposalsProcess.tsx/ContentCreativeStep";
 import VideoRecordingStep, { defaultVideoRecording, type VideoRecordingData } from "./ProposalsProcess.tsx/VideoRecordingStep";
 import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMaterials";
@@ -2103,12 +2103,17 @@ const AddNewProposal = ({
       return;
     }
     // Step 2 = Venue & Schedule — empty fields don't block, but a
-    // chronologically impossible production schedule does.
+    // chronologically impossible schedule or a show outside the event
+    // date range does.
     if (proposalProcessStep === 2) {
-      const orderErrors = venueScheduleOrderErrors(proposalData.venueSchedule);
-      const firstError = Object.values(orderErrors)[0];
+      const scheduleErrors = venueScheduleValidationErrors(
+        proposalData.venueSchedule,
+        toIsoDate(proposalData.event.startDate),
+        toIsoDate(proposalData.event.endDate),
+      );
+      const firstError = Object.values(scheduleErrors)[0];
       if (firstError) {
-        toast.error(`Production schedule is out of order: ${firstError}`);
+        toast.error(`Production schedule needs attention: ${firstError}`);
         return;
       }
     }
@@ -2362,6 +2367,8 @@ const AddNewProposal = ({
                 onBack={backHandler}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                eventStartDate={toIsoDate(proposalData.event.startDate)}
+                eventEndDate={toIsoDate(proposalData.event.endDate)}
               />
             )}
             {proposalProcessStep === 3 && (
