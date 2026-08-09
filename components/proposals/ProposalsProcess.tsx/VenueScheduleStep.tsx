@@ -55,6 +55,68 @@ export type VenueScheduleData = {
   timeZone: string;
 };
 
+/* ─── Production schedule chronological order ───
+   Load-In ≤ Rehearsal ≤ Show Start ≤ Show End ≤ Strike.
+   Rehearsal is optional; blank entries are skipped. */
+const SCHEDULE_SEQUENCE = [
+  { dateKey: "loadInDate", timeKey: "loadInTime", label: "Load-In" },
+  { dateKey: "rehearsalDate", timeKey: "rehearsalTime", label: "Rehearsal" },
+  { dateKey: "showStartDate", timeKey: "showStartTime", label: "Show Start" },
+  { dateKey: "showEndDate", timeKey: "showEndTime", label: "Show End" },
+  { dateKey: "strikeDate", timeKey: "strikeTime", label: "Strike" },
+] as const;
+
+type ScheduleDateKey = (typeof SCHEDULE_SEQUENCE)[number]["dateKey"];
+
+const scheduleInstant = (
+  data: VenueScheduleData,
+  entry: (typeof SCHEDULE_SEQUENCE)[number],
+): number | null => {
+  const date = toDateObj(data[entry.dateKey], data[entry.timeKey]);
+  return date ? date.getTime() : null;
+};
+
+/** Returns a message per field that breaks the chronological sequence.
+    Each filled field is compared against the latest filled field before it. */
+export const venueScheduleOrderErrors = (
+  data: VenueScheduleData,
+): Partial<Record<ScheduleDateKey, string>> => {
+  const errors: Partial<Record<ScheduleDateKey, string>> = {};
+  let prev: { label: string; at: number } | null = null;
+  for (const entry of SCHEDULE_SEQUENCE) {
+    const at = scheduleInstant(data, entry);
+    if (at === null) continue;
+    if (prev && at < prev.at) {
+      errors[entry.dateKey] = `${entry.label} must be on or after ${prev.label}.`;
+    }
+    if (!prev || at > prev.at) prev = { label: entry.label, at };
+  }
+  return errors;
+};
+
+/** Calendar bounds for one field: min = latest filled field before it,
+    max = earliest filled field after it. Day-granularity (the picker
+    constrains dates, not times — same-day time conflicts are caught by
+    venueScheduleOrderErrors). */
+const scheduleBounds = (
+  data: VenueScheduleData,
+  key: ScheduleDateKey,
+): { minDate?: Date; maxDate?: Date } => {
+  const index = SCHEDULE_SEQUENCE.findIndex((e) => e.dateKey === key);
+  let min: number | null = null;
+  let max: number | null = null;
+  SCHEDULE_SEQUENCE.forEach((entry, i) => {
+    const at = scheduleInstant(data, entry);
+    if (at === null) return;
+    if (i < index && (min === null || at > min)) min = at;
+    if (i > index && (max === null || at < max)) max = at;
+  });
+  return {
+    ...(min !== null ? { minDate: new Date(min) } : {}),
+    ...(max !== null ? { maxDate: new Date(max) } : {}),
+  };
+};
+
 export const defaultVenueSchedule = (): VenueScheduleData => ({
   venueName: "",
   venueCity: "",
@@ -259,6 +321,12 @@ const VenueScheduleStep = ({
   const err = (val: string) =>
     showErrors && !val.trim()
       ? "border-red-400 focus:border-red-400 focus:ring-red-200"
+      : "";
+
+  const orderErrors = venueScheduleOrderErrors(safeData);
+  const orderErr = (key: ScheduleDateKey) =>
+    orderErrors[key]
+      ? " border-red-400 focus:border-red-400 focus:ring-red-200"
       : "";
 
   const handleStateChange = (state: string) => {
@@ -589,10 +657,16 @@ const VenueScheduleStep = ({
                   const { date, time } = fromDateObj(d);
                   onChange({ loadInDate: date, loadInTime: time });
                 }}
-                inputClassName={`${inputClass} pr-12${safeData.loadInDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                {...scheduleBounds(safeData, "loadInDate")}
+                inputClassName={`${inputClass} pr-12${safeData.loadInDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("loadInDate")}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
+              {orderErrors.loadInDate && (
+                <p className="mt-1 text-xs text-red-500 normal-case">
+                  {orderErrors.loadInDate}
+                </p>
+              )}
             </div>
 
             <div>
@@ -611,10 +685,16 @@ const VenueScheduleStep = ({
                   const { date, time } = fromDateObj(d);
                   onChange({ rehearsalDate: date, rehearsalTime: time });
                 }}
-                inputClassName={`${inputClass} pr-12`}
+                {...scheduleBounds(safeData, "rehearsalDate")}
+                inputClassName={`${inputClass} pr-12${orderErr("rehearsalDate")}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time (optional)"
               />
+              {orderErrors.rehearsalDate && (
+                <p className="mt-1 text-xs text-red-500 normal-case">
+                  {orderErrors.rehearsalDate}
+                </p>
+              )}
               {!safeData.rehearsalDate && (
                 <p className="mt-1 text-xs text-amber-600 normal-case">
                   Leave blank if no formal rehearsal — timeline will show &quot;TBD&quot;.
@@ -641,10 +721,16 @@ const VenueScheduleStep = ({
                   const { date, time } = fromDateObj(d);
                   onChange({ showStartDate: date, showStartTime: time });
                 }}
-                inputClassName={`${inputClass} pr-12${safeData.showStartDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                {...scheduleBounds(safeData, "showStartDate")}
+                inputClassName={`${inputClass} pr-12${safeData.showStartDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("showStartDate")}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
+              {orderErrors.showStartDate && (
+                <p className="mt-1 text-xs text-red-500 normal-case">
+                  {orderErrors.showStartDate}
+                </p>
+              )}
               {showErrors && !safeData.showStartDate.trim() && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
@@ -666,10 +752,16 @@ const VenueScheduleStep = ({
                   const { date, time } = fromDateObj(d);
                   onChange({ showEndDate: date, showEndTime: time });
                 }}
-                inputClassName={`${inputClass} pr-12${safeData.showEndDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                {...scheduleBounds(safeData, "showEndDate")}
+                inputClassName={`${inputClass} pr-12${safeData.showEndDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("showEndDate")}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
+              {orderErrors.showEndDate && (
+                <p className="mt-1 text-xs text-red-500 normal-case">
+                  {orderErrors.showEndDate}
+                </p>
+              )}
               {showErrors && !safeData.showEndDate.trim() && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
@@ -694,10 +786,16 @@ const VenueScheduleStep = ({
                   const { date, time } = fromDateObj(d);
                   onChange({ strikeDate: date, strikeTime: time });
                 }}
-                inputClassName={`${inputClass} pr-12${safeData.strikeDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
+                {...scheduleBounds(safeData, "strikeDate")}
+                inputClassName={`${inputClass} pr-12${safeData.strikeDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("strikeDate")}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
               />
+              {orderErrors.strikeDate && (
+                <p className="mt-1 text-xs text-red-500 normal-case">
+                  {orderErrors.strikeDate}
+                </p>
+              )}
             </div>
           </div>
         </section>

@@ -17,7 +17,7 @@ import EventForm from "./ProposalsProcess.tsx/EventForm";
 import ProcessList from "./ProposalsProcess.tsx/ProcessList";
 import RoomAndProductionStep, { defaultRoom, firstIncompleteRoom } from "./ProposalsProcess.tsx/RoomAndProductionStep";
 import HybridVirtualStep from "./ProposalsProcess.tsx/HybridVirtualStep";
-import VenueScheduleStep, { defaultVenueSchedule, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
+import VenueScheduleStep, { defaultVenueSchedule, venueScheduleOrderErrors, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
 import ContentCreativeStep, { defaultContentCreative, type ContentCreativeData } from "./ProposalsProcess.tsx/ContentCreativeStep";
 import VideoRecordingStep, { defaultVideoRecording, type VideoRecordingData } from "./ProposalsProcess.tsx/VideoRecordingStep";
 import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMaterials";
@@ -2102,7 +2102,16 @@ const AddNewProposal = ({
     if (proposalProcessStep === 1 && !isEventStepValid()) {
       return;
     }
-    // Step 2 = Venue & Schedule � no required validation blocking
+    // Step 2 = Venue & Schedule — empty fields don't block, but a
+    // chronologically impossible production schedule does.
+    if (proposalProcessStep === 2) {
+      const orderErrors = venueScheduleOrderErrors(proposalData.venueSchedule);
+      const firstError = Object.values(orderErrors)[0];
+      if (firstError) {
+        toast.error(`Production schedule is out of order: ${firstError}`);
+        return;
+      }
+    }
     if (proposalProcessStep === 3 && !isRoomAndProductionStepValid()) {
       reportIncompleteRoom();
       return;
