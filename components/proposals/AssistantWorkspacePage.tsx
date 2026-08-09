@@ -1000,7 +1000,15 @@ function InvestmentCard({ report, declaredBudget }: { report: InvestmentReport; 
 
 // ── Main page ────────────────────────────────────────────────────────────────
 
-export default function AssistantWorkspacePage({ initialProposalId }: { initialProposalId?: string }) {
+export default function AssistantWorkspacePage({
+  initialProposalId,
+  autoTask,
+}: {
+  initialProposalId?: string;
+  /** Task to start on arrival, e.g. from the workflow shell's
+      "Create my first draft" deep link (?task=generate_draft). */
+  autoTask?: "generate_draft";
+}) {
   const [proposalId, setProposalId] = useState<string | null>(initialProposalId ?? null);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string | null>(null);
@@ -1349,6 +1357,26 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     }
     await sendDraftMessage(version);
   };
+
+  // One-click generation: arriving with ?task=generate_draft (the workflow
+  // shell's "Create my first draft" CTA) triggers the same handler as the
+  // rail's Generate draft chip exactly once, then strips the param from the
+  // URL so a refresh or back-navigation cannot start a second draft.
+  const autoTaskFired = useRef(false);
+  useEffect(() => {
+    if (autoTask !== "generate_draft" || autoTaskFired.current || !proposalId) return;
+    // Wait for the workspace to be idle: runDraftFromCard silently no-ops
+    // while another run is in flight (e.g. the arrival readiness check),
+    // which would consume this one-shot without generating anything — and a
+    // draft run racing a concurrent run can fail on the version guard. The
+    // busy flags are deps, so the effect retries as they settle.
+    if (sending || draftBusy) return;
+    autoTaskFired.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    void runDraftFromCard();
+    // runDraftFromCard is recreated per render; the fired ref makes this one-shot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTask, proposalId, sending, draftBusy]);
 
   // Closes the current run of typed messages into a source and starts
   // extraction, rather than waiting for the idle timer to do it.

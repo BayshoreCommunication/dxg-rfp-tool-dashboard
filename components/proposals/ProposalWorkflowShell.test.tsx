@@ -75,6 +75,10 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.getByRole("link", { name: /Open the assistant/ }))
       .toHaveAttribute("href", `/proposals/${PROPOSAL_ID}/assistant`);
     expect(screen.queryByText(/Tell the assistant about your event/)).toBeInTheDocument();
+    expect(screen.getByText("You approve every step")).toBeInTheDocument();
+    expect(screen.getByText("Nothing is published automatically.")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Proposal journey progress" }))
+      .toHaveAttribute("aria-valuenow", "0");
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });
 

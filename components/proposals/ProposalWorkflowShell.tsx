@@ -7,7 +7,18 @@
 
 import { getProposalWorkflowAction, setProposalWorkflowStepAction, type ProposalWorkflow } from "@/app/actions/proposalWorkflow";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, Check, Lock, Radio, Send } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  Check,
+  FileText,
+  Lock,
+  MessageCircleQuestion,
+  Radio,
+  Send,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import GuidancePanel from "./GuidancePanel";
 import HistoricalInsightsPanel from "./HistoricalInsightsPanel";
@@ -120,13 +131,19 @@ export default function ProposalWorkflowShell({
   // disagree. Every status and summary now comes from one place.
   const steps = data?.steps ?? ([1, 2, 3, 4, 5] as const).map((id) => ({ id, key: "", label: labels[id - 1], status: "available" as const, summary: "Loading…" }));
   const isPublished = data?.state?.headline?.toLowerCase().includes("sent to vendors") ?? false;
-  const nextActionHref = isPublished ? "/vendor-responses" : `/proposals/${proposalId}/assistant`;
+  // When the next step IS generating the draft, deep-link so the assistant
+  // starts generation on arrival — one click instead of two.
+  const nextActionHref = isPublished
+    ? "/vendor-responses"
+    : `/proposals/${proposalId}/assistant${data?.state?.nextAction === "generate_draft" ? "?task=generate_draft" : ""}`;
   const nextActionLabel = isPublished
     ? "View vendor responses"
     : data?.state?.nextAction !== "none"
       ? (data?.state?.nextActionLabel ?? "Open the assistant")
       : "Review key questions";
   const stagesComplete = data ? data.steps.filter((s) => s.status === "complete").length : 0;
+  const stageCount = data?.steps.length ?? 5;
+  const progressPercent = data ? Math.round((stagesComplete / stageCount) * 100) : 0;
   return <section aria-label="Proposal assistance" className="@container mb-0 border-b border-[#e5eaee] bg-white">
     <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-[#edf0f2] px-6 py-5 sm:px-8">
       <div>
@@ -142,38 +159,62 @@ export default function ProposalWorkflowShell({
     </header>
     {/* The conversation itself lives on one surface only: this editor links out
         to it rather than embedding a second copy. */}
-    {conversationsEnabled && <div className="mx-6 mt-6 overflow-hidden rounded-2xl border border-[#cfe6f3] bg-[#f3faff] shadow-[0_10px_28px_rgba(7,134,207,0.07)] sm:mx-8">
-      <div className="grid @min-[800px]:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex items-start gap-4 p-5 sm:gap-5 sm:p-6">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white bg-white text-[#0786cf] shadow-[0_6px_18px_rgba(7,134,207,0.12)] sm:h-14 sm:w-14"><Send size={27} strokeWidth={1.8} aria-hidden="true" /></div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "Proposal assistance"}</p>
-            <p className="mt-2 text-lg font-bold tracking-[-0.015em] text-[#172b3a] sm:text-xl">{isPublished ? "Your proposal is live and accepting responses." : "Answer a few questions — the assistant generates your proposal."}</p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#566a78]">{isPublished ? "Vendors can review the RFP and submit their proposals. Keep an eye on incoming activity and answer questions as they arrive." : "Tell the assistant about your event and it drafts the RFP for you. Review the draft, resolve its questions, and publish — or edit the form directly at any point."}</p>
-            {!isPublished && data && (
-              <div className="mt-4 max-w-2xl">
-                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.12em] text-[#718592]">
-                  <span>Progress</span>
-                  <span>{stagesComplete} of {data.steps.length} stages complete</span>
-                </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#dcecf5]">
-                  <div
-                    className="h-full rounded-full bg-[#0786cf] transition-all duration-500"
-                    style={{ width: `${Math.max(4, (stagesComplete / data.steps.length) * 100)}%` }}
-                  />
-                </div>
+    {conversationsEnabled && <div className="mx-6 mt-6 overflow-hidden rounded-[22px] border border-[#c9e4f2] bg-[linear-gradient(135deg,#f2fbff_0%,#f8fcfe_58%,#ffffff_100%)] shadow-[0_16px_38px_rgba(16,78,112,0.09)] sm:mx-8">
+      <div className="grid @min-[600px]:grid-cols-[minmax(0,1fr)_270px]">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-start gap-4 sm:gap-5">
+            <div className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#0786cf] text-white shadow-[0_8px_20px_rgba(7,134,207,0.24)] sm:h-14 sm:w-14">
+              <Send size={25} strokeWidth={1.8} aria-hidden="true" />
+              {!isPublished && <span className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full border-2 border-[#f2fbff] bg-white text-[#0786cf]"><Sparkles size={13} strokeWidth={2.2} aria-hidden="true" /></span>}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "AI-guided workspace"}</p>
+                {!isPublished && <span className="inline-flex items-center gap-1 rounded-full border border-[#cfe6f3] bg-white/80 px-2 py-0.5 text-[10px] font-bold text-[#476577]"><ShieldCheck size={11} aria-hidden="true" />You approve every step</span>}
               </div>
-            )}
+              <p className="mt-2 text-lg font-extrabold tracking-[-0.02em] text-[#172b3a] sm:text-[21px]">{isPublished ? "Your proposal is live and accepting responses." : "Turn your event details into a vendor-ready proposal."}</p>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#566a78]">{isPublished ? "Vendors can review the RFP and submit their proposals. Keep an eye on incoming activity and answer questions as they arrive." : "Tell the assistant about your event and it drafts the RFP for you. You can review the wording, resolve missing details, or edit the form yourself at any time."}</p>
+            </div>
           </div>
+
+          {!isPublished && <div className="mt-5 grid gap-2 sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-xl border border-white/90 bg-white/65 px-3 py-2 text-xs font-semibold text-[#476577]"><FileText size={15} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Draft from your brief</div>
+            <div className="flex items-center gap-2 rounded-xl border border-white/90 bg-white/65 px-3 py-2 text-xs font-semibold text-[#476577]"><MessageCircleQuestion size={15} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Spot missing details</div>
+            <div className="flex items-center gap-2 rounded-xl border border-white/90 bg-white/65 px-3 py-2 text-xs font-semibold text-[#476577]"><ShieldCheck size={15} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Keep final control</div>
+          </div>}
+
+          {!isPublished && (
+            <div className="mt-5 border-t border-[#d9ebf4] pt-4">
+              <div className="flex items-center justify-between gap-4 text-xs font-bold text-[#476577]">
+                <span>Proposal progress</span>
+                <span className="tabular-nums text-[#172b3a]">{data ? `${stagesComplete} of ${stageCount} stages` : "Loading progress…"}</span>
+              </div>
+              <div
+                className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#d9eaf3]"
+                role="progressbar"
+                aria-label="Proposal journey progress"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progressPercent}
+              >
+                <div
+                  className="h-full rounded-full bg-[linear-gradient(90deg,#2fc6f5,#0786cf)] transition-all duration-500"
+                  style={{ width: `${data ? Math.max(4, progressPercent) : 0}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
-        <div className="border-t border-[#d8eaf4] bg-white/70 p-5 sm:p-6 @min-[800px]:border-l @min-[800px]:border-t-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#718592]">Next best action</p>
-          <p className="mt-2 text-base font-bold text-[#172b3a]">{isPublished ? "Review vendor activity" : (data?.state?.nextActionLabel ?? "Open the assistant")}</p>
-          <p className="mt-1.5 text-sm leading-5 text-[#687782]">{isPublished ? "Monitor responses and keep vendor questions moving." : (data?.state?.headline ?? "Continue from the most useful next step.")}</p>
+
+        <aside className="border-t border-[#d8eaf4] bg-white/80 p-5 sm:p-6 @min-[600px]:border-l @min-[600px]:border-t-0" aria-label="Recommended next action">
+          <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#0786cf]"><Sparkles size={14} aria-hidden="true" />Recommended next step</div>
+          <p className="mt-3 text-lg font-extrabold tracking-[-0.015em] text-[#172b3a]">{isPublished ? "Review vendor activity" : (data?.state?.nextActionLabel ?? "Open the assistant")}</p>
+          <p className="mt-1.5 min-h-10 text-sm leading-5 text-[#687782]">{isPublished ? "Monitor responses and keep vendor questions moving." : (data?.state?.headline ?? "Continue from the most useful next step.")}</p>
           {/* A published RFP has no next action. Offering one that still reads
               "Answer the next question" would invite work that is already over. */}
-          <Link href={nextActionHref} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0786cf] px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_12px_rgba(7,134,207,0.18)] transition-colors hover:bg-[#066fae] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]">{nextActionLabel}<ArrowRight size={15} aria-hidden="true" /></Link>
-        </div>
+          <Link href={nextActionHref} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0786cf] px-4 py-2.5 text-sm font-bold text-white shadow-[0_6px_16px_rgba(7,134,207,0.2)] transition-all hover:-translate-y-px hover:bg-[#066fae] hover:shadow-[0_8px_18px_rgba(7,134,207,0.24)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]">{nextActionLabel}<ArrowRight size={15} aria-hidden="true" /></Link>
+          {!isPublished && <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] font-semibold text-[#718592]"><ShieldCheck size={12} aria-hidden="true" />Nothing is published automatically.</p>}
+        </aside>
       </div>
     </div>}
     {error && <p role="alert" className="mx-6 mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800 sm:mx-8">{error}</p>}
@@ -184,12 +225,12 @@ export default function ProposalWorkflowShell({
       </div>
       {isPublished && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"><Check size={13} strokeWidth={2.5} aria-hidden="true" />Sent to vendors</span>}
     </div>
-    <ol aria-label="Proposal creation steps" aria-busy={busy} className="mx-6 mb-6 grid gap-2 sm:mx-8 sm:grid-cols-5">{steps.map((item, index) => {
+    <ol aria-label="Proposal creation steps" aria-busy={busy} className="mx-6 mb-6 grid gap-2 rounded-[20px] border border-[#e7edf1] bg-[#f8fafb] p-2 sm:mx-8 sm:grid-cols-5">{steps.map((item, index) => {
       const isActive = step === item.id;
       const hasNext = index < steps.length - 1;
       return <li key={item.id} className="relative min-w-0">
         {hasNext && <span aria-hidden="true" className="pointer-events-none absolute left-8 top-8 z-0 h-[calc(100%+0.5rem)] w-px bg-[#dfe7ec] sm:bottom-auto sm:left-[calc(50%+20px)] sm:right-[calc(-50%+20px)] sm:top-8 sm:h-px sm:w-auto" />}
-        <button type="button" aria-current={isActive ? "step" : undefined} onClick={() => choose(item.id)} className={`relative z-[1] flex h-full min-h-[76px] w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] sm:min-h-[112px] sm:flex-col sm:items-center sm:px-2 sm:text-center ${isActive ? "border-[#b9def2] bg-[#f3faff] text-[#0786cf] shadow-[0_6px_18px_rgba(7,134,207,0.08)]" : "border-[#edf2f5] bg-[#f8fafb] text-[#263744] hover:border-[#dce7ed] hover:bg-white"}`}>
+        <button type="button" aria-current={isActive ? "step" : undefined} onClick={() => choose(item.id)} className={`relative z-[1] flex h-full min-h-[72px] w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] sm:min-h-[104px] sm:flex-col sm:items-center sm:px-2 sm:text-center ${isActive ? "border-[#b9def2] bg-[#f3faff] text-[#0786cf] shadow-[0_6px_18px_rgba(7,134,207,0.08)]" : "border-transparent bg-[#f8fafb] text-[#263744] hover:border-[#dce7ed] hover:bg-white"}`}>
           <span className={`relative z-[2] grid h-10 w-10 shrink-0 place-items-center rounded-full border text-sm font-bold shadow-sm ${
             isActive
               ? "border-[#0786cf] bg-[#0786cf] text-white shadow-[0_0_0_4px_rgba(7,134,207,0.10)]"

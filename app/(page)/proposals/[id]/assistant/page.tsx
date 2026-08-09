@@ -14,7 +14,13 @@ const conversationsEnabled = process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED === "
 // Canonical URL for an existing proposal's assistant. `/proposals/add-new-proposal`
 // stays the "start something new" entry and redirects here as soon as a proposal
 // exists, so there is exactly one surface for the conversation.
-const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
+const Page = async ({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ task?: string }>;
+}) => {
   const { id } = await params;
 
   if (!conversationsEnabled || !isSafeProposalId(id)) notFound();
@@ -24,7 +30,16 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const proposal = await getProposalByIdAction(id);
   if (!proposal.success) notFound();
 
-  return <AssistantWorkspacePage initialProposalId={id} />;
+  // ?task=generate_draft (the workflow shell's "Create my first draft" CTA)
+  // asks the workspace to start draft generation on arrival.
+  const { task } = (await searchParams) ?? {};
+
+  return (
+    <AssistantWorkspacePage
+      initialProposalId={id}
+      autoTask={task === "generate_draft" ? "generate_draft" : undefined}
+    />
+  );
 };
 
 export default Page;
