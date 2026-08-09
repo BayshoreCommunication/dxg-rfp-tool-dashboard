@@ -844,10 +844,17 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
               {(() => {
                 const ldf = (cc.liveDataFeeds || {}) as RD;
                 const ldfOwnership = p(ldf.needed) === "YES" ? p(ldf.ownership) : "";
+                const openingClosingOwner = p(cc.openingClosingVideo);
+                const motionAssetsOwner = p(cc.motionGraphicsStingersBumpers);
+                const legacyCombinedOwner = !openingClosingOwner && !motionAssetsOwner
+                  ? p(cc.motionGraphicsOpenerVideo)
+                  : "";
                 const rows = [
                   { label: "Presentation Template Design", val: p(cc.presentationTemplateDesign) },
                   { label: "Speaker Slide Collection & Formatting", val: p(cc.speakerSlideCollection) },
-                  { label: "Motion Graphics / Opener Video", val: p(cc.motionGraphicsOpenerVideo) },
+                  { label: "Opening / Closing Video", val: openingClosingOwner },
+                  { label: "Motion Graphics / Stingers / Speaker Bumpers", val: motionAssetsOwner },
+                  { label: "Legacy Motion Graphics / Opener Video", val: legacyCombinedOwner },
                   { label: "Lower Thirds & Name Supers", val: p(cc.lowerThirdsNameSupers) },
                   { label: "Event Logo & Brand Standards", val: p(cc.eventLogoBrandStandards) },
                   { label: "Sizzle / Recap Video", val: p(cc.sizzleRecapVideo) },

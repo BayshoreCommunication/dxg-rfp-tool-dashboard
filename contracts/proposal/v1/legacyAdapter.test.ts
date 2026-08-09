@@ -197,6 +197,9 @@ describe("legacy proposal adapter", () => {
     expect(result.proposal.content.rooms[0].production?.unionLabor).toBeNull();
     expect(result.proposal.content.hybridVirtual?.remoteSpeakers?.count).toBe(5);
     expect(result.proposal.content.contentCreative?.liveDataFeeds?.required).toBe(true);
+    expect(result.proposal.content.contentCreative?.motionGraphicsOwner).toBe("AV Vendor");
+    expect(result.proposal.content.contentCreative?.openingClosingVideoOwner).toBeUndefined();
+    expect(result.proposal.content.contentCreative?.motionGraphicsStingersBumpersOwner).toBeUndefined();
     expect(result.proposal.content.videoRecording?.cameraCount).toBe(3);
     expect(result.proposal.content.videoRecording?.codec).toBe("H.264");
     expect(result.proposal.content.videoRecording?.recordIn4k).toBe(false);
@@ -218,6 +221,26 @@ describe("legacy proposal adapter", () => {
     expect(result.issues.map((issue) => issue.path)).toEqual(
       expect.arrayContaining(["/contact/contactLastName", "/contact/contactEmail"]),
     );
+  });
+
+  it("maps the two new creative video owners independently", () => {
+    const result = mapLegacyProposalToV1({
+      ...legacyProposal,
+      contentCreative: {
+        ...legacyProposal.contentCreative,
+        motionGraphicsOpenerVideo: undefined,
+        openingClosingVideo: "AV Vendor",
+        motionGraphicsStingersBumpers: "Client / Internal Team",
+      },
+    }, { organizationId: "org-001" });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.proposal.content.contentCreative).toEqual(expect.objectContaining({
+      openingClosingVideoOwner: "AV Vendor",
+      motionGraphicsStingersBumpersOwner: "Client / Internal Team",
+    }));
+    expect(result.proposal.content.contentCreative?.motionGraphicsOwner).toBeUndefined();
   });
 
   it("maps repeated LED walls and keeps legacy scalar compatibility", () => {

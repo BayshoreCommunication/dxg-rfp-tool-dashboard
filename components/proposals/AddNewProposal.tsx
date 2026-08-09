@@ -957,6 +957,8 @@ const normalizeExtracted = (
           presentationTemplateDesign: own(rc.presentationTemplateDesign),
           speakerSlideCollection: own(rc.speakerSlideCollection),
           motionGraphicsOpenerVideo: own(rc.motionGraphicsOpenerVideo),
+          openingClosingVideo: own(rc.openingClosingVideo),
+          motionGraphicsStingersBumpers: own(rc.motionGraphicsStingersBumpers),
           lowerThirdsNameSupers: own(rc.lowerThirdsNameSupers),
           eventLogoBrandStandards: own(rc.eventLogoBrandStandards),
           sizzleRecapVideo: own(rc.sizzleRecapVideo),
@@ -1814,6 +1816,12 @@ const AddNewProposal = ({
   const buildProposalPayload = (): ProposalData & { production: ProductionSupportData } => {
     const normalizedRooms = rooms.map((r) => normalizeRoomByRoomForSubmit(r));
     const firstRoom = normalizedRooms[0] ?? normalizeRoomByRoomForSubmit(defaultRoom());
+    const normalizedContentCreative = { ...proposalData.contentCreative };
+    if (normalizedContentCreative.openingClosingVideo || normalizedContentCreative.motionGraphicsStingersBumpers) {
+      delete normalizedContentCreative.motionGraphicsOpenerVideo;
+    } else if (!normalizedContentCreative.motionGraphicsOpenerVideo) {
+      delete normalizedContentCreative.motionGraphicsOpenerVideo;
+    }
     return {
       ...proposalData,
       proposalSettings: {
@@ -1826,6 +1834,7 @@ const AddNewProposal = ({
         dateFormat: proposalSettings.proposals.dateFormat,
       },
       roomByRoom: normalizedRooms,
+      contentCreative: normalizedContentCreative,
       videoRecordingStep: proposalData.videoRecordingStep.videoRecordingRequired === "YES"
         ? proposalData.videoRecordingStep
         : { ...proposalData.videoRecordingStep, recordingCodec: "", recordIn4k: "" },
