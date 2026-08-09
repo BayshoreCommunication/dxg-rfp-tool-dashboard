@@ -3,6 +3,7 @@
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import GlobalSelect from "@/components/shared/GlobalSelect";
+import { useState } from "react";
 
 type ProposalSettings = {
   branding: { linkPrefix: string; defaultFont: "Inter" | "Poppins" | "Roboto" };
@@ -20,6 +21,8 @@ export type VideoRecordingData = {
   imagRequired: "YES" | "NO" | "";
   cameraOperators: string;
   isoRecordings: string;
+  recordingCodec: "H.264" | "H.265" | "ProRes" | "";
+  recordIn4k: "YES" | "NO" | "";
   /* Recording & Deliverables */
   recordingResolution: string;
   recordingMedia: string;
@@ -41,6 +44,8 @@ export const defaultVideoRecording = (): VideoRecordingData => ({
   imagRequired: "",
   cameraOperators: "",
   isoRecordings: "",
+  recordingCodec: "",
+  recordIn4k: "",
   recordingResolution: "",
   recordingMedia: "",
   editedDeliverable: {
@@ -147,6 +152,7 @@ const VideoRecordingStep = ({
   onChange,
   onContinue,
   onBack,
+  showErrors,
   proposalSettings,
   onDemandRecording = "",
   sizzleRecapOwner = "",
@@ -162,6 +168,9 @@ const VideoRecordingStep = ({
   };
 
   const needsRecording = safeData.videoRecordingRequired === "YES";
+  const [attemptedContinue, setAttemptedContinue] = useState(false);
+  const recordingFormatMissing = needsRecording && (!safeData.recordingCodec || !safeData.recordIn4k);
+  const revealRecordingErrors = showErrors || attemptedContinue;
   /* Cross-page suggestion: sizzle/recap owned by AV Vendor → suggest edited deliverable */
   const suggestEdited = sizzleRecapOwner === "AV Vendor" && safeData.editedDeliverable.needed !== "YES";
 
@@ -218,7 +227,11 @@ const VideoRecordingStep = ({
               isSelected={safeData.videoRecordingRequired === "NO"}
               title="No — No recording needed"
               description="The AV vendor will only execute the live show. Section 5 will be omitted from your RFP."
-              onClick={() => onChange({ videoRecordingRequired: "NO" })}
+              onClick={() => onChange({
+                videoRecordingRequired: "NO",
+                recordingCodec: "",
+                recordIn4k: "",
+              })}
             />
           </div>
         </div>
@@ -259,23 +272,26 @@ const VideoRecordingStep = ({
                   </GlobalSelect>
                 </div>
 
-                {/* Fields 7 + 8 — Resolution + Media */}
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-3 gap-5">
                   <div>
                     <label className={labelClass}>
-                      Recording Resolution <span className="text-red-500">*</span>
-                      <InfoTooltip text="4K is now the standard for professional events and future-proofs your footage. 1080p is sufficient if files will only be used for internal review or social clips. 4K dramatically increases storage needs." />
+                      Recording Codec <span className="text-red-500">*</span>
+                      <InfoTooltip text="Choose the acquisition codec the vendor must use. H.264 is broadly compatible, H.265 is more efficient, and ProRes is optimized for professional post-production." />
                     </label>
                     <GlobalSelect
-                      className={`${inputClass} appearance-none`}
-                      value={safeData.recordingResolution}
-                      onChange={(e) => onChange({ recordingResolution: e.target.value })}
+                      className={`${inputClass} appearance-none ${revealRecordingErrors && !safeData.recordingCodec ? "border-red-400" : ""}`}
+                      value={safeData.recordingCodec}
+                      onChange={(e) => onChange({ recordingCodec: e.target.value as VideoRecordingData["recordingCodec"] })}
                     >
-                      <option value="">Select resolution…</option>
-                      <option>4K (Preferred)</option>
-                      <option>1080p</option>
-                      <option>Either Acceptable</option>
+                      <option value="">Select codec…</option>
+                      <option>H.264</option><option>H.265</option><option>ProRes</option>
                     </GlobalSelect>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Record in 4K? <span className="text-red-500">*</span></label>
+                    <YesNo value={safeData.recordIn4k} onChange={(value) => onChange({ recordIn4k: value })} />
+                    {revealRecordingErrors && !safeData.recordIn4k && <p className="mt-2 text-xs text-red-500">Choose Yes or No.</p>}
                   </div>
 
                   <div>
@@ -489,7 +505,10 @@ const VideoRecordingStep = ({
         </button>
         <button
           type="button"
-          onClick={onContinue}
+          onClick={() => {
+            setAttemptedContinue(true);
+            if (!recordingFormatMissing) onContinue();
+          }}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
           style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >

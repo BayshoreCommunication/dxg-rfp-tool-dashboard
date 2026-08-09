@@ -97,6 +97,8 @@ const legacyProposal = {
     cameraOperators: "3",
     isoRecordings: "All cameras ISO",
     recordingResolution: "4K",
+    recordingCodec: "H.264",
+    recordIn4k: "NO",
     recordingMedia: "SSD",
     editedDeliverable: {
       needed: "YES",
@@ -196,6 +198,8 @@ describe("legacy proposal adapter", () => {
     expect(result.proposal.content.hybridVirtual?.remoteSpeakers?.count).toBe(5);
     expect(result.proposal.content.contentCreative?.liveDataFeeds?.required).toBe(true);
     expect(result.proposal.content.videoRecording?.cameraCount).toBe(3);
+    expect(result.proposal.content.videoRecording?.codec).toBe("H.264");
+    expect(result.proposal.content.videoRecording?.recordIn4k).toBe(false);
     expect(result.proposal.content.venueTechnical?.powerDropCount).toBe(2);
     expect(result.proposal.content.vendorCoordination?.coVendors?.[0].category).toBe(
       "in_house_venue_av",

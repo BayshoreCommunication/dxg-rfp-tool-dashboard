@@ -1219,6 +1219,10 @@ const mapApiProposalToFormData = (
   videoRecordingStep: {
     ...defaultProposalData.videoRecordingStep,
     ...(raw.videoRecordingStep || {}),
+    recordIn4k: raw.videoRecordingStep?.recordIn4k || (
+      /4k/i.test(raw.videoRecordingStep?.recordingResolution ?? "") ? "YES"
+        : /1080/i.test(raw.videoRecordingStep?.recordingResolution ?? "") ? "NO" : ""
+    ),
   },
   venue: (() => {
     const rv = (raw.venue ?? {}) as Record<string, unknown>;
@@ -1822,6 +1826,9 @@ const AddNewProposal = ({
         dateFormat: proposalSettings.proposals.dateFormat,
       },
       roomByRoom: normalizedRooms,
+      videoRecordingStep: proposalData.videoRecordingStep.videoRecordingRequired === "YES"
+        ? proposalData.videoRecordingStep
+        : { ...proposalData.videoRecordingStep, recordingCodec: "", recordIn4k: "" },
       production: {
         scenicStageDesign: firstRoom.scenicStageDesign,
         showCrewNeeded: firstRoom.showCrewNeeded,

@@ -901,7 +901,8 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           <div className="section-subtitle">Recording &amp; Deliverables</div>
           <table>
             <tbody>
-              <InfoTd label="Resolution" value={p(vr.recordingResolution)} />
+              <InfoTd label="Recording Codec" value={p(vr.recordingCodec)} />
+              <InfoTd label="Record in 4K" value={p(vr.recordIn4k) ? yn(vr.recordIn4k) : p(vr.recordingResolution)} />
               <InfoTd label="Recording Media" value={p(vr.recordingMedia)} />
               <InfoTd label="Raw Footage Turnover" value={yn(vr.rawFootageTurnover)} />
               <InfoTd label="Deliverable Format" value={arr(vr.deliverableFormat).join(", ")} />

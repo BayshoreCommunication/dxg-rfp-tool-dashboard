@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import VideoRecordingStep, { defaultVideoRecording } from "./VideoRecordingStep";
 import type { ProposalSettings } from "../AddNewProposal";
@@ -24,4 +24,29 @@ test("camera quantities and positions are editable only in Room Specifications",
   expect(screen.queryByText(/Camera Positions Needed/i)).not.toBeInTheDocument();
   expect(screen.getByText(/ISO Recording Strategy/i)).toBeInTheDocument();
   expect(screen.getByText(/Recording & Deliverables/i)).toBeInTheDocument();
+});
+
+test("requires an explicit codec and 4K choice when recording is enabled", () => {
+  const onContinue = jest.fn();
+  const onChange = jest.fn();
+  render(
+    <VideoRecordingStep
+      data={{ ...defaultVideoRecording(), videoRecordingRequired: "YES" }}
+      onChange={onChange}
+      onContinue={onContinue}
+      onBack={jest.fn()}
+      showErrors={false}
+      proposalSettings={settings}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: /Venue & Technical/i }));
+  expect(onContinue).not.toHaveBeenCalled();
+  expect(screen.getByText("Choose Yes or No.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /No — No recording needed/i }));
+  expect(onChange).toHaveBeenCalledWith({
+    videoRecordingRequired: "NO",
+    recordingCodec: "",
+    recordIn4k: "",
+  });
 });
