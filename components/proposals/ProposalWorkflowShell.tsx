@@ -7,7 +7,7 @@
 
 import { getProposalWorkflowAction, setProposalWorkflowStepAction, type ProposalWorkflow } from "@/app/actions/proposalWorkflow";
 import Link from "next/link";
-import { ArrowRight, Check, ExternalLink, MoreHorizontal, Radio, Send } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, Radio, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import GuidancePanel from "./GuidancePanel";
 import HistoricalInsightsPanel from "./HistoricalInsightsPanel";
@@ -136,8 +136,7 @@ export default function ProposalWorkflowShell({
         <p className="mt-1.5 text-sm text-[#687782]">{isPublished ? "Live vendor-facing proposal" : "Build, review, and prepare your proposal"}</p>
       </div>
       <div className="flex items-center gap-2.5">
-        <button type="button" aria-label="More proposal actions" className="grid h-11 w-11 place-items-center rounded-xl border border-[#dfe7ec] bg-white text-[#687782] shadow-sm transition hover:border-[#cbd8df] hover:bg-[#f7fafb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]"><MoreHorizontal size={20} /></button>
-        <a href="#manual-proposal-details" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#0786cf] px-4 py-2.5 text-sm font-bold text-white shadow-[0_5px_14px_rgba(7,134,207,0.2)] transition hover:bg-[#066fae] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] sm:px-5">Open advanced editor<ExternalLink size={15} aria-hidden="true" /></a>
+        <a href="#manual-proposal-details" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#0786cf] px-4 py-2.5 text-sm font-bold text-white shadow-[0_5px_14px_rgba(7,134,207,0.2)] transition hover:bg-[#066fae] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] sm:px-5">Edit form directly<ArrowDown size={15} aria-hidden="true" /></a>
       </div>
     </header>
     {/* The conversation itself lives on one surface only: this editor links out
