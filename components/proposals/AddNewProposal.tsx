@@ -28,6 +28,12 @@ import ProposalWorkflowShell from "./ProposalWorkflowShell";
 import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
 import { CAMERA_PLAN_SPECIFIC, cameraPlanTotal } from "./cameraPlan";
+import {
+  ensureLedWallSlots,
+  ledWallCount,
+  normalizeLedWalls,
+  type LedWallSpecification,
+} from "./ledWallPlan";
 
 /* ─── Proposal data by step ─── */
 export type EventData = {
@@ -101,6 +107,8 @@ export type RoomByRoomData = {
     screenSizeOther: string;
   };
   ledWall: string;
+  ledWallCount: string;
+  ledWalls: LedWallSpecification[];
   clientProvideOwnPresentationLaptop: {
     clientProvideOwnPresentationLaptop: string;
     clientLaptopQty: string;
@@ -688,6 +696,8 @@ const normalizeExtracted = (
       // ── Flat Yes/No fields ──
       audioRecording: matchOption((rRec.audioRecording as string) ?? "", ["Yes", "No"]) as RoomByRoomData["audioRecording"],
       ledWall: matchOption((rRec.ledWall as string) ?? "", ["Yes", "No"]),
+      ledWallCount: String(rRec.ledWallCount ?? (normalizeLedWalls(rRec).length || "")),
+      ledWalls: normalizeLedWalls(rRec),
       ledWallWidth: (rRec.ledWallWidth as string) ?? "",
       ledWallHeight: (rRec.ledWallHeight as string) ?? "",
       ledWallPixelPitch: (rRec.ledWallPixelPitch as string) ?? "",
@@ -1161,6 +1171,8 @@ const mapApiProposalToFormData = (
         ? String((raw.videoRecordingStep as Record<string, unknown>).numberOfCameras ?? "")
         : "";
       const legacyCameraCount = rawCameras.camerasQty || standaloneLegacyCount;
+      const normalizedLedWalls = normalizeLedWalls(r);
+      const normalizedLedWallCount = ledWallCount(r);
       const normalizedCameras: RoomByRoomData["cameras"] = {
         ...defaultRoom().cameras,
         ...rawCameras,
@@ -1178,6 +1190,8 @@ const mapApiProposalToFormData = (
           ...display,
         },
         cameras: normalizedCameras,
+        ledWallCount: normalizedLedWallCount > 0 ? String(normalizedLedWallCount) : "",
+        ledWalls: ensureLedWallSlots(normalizedLedWalls, normalizedLedWallCount),
         functions: normalizeRoomFunctions(r),
         roomLocation: typeof r.roomLocation === "string" && r.roomLocation.trim()
           ? r.roomLocation
@@ -1706,6 +1720,31 @@ const AddNewProposal = ({
         videoPlaybackCount: "",
         videoPlaybackFormat: "",
       };
+    }
+    if (normalized.ledWall !== "Yes") {
+      normalized.ledWallCount = "";
+      normalized.ledWalls = [];
+      normalized.ledWallWidth = "";
+      normalized.ledWallHeight = "";
+      normalized.ledWallShape = "";
+      normalized.ledWallPixelPitch = "";
+      normalized.ledWallSwitcher = "";
+      normalized.ledWallNotes = "";
+      normalized.ledWallSpecs = "";
+    } else {
+      const count = ledWallCount(normalized);
+      normalized.ledWallCount = count > 0 ? String(count) : "";
+      normalized.ledWalls = ensureLedWallSlots(normalizeLedWalls(normalized), count).slice(0, count);
+      const firstWall = normalized.ledWalls[0];
+      if (firstWall) {
+        normalized.ledWallWidth = firstWall.width;
+        normalized.ledWallHeight = firstWall.height;
+        normalized.ledWallShape = firstWall.shape;
+        normalized.ledWallPixelPitch = firstWall.pixelPitch;
+        normalized.ledWallSwitcher = firstWall.switcher;
+        normalized.ledWallNotes = firstWall.notes;
+        normalized.ledWallSpecs = firstWall.specs;
+      }
     }
     if (normalized.cameras.cameras !== "Yes") {
       normalized.cameras = {
@@ -2377,8 +2416,13 @@ const AddNewProposal = ({
                 strikeDate={proposalData.venueSchedule.strikeDate}
                 numberOfEventRooms={proposalData.venueSchedule.numberOfEventRooms}
                 ledWallMaxWidth={(() => {
-                  const widths = proposalData.roomByRoom
-                    .map((r) => parseFloat(r.ledWallWidth ?? "0"))
+                  const widths = rooms
+                    .flatMap((room) => {
+                      const count = ledWallCount(room);
+                      return ensureLedWallSlots(normalizeLedWalls(room), count)
+                        .slice(0, count)
+                        .map((wall) => parseFloat(wall.width || "0"));
+                    })
                     .filter((w) => !isNaN(w) && w > 0);
                   return widths.length ? Math.max(...widths) : undefined;
                 })()}

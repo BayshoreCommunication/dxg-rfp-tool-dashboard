@@ -216,6 +216,29 @@ describe("legacy proposal adapter", () => {
     );
   });
 
+  it("maps repeated LED walls and keeps legacy scalar compatibility", () => {
+    const result = mapLegacyProposalToV1({
+      ...legacyProposal,
+      roomByRoom: [{
+        ...legacyProposal.roomByRoom[0],
+        ledWall: "Yes",
+        ledWallCount: "2",
+        ledWalls: [
+          { width: "40", height: "15", shape: "Flat / Straight", pixelPitch: "2.6mm", switcher: "Barco E2/E3", notes: "Main wall" },
+          { width: "16", height: "9", shape: "Curved", pixelPitch: "1.9mm", switcher: "Vendor Recommendation", notes: "Side wall" },
+        ],
+      }],
+    }, { organizationId: "org-001" });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.proposal.content.rooms[0].video?.ledWallCount).toBe(2);
+    expect(result.proposal.content.rooms[0].video?.ledWalls).toEqual([
+      expect.objectContaining({ width: { value: 40, unit: "ft" }, height: { value: 15, unit: "ft" }, shape: "Flat / Straight" }),
+      expect.objectContaining({ width: { value: 16, unit: "ft" }, height: { value: 9, unit: "ft" }, shape: "Curved" }),
+    ]);
+  });
+
   it("reports invalid legacy dates instead of guessing", () => {
     const result = mapLegacyProposalToV1(
       {
