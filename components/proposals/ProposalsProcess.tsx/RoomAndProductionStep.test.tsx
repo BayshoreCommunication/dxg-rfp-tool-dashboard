@@ -9,7 +9,7 @@ import {
   parseScheduleWorkbook,
   venueTimeValue,
 } from "./RoomAndProductionStep";
-import { SCREEN_SIZE_OTHER } from "../screenSize";
+import { SCREEN_SIZE_OTHER, SCREEN_SIZE_VENDOR_RECOMMENDATION } from "../screenSize";
 
 jest.mock("@/app/actions/proposals", () => ({
   normalizeScheduleTimesAction: jest.fn(),
@@ -153,6 +153,7 @@ describe("mandatory function schedules", () => {
       numberOfMonitors: "0",
       numberOfScreens: "2",
       monitorSize: "",
+      monitorSizeOther: "",
       screenSize: SCREEN_SIZE_OTHER,
       screenSizeOther: "",
     };
@@ -160,6 +161,38 @@ describe("mandatory function schedules", () => {
     expect(missingRoomFields(room)).toContain("custom screen size");
     room.largeMonitorsOrScreenProjector.screenSizeOther = "22' × 12' rear projection";
     expect(missingRoomFields(room)).not.toContain("custom screen size");
+  });
+
+  it("blocks Continue when Other lacks an explicit custom monitor size", () => {
+    const room = completeRoom();
+    room.largeMonitorsOrScreenProjector = {
+      largeMonitorsOrScreenProjector: "Yes",
+      numberOfMonitors: "2",
+      numberOfScreens: "0",
+      monitorSize: SCREEN_SIZE_OTHER,
+      monitorSizeOther: "",
+      screenSize: "",
+      screenSizeOther: "",
+    };
+
+    expect(missingRoomFields(room)).toContain("custom monitor size");
+    room.largeMonitorsOrScreenProjector.monitorSizeOther = '85" wall-mounted';
+    expect(missingRoomFields(room)).not.toContain("custom monitor size");
+  });
+
+  it("accepts Vendor Recommendation as a monitor size without further input", () => {
+    const room = completeRoom();
+    room.largeMonitorsOrScreenProjector = {
+      largeMonitorsOrScreenProjector: "Yes",
+      numberOfMonitors: "2",
+      numberOfScreens: "0",
+      monitorSize: SCREEN_SIZE_VENDOR_RECOMMENDATION,
+      monitorSizeOther: "",
+      screenSize: "",
+      screenSizeOther: "",
+    };
+
+    expect(missingRoomFields(room)).not.toContain("custom monitor size");
   });
 });
 

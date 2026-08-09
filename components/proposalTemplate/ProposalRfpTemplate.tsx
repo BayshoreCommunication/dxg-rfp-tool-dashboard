@@ -1,6 +1,6 @@
 "use client";
 
-import { resolveScreenSize } from "@/components/proposals/screenSize";
+import { resolveMonitorSize, resolveScreenSize } from "@/components/proposals/screenSize";
 import { cameraPlanSummary, type CameraPlan } from "@/components/proposals/cameraPlan";
 import { ensureLedWallSlots, ledWallCount, normalizeLedWalls, type LedWallPlan } from "@/components/proposals/ledWallPlan";
 
@@ -362,7 +362,12 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     const lmVal = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).largeMonitorsOrScreenProjector) : p(lmRaw as string);
     const lmMonitors = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).numberOfMonitors) : "";
     const lmScreens = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).numberOfScreens) : "";
-    const lmMonitorSize = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).monitorSize) : "";
+    const lmMonitorSize = lmRaw && typeof lmRaw === "object"
+      ? resolveMonitorSize({
+          monitorSize: p((lmRaw as RD).monitorSize),
+          monitorSizeOther: p((lmRaw as RD).monitorSizeOther),
+        })
+      : "";
     const lmScreenSize = lmRaw && typeof lmRaw === "object"
       ? resolveScreenSize({
           screenSize: p((lmRaw as RD).screenSize),

@@ -15,7 +15,9 @@ import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
 import {
   SCREEN_SIZE_OTHER,
   SCREEN_SIZE_VENDOR_RECOMMENDATION,
+  customMonitorSizeIsMissing,
   customScreenSizeIsMissing,
+  selectMonitorSize,
   selectScreenSize,
 } from "../screenSize";
 import {
@@ -424,7 +426,17 @@ const LED_SWITCHER_OPTIONS = [
 ];
 
 // ─── Monitor / screen size options ────────────────────────────────────────────
-const MONITOR_SIZE_OPTIONS = ["40\"", "43\"", "50\"", "55\"", "60\"", "65\"", "70\""];
+const MONITOR_SIZE_OPTIONS = [
+  "40\"",
+  "43\"",
+  "50\"",
+  "55\"",
+  "60\"",
+  "65\"",
+  "70\"",
+  SCREEN_SIZE_VENDOR_RECOMMENDATION,
+  SCREEN_SIZE_OTHER,
+];
 const SCREEN_SIZE_OPTIONS = [
   "8' Tripod",
   "10' Wide Fastfold",
@@ -477,6 +489,7 @@ export const defaultRoom = (): RoomByRoomData => ({
     numberOfMonitors: "",
     numberOfScreens: "",
     monitorSize: "",
+    monitorSizeOther: "",
     screenSize: "",
     screenSizeOther: "",
   },
@@ -1111,6 +1124,7 @@ const RoomForm = ({
                 numberOfMonitors: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.numberOfMonitors,
                 numberOfScreens: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.numberOfScreens,
                 monitorSize: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.monitorSize,
+                monitorSizeOther: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.monitorSizeOther,
                 screenSize: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.screenSize,
                 screenSizeOther: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.screenSizeOther,
               },
@@ -1133,6 +1147,7 @@ const RoomForm = ({
                       ...data.largeMonitorsOrScreenProjector,
                       numberOfMonitors: e.target.value,
                       monitorSize: Number(e.target.value) > 0 ? data.largeMonitorsOrScreenProjector.monitorSize : "",
+                      monitorSizeOther: Number(e.target.value) > 0 ? data.largeMonitorsOrScreenProjector.monitorSizeOther : "",
                     },
                   })
                 }
@@ -1159,25 +1174,56 @@ const RoomForm = ({
               />
             </div>
             {Number(data.largeMonitorsOrScreenProjector.numberOfMonitors) > 0 && (
-              <div>
-                <label className={`${labelClass} mt-0`}>Monitor Size</label>
-                <GlobalSelect
-                  className={inputClass}
-                  value={data.largeMonitorsOrScreenProjector.monitorSize}
-                  onChange={(e) =>
-                    onChange({
-                      largeMonitorsOrScreenProjector: {
-                        ...data.largeMonitorsOrScreenProjector,
-                        monitorSize: e.target.value,
-                      },
-                    })
-                  }
-                >
-                  <option value="">Select size…</option>
-                  {MONITOR_SIZE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </GlobalSelect>
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor={`${uid}-monitor-size`} className={`${labelClass} mt-0`}>Monitor Size</label>
+                  <GlobalSelect
+                    id={`${uid}-monitor-size`}
+                    className={inputClass}
+                    value={data.largeMonitorsOrScreenProjector.monitorSize}
+                    onChange={(e) =>
+                      onChange({
+                        largeMonitorsOrScreenProjector: {
+                          ...data.largeMonitorsOrScreenProjector,
+                          ...selectMonitorSize(data.largeMonitorsOrScreenProjector, e.target.value),
+                        },
+                      })
+                    }
+                  >
+                    <option value="">Select size…</option>
+                    {MONITOR_SIZE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </GlobalSelect>
+                </div>
+                {data.largeMonitorsOrScreenProjector.monitorSize === SCREEN_SIZE_OTHER && (
+                  <div>
+                    <label htmlFor={`${uid}-monitor-size-other`} className={`${labelClass} mt-0`}>
+                      Custom Monitor Size <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id={`${uid}-monitor-size-other`}
+                      type="text"
+                      required
+                      aria-invalid={showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) ? true : undefined}
+                      aria-describedby={showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) ? `${uid}-monitor-size-other-error` : undefined}
+                      className={`${inputClass} ${showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) ? "border-red-400 focus:border-red-400" : ""}`}
+                      placeholder={'e.g. 85" wall-mounted'}
+                      value={data.largeMonitorsOrScreenProjector.monitorSizeOther}
+                      onChange={(e) => onChange({
+                        largeMonitorsOrScreenProjector: {
+                          ...data.largeMonitorsOrScreenProjector,
+                          monitorSizeOther: e.target.value,
+                        },
+                      })}
+                    />
+                    {showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) && (
+                      <p id={`${uid}-monitor-size-other-error`} className="mt-1 text-xs text-red-500">
+                        Enter the custom monitor size.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             {Number(data.largeMonitorsOrScreenProjector.numberOfScreens) > 0 && (
@@ -1957,6 +2003,12 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
     customScreenSizeIsMissing(room.largeMonitorsOrScreenProjector)
   ) {
     missing.push("custom screen size");
+  }
+  if (
+    Number(room.largeMonitorsOrScreenProjector.numberOfMonitors) > 0 &&
+    customMonitorSizeIsMissing(room.largeMonitorsOrScreenProjector)
+  ) {
+    missing.push("custom monitor size");
   }
   return missing;
 };

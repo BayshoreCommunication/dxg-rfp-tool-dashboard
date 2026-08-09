@@ -103,6 +103,7 @@ export type RoomByRoomData = {
     numberOfMonitors: string;
     numberOfScreens: string;
     monitorSize: string;
+    monitorSizeOther: string;
     screenSize: string;
     screenSizeOther: string;
   };
@@ -671,6 +672,7 @@ const normalizeExtracted = (
         numberOfMonitors: (rRec.numberOfMonitors as string) ?? "",
         numberOfScreens: (rRec.numberOfScreens as string) ?? "",
         monitorSize: (rRec.monitorSize as string) ?? "",
+        monitorSizeOther: (rRec.monitorSizeOther as string) ?? "",
         screenSize: (rRec.screenSize as string) ?? "",
         screenSizeOther: (rRec.screenSizeOther as string) ?? "",
       },
@@ -1686,6 +1688,7 @@ const AddNewProposal = ({
         numberOfMonitors: "",
         numberOfScreens: "",
         monitorSize: "",
+        monitorSizeOther: "",
         screenSize: "",
         screenSizeOther: "",
       };
@@ -1695,6 +1698,11 @@ const AddNewProposal = ({
         monitorSize: Number(normalized.largeMonitorsOrScreenProjector.numberOfMonitors) > 0
           ? normalized.largeMonitorsOrScreenProjector.monitorSize
           : "",
+        monitorSizeOther:
+          Number(normalized.largeMonitorsOrScreenProjector.numberOfMonitors) > 0 &&
+          normalized.largeMonitorsOrScreenProjector.monitorSize === "Other — Specify"
+            ? normalized.largeMonitorsOrScreenProjector.monitorSizeOther
+            : "",
         screenSize: Number(normalized.largeMonitorsOrScreenProjector.numberOfScreens) > 0
           ? normalized.largeMonitorsOrScreenProjector.screenSize
           : "",
