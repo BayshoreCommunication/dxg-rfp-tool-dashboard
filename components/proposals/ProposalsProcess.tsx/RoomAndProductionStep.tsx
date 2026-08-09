@@ -18,6 +18,22 @@ import {
   customScreenSizeIsMissing,
   selectScreenSize,
 } from "../screenSize";
+import {
+  CAMERA_PLAN_SPECIFIC,
+  CAMERA_PLAN_VENDOR_RECOMMENDATION,
+  CAMERA_TYPE_BOTH,
+  CAMERA_TYPE_OTHER,
+  CAMERA_TYPE_PTZ,
+  CAMERA_TYPE_STUDIO,
+  cameraPlanMissingFields,
+  cameraPlanTotal,
+} from "../cameraPlan";
+import {
+  ensureLedWallSlots,
+  ledWallCount,
+  ledWallPlanMissingFields,
+  normalizeLedWalls,
+} from "../ledWallPlan";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -447,6 +463,8 @@ export const defaultRoom = (): RoomByRoomData => ({
   audioRecording: "",
   audienceQa: { audienceQa: "", audienceQaMethod: "" },
   ledWall: "",
+  ledWallCount: "",
+  ledWalls: [],
   ledWallSpecs: "",
   ledWallWidth: "",
   ledWallHeight: "",
@@ -466,7 +484,10 @@ export const defaultRoom = (): RoomByRoomData => ({
   presentationLaptops: { presentationLaptops: "", presentationLaptopQty: "" },
   videoPlayback: { videoPlayback: "", videoPlaybackCount: "", videoPlaybackFormat: "" },
   videoFormatAspectRatio: "",
-  cameras: { cameras: "", camerasQty: "" },
+  cameras: {
+    cameras: "", camerasQty: "", cameraPlanMode: "", cameraType: "",
+    ptzCameraQty: "", studioCameraQty: "", otherCameraType: "", otherCameraQty: "",
+  },
   videoRecording: { videoRecording: "", videoRecordingType: "" },
   lightingRequirements: [],
   stageWashLighting: { stageWashLighting: "", stageWashLightingStageSize: "" },
@@ -562,6 +583,14 @@ const RoomForm = ({
   if (lighting.includes("Moving Lights / Programmable Effects")) autoSuggest.push("L1 (Lighting Director)");
   const unaddedSuggestions = autoSuggest.filter((r) => !data.showCrewNeeded.includes(r));
   const functionSchedules = schedulesForRoom(data);
+  const activeLedWallCount = ledWallCount(data);
+  const ledWalls = ensureLedWallSlots(normalizeLedWalls(data), activeLedWallCount);
+
+  const updateLedWall = (wallIndex: number, updates: Partial<(typeof ledWalls)[number]>) => {
+    const next = ensureLedWallSlots(ledWalls, wallIndex + 1);
+    next[wallIndex] = { ...next[wallIndex], ...updates };
+    onChange({ ledWalls: next });
+  };
 
   const updateFunctionSchedules = (next: RoomFunctionSchedule[]) => {
     const schedules = next.length > 0 ? next : [defaultFunctionSchedule()];
@@ -986,128 +1015,82 @@ const RoomForm = ({
             onChange({
               ledWall: v,
               ...(v !== "Yes"
-                ? { ledWallWidth: "", ledWallHeight: "", ledWallShape: "", ledWallPixelPitch: "", ledWallSwitcher: "", ledWallNotes: "", ledWallSpecs: "" }
-                : {}),
+                ? { ledWallCount: "", ledWalls: [] }
+                : activeLedWallCount > 0
+                  ? {}
+                  : { ledWallCount: "1", ledWalls: ensureLedWallSlots(normalizeLedWalls(data), 1) }),
             })
           }
         />
         {data.ledWall === "Yes" && (
           <div className={subPanelClass}>
             <p className={subPanelHeader}>LED Wall Specifications</p>
-
-            {/* Width + Height */}
-            <div className="mb-4 grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  Width (ft)
-                  <InfoTooltip text="Total LED wall width in feet. Walls over 60ft significantly impact budget and trigger a Producer consultation recommendation." />
-                </label>
-                <input
-                  type="number"
-                  className={inputClass}
-                  placeholder="e.g. 80"
-                  value={data.ledWallWidth ?? ""}
-                  onChange={(e) => onChange({ ledWallWidth: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Height (ft)
-                  <InfoTooltip text="Total LED wall height in feet." />
-                </label>
-                <input
-                  type="number"
-                  className={inputClass}
-                  placeholder="e.g. 20"
-                  value={data.ledWallHeight ?? ""}
-                  onChange={(e) => onChange({ ledWallHeight: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Shape + Pixel Pitch */}
-            <div className="mb-4 grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  Shape
-                  <InfoTooltip text="Curved LED walls require specialized rigging and content production — flag this early as it significantly impacts budget." />
-                </label>
-                <GlobalSelect
-                  className={inputClass}
-                  value={data.ledWallShape ?? ""}
-                  onChange={(e) => onChange({ ledWallShape: e.target.value })}
-                >
-                  <option value="">Select shape…</option>
-                  <option>Flat / Straight</option>
-                  <option>Curved</option>
-                  <option>Multi-Panel / Segmented</option>
-                  <option>Wraparound</option>
-                </GlobalSelect>
-                {data.ledWallShape === "Curved" && (
-                  <p className="mt-1 text-xs text-amber-600 normal-case">
-                    Curved LED may trigger a Producer Insight consultation.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Pixel Pitch Preference
-                  <InfoTooltip text="Finer pixel pitch = sharper image at close range. 1.9mm is premium for stages under 30ft. 3.9mm is acceptable for large arenas." />
-                </label>
-                <GlobalSelect
-                  className={inputClass}
-                  value={data.ledWallPixelPitch ?? ""}
-                  onChange={(e) => onChange({ ledWallPixelPitch: e.target.value })}
-                >
-                  <option value="">Select preference…</option>
-                  <option>1.9mm or finer (Premium)</option>
-                  <option>2.6mm (Standard)</option>
-                  <option>3.9mm (Acceptable for distance)</option>
-                  <option>Vendor Recommendation</option>
-                </GlobalSelect>
-              </div>
-            </div>
-
-            {/* Switcher */}
-            <div className="mb-4">
-              <label className={labelClass}>
-                Switcher / Processor Requirement
-                <InfoTooltip text="The video processor that drives the LED wall. Specify preference or defer to vendor." />
-              </label>
-              <GlobalSelect
-                className={inputClass}
-                value={data.ledWallSwitcher ?? ""}
-                onChange={(e) => onChange({ ledWallSwitcher: e.target.value })}
-              >
-                <option value="">Select preference…</option>
-                {LED_SWITCHER_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </GlobalSelect>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className={labelClass}>
-                Additional Notes
-                <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-              </label>
-              <textarea
-                rows={2}
-                className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
-                placeholder="e.g. Center I-MAG playback, lower-third overlays, integration with timecode..."
-                value={data.ledWallNotes ?? ""}
-                onChange={(e) => onChange({ ledWallNotes: e.target.value })}
+            <div className="mb-5 max-w-xs">
+              <label className={labelClass}>Number of LED Walls <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                className={`${inputClass} ${showErrors && activeLedWallCount < 1 ? "border-red-400 focus:border-red-400" : ""}`}
+                value={data.ledWallCount ?? ""}
+                onChange={(event) => {
+                  const rawCount = event.target.value;
+                  const nextCount = Math.min(20, Math.max(0, Number(rawCount) || 0));
+                  onChange({
+                    ledWallCount: rawCount,
+                    ledWalls: ensureLedWallSlots(ledWalls, nextCount),
+                  });
+                }}
               />
             </div>
 
-            {data.ledWallWidth && Number(data.ledWallWidth) >= 60 && (
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                <span className="shrink-0">⚠️</span>
-                <span>
-                  <strong>Large LED Wall:</strong> Walls ≥ 60ft may trigger a Producer Insight Call recommendation.
-                </span>
-              </div>
+            <div className="space-y-5">
+              {ledWalls.slice(0, activeLedWallCount).map((wall, wallIndex) => (
+                <div key={wallIndex} className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="mb-4 text-sm font-bold text-[#222628]">LED Wall {wallIndex + 1}</p>
+                  <div className="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Width (ft) <span className="text-red-500">*</span></label>
+                      <input type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.width) > 0) ? "border-red-400" : ""}`} placeholder="e.g. 40" value={wall.width} onChange={(event) => updateLedWall(wallIndex, { width: event.target.value })} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Height (ft) <span className="text-red-500">*</span></label>
+                      <input type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.height) > 0) ? "border-red-400" : ""}`} placeholder="e.g. 15" value={wall.height} onChange={(event) => updateLedWall(wallIndex, { height: event.target.value })} />
+                    </div>
+                  </div>
+                  <div className="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Shape <span className="text-red-500">*</span></label>
+                      <GlobalSelect className={`${inputClass} ${showErrors && !wall.shape ? "border-red-400" : ""}`} value={wall.shape} onChange={(event) => updateLedWall(wallIndex, { shape: event.target.value })}>
+                        <option value="">Select shape…</option>
+                        <option>Flat / Straight</option><option>Curved</option><option>Multi-Panel / Segmented</option><option>Wraparound</option>
+                      </GlobalSelect>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Pixel Pitch <span className="text-red-500">*</span></label>
+                      <GlobalSelect className={`${inputClass} ${showErrors && !wall.pixelPitch ? "border-red-400" : ""}`} value={wall.pixelPitch} onChange={(event) => updateLedWall(wallIndex, { pixelPitch: event.target.value })}>
+                        <option value="">Select preference…</option>
+                        <option>1.9mm or finer (Premium)</option><option>2.6mm (Standard)</option><option>3.9mm (Acceptable for distance)</option><option>Vendor Recommendation</option>
+                      </GlobalSelect>
+                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <label className={labelClass}>Switcher / Processor <span className="text-red-500">*</span></label>
+                    <GlobalSelect className={`${inputClass} ${showErrors && !wall.switcher ? "border-red-400" : ""}`} value={wall.switcher} onChange={(event) => updateLedWall(wallIndex, { switcher: event.target.value })}>
+                      <option value="">Select preference…</option>
+                      {LED_SWITCHER_OPTIONS.map((option) => <option key={option}>{option}</option>)}
+                    </GlobalSelect>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Additional Notes <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                    <textarea rows={2} className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm" value={wall.notes} onChange={(event) => updateLedWall(wallIndex, { notes: event.target.value })} />
+                  </div>
+                  {Number(wall.width) >= 60 && <p className="mt-3 text-xs text-amber-700">Large LED wall: walls ≥ 60ft may trigger a Producer Insight Call recommendation.</p>}
+                </div>
+              ))}
+            </div>
+            {showErrors && ledWallPlanMissingFields(data).length > 0 && (
+              <p className="mt-3 text-xs text-red-500">Complete: {ledWallPlanMissingFields(data).join(", ")}.</p>
             )}
           </div>
         )}
@@ -1389,28 +1372,82 @@ const RoomForm = ({
       <div>
         <label className={labelClass}>
           Cameras?
-          <InfoTooltip text="Camera coverage for IMAG (image magnification on screens) or for video recording. Specify quantity so the AV company can plan camera positions and operators." />
+          <InfoTooltip text="Camera coverage for IMAG or recording. Choose a specific typed plan, or ask the vendor to recommend the right plan for this room." />
         </label>
         <YesNo
           value={data.cameras.cameras}
           onChange={(v) =>
             onChange({
               cameras: {
+                ...data.cameras,
                 cameras: v,
-                camerasQty: v !== "Yes" ? "" : data.cameras.camerasQty,
+                ...(v !== "Yes" ? {
+                  camerasQty: "", cameraPlanMode: "", cameraType: "", ptzCameraQty: "",
+                  studioCameraQty: "", otherCameraType: "", otherCameraQty: "",
+                } : {}),
               },
             })
           }
         />
         {data.cameras.cameras === "Yes" && (
-          <input
-            className={`${inputClass} mt-3`}
-            placeholder="How many cameras?"
-            value={data.cameras.camerasQty}
-            onChange={(e) =>
-              onChange({ cameras: { ...data.cameras, camerasQty: e.target.value } })
-            }
-          />
+          <div className={subPanelClass}>
+            <label className={labelClass}>Camera Planning Approach <span className="text-red-500">*</span></label>
+            <div className="flex flex-wrap gap-3">
+              {[CAMERA_PLAN_SPECIFIC, CAMERA_PLAN_VENDOR_RECOMMENDATION].map((option) => (
+                <PillRadio
+                  key={option}
+                  name={`${uid}-camera-plan-mode`}
+                  value={option}
+                  checked={data.cameras.cameraPlanMode === option}
+                  onChange={() => onChange({ cameras: {
+                    ...data.cameras,
+                    cameraPlanMode: option,
+                    cameraType: option === CAMERA_PLAN_SPECIFIC ? data.cameras.cameraType : "",
+                    ptzCameraQty: option === CAMERA_PLAN_SPECIFIC ? data.cameras.ptzCameraQty : "",
+                    studioCameraQty: option === CAMERA_PLAN_SPECIFIC ? data.cameras.studioCameraQty : "",
+                    otherCameraType: option === CAMERA_PLAN_SPECIFIC ? data.cameras.otherCameraType : "",
+                    otherCameraQty: option === CAMERA_PLAN_SPECIFIC ? data.cameras.otherCameraQty : "",
+                    camerasQty: option === CAMERA_PLAN_SPECIFIC ? data.cameras.camerasQty : "",
+                  } })}
+                />
+              ))}
+            </div>
+            {data.cameras.cameraPlanMode === CAMERA_PLAN_SPECIFIC && (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className={labelClass}>Camera Type <span className="text-red-500">*</span></label>
+                  <GlobalSelect
+                    className={inputClass}
+                    value={data.cameras.cameraType}
+                    onChange={(event) => onChange({ cameras: {
+                      ...data.cameras,
+                      cameraType: event.target.value,
+                      ptzCameraQty: [CAMERA_TYPE_PTZ, CAMERA_TYPE_BOTH].includes(event.target.value) ? data.cameras.ptzCameraQty : "",
+                      studioCameraQty: [CAMERA_TYPE_STUDIO, CAMERA_TYPE_BOTH].includes(event.target.value) ? data.cameras.studioCameraQty : "",
+                      otherCameraType: event.target.value === CAMERA_TYPE_OTHER ? data.cameras.otherCameraType : "",
+                      otherCameraQty: event.target.value === CAMERA_TYPE_OTHER ? data.cameras.otherCameraQty : "",
+                    } })}
+                  >
+                    <option value="">Select camera type…</option>
+                    {[CAMERA_TYPE_PTZ, CAMERA_TYPE_STUDIO, CAMERA_TYPE_BOTH, CAMERA_TYPE_OTHER].map((option) => <option key={option}>{option}</option>)}
+                  </GlobalSelect>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[CAMERA_TYPE_PTZ, CAMERA_TYPE_BOTH].includes(data.cameras.cameraType) && (
+                    <div><label className={labelClass}>PTZ Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.ptzCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, ptzCameraQty: event.target.value } })} /></div>
+                  )}
+                  {[CAMERA_TYPE_STUDIO, CAMERA_TYPE_BOTH].includes(data.cameras.cameraType) && (
+                    <div><label className={labelClass}>Studio / Broadcast Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.studioCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, studioCameraQty: event.target.value } })} /></div>
+                  )}
+                  {data.cameras.cameraType === CAMERA_TYPE_OTHER && (
+                    <><div><label className={labelClass}>Other Camera Type <span className="text-red-500">*</span></label><input className={inputClass} value={data.cameras.otherCameraType} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraType: event.target.value } })} /></div><div><label className={labelClass}>Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.otherCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraQty: event.target.value } })} /></div></>
+                  )}
+                </div>
+                {cameraPlanTotal(data.cameras) > 0 && <p className="text-xs font-semibold text-[#0069a0]">Derived total: {cameraPlanTotal(data.cameras)} camera(s)</p>}
+              </div>
+            )}
+            {showErrors && cameraPlanMissingFields(data.cameras).length > 0 && <p className="mt-2 text-xs text-red-500">Complete: {cameraPlanMissingFields(data.cameras).join(", ")}.</p>}
+          </div>
         )}
       </div>
 
@@ -1913,6 +1950,8 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
     })) missing.push("end time after start time");
   }
   if (room.showCrewNeeded.length === 0) missing.push("show crew");
+  missing.push(...cameraPlanMissingFields(room.cameras));
+  missing.push(...ledWallPlanMissingFields(room));
   if (
     Number(room.largeMonitorsOrScreenProjector.numberOfScreens) > 0 &&
     customScreenSizeIsMissing(room.largeMonitorsOrScreenProjector)

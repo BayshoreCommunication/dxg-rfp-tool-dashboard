@@ -162,3 +162,29 @@ describe("mandatory function schedules", () => {
     expect(missingRoomFields(room)).not.toContain("custom screen size");
   });
 });
+
+describe("multiple LED wall validation", () => {
+  const completeRoom = () => ({
+    ...defaultRoom(),
+    roomLocation: "Grand Ballroom",
+    roomFunction: "Keynote",
+    scheduleDate: "2026-08-10",
+    showStartDateTime: "2026-08-10T13:00:00.000Z",
+    showEndDateTime: "2026-08-10T14:00:00.000Z",
+    estimatedAttendeesInRoom: "500",
+    showCrewNeeded: ["V1 (Video Engineer)"],
+  });
+
+  it("identifies the incomplete wall by its one-based number", () => {
+    const missing = missingRoomFields({
+      ...completeRoom(),
+      ledWall: "Yes",
+      ledWallCount: "2",
+      ledWalls: [{
+        width: "40", height: "15", shape: "Flat / Straight",
+        pixelPitch: "2.6mm (Standard)", switcher: "Barco E2/E3", notes: "", specs: "",
+      }],
+    });
+    expect(missing).toEqual(expect.arrayContaining(["LED wall 2 width", "LED wall 2 processor"]));
+  });
+});

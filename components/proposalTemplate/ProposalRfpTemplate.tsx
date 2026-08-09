@@ -1,6 +1,8 @@
 "use client";
 
 import { resolveScreenSize } from "@/components/proposals/screenSize";
+import { cameraPlanSummary, type CameraPlan } from "@/components/proposals/cameraPlan";
+import { ensureLedWallSlots, ledWallCount, normalizeLedWalls, type LedWallPlan } from "@/components/proposals/ledWallPlan";
 
 /* ─── CSS matching ProposalTemplate.html design ─── */
 const TEMPLATE_CSS = `
@@ -317,7 +319,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
       notes.push(p(room.scenicStageDesignNotes));
     }
     if (p(room.contentVideoNeeds)) notes.push(p(room.contentVideoNeeds));
-    if (p(room.ledWallNotes)) notes.push(p(room.ledWallNotes));
+    if (!Array.isArray(room.ledWalls) && p(room.ledWallNotes)) notes.push(p(room.ledWallNotes));
 
     const aqRaw = room.audienceQa;
     const aqMethod = aqRaw && typeof aqRaw === "object" ? p((aqRaw as RD).audienceQaMethod) : "";
@@ -348,7 +350,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
     const camRaw = room.cameras;
     const camVal = camRaw && typeof camRaw === "object" ? p((camRaw as RD).cameras) : p(camRaw as string);
-    const camQty = camRaw && typeof camRaw === "object" ? p((camRaw as RD).camerasQty) : "";
+    const camSummary = camRaw && typeof camRaw === "object"
+      ? cameraPlanSummary(camRaw as unknown as CameraPlan)
+      : camVal;
 
     const pmicRaw = room.podiumMic;
     const pmicVal = pmicRaw && typeof pmicRaw === "object" ? p((pmicRaw as RD).podiumMic) : p(pmicRaw as string);
@@ -384,7 +388,12 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     const vpFormat = vpRaw && typeof vpRaw === "object" ? p((vpRaw as RD).videoPlaybackFormat) : "";
 
     const isLedWall = p(room.ledWall).toLowerCase() === "yes";
-    const ledSize = [p(room.ledWallWidth) ? `${p(room.ledWallWidth)}W` : "", p(room.ledWallHeight) ? `${p(room.ledWallHeight)}H` : ""].filter(Boolean).join(" × ");
+    const ledWallPlan = room as unknown as LedWallPlan;
+    const roomLedWallCount = ledWallCount(ledWallPlan);
+    const roomLedWalls = ensureLedWallSlots(normalizeLedWalls(ledWallPlan), roomLedWallCount).slice(0, roomLedWallCount);
+    roomLedWalls.forEach((wall) => {
+      if (wall.notes.trim()) notes.push(wall.notes.trim());
+    });
 
     const teleVal = p(room.teleprompterRequired);
     const isBilingual = p(room.teleprompterBilingual).toUpperCase() === "YES";
@@ -445,10 +454,16 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
         {/* Displays / LED */}
         <InfoRow label="LED Wall" value={isLedWall ? "Yes" : p(room.ledWall)} />
-        {isLedWall && <InfoRow label="LED Size" value={ledSize} />}
-        {isLedWall && <InfoRow label="LED Shape" value={p(room.ledWallShape)} />}
-        {isLedWall && <InfoRow label="LED Pixel Pitch" value={p(room.ledWallPixelPitch)} />}
-        {isLedWall && <InfoRow label="LED Switcher" value={p(room.ledWallSwitcher)} />}
+        {isLedWall && <InfoRow label="LED Wall Count" value={String(roomLedWallCount || 1)} />}
+        {isLedWall && roomLedWalls.map((wall, wallIndex) => (
+          <div key={`${idx}-led-wall-${wallIndex}`}>
+            <InfoRow label={`LED Wall ${wallIndex + 1} Size`} value={[wall.width ? `${wall.width}W` : "", wall.height ? `${wall.height}H` : ""].filter(Boolean).join(" × ")} />
+            <InfoRow label={`LED Wall ${wallIndex + 1} Shape`} value={wall.shape} />
+            <InfoRow label={`LED Wall ${wallIndex + 1} Pixel Pitch`} value={wall.pixelPitch} />
+            <InfoRow label={`LED Wall ${wallIndex + 1} Processor`} value={wall.switcher} />
+            <InfoRow label={`LED Wall ${wallIndex + 1} Notes`} value={wall.notes} />
+          </div>
+        ))}
         <InfoRow label="Large Monitors" value={lmVal === "Yes" && lmQty ? `Yes (${lmQty})` : lmVal} />
 
         {/* Video */}
@@ -458,7 +473,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           value={vpVal === "Yes" ? `Yes${vpCount ? ` (${vpCount})` : ""}${vpFormat ? ` — ${vpFormat}` : ""}` : vpVal}
         />
         <InfoRow label="Video Recording" value={vrVal === "Yes" && vrType ? `Yes — ${vrType}` : vrVal} />
-        <InfoRow label="Cameras" value={camVal === "Yes" && camQty ? `Yes (${camQty})` : camVal} />
+        <InfoRow label="Cameras" value={camSummary} />
 
         {/* Presentation */}
         <InfoRow label="Pres. Laptops" value={plVal === "Yes" && plQty ? `Yes (${plQty})` : plVal} />
@@ -876,13 +891,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           <IntHeader brand={brandName} title={headerTitle} />
           <SectionTitle num={nextSec()}>Video Recording &amp; Broadcast</SectionTitle>
 
-          <div className="section-subtitle">Camera Plan</div>
+          <div className="section-subtitle">Recording Strategy</div>
           <table>
             <tbody>
-              <InfoTd label="Total Cameras Required" value={p(vr.numberOfCameras)} />
-              <InfoTd label="Camera Positions" value={arr(vr.cameraPositions).join(", ")} />
-              <InfoTd label="IMAG" value={yn(vr.imagRequired)} />
-              <InfoTd label="Camera Operators" value={p(vr.cameraOperators)} />
               <InfoTd label="ISO Recordings" value={p(vr.isoRecordings)} />
             </tbody>
           </table>
@@ -890,7 +901,8 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           <div className="section-subtitle">Recording &amp; Deliverables</div>
           <table>
             <tbody>
-              <InfoTd label="Resolution" value={p(vr.recordingResolution)} />
+              <InfoTd label="Recording Codec" value={p(vr.recordingCodec)} />
+              <InfoTd label="Record in 4K" value={p(vr.recordIn4k) ? yn(vr.recordIn4k) : p(vr.recordingResolution)} />
               <InfoTd label="Recording Media" value={p(vr.recordingMedia)} />
               <InfoTd label="Raw Footage Turnover" value={yn(vr.rawFootageTurnover)} />
               <InfoTd label="Deliverable Format" value={arr(vr.deliverableFormat).join(", ")} />

@@ -27,6 +27,13 @@ import SaveCopyModal from "./SaveCopyModal";
 import ProposalWorkflowShell from "./ProposalWorkflowShell";
 import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
+import { CAMERA_PLAN_SPECIFIC, cameraPlanTotal } from "./cameraPlan";
+import {
+  ensureLedWallSlots,
+  ledWallCount,
+  normalizeLedWalls,
+  type LedWallSpecification,
+} from "./ledWallPlan";
 
 /* ─── Proposal data by step ─── */
 export type EventData = {
@@ -100,6 +107,8 @@ export type RoomByRoomData = {
     screenSizeOther: string;
   };
   ledWall: string;
+  ledWallCount: string;
+  ledWalls: LedWallSpecification[];
   clientProvideOwnPresentationLaptop: {
     clientProvideOwnPresentationLaptop: string;
     clientLaptopQty: string;
@@ -121,6 +130,12 @@ export type RoomByRoomData = {
   cameras: {
     cameras: string;
     camerasQty: string;
+    cameraPlanMode: string;
+    cameraType: string;
+    ptzCameraQty: string;
+    studioCameraQty: string;
+    otherCameraType: string;
+    otherCameraQty: string;
   };
   videoRecording: {
     videoRecording: string;
@@ -669,12 +684,20 @@ const normalizeExtracted = (
         videoPlaybackFormat: matchOption((rRec.videoPlaybackFormat as string) ?? "", ["4:3", "16:9", "Custom Wide Screen"]),
       },
       cameras: {
-        cameras: matchOption((rRec.cameras as string) ?? "", ["Yes", "No"]),
+        cameras: matchOption((rRec.cameras as string) ?? "", ["Yes", "No"]) || (rRec.camerasQty ? "Yes" : ""),
         camerasQty: (rRec.camerasQty as string) ?? "",
+        cameraPlanMode: (rRec.cameraPlanMode as string) || (rRec.camerasQty ? CAMERA_PLAN_SPECIFIC : ""),
+        cameraType: (rRec.cameraType as string) ?? "",
+        ptzCameraQty: (rRec.ptzCameraQty as string) ?? "",
+        studioCameraQty: (rRec.studioCameraQty as string) ?? "",
+        otherCameraType: (rRec.otherCameraType as string) ?? "",
+        otherCameraQty: (rRec.otherCameraQty as string) ?? "",
       },
       // ── Flat Yes/No fields ──
       audioRecording: matchOption((rRec.audioRecording as string) ?? "", ["Yes", "No"]) as RoomByRoomData["audioRecording"],
       ledWall: matchOption((rRec.ledWall as string) ?? "", ["Yes", "No"]),
+      ledWallCount: String(rRec.ledWallCount ?? (normalizeLedWalls(rRec).length || "")),
+      ledWalls: normalizeLedWalls(rRec),
       ledWallWidth: (rRec.ledWallWidth as string) ?? "",
       ledWallHeight: (rRec.ledWallHeight as string) ?? "",
       ledWallPixelPitch: (rRec.ledWallPixelPitch as string) ?? "",
@@ -1141,6 +1164,22 @@ const mapApiProposalToFormData = (
       const display = r.largeMonitorsOrScreenProjector && typeof r.largeMonitorsOrScreenProjector === "object"
         ? r.largeMonitorsOrScreenProjector as Partial<RoomByRoomData["largeMonitorsOrScreenProjector"]>
         : {};
+      const rawCameras = r.cameras && typeof r.cameras === "object"
+        ? r.cameras as Partial<RoomByRoomData["cameras"]>
+        : {};
+      const standaloneLegacyCount = idx === 0 && raw.videoRecordingStep
+        ? String((raw.videoRecordingStep as Record<string, unknown>).numberOfCameras ?? "")
+        : "";
+      const legacyCameraCount = rawCameras.camerasQty || standaloneLegacyCount;
+      const normalizedLedWalls = normalizeLedWalls(r);
+      const normalizedLedWallCount = ledWallCount(r);
+      const normalizedCameras: RoomByRoomData["cameras"] = {
+        ...defaultRoom().cameras,
+        ...rawCameras,
+        cameras: rawCameras.cameras || (legacyCameraCount ? "Yes" : ""),
+        camerasQty: legacyCameraCount,
+        cameraPlanMode: rawCameras.cameraPlanMode || (legacyCameraCount ? CAMERA_PLAN_SPECIFIC : ""),
+      };
       // Merge legacy production fields only on the first room
       const isFirst = idx === 0;
       return {
@@ -1150,6 +1189,9 @@ const mapApiProposalToFormData = (
           ...defaultRoom().largeMonitorsOrScreenProjector,
           ...display,
         },
+        cameras: normalizedCameras,
+        ledWallCount: normalizedLedWallCount > 0 ? String(normalizedLedWallCount) : "",
+        ledWalls: ensureLedWallSlots(normalizedLedWalls, normalizedLedWallCount),
         functions: normalizeRoomFunctions(r),
         roomLocation: typeof r.roomLocation === "string" && r.roomLocation.trim()
           ? r.roomLocation
@@ -1177,6 +1219,10 @@ const mapApiProposalToFormData = (
   videoRecordingStep: {
     ...defaultProposalData.videoRecordingStep,
     ...(raw.videoRecordingStep || {}),
+    recordIn4k: raw.videoRecordingStep?.recordIn4k || (
+      /4k/i.test(raw.videoRecordingStep?.recordingResolution ?? "") ? "YES"
+        : /1080/i.test(raw.videoRecordingStep?.recordingResolution ?? "") ? "NO" : ""
+    ),
   },
   venue: (() => {
     const rv = (raw.venue ?? {}) as Record<string, unknown>;
@@ -1679,8 +1725,43 @@ const AddNewProposal = ({
         videoPlaybackFormat: "",
       };
     }
+    if (normalized.ledWall !== "Yes") {
+      normalized.ledWallCount = "";
+      normalized.ledWalls = [];
+      normalized.ledWallWidth = "";
+      normalized.ledWallHeight = "";
+      normalized.ledWallShape = "";
+      normalized.ledWallPixelPitch = "";
+      normalized.ledWallSwitcher = "";
+      normalized.ledWallNotes = "";
+      normalized.ledWallSpecs = "";
+    } else {
+      const count = ledWallCount(normalized);
+      normalized.ledWallCount = count > 0 ? String(count) : "";
+      normalized.ledWalls = ensureLedWallSlots(normalizeLedWalls(normalized), count).slice(0, count);
+      const firstWall = normalized.ledWalls[0];
+      if (firstWall) {
+        normalized.ledWallWidth = firstWall.width;
+        normalized.ledWallHeight = firstWall.height;
+        normalized.ledWallShape = firstWall.shape;
+        normalized.ledWallPixelPitch = firstWall.pixelPitch;
+        normalized.ledWallSwitcher = firstWall.switcher;
+        normalized.ledWallNotes = firstWall.notes;
+        normalized.ledWallSpecs = firstWall.specs;
+      }
+    }
     if (normalized.cameras.cameras !== "Yes") {
-      normalized.cameras = { ...normalized.cameras, camerasQty: "" };
+      normalized.cameras = {
+        cameras: "", camerasQty: "", cameraPlanMode: "", cameraType: "",
+        ptzCameraQty: "", studioCameraQty: "", otherCameraType: "", otherCameraQty: "",
+      };
+    } else {
+      normalized.cameras = {
+        ...normalized.cameras,
+        camerasQty: cameraPlanTotal(normalized.cameras) > 0
+          ? String(cameraPlanTotal(normalized.cameras))
+          : normalized.cameras.camerasQty,
+      };
     }
     // Audience Q&A has no separate yes/no control — the chosen method is the
     // whole answer — so the usual "clear the child when the parent isn't Yes"
@@ -1745,6 +1826,9 @@ const AddNewProposal = ({
         dateFormat: proposalSettings.proposals.dateFormat,
       },
       roomByRoom: normalizedRooms,
+      videoRecordingStep: proposalData.videoRecordingStep.videoRecordingRequired === "YES"
+        ? proposalData.videoRecordingStep
+        : { ...proposalData.videoRecordingStep, recordingCodec: "", recordIn4k: "" },
       production: {
         scenicStageDesign: firstRoom.scenicStageDesign,
         showCrewNeeded: firstRoom.showCrewNeeded,
@@ -2339,8 +2423,13 @@ const AddNewProposal = ({
                 strikeDate={proposalData.venueSchedule.strikeDate}
                 numberOfEventRooms={proposalData.venueSchedule.numberOfEventRooms}
                 ledWallMaxWidth={(() => {
-                  const widths = proposalData.roomByRoom
-                    .map((r) => parseFloat(r.ledWallWidth ?? "0"))
+                  const widths = rooms
+                    .flatMap((room) => {
+                      const count = ledWallCount(room);
+                      return ensureLedWallSlots(normalizeLedWalls(room), count)
+                        .slice(0, count)
+                        .map((wall) => parseFloat(wall.width || "0"));
+                    })
                     .filter((w) => !isNaN(w) && w > 0);
                   return widths.length ? Math.max(...widths) : undefined;
                 })()}

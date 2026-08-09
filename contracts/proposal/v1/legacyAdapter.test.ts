@@ -44,7 +44,14 @@ const legacyProposal = {
       estimatedAttendeesInRoom: "500",
       podiumMic: { podiumMic: "Yes", podiumMicQty: "1" },
       wirelessMics: { wirelessMics: "Yes", wirelessMicsQty: "4", wirelessMicsType: "Lavalier" },
-      cameras: { cameras: "Yes", camerasQty: "3" },
+      cameras: {
+        cameras: "Yes",
+        camerasQty: "3",
+        cameraPlanMode: "Specific Camera Plan",
+        cameraType: "Both",
+        ptzCameraQty: "1",
+        studioCameraQty: "2",
+      },
       scenicStageDesign: "Yes",
       unionLabor: "Not Sure",
       showCrewNeeded: ["A1", "V1"],
@@ -90,6 +97,8 @@ const legacyProposal = {
     cameraOperators: "3",
     isoRecordings: "All cameras ISO",
     recordingResolution: "4K",
+    recordingCodec: "H.264",
+    recordIn4k: "NO",
     recordingMedia: "SSD",
     editedDeliverable: {
       needed: "YES",
@@ -176,12 +185,21 @@ describe("legacy proposal adapter", () => {
     expect(result.proposal.content.event.format).toBe("hybrid");
     expect(result.proposal.content.event.attendeeCount).toBe(500);
     expect(result.proposal.content.rooms[0].audio?.wirelessMicCount).toBe(4);
+    expect(result.proposal.content.rooms[0].video).toEqual(expect.objectContaining({
+      cameraPlanMode: "specific",
+      cameraType: "both",
+      ptzCameraCount: 1,
+      studioCameraCount: 2,
+      cameraCount: 3,
+    }));
     expect(result.proposal.content.rooms[0].scheduleEntries).toHaveLength(2);
     expect(result.proposal.content.rooms[0].scheduleEntries?.[1].function).toBe("Leadership Panel");
     expect(result.proposal.content.rooms[0].production?.unionLabor).toBeNull();
     expect(result.proposal.content.hybridVirtual?.remoteSpeakers?.count).toBe(5);
     expect(result.proposal.content.contentCreative?.liveDataFeeds?.required).toBe(true);
     expect(result.proposal.content.videoRecording?.cameraCount).toBe(3);
+    expect(result.proposal.content.videoRecording?.codec).toBe("H.264");
+    expect(result.proposal.content.videoRecording?.recordIn4k).toBe(false);
     expect(result.proposal.content.venueTechnical?.powerDropCount).toBe(2);
     expect(result.proposal.content.vendorCoordination?.coVendors?.[0].category).toBe(
       "in_house_venue_av",
@@ -200,6 +218,29 @@ describe("legacy proposal adapter", () => {
     expect(result.issues.map((issue) => issue.path)).toEqual(
       expect.arrayContaining(["/contact/contactLastName", "/contact/contactEmail"]),
     );
+  });
+
+  it("maps repeated LED walls and keeps legacy scalar compatibility", () => {
+    const result = mapLegacyProposalToV1({
+      ...legacyProposal,
+      roomByRoom: [{
+        ...legacyProposal.roomByRoom[0],
+        ledWall: "Yes",
+        ledWallCount: "2",
+        ledWalls: [
+          { width: "40", height: "15", shape: "Flat / Straight", pixelPitch: "2.6mm", switcher: "Barco E2/E3", notes: "Main wall" },
+          { width: "16", height: "9", shape: "Curved", pixelPitch: "1.9mm", switcher: "Vendor Recommendation", notes: "Side wall" },
+        ],
+      }],
+    }, { organizationId: "org-001" });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.proposal.content.rooms[0].video?.ledWallCount).toBe(2);
+    expect(result.proposal.content.rooms[0].video?.ledWalls).toEqual([
+      expect.objectContaining({ width: { value: 40, unit: "ft" }, height: { value: 15, unit: "ft" }, shape: "Flat / Straight" }),
+      expect.objectContaining({ width: { value: 16, unit: "ft" }, height: { value: 9, unit: "ft" }, shape: "Curved" }),
+    ]);
   });
 
   it("reports invalid legacy dates instead of guessing", () => {

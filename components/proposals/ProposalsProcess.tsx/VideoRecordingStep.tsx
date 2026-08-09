@@ -3,6 +3,7 @@
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import GlobalSelect from "@/components/shared/GlobalSelect";
+import { useState } from "react";
 
 type ProposalSettings = {
   branding: { linkPrefix: string; defaultFont: "Inter" | "Poppins" | "Roboto" };
@@ -20,6 +21,8 @@ export type VideoRecordingData = {
   imagRequired: "YES" | "NO" | "";
   cameraOperators: string;
   isoRecordings: string;
+  recordingCodec: "H.264" | "H.265" | "ProRes" | "";
+  recordIn4k: "YES" | "NO" | "";
   /* Recording & Deliverables */
   recordingResolution: string;
   recordingMedia: string;
@@ -41,6 +44,8 @@ export const defaultVideoRecording = (): VideoRecordingData => ({
   imagRequired: "",
   cameraOperators: "",
   isoRecordings: "",
+  recordingCodec: "",
+  recordIn4k: "",
   recordingResolution: "",
   recordingMedia: "",
   editedDeliverable: {
@@ -64,19 +69,6 @@ const groupLabelClass =
 const subPanelClass =
   "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4 space-y-4";
 
-/* ─── Camera position options ─── */
-const CAMERA_POSITIONS = [
-  "Stage Wide Shot",
-  "Speaker Close-Up",
-  "Audience Reaction",
-  "Presenter POV",
-  "Roaming / Handheld",
-  "Overhead / Jib",
-  "All of the Above",
-  "Vendor Recommendation",
-];
-const REAL_POSITIONS = CAMERA_POSITIONS.slice(0, 6);
-
 /* ─── Yes/No buttons ─── */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
@@ -88,11 +80,9 @@ const yesNoCls = (opt: "YES" | "NO", value: string): string => {
 };
 
 const YesNo = ({
-  name,
   value,
   onChange,
 }: {
-  name: string;
   value: string;
   onChange: (v: "YES" | "NO") => void;
 }) => (
@@ -162,6 +152,7 @@ const VideoRecordingStep = ({
   onChange,
   onContinue,
   onBack,
+  showErrors,
   proposalSettings,
   onDemandRecording = "",
   sizzleRecapOwner = "",
@@ -177,29 +168,9 @@ const VideoRecordingStep = ({
   };
 
   const needsRecording = safeData.videoRecordingRequired === "YES";
-  const camCount = parseInt(safeData.numberOfCameras) || 0;
-
-  /* Camera position count vs camera count warning */
-  const selectedRealPositions = safeData.cameraPositions.includes("All of the Above")
-    ? REAL_POSITIONS.length
-    : safeData.cameraPositions.filter((p) => !["All of the Above", "Vendor Recommendation"].includes(p)).length;
-  const positionWarning =
-    selectedRealPositions > 0 && camCount > 0 && selectedRealPositions > camCount
-      ? `You've selected ${selectedRealPositions} positions but only ${camCount} camera${camCount !== 1 ? "s" : ""}. Consider increasing camera count or reducing positions, or note that some cameras will cover multiple angles.`
-      : undefined;
-
-  /* Camera count hint based on capacity (no data dependency here, just general hints) */
-  const camHint =
-    camCount === 0
-      ? null
-      : camCount === 1
-      ? "Single-camera setups are only adequate for small breakout archival."
-      : camCount >= 5
-      ? "5+ cameras — suitable for broadcast-quality production."
-      : camCount >= 3
-      ? "3–5 cameras — standard professional setup."
-      : "2 cameras — minimal; consider adding a 3rd for coverage flexibility.";
-
+  const [attemptedContinue, setAttemptedContinue] = useState(false);
+  const recordingFormatMissing = needsRecording && (!safeData.recordingCodec || !safeData.recordIn4k);
+  const revealRecordingErrors = showErrors || attemptedContinue;
   /* Cross-page suggestion: sizzle/recap owned by AV Vendor → suggest edited deliverable */
   const suggestEdited = sizzleRecapOwner === "AV Vendor" && safeData.editedDeliverable.needed !== "YES";
 
@@ -256,7 +227,11 @@ const VideoRecordingStep = ({
               isSelected={safeData.videoRecordingRequired === "NO"}
               title="No — No recording needed"
               description="The AV vendor will only execute the live show. Section 5 will be omitted from your RFP."
-              onClick={() => onChange({ videoRecordingRequired: "NO" })}
+              onClick={() => onChange({
+                videoRecordingRequired: "NO",
+                recordingCodec: "",
+                recordIn4k: "",
+              })}
             />
           </div>
         </div>
@@ -274,146 +249,49 @@ const VideoRecordingStep = ({
         {/* YES: Full recording scope */}
         {needsRecording && (
           <>
-            {/* ── Camera Plan ── */}
-            <div>
-              <p className={groupLabelClass}>Camera Plan</p>
-              <div className="space-y-6">
-
-                {/* Field 2 — Number of Cameras */}
-                <div>
-                  <label className={labelClass}>
-                    Number of Cameras Required <span className="text-red-500">*</span>
-                    <InfoTooltip text="For a 1,000-person general session, 3–5 cameras is the standard minimum. For broadcast quality, plan for 5+. Single-camera setups are only adequate for archival recording of small breakouts. Each camera needs a position selection below." />
-                  </label>
-                  <div className="flex items-center gap-2" style={{ maxWidth: 200 }}>
-                    <button
-                      type="button"
-                      onClick={() => onChange({ numberOfCameras: String(Math.max(1, camCount - 1)) })}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors"
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={20}
-                      className={`${inputClass} text-center`}
-                      placeholder="e.g. 3"
-                      value={safeData.numberOfCameras}
-                      onChange={(e) => onChange({ numberOfCameras: e.target.value })}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => onChange({ numberOfCameras: String(Math.min(20, camCount + 1)) })}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                  {camHint && (
-                    <p className="mt-2 text-xs text-[#969798] italic">{camHint}</p>
-                  )}
-                </div>
-
-                {/* Field 3 — Camera Positions */}
-                <div>
-                  <label className={labelClass}>
-                    Camera Positions Needed <span className="text-red-500">*</span>
-                    <InfoTooltip text="Select all camera angles needed. Standard broadcast setup: stage wide + speaker close-up + audience reaction. Add roaming for energy, jib for cinematic feel. Total angles should roughly match camera count." />
-                  </label>
-                  <div className="flex flex-wrap gap-3">
-                    {CAMERA_POSITIONS.map((opt) => (
-                      <PillCheckbox
-                        key={opt}
-                        label={opt}
-                        checked={safeData.cameraPositions.includes(opt)}
-                        onChange={() =>
-                          onChange({ cameraPositions: toggleItem(safeData.cameraPositions, opt) })
-                        }
-                      />
-                    ))}
-                  </div>
-                  {positionWarning && (
-                    <p className="mt-2 text-xs font-medium text-amber-600">⚠ {positionWarning}</p>
-                  )}
-                </div>
-
-                {/* Field 4 — IMAG */}
-                <div>
-                  <label className={labelClass}>
-                    IMAG (Image Magnification to Screens)? <span className="text-red-500">*</span>
-                    <InfoTooltip text="Will cameras feed live IMAG to your LED wall or screens during the show? IMAG makes presenters visible to large audiences by projecting their live image onto large screens. Standard for rooms over 500 people. Requires a Technical Director (TD) and Video Engineer (V1) on crew." />
-                  </label>
-                  <YesNo
-                    name="imagRequired"
-                    value={safeData.imagRequired}
-                    onChange={(v) => onChange({ imagRequired: v })}
-                  />
-                </div>
-
-                {/* Fields 5 + 6 — Operators + ISO */}
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <label className={labelClass}>
-                      Camera Operators <span className="text-red-500">*</span>
-                      <InfoTooltip text="Dedicated operators provide the highest production quality — they frame shots, follow speakers, and react to action. Robotic cameras (PTZ) are operated remotely by a single technician and cost less. Most professional broadcasts use dedicated operators for stage cameras and robotics for audience/wide shots." />
-                    </label>
-                    <GlobalSelect
-                      className={`${inputClass} appearance-none`}
-                      value={safeData.cameraOperators}
-                      onChange={(e) => onChange({ cameraOperators: e.target.value })}
-                    >
-                      <option value="">Select operator model…</option>
-                      <option>Dedicated Operator Per Camera</option>
-                      <option>Robotic Cameras Acceptable</option>
-                      <option>Mixed — Operators on key cameras, robotic on auxiliary</option>
-                    </GlobalSelect>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      ISO Recordings Per Camera <span className="text-red-500">*</span>
-                      <InfoTooltip text="ISO (isolated) = individual recording per camera. Program cut = single switched live output. Most professional productions capture BOTH — ISO gives editing flexibility post-event; program cut gives you a ready-to-publish version immediately." />
-                    </label>
-                    <GlobalSelect
-                      className={`${inputClass} appearance-none`}
-                      value={safeData.isoRecordings}
-                      onChange={(e) => onChange({ isoRecordings: e.target.value })}
-                    >
-                      <option value="">Select ISO strategy…</option>
-                      <option>Switched Program Cut Only</option>
-                      <option>ISO Per Camera Only</option>
-                      <option>Both ISO + Switched Program Cut</option>
-                      <option>Vendor Recommendation</option>
-                    </GlobalSelect>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
             {/* ── Recording & Deliverables ── */}
             <div>
               <p className={groupLabelClass}>Recording &amp; Deliverables</p>
               <div className="space-y-6">
 
-                {/* Fields 7 + 8 — Resolution + Media */}
-                <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className={labelClass}>
+                    ISO Recording Strategy <span className="text-red-500">*</span>
+                    <InfoTooltip text="Choose whether the vendor records the switched program, isolated camera feeds, or both. Camera types and quantities are configured per room." />
+                  </label>
+                  <GlobalSelect
+                    className={`${inputClass} appearance-none`}
+                    value={safeData.isoRecordings}
+                    onChange={(e) => onChange({ isoRecordings: e.target.value })}
+                  >
+                    <option value="">Select ISO strategy…</option>
+                    <option>Switched Program Cut Only</option>
+                    <option>ISO Per Camera Only</option>
+                    <option>Both ISO + Switched Program Cut</option>
+                    <option>Vendor Recommendation</option>
+                  </GlobalSelect>
+                </div>
+
+                <div className="grid grid-cols-3 gap-5">
                   <div>
                     <label className={labelClass}>
-                      Recording Resolution <span className="text-red-500">*</span>
-                      <InfoTooltip text="4K is now the standard for professional events and future-proofs your footage. 1080p is sufficient if files will only be used for internal review or social clips. 4K dramatically increases storage needs." />
+                      Recording Codec <span className="text-red-500">*</span>
+                      <InfoTooltip text="Choose the acquisition codec the vendor must use. H.264 is broadly compatible, H.265 is more efficient, and ProRes is optimized for professional post-production." />
                     </label>
                     <GlobalSelect
-                      className={`${inputClass} appearance-none`}
-                      value={safeData.recordingResolution}
-                      onChange={(e) => onChange({ recordingResolution: e.target.value })}
+                      className={`${inputClass} appearance-none ${revealRecordingErrors && !safeData.recordingCodec ? "border-red-400" : ""}`}
+                      value={safeData.recordingCodec}
+                      onChange={(e) => onChange({ recordingCodec: e.target.value as VideoRecordingData["recordingCodec"] })}
                     >
-                      <option value="">Select resolution…</option>
-                      <option>4K (Preferred)</option>
-                      <option>1080p</option>
-                      <option>Either Acceptable</option>
+                      <option value="">Select codec…</option>
+                      <option>H.264</option><option>H.265</option><option>ProRes</option>
                     </GlobalSelect>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Record in 4K? <span className="text-red-500">*</span></label>
+                    <YesNo value={safeData.recordIn4k} onChange={(value) => onChange({ recordIn4k: value })} />
+                    {revealRecordingErrors && !safeData.recordIn4k && <p className="mt-2 text-xs text-red-500">Choose Yes or No.</p>}
                   </div>
 
                   <div>
@@ -447,7 +325,6 @@ const VideoRecordingStep = ({
                     </p>
                   )}
                   <YesNo
-                    name="editedDeliverable"
                     value={safeData.editedDeliverable.needed}
                     onChange={(v) =>
                       onChange({
@@ -563,7 +440,6 @@ const VideoRecordingStep = ({
                     <InfoTooltip text="Do you want full turnover of all raw ISO files in addition to any edited deliverable? Raw turnover gives you complete editing flexibility. Files can be very large for multi-camera 4K events — confirm your storage and transfer capability." />
                   </label>
                   <YesNo
-                    name="rawFootageTurnover"
                     value={safeData.rawFootageTurnover}
                     onChange={(v) => onChange({ rawFootageTurnover: v })}
                   />
@@ -629,7 +505,10 @@ const VideoRecordingStep = ({
         </button>
         <button
           type="button"
-          onClick={onContinue}
+          onClick={() => {
+            setAttemptedContinue(true);
+            if (!recordingFormatMissing) onContinue();
+          }}
           className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
           style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
