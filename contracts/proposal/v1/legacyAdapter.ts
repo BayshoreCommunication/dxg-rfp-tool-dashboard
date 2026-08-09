@@ -237,6 +237,12 @@ const mapRoom = (
         }];
       })
     : [];
+  const selectedScreenSize = text(monitors.screenSize);
+  const resolvedScreenSize = selectedScreenSize === "Other — Specify"
+    ? monitors.screenSizeOther
+    : selectedScreenSize === "Vendor Recommendation"
+      ? undefined
+      : monitors.screenSize;
 
   return {
     id: text(room._id) ?? `room-${index + 1}`,
@@ -265,7 +271,7 @@ const mapRoom = (
       ...optional("monitorCount", integer(monitors.numberOfMonitors)),
       ...optional("monitorSize", measurement(monitors.monitorSize, "in", `/roomByRoom/${index}/largeMonitorsOrScreenProjector/monitorSize`, issues)),
       ...optional("screenCount", integer(monitors.numberOfScreens)),
-      ...optional("screenSize", measurement(monitors.screenSize, "ft", `/roomByRoom/${index}/largeMonitorsOrScreenProjector/screenSize`, issues)),
+      ...optional("screenSize", measurement(resolvedScreenSize, "ft", `/roomByRoom/${index}/largeMonitorsOrScreenProjector/screenSize`, issues)),
       ...optional("ledWallRequired", booleanOrNull(room.ledWall)),
       ...optional("ledWallWidth", measurement(room.ledWallWidth, "ft", `/roomByRoom/${index}/ledWallWidth`, issues)),
       ...optional("ledWallHeight", measurement(room.ledWallHeight, "ft", `/roomByRoom/${index}/ledWallHeight`, issues)),

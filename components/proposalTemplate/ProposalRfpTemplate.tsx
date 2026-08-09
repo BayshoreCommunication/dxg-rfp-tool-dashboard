@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveScreenSize } from "@/components/proposals/screenSize";
+
 /* ─── CSS matching ProposalTemplate.html design ─── */
 const TEMPLATE_CSS = `
   @page { size: A4; margin: 0; }
@@ -356,9 +358,16 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     const lmVal = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).largeMonitorsOrScreenProjector) : p(lmRaw as string);
     const lmMonitors = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).numberOfMonitors) : "";
     const lmScreens = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).numberOfScreens) : "";
+    const lmMonitorSize = lmRaw && typeof lmRaw === "object" ? p((lmRaw as RD).monitorSize) : "";
+    const lmScreenSize = lmRaw && typeof lmRaw === "object"
+      ? resolveScreenSize({
+          screenSize: p((lmRaw as RD).screenSize),
+          screenSizeOther: p((lmRaw as RD).screenSizeOther),
+        })
+      : "";
     const lmQty = [
-      lmMonitors ? `${lmMonitors} monitor${lmMonitors === "1" ? "" : "s"}` : "",
-      lmScreens ? `${lmScreens} screen${lmScreens === "1" ? "" : "s"}` : "",
+      lmMonitors ? `${lmMonitors} monitor${lmMonitors === "1" ? "" : "s"}${lmMonitorSize ? ` — ${lmMonitorSize}` : ""}` : "",
+      lmScreens ? `${lmScreens} screen${lmScreens === "1" ? "" : "s"}${lmScreenSize ? ` — ${lmScreenSize}` : ""}` : "",
     ].filter(Boolean).join(", ");
 
     const clRaw = room.clientProvideOwnPresentationLaptop;

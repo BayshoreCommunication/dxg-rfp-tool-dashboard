@@ -12,6 +12,12 @@ import GlobalSelect from "@/components/shared/GlobalSelect";
 import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./eventTimeZone";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
 import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
+import {
+  SCREEN_SIZE_OTHER,
+  SCREEN_SIZE_VENDOR_RECOMMENDATION,
+  customScreenSizeIsMissing,
+  selectScreenSize,
+} from "../screenSize";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -413,6 +419,8 @@ const SCREEN_SIZE_OPTIONS = [
   "20' Wide Fastfold",
   "24' Wide Fastfold",
   "32' Wide Fastfold",
+  SCREEN_SIZE_VENDOR_RECOMMENDATION,
+  SCREEN_SIZE_OTHER,
 ];
 
 // ─── Video playback format options ────────────────────────────────────────────
@@ -452,6 +460,7 @@ export const defaultRoom = (): RoomByRoomData => ({
     numberOfScreens: "",
     monitorSize: "",
     screenSize: "",
+    screenSizeOther: "",
   },
   clientProvideOwnPresentationLaptop: { clientProvideOwnPresentationLaptop: "", clientLaptopQty: "" },
   presentationLaptops: { presentationLaptops: "", presentationLaptopQty: "" },
@@ -1118,6 +1127,7 @@ const RoomForm = ({
                 numberOfScreens: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.numberOfScreens,
                 monitorSize: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.monitorSize,
                 screenSize: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.screenSize,
+                screenSizeOther: v !== "Yes" ? "" : data.largeMonitorsOrScreenProjector.screenSizeOther,
               },
             })
           }
@@ -1157,6 +1167,7 @@ const RoomForm = ({
                       ...data.largeMonitorsOrScreenProjector,
                       numberOfScreens: e.target.value,
                       screenSize: Number(e.target.value) > 0 ? data.largeMonitorsOrScreenProjector.screenSize : "",
+                      screenSizeOther: Number(e.target.value) > 0 ? data.largeMonitorsOrScreenProjector.screenSizeOther : "",
                     },
                   })
                 }
@@ -1185,25 +1196,56 @@ const RoomForm = ({
               </div>
             )}
             {Number(data.largeMonitorsOrScreenProjector.numberOfScreens) > 0 && (
-              <div>
-                <label className={`${labelClass} mt-0`}>Screen Size</label>
-                <GlobalSelect
-                  className={inputClass}
-                  value={data.largeMonitorsOrScreenProjector.screenSize}
-                  onChange={(e) =>
-                    onChange({
-                      largeMonitorsOrScreenProjector: {
-                        ...data.largeMonitorsOrScreenProjector,
-                        screenSize: e.target.value,
-                      },
-                    })
-                  }
-                >
-                  <option value="">Select size…</option>
-                  {SCREEN_SIZE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </GlobalSelect>
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor={`${uid}-screen-size`} className={`${labelClass} mt-0`}>Screen Size</label>
+                  <GlobalSelect
+                    id={`${uid}-screen-size`}
+                    className={inputClass}
+                    value={data.largeMonitorsOrScreenProjector.screenSize}
+                    onChange={(e) =>
+                      onChange({
+                        largeMonitorsOrScreenProjector: {
+                          ...data.largeMonitorsOrScreenProjector,
+                          ...selectScreenSize(data.largeMonitorsOrScreenProjector, e.target.value),
+                        },
+                      })
+                    }
+                  >
+                    <option value="">Select size…</option>
+                    {SCREEN_SIZE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </GlobalSelect>
+                </div>
+                {data.largeMonitorsOrScreenProjector.screenSize === SCREEN_SIZE_OTHER && (
+                  <div>
+                    <label htmlFor={`${uid}-screen-size-other`} className={`${labelClass} mt-0`}>
+                      Custom Screen Size <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id={`${uid}-screen-size-other`}
+                      type="text"
+                      required
+                      aria-invalid={showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) ? true : undefined}
+                      aria-describedby={showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) ? `${uid}-screen-size-other-error` : undefined}
+                      className={`${inputClass} ${showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) ? "border-red-400 focus:border-red-400" : ""}`}
+                      placeholder={'e.g. 22\' × 12\' rear projection'}
+                      value={data.largeMonitorsOrScreenProjector.screenSizeOther}
+                      onChange={(e) => onChange({
+                        largeMonitorsOrScreenProjector: {
+                          ...data.largeMonitorsOrScreenProjector,
+                          screenSizeOther: e.target.value,
+                        },
+                      })}
+                    />
+                    {showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) && (
+                      <p id={`${uid}-screen-size-other-error`} className="mt-1 text-xs text-red-500">
+                        Enter the custom screen size.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1859,6 +1901,12 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
     })) missing.push("end time after start time");
   }
   if (room.showCrewNeeded.length === 0) missing.push("show crew");
+  if (
+    Number(room.largeMonitorsOrScreenProjector.numberOfScreens) > 0 &&
+    customScreenSizeIsMissing(room.largeMonitorsOrScreenProjector)
+  ) {
+    missing.push("custom screen size");
+  }
   return missing;
 };
 

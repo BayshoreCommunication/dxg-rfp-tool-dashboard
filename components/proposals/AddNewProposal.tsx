@@ -97,6 +97,7 @@ export type RoomByRoomData = {
     numberOfScreens: string;
     monitorSize: string;
     screenSize: string;
+    screenSizeOther: string;
   };
   ledWall: string;
   clientProvideOwnPresentationLaptop: {
@@ -652,6 +653,7 @@ const normalizeExtracted = (
         numberOfScreens: (rRec.numberOfScreens as string) ?? "",
         monitorSize: (rRec.monitorSize as string) ?? "",
         screenSize: (rRec.screenSize as string) ?? "",
+        screenSizeOther: (rRec.screenSizeOther as string) ?? "",
       },
       presentationLaptops: {
         presentationLaptops: matchOption((rRec.presentationLaptops as string) ?? "", ["Yes", "No"]),
@@ -1130,11 +1132,18 @@ const mapApiProposalToFormData = (
 
     return rawRooms.map((rawRoom, idx) => {
       const r = (rawRoom ?? {}) as Record<string, unknown>;
+      const display = r.largeMonitorsOrScreenProjector && typeof r.largeMonitorsOrScreenProjector === "object"
+        ? r.largeMonitorsOrScreenProjector as Partial<RoomByRoomData["largeMonitorsOrScreenProjector"]>
+        : {};
       // Merge legacy production fields only on the first room
       const isFirst = idx === 0;
       return {
         ...defaultRoom(),
         ...r,
+        largeMonitorsOrScreenProjector: {
+          ...defaultRoom().largeMonitorsOrScreenProjector,
+          ...display,
+        },
         functions: normalizeRoomFunctions(r),
         roomLocation: typeof r.roomLocation === "string" && r.roomLocation.trim()
           ? r.roomLocation
@@ -1619,6 +1628,7 @@ const AddNewProposal = ({
         numberOfScreens: "",
         monitorSize: "",
         screenSize: "",
+        screenSizeOther: "",
       };
     } else {
       normalized.largeMonitorsOrScreenProjector = {
@@ -1629,6 +1639,11 @@ const AddNewProposal = ({
         screenSize: Number(normalized.largeMonitorsOrScreenProjector.numberOfScreens) > 0
           ? normalized.largeMonitorsOrScreenProjector.screenSize
           : "",
+        screenSizeOther:
+          Number(normalized.largeMonitorsOrScreenProjector.numberOfScreens) > 0 &&
+          normalized.largeMonitorsOrScreenProjector.screenSize === "Other — Specify"
+            ? normalized.largeMonitorsOrScreenProjector.screenSizeOther
+            : "",
       };
     }
     if (

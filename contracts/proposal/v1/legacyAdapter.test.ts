@@ -218,6 +218,28 @@ describe("legacy proposal adapter", () => {
     );
   });
 
+  it("maps an explicit custom screen size without treating Other as the value", () => {
+    const result = mapLegacyProposalToV1({
+      ...legacyProposal,
+      roomByRoom: [{
+        ...legacyProposal.roomByRoom[0],
+        largeMonitorsOrScreenProjector: {
+          largeMonitorsOrScreenProjector: "Yes",
+          numberOfScreens: "2",
+          screenSize: "Other — Specify",
+          screenSizeOther: "22 ft wide",
+        },
+      }],
+    }, { organizationId: "org-001" });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.proposal.content.rooms[0].video?.screenSize).toEqual({
+      value: 22,
+      unit: "ft",
+    });
+  });
+
   it("removes internal source references from the public projection", () => {
     const result = mapLegacyProposalToV1(legacyProposal, {
       organizationId: "org-001",

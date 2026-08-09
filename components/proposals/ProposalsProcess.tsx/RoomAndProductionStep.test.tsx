@@ -9,6 +9,7 @@ import {
   parseScheduleWorkbook,
   venueTimeValue,
 } from "./RoomAndProductionStep";
+import { SCREEN_SIZE_OTHER } from "../screenSize";
 
 jest.mock("@/app/actions/proposals", () => ({
   normalizeScheduleTimesAction: jest.fn(),
@@ -143,5 +144,21 @@ describe("mandatory function schedules", () => {
       ...result.rooms[0],
       showCrewNeeded: ["A1 (Audio Engineer)"],
     })).toContain("end time");
+  });
+
+  it("blocks Continue when Other lacks an explicit custom screen size", () => {
+    const room = completeRoom();
+    room.largeMonitorsOrScreenProjector = {
+      largeMonitorsOrScreenProjector: "Yes",
+      numberOfMonitors: "0",
+      numberOfScreens: "2",
+      monitorSize: "",
+      screenSize: SCREEN_SIZE_OTHER,
+      screenSizeOther: "",
+    };
+
+    expect(missingRoomFields(room)).toContain("custom screen size");
+    room.largeMonitorsOrScreenProjector.screenSizeOther = "22' × 12' rear projection";
+    expect(missingRoomFields(room)).not.toContain("custom screen size");
   });
 });
