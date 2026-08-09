@@ -15,7 +15,10 @@ export type ContentCreativeData = {
   contentServicesNeeded: "YES" | "NO" | "";
   presentationTemplateDesign: string;
   speakerSlideCollection: string;
-  motionGraphicsOpenerVideo: string;
+  /** Legacy combined owner. Read-only compatibility fallback. */
+  motionGraphicsOpenerVideo?: string;
+  openingClosingVideo: string;
+  motionGraphicsStingersBumpers: string;
   lowerThirdsNameSupers: string;
   eventLogoBrandStandards: string;
   sizzleRecapVideo: string;
@@ -33,7 +36,8 @@ export const defaultContentCreative = (): ContentCreativeData => ({
   contentServicesNeeded: "",
   presentationTemplateDesign: "",
   speakerSlideCollection: "",
-  motionGraphicsOpenerVideo: "",
+  openingClosingVideo: "",
+  motionGraphicsStingersBumpers: "",
   lowerThirdsNameSupers: "",
   eventLogoBrandStandards: "",
   sizzleRecapVideo: "",
@@ -190,6 +194,10 @@ const ContentCreativeStep = ({
   const isInPersonOnly  = eventFormat === "In-Person";
   const isHybridOrVirtual = eventFormat === "Hybrid" || eventFormat === "Virtual";
   const notesLen        = safeData.creativeDirectionNotes.length;
+  const legacyVideoOwner = safeData.motionGraphicsOpenerVideo?.trim() ?? "";
+  const showLegacyVideoOwner = Boolean(
+    legacyVideoOwner && !safeData.openingClosingVideo && !safeData.motionGraphicsStingersBumpers,
+  );
 
   const sponsorWarning =
     sponsorOverlays === "YES" && safeData.sponsorRecognitionContent === "N/A"
@@ -295,13 +303,27 @@ const ContentCreativeStep = ({
 
                   {/* Field 4 */}
                   <MatrixRow
-                    label="Motion Graphics / Opener Video"
-                    helpText="Who produces the opening 'show open' video, session bumpers, and motion graphic elements? A great opener sets the tone for the entire event. Typical scope: 60–90 second main open + 6–10 bumpers."
-                    value={safeData.motionGraphicsOpenerVideo}
-                    onChange={(v) => onChange({ motionGraphicsOpenerVideo: v })}
+                    label="Opening / Closing Video"
+                    helpText="Who produces the event's opening and closing videos? This scope covers the primary show-open and show-close pieces, independently from shorter motion-graphics assets."
+                    value={safeData.openingClosingVideo}
+                    onChange={(v) => onChange({ openingClosingVideo: v })}
                   />
 
                   {/* Field 5 */}
+                  <MatrixRow
+                    label="Motion Graphics / Stingers / Speaker Bumpers"
+                    helpText="Who produces the short animated transitions, stingers, and speaker bumpers used throughout the show? These are separate deliverables from the main opening and closing videos."
+                    value={safeData.motionGraphicsStingersBumpers}
+                    onChange={(v) => onChange({ motionGraphicsStingersBumpers: v })}
+                  />
+
+                  {showLegacyVideoOwner && (
+                    <div className="border-b border-[#f0f2f8] bg-amber-50/60 px-3 py-3 text-xs text-amber-800">
+                      Legacy Motion Graphics / Opener Video owner: <strong>{legacyVideoOwner}</strong>. Assign the two new deliverables independently before saving to replace this combined value.
+                    </div>
+                  )}
+
+                  {/* Field 6 */}
                   <MatrixRow
                     label="Lower Thirds & Name Supers"
                     helpText="Who builds and operates the speaker name/title graphics that appear on screen during presentations? These need to be built in advance and switched live during the show by a graphics operator."
