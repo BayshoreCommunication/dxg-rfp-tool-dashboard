@@ -15,6 +15,7 @@ import {
   closeConversationSegmentAction,
   type ConversationMessage,
   type ConversationQuestion,
+  type ConversationQuestionAnswer,
   type ConversationRunType,
 } from "@/app/actions/conversation";
 import { deletePrivateDocumentSource, type PrivateDocumentSource } from "@/app/actions/durableJobs";
@@ -105,6 +106,7 @@ const impactLabels: Record<string, string> = {
 // Short human label for a single-field question, e.g.
 // "/content/venueSchedule/numberOfEventRooms" -> "Number of event rooms".
 const questionFieldLabel = (question: ConversationQuestion): string => {
+  if (question.answerType === "date_time" && isLoadInDateQuestion(question)) return "Production load-in";
   const segment = question.paths.length === 1 ? question.paths[0].split("/").pop() ?? "" : "";
   if (!segment) return "Answer";
   const words = segment.replace(/([A-Z])/g, " $1").toLowerCase().trim();
@@ -446,19 +448,22 @@ export function maximumDateForQuestion(
   proposal: Record<string, unknown> | null,
 ): Date | undefined {
   if (!isLoadInDateQuestion(question) || !proposal) return undefined;
+  const venueSchedule = isRecord(proposal.venueSchedule) ? proposal.venueSchedule : {};
   const event = isRecord(proposal.event) ? proposal.event : {};
-  const start = parseDay(event.startDate);
+  const start = parseDay(venueSchedule.showStartDate) ?? parseDay(event.startDate);
   return start ? new Date(start.year, start.month, start.day) : undefined;
 }
 
-function GuidedQuestionCard({ question, current, busy, error, minimumDate, maximumDate, onAnswer, onSkip }: {
+function GuidedQuestionCard({ question, current, busy, error, minimumDate, maximumDate, initialDate, initialTime, onAnswer, onSkip }: {
   question: ConversationQuestion;
   current: number;
   busy: boolean;
   error: string | null;
   minimumDate: Date;
   maximumDate?: Date;
-  onAnswer: (answer: string) => void;
+  initialDate?: string;
+  initialTime?: string;
+  onAnswer: (answer: ConversationQuestionAnswer) => void;
   onSkip: () => void;
 }) {
   // The caller keys this card by question id, so the control resets per question.
@@ -468,8 +473,9 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
   // written until they answer — the confirmation IS the per-field review.
   const suggested = question.suggestedAnswer ?? null;
   const suggestedDay = (() => {
-    if (answerType !== "date" || !suggested) return null;
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(suggested);
+    const rawDay = answerType === "date_time" ? initialDate : suggested;
+    if ((answerType !== "date" && answerType !== "date_time") || !rawDay) return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rawDay);
     if (!match) return null;
     const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
     // A suggestion outside this question's date bounds is not seeded; the
@@ -478,7 +484,8 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
     if (maximumDate && parsed > maximumDate) return null;
     return parsed;
   })();
-  const [value, setValue] = useState(() => (answerType === "date" || answerType === "choice" ? "" : suggested ?? ""));
+  const [value, setValue] = useState(() =>
+    answerType === "date_time" ? initialTime ?? "" : answerType === "date" || answerType === "choice" ? "" : suggested ?? "");
   const [day, setDay] = useState<Date | null>(suggestedDay);
   const [dateError, setDateError] = useState<string | null>(null);
   const [pendingOption, setPendingOption] = useState<string | null>(null);
@@ -486,14 +493,22 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
   const suggestedOption = answerType === "choice" && suggested && question.options.includes(suggested) ? suggested : null;
   // The caption only shows while the control still holds the untouched
   // suggestion (the seeded Date is compared by reference on purpose).
-  const prefilled = answerType === "choice" ? !!suggestedOption : answerType === "date" ? !!suggestedDay && day === suggestedDay : !!suggested && value === suggested;
+  const prefilled = answerType === "choice"
+    ? !!suggestedOption
+    : answerType === "date" || answerType === "date_time"
+      ? !!suggestedDay && day === suggestedDay
+      : !!suggested && value === suggested;
   const isTimeAnswer = answerType === "time" || isLoadInTimeQuestion(question);
   const inputId = `guided-answer-${question.id}`;
   const errorId = `guided-answer-error-${question.id}`;
   const displayError = dateError || error;
   // A picked day is submitted from its LOCAL calendar parts; toISOString would
   // shift the date by a day for anyone west of UTC.
-  const answer = answerType === "date" ? (day ? localIsoDay(day) : "") : value.trim();
+  const answer: ConversationQuestionAnswer | null = answerType === "date"
+    ? (day ? localIsoDay(day) : null)
+    : answerType === "date_time"
+      ? (day && value.trim() ? { date: localIsoDay(day), time: value.trim() } : null)
+      : value.trim() || null;
   const skipButton = (
     <button
       type="button"
@@ -558,9 +573,9 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
       ) : (
         <form
           className="mt-3 flex flex-wrap items-center gap-2"
-          onSubmit={event => { event.preventDefault(); if (answer && !busy) onAnswer(answer); }}
+          onSubmit={event => { event.preventDefault(); if (answer !== null && !busy) onAnswer(answer); }}
         >
-          {answerType === "date" ? (
+          {answerType === "date" || answerType === "date_time" ? (
             <div className="flex min-w-[11rem] flex-1 basis-48 items-center">
               <label htmlFor={inputId} className="sr-only">Answer this question</label>
               <GlobalDateInput
@@ -596,7 +611,8 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
               />
             </div>
-          ) : (
+          ) : null}
+          {answerType !== "date" && (
             <input
               type={isTimeAnswer ? "time" : answerType === "number" ? "number" : "text"}
               {...(answerType === "number"
@@ -608,8 +624,8 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
               onChange={event => setValue(event.target.value)}
               onInput={event => setValue(event.currentTarget.value)}
               disabled={busy}
-              placeholder={answerType === "number" ? "Enter a number…" : isTimeAnswer ? "HH:MM" : "Type your answer…"}
-              aria-label="Answer this question"
+              placeholder={answerType === "number" ? "Enter a number…" : isTimeAnswer || answerType === "date_time" ? "HH:MM" : "Type your answer…"}
+              aria-label={answerType === "date_time" ? "Load-in time" : "Answer this question"}
               aria-invalid={displayError ? true : undefined}
               aria-describedby={displayError ? errorId : undefined}
               className={`${ANSWER_FIELD_CLASS} basis-48`}
@@ -617,7 +633,7 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
           )}
           <button
             type="submit"
-            disabled={busy || !answer}
+            disabled={busy || answer === null}
             className={PRIMARY_BUTTON_CLASS}
           >
             {busy ? "Saving…" : "Answer"}
@@ -1399,6 +1415,9 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
   // confirms the value and advances, a validation failure (422) re-asks with
   // the friendly message. Skip dismisses the question and advances.
   const currentQuestion = openQuestions[0] ?? null;
+  const currentVenueSchedule = proposal && isRecord(proposal.venueSchedule) ? proposal.venueSchedule : {};
+  const currentLoadInDate = typeof currentVenueSchedule.loadInDate === "string" ? currentVenueSchedule.loadInDate : undefined;
+  const currentLoadInTime = typeof currentVenueSchedule.loadInTime === "string" ? currentVenueSchedule.loadInTime : undefined;
   // Answers persist, so the resolved count must come from the conversation and
   // not only from this session — otherwise a refresh hides the progress card on
   // a proposal whose questions were all answered earlier.
@@ -1441,13 +1460,16 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
     return () => { active = false; };
   }, [questionsComplete, proposalId, proposalVersion]);
 
-  const answerCurrentQuestion = async (answer: string) => {
+  const answerCurrentQuestion = async (answer: ConversationQuestionAnswer) => {
     if (!currentQuestion) return;
     const question = currentQuestion;
     const resolved = await resolveQuestion(question.id, { status: "answered", answer });
     if (resolved) {
       setAnsweredCount(count => count + 1);
-      setLastConfirmed({ label: questionFieldLabel(question), value: answer });
+      setLastConfirmed({
+        label: questionFieldLabel(question),
+        value: typeof answer === "string" ? answer : `${answer.date} at ${answer.time}`,
+      });
     }
   };
 
@@ -1874,6 +1896,8 @@ export default function AssistantWorkspacePage({ initialProposalId }: { initialP
                         error={questionError}
                         minimumDate={minimumDateForQuestion(currentQuestion, proposal)}
                         maximumDate={maximumDateForQuestion(currentQuestion, proposal)}
+                        initialDate={currentQuestion.answerType === "date_time" ? currentLoadInDate : undefined}
+                        initialTime={currentQuestion.answerType === "date_time" ? currentLoadInTime : undefined}
                         onAnswer={answer => void answerCurrentQuestion(answer)}
                         onSkip={() => void skipCurrentQuestion()}
                       />

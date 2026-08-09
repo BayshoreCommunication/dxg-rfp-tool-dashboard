@@ -106,7 +106,9 @@ export type ConversationMessage = {
 export type ConversationQuestionImpact = "schedule" | "cost" | "production" | "scope";
 // The control the guided question card renders. Anything the backend does not
 // recognise (and every free-form question) falls back to a plain text box.
-export type ConversationAnswerType = "date" | "time" | "choice" | "number" | "text";
+export type ConversationAnswerType = "date" | "time" | "date_time" | "choice" | "number" | "text";
+export type ConversationQuestionAnswer = string | { date: string; time: string };
+export type AppliedQuestionField = { path: string; mongoPath: string; value: unknown };
 export type ConversationQuestion = {
   id: string;
   code: string;
@@ -181,7 +183,7 @@ const parseMessage = (value: unknown): ConversationMessage | null => {
   };
 };
 
-const ANSWER_TYPES = ["date", "time", "choice", "number", "text"] as const;
+const ANSWER_TYPES = ["date", "time", "date_time", "choice", "number", "text"] as const;
 
 const parseQuestion = (value: unknown): ConversationQuestion | null => {
   if (!isRecord(value) || typeof value.id !== "string") return null;
@@ -292,8 +294,8 @@ export const closeConversationSegmentAction = async (
 export const patchConversationQuestionAction = async (
   proposalId: string,
   questionId: string,
-  input: { status: "answered" | "dismissed"; answer?: string },
-): Promise<ActionResult<{ id: string; status: string; answeredMessageId: string | null; appliedField: { path: string; mongoPath: string; value: unknown } | null }>> =>
+  input: { status: "answered" | "dismissed"; answer?: ConversationQuestionAnswer },
+): Promise<ActionResult<{ id: string; status: string; answeredMessageId: string | null; appliedField: AppliedQuestionField | null; appliedFields?: AppliedQuestionField[] }>> =>
   request(`/api/v1/proposals/${encodeURIComponent(proposalId)}/conversation/questions/${encodeURIComponent(questionId)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -305,11 +307,17 @@ export const patchConversationQuestionAction = async (
     const appliedField = isRecord(value.appliedField) && typeof value.appliedField.path === "string"
       ? { path: value.appliedField.path, mongoPath: typeof value.appliedField.mongoPath === "string" ? value.appliedField.mongoPath : "", value: value.appliedField.value }
       : null;
+    const appliedFields = Array.isArray(value.appliedFields)
+      ? value.appliedFields.flatMap(item => isRecord(item) && typeof item.path === "string"
+        ? [{ path: item.path, mongoPath: typeof item.mongoPath === "string" ? item.mongoPath : "", value: item.value }]
+        : [])
+      : appliedField ? [appliedField] : [];
     return {
       id: value.id,
       status: typeof value.status === "string" ? value.status : "",
       answeredMessageId: typeof value.answeredMessageId === "string" ? value.answeredMessageId : null,
       appliedField,
+      appliedFields,
     };
   });
 
