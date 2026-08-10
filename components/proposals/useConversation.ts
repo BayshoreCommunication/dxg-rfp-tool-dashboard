@@ -510,7 +510,18 @@ export function useAutoExtraction(
               content: "Extracting requirements from the attached files.",
               intent: "extract_requirements",
               sourceIds: toExtract,
-            }, watch.proposalId).finally(() => { firingRef.current = false; });
+            }, watch.proposalId).then((sent) => {
+              if (sent) return;
+              // Acceptance failed before a run existed (for example while the
+              // API had no healthy target). Do not permanently consume these
+              // sources: the failed message's Retry action must be able to
+              // submit the same source ids again without another upload.
+              const latest = readAutoExtractStore(watch.proposalId);
+              writeAutoExtractStore(watch.proposalId, {
+                pending: latest.pending,
+                handled: latest.handled.filter(id => !toExtract.includes(id)),
+              });
+            }).finally(() => { firingRef.current = false; });
           }
           return;
         }

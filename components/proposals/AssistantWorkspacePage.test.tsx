@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import AssistantWorkspacePage, { displayQuestionPrompt, isBeforeLocalToday, maximumDateForQuestion, minimumDateForQuestion, visibleRunMessages } from "./AssistantWorkspacePage";
+import AssistantWorkspacePage, { displayQuestionPrompt, isBeforeLocalToday, maximumDateForQuestion, minimumDateForQuestion, sourceIdsForFailedExtraction, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
@@ -801,7 +801,7 @@ describe("AssistantWorkspacePage", () => {
     }
   });
 
-  test("an extraction failure releases guided questions instead of hiding them indefinitely", async () => {
+  test("an extraction failure holds guided questions until the planner explicitly continues", async () => {
     mockedGetConversation.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -814,9 +814,14 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
+    expect(await screen.findByText("Requirement extraction did not finish. Try again.")).toBeInTheDocument();
+    expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("What is this event called?")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue without extraction" }));
     expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
     expect(screen.getByText("What is this event called?")).toBeInTheDocument();
-    expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
   });
 
   test("a late-arriving suggestion does not overwrite an answer the planner already typed", async () => {
@@ -1173,6 +1178,45 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     const reviewLink = await screen.findByRole("link", { name: /Review & apply 3 extracted fields/ });
     expect(reviewLink).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+  });
+
+  test("a failed extraction retries the same attached sources without another upload", async () => {
+    const requestMessage = {
+      id: "msg-extract-request", ordinal: 1, role: "user" as const, kind: "action_request" as const,
+      content: "Extract the requirements from the selected sources.", intent: "extract_requirements",
+      runType: null, runId: null, jobId: null, status: "complete" as const,
+      createdAt: "2026-07-21T10:00:00.000Z",
+      attachments: [{ sourceId: "src-existing", role: "primary", filename: "event-brief.txt", sourceStatus: "ready" }],
+    };
+    const failedRun = { ...proposalContextMessage("failed"), ordinal: 2 };
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 2, updatedAt: "2026-07-21T10:01:00.000Z" },
+        capabilities: { conversationExtraction: true },
+        messages: [requestMessage, failedRun],
+        questions: [startDateQuestion],
+      },
+    });
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "retry-correlation",
+      data: { created: true, message: null, assistantMessageId: "msg-retry", run: { runType: "proposal_context", runId: "run-retry", jobId: "job-retry" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByText("Requirement extraction did not finish. Try again.")).toBeInTheDocument();
+    expect(screen.queryByText(startDateQuestion.prompt)).not.toBeInTheDocument();
+    expect(sourceIdsForFailedExtraction([requestMessage, failedRun], failedRun)).toEqual(["src-existing"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry extraction" }));
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { content: "Extract the requirements from the selected sources.", intent: "extract_requirements", sourceIds: ["src-existing"] },
+      expect.any(String),
+    ));
   });
 
   test("Extract requirements is disabled when no ready non-confidential source exists", async () => {

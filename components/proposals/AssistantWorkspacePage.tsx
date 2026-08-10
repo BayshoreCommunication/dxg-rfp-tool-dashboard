@@ -88,6 +88,23 @@ export const visibleRunMessages = (messages: ConversationMessage[]): Conversatio
   ));
 };
 
+// A run-result message is inserted immediately after the action-request that
+// created it. Keeping this relationship in the conversation history lets a
+// failed extraction be retried from the already-scanned sources, without
+// asking the planner to upload the same files again.
+export const sourceIdsForFailedExtraction = (
+  messages: ConversationMessage[],
+  failedRun: ConversationMessage,
+): string[] => {
+  const request = messages.find(
+    (message) =>
+      message.role === "user" &&
+      message.intent === "extract_requirements" &&
+      message.ordinal === failedRun.ordinal - 1,
+  );
+  return request?.attachments.map((attachment) => attachment.sourceId) ?? [];
+};
+
 const segmentSkipReasons: Record<string, string> = {
   open: "I'll use these once you pause or add a bit more.",
   insufficient: "There isn't enough detail in your messages yet for me to pull requirements from.",
@@ -1080,6 +1097,8 @@ export default function AssistantWorkspacePage({
   const [proposalVersion, setProposalVersion] = useState<number>();
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [retryingExtractionId, setRetryingExtractionId] = useState<string | null>(null);
+  const [continuedAfterExtractionFailure, setContinuedAfterExtractionFailure] = useState<string[]>([]);
   // Completion progress summary: one deterministic guidance run per
   // proposal+version, kept out of render by a ref guard.
   const [completionReport, setCompletionReport] = useState<GuidanceReport | null>(null);
@@ -1127,6 +1146,15 @@ export default function AssistantWorkspacePage({
 
   const messages = useMemo(() => data?.messages ?? [], [data]);
   const displayedMessages = useMemo(() => visibleRunMessages(messages), [messages]);
+  const latestContextRun = useMemo(
+    () => messages.reduce<ConversationMessage | null>(
+      (latest, message) => message.runType === "proposal_context" && (!latest || message.ordinal > latest.ordinal) ? message : latest,
+      null,
+    ),
+    [messages],
+  );
+  const extractionFailureBlocksQuestions = latestContextRun?.status === "failed"
+    && !continuedAfterExtractionFailure.includes(latestContextRun.id);
   const chatExtractionEnabled = data?.capabilities?.conversationExtraction === true;
   const openQuestions = (data?.questions ?? []).filter(item => item.status === "open");
   // answer message id -> the question it answered, so the thread can replay the
@@ -1366,6 +1394,22 @@ export default function AssistantWorkspacePage({
       intent: "extract_requirements",
       sourceIds: readySources.slice(0, 5).map(source => source.id),
     });
+  };
+
+  const retryFailedExtraction = async (message: ConversationMessage) => {
+    if (!proposalId || retryingExtractionId) return;
+    const sourceIds = sourceIdsForFailedExtraction(messages, message);
+    if (sourceIds.length === 0) return;
+    setRetryingExtractionId(message.id);
+    try {
+      await sendMessage({
+        content: taskContent.extract_requirements,
+        intent: "extract_requirements",
+        sourceIds,
+      });
+    } finally {
+      setRetryingExtractionId(null);
+    }
   };
 
   const sendDraftMessage = async (version: number) => {
@@ -1643,9 +1687,40 @@ export default function AssistantWorkspacePage({
       return <li key={message.id} className="flex justify-start"><SkeletonCard label={labels.pending} /></li>;
     }
     if (labels && message.status === "failed") {
+      const extractionSourceIds = message.runType === "proposal_context"
+        ? sourceIdsForFailedExtraction(messages, message)
+        : [];
       return (
         <li key={message.id} className="flex justify-start">
-          <p role="alert" className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{labels.failed}</p>
+          <div className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            <p role="alert">{labels.failed}</p>
+            {message.runType === "proposal_context" && (
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void retryFailedExtraction(message)}
+                  disabled={extractionSourceIds.length === 0 || retryingExtractionId === message.id}
+                  aria-busy={retryingExtractionId === message.id}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {retryingExtractionId === message.id && <Loader2 size={12} className="animate-spin" aria-hidden />}
+                  Retry extraction
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContinuedAfterExtractionFailure((current) => current.includes(message.id) ? current : [...current, message.id])}
+                  className="min-h-9 text-xs font-semibold text-red-800 underline underline-offset-2"
+                >
+                  Continue without extraction
+                </button>
+                {extractionSourceIds.length === 0 && (
+                  <span className="text-xs text-red-700">
+                    The original sources are no longer attached. Add them again to retry.
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </li>
       );
     }
@@ -1973,7 +2048,7 @@ export default function AssistantWorkspacePage({
                       <SkeletonCard label="Reading your sources before asking the next question…" />
                     </li>
                   )}
-                  {currentQuestion && !sending && !extractionPending && (
+                  {currentQuestion && !sending && !extractionPending && !extractionFailureBlocksQuestions && (
                     <li className="flex justify-start">
                       <GuidedQuestionCard
                         key={currentQuestion.id}
