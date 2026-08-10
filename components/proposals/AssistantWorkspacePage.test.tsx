@@ -190,6 +190,21 @@ const conversationWithGuidedQuestions = (questions: Array<ReturnType<typeof guid
   },
 });
 
+const proposalContextMessage = (status: "pending" | "complete" | "failed") => ({
+  id: "msg-context-1",
+  ordinal: 2,
+  role: "assistant" as const,
+  kind: "run_result" as const,
+  content: "I reviewed your sources and extracted the requirements below.",
+  intent: null,
+  runType: "proposal_context" as const,
+  runId: "run-ctx-1",
+  jobId: "job-ctx-1",
+  status,
+  createdAt: "2026-07-21T10:01:00.000Z",
+  attachments: [],
+});
+
 let replaceStateSpy: jest.SpyInstance;
 
 describe("AssistantWorkspacePage", () => {
@@ -709,6 +724,201 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByLabelText("Answer this question")).toHaveValue("");
     expect(screen.queryByText(/Pre-filled from your message/)).not.toBeInTheDocument();
     expect(screen.queryByText(/highlighted option comes from your message/)).not.toBeInTheDocument();
+  });
+
+  test("a guided question stays hidden while source extraction is pending, showing a reading state instead", async () => {
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: conversationWithQuestion.data.conversation,
+        messages: [...conversationWithQuestion.data.messages, proposalContextMessage("pending")],
+        questions: [guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope")],
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    // The persisted extraction-in-progress state is visible...
+    expect(await screen.findByText(/Extracting requirements…/)).toBeInTheDocument();
+    // ...and so is the dedicated "waiting to ask" placeholder in the question's slot...
+    expect(screen.getByText(/Reading your sources before asking the next question/)).toBeInTheDocument();
+    // ...but the guided question control itself is not, even though it is open.
+    expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("What is this event called?")).not.toBeInTheDocument();
+    // Normal conversation content is not hidden by the pending extraction.
+    expect(screen.getByText("Please review the venue requirements.")).toBeInTheDocument();
+  });
+
+  test("a guided question appears with its extracted suggestion once extraction finishes", async () => {
+    jest.useFakeTimers();
+    try {
+      const withoutSuggestion = guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope");
+      const withSuggestion = guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope", {
+        suggestedAnswer: "Northstar Leadership Summit 2026",
+      });
+      mockedGetConversation
+        .mockResolvedValueOnce({
+          success: true,
+          correlationId: "test-correlation",
+          data: {
+            conversation: conversationWithQuestion.data.conversation,
+            messages: [...conversationWithQuestion.data.messages, proposalContextMessage("pending")],
+            questions: [withoutSuggestion],
+          },
+        })
+        .mockResolvedValue({
+          success: true,
+          correlationId: "test-correlation",
+          data: {
+            conversation: conversationWithQuestion.data.conversation,
+            messages: [...conversationWithQuestion.data.messages, proposalContextMessage("complete")],
+            questions: [withSuggestion],
+          },
+        });
+      mockedGetProposalContext.mockResolvedValue({
+        success: true,
+        correlationId: "test-correlation",
+        data: { run: { id: "run-ctx-1", model: "gpt-test" }, evidence: [], operations: [] },
+      } as never);
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      expect(await screen.findByText(/Extracting requirements…/)).toBeInTheDocument();
+      expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+
+      // The pending message keeps the poll interval fast (1s), so the next
+      // poll lands the completed run and the now-suggested question without
+      // any remount — the same clarification-question row/id stays open the
+      // whole time.
+      await act(async () => { await jest.advanceTimersByTimeAsync(1_000); });
+
+      expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
+      expect(screen.getByText("What is this event called?")).toBeInTheDocument();
+      expect(screen.getByLabelText("Answer this question")).toHaveValue("Northstar Leadership Summit 2026");
+      expect(screen.getByText("Pre-filled from your message — confirm or edit.")).toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("an extraction failure releases guided questions instead of hiding them indefinitely", async () => {
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: conversationWithQuestion.data.conversation,
+        messages: [...conversationWithQuestion.data.messages, proposalContextMessage("failed")],
+        questions: [guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope")],
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
+    expect(screen.getByText("What is this event called?")).toBeInTheDocument();
+    expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
+  });
+
+  test("a late-arriving suggestion does not overwrite an answer the planner already typed", async () => {
+    jest.useFakeTimers();
+    try {
+      const withoutSuggestion = guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope");
+      const withSuggestion = guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope", {
+        suggestedAnswer: "Northstar Leadership Summit 2026",
+      });
+      mockedGetConversation
+        .mockResolvedValueOnce(conversationWithGuidedQuestions([withoutSuggestion]))
+        .mockResolvedValue(conversationWithGuidedQuestions([withSuggestion]));
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await screen.findByText("Guided question 1");
+
+      const input = screen.getByLabelText("Answer this question");
+      fireEvent.change(input, { target: { value: "My Own Event Name" } });
+      expect(input).toHaveValue("My Own Event Name");
+
+      // No message is pending, so this is the slow (10s) poll interval.
+      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+
+      expect(screen.getByLabelText("Answer this question")).toHaveValue("My Own Event Name");
+      expect(screen.queryByText("Pre-filled from your message — confirm or edit.")).not.toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("a conversation update refreshes the proposal only once", async () => {
+    jest.useFakeTimers();
+    try {
+      mockedGetConversation
+        .mockResolvedValueOnce(conversationWithGuidedQuestions([startDateQuestion]))
+        .mockResolvedValue({
+          ...conversationWithGuidedQuestions([startDateQuestion]),
+          data: {
+            ...conversationWithGuidedQuestions([startDateQuestion]).data,
+            conversation: {
+              ...conversationWithGuidedQuestions([startDateQuestion]).data.conversation,
+              updatedAt: "2026-07-21T10:01:00.000Z",
+            },
+          },
+        });
+      mockedGetProposal.mockResolvedValue({
+        success: true,
+        message: "ok",
+        data: { _id: PROPOSAL_ID, version: 7, event: { eventName: "Northstar" } },
+      });
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await screen.findByText("Guided question 1");
+      await waitFor(() => expect(mockedGetProposal).toHaveBeenCalledTimes(1));
+
+      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+
+      await waitFor(() => expect(mockedGetProposal).toHaveBeenCalledTimes(2));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("a late-arriving date suggestion does not overwrite a date the planner already picked", async () => {
+    jest.useFakeTimers();
+    try {
+      const withoutSuggestion = guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date" });
+      const withSuggestion = guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", {
+        answerType: "date",
+        suggestedAnswer: "2026-09-14",
+      });
+      mockedGetConversation
+        .mockResolvedValueOnce(conversationWithGuidedQuestions([withoutSuggestion]))
+        .mockResolvedValue(conversationWithGuidedQuestions([withSuggestion]));
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await screen.findByText("Guided question 1");
+
+      const input = screen.getByLabelText("Answer this question");
+      fireEvent.change(input, { target: { value: "2026-09-20" } });
+      expect(input).toHaveValue("2026-09-20");
+
+      // No message is pending, so this is the slow (10s) poll interval — the
+      // extraction-derived "2026-09-14" suggestion lands on this refresh.
+      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+
+      expect(screen.getByLabelText("Answer this question")).toHaveValue("2026-09-20");
+      expect(screen.queryByText("Pre-filled from your message — confirm or edit.")).not.toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("a conversation-only proposal (no attachments) shows guided questions immediately", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([startDateQuestion]));
+    mockedListSources.mockResolvedValue({ success: true, data: [], correlationId: "test-correlation" });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Answer this question")).toBeInTheDocument();
+    expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
   });
 
   test("a choice question renders pills and clicking one submits that option immediately", async () => {

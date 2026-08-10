@@ -454,6 +454,15 @@ export function maximumDateForQuestion(
   return start ? new Date(start.year, start.month, start.day) : undefined;
 }
 
+// A yyyy-mm-dd string parsed into local calendar parts, matching how the
+// value round-trips through localIsoDay — a plain `new Date(iso)` would
+// anchor to UTC midnight and can render a day early for anyone west of UTC.
+// Callers only pass a string already validated against /^\d{4}-\d{2}-\d{2}$/.
+function parseIsoLocalDate(iso: string): Date {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function GuidedQuestionCard({ question, current, busy, error, minimumDate, maximumDate, initialDate, initialTime, onAnswer, onSkip }: {
   question: ConversationQuestion;
   current: number;
@@ -472,31 +481,57 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
   // own message already contained, so confirming is one action. Nothing is
   // written until they answer — the confirmation IS the per-field review.
   const suggested = question.suggestedAnswer ?? null;
-  const suggestedDay = (() => {
+  // A stable primitive (not a Date instance): the Date built below would
+  // otherwise get a fresh identity every render even when the underlying
+  // suggestion is unchanged, which would make an effect keyed on it re-fire
+  // every render instead of only when a suggestion actually arrives/changes.
+  const suggestedDayIso = (() => {
     const rawDay = answerType === "date_time" ? initialDate : suggested;
     if ((answerType !== "date" && answerType !== "date_time") || !rawDay) return null;
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rawDay);
-    if (!match) return null;
-    const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDay)) return null;
+    const parsed = parseIsoLocalDate(rawDay);
     // A suggestion outside this question's date bounds is not seeded; the
     // planner picks manually under the same rules as an unassisted answer.
     if (isBeforeLocalToday(parsed, minimumDate)) return null;
     if (maximumDate && parsed > maximumDate) return null;
-    return parsed;
+    return rawDay;
   })();
   const [value, setValue] = useState(() =>
     answerType === "date_time" ? initialTime ?? "" : answerType === "date" || answerType === "choice" ? "" : suggested ?? "");
-  const [day, setDay] = useState<Date | null>(suggestedDay);
+  const [day, setDay] = useState<Date | null>(() => (suggestedDayIso ? parseIsoLocalDate(suggestedDayIso) : null));
   const [dateError, setDateError] = useState<string | null>(null);
   const [pendingOption, setPendingOption] = useState<string | null>(null);
+  // The question keeps the same id for its whole lifetime (it is only
+  // superseded once its target field is actually filled), so a suggestion
+  // that arrives after mount — extraction finishing while this card is
+  // already showing — needs to reach the control without a remount. It is
+  // applied only while the planner has not touched the control; touching it
+  // once opts this question instance out of further auto-fill. Adjusted
+  // during render (React's documented pattern for syncing state off a prop
+  // change) rather than in an effect, so the stale value never paints.
+  const [edited, setEdited] = useState(false);
+  const [prevSuggested, setPrevSuggested] = useState(suggested);
+  if (suggested !== prevSuggested) {
+    setPrevSuggested(suggested);
+    if (!edited && answerType !== "date" && answerType !== "date_time" && answerType !== "choice") {
+      setValue(suggested ?? "");
+    }
+  }
+  const [prevSuggestedDayIso, setPrevSuggestedDayIso] = useState(suggestedDayIso);
+  if (suggestedDayIso !== prevSuggestedDayIso) {
+    setPrevSuggestedDayIso(suggestedDayIso);
+    if (!edited && (answerType === "date" || answerType === "date_time")) {
+      setDay(suggestedDayIso ? parseIsoLocalDate(suggestedDayIso) : null);
+    }
+  }
   const impactLabel = question.impact ? impactLabels[question.impact] : null;
   const suggestedOption = answerType === "choice" && suggested && question.options.includes(suggested) ? suggested : null;
   // The caption only shows while the control still holds the untouched
-  // suggestion (the seeded Date is compared by reference on purpose).
+  // suggestion.
   const prefilled = answerType === "choice"
     ? !!suggestedOption
     : answerType === "date" || answerType === "date_time"
-      ? !!suggestedDay && day === suggestedDay
+      ? !!suggestedDayIso && !!day && localIsoDay(day) === suggestedDayIso
       : !!suggested && value === suggested;
   const isTimeAnswer = answerType === "time" || isLoadInTimeQuestion(question);
   const inputId = `guided-answer-${question.id}`;
@@ -582,6 +617,7 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
                 id={inputId}
                 value={day}
                 onChange={nextDay => {
+                  setEdited(true);
                   if (nextDay && isBeforeLocalToday(nextDay, minimumDate)) {
                     setDay(null);
                     setDateError(isEventEndDateQuestion(question)
@@ -621,8 +657,8 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
                   ? { step: 300 }
                   : {})}
               value={value}
-              onChange={event => setValue(event.target.value)}
-              onInput={event => setValue(event.currentTarget.value)}
+              onChange={event => { setEdited(true); setValue(event.target.value); }}
+              onInput={event => { setEdited(true); setValue(event.currentTarget.value); }}
               disabled={busy}
               placeholder={answerType === "number" ? "Enter a number…" : isTimeAnswer || answerType === "date_time" ? "HH:MM" : "Type your answer…"}
               aria-label={answerType === "date_time" ? "Load-in time" : "Answer this question"}
@@ -1158,25 +1194,44 @@ export default function AssistantWorkspacePage({
     return () => { active = false; };
   }, []);
 
-  // The proposal document backs both the breadcrumb title and the captured
-  // details overview — refreshed when the conversation changes (e.g. after
-  // extraction results are applied).
+  // One proposal read backs the breadcrumb, captured-details overview, and
+  // draft version. Previously two effects fetched the same document whenever
+  // the conversation timestamp changed, doubling traffic during polling.
   useEffect(() => {
-    if (!proposalId) return;
+    // Wait for the initial conversation read so the mount and that first
+    // payload do not trigger two back-to-back proposal requests.
+    if (!proposalId || loading) return;
     let active = true;
-    void getProposalByIdAction(proposalId).then(result => {
-      if (!active || !result.success || !isRecord(result.data)) return;
-      setProposal(result.data);
-      const event = isRecord(result.data.event) ? result.data.event : null;
-      const name = typeof event?.eventName === "string" ? event.eventName.trim() : "";
-      if (name) setEventName(name);
-    });
-    return () => { active = false; };
-  }, [proposalId, data?.conversation?.updatedAt, completedContextRuns]);
+    void (async () => {
+      const current = await getProposalByIdAction(proposalId);
+      if (!active) return;
+      if (current.success && isRecord(current.data)) {
+        setProposal(current.data);
+        const event = isRecord(current.data.event) ? current.data.event : null;
+        const name = typeof event?.eventName === "string" ? event.eventName.trim() : "";
+        if (name) setEventName(name);
+        // The proposal document is authoritative for new and conversation-only
+        // proposals, which may never have an extraction review.
+        if (typeof current.data.version === "number") {
+          setProposalVersion(current.data.version);
+          return;
+        }
+      }
 
-  // The proposal document carries its own version, so a draft can be generated
-  // from a conversation-only proposal that has no extraction run at all. The
-  // context/review lookup stays as a fallback for older payloads.
+      // Older proposal payloads may not expose a version. Preserve the existing
+      // read-only extraction-review fallback without issuing a second proposal
+      // request.
+      const latest = await getLatestProposalContextAction(proposalId);
+      if (!active || !latest.success || !isRecord(latest.data.run) || typeof latest.data.run.id !== "string") return;
+      const review = await getCandidateReviewAction(proposalId, latest.data.run.id);
+      if (active && review.success) setProposalVersion(review.data.proposalVersion);
+    })();
+    return () => { active = false; };
+  }, [proposalId, loading, completedContextRuns, data?.conversation?.updatedAt]);
+
+  // Draft generation revalidates the version at click time when the background
+  // refresh has not produced one yet. This is intentionally on-demand; the
+  // polling effect above still performs only one proposal read per update.
   const fetchProposalVersion = useCallback(async (id: string): Promise<number | undefined> => {
     const current = await getProposalByIdAction(id);
     if (current.success && isRecord(current.data) && typeof current.data.version === "number") return current.data.version;
@@ -1185,17 +1240,6 @@ export default function AssistantWorkspacePage({
     const review = await getCandidateReviewAction(id, latest.data.run.id);
     return review.success ? review.data.proposalVersion : undefined;
   }, []);
-
-  // Re-read the proposal version whenever extraction or conversation state
-  // changes so draft generation never relies on a stale version.
-  useEffect(() => {
-    if (!proposalId) return;
-    let active = true;
-    void fetchProposalVersion(proposalId).then(version => {
-      if (active && typeof version === "number") setProposalVersion(version);
-    });
-    return () => { active = false; };
-  }, [proposalId, completedContextRuns, data?.conversation?.updatedAt, fetchProposalVersion]);
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView?.({ block: "end" });
@@ -1443,6 +1487,16 @@ export default function AssistantWorkspacePage({
   // confirms the value and advances, a validation failure (422) re-asks with
   // the friendly message. Skip dismisses the question and advances.
   const currentQuestion = openQuestions[0] ?? null;
+  // A gap question stays open (and keeps its id) for its whole lifetime — it
+  // is only superseded once its target field is actually filled — so showing
+  // it the instant a source is attached surfaces a blank control that only
+  // fills in on refresh once extraction lands. Cover the whole window: the
+  // client-side scan watch, the optimistic extract_requirements send, and the
+  // persisted run before it reaches a terminal status. Each clears on success
+  // or failure, so a question can never stay hidden past a terminal outcome.
+  const extractionPending = autoScanning
+    || pending.some(item => item.intent === "extract_requirements" && item.state === "sending")
+    || messages.some(message => message.runType === "proposal_context" && message.status === "pending");
   const currentVenueSchedule = proposal && isRecord(proposal.venueSchedule) ? proposal.venueSchedule : {};
   const currentLoadInDate = typeof currentVenueSchedule.loadInDate === "string" ? currentVenueSchedule.loadInDate : undefined;
   const currentLoadInTime = typeof currentVenueSchedule.loadInTime === "string" ? currentVenueSchedule.loadInTime : undefined;
@@ -1914,7 +1968,12 @@ export default function AssistantWorkspacePage({
                       questions may synchronize before the assistant reply is
                       ready, but the next question must not jump ahead of that
                       reply in the thread. */}
-                  {currentQuestion && !sending && (
+                  {currentQuestion && !sending && extractionPending && (
+                    <li className="flex justify-start">
+                      <SkeletonCard label="Reading your sources before asking the next question…" />
+                    </li>
+                  )}
+                  {currentQuestion && !sending && !extractionPending && (
                     <li className="flex justify-start">
                       <GuidedQuestionCard
                         key={currentQuestion.id}
