@@ -168,19 +168,16 @@ export default function ProposalWorkflowShell({
               {!isPublished && <span className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full border-2 border-[#f2fbff] bg-white text-[#0786cf]"><Sparkles size={13} strokeWidth={2.2} aria-hidden="true" /></span>}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "AI-guided workspace"}</p>
-                {!isPublished && <span className="inline-flex items-center gap-1 rounded-full border border-[#cfe6f3] bg-white/80 px-2 py-0.5 text-[10px] font-bold text-[#476577]"><ShieldCheck size={11} aria-hidden="true" />You approve every step</span>}
-              </div>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "AI-guided workspace"}</p>
               <p className="mt-2 text-lg font-extrabold tracking-[-0.02em] text-[#172b3a] sm:text-[21px]">{isPublished ? "Your proposal is live and accepting responses." : "Turn your event details into a vendor-ready proposal."}</p>
-              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#566a78]">{isPublished ? "Vendors can review the RFP and submit their proposals. Keep an eye on incoming activity and answer questions as they arrive." : "Tell the assistant about your event and it drafts the RFP for you. You can review the wording, resolve missing details, or edit the form yourself at any time."}</p>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#566a78]">{isPublished ? "Vendors can review the RFP and submit their proposals. Keep an eye on incoming activity and answer questions as they arrive." : "Share what you know. The assistant drafts the RFP, flags missing details, and keeps every change open for your review."}</p>
             </div>
           </div>
 
           {!isPublished && <div className="mt-5 grid gap-2 sm:grid-cols-3">
-            <div className="flex items-center gap-2 rounded-xl border border-white/90 bg-white/65 px-3 py-2 text-xs font-semibold text-[#476577]"><FileText size={15} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Draft from your brief</div>
-            <div className="flex items-center gap-2 rounded-xl border border-white/90 bg-white/65 px-3 py-2 text-xs font-semibold text-[#476577]"><MessageCircleQuestion size={15} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Spot missing details</div>
-            <div className="flex items-center gap-2 rounded-xl border border-white/90 bg-white/65 px-3 py-2 text-xs font-semibold text-[#476577]"><ShieldCheck size={15} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Keep final control</div>
+            <div className="flex items-center gap-1.5 rounded-xl border border-white/90 bg-white/65 px-2.5 py-2 text-[11px] font-bold text-[#476577]"><FileText size={14} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Draft faster</div>
+            <div className="flex items-center gap-1.5 rounded-xl border border-white/90 bg-white/65 px-2.5 py-2 text-[11px] font-bold text-[#476577]"><MessageCircleQuestion size={14} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Find gaps</div>
+            <div className="flex items-center gap-1.5 rounded-xl border border-white/90 bg-white/65 px-2.5 py-2 text-[11px] font-bold text-[#476577]"><ShieldCheck size={14} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Keep control</div>
           </div>}
 
           {!isPublished && (

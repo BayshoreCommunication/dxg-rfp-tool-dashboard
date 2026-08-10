@@ -74,8 +74,8 @@ describe("ProposalWorkflowShell", () => {
     // The assistant is reached by link, not by a second embedded copy.
     expect(screen.getByRole("link", { name: /Open the assistant/ }))
       .toHaveAttribute("href", `/proposals/${PROPOSAL_ID}/assistant`);
-    expect(screen.queryByText(/Tell the assistant about your event/)).toBeInTheDocument();
-    expect(screen.getByText("You approve every step")).toBeInTheDocument();
+    expect(screen.queryByText(/The assistant drafts the RFP/)).toBeInTheDocument();
+    expect(screen.getByText("Keep control")).toBeInTheDocument();
     expect(screen.getByText("Nothing is published automatically.")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Proposal journey progress" }))
       .toHaveAttribute("aria-valuenow", "0");
@@ -238,7 +238,7 @@ describe("ProposalWorkflowShell", () => {
     // Stepper and assistant banner stay. The old technical-details duplicate is
     // intentionally removed so the actual intake form begins immediately.
     expect(screen.getByRole("list", { name: "Proposal creation steps" })).toBeInTheDocument();
-    expect(screen.getByText(/Tell the assistant about your event/)).toBeInTheDocument();
+    expect(screen.getByText(/The assistant drafts the RFP/)).toBeInTheDocument();
     expect(screen.queryByText(/You can upload more than one source/)).not.toBeInTheDocument();
 
     // The other panels are untouched.
