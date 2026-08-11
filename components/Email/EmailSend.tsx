@@ -45,6 +45,7 @@ export default function EmailSend() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string>();
   const [sending, setSending] = useState(false);
 
   const [proposals, setProposals] = useState<ProposalOption[]>([]);
@@ -74,44 +75,54 @@ export default function EmailSend() {
 
     const run = async () => {
       setLoading(true);
+      setLoadError(undefined);
 
-      const proposalsRes = await getProposalsAction({
-        page: 1,
-        limit: 100,
-        status: "submitted",
-        isActive: true,
-      });
+      try {
+        const proposalsRes = await getProposalsAction({
+          page: 1,
+          limit: 100,
+          status: "submitted",
+          isActive: true,
+        });
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (proposalsRes.success && Array.isArray(proposalsRes.data)) {
-        const proposalItems = proposalsRes.data as ProposalOption[];
-        setProposals(proposalItems);
+        if (proposalsRes.success && Array.isArray(proposalsRes.data)) {
+          const proposalItems = proposalsRes.data as ProposalOption[];
+          setProposals(proposalItems);
 
-        const preferredProposal = preselectedProposalId
-          ? proposalItems.find((item) => item._id === preselectedProposalId)
-          : null;
+          const preferredProposal = preselectedProposalId
+            ? proposalItems.find((item) => item._id === preselectedProposalId)
+            : null;
 
-        if (preferredProposal) {
-          setProposalId(preferredProposal._id);
-          setSubject((prev) =>
-            prev.trim().length > 0
-              ? prev
-              : `Proposal for ${preferredProposal.event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
-          );
-        } else if (proposalItems[0]?._id) {
-          setProposalId((prev) => prev || proposalItems[0]._id);
-          setSubject((prev) =>
-            prev.trim().length > 0
-              ? prev
-              : `Proposal for ${proposalItems[0].event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
-          );
+          if (preferredProposal) {
+            setProposalId(preferredProposal._id);
+            setSubject((prev) =>
+              prev.trim().length > 0
+                ? prev
+                : `Proposal for ${preferredProposal.event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
+            );
+          } else if (proposalItems[0]?._id) {
+            setProposalId((prev) => prev || proposalItems[0]._id);
+            setSubject((prev) =>
+              prev.trim().length > 0
+                ? prev
+                : `Proposal for ${proposalItems[0].event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
+            );
+          }
+        } else {
+          setProposals([]);
+          setProposalId("");
+          setLoadError(proposalsRes.message || "Submitted proposals could not be loaded.");
         }
-      } else {
+      } catch {
+        if (cancelled) return;
         setProposals([]);
+        setProposalId("");
+        setLoadError("Submitted proposals could not be loaded.");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      setLoading(false);
     };
 
     void run();
@@ -266,12 +277,16 @@ export default function EmailSend() {
             <select
               value={proposalId}
               onChange={(event) => handleProposalChange(event.target.value)}
+              disabled={loading || Boolean(loadError)}
+              aria-describedby="proposal-load-status"
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]"
             >
-              {proposals.length === 0 && (
-                <option value="">
-                  No active submitted proposals available
-                </option>
+              {loading && <option value="">Loading submitted proposals…</option>}
+              {!loading && loadError && (
+                <option value="">Submitted proposals could not be loaded</option>
+              )}
+              {!loading && !loadError && proposals.length === 0 && (
+                <option value="">No submitted proposals ready to send</option>
               )}
               {proposals.map((proposal) => (
                 <option key={proposal._id} value={proposal._id}>
@@ -279,6 +294,18 @@ export default function EmailSend() {
                 </option>
               ))}
             </select>
+            <div id="proposal-load-status" aria-live="polite">
+              {loading && (
+                <p role="status" className="text-[12px] text-slate-500">
+                  Loading submitted proposals…
+                </p>
+              )}
+              {!loading && loadError && (
+                <p role="alert" className="text-[12px] text-red-600">
+                  {loadError} Refresh the page to try again.
+                </p>
+              )}
+            </div>
             {selectedProposalLink ? (
               <div className="rounded-lg border border-[#008ad2]/20 bg-[#008ad2]/5 px-3 py-2 text-[12px] text-brand-dark">
                 Proposal link:{" "}

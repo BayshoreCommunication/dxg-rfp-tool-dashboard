@@ -77,7 +77,7 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.queryByText(/The assistant drafts the RFP/)).toBeInTheDocument();
     expect(screen.getByText("Keep control")).toBeInTheDocument();
     expect(screen.getByText("Nothing is published automatically.")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "Proposal journey progress" }))
+    expect(screen.getByRole("progressbar", { name: "AI preparation progress" }))
       .toHaveAttribute("aria-valuenow", "0");
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });

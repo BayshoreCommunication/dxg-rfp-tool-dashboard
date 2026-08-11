@@ -183,13 +183,13 @@ export default function ProposalWorkflowShell({
           {!isPublished && (
             <div className="mt-5 border-t border-[#d9ebf4] pt-4">
               <div className="flex items-center justify-between gap-4 text-xs font-bold text-[#476577]">
-                <span>Proposal progress</span>
+                <span>AI preparation progress</span>
                 <span className="tabular-nums text-[#172b3a]">{data ? `${stagesComplete} of ${stageCount} stages` : "Loading progress…"}</span>
               </div>
               <div
                 className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#d9eaf3]"
                 role="progressbar"
-                aria-label="Proposal journey progress"
+                aria-label="AI preparation progress"
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={progressPercent}

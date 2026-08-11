@@ -2,22 +2,21 @@
 
 interface Step {
   id: number;       // numeric id used for activeStep comparison
-  badge: string;    // displayed in the circle: "1", "2", "2B", etc.
   label: string;
   sub: string;      // subtitle shown below the label
 }
 
 const steps: Step[] = [
-  { id: 1,  badge: "1",  label: "Event Overview",      sub: "Identity & narrative" },
-  { id: 2,  badge: "2",  label: "Venue & Schedule",    sub: "Dates, rooms, union" },
-  { id: 3,  badge: "2B", label: "Room Specifications", sub: "AV per room" },
-  { id: 4,  badge: "3",  label: "Hybrid & Virtual",    sub: "Conditional" },
-  { id: 5,  badge: "4",  label: "Content & Creative",  sub: "Ownership matrix" },
-  { id: 6,  badge: "5",  label: "Video Recording",     sub: "Recording & deliverables" },
-  { id: 7,  badge: "6",  label: "Venue & Technical",   sub: "Power, rigging, COI" },
-  { id: 8,  badge: "7",  label: "Investment & Evaluation", sub: "Scoring & timeline" },
-  { id: 9,  badge: "8",  label: "Uploads & Co-Vendors",sub: "Files & partners" },
-  { id: 10, badge: "9",  label: "Contact & Submit",    sub: "Generate RFP" },
+  { id: 1, label: "Event Overview", sub: "Identity & narrative" },
+  { id: 2, label: "Venue & Schedule", sub: "Dates, rooms, union" },
+  { id: 3, label: "Room Specifications", sub: "AV per room" },
+  { id: 4, label: "Hybrid & Virtual", sub: "Conditional" },
+  { id: 5, label: "Content & Creative", sub: "Ownership matrix" },
+  { id: 6, label: "Video Recording", sub: "Recording & deliverables" },
+  { id: 7, label: "Venue & Technical", sub: "Power, rigging, COI" },
+  { id: 8, label: "Investment & Evaluation", sub: "Scoring & timeline" },
+  { id: 9, label: "Uploads & Co-Vendors", sub: "Files & partners" },
+  { id: 10, label: "Contact & Publish", sub: "Review and publish" },
 ];
 
 const circleClass = (isActive: boolean, isCompleted: boolean): string => {
@@ -59,15 +58,10 @@ const ProcessList = ({
   completedStepIds?: number[];
 }) => {
   const visibleSteps = steps.filter((s) => !hideStepIds.includes(s.id));
-
-  let counter = 2;
-  const badgedSteps = visibleSteps.map((step) => {
-    if (step.id === 1) return { ...step, badge: "1" };
-    if (step.id === 2) return { ...step, badge: "2" };
-    if (step.id === 3) return { ...step, badge: "2B" };
-    counter++;
-    return { ...step, badge: String(counter) };
-  });
+  const badgedSteps = visibleSteps.map((step, index) => ({
+    ...step,
+    badge: String(index + 1),
+  }));
 
   const completedCount = badgedSteps.filter((step) =>
     completedStepIds
@@ -82,15 +76,22 @@ const ProcessList = ({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#647582]">
-              Intake form
+              Detailed form
             </p>
-            <p className="mt-1 text-xs text-[#8a98a3]">Proposal progress</p>
+            <p className="mt-1 text-xs text-[#8a98a3]">Required information</p>
           </div>
           <span className="rounded-full bg-[#eef8fd] px-2.5 py-1 text-[10px] font-bold text-[#0786cf]">
-            {completedCount}/{badgedSteps.length} done
+            {completedCount} of {badgedSteps.length} complete
           </span>
         </div>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#edf2f5]" aria-hidden="true">
+        <div
+          className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#edf2f5]"
+          role="progressbar"
+          aria-label="Detailed proposal form progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+        >
           <div
             className="h-full rounded-full bg-[#10B981] transition-[width] duration-300"
             style={{ width: `${progress}%` }}

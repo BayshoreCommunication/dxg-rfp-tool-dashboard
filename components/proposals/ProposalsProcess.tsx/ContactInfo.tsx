@@ -641,13 +641,12 @@ const ContactInfo = ({
         {/* ── Submit banner ── */}
         <div className="rounded-xl border border-[#1DBFD3]/30 bg-[#f0fbff] p-5">
           <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            {isEditMode ? "Ready to update your RFP?" : "Ready to generate your RFP?"}
+            {isEditMode ? "Ready to publish your changes?" : "Ready to publish your RFP?"}
           </p>
           <p className="text-sm text-[#4a5a8a]">
-            Once you click <strong>{isEditMode ? "Update RFP" : "Generate RFP"}</strong>,{" "}
-            {isEditMode
-              ? "your changes will be saved and the proposal will be updated."
-              : "you�ll choose a proposal template and your intake form will be packaged into a professional RFP document for your AV vendor."}
+            <strong>{isEditMode ? "Publish updated RFP" : "Publish RFP"}</strong> saves this
+            information and makes the proposal live for vendors. It does not email vendors;
+            invitations are sent separately.
           </p>
         </div>
 
@@ -683,7 +682,7 @@ const ContactInfo = ({
             style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
           >
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-            {isSubmitting ? "Submitting…" : isEditMode ? "Update RFP" : "Generate RFP"}
+            {isSubmitting ? "Publishing…" : isEditMode ? "Publish updated RFP" : "Publish RFP"}
             {isSubmitting ? null : <ArrowRight size={15} className="shrink-0" />}
           </button>
         </div>

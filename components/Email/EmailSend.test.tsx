@@ -256,6 +256,20 @@ describe('EmailSend — successful send', () => {
 })
 
 describe('EmailSend — proposal selection', () => {
+  it('shows an honest loading state before proposals arrive', async () => {
+    let resolveRequest!: (value: unknown) => void
+    mockGetProposals.mockReturnValue(new Promise((resolve) => { resolveRequest = resolve }))
+
+    render(<EmailSend />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading submitted proposals')
+    expect(screen.getByRole('combobox')).toBeDisabled()
+    expect(screen.queryByText(/No submitted proposals ready/)).not.toBeInTheDocument()
+
+    resolveRequest({ success: true, data: [] })
+    await waitFor(() => expect(screen.getByRole('combobox')).not.toBeDisabled(), LOAD_TIMEOUT)
+  })
+
   it('pre-selects proposal from URL query param', async () => {
     mockSearchParamsGet.mockReturnValue('prop-001')
     render(<EmailSend />)
@@ -265,10 +279,21 @@ describe('EmailSend — proposal selection', () => {
     }, LOAD_TIMEOUT)
   })
 
-  it('shows "No active submitted proposals" when list is empty', async () => {
+  it('shows the empty state only after a successful load', async () => {
     mockGetProposals.mockResolvedValue({ success: true, data: [] })
     render(<EmailSend />)
     await waitForLoad()
-    expect(screen.getByText(/No active submitted proposals/)).toBeInTheDocument()
+    expect(screen.getByText(/No submitted proposals ready to send/)).toBeInTheDocument()
+  })
+
+  it('distinguishes a load failure from an empty proposal list', async () => {
+    mockGetProposals.mockResolvedValue({ success: false, message: 'Service unavailable' })
+    render(<EmailSend />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Service unavailable')
+    }, LOAD_TIMEOUT)
+    expect(screen.getByRole('combobox')).toBeDisabled()
+    expect(screen.queryByText(/No submitted proposals ready to send/)).not.toBeInTheDocument()
   })
 })

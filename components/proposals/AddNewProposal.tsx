@@ -27,6 +27,7 @@ import SaveCopyModal from "./SaveCopyModal";
 import ProposalWorkflowShell from "./ProposalWorkflowShell";
 import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
+import ProposalValidationSummary from "./ProposalValidationSummary";
 import { CAMERA_PLAN_SPECIFIC, cameraPlanTotal } from "./cameraPlan";
 import {
   ensureLedWallSlots,
@@ -1518,14 +1519,16 @@ const AddNewProposal = ({
     }));
   };
 
-  const isEventStepValid = () => {
+  const eventValidationIssues = () => {
     const { eventName, startDate, endDate } = proposalData.event;
-    return (
-      eventName.trim().length > 0 &&
-      startDate.trim().length > 0 &&
-      endDate.trim().length > 0
-    );
+    return [
+      !eventName.trim() ? "Event name" : "",
+      !startDate.trim() ? "Start date" : "",
+      !endDate.trim() ? "End date" : "",
+    ].filter(Boolean);
   };
+
+  const isEventStepValid = () => eventValidationIssues().length === 0;
 
   const isRoomAndProductionStepValid = () => firstIncompleteRoom(rooms) === null;
 
@@ -1541,20 +1544,29 @@ const AddNewProposal = ({
     setFocusRoom({ index: incomplete.index, token: Date.now() });
   };
 
-  const isVenueStepValid = () => {
+  const venueValidationIssues = () => {
     const { riggingRequired, powerDropsRequired, wirelessInternetRequired } =
       proposalData.venue;
-    return !!riggingRequired && !!powerDropsRequired && !!wirelessInternetRequired;
+    return [
+      !riggingRequired ? "Rigging requirement" : "",
+      !powerDropsRequired ? "Power-drop requirement" : "",
+      !wirelessInternetRequired ? "Wireless-internet requirement" : "",
+    ].filter(Boolean);
   };
 
-  const isUploadsStepValid = () => {
+  const isVenueStepValid = () => venueValidationIssues().length === 0;
+
+  const uploadsValidationIssues = () => {
     const { ndaRequired, ndaType } = proposalData.uploads;
-    if (!ndaRequired) return false;
-    if (ndaRequired === "YES" && !ndaType) return false;
-    return true;
+    return [
+      !ndaRequired ? "NDA sharing requirement" : "",
+      ndaRequired === "YES" && !ndaType ? "NDA type" : "",
+    ].filter(Boolean);
   };
 
-  const isBudgetStepValid = () => {
+  const isUploadsStepValid = () => uploadsValidationIssues().length === 0;
+
+  const budgetValidationIssues = () => {
     const {
       estimatedAvBudget,
       proposalFormatPreferences,
@@ -1571,23 +1583,6 @@ const AddNewProposal = ({
       howDidYouHearOther,
     } = proposalData.budget;
 
-    if (
-      !estimatedAvBudget.trim() ||
-      !vendorQuestionsDueDate.trim() ||
-      !responseToVendorQuestionsDate.trim() ||
-      !proposalSubmissionDueDate.trim() ||
-      !shortlistNotificationDate.trim() ||
-      !vendorPresentationOpportunity.trim() ||
-      !vendorSelectionDate.trim() ||
-      !callWithDxgProducer.trim() ||
-      !howDidYouHear.trim()
-    ) {
-      return false;
-    }
-    if (vendorPresentationOpportunity === "YES" && !vendorPresentationDate.trim()) return false;
-    if (howDidYouHear === "Other" && !howDidYouHearOther.trim()) return false;
-    if (!proposalFormatPreferences || proposalFormatPreferences.length === 0) return false;
-
     const hybridActive = proposalData.event.eventFormat !== "In-Person";
     const scenicActive =
       proposalData.roomByRoom.some((r) => r.scenicStageDesign === "Yes") ||
@@ -1600,27 +1595,51 @@ const AddNewProposal = ({
       (scenicActive ? evaluationMatrix.creativeScenic : 0) +
       evaluationMatrix.responsiveness +
       evaluationMatrix.sustainabilityDei;
-    if (matrixSum !== 100) return false;
-
-    return true;
+    return [
+      !estimatedAvBudget.trim() ? "Estimated AV budget range" : "",
+      !vendorQuestionsDueDate.trim() ? "Vendor questions due date" : "",
+      !responseToVendorQuestionsDate.trim() ? "Response to vendor questions date" : "",
+      !proposalSubmissionDueDate.trim() ? "Proposal submission due date" : "",
+      !shortlistNotificationDate.trim() ? "Shortlist notification date" : "",
+      !vendorPresentationOpportunity.trim() ? "Vendor presentation choice" : "",
+      vendorPresentationOpportunity === "YES" && !vendorPresentationDate.trim()
+        ? "Vendor presentation date"
+        : "",
+      !vendorSelectionDate.trim() ? "Vendor selection date" : "",
+      !callWithDxgProducer.trim() ? "DXG producer call choice" : "",
+      !howDidYouHear.trim() ? "How you heard about DXG" : "",
+      howDidYouHear === "Other" && !howDidYouHearOther.trim()
+        ? "How you heard about DXG details"
+        : "",
+      !proposalFormatPreferences || proposalFormatPreferences.length === 0
+        ? "Proposal format preference"
+        : "",
+      matrixSum !== 100
+        ? `Evaluation weights must total 100% (currently ${matrixSum}%)`
+        : "",
+    ].filter(Boolean);
   };
 
-  const isContactStepValid = () => {
+  const isBudgetStepValid = () => budgetValidationIssues().length === 0;
+
+  const contactValidationIssues = () => {
     const {
       contactFirstName, contactLastName, contactTitle,
       contactOrganization, contactEmail, contactPhone,
       organizationLegalName,
     } = proposalData.contact;
-    return (
-      contactFirstName.trim().length > 0 &&
-      contactLastName.trim().length > 0 &&
-      contactTitle.trim().length > 0 &&
-      contactOrganization.trim().length > 0 &&
-      contactEmail.trim().length > 0 &&
-      contactPhone.trim().length > 0 &&
-      organizationLegalName.trim().length > 0
-    );
+    return [
+      !contactFirstName.trim() ? "Contact first name" : "",
+      !contactLastName.trim() ? "Contact last name" : "",
+      !contactTitle.trim() ? "Contact title" : "",
+      !contactOrganization.trim() ? "Organization display name" : "",
+      !contactEmail.trim() ? "Contact email" : "",
+      !contactPhone.trim() ? "Contact phone" : "",
+      !organizationLegalName.trim() ? "Organization legal name" : "",
+    ].filter(Boolean);
   };
+
+  const isContactStepValid = () => contactValidationIssues().length === 0;
 
   /**
    * Steps whose required fields are genuinely filled, for the sidebar's green
@@ -1642,6 +1661,48 @@ const AddNewProposal = ({
       if (validator ? validator() : proposalProcessStep > step) done.push(step);
     }
     return done;
+  })();
+
+  const currentValidationSummary = (() => {
+    if (!showErrors) return null;
+
+    if (proposalProcessStep === 1) {
+      return { section: "Event Overview", issues: eventValidationIssues() };
+    }
+    if (proposalProcessStep === 2) {
+      return {
+        section: "Venue & Schedule",
+        issues: Object.values(
+          venueScheduleValidationErrors(
+            proposalData.venueSchedule,
+            toIsoDate(proposalData.event.startDate),
+            toIsoDate(proposalData.event.endDate),
+          ),
+        ).filter(Boolean),
+      };
+    }
+    if (proposalProcessStep === 3) {
+      const incomplete = firstIncompleteRoom(rooms);
+      return {
+        section: "Room Specifications",
+        issues: incomplete
+          ? [`${incomplete.label}: ${incomplete.missing.join(", ")}`]
+          : [],
+      };
+    }
+    if (proposalProcessStep === 7) {
+      return { section: "Venue & Technical", issues: venueValidationIssues() };
+    }
+    if (proposalProcessStep === 8) {
+      return { section: "Investment & Evaluation", issues: budgetValidationIssues() };
+    }
+    if (proposalProcessStep === 9) {
+      return { section: "Uploads & Co-Vendors", issues: uploadsValidationIssues() };
+    }
+    if (proposalProcessStep === 10) {
+      return { section: "Contact & Publish", issues: contactValidationIssues() };
+    }
+    return null;
   })();
 
   const normalizeRoomByRoomForSubmit = (
@@ -2014,7 +2075,7 @@ const AddNewProposal = ({
   };
 
   /** Convert a stored date string (MM/DD/YYYY or similar) to YYYY-MM-DD for HTML date inputs */
-  const toIsoDate = (raw: string): string => {
+  function toIsoDate(raw: string): string {
     if (!raw) return "";
     const v = raw.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
@@ -2025,7 +2086,7 @@ const AddNewProposal = ({
     if (c.length === 4) return `${c}-${b.padStart(2, "0")}-${a.padStart(2, "0")}`;
     if (a.length === 4) return `${a}-${b.padStart(2, "0")}-${c.padStart(2, "0")}`;
     return "";
-  };
+  }
 
   const handleSaveCopy = async (overrides: {
     eventName: string;
@@ -2356,6 +2417,9 @@ const AddNewProposal = ({
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_CONTEXT_ENABLED === "true" && <ProposalContextPanel proposalId={proposalId} />}
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED !== "true" && process.env.NEXT_PUBLIC_PROPOSAL_DRAFT_ENABLED === "true" && <ProposalDraftPanel proposalId={proposalId} />}
             <div id="manual-proposal-details" />
+            {currentValidationSummary && (
+              <ProposalValidationSummary {...currentValidationSummary} />
+            )}
             {proposalProcessStep === 1 && (
               <EventForm
                 data={proposalData.event}
