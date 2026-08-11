@@ -14,6 +14,7 @@ import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./even
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
 import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
 import RoomDeletionDialog from "../RoomDeletionDialog";
+import ToastMessage from "@/components/ui/ToastMessage";
 import {
   SCREEN_SIZE_OTHER,
   SCREEN_SIZE_VENDOR_RECOMMENDATION,
@@ -2557,7 +2558,13 @@ const RoomAndProductionStep = ({
       });
       return next;
     });
-    toast.success(`${label} removed. ${nextRooms.length} room${nextRooms.length === 1 ? " remains" : "s remain"}.`);
+    toast.success(
+      <ToastMessage
+        title="Room removed"
+        description={`“${label}” was removed. ${nextRooms.length} room${nextRooms.length === 1 ? " remains" : "s remain"}.`}
+      />,
+      { ariaLabel: `${label} removed` },
+    );
   };
 
   const handleScheduleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
