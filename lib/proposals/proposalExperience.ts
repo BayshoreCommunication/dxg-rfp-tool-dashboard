@@ -32,6 +32,74 @@ export type TimelineIssue = {
   message: string;
 };
 
+export type ProcurementTimelineDateField = Exclude<
+  keyof ProcurementTimelineData,
+  "vendorPresentationOpportunity"
+>;
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const procurementTimelineFields = (
+  data: ProcurementTimelineData,
+): ProcurementTimelineDateField[] => [
+  "vendorQuestionsDueDate",
+  "responseToVendorQuestionsDate",
+  "proposalSubmissionDueDate",
+  "shortlistNotificationDate",
+  ...(data.vendorPresentationOpportunity === "YES"
+    ? (["vendorPresentationDate"] as ProcurementTimelineDateField[])
+    : []),
+  "vendorSelectionDate",
+  "decisionDate",
+];
+
+const localDateFromDay = (day: number): Date => {
+  const utc = new Date(day);
+  return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
+};
+
+/**
+ * Calendar bounds for a procurement milestone. The latest populated earlier
+ * milestone becomes the minimum, the earliest populated later milestone
+ * becomes the maximum, and every procurement milestone must remain before the
+ * event starts. Today is the fallback minimum so users cannot add new dates in
+ * the past.
+ */
+export const procurementTimelineDateBounds = (
+  data: ProcurementTimelineData,
+  field: ProcurementTimelineDateField,
+  eventStartDate?: string,
+  today = new Date(),
+): { minDate: Date; maxDate?: Date } => {
+  const fields = procurementTimelineFields(data);
+  const index = fields.indexOf(field);
+  const todayAt = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const previousDates = (index < 0 ? [] : fields.slice(0, index))
+    .map((candidate) => parseDate(data[candidate]))
+    .filter((candidate): candidate is number => candidate !== null);
+  const nextDates = (index < 0 ? [] : fields.slice(index + 1))
+    .map((candidate) => parseDate(data[candidate]))
+    .filter((candidate): candidate is number => candidate !== null);
+  const eventStart = parseDate(eventStartDate);
+  const maximumCandidates = [
+    ...nextDates,
+    ...(eventStart !== null ? [eventStart - ONE_DAY_MS] : []),
+  ];
+  const minimum = Math.max(todayAt, ...previousDates);
+  const maximum = maximumCandidates.length
+    ? Math.min(...maximumCandidates)
+    : null;
+
+  return {
+    minDate: localDateFromDay(minimum),
+    ...(maximum !== null ? { maxDate: localDateFromDay(maximum) } : {}),
+  };
+};
+
 const BASIC_STEP_IDS = [1, 2, 3, 8, 10] as const;
 const ADVANCED_STEP_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 

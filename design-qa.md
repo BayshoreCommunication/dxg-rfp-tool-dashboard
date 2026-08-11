@@ -37,6 +37,77 @@ final result: blocked
 - Automated verification: focused Jest suite passed 9/9 tests; ESLint, TypeScript, and `git diff --check` passed.
 
 final result: passed
+
+---
+
+# Procurement Timeline Date Bounds — Design QA
+
+## Evidence
+
+- Source visual truth (validation state): `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_8YwBqv/Screenshot 2026-08-11 at 6.01.14 PM.png`
+- Source visual truth (open calendar): `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_R4ztQp/Screenshot 2026-08-11 at 6.01.26 PM.png`
+- Browser-rendered implementation: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/procurement-date-bounds-localhost-qa.png`
+- Combined comparison: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/procurement-date-bounds-comparison.png`
+- Route: `http://localhost:3000/proposals/proposal-edit?proposalId=6a7ad926334f978be434d136`
+- State: Investment & Evaluation, Presentation Date calendar open, stored Presentation Date `08-19-2026`, Shortlist Notification `08-30-2026`, Vendor Selection `08-31-2026`.
+
+## Viewport and normalization
+
+- Source validation capture: 858 × 149 pixels at supplied 1× density.
+- Source calendar capture: 424 × 406 pixels at supplied 1× density.
+- Browser implementation capture: 1444 × 952 pixels at 1× density; the focused calendar region was cropped to 900 × 405 pixels without resizing.
+- The combined 1200 × 1220 comparison places both source states and the focused implementation crop in one review image. Layout scale differs because the source was tightly cropped; calendar typography, tokens, selected/disabled states, and interaction affordances were compared at original pixel density.
+
+## Full-view comparison evidence
+
+The implementation preserves the existing proposal editor, procurement-card layout, field label, input, calendar trigger, validation copy, and workflow rail. No unrelated layout, typography, or navigation changes appear in the browser capture.
+
+## Focused-region comparison evidence
+
+The source calendar visually presents every day as selectable, including `08-19-2026`, even though the adjacent validation says the presentation must be on or after `08-30-2026`. In the implementation, August 1–29 and September 1–5 are exposed as “Not available” disabled grid cells, while August 30–31 are the only selectable dates. The stored invalid 19th remains visible for correction but no longer receives the cyan selected treatment; it is grey and struck through like every other blocked date.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the existing product font, heading weight, field label, helper text, and calendar hierarchy are unchanged.
+- Spacing and layout rhythm: the input, popover alignment, card padding, day grid, and workflow rail retain their existing dimensions and rhythm with no clipping or overflow.
+- Colors and visual tokens: cyan remains reserved for active/available states. Disabled dates use the existing muted neutral token, line-through affordance, and no hover elevation or selected shadow.
+- Image quality and asset fidelity: no raster imagery was introduced. The existing calendar icon and date-picker controls remain sharp and consistent with the product icon system.
+- Copy and content: the existing field label and direct validation message remain unchanged. Accessibility names now identify every unavailable date as “Not available”.
+
+## Interaction and runtime checks
+
+- Opening Presentation Date with Shortlist Notification `08-30-2026` and Vendor Selection `08-31-2026` leaves only August 30–31 selectable.
+- Attempting to activate the disabled August 19 grid cell was blocked by the browser; the stored input value remained unchanged.
+- The same dynamic bounds are applied to Vendor Questions Due, Response to Vendor Questions, Proposal Submission Due, Shortlist Notification, Presentation Date, Vendor Selection, and Target Decision Date.
+- Past dates are disabled, later populated milestones cap earlier pickers, earlier populated milestones set later-picker minimums, and every procurement date is capped to the day before the event starts.
+- Browser error state was checked: no app runtime, hydration, or error overlay appeared. The local Next.js toolbar retained one pre-existing advisory issue badge unrelated to this interaction.
+
+## Comparison history
+
+### Pass 1
+
+- [P2] The old invalid selected date was functionally disabled but retained the cyan selected style, making it appear actionable. Fix: disabled and disabled-hover styling now overrides selected and keyboard-selected states, removes elevation, and prevents hover movement.
+
+### Pass 2
+
+- Post-fix browser evidence shows the invalid selected date using the same grey, struck-through visual language as all blocked dates.
+- No actionable P0, P1, or P2 findings remain.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+
+## Implementation checklist
+
+- [x] Bound each procurement calendar to the latest earlier milestone.
+- [x] Bound each procurement calendar to the earliest later milestone.
+- [x] Disable past dates and dates on or after the event start.
+- [x] Keep viable same-day milestones selectable in line with existing validation rules.
+- [x] Make disabled, selected-invalid, hover, and accessibility states unambiguous.
+- [x] Verify the open-calendar state and blocked click in localhost.
+- [x] Verify the full automated test suite, lint, and type-check.
+
+final result: passed
 ---
 
 ## Proposal Journey Neutral and Selected Indicators — Verification Status

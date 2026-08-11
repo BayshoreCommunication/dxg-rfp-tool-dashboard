@@ -2,6 +2,7 @@ import {
   buildPersonalizedInvitation,
   buildVendorReadyStatementOfWork,
   estimateInitialBudget,
+  procurementTimelineDateBounds,
   procurementTimelineIssues,
   proposalStepOrder,
 } from "./proposalExperience";
@@ -35,6 +36,54 @@ describe("proposal experience helpers", () => {
         "vendorSelectionDate",
       ]),
     );
+  });
+
+  test("bounds each procurement calendar between viable surrounding milestones", () => {
+    const timeline = {
+      vendorQuestionsDueDate: "2026-08-12",
+      responseToVendorQuestionsDate: "2026-08-14",
+      proposalSubmissionDueDate: "2026-08-16",
+      shortlistNotificationDate: "2026-08-20",
+      vendorPresentationOpportunity: "YES",
+      vendorPresentationDate: "2026-08-22",
+      vendorSelectionDate: "2026-08-25",
+      decisionDate: "2026-08-26",
+    };
+    const today = new Date(2026, 7, 11);
+
+    expect(
+      procurementTimelineDateBounds(
+        timeline,
+        "vendorPresentationDate",
+        "2026-08-30",
+        today,
+      ),
+    ).toEqual({
+      minDate: new Date(2026, 7, 20),
+      maxDate: new Date(2026, 7, 25),
+    });
+    expect(
+      procurementTimelineDateBounds(
+        timeline,
+        "vendorQuestionsDueDate",
+        "2026-08-30",
+        today,
+      ),
+    ).toEqual({
+      minDate: new Date(2026, 7, 11),
+      maxDate: new Date(2026, 7, 14),
+    });
+    expect(
+      procurementTimelineDateBounds(
+        timeline,
+        "decisionDate",
+        "2026-08-30",
+        today,
+      ),
+    ).toEqual({
+      minDate: new Date(2026, 7, 25),
+      maxDate: new Date(2026, 7, 29),
+    });
   });
 
   test("builds an explainable budget range", () => {

@@ -355,12 +355,23 @@ body {
   font-weight: 500;
 }
 
-.dxg-datepicker .react-datepicker__day--disabled {
-  color: #a6b5bb;
-  background: #f4f7f8;
+.dxg-datepicker .react-datepicker__day--disabled,
+.dxg-datepicker .react-datepicker__day--disabled.react-datepicker__day--selected,
+.dxg-datepicker .react-datepicker__day--disabled.react-datepicker__day--keyboard-selected {
+  color: #a6b5bb !important;
+  background: #f4f7f8 !important;
   cursor: not-allowed;
   text-decoration: line-through;
   text-decoration-thickness: 1px;
+  box-shadow: none;
+}
+
+.dxg-datepicker .react-datepicker__day--disabled:hover,
+.dxg-datepicker .react-datepicker__day--disabled.react-datepicker__day--selected:hover,
+.dxg-datepicker .react-datepicker__day--disabled.react-datepicker__day--keyboard-selected:hover {
+  color: #a6b5bb !important;
+  background: #f4f7f8 !important;
+  transform: none;
 }
 
 .dxg-datepicker .react-datepicker__today-button {

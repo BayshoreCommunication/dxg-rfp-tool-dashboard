@@ -5,7 +5,9 @@ import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import type { BudgetData, ProposalSettings } from "../AddNewProposal";
 import {
+  procurementTimelineDateBounds,
   procurementTimelineIssues,
+  type ProcurementTimelineDateField,
   type ProposalExperienceMode,
 } from "@/lib/proposals/proposalExperience";
 import { InfoTooltip, toggleItem } from "./shared";
@@ -351,6 +353,8 @@ const BudgetProposalPreferences = ({
   const timelineIssues = procurementTimelineIssues(safeData, eventStartDate);
   const timelineError = (field: keyof BudgetData) =>
     timelineIssues.find((issue) => issue.field === field)?.message;
+  const timelineBounds = (field: ProcurementTimelineDateField) =>
+    procurementTimelineDateBounds(safeData, field, eventStartDate);
 
   /* ─── Quick-balance: proportionally scale active rows to sum to 100 ─── */
   const quickBalance = () => {
@@ -856,6 +860,8 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.vendorQuestionsDueDate)}
               onChange={(value) => onChange({ vendorQuestionsDueDate: fromDateToIso(value) })}
+              {...timelineBounds("vendorQuestionsDueDate")}
+              showTodayShortcut
               inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorQuestionsDueDate) || timelineError("vendorQuestionsDueDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.vendorQuestionsDueDate && (
@@ -877,6 +883,8 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.responseToVendorQuestionsDate)}
               onChange={(value) => onChange({ responseToVendorQuestionsDate: fromDateToIso(value) })}
+              {...timelineBounds("responseToVendorQuestionsDate")}
+              showTodayShortcut
               inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.responseToVendorQuestionsDate) || timelineError("responseToVendorQuestionsDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.responseToVendorQuestionsDate && (
@@ -902,6 +910,8 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.proposalSubmissionDueDate)}
               onChange={(value) => onChange({ proposalSubmissionDueDate: fromDateToIso(value) })}
+              {...timelineBounds("proposalSubmissionDueDate")}
+              showTodayShortcut
               inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.proposalSubmissionDueDate) || timelineError("proposalSubmissionDueDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.proposalSubmissionDueDate && (
@@ -923,6 +933,8 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.shortlistNotificationDate)}
               onChange={(value) => onChange({ shortlistNotificationDate: fromDateToIso(value) })}
+              {...timelineBounds("shortlistNotificationDate")}
+              showTodayShortcut
               inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.shortlistNotificationDate) || timelineError("shortlistNotificationDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.shortlistNotificationDate && (
@@ -966,6 +978,8 @@ const BudgetProposalPreferences = ({
                   format={pickerFormat}
                   value={fromIsoToDate(safeData.vendorPresentationDate)}
                   onChange={(value) => onChange({ vendorPresentationDate: fromDateToIso(value) })}
+                  {...timelineBounds("vendorPresentationDate")}
+                  showTodayShortcut
                   inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorPresentationDate) || timelineError("vendorPresentationDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
                 />
               </div>
@@ -993,6 +1007,8 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.vendorSelectionDate)}
               onChange={(value) => onChange({ vendorSelectionDate: fromDateToIso(value) })}
+              {...timelineBounds("vendorSelectionDate")}
+              showTodayShortcut
               inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorSelectionDate) || timelineError("vendorSelectionDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
           </div>
@@ -1018,6 +1034,8 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.decisionDate)}
               onChange={(value) => onChange({ decisionDate: fromDateToIso(value) })}
+              {...timelineBounds("decisionDate")}
+              showTodayShortcut
               inputClassName={`${inputClass} pr-12 ${timelineError("decisionDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
           </div>
