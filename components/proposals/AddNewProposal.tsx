@@ -39,7 +39,6 @@ import {
 } from "./ledWallPlan";
 import {
   buildVendorReadyStatementOfWork,
-  estimateInitialBudget,
   procurementTimelineIssues,
   proposalStepOrder,
   type AnswerProvenance,
@@ -1914,12 +1913,6 @@ const AddNewProposal = ({
   const visibleCompletedSteps = visibleStepOrder.filter((step) =>
     completedStepIds.includes(step),
   ).length;
-  const budgetEstimate = estimateInitialBudget({
-    attendees: proposalData.event.attendees,
-    rooms: proposalData.venueSchedule.numberOfEventRooms,
-    eventFormat: proposalData.event.eventFormat,
-  });
-
   const normalizeRoomByRoomForSubmit = (
     roomByRoom: RoomByRoomData,
   ): RoomByRoomData => {
@@ -2876,7 +2869,6 @@ const AddNewProposal = ({
                 budget={proposalData.budget}
                 contact={proposalData.contact}
                 issues={checklistIssues}
-                budgetEstimate={budgetEstimate}
                 provenance={fieldProvenance}
                 auditTrail={auditTrail}
                 assumptions={basicAssumptions}

@@ -6,7 +6,7 @@ import type { VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep
 
 const noop = jest.fn();
 
-test("summarizes essential scope, provenance, estimate, and approval", () => {
+test("summarizes vendor-visible scope without exposing planning estimates", () => {
   render(
     <ProposalFinalReview
       event={{ eventName: "Summit", eventFormat: "In-Person", attendees: "300", startDate: "2026-09-01", endDate: "2026-09-02", eventType: { eventType: "Conference" } } as EventData}
@@ -15,7 +15,6 @@ test("summarizes essential scope, provenance, estimate, and approval", () => {
       budget={{ estimatedAvBudget: "Standard", proposalSubmissionDueDate: "2026-08-10", vendorSelectionDate: "2026-08-20" } as BudgetData}
       contact={{ contactFirstName: "Taylor", contactLastName: "Reed", contactOrganization: "DXG", contactEmail: "taylor@example.com", additionalContacts: [] } as unknown as ContactData}
       issues={[]}
-      budgetEstimate={{ low: 30_000, high: 45_000, confidence: 90, explanation: "Planning inputs complete." }}
       provenance={{ roomByRoom: { source: "assumed", confidence: 0.86, explanation: "Template applied." } }}
       auditTrail={[{ id: "1", label: "Applied General Session template", source: "assumed", createdAt: "2026-08-11T00:00:00.000Z" }]}
       assumptions={["Recording remains unspecified."]}
@@ -27,7 +26,9 @@ test("summarizes essential scope, provenance, estimate, and approval", () => {
   );
 
   expect(screen.getByText("Required information complete")).toBeInTheDocument();
-  expect(screen.getByText("$30,000–$45,000")).toBeInTheDocument();
+  expect(screen.getByText("Procurement timeline")).toBeInTheDocument();
+  expect(screen.queryByText("AI planning estimate")).not.toBeInTheDocument();
+  expect(screen.queryByText("Standard")).not.toBeInTheDocument();
   expect(screen.getByText("Assumed · 86%")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("checkbox"));
   expect(noop).toHaveBeenCalledWith(true);

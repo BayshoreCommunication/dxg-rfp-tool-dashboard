@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Bot,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
@@ -23,7 +22,6 @@ import type {
 import type { VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
 import type {
   AnswerProvenance,
-  BudgetEstimate,
   ProposalChecklistIssue,
 } from "@/lib/proposals/proposalExperience";
 
@@ -41,7 +39,6 @@ type Props = {
   budget: BudgetData;
   contact: ContactData;
   issues: ProposalChecklistIssue[];
-  budgetEstimate: BudgetEstimate;
   provenance: Record<string, AnswerProvenance>;
   auditTrail: ProposalAuditEntry[];
   assumptions: string[];
@@ -50,13 +47,6 @@ type Props = {
   onEditStep: (step: number) => void;
   onGenerateStatementOfWork: () => void;
 };
-
-const money = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
 
 const sourcePresentation = {
   user: { label: "User-provided", className: "border-sky-200 bg-sky-50 text-sky-700" },
@@ -122,7 +112,6 @@ export default function ProposalFinalReview({
   budget,
   contact,
   issues,
-  budgetEstimate,
   provenance,
   auditTrail,
   assumptions,
@@ -151,7 +140,7 @@ export default function ProposalFinalReview({
             Confirm what vendors will receive
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-            Review scope, dates, budget, contacts, recipients, and every AI assumption before publishing.
+            Review scope, dates, procurement milestones, contacts, recipients, and every AI assumption before publishing.
           </p>
         </div>
         <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-extrabold ${issues.length === 0 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
@@ -181,8 +170,7 @@ export default function ProposalFinalReview({
           <p>Vendor recommendations remain editable in Advanced production.</p>
         </ReviewCard>
 
-        <ReviewCard title="Budget and procurement" step={8} onEdit={onEditStep} provenance={provenance.budget} icon={<DollarSign size={17} aria-hidden="true" />}>
-          <p className="font-bold text-slate-900">{budget.estimatedAvBudget || "Budget range not selected"}</p>
+        <ReviewCard title="Procurement timeline" step={8} onEdit={onEditStep} provenance={provenance.budget} icon={<DollarSign size={17} aria-hidden="true" />}>
           <p>Proposals due: {budget.proposalSubmissionDueDate || "Not provided"}</p>
           <p>Vendor selection: {budget.vendorSelectionDate || "Not provided"}</p>
         </ReviewCard>
@@ -198,15 +186,6 @@ export default function ProposalFinalReview({
           <p className="mt-1 text-xs text-slate-500">Vendor invitation recipients are selected after publishing.</p>
         </ReviewCard>
 
-        <article className="rounded-2xl border border-violet-200 bg-violet-50 p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-violet-900">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-violet-700"><Bot size={17} aria-hidden="true" /></span>
-            <h3 className="text-sm font-extrabold">AI planning estimate</h3>
-          </div>
-          <p className="mt-3 text-lg font-extrabold text-violet-950">{money(budgetEstimate.low)}–{money(budgetEstimate.high)}</p>
-          <p className="mt-1 text-xs font-bold text-violet-700">Confidence: {budgetEstimate.confidence}%</p>
-          <p className="mt-2 text-xs leading-5 text-violet-800">{budgetEstimate.explanation}</p>
-        </article>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">

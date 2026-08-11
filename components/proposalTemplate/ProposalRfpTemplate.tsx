@@ -249,9 +249,6 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     p(proposal.proposalSetting?.branding?.brandName) ||
     p(proposal.proposalSettings?.linkPrefix) ||
     "DXG";
-  const currency =
-    p(proposal.proposalSetting?.proposals?.defaultCurrency) ||
-    p(proposal.proposalSettings?.defaultCurrency) || "$";
 
   const eventName = p(ev.eventName) || "Event Proposal";
   const isHybrid = ev.eventFormat === "Hybrid" || ev.eventFormat === "Virtual";
@@ -588,10 +585,6 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             <div className="stat-label">Union Venue</div>
             <div className="stat-value" style={{ color: "#f97316" }}>{p(vs.isUnionVenue) === "YES" ? "Yes" : p(vs.isUnionVenue) === "NO" ? "No" : "—"}</div>
           </div>
-          <div className="stat-card" style={{ borderTopColor: "#10b981", background: "rgba(16,185,129,0.04)" }}>
-            <div className="stat-label">Budget Tier</div>
-            <div className="stat-value" style={{ color: "#10b981" }}>{p(bud.estimatedAvBudget) || "—"}</div>
-          </div>
         </div>
 
         {flags.length > 0 && (
@@ -710,7 +703,6 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           <InfoRow label="Attendees" value={p(ev.attendees)} />
           <InfoRow label="Production Rooms" value={p(vs.numberOfEventRooms) || String(rooms.length) || ""} />
           <InfoRow label="Time Zone" value={p(vs.timeZone)} />
-          <InfoRow label="Budget Tier" value={p(bud.estimatedAvBudget) ? `${currency} ${p(bud.estimatedAvBudget)}` : ""} />
           {arr(bud.proposalFormatPreferences as unknown).length > 0 && (
             <InfoRow label="Proposal Format" value={arr(bud.proposalFormatPreferences as unknown).join(", ")} />
           )}
