@@ -523,3 +523,72 @@ The accessibility-tree review separately confirmed unique form/section headings,
 - [x] Verify focused and full-page visual evidence.
 
 final result: passed
+
+---
+
+# Items Remaining Floating Popover — Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_xhdUbX/Screenshot 2026-08-11 at 6.15.39 PM.png`
+- Browser-rendered implementation: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/items-remaining-floating-popover-localhost.png`
+- Combined comparison: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/items-remaining-floating-popover-comparison.png`
+- Route: `http://localhost:3000/proposals/proposal-edit?proposalId=6a7ad926334f978be434d136`
+- State: Advanced production mode, seven checklist items, checklist open.
+
+## Viewport and normalization
+
+- Source: 1276 × 475 pixels at supplied 1× density.
+- Browser implementation: 1265 × 712 pixels at 1× density; the comparison uses an unscaled 1265 × 540 top-of-page crop.
+- Source and implementation are both desktop light-theme states. Live readiness changed from 9/10 in the source capture to 6/10 in the browser data; this does not affect the popover geometry or styling under review.
+
+## Full-view comparison evidence
+
+The source checklist participates in the proposal-builder grid and increases the card height to match the full checklist. The implementation keeps the proposal-builder card compact and anchors the checklist eight pixels below its trigger as a layered panel above the following proposal content. The panel remains aligned to the trigger's right and width, with its own bounded scroll area.
+
+## Focused-region comparison evidence
+
+The comparison shows unchanged trigger typography, icon, count, border radius, label hierarchy, and row density. The new elevation, border, white surface, and independent scrollbar clearly distinguish the checklist as temporary floating content. The open trigger retains a visible focus/active treatment, while the underlying page remains readable and structurally unchanged.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing product font, weights, label casing, and line heights are preserved.
+- Spacing and layout rhythm: the builder card no longer acquires empty vertical space; the popover uses an 8 px anchor gap, 12 px radius, and the existing 288 px maximum list height.
+- Colors and visual tokens: existing slate, white, cyan, and blue tokens remain; elevation is consistent with other product popovers.
+- Image quality and asset fidelity: no raster assets were introduced. Existing Lucide checklist and chevron icons are preserved.
+- Copy and content: all checklist counts, section names, and issue labels remain unchanged.
+
+## Interaction and runtime checks
+
+- Trigger toggles the floating region and exposes `aria-expanded` and `aria-controls`.
+- Selecting an issue closes the popover before navigating to the issue.
+- Clicking outside closes the popover.
+- Escape closes the popover and restores keyboard focus to the trigger.
+- Long lists scroll within the panel without changing the proposal-builder card height.
+- No browser-visible runtime, hydration, or error overlay appeared during the verified interaction.
+
+## Comparison history
+
+### Pass 1
+
+- [P1] The checklist expanded the full proposal-builder card, producing a large empty left column and pushing primary proposal content down. Fix: replaced the in-flow disclosure body with a controlled, absolutely positioned popover anchored to the existing trigger.
+
+### Pass 2
+
+- Post-fix evidence shows the builder card retaining its compact height while the complete checklist floats over the following content.
+- No actionable P0, P1, or P2 findings remain.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+
+## Implementation checklist
+
+- [x] Remove open checklist content from document flow.
+- [x] Preserve the existing trigger and checklist visual language.
+- [x] Keep long lists independently scrollable.
+- [x] Support toggle, issue selection, outside-click, and Escape dismissal.
+- [x] Restore trigger focus after keyboard dismissal.
+- [x] Verify browser rendering and the full automated suite.
+
+final result: passed

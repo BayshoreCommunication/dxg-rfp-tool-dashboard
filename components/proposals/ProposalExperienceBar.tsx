@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, ChevronDown, ListChecks, SlidersHorizontal, Sparkles } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type {
   ProposalChecklistIssue,
@@ -24,9 +25,40 @@ export default function ProposalExperienceBar({
   issues,
   onIssueClick,
 }: Props) {
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const checklistId = useId();
+  const checklistRef = useRef<HTMLDivElement | null>(null);
+  const checklistTriggerRef = useRef<HTMLButtonElement | null>(null);
   const progress = totalSteps === 0
     ? 0
     : Math.round((completedSteps / totalSteps) * 100);
+
+  useEffect(() => {
+    if (!checklistOpen) return;
+
+    const closeOutside = (event: PointerEvent) => {
+      if (!checklistRef.current?.contains(event.target as Node)) {
+        setChecklistOpen(false);
+      }
+    };
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setChecklistOpen(false);
+      window.requestAnimationFrame(() => checklistTriggerRef.current?.focus());
+    };
+
+    document.addEventListener("pointerdown", closeOutside);
+    window.addEventListener("keydown", closeWithEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      window.removeEventListener("keydown", closeWithEscape);
+    };
+  }, [checklistOpen]);
+
+  const selectIssue = (issue: ProposalChecklistIssue) => {
+    setChecklistOpen(false);
+    onIssueClick(issue);
+  };
 
   return (
     <section
@@ -105,8 +137,19 @@ export default function ProposalExperienceBar({
           </p>
         </div>
 
-        <details className="group rounded-xl border border-slate-200 bg-slate-50 open:bg-white">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] [&::-webkit-details-marker]:hidden">
+        <div ref={checklistRef} className="relative">
+          <button
+            ref={checklistTriggerRef}
+            type="button"
+            aria-expanded={checklistOpen}
+            aria-controls={checklistId}
+            onClick={() => setChecklistOpen((current) => !current)}
+            className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm font-bold text-slate-800 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] ${
+              checklistOpen
+                ? "border-[#b9dfe8] bg-white shadow-sm"
+                : "border-slate-200 bg-slate-50 hover:border-[#c9dce4] hover:bg-white"
+            }`}
+          >
             <span className="flex items-center gap-2">
               {issues.length === 0 ? (
                 <CheckCircle2 size={18} className="text-emerald-600" aria-hidden="true" />
@@ -119,37 +162,45 @@ export default function ProposalExperienceBar({
             </span>
             <ChevronDown
               size={17}
-              className="transition-transform group-open:rotate-180"
+              className={`transition-transform ${checklistOpen ? "rotate-180" : ""}`}
               aria-hidden="true"
             />
-          </summary>
-          <div className="max-h-72 overflow-y-auto border-t border-slate-200 p-2">
-            {issues.length === 0 ? (
-              <p className="px-2 py-3 text-sm text-emerald-700">
-                All required information for this mode is complete.
-              </p>
-            ) : (
-              <ul className="space-y-1">
-                {issues.map((issue) => (
-                  <li key={issue.id}>
-                    <button
-                      type="button"
-                      onClick={() => onIssueClick(issue)}
-                      className="w-full rounded-lg px-3 py-2.5 text-left transition hover:bg-[#eef8fd] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0786cf]"
-                    >
-                      <span className="block text-[11px] font-extrabold uppercase tracking-wide text-[#0786cf]">
-                        {issue.section}
-                      </span>
-                      <span className="mt-0.5 block text-sm font-semibold text-slate-700">
-                        {issue.label}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </details>
+          </button>
+
+          {checklistOpen && (
+            <div
+              id={checklistId}
+              role="region"
+              aria-label="Remaining required items"
+              className="absolute right-0 top-[calc(100%+8px)] z-[80] max-h-72 w-full min-w-[min(320px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-[#cfe1e8] bg-white p-2 shadow-[0_20px_48px_rgba(15,42,67,0.18),0_4px_12px_rgba(7,134,207,0.08)] motion-safe:animate-[assistant-message-in_160ms_ease-out]"
+            >
+              {issues.length === 0 ? (
+                <p className="px-2 py-3 text-sm text-emerald-700">
+                  All required information for this mode is complete.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {issues.map((issue) => (
+                    <li key={issue.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectIssue(issue)}
+                        className="w-full rounded-lg px-3 py-2.5 text-left transition hover:bg-[#eef8fd] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0786cf]"
+                      >
+                        <span className="block text-[11px] font-extrabold uppercase tracking-wide text-[#0786cf]">
+                          {issue.section}
+                        </span>
+                        <span className="mt-0.5 block text-sm font-semibold text-slate-700">
+                          {issue.label}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

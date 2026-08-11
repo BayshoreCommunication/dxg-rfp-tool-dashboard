@@ -47,8 +47,46 @@ describe("ProposalExperienceBar", () => {
       />,
     );
 
-    await user.click(screen.getByText("1 item remaining"));
+    const trigger = screen.getByRole("button", { name: "1 item remaining" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("region", { name: "Remaining required items" }))
+      .toHaveClass("absolute");
+
     await user.click(screen.getByRole("button", { name: /Event Overview Add the event name/ }));
     expect(onIssueClick).toHaveBeenCalledWith(issue);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("region", { name: "Remaining required items" }))
+      .not.toBeInTheDocument();
+  });
+
+  test("dismisses the floating checklist with Escape and restores trigger focus", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProposalExperienceBar
+        mode="advanced"
+        onModeChange={jest.fn()}
+        completedSteps={9}
+        totalSteps={10}
+        issues={[{
+          id: "contact-first-name",
+          stepId: 10,
+          section: "Contact & Publish",
+          label: "Contact first name",
+        }]}
+        onIssueClick={jest.fn()}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: "1 item remaining" });
+    await user.click(trigger);
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("region", { name: "Remaining required items" }))
+      .not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });
