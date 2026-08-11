@@ -37,7 +37,6 @@ final result: blocked
 - Automated verification: focused Jest suite passed 9/9 tests; ESLint, TypeScript, and `git diff --check` passed.
 
 final result: passed
-
 ---
 
 ## Proposal Journey Neutral and Selected Indicators — Verification Status
@@ -367,5 +366,89 @@ The references and implementation differ in source image size and crop. Comparis
 - Runtime verification: no browser errors were observed. One pre-existing image-loading performance warning was present for `rfpilot-primary-logo.png`.
 - Visual comparison: the proposal header omits the DXG wordmark, the live-status band, five-step workflow, Event Overview fields, narrative textarea, footer actions, and white Intake Form rail match the approved direction. The global application rail remains outside the proposal canvas, and proposal text/status reflect live backend data rather than the static mock.
 - Iteration: removed the duplicate Technical details panel, moved the narrative field above the fold, eliminated duplicate Ask AI labels, and replaced the dark intake rail with the approved light treatment.
+
+final result: passed
+
+---
+
+# Vendor Response Redesign — Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_6CRw5C/Screenshot 2026-08-11 at 4.31.43 PM.png`
+- Browser-rendered implementation viewport: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/vendor-response-redesign.jpg`
+- Browser-rendered implementation full page: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/vendor-response-redesign-full.jpg`
+- Combined comparison: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/vendor-response-comparison.jpg`
+- Route: `http://localhost:3000/vendor-response/general-av-services-rfp-6a7aa6f2c7e1575700216e0a`
+- State: first-time vendor response, empty form, light theme.
+
+## Viewport and normalization
+
+- Source: 712 × 849 pixels, supplied at 1× density.
+- Browser viewport: 1280 × 720 CSS pixels at device pixel ratio 1.
+- Browser viewport capture: 1265 × 712 pixels (the in-app browser excludes its scrollbar area).
+- Full-page evidence was assembled from three browser viewport captures at scroll positions 0, 700, and 867 CSS pixels. The resulting implementation image is 1265 × 1568 pixels.
+- For the combined full-view comparison, both panels were fit into equal 712 × 849 review frames without cropping the app-owned content. The source is portrait while the available in-app browser viewport is landscape, so the comparison is used for hierarchy, typography, color, and full-flow density rather than false pixel-level alignment.
+
+## Full-view comparison evidence
+
+The redesign preserves the source screen's light surface, centered response form, navy typography, cyan brand accent, proposal title, required contact fields, optional proposal details, document upload, primary submission action, and DXG footer. It intentionally expands the single undifferentiated card into three clearly labeled sections and adds submission reassurance, upload guidance, validation states, and review copy.
+
+No app-owned raster assets appear in the source or implementation. All interface icons use the product's existing Lucide icon system and inherit accessible text labels from their controls.
+
+## Focused-region comparison evidence
+
+The original-pixel viewport capture provides a readable focused comparison for the header and contact-information region. It confirms:
+
+- the proposal title remains immediately visible;
+- the headline retains the source's weight and hierarchy;
+- required fields preserve clear labels and familiar input proportions;
+- the security panel is visually secondary to the primary task;
+- the two-column desktop layout reduces scrolling without compressing controls.
+
+The accessibility-tree review separately confirmed unique form/section headings, associated labels, field-level alerts, focus on the first invalid field, and a single accessible file-selection control.
+
+## Required fidelity surfaces
+
+- Fonts and typography: Proxima Nova remains the inherited product font. The redesigned heading, section titles, labels, helper copy, and button weights create a clearer hierarchy without introducing a new typeface. Text remains readable at the tested viewport.
+- Spacing and layout rhythm: the source's centered-card rhythm is retained. The header, three form sections, upload area, and submission footer use consistent 20–40 px spacing, 12–24 px radii, and restrained elevation. No content clips or overlaps.
+- Colors and visual tokens: slate/navy neutrals and DXG cyan/blue accents remain consistent with the source and global tokens. Rose, amber, and emerald are limited to validation, update, and success states. Contrast is sufficient in the reviewed states.
+- Image quality and asset fidelity: no source imagery or logos required recreation. Existing vector icons remain sharp at 1× and are decorative where adjacent copy provides the meaning.
+- Copy and content: the original fields and submission purpose are preserved. New copy explains what to include, how uploads are handled, where confirmation is sent, and what submission means.
+
+## Interaction and runtime checks
+
+- Empty submission exposes three direct field errors and moves focus to the first invalid field.
+- Correcting values clears their error messages.
+- Drag-and-drop and file-picker behavior, duplicate detection, 10 MB limits, file readiness, and removal are covered by component tests.
+- Existing-response update mode and the successful confirmation state are covered by component tests.
+- Browser navigation, initial render, validation interaction, corrected field state, and accessibility structure were tested on the real localhost route.
+- No browser-visible Next.js error overlay or hydration error remained in the final route state.
+
+## Comparison history
+
+### Pass 1
+
+- [P2] Proposal context disappeared when the public proposal lookup was unavailable. Fix: added a deterministic human-readable title fallback from the route slug, preserving known acronyms such as AV and RFP. Post-fix evidence shows `General AV Services RFP` in the header.
+- [P2] The visually hidden native file input appeared as a second unlabeled file control in the accessibility tree. Fix: removed it from the accessibility tree while retaining the labeled `Choose files` button as the single entry point. Post-fix accessibility evidence contains only the labeled button.
+
+### Pass 2
+
+- No actionable P0, P1, or P2 differences remain.
+- P3 follow-up: the fuller guidance makes the page longer than the source on narrow screens. This is an intentional usability trade-off; the three section headings keep the scroll understandable.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+
+## Implementation checklist
+
+- [x] Preserve public submit and update behavior.
+- [x] Strengthen RFP context and submission trust.
+- [x] Group contact, proposal, and document tasks.
+- [x] Add direct accessible validation.
+- [x] Add drag-and-drop upload feedback and limits.
+- [x] Verify browser rendering and primary interactions.
+- [x] Verify focused and full-page visual evidence.
 
 final result: passed
