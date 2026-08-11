@@ -764,8 +764,11 @@ const VenueScheduleStep = ({
                 <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue — this is the earliest you can start setup, not the show start. Typical load-in is 1–3 days before show day for large events." />
               </label>
               <GlobalDateTimeInput
+                label="Load-In date and time"
                 hideLabel
                 showFormatInLabel={false}
+                localeAware
+                showTodayShortcut
                 showTime
                 use12Hours
                 timeIntervals={15}
@@ -797,8 +800,11 @@ const VenueScheduleStep = ({
                 <InfoTooltip text="When is your speaker/tech rehearsal scheduled? Most productions run a full tech rehearsal the day before show day. Leave blank if no formal rehearsal is planned — timeline column will display 'TBD'." />
               </label>
               <GlobalDateTimeInput
+                label="Rehearsal date and time"
                 hideLabel
                 showFormatInLabel={false}
+                localeAware
+                showTodayShortcut
                 showTime
                 use12Hours
                 timeIntervals={15}

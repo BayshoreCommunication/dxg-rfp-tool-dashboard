@@ -4,6 +4,7 @@ import { CalendarRangeIcon, X } from "lucide-react";
 import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useDatePickerLocalePresentation } from "./datePickerLocale";
 
 type DateFormatType =
   | "yyyy-dd-MM"
@@ -11,16 +12,19 @@ type DateFormatType =
   | "MM-dd-yyyy"
   | "yyyy-MM-dd"
   | "MM/dd/yyyy"
+  | "dd/MM/yyyy"
   | "yyyy-dd-MM HH:mm"
   | "dd-MM-yyyy HH:mm"
   | "MM-dd-yyyy HH:mm"
   | "yyyy-MM-dd HH:mm"
   | "MM/dd/yyyy HH:mm"
+  | "dd/MM/yyyy HH:mm"
   | "yyyy-dd-MM hh:mm aa"
   | "dd-MM-yyyy hh:mm aa"
   | "MM-dd-yyyy hh:mm aa"
   | "yyyy-MM-dd hh:mm aa"
-  | "MM/dd/yyyy hh:mm aa";
+  | "MM/dd/yyyy hh:mm aa"
+  | "dd/MM/yyyy hh:mm aa";
 
 interface GlobalDatePickerProps {
   label?: string;
@@ -50,6 +54,13 @@ interface GlobalDatePickerProps {
   timeIntervals?: number;
   /** Show an × button to clear the selected value. Default: true */
   clearable?: boolean;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
+  ariaLabelledBy?: string;
+  /** Show a Today shortcut when today is inside the allowed date window. */
+  showTodayShortcut?: boolean;
+  /** Match numeric field order and the first weekday to the browser locale. */
+  localeAware?: boolean;
 }
 
 const formatLabelMap: Record<DateFormatType, string> = {
@@ -58,16 +69,19 @@ const formatLabelMap: Record<DateFormatType, string> = {
   "MM-dd-yyyy": "MM-DD-YYYY",
   "yyyy-MM-dd": "YYYY-MM-DD",
   "MM/dd/yyyy": "MM/DD/YYYY",
+  "dd/MM/yyyy": "DD/MM/YYYY",
   "yyyy-dd-MM HH:mm": "YYYY-DD-MM HH:MM",
   "dd-MM-yyyy HH:mm": "DD-MM-YYYY HH:MM",
   "MM-dd-yyyy HH:mm": "MM-DD-YYYY HH:MM",
   "yyyy-MM-dd HH:mm": "YYYY-MM-DD HH:MM",
   "MM/dd/yyyy HH:mm": "MM/DD/YYYY HH:MM",
+  "dd/MM/yyyy HH:mm": "DD/MM/YYYY HH:MM",
   "yyyy-dd-MM hh:mm aa": "YYYY-DD-MM hh:MM AM/PM",
   "dd-MM-yyyy hh:mm aa": "DD-MM-YYYY hh:MM AM/PM",
   "MM-dd-yyyy hh:mm aa": "MM-DD-YYYY hh:MM AM/PM",
   "yyyy-MM-dd hh:mm aa": "YYYY-MM-DD hh:MM AM/PM",
   "MM/dd/yyyy hh:mm aa": "MM/DD/YYYY hh:MM AM/PM",
+  "dd/MM/yyyy hh:mm aa": "DD/MM/YYYY hh:MM AM/PM",
 };
 
 const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
@@ -94,16 +108,27 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
   use12Hours = false,
   timeIntervals = 15,
   clearable = true,
+  ariaInvalid = false,
+  ariaDescribedBy,
+  ariaLabelledBy,
+  showTodayShortcut = false,
+  localeAware = false,
 }) => {
   const dateRef = useRef<DatePicker>(null);
+  const localePresentation = useDatePickerLocalePresentation();
 
   /* Auto-resolve format when showTime is true but a date-only format is given */
   const resolvedFormat: DateFormatType = (() => {
-    if (!showTime) return format;
-    if (format.includes(":")) return format; // already has time part
+    const dateFormat = localeAware ? localePresentation.format : format;
+    if (!showTime) return dateFormat;
+    if (dateFormat.includes(":")) return dateFormat; // already has time part
     const timeToken = use12Hours ? "hh:mm aa" : "HH:mm";
-    return `${format} ${timeToken}` as DateFormatType;
+    return `${dateFormat} ${timeToken}` as DateFormatType;
   })();
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const todayIsSelectable =
+    (!minDate || today >= minDate) && (!maxDate || today <= maxDate);
 
   const resolvedInputClassName =
     inputClassName ||
@@ -137,6 +162,9 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
           required={required}
           minDate={minDate}
           maxDate={maxDate}
+          openToDate={value || minDate || undefined}
+          todayButton={showTodayShortcut && todayIsSelectable ? "Today" : undefined}
+          calendarStartDay={localeAware ? localePresentation.calendarStartDay : undefined}
           /* ── Time props ── */
           showTimeSelect={showTime}
           timeFormat={use12Hours ? "hh:mm aa" : "HH:mm"}
@@ -149,12 +177,16 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
           popperClassName="dxg-datepicker-popper"
           showPopperArrow={false}
           calendarClassName="dxg-datepicker"
+          ariaInvalid={ariaInvalid ? "true" : undefined}
+          ariaDescribedBy={ariaDescribedBy}
+          ariaLabelledBy={ariaLabelledBy}
         />
 
         <button
           type="button"
           aria-label={`Open ${label || "date and time"} calendar`}
           onClick={() => dateRef.current?.setFocus()}
+          disabled={disabled}
           className={buttonClassName}
         >
           <CalendarRangeIcon size={20} />

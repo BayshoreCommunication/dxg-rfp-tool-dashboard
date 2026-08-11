@@ -1628,6 +1628,7 @@ const AddNewProposal = ({
     experienceMode,
     toIsoDate(proposalData.event.startDate),
     toIsoDate(proposalData.event.endDate),
+    proposalData.venueSchedule.timeZone,
   ) === null;
 
   /**
@@ -1641,6 +1642,7 @@ const AddNewProposal = ({
       experienceMode,
       toIsoDate(proposalData.event.startDate),
       toIsoDate(proposalData.event.endDate),
+      proposalData.venueSchedule.timeZone,
     );
     if (!incomplete) return;
     toast.error(`${incomplete.label} still needs: ${incomplete.missing.join(", ")}.`);
@@ -1825,6 +1827,7 @@ const AddNewProposal = ({
         experienceMode,
         toIsoDate(proposalData.event.startDate),
         toIsoDate(proposalData.event.endDate),
+        proposalData.venueSchedule.timeZone,
       );
       return {
         section: "Room Specifications",
@@ -1869,6 +1872,7 @@ const AddNewProposal = ({
         experienceMode,
         toIsoDate(proposalData.event.startDate),
         toIsoDate(proposalData.event.endDate),
+        proposalData.venueSchedule.timeZone,
       );
       if (missing) {
         add(3, "Room Specifications", missing.missing.map((label) => `${roomLabel(room, index)}: ${label}`));

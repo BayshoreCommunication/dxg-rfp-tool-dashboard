@@ -613,6 +613,86 @@ const schedulesForRoom = (room: RoomByRoomData): RoomFunctionSchedule[] => {
     : [defaultFunctionSchedule()];
 };
 
+const PRODUCTION_ACCESS_LEAD_DAYS = 7;
+
+const shiftIsoDate = (isoDate: string, days: number): string => {
+  const date = isoDateToLocalDate(isoDate);
+  if (!date) return "";
+  date.setDate(date.getDate() + days);
+  return localDateToIsoDate(date);
+};
+
+const earliestFunctionStart = (room: RoomByRoomData): string => {
+  let earliest = "";
+  let earliestAt = Number.POSITIVE_INFINITY;
+  for (const entry of schedulesForRoom(room)) {
+    const at = Date.parse(entry.showStartDateTime);
+    if (Number.isFinite(at) && at < earliestAt) {
+      earliest = entry.showStartDateTime;
+      earliestAt = at;
+    }
+  }
+  return earliest;
+};
+
+export type RoomProductionAccessErrors = {
+  loadIn?: string;
+  rehearsal?: string;
+};
+
+/**
+ * Room access can start before the event, but a date more than a week early is
+ * almost always a typo. Both optional milestones must also happen before the
+ * first function, and rehearsal cannot precede load-in.
+ */
+export const roomProductionAccessTimeErrors = (
+  room: RoomByRoomData,
+  eventStartDate?: string,
+  eventEndDate?: string,
+  eventTimeZone?: string | null,
+): RoomProductionAccessErrors => {
+  const errors: RoomProductionAccessErrors = {};
+  const loadInAt = Date.parse(room.loadInDateTime);
+  const rehearsalAt = Date.parse(room.rehearsalDateTime);
+  const firstFunctionIso = earliestFunctionStart(room);
+  const firstFunctionAt = Date.parse(firstFunctionIso);
+  const earliestDate = eventStartDate
+    ? shiftIsoDate(eventStartDate, -PRODUCTION_ACCESS_LEAD_DAYS)
+    : "";
+  const earliestAt = Date.parse(
+    earliestDate ? wallClockToIso(earliestDate, { hours: 0, minutes: 0 }, eventTimeZone) : "",
+  );
+  const fallbackEndAt = Date.parse(
+    eventEndDate
+      ? wallClockToIso(eventEndDate, { hours: 23, minutes: 59 }, eventTimeZone)
+      : "",
+  );
+  const latestAt = Number.isFinite(firstFunctionAt) ? firstFunctionAt : fallbackEndAt;
+  const latestMessage = Number.isFinite(firstFunctionAt)
+    ? "must be before the room’s first function."
+    : "must be within the event’s production window.";
+
+  if (Number.isFinite(loadInAt)) {
+    if (Number.isFinite(earliestAt) && loadInAt < earliestAt) {
+      errors.loadIn = `Load-in can be no more than ${PRODUCTION_ACCESS_LEAD_DAYS} days before the event.`;
+    } else if (Number.isFinite(latestAt) && loadInAt >= latestAt) {
+      errors.loadIn = `Load-in ${latestMessage}`;
+    }
+  }
+
+  if (Number.isFinite(rehearsalAt)) {
+    if (Number.isFinite(earliestAt) && rehearsalAt < earliestAt) {
+      errors.rehearsal = `Rehearsal can be no more than ${PRODUCTION_ACCESS_LEAD_DAYS} days before the event.`;
+    } else if (Number.isFinite(latestAt) && rehearsalAt >= latestAt) {
+      errors.rehearsal = `Rehearsal ${latestMessage}`;
+    } else if (Number.isFinite(loadInAt) && rehearsalAt < loadInAt) {
+      errors.rehearsal = "Rehearsal must be on or after load-in.";
+    }
+  }
+
+  return errors;
+};
+
 // ─── Single room form ─────────────────────────────────────────────────────────
 const RoomForm = ({
   data,
@@ -652,6 +732,29 @@ const RoomForm = ({
   if (lighting.includes("Moving Lights / Programmable Effects")) autoSuggest.push("L1 (Lighting Director)");
   const unaddedSuggestions = autoSuggest.filter((r) => !data.showCrewNeeded.includes(r));
   const functionSchedules = schedulesForRoom(data);
+  const productionAccessErrors = roomProductionAccessTimeErrors(
+    data,
+    eventStartDate,
+    eventEndDate,
+    eventTimeZone,
+  );
+  const productionWindowStartDate = eventStartDate
+    ? shiftIsoDate(eventStartDate, -PRODUCTION_ACCESS_LEAD_DAYS)
+    : "";
+  const firstFunctionIso = earliestFunctionStart(data);
+  const firstFunctionDisplay = toEventZoneDisplay(firstFunctionIso, eventTimeZone);
+  const productionWindowEndDate = firstFunctionDisplay
+    ? localDateToIsoDate(firstFunctionDisplay)
+    : eventEndDate || eventStartDate || "";
+  const loadInDisplay = toEventZoneDisplay(data.loadInDateTime, eventTimeZone);
+  const rehearsalMinDate = loadInDisplay
+    ? new Date(loadInDisplay.getFullYear(), loadInDisplay.getMonth(), loadInDisplay.getDate(), 12)
+    : isoDateToLocalDate(productionWindowStartDate) ?? undefined;
+  const productionWindowLabel = productionWindowStartDate && productionWindowEndDate
+    ? firstFunctionDisplay
+      ? `${formatScheduleDate(productionWindowStartDate)} until the first function on ${formatScheduleDate(productionWindowEndDate)}`
+      : `${formatScheduleDate(productionWindowStartDate)} through ${formatScheduleDate(productionWindowEndDate)}`
+    : "before the room’s first function";
   const activeLedWallCount = ledWallCount(data);
   const ledWalls = ensureLedWallSlots(normalizeLedWalls(data), activeLedWallCount);
 
@@ -794,6 +897,7 @@ const RoomForm = ({
                     <label htmlFor={`${uid}-function-${functionIndex}-date`} className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#3d4143]">Date <span className="text-red-500">*</span></label>
                     <GlobalDateInput
                       id={`${uid}-function-${functionIndex}-date`}
+                      label={`Function ${functionIndex + 1} date`}
                       hideLabel
                       showFormatInLabel={false}
                       showErrorMessage={false}
@@ -911,40 +1015,84 @@ const RoomForm = ({
           Add room load-in &amp; rehearsal times
         </button>
         {showManualTimes && (
-          <div className="mt-3 grid gap-4 md:grid-cols-2">
+          <fieldset className="mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            <legend className="px-1 text-xs font-bold uppercase tracking-wide text-slate-700">
+              Production access schedule
+            </legend>
+            <p id={`${uid}-production-access-guidance`} className="mb-4 text-xs leading-5 text-slate-600">
+              Select a date and time in one control. Allowed window: {productionWindowLabel}; 15-minute increments · {eventTimeZone || "venue time"}.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className={`${labelClass} mt-0`}>Load-In</label>
+              <label id={`${uid}-load-in-label`} htmlFor={`${uid}-load-in`} className={`${labelClass} mt-0`}>
+                Load-In
+                <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span>
+              </label>
               <GlobalDateTimeInput
+                id={`${uid}-load-in`}
+                label="Load-In"
                 hideLabel
                 showFormatInLabel={false}
-                format="MM/dd/yyyy"
+                localeAware
+                showTodayShortcut
                 showTime
                 use12Hours
                 timeIntervals={15}
-                value={toEventZoneDisplay(data.loadInDateTime, eventTimeZone)}
+                value={loadInDisplay}
                 onChange={(d) => onChange({ loadInDateTime: fromEventZoneDisplay(d, eventTimeZone) })}
-                inputClassName={`${inputClass} pr-12`}
+                minDate={isoDateToLocalDate(productionWindowStartDate) ?? undefined}
+                maxDate={isoDateToLocalDate(productionWindowEndDate) ?? undefined}
+                error={productionAccessErrors.loadIn}
+                ariaInvalid={Boolean(productionAccessErrors.loadIn)}
+                ariaLabelledBy={`${uid}-load-in-label`}
+                ariaDescribedBy={`${uid}-production-access-guidance${productionAccessErrors.loadIn ? ` ${uid}-load-in-error` : ""}`}
+                inputClassName={`${inputClass} pr-12 ${productionAccessErrors.loadIn ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
+                showErrorMessage={false}
               />
+              {productionAccessErrors.loadIn && (
+                <p id={`${uid}-load-in-error`} className="mt-1 text-xs text-red-500">
+                  {productionAccessErrors.loadIn}
+                </p>
+              )}
             </div>
             <div>
-              <label className={`${labelClass} mt-0`}>Rehearsal</label>
+              <label id={`${uid}-rehearsal-label`} htmlFor={`${uid}-rehearsal`} className={`${labelClass} mt-0`}>
+                Rehearsal
+                <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span>
+              </label>
               <GlobalDateTimeInput
+                id={`${uid}-rehearsal`}
+                label="Rehearsal"
                 hideLabel
                 showFormatInLabel={false}
-                format="MM/dd/yyyy"
+                localeAware
+                showTodayShortcut
                 showTime
                 use12Hours
                 timeIntervals={15}
                 value={toEventZoneDisplay(data.rehearsalDateTime, eventTimeZone)}
                 onChange={(d) => onChange({ rehearsalDateTime: fromEventZoneDisplay(d, eventTimeZone) })}
-                inputClassName={`${inputClass} pr-12`}
+                minDate={rehearsalMinDate}
+                maxDate={isoDateToLocalDate(productionWindowEndDate) ?? undefined}
+                error={productionAccessErrors.rehearsal}
+                ariaInvalid={Boolean(productionAccessErrors.rehearsal)}
+                ariaLabelledBy={`${uid}-rehearsal-label`}
+                ariaDescribedBy={`${uid}-production-access-guidance${productionAccessErrors.rehearsal ? ` ${uid}-rehearsal-error` : ""}`}
+                inputClassName={`${inputClass} pr-12 ${productionAccessErrors.rehearsal ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
-                placeholder="Select date & time"
+                placeholder="Select date & time (optional)"
+                showErrorMessage={false}
               />
+              {productionAccessErrors.rehearsal && (
+                <p id={`${uid}-rehearsal-error`} className="mt-1 text-xs text-red-500">
+                  {productionAccessErrors.rehearsal}
+                </p>
+              )}
             </div>
-          </div>
+            </div>
+          </fieldset>
         )}
       </div>
 
@@ -2107,6 +2255,7 @@ export const missingRoomFields = (
   mode: ProposalExperienceMode = "advanced",
   eventStartDate?: string,
   eventEndDate?: string,
+  eventTimeZone?: string | null,
 ): string[] => {
   const missing: string[] = [];
   if (!room.roomLocation.trim()) missing.push("physical room name");
@@ -2146,6 +2295,14 @@ export const missingRoomFields = (
     if (room.showCrewNeeded.length === 0) missing.push("show crew");
     missing.push(...cameraPlanMissingFields(room.cameras));
     missing.push(...ledWallPlanMissingFields(room));
+    const productionAccessErrors = roomProductionAccessTimeErrors(
+      room,
+      eventStartDate,
+      eventEndDate,
+      eventTimeZone,
+    );
+    if (productionAccessErrors.loadIn) missing.push("valid load-in time");
+    if (productionAccessErrors.rehearsal) missing.push("valid rehearsal time");
   }
   if (
     Number(room.largeMonitorsOrScreenProjector.numberOfScreens) > 0 &&
@@ -2171,9 +2328,10 @@ export const firstIncompleteRoom = (
   mode: ProposalExperienceMode = "advanced",
   eventStartDate?: string,
   eventEndDate?: string,
+  eventTimeZone?: string | null,
 ): { index: number; label: string; missing: string[] } | null => {
   for (const [index, room] of rooms.entries()) {
-    const missing = missingRoomFields(room, mode, eventStartDate, eventEndDate);
+    const missing = missingRoomFields(room, mode, eventStartDate, eventEndDate, eventTimeZone);
     if (missing.length) return { index, label: roomLabel(room, index), missing };
   }
   return null;
