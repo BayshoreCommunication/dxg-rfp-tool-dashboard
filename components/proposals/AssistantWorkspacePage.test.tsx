@@ -1180,7 +1180,7 @@ describe("AssistantWorkspacePage", () => {
     expect(reviewLink).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
   });
 
-  test("a failed extraction retries the same attached sources without another upload", async () => {
+  test("a failed extraction keeps guided questions hidden and retries the same attached sources", async () => {
     const requestMessage = {
       id: "msg-extract-request", ordinal: 1, role: "user" as const, kind: "action_request" as const,
       content: "Extract the requirements from the selected sources.", intent: "extract_requirements",
@@ -1217,6 +1217,32 @@ describe("AssistantWorkspacePage", () => {
       { content: "Extract the requirements from the selected sources.", intent: "extract_requirements", sourceIds: ["src-existing"] },
       expect.any(String),
     ));
+  });
+
+  test("a planner can explicitly continue to guided questions after extraction fails", async () => {
+    const requestMessage = {
+      id: "msg-extract-request", ordinal: 1, role: "user" as const, kind: "action_request" as const,
+      content: "Extract the requirements from the selected sources.", intent: "extract_requirements",
+      runType: null, runId: null, jobId: null, status: "complete" as const,
+      createdAt: "2026-07-21T10:00:00.000Z",
+      attachments: [{ sourceId: "src-existing", role: "primary", filename: "event-brief.txt", sourceStatus: "ready" }],
+    };
+    const failedRun = { ...proposalContextMessage("failed"), ordinal: 2 };
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 2, updatedAt: "2026-07-21T10:01:00.000Z" },
+        capabilities: { conversationExtraction: true },
+        messages: [requestMessage, failedRun],
+        questions: [startDateQuestion],
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Continue without extraction" }));
+
+    expect(await screen.findByText(startDateQuestion.prompt)).toBeInTheDocument();
   });
 
   test("Extract requirements is disabled when no ready non-confidential source exists", async () => {
@@ -1662,7 +1688,7 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByText("Union venue")).not.toBeInTheDocument();
     expect(screen.getByText("10 details captured from your sources.")).toBeInTheDocument();
     // Extraction output stays read-only and links to the explicit review.
-    expect(screen.getByText(/ready for explicit review/)).toBeInTheDocument();
+    expect(screen.getByText(/need your explicit review/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review suggestions" })).toBeInTheDocument();
     // The explicit next step plus the softer alternatives.
     expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
@@ -1758,7 +1784,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     expect(await screen.findByText(/details captured from your sources/)).toBeInTheDocument();
-    expect(screen.getByText(/ready for explicit review/)).toBeInTheDocument();
+    expect(screen.getByText(/need your explicit review/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review suggestions" }))
       .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
     expect(screen.queryByText(/Added .* field.* to your proposal/)).not.toBeInTheDocument();

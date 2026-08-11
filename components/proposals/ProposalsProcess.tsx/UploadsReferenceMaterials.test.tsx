@@ -46,6 +46,26 @@ const uploads: UploadsData = {
 };
 
 describe("categorized reference materials", () => {
+  it("focuses the scenic upload when opened from Section 2B", () => {
+    Element.prototype.scrollIntoView = jest.fn();
+    const { container } = render(
+      <UploadsReferenceMaterials
+        data={uploads}
+        onChange={jest.fn()}
+        onContinue={jest.fn()}
+        onBack={jest.fn()}
+        proposalSettings={settings}
+        focusTarget="scenic_inspiration"
+      />,
+    );
+
+    const scenicInput = container.querySelector<HTMLInputElement>(
+      "#scenic-inspirations input[type=file]",
+    );
+    expect(scenicInput).not.toBeNull();
+    expect(document.activeElement).toBe(scenicInput);
+  });
+
   it("renders scenic and venue/COI files in separate labeled groups while retaining legacy files", () => {
     render(
       <UploadsReferenceMaterials

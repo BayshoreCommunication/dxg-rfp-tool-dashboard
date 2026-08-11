@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 // Chat-first AI workspace for creating a proposal. Full-page layout: breadcrumb
 // top bar, centered greeting empty state with a single composer, a threaded
@@ -17,52 +17,116 @@ import {
   type ConversationQuestion,
   type ConversationQuestionAnswer,
   type ConversationRunType,
-} from "@/app/actions/conversation";
-import { deletePrivateDocumentSource, type PrivateDocumentSource } from "@/app/actions/durableJobs";
-import GlobalDateInput from "@/components/shared/GlobalDateInput";
-import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
-import { generateGuidanceAction, getLatestGuidanceAction, type GuidanceReport, type GuidanceSectionCompleteness } from "@/app/actions/guidance";
-import { generateInvestmentGuidanceAction, getLatestInvestmentGuidanceAction, type InvestmentReport } from "@/app/actions/investment";
-import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
-import { getProposalDraftAction, type ProposalDraftSection } from "@/app/actions/proposalDraft";
-import { createProposalAction, getProposalByIdAction } from "@/app/actions/proposals";
-import { getUserData } from "@/app/actions/user";
-import AssistantOrb from "@/components/ai/shared/AssistantOrb";
-import TypingIndicator from "@/components/ai/shared/TypingIndicator";
-import type { ProposalData } from "@/components/proposals/AddNewProposal";
-import { presentJob } from "@/lib/asyncOperations";
+} from '@/app/actions/conversation';
 import {
-  ArrowUp, Download, FileText, Loader2, Paperclip, PencilLine, Sparkles, StickyNote, Upload, X,
-} from "lucide-react";
-import Link from "next/link";
-import { stepForPath } from "./GuidancePanel";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAutoExtraction, useConversation, useNotesScan, useProposalSources, useSourceUpload } from "./useConversation";
-import { takeProposalHandoffDraft } from "@/lib/aiAssistant/handoff";
+  deletePrivateDocumentSource,
+  type PrivateDocumentSource,
+} from '@/app/actions/durableJobs';
+import GlobalDateInput from '@/components/shared/GlobalDateInput';
+import { getCandidateReviewAction } from '@/app/actions/candidateApplication';
+import {
+  generateGuidanceAction,
+  getLatestGuidanceAction,
+  type GuidanceReport,
+  type GuidanceSectionCompleteness,
+} from '@/app/actions/guidance';
+import {
+  generateInvestmentGuidanceAction,
+  getLatestInvestmentGuidanceAction,
+  type InvestmentReport,
+} from '@/app/actions/investment';
+import {
+  getLatestProposalContextAction,
+  getProposalContextAction,
+} from '@/app/actions/proposalContext';
+import {
+  getProposalDraftAction,
+  type ProposalDraftSection,
+} from '@/app/actions/proposalDraft';
+import {
+  createProposalAction,
+  getProposalByIdAction,
+} from '@/app/actions/proposals';
+import { getUserData } from '@/app/actions/user';
+import AssistantOrb from '@/components/ai/shared/AssistantOrb';
+import TypingIndicator from '@/components/ai/shared/TypingIndicator';
+import type { ProposalData } from '@/components/proposals/AddNewProposal';
+import { presentJob } from '@/lib/asyncOperations';
+import {
+  ArrowUp,
+  Check,
+  Download,
+  FileText,
+  Loader2,
+  Paperclip,
+  PencilLine,
+  Sparkles,
+  StickyNote,
+  Upload,
+  X,
+} from 'lucide-react';
+import Link from 'next/link';
+import { stepForPath } from './GuidancePanel';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  useAutoExtraction,
+  useConversation,
+  useNotesScan,
+  useProposalSources,
+  useSourceUpload,
+} from './useConversation';
+import { takeProposalHandoffDraft } from '@/lib/aiAssistant/handoff';
 
-const ACCENT = "#00c2c9";
-const DEEP = "#087f69";
+const ACCENT = '#00c2c9';
+const DEEP = '#087f69';
 
-const runLabels: Record<ConversationRunType, { pending: string; failed: string }> = {
-  proposal_context: { pending: "Extracting requirements…", failed: "Requirement extraction did not finish. Try again." },
-  proposal_draft: { pending: "Drafting the proposal…", failed: "Draft generation did not finish. Try again." },
+const runLabels: Record<
+  ConversationRunType,
+  { pending: string; failed: string }
+> = {
+  proposal_context: {
+    pending: 'Extracting requirements…',
+    failed: 'Requirement extraction did not finish. Try again.',
+  },
+  proposal_draft: {
+    pending: 'Drafting the proposal…',
+    failed: 'Draft generation did not finish. Try again.',
+  },
 };
 
-const taskContent: Record<"extract_requirements" | "generate_draft", string> = {
-  extract_requirements: "Extract the requirements from the selected sources.",
-  generate_draft: "Generate a proposal draft from the current information.",
+const taskContent: Record<
+  'extract_requirements' | 'generate_draft',
+  string
+> = {
+  extract_requirements:
+    'Extract the requirements from the selected sources.',
+  generate_draft:
+    'Generate a proposal draft from the current information.',
 };
 
 type LocalCard =
-  | { id: string; kind: "guidance"; report: GuidanceReport }
-  | { id: string; kind: "investment"; report: InvestmentReport }
+  | { id: string; kind: 'guidance'; report: GuidanceReport }
+  | { id: string; kind: 'investment'; report: InvestmentReport }
   // Extraction from typed messages happens in the background, so without a
   // card the planner sees sources and applied fields appear from nowhere.
-  | { id: string; kind: "segment"; created: boolean; reason?: string }
+  | { id: string; kind: 'segment'; created: boolean; reason?: string }
   // A skipped question otherwise vanishes: nothing records it and the only way
   // back is to know which editor page owns the field.
-  | { id: string; kind: "skipped"; label: string; step?: number; stepLabel?: string }
-  | { id: string; kind: "error"; message: string };
+  | {
+      id: string;
+      kind: 'skipped';
+      label: string;
+      step?: number;
+      stepLabel?: string;
+    }
+  | { id: string; kind: 'error'; message: string };
 
 // Why a "use what I've told you" request produced nothing. Deliberately plain:
 // none of these are failures, and the planner should not be made to feel one
@@ -74,18 +138,29 @@ type LocalCard =
 // A successful retry supersedes an earlier failed attempt of the same run
 // type. Keeping the old red alert beside the finished draft makes the current
 // state look contradictory even though the audit history remains persisted.
-export const visibleRunMessages = (messages: ConversationMessage[]): ConversationMessage[] => {
+export const visibleRunMessages = (
+  messages: ConversationMessage[],
+): ConversationMessage[] => {
   const latestComplete = new Map<ConversationRunType, number>();
   for (const message of messages) {
-    if (message.runType && message.status === "complete") {
-      latestComplete.set(message.runType, Math.max(latestComplete.get(message.runType) ?? -1, message.ordinal));
+    if (message.runType && message.status === 'complete') {
+      latestComplete.set(
+        message.runType,
+        Math.max(
+          latestComplete.get(message.runType) ?? -1,
+          message.ordinal,
+        ),
+      );
     }
   }
-  return messages.filter(message => !(
-    message.runType
-    && message.status === "failed"
-    && (latestComplete.get(message.runType) ?? -1) > message.ordinal
-  ));
+  return messages.filter(
+    (message) =>
+      !(
+        message.runType &&
+        message.status === 'failed' &&
+        (latestComplete.get(message.runType) ?? -1) > message.ordinal
+      ),
+  );
 };
 
 // A run-result message is inserted immediately after the action-request that
@@ -98,8 +173,8 @@ export const sourceIdsForFailedExtraction = (
 ): string[] => {
   const request = messages.find(
     (message) =>
-      message.role === "user" &&
-      message.intent === "extract_requirements" &&
+      message.role === 'user' &&
+      message.intent === 'extract_requirements' &&
       message.ordinal === failedRun.ordinal - 1,
   );
   return request?.attachments.map((attachment) => attachment.sourceId) ?? [];
@@ -107,70 +182,107 @@ export const sourceIdsForFailedExtraction = (
 
 const segmentSkipReasons: Record<string, string> = {
   open: "I'll use these once you pause or add a bit more.",
-  insufficient: "There isn't enough detail in your messages yet for me to pull requirements from.",
-  empty: "Nothing new since the last time I read your messages.",
-  disabled: "Reading requirements from chat isn't switched on in this environment.",
-  ingestion_disabled: "Source handling isn't switched on in this environment.",
+  insufficient:
+    "There isn't enough detail in your messages yet for me to pull requirements from.",
+  empty: 'Nothing new since the last time I read your messages.',
+  disabled:
+    "Reading requirements from chat isn't switched on in this environment.",
+  ingestion_disabled:
+    "Source handling isn't switched on in this environment.",
 };
 
 const impactLabels: Record<string, string> = {
-  cost: "affects cost",
-  schedule: "affects schedule",
-  production: "affects production",
-  scope: "affects scope",
+  cost: 'affects cost',
+  schedule: 'affects schedule',
+  production: 'affects production',
+  scope: 'affects scope',
 };
 
 // Short human label for a single-field question, e.g.
 // "/content/venueSchedule/numberOfEventRooms" -> "Number of event rooms".
-const questionFieldLabel = (question: ConversationQuestion): string => {
-  if (question.answerType === "date_time" && isLoadInDateQuestion(question)) return "Production load-in";
-  const segment = question.paths.length === 1 ? question.paths[0].split("/").pop() ?? "" : "";
-  if (!segment) return "Answer";
-  const words = segment.replace(/([A-Z])/g, " $1").toLowerCase().trim();
+const questionFieldLabel = (
+  question: ConversationQuestion,
+): string => {
+  if (
+    question.answerType === 'date_time' &&
+    isLoadInDateQuestion(question)
+  )
+    return 'Production load-in';
+  const segment =
+    question.paths.length === 1
+      ? (question.paths[0].split('/').pop() ?? '')
+      : '';
+  if (!segment) return 'Answer';
+  const words = segment
+    .replace(/([A-Z])/g, ' $1')
+    .toLowerCase()
+    .trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
 const citationLabel = (citation: string): string => {
-  const segment = citation.split("/").filter(Boolean).pop() ?? citation;
+  const segment =
+    citation.split('/').filter(Boolean).pop() ?? citation;
   const labels: Record<string, string> = {
-    aboutOrganization: "Organization",
-    editionYear: "Edition / year",
-    endDate: "End date",
-    eventFormat: "Event format",
-    eventName: "Event name",
-    eventObjectives: "Event objectives",
-    eventType: "Event type",
-    startDate: "Start date",
-    statementOfWork: "Scope of work",
+    aboutOrganization: 'Organization',
+    editionYear: 'Edition / year',
+    endDate: 'End date',
+    eventFormat: 'Event format',
+    eventName: 'Event name',
+    eventObjectives: 'Event objectives',
+    eventType: 'Event type',
+    startDate: 'Start date',
+    statementOfWork: 'Scope of work',
   };
   if (labels[segment]) return labels[segment];
-  const words = segment.replace(/([A-Z])/g, " $1").replace(/[_-]+/g, " ").toLowerCase().trim();
-  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Proposal detail";
+  const words = segment
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]+/g, ' ')
+    .toLowerCase()
+    .trim();
+  return words
+    ? words.charAt(0).toUpperCase() + words.slice(1)
+    : 'Proposal detail';
 };
 
 // A picked calendar day submitted as YYYY-MM-DD from its LOCAL parts:
 // toISOString() would shift the day for anyone behind UTC.
 const localIsoDay = (date: Date): string => {
-  const pad = (part: number) => String(part).padStart(2, "0");
+  const pad = (part: number) => String(part).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
 
 // ── Captured-detail summary ──────────────────────────────────────────────────
 // The overview card reads the proposal document itself (legacy field names) and
 // renders only the fields that actually carry a value.
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
-const PLACEHOLDER_EVENT_NAME = "Untitled proposal";
+const PLACEHOLDER_EVENT_NAME = 'Untitled proposal';
 
 export type OverviewRow = { label: string; value: string };
 
 const textValue = (value: unknown): string => {
-  if (typeof value === "string") return value.trim();
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return "";
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' && Number.isFinite(value))
+    return String(value);
+  return '';
 };
 
 type DayParts = { year: number; month: number; day: number };
@@ -189,94 +301,136 @@ const parseDay = (value: unknown): DayParts | null => {
   }
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return null;
-  return { year: parsed.getFullYear(), month: parsed.getMonth(), day: parsed.getDate() };
+  return {
+    year: parsed.getFullYear(),
+    month: parsed.getMonth(),
+    day: parsed.getDate(),
+  };
 };
 
 const formatDay = (parts: DayParts, withYear = true) =>
-  `${parts.day} ${MONTHS[parts.month]}${withYear ? ` ${parts.year}` : ""}`;
+  `${parts.day} ${MONTHS[parts.month]}${withYear ? ` ${parts.year}` : ''}`;
 
 // "16–18 Mar 2027" when both ends share a month, "28 Feb – 2 Mar 2027" within a
 // year, otherwise both ends fully qualified.
 const formatDateRange = (start: unknown, end: unknown): string => {
   const from = parseDay(start);
   const to = parseDay(end);
-  if (!from && !to) return "";
+  if (!from && !to) return '';
   if (!from) return formatDay(to as DayParts);
   if (!to) return formatDay(from);
   if (from.year === to.year && from.month === to.month) {
-    return from.day === to.day ? formatDay(from) : `${from.day}–${to.day} ${MONTHS[from.month]} ${from.year}`;
+    return from.day === to.day
+      ? formatDay(from)
+      : `${from.day}–${to.day} ${MONTHS[from.month]} ${from.year}`;
   }
-  if (from.year === to.year) return `${formatDay(from, false)} – ${formatDay(to)}`;
+  if (from.year === to.year)
+    return `${formatDay(from, false)} – ${formatDay(to)}`;
   return `${formatDay(from)} – ${formatDay(to)}`;
 };
 
-const isYes = (value: unknown) => textValue(value).toUpperCase() === "YES";
+const isYes = (value: unknown) =>
+  textValue(value).toUpperCase() === 'YES';
 
-const budgetTierLabel = (proposal: Record<string, unknown> | null): string => {
-  if (!proposal) return "";
+const budgetTierLabel = (
+  proposal: Record<string, unknown> | null,
+): string => {
+  if (!proposal) return '';
   const budget = isRecord(proposal.budget) ? proposal.budget : {};
   const tier = textValue(budget.estimatedAvBudget);
   const ranges: Record<string, string> = {
-    Essential: "$10K – $25K",
-    Standard: "$25K – $50K",
-    Production: "$50K – $100K",
-    Premium: "$100K – $250K",
-    Enterprise: "$250K – $500K",
-    Signature: "$500K+",
-    "Not Yet Determined": "Need guidance",
+    Essential: '$10K – $25K',
+    Standard: '$25K – $50K',
+    Production: '$50K – $100K',
+    Premium: '$100K – $250K',
+    Enterprise: '$250K – $500K',
+    Signature: '$500K+',
+    'Not Yet Determined': 'Need guidance',
   };
-  return tier ? `${tier}${ranges[tier] ? ` (${ranges[tier]})` : ""}` : "";
+  return tier
+    ? `${tier}${ranges[tier] ? ` (${ranges[tier]})` : ''}`
+    : '';
 };
 
 // Key captured details, in reading order, capped so the card stays scannable.
-export const buildOverviewRows = (proposal: Record<string, unknown> | null): OverviewRow[] => {
+export const buildOverviewRows = (
+  proposal: Record<string, unknown> | null,
+): OverviewRow[] => {
   if (!proposal) return [];
   const event = isRecord(proposal.event) ? proposal.event : {};
-  const venueSchedule = isRecord(proposal.venueSchedule) ? proposal.venueSchedule : {};
-  const hybridVirtual = isRecord(proposal.hybridVirtual) ? proposal.hybridVirtual : {};
-  const videoRecording = isRecord(proposal.videoRecordingStep) ? proposal.videoRecordingStep : {};
+  const venueSchedule = isRecord(proposal.venueSchedule)
+    ? proposal.venueSchedule
+    : {};
+  const hybridVirtual = isRecord(proposal.hybridVirtual)
+    ? proposal.hybridVirtual
+    : {};
+  const videoRecording = isRecord(proposal.videoRecordingStep)
+    ? proposal.videoRecordingStep
+    : {};
   const budget = isRecord(proposal.budget) ? proposal.budget : {};
 
   const rows: OverviewRow[] = [];
-  const push = (label: string, value: string) => { if (value) rows.push({ label, value }); };
+  const push = (label: string, value: string) => {
+    if (value) rows.push({ label, value });
+  };
 
   const eventName = textValue(event.eventName);
-  push("Event", eventName === PLACEHOLDER_EVENT_NAME ? "" : eventName);
-  push("Dates", formatDateRange(event.startDate, event.endDate));
-  push("Format", textValue(event.eventFormat));
-  push("Attendees", textValue(event.attendees));
-  push("Venue", textValue(venueSchedule.venueName));
-  push("City", textValue(venueSchedule.venueCity));
-  push("Event rooms", textValue(venueSchedule.numberOfEventRooms));
-  if (isYes(venueSchedule.isUnionVenue)) rows.push({ label: "Union venue", value: "Yes" });
-  push("Streaming platform", textValue(hybridVirtual.streamingPlatform));
+  push(
+    'Event',
+    eventName === PLACEHOLDER_EVENT_NAME ? '' : eventName,
+  );
+  push('Dates', formatDateRange(event.startDate, event.endDate));
+  push('Format', textValue(event.eventFormat));
+  push('Attendees', textValue(event.attendees));
+  push('Venue', textValue(venueSchedule.venueName));
+  push('City', textValue(venueSchedule.venueCity));
+  push('Event rooms', textValue(venueSchedule.numberOfEventRooms));
+  if (isYes(venueSchedule.isUnionVenue))
+    rows.push({ label: 'Union venue', value: 'Yes' });
+  push(
+    'Streaming platform',
+    textValue(hybridVirtual.streamingPlatform),
+  );
   if (isYes(videoRecording.videoRecordingRequired)) {
     const cameras = textValue(videoRecording.numberOfCameras);
-    rows.push({ label: "Video recording", value: cameras ? `Yes — ${cameras} camera${cameras === "1" ? "" : "s"}` : "Yes" });
+    rows.push({
+      label: 'Video recording',
+      value: cameras
+        ? `Yes — ${cameras} camera${cameras === '1' ? '' : 's'}`
+        : 'Yes',
+    });
   }
   const due = parseDay(budget.proposalSubmissionDueDate);
-  if (due) rows.push({ label: "Proposal due", value: formatDay(due) });
+  if (due)
+    rows.push({ label: 'Proposal due', value: formatDay(due) });
 
   return rows.slice(0, 10);
 };
 
 const firstNameOf = (name: unknown): string | null => {
-  if (typeof name !== "string") return null;
+  if (typeof name !== 'string') return null;
   const first = name.trim().split(/\s+/)[0];
   return first || null;
 };
 
 const dayPart = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return "Morning";
-  if (hour < 17) return "Afternoon";
-  return "Evening";
+  if (hour < 12) return 'Morning';
+  if (hour < 17) return 'Afternoon';
+  return 'Evening';
 };
 
-const money = (minor: number | null | undefined, currency: string | null) => {
-  if (minor === null || minor === undefined || !currency) return "—";
+const money = (
+  minor: number | null | undefined,
+  currency: string | null,
+) => {
+  if (minor === null || minor === undefined || !currency) return '—';
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(minor / 100);
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(minor / 100);
   } catch {
     return `${(minor / 100).toLocaleString()} ${currency}`;
   }
@@ -287,13 +441,16 @@ const money = (minor: number | null | undefined, currency: string | null) => {
  * "$48,697 – $121,981" claims a precision it does not have; the exact numbers
  * still appear on the individual line items.
  */
-const roundedMoney = (minor: number | null | undefined, currency: string | null) => {
-  if (minor === null || minor === undefined || !currency) return "—";
+const roundedMoney = (
+  minor: number | null | undefined,
+  currency: string | null,
+) => {
+  if (minor === null || minor === undefined || !currency) return '—';
   const major = minor / 100;
   if (major < 1000) return money(minor, currency);
   const thousands = Math.round(major / 1000);
   try {
-    return `${new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(thousands * 1000)}`;
+    return `${new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(thousands * 1000)}`;
   } catch {
     return `${(thousands * 1000).toLocaleString()} ${currency}`;
   }
@@ -302,24 +459,45 @@ const roundedMoney = (minor: number | null | undefined, currency: string | null)
 const MAX_STAGED_FILES = 3;
 
 const formatFileSize = (bytes: number) => {
-  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`;
+  if (bytes >= 1_048_576)
+    return `${(bytes / 1_048_576).toFixed(1)} MB`;
   if (bytes >= 1_024) return `${Math.round(bytes / 1_024)} KB`;
   return `${bytes} B`;
 };
 
 // ── Small presentational pieces ──────────────────────────────────────────────
 
-function SourceChips({ chips }: { chips: Array<{ label: string; count: number }> }) {
+function SourceChips({
+  chips,
+}: {
+  chips: Array<{ label: string; count: number }>;
+}) {
   if (chips.length === 0) return null;
   return (
     <div className="mb-3">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Sources</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+        Sources
+      </p>
       <ul className="mt-1.5 flex flex-wrap gap-1.5">
-        {chips.map(chip => (
-          <li key={chip.label} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
-            <FileText size={11} className="shrink-0 text-slate-400" aria-hidden />
-            <span className="max-w-[12rem] truncate" title={chip.label}>{chip.label}</span>
-            <span className="rounded-full bg-white px-1.5 text-[10px] font-semibold text-slate-500">{chip.count}</span>
+        {chips.map((chip) => (
+          <li
+            key={chip.label}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700"
+          >
+            <FileText
+              size={11}
+              className="shrink-0 text-slate-400"
+              aria-hidden
+            />
+            <span
+              className="max-w-[12rem] truncate"
+              title={chip.label}
+            >
+              {chip.label}
+            </span>
+            <span className="rounded-full bg-white px-1.5 text-[10px] font-semibold text-slate-500">
+              {chip.count}
+            </span>
           </li>
         ))}
       </ul>
@@ -327,12 +505,21 @@ function SourceChips({ chips }: { chips: Array<{ label: string; count: number }>
   );
 }
 
-function CardFooter({ detailsHref, detailsLabel }: { detailsHref?: string; detailsLabel?: string }) {
+function CardFooter({
+  detailsHref,
+  detailsLabel,
+}: {
+  detailsHref?: string;
+  detailsLabel?: string;
+}) {
   if (!detailsHref) return null;
   return (
     <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-2.5">
-      <Link href={detailsHref} className="text-xs font-semibold text-[#087f69] underline underline-offset-2">
-        {detailsLabel ?? "View details"}
+      <Link
+        href={detailsHref}
+        className="text-xs font-semibold text-[#087f69] underline underline-offset-2"
+      >
+        {detailsLabel ?? 'View details'}
       </Link>
     </div>
   );
@@ -346,12 +533,19 @@ function CardFooter({ detailsHref, detailsLabel }: { detailsHref?: string; detai
 // two primary buttons that do the same thing, so the caller decides which card
 // owns the row.
 const ACTION_BASE =
-  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
+  'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50';
 const ACTION_PRIMARY = `${ACTION_BASE} bg-[#087f69] text-white hover:bg-[#0a9a81]`;
 const ACTION_SECONDARY = `${ACTION_BASE} border border-[#087f69] bg-white text-[#087f69] hover:bg-emerald-50`;
 const ACTION_TERTIARY = `${ACTION_BASE} px-1 text-slate-500 underline underline-offset-2 hover:text-slate-800`;
 
-function CardActionRow({ proposalId, hasDraft, draftBusy, onGenerateDraft, onRunReadiness, readinessBusy = false }: {
+function CardActionRow({
+  proposalId,
+  hasDraft,
+  draftBusy,
+  onGenerateDraft,
+  onRunReadiness,
+  readinessBusy = false,
+}: {
   proposalId: string;
   hasDraft: boolean;
   draftBusy: boolean;
@@ -370,8 +564,14 @@ function CardActionRow({ proposalId, hasDraft, draftBusy, onGenerateDraft, onRun
         aria-busy={draftBusy}
         className={ACTION_PRIMARY}
       >
-        {draftBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
-        {draftBusy ? "Generating…" : hasDraft ? "Regenerate draft" : "Generate proposal draft"}
+        {draftBusy && (
+          <Loader2 size={12} className="animate-spin" aria-hidden />
+        )}
+        {draftBusy
+          ? 'Generating…'
+          : hasDraft
+            ? 'Regenerate draft'
+            : 'Generate proposal draft'}
       </button>
       {onRunReadiness && (
         <button
@@ -381,11 +581,16 @@ function CardActionRow({ proposalId, hasDraft, draftBusy, onGenerateDraft, onRun
           aria-busy={readinessBusy}
           className={ACTION_SECONDARY}
         >
-          {readinessBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
-          {readinessBusy ? "Checking…" : "Run readiness check"}
+          {readinessBusy && (
+            <Loader2 size={12} className="animate-spin" aria-hidden />
+          )}
+          {readinessBusy ? 'Checking…' : 'Run readiness check'}
         </button>
       )}
-      <Link href={`/proposals/proposal-edit?proposalId=${proposalId}`} className={ACTION_TERTIARY}>
+      <Link
+        href={`/proposals/proposal-edit?proposalId=${proposalId}`}
+        className={ACTION_TERTIARY}
+      >
         Edit all details
       </Link>
     </div>
@@ -394,9 +599,15 @@ function CardActionRow({ proposalId, hasDraft, draftBusy, onGenerateDraft, onRun
 
 function SkeletonCard({ label }: { label: string }) {
   return (
-    <div role="status" className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div
+      role="status"
+      className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+    >
       <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
-        <span aria-hidden className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#00c2c9] border-t-transparent" />
+        <span
+          aria-hidden
+          className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#00c2c9] border-t-transparent"
+        />
         {label} You can keep working while this finishes.
       </p>
       <div className="mt-3 space-y-2" aria-hidden>
@@ -414,13 +625,16 @@ function SkeletonCard({ label }: { label: string }) {
 // An invalid answer (backend 422) keeps the question and shows the validation
 // message so the user can re-answer.
 const ANSWER_FIELD_CLASS =
-  "min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 disabled:cursor-not-allowed disabled:bg-slate-50";
+  'min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 disabled:cursor-not-allowed disabled:bg-slate-50';
 const PRIMARY_BUTTON_CLASS =
-  "shrink-0 rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
+  'shrink-0 rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50';
 const SKIP_BUTTON_CLASS =
-  "shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50";
+  'shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50';
 
-export function isBeforeLocalToday(candidate: Date, now = new Date()): boolean {
+export function isBeforeLocalToday(
+  candidate: Date,
+  now = new Date(),
+): boolean {
   const selectedDay = new Date(candidate);
   selectedDay.setHours(0, 0, 0, 0);
   const today = new Date(now);
@@ -429,19 +643,32 @@ export function isBeforeLocalToday(candidate: Date, now = new Date()): boolean {
 }
 
 const isEventEndDateQuestion = (question: ConversationQuestion) =>
-  question.paths.some(path => path.endsWith("/event/endDate"));
+  question.paths.some((path) => path.endsWith('/event/endDate'));
 
 const isLoadInDateQuestion = (question: ConversationQuestion) =>
-  question.paths.some(path => path.endsWith("/venueSchedule/loadInDate"));
+  question.paths.some((path) =>
+    path.endsWith('/venueSchedule/loadInDate'),
+  );
 
 const isLoadInTimeQuestion = (question: ConversationQuestion) =>
-  question.paths.some(path => path.endsWith("/venueSchedule/loadInTime"));
+  question.paths.some((path) =>
+    path.endsWith('/venueSchedule/loadInTime'),
+  );
 
-export const displayQuestionPrompt = (question: ConversationQuestion): string => {
-  if (question.paths.some(path => path.endsWith("/venueSchedule/venueName"))) {
-    return "Which venue will host the event? Enter the venue name, or use Skip if it is still undecided.";
+export const displayQuestionPrompt = (
+  question: ConversationQuestion,
+): string => {
+  if (
+    question.paths.some((path) =>
+      path.endsWith('/venueSchedule/venueName'),
+    )
+  ) {
+    return 'Which venue will host the event? Enter the venue name, or use Skip if it is still undecided.';
   }
-  return question.prompt || question.code.replaceAll("_", " ").toLowerCase();
+  return (
+    question.prompt ||
+    question.code.replaceAll('_', ' ').toLowerCase()
+  );
 };
 
 export function minimumDateForQuestion(
@@ -465,10 +692,16 @@ export function maximumDateForQuestion(
   proposal: Record<string, unknown> | null,
 ): Date | undefined {
   if (!isLoadInDateQuestion(question) || !proposal) return undefined;
-  const venueSchedule = isRecord(proposal.venueSchedule) ? proposal.venueSchedule : {};
+  const venueSchedule = isRecord(proposal.venueSchedule)
+    ? proposal.venueSchedule
+    : {};
   const event = isRecord(proposal.event) ? proposal.event : {};
-  const start = parseDay(venueSchedule.showStartDate) ?? parseDay(event.startDate);
-  return start ? new Date(start.year, start.month, start.day) : undefined;
+  const start =
+    parseDay(venueSchedule.showStartDate) ??
+    parseDay(event.startDate);
+  return start
+    ? new Date(start.year, start.month, start.day)
+    : undefined;
 }
 
 // A yyyy-mm-dd string parsed into local calendar parts, matching how the
@@ -476,11 +709,22 @@ export function maximumDateForQuestion(
 // anchor to UTC midnight and can render a day early for anyone west of UTC.
 // Callers only pass a string already validated against /^\d{4}-\d{2}-\d{2}$/.
 function parseIsoLocalDate(iso: string): Date {
-  const [year, month, day] = iso.split("-").map(Number);
+  const [year, month, day] = iso.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
 
-function GuidedQuestionCard({ question, current, busy, error, minimumDate, maximumDate, initialDate, initialTime, onAnswer, onSkip }: {
+function GuidedQuestionCard({
+  question,
+  current,
+  busy,
+  error,
+  minimumDate,
+  maximumDate,
+  initialDate,
+  initialTime,
+  onAnswer,
+  onSkip,
+}: {
   question: ConversationQuestion;
   current: number;
   busy: boolean;
@@ -503,8 +747,13 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
   // suggestion is unchanged, which would make an effect keyed on it re-fire
   // every render instead of only when a suggestion actually arrives/changes.
   const suggestedDayIso = (() => {
-    const rawDay = answerType === "date_time" ? initialDate : suggested;
-    if ((answerType !== "date" && answerType !== "date_time") || !rawDay) return null;
+    const rawDay =
+      answerType === 'date_time' ? initialDate : suggested;
+    if (
+      (answerType !== 'date' && answerType !== 'date_time') ||
+      !rawDay
+    )
+      return null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDay)) return null;
     const parsed = parseIsoLocalDate(rawDay);
     // A suggestion outside this question's date bounds is not seeded; the
@@ -514,10 +763,19 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
     return rawDay;
   })();
   const [value, setValue] = useState(() =>
-    answerType === "date_time" ? initialTime ?? "" : answerType === "date" || answerType === "choice" ? "" : suggested ?? "");
-  const [day, setDay] = useState<Date | null>(() => (suggestedDayIso ? parseIsoLocalDate(suggestedDayIso) : null));
+    answerType === 'date_time'
+      ? (initialTime ?? '')
+      : answerType === 'date' || answerType === 'choice'
+        ? ''
+        : (suggested ?? ''),
+  );
+  const [day, setDay] = useState<Date | null>(() =>
+    suggestedDayIso ? parseIsoLocalDate(suggestedDayIso) : null,
+  );
   const [dateError, setDateError] = useState<string | null>(null);
-  const [pendingOption, setPendingOption] = useState<string | null>(null);
+  const [pendingOption, setPendingOption] = useState<string | null>(
+    null,
+  );
   // The question keeps the same id for its whole lifetime (it is only
   // superseded once its target field is actually filled), so a suggestion
   // that arrives after mount — extraction finishing while this card is
@@ -530,41 +788,70 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
   const [prevSuggested, setPrevSuggested] = useState(suggested);
   if (suggested !== prevSuggested) {
     setPrevSuggested(suggested);
-    if (!edited && answerType !== "date" && answerType !== "date_time" && answerType !== "choice") {
-      setValue(suggested ?? "");
+    if (
+      !edited &&
+      answerType !== 'date' &&
+      answerType !== 'date_time' &&
+      answerType !== 'choice'
+    ) {
+      setValue(suggested ?? '');
     }
   }
-  const [prevSuggestedDayIso, setPrevSuggestedDayIso] = useState(suggestedDayIso);
+  const [prevSuggestedDayIso, setPrevSuggestedDayIso] =
+    useState(suggestedDayIso);
   if (suggestedDayIso !== prevSuggestedDayIso) {
     setPrevSuggestedDayIso(suggestedDayIso);
-    if (!edited && (answerType === "date" || answerType === "date_time")) {
-      setDay(suggestedDayIso ? parseIsoLocalDate(suggestedDayIso) : null);
+    if (
+      !edited &&
+      (answerType === 'date' || answerType === 'date_time')
+    ) {
+      setDay(
+        suggestedDayIso ? parseIsoLocalDate(suggestedDayIso) : null,
+      );
     }
   }
-  const impactLabel = question.impact ? impactLabels[question.impact] : null;
-  const suggestedOption = answerType === "choice" && suggested && question.options.includes(suggested) ? suggested : null;
+  const impactLabel = question.impact
+    ? impactLabels[question.impact]
+    : null;
+  const suggestedOption =
+    answerType === 'choice' &&
+    suggested &&
+    question.options.includes(suggested)
+      ? suggested
+      : null;
   // The caption only shows while the control still holds the untouched
   // suggestion.
-  const prefilled = answerType === "choice"
-    ? !!suggestedOption
-    : answerType === "date" || answerType === "date_time"
-      ? !!suggestedDayIso && !!day && localIsoDay(day) === suggestedDayIso
-      : !!suggested && value === suggested;
-  const isTimeAnswer = answerType === "time" || isLoadInTimeQuestion(question);
+  const prefilled =
+    answerType === 'choice'
+      ? !!suggestedOption
+      : answerType === 'date' || answerType === 'date_time'
+        ? !!suggestedDayIso &&
+          !!day &&
+          localIsoDay(day) === suggestedDayIso
+        : !!suggested && value === suggested;
+  const isTimeAnswer =
+    answerType === 'time' || isLoadInTimeQuestion(question);
   const inputId = `guided-answer-${question.id}`;
   const errorId = `guided-answer-error-${question.id}`;
   const displayError = dateError || error;
   // A picked day is submitted from its LOCAL calendar parts; toISOString would
   // shift the date by a day for anyone west of UTC.
-  const answer: ConversationQuestionAnswer | null = answerType === "date"
-    ? (day ? localIsoDay(day) : null)
-    : answerType === "date_time"
-      ? (day && value.trim() ? { date: localIsoDay(day), time: value.trim() } : null)
-      : value.trim() || null;
+  const answer: ConversationQuestionAnswer | null =
+    answerType === 'date'
+      ? day
+        ? localIsoDay(day)
+        : null
+      : answerType === 'date_time'
+        ? day && value.trim()
+          ? { date: localIsoDay(day), time: value.trim() }
+          : null
+        : value.trim() || null;
   const skipButton = (
     <button
       type="button"
-      onClick={() => { if (!busy) onSkip(); }}
+      onClick={() => {
+        if (!busy) onSkip();
+      }}
       disabled={busy}
       className={SKIP_BUTTON_CLASS}
     >
@@ -573,25 +860,33 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
   );
 
   return (
-    <div className="w-full max-w-[85%] rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+    <div className="max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">Guided question {current}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
+          Guided question {current}
+        </p>
         {impactLabel && (
-          <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-800">{impactLabel}</span>
+          <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+            {impactLabel}
+          </span>
         )}
-        {question.severity === "blocking" && (
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">Blocking</span>
+        {question.severity === 'blocking' && (
+          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">
+            Blocking
+          </span>
         )}
       </div>
-      <p className="mt-2 text-sm font-medium text-slate-900">{displayQuestionPrompt(question)}</p>
+      <p className="mt-2 text-sm font-medium text-slate-900">
+        {displayQuestionPrompt(question)}
+      </p>
 
-      {answerType === "choice" ? (
+      {answerType === 'choice' ? (
         // One tap answers: each pill submits its own value, so there is no
         // separate Answer step for a closed set of options. Long lists (e.g.
         // the nine streaming platforms) get tighter pills, and every pill wraps
         // rather than stretching the card on a narrow screen.
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          {question.options.map(option => {
+          {question.options.map((option) => {
             // Only the in-flight pill is highlighted, so a rejected answer (422)
             // never leaves an option looking accepted. The extraction-suggested
             // pill gets a distinct (non-active) accent so it reads as "found in
@@ -604,19 +899,30 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
                 type="button"
                 disabled={busy}
                 aria-busy={active}
-                {...(isSuggested ? { "aria-description": "Suggested from your message" } : {})}
-                onClick={() => { if (busy) return; setPendingOption(option); onAnswer(option); }}
+                {...(isSuggested
+                  ? {
+                      'aria-description':
+                        'Suggested from your message',
+                    }
+                  : {})}
+                onClick={() => {
+                  if (busy) return;
+                  setPendingOption(option);
+                  onAnswer(option);
+                }}
                 className={`max-w-full whitespace-normal break-words rounded-full border text-left text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
-                  question.options.length > 5 ? "px-3 py-1.5" : "px-4 py-2"
+                  question.options.length > 5
+                    ? 'px-3 py-1.5'
+                    : 'px-4 py-2'
                 } ${
                   active
-                    ? "border-[#087f69] bg-[#087f69] text-white"
+                    ? 'border-[#087f69] bg-[#087f69] text-white'
                     : isSuggested
-                      ? "border-[#00c2c9] bg-[#00c2c9]/10 text-[#087f69] hover:border-[#087f69]"
-                      : "border-slate-300 bg-white text-slate-700 hover:border-[#00c2c9] hover:bg-[#00c2c9]/10 hover:text-[#087f69]"
+                      ? 'border-[#00c2c9] bg-[#00c2c9]/10 text-[#087f69] hover:border-[#087f69]'
+                      : 'border-slate-300 bg-white text-slate-700 hover:border-[#00c2c9] hover:bg-[#00c2c9]/10 hover:text-[#087f69]'
                 }`}
               >
-                {active ? "Saving…" : option}
+                {active ? 'Saving…' : option}
               </button>
             );
           })}
@@ -625,26 +931,42 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
       ) : (
         <form
           className="mt-3 flex flex-wrap items-center gap-2"
-          onSubmit={event => { event.preventDefault(); if (answer !== null && !busy) onAnswer(answer); }}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (answer !== null && !busy) onAnswer(answer);
+          }}
         >
-          {answerType === "date" || answerType === "date_time" ? (
+          {answerType === 'date' || answerType === 'date_time' ? (
             <div className="flex min-w-[11rem] flex-1 basis-48 items-center">
-              <label htmlFor={inputId} className="sr-only">Answer this question</label>
+              <label htmlFor={inputId} className="sr-only">
+                Answer this question
+              </label>
               <GlobalDateInput
                 id={inputId}
                 value={day}
-                onChange={nextDay => {
+                onChange={(nextDay) => {
                   setEdited(true);
-                  if (nextDay && isBeforeLocalToday(nextDay, minimumDate)) {
+                  if (
+                    nextDay &&
+                    isBeforeLocalToday(nextDay, minimumDate)
+                  ) {
                     setDay(null);
-                    setDateError(isEventEndDateQuestion(question)
-                      ? "Event end date cannot be earlier than the event start date."
-                      : "Event start date cannot be earlier than today.");
+                    setDateError(
+                      isEventEndDateQuestion(question)
+                        ? 'Event end date cannot be earlier than the event start date.'
+                        : 'Event start date cannot be earlier than today.',
+                    );
                     return;
                   }
-                  if (nextDay && maximumDate && nextDay > maximumDate) {
+                  if (
+                    nextDay &&
+                    maximumDate &&
+                    nextDay > maximumDate
+                  ) {
                     setDay(null);
-                    setDateError("Production load-in cannot be after the event start date.");
+                    setDateError(
+                      'Production load-in cannot be after the event start date.',
+                    );
                     return;
                   }
                   setDateError(null);
@@ -660,25 +982,47 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
                 error={displayError ?? undefined}
                 ariaInvalid={!!displayError}
                 ariaDescribedBy={displayError ? errorId : undefined}
-                inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? "cursor-not-allowed bg-slate-50" : ""}`}
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
               />
             </div>
           ) : null}
-          {answerType !== "date" && (
+          {answerType !== 'date' && (
             <input
-              type={isTimeAnswer ? "time" : answerType === "number" ? "number" : "text"}
-              {...(answerType === "number"
-                ? { min: 0, inputMode: "numeric" as const, step: 1 }
+              type={
+                isTimeAnswer
+                  ? 'time'
+                  : answerType === 'number'
+                    ? 'number'
+                    : 'text'
+              }
+              {...(answerType === 'number'
+                ? { min: 0, inputMode: 'numeric' as const, step: 1 }
                 : isTimeAnswer
                   ? { step: 300 }
                   : {})}
               value={value}
-              onChange={event => { setEdited(true); setValue(event.target.value); }}
-              onInput={event => { setEdited(true); setValue(event.currentTarget.value); }}
+              onChange={(event) => {
+                setEdited(true);
+                setValue(event.target.value);
+              }}
+              onInput={(event) => {
+                setEdited(true);
+                setValue(event.currentTarget.value);
+              }}
               disabled={busy}
-              placeholder={answerType === "number" ? "Enter a number…" : isTimeAnswer || answerType === "date_time" ? "HH:MM" : "Type your answer…"}
-              aria-label={answerType === "date_time" ? "Load-in time" : "Answer this question"}
+              placeholder={
+                answerType === 'number'
+                  ? 'Enter a number…'
+                  : isTimeAnswer || answerType === 'date_time'
+                    ? 'HH:MM'
+                    : 'Type your answer…'
+              }
+              aria-label={
+                answerType === 'date_time'
+                  ? 'Load-in time'
+                  : 'Answer this question'
+              }
               aria-invalid={displayError ? true : undefined}
               aria-describedby={displayError ? errorId : undefined}
               className={`${ANSWER_FIELD_CLASS} basis-48`}
@@ -689,61 +1033,108 @@ function GuidedQuestionCard({ question, current, busy, error, minimumDate, maxim
             disabled={busy || answer === null}
             className={PRIMARY_BUTTON_CLASS}
           >
-            {busy ? "Saving…" : "Answer"}
+            {busy ? 'Saving…' : 'Answer'}
           </button>
           {skipButton}
         </form>
       )}
       {prefilled && !displayError && (
         <p role="note" className="mt-2 text-xs text-slate-600">
-          {answerType === "choice"
-            ? "The highlighted option comes from your message — tap it to confirm."
-            : "Pre-filled from your message — confirm or edit."}
+          {answerType === 'choice'
+            ? 'The highlighted option comes from your message — tap it to confirm.'
+            : 'Pre-filled from your message — confirm or edit.'}
         </p>
       )}
-      {displayError && <p id={errorId} role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{displayError}</p>}
+      {displayError && (
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800"
+        >
+          {displayError}
+        </p>
+      )}
     </div>
   );
 }
 
 // Details of a completed extraction run: evidence chips grouped per source,
 // count of suggested fields linking to the review surface, and the model badge.
-function ContextRunCard({ proposalId, message, sourcesById }: {
+function ContextRunCard({
+  proposalId,
+  message,
+  sourcesById,
+}: {
   proposalId: string;
   message: ConversationMessage;
   sourcesById: Map<string, PrivateDocumentSource>;
 }) {
-  const [chips, setChips] = useState<Array<{ label: string; count: number }>>([]);
+  const [chips, setChips] = useState<
+    Array<{ label: string; count: number }>
+  >([]);
   const [fieldCount, setFieldCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!message.runId) return;
     let active = true;
-    void getProposalContextAction(proposalId, message.runId).then(result => {
-      if (!active || !result.success) return;
-      const evidence = Array.isArray(result.data.evidence) ? result.data.evidence : [];
-      const counts = new Map<string, number>();
-      for (const row of evidence) {
-        const versionId = isRecord(row) && typeof row.source_version_id === "string" ? row.source_version_id : "";
-        const sourceId = versionId.startsWith("source:") ? versionId.slice("source:".length) : versionId;
-        const label = sourcesById.get(sourceId)?.originalFilename || "Attached source";
-        counts.set(label, (counts.get(label) ?? 0) + 1);
-      }
-      setChips([...counts.entries()].map(([label, count]) => ({ label, count })));
-      setFieldCount(Array.isArray(result.data.operations) ? result.data.operations.length : 0);
-    });
-    return () => { active = false; };
+    void getProposalContextAction(proposalId, message.runId).then(
+      (result) => {
+        if (!active || !result.success) return;
+        const evidence = Array.isArray(result.data.evidence)
+          ? result.data.evidence
+          : [];
+        const counts = new Map<string, number>();
+        for (const row of evidence) {
+          const versionId =
+            isRecord(row) && typeof row.source_version_id === 'string'
+              ? row.source_version_id
+              : '';
+          const sourceId = versionId.startsWith('source:')
+            ? versionId.slice('source:'.length)
+            : versionId;
+          const label =
+            sourcesById.get(sourceId)?.originalFilename ||
+            'Attached source';
+          counts.set(label, (counts.get(label) ?? 0) + 1);
+        }
+        setChips(
+          [...counts.entries()].map(([label, count]) => ({
+            label,
+            count,
+          })),
+        );
+        setFieldCount(
+          Array.isArray(result.data.operations)
+            ? result.data.operations.length
+            : 0,
+        );
+      },
+    );
+    return () => {
+      active = false;
+    };
   }, [proposalId, message.runId, sourcesById]);
 
   const reviewHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   return (
-    <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <SourceChips chips={chips} />
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Results</p>
-      <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-800">{message.content}</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+        Extracted from your sources
+      </p>
+      <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-800">
+        {message.content}
+      </p>
       {fieldCount !== null && (
-        <Link href={reviewHref} className="mt-2 inline-block rounded-lg border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50">
-          Review &amp; apply {fieldCount} extracted field{fieldCount === 1 ? "" : "s"}
+        <Link
+          href={reviewHref}
+          className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50"
+        >
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+            Suggestions
+          </span>
+          Review &amp; apply {fieldCount} extracted field
+          {fieldCount === 1 ? '' : 's'}
         </Link>
       )}
       <CardFooter detailsHref={reviewHref} />
@@ -757,47 +1148,71 @@ function ContextRunCard({ proposalId, message, sourcesById }: {
 // staleness hint is never rendered on a guess.
 const draftRunVersion = (run: unknown): number | null => {
   if (!isRecord(run)) return null;
-  const raw = run.expected_proposal_version ?? run.expectedProposalVersion;
-  if (typeof raw !== "number" && typeof raw !== "string") return null;
+  const raw =
+    run.expected_proposal_version ?? run.expectedProposalVersion;
+  if (typeof raw !== 'number' && typeof raw !== 'string') return null;
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? value : null;
 };
 
 // Details of a completed draft run: read-only sections rendered inline, plus a
 // quiet staleness hint when the proposal moved on after the draft was written.
-function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, onRegenerate }: {
+function DraftRunCard({
+  proposalId,
+  message,
+  currentProposalVersion,
+  draftBusy,
+  onRegenerate,
+}: {
   proposalId: string;
   message: ConversationMessage;
   currentProposalVersion: number | undefined;
   draftBusy: boolean;
   onRegenerate: () => void;
 }) {
-  const [sections, setSections] = useState<ProposalDraftSection[]>([]);
-  const [run, setRun] = useState<Record<string, unknown> | null>(null);
+  const [sections, setSections] = useState<ProposalDraftSection[]>(
+    [],
+  );
+  const [run, setRun] = useState<Record<string, unknown> | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!message.runId) return;
     let active = true;
-    void getProposalDraftAction(proposalId, message.runId).then(result => {
-      if (!active || !result.success) return;
-      setSections(result.data.sections ?? []);
-      setRun(isRecord(result.data.run) ? result.data.run : null);
-    });
-    return () => { active = false; };
+    void getProposalDraftAction(proposalId, message.runId).then(
+      (result) => {
+        if (!active || !result.success) return;
+        setSections(result.data.sections ?? []);
+        setRun(isRecord(result.data.run) ? result.data.run : null);
+      },
+    );
+    return () => {
+      active = false;
+    };
   }, [proposalId, message.runId]);
 
   const draftVersion = draftRunVersion(run);
   // Both versions must be known: a missing version means "unknown", not "stale".
-  const stale = draftVersion !== null && typeof currentProposalVersion === "number" && currentProposalVersion > draftVersion;
+  const stale =
+    draftVersion !== null &&
+    typeof currentProposalVersion === 'number' &&
+    currentProposalVersion > draftVersion;
 
   const detailsHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   return (
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Results</p>
-      <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-800">{message.content}</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+        Results
+      </p>
+      <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-800">
+        {message.content}
+      </p>
       {stale && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-          <p className="min-w-0 text-xs text-amber-900">This draft was written before your latest answers.</p>
+          <p className="min-w-0 text-xs text-amber-900">
+            This draft was written before your latest answers.
+          </p>
           <button
             type="button"
             onClick={onRegenerate}
@@ -805,8 +1220,14 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
             aria-busy={draftBusy}
             className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {draftBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
-            {draftBusy ? "Generating…" : "Regenerate draft"}
+            {draftBusy && (
+              <Loader2
+                size={12}
+                className="animate-spin"
+                aria-hidden
+              />
+            )}
+            {draftBusy ? 'Generating…' : 'Regenerate draft'}
           </button>
         </div>
       )}
@@ -814,36 +1235,51 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
           scan the whole thing without opening eight disclosures. */}
       {sections.length > 0 && (
         <article className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-slate-50/70">
-          {sections.map(section => (
+          {sections.map((section) => (
             <section key={section.id} className="p-3">
-              <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{section.heading}</h4>
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                {section.heading}
+              </h4>
               <div className="mt-1.5 space-y-2">
-                {section.paragraphs.length > 0
-                  ? section.paragraphs.map((paragraph, index) => (
-                      <div key={index}>
-                        <p className="text-sm leading-relaxed text-slate-700">{paragraph.text}</p>
-                        {paragraph.citations.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1" aria-label="Sources">
-                            {paragraph.citations.map(citation => (
-                              <span
-                                key={citation}
-                                data-citation={citation}
-                                className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-500"
-                              >
-                                {citationLabel(citation)}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  : <p className="text-sm italic text-slate-400">Nothing supported by evidence yet for this section.</p>}
+                {section.paragraphs.length > 0 ? (
+                  section.paragraphs.map((paragraph, index) => (
+                    <div key={index}>
+                      <p className="text-sm leading-relaxed text-slate-700">
+                        {paragraph.text}
+                      </p>
+                      {paragraph.citations.length > 0 && (
+                        <div
+                          className="mt-1 flex flex-wrap gap-1"
+                          aria-label="Sources"
+                        >
+                          {paragraph.citations.map((citation) => (
+                            <span
+                              key={citation}
+                              data-citation={citation}
+                              className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-500"
+                            >
+                              {citationLabel(citation)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm italic text-slate-400">
+                    Nothing supported by evidence yet for this
+                    section.
+                  </p>
+                )}
               </div>
             </section>
           ))}
         </article>
       )}
-      <CardFooter detailsHref={detailsHref} detailsLabel="View draft" />
+      <CardFooter
+        detailsHref={detailsHref}
+        detailsLabel="View draft"
+      />
     </div>
   );
 }
@@ -853,9 +1289,23 @@ function DraftRunCard({ proposalId, message, currentProposalVersion, draftBusy, 
 // no-questions notice and disappears once a draft run exists.
 // `showActions` is false when the completion progress card is on screen — that
 // card then owns the single primary action for the whole thread.
-function OverviewCard({ proposalId, eventName, rows, detailCount, detailSource, pendingReview, busy, error, showActions, hasDraft, onGenerateDraft, onRunReadiness, readinessBusy }: {
+function OverviewCard({
+  proposalId,
+  eventName,
+  rows,
+  detailCount,
+  detailSource,
+  pendingReview,
+  busy,
+  error,
+  showActions,
+  hasDraft,
+  onGenerateDraft,
+  onRunReadiness,
+  readinessBusy,
+}: {
   proposalId: string;
-  detailSource: "sources" | "answers" | "both";
+  detailSource: 'sources' | 'answers' | 'both';
   eventName: string | null;
   rows: OverviewRow[];
   detailCount: number;
@@ -869,30 +1319,66 @@ function OverviewCard({ proposalId, eventName, rows, detailCount, detailSource, 
   readinessBusy: boolean;
 }) {
   const editorHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
-  const title = eventName && eventName !== PLACEHOLDER_EVENT_NAME ? eventName : "your proposal";
+  const title =
+    eventName && eventName !== PLACEHOLDER_EVENT_NAME
+      ? eventName
+      : 'your proposal';
   return (
-    <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-sm font-semibold text-slate-900">Here&rsquo;s what I have for {title}</p>
+    <div className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold text-slate-900">
+          Here&rsquo;s what I have for {title}
+        </p>
+        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+          Confirmed in proposal
+        </span>
+      </div>
       {rows.length > 0 && (
         <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
-          {rows.map(row => (
-            <div key={row.label} className="flex items-baseline justify-between gap-3 border-b border-slate-100 pb-1">
-              <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-400">{row.label}</dt>
-              <dd className="min-w-0 truncate text-right text-sm text-slate-800" title={row.value}>{row.value}</dd>
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className="flex items-baseline justify-between gap-3 border-b border-slate-100 pb-1"
+            >
+              <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {row.label}
+              </dt>
+              <dd
+                className="min-w-0 truncate text-right text-sm text-slate-800"
+                title={row.value}
+              >
+                {row.value}
+              </dd>
             </div>
           ))}
         </dl>
       )}
       {detailCount > 0 && (
         <p className="mt-2.5 text-xs text-slate-500">
-          {detailCount} detail{detailCount === 1 ? "" : "s"} captured from{" "}
-          {detailSource === "sources" ? "your sources" : detailSource === "answers" ? "your answers" : "your sources and answers"}.
+          {detailCount} detail{detailCount === 1 ? '' : 's'} captured
+          from{' '}
+          {detailSource === 'sources'
+            ? 'your sources'
+            : detailSource === 'answers'
+              ? 'your answers'
+              : 'your sources and answers'}
+          .
         </p>
       )}
       {pendingReview > 0 && (
-        <p className="mt-1 text-xs text-slate-600">
-          Extracted suggestions are ready for explicit review.{" "}
-          <Link href={editorHref} className="font-semibold text-[#087f69] underline underline-offset-2">Review suggestions</Link>
+        <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-950">
+          <span className="font-bold uppercase tracking-wide text-amber-800">
+            Suggestions · not yet confirmed
+          </span>
+          {' — '}
+          Extracted fields still need your explicit review before they
+          become proposal values.{' '}
+          <Link
+            href={editorHref}
+            className="font-semibold text-[#087f69] underline underline-offset-2"
+          >
+            Review suggestions
+          </Link>
         </p>
       )}
       {showActions && (
@@ -905,27 +1391,51 @@ function OverviewCard({ proposalId, eventName, rows, detailCount, detailSource, 
             onRunReadiness={onRunReadiness}
             readinessBusy={readinessBusy}
           />
-          <p className="mt-2 text-xs text-slate-500">Or add more details — upload another file, paste notes, or ask me anything.</p>
+          <p className="mt-2 text-xs text-slate-500">
+            Or add more details — upload another file, paste notes, or
+            ask me anything.
+          </p>
         </div>
       )}
-      {showActions && error && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</p>}
+      {showActions && error && (
+        <p
+          role="alert"
+          className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800"
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }
 
 // The 3 thinnest sections, so the card names what is actually worth filling in
 // next. Complete sections are never listed — this is a progress moment.
-export const weakestSections = (report: GuidanceReport): GuidanceSectionCompleteness[] =>
+export const weakestSections = (
+  report: GuidanceReport,
+): GuidanceSectionCompleteness[] =>
   [...report.completeness]
-    .filter(section => section.total > 0 && section.score < 1)
-    .sort((a, b) => a.score - b.score || a.label.localeCompare(b.label))
+    .filter((section) => section.total > 0 && section.score < 1)
+    .sort(
+      (a, b) => a.score - b.score || a.label.localeCompare(b.label),
+    )
     .slice(0, 3);
 
 // Shown once every key question is answered: a real progress summary from the
 // deterministic guidance engine (percentage, slim bar, weakest sections) rather
 // than a vague "everything else is optional". A failed check degrades to the
 // plain headline — the actions always stay available.
-function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, draftError, onGenerateDraft, onRunReadiness, readinessBusy }: {
+function CompletionCard({
+  proposalId,
+  report,
+  checking,
+  hasDraft,
+  draftBusy,
+  draftError,
+  onGenerateDraft,
+  onRunReadiness,
+  readinessBusy,
+}: {
   proposalId: string;
   report: GuidanceReport | null;
   checking: boolean;
@@ -936,16 +1446,20 @@ function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, dra
   onRunReadiness?: () => void;
   readinessBusy: boolean;
 }) {
-  const percent = report ? Math.round(report.overallCompleteness * 100) : null;
+  const percent = report
+    ? Math.round(report.overallCompleteness * 100)
+    : null;
   const weakest = report ? weakestSections(report) : [];
   return (
-    <div className="max-w-[85%] rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+    <div className="max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
       <p className="text-sm font-semibold text-emerald-900">
         {/* Not "X% complete": the stepper uses "complete" for how far
             through the workflow a proposal is, and this measures how much of
             the questionnaire is filled in. Two different questions deserve two
             different words, or a planner reads them as contradicting. */}
-        {percent === null ? "Key questions answered." : `Your proposal details are ${percent}% filled in`}
+        {percent === null
+          ? 'Key questions answered.'
+          : `Your proposal details are ${percent}% filled in`}
       </p>
       {percent !== null && (
         <div
@@ -956,25 +1470,43 @@ function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, dra
           aria-label="Proposal completeness"
           className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-emerald-100"
         >
-          <div className="h-full rounded-full bg-[#087f69]" style={{ width: `${percent}%` }} />
+          <div
+            className="h-full rounded-full bg-[#087f69]"
+            style={{ width: `${percent}%` }}
+          />
         </div>
       )}
       {percent === null && checking && (
-        <p role="status" className="mt-1 text-xs text-emerald-800">Checking what&rsquo;s left…</p>
+        <p role="status" className="mt-1 text-xs text-emerald-800">
+          Checking what&rsquo;s left…
+        </p>
       )}
       {weakest.length > 0 && (
         <ul className="mt-3 space-y-1">
-          {weakest.map(section => (
-            <li key={section.section || section.label} className="flex items-baseline justify-between gap-3 rounded-lg border border-emerald-100 bg-white px-2.5 py-1.5 text-xs text-slate-700">
-              <span className="min-w-0 truncate" title={section.label}>{section.label}</span>
-              <span className="shrink-0 font-semibold tabular-nums text-slate-500">{section.filled}/{section.total}</span>
+          {weakest.map((section) => (
+            <li
+              key={section.section || section.label}
+              className="flex items-baseline justify-between gap-3 rounded-lg border border-emerald-100 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+            >
+              <span
+                className="min-w-0 truncate"
+                title={section.label}
+              >
+                {section.label}
+              </span>
+              <span className="shrink-0 font-semibold tabular-nums text-slate-500">
+                {section.filled}/{section.total}
+              </span>
             </li>
           ))}
         </ul>
       )}
       {report && report.blockingCount > 0 && (
         <p className="mt-2 text-xs font-medium text-amber-800">
-          {report.blockingCount} item{report.blockingCount === 1 ? "" : "s"} need{report.blockingCount === 1 ? "s" : ""} attention before publishing.
+          {report.blockingCount} item
+          {report.blockingCount === 1 ? '' : 's'} need
+          {report.blockingCount === 1 ? 's' : ''} attention before
+          publishing.
         </p>
       )}
       <CardActionRow
@@ -985,68 +1517,268 @@ function CompletionCard({ proposalId, report, checking, hasDraft, draftBusy, dra
         onRunReadiness={onRunReadiness}
         readinessBusy={readinessBusy}
       />
-      {draftError && <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">{draftError}</p>}
+      {draftError && (
+        <p
+          role="alert"
+          className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800"
+        >
+          {draftError}
+        </p>
+      )}
     </div>
   );
 }
 
 function GuidanceCard({ report }: { report: GuidanceReport }) {
-  const blocking = report.findings.filter(f => f.severity === "blocking").length;
-  const warnings = report.findings.filter(f => f.severity === "warning").length;
+  const blocking = report.findings.filter(
+    (f) => f.severity === 'blocking',
+  ).length;
+  const warnings = report.findings.filter(
+    (f) => f.severity === 'warning',
+  ).length;
   return (
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Results — Readiness check</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+        Results — Readiness check
+      </p>
       <div className="mt-2 flex items-baseline justify-between gap-3">
-        <p className="text-sm font-semibold text-slate-900">Overall completeness</p>
-        <p className="text-xl font-bold text-slate-900">{Math.round(report.overallCompleteness * 100)}%</p>
+        <p className="text-sm font-semibold text-slate-900">
+          Overall completeness
+        </p>
+        <p className="text-xl font-bold text-slate-900">
+          {Math.round(report.overallCompleteness * 100)}%
+        </p>
       </div>
-      <div aria-hidden className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-        <div className="h-full rounded-full bg-[#087f69]" style={{ width: `${Math.round(report.overallCompleteness * 100)}%` }} />
+      <div
+        aria-hidden
+        className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100"
+      >
+        <div
+          className="h-full rounded-full bg-[#087f69]"
+          style={{
+            width: `${Math.round(report.overallCompleteness * 100)}%`,
+          }}
+        />
       </div>
       <p className="mt-2 text-sm text-slate-700">
         {report.findings.length === 0
-          ? "No issues found. Your proposal fields look consistent."
-          : `${report.findings.length} finding${report.findings.length === 1 ? "" : "s"} — ${blocking} blocking, ${warnings} worth reviewing.`}
+          ? 'No issues found. Your proposal fields look consistent.'
+          : `${report.findings.length} finding${report.findings.length === 1 ? '' : 's'} — ${blocking} blocking, ${warnings} worth reviewing.`}
       </p>
-      {report.findings.slice(0, 3).map(finding => (
-        <p key={`${finding.code}-${finding.paths.join(",")}`} className="mt-1.5 rounded-lg border border-slate-100 bg-slate-50 p-2 text-xs text-slate-700">
+      {report.findings.slice(0, 3).map((finding) => (
+        <p
+          key={`${finding.code}-${finding.paths.join(',')}`}
+          className="mt-1.5 rounded-lg border border-slate-100 bg-slate-50 p-2 text-xs text-slate-700"
+        >
           {finding.message}
         </p>
       ))}
-      <p className="mt-2 text-[11px] text-slate-400">Verified checks based on your proposal details.</p>
+      <p className="mt-2 text-[11px] text-slate-400">
+        Verified checks based on your proposal details.
+      </p>
     </div>
   );
 }
 
-function InvestmentCard({ report, declaredBudget }: { report: InvestmentReport; declaredBudget: string }) {
-  const summary = report.totalMidMinor !== null && report.currency
-    ? `Estimated investment ${roundedMoney(report.totalLowMinor, report.currency)} – ${roundedMoney(report.totalHighMinor, report.currency)} (mid ${roundedMoney(report.totalMidMinor, report.currency)}).`
-    : "Investment guidance generated — some categories need more information before an estimate is possible.";
+function InvestmentCard({
+  report,
+  declaredBudget,
+}: {
+  report: InvestmentReport;
+  declaredBudget: string;
+}) {
+  const summary =
+    report.totalMidMinor !== null && report.currency
+      ? `Estimated investment ${roundedMoney(report.totalLowMinor, report.currency)} – ${roundedMoney(report.totalHighMinor, report.currency)} (mid ${roundedMoney(report.totalMidMinor, report.currency)}).`
+      : 'Investment guidance generated — some categories need more information before an estimate is possible.';
   return (
     <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Results — Investment guidance</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+        Results — Investment guidance
+      </p>
       <p className="mt-2 text-sm text-slate-800">{summary}</p>
       {declaredBudget && (
         <p className="mt-2 rounded-lg border border-cyan-100 bg-cyan-50 p-2 text-xs text-slate-700">
-          Your stated planning budget is <strong>{declaredBudget}</strong>. The estimate below is scope-based guidance, not a replacement for that budget.
+          Your stated planning budget is{' '}
+          <strong>{declaredBudget}</strong>. The estimate below is
+          scope-based guidance, not a replacement for that budget.
         </p>
       )}
       {report.lineItems.length > 0 && (
         <ul className="mt-2 space-y-1">
-          {report.lineItems.slice(0, 5).map(item => (
-            <li key={item.label} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700">
+          {report.lineItems.slice(0, 5).map((item) => (
+            <li
+              key={item.label}
+              className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700"
+            >
               <span className="truncate">{item.label}</span>
-              <span className="shrink-0 font-semibold">{money(item.midMinor, item.currency || report.currency)}</span>
+              <span className="shrink-0 font-semibold">
+                {money(
+                  item.midMinor,
+                  item.currency || report.currency,
+                )}
+              </span>
             </li>
           ))}
         </ul>
       )}
       {report.refusals.length > 0 && (
         <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-          {report.refusals.length} categor{report.refusals.length === 1 ? "y" : "ies"} need more information: {report.refusals.map(r => r.ask).join(" ")}
+          {report.refusals.length} categor
+          {report.refusals.length === 1 ? 'y' : 'ies'} need more
+          information: {report.refusals.map((r) => r.ask).join(' ')}
         </p>
       )}
-      <p className="mt-2 text-[11px] text-slate-400">Range guidance from approved pricing records.</p>
+      <p className="mt-2 text-[11px] text-slate-400">
+        Range guidance from approved pricing records.
+      </p>
+    </div>
+  );
+}
+
+// ── Workspace chrome ─────────────────────────────────────────────────────────
+// A single journey strip and next-step banner keep one primary CTA visible while
+// the chat column stays visually dominant.
+
+type WorkspacePhase =
+  'share' | 'extract' | 'clarify' | 'draft' | 'review';
+
+const JOURNEY_STEPS: Array<{ id: WorkspacePhase; label: string }> = [
+  { id: 'share', label: 'Share details' },
+  { id: 'extract', label: 'Extract' },
+  { id: 'clarify', label: 'Clarify' },
+  { id: 'draft', label: 'Draft' },
+  { id: 'review', label: 'Review' },
+];
+
+const phaseIndex = (phase: WorkspacePhase) =>
+  JOURNEY_STEPS.findIndex((step) => step.id === phase);
+
+function WorkspaceJourneyBar({ phase }: { phase: WorkspacePhase }) {
+  const activeIndex = phaseIndex(phase);
+  return (
+    <ol
+      aria-label="Proposal building progress"
+      className="hidden min-w-0 flex-1 items-center justify-center gap-1 sm:flex lg:gap-2"
+    >
+      {JOURNEY_STEPS.map((step, index) => {
+        const complete = index < activeIndex;
+        const active = index === activeIndex;
+        return (
+          <li
+            key={step.id}
+            className="flex min-w-0 items-center gap-1 lg:gap-2"
+          >
+            <span
+              className={`inline-flex max-w-[5.5rem] items-center gap-1.5 truncate rounded-full px-2 py-1 text-[11px] font-semibold lg:max-w-none lg:px-2.5 lg:text-xs ${
+                active
+                  ? 'bg-[#087f69] text-white shadow-sm'
+                  : complete
+                    ? 'bg-emerald-50 text-emerald-800'
+                    : 'bg-slate-100 text-slate-500'
+              }`}
+              aria-current={active ? 'step' : undefined}
+            >
+              {complete ? (
+                <Check size={12} className="shrink-0" aria-hidden />
+              ) : null}
+              {step.label}
+            </span>
+            {index < JOURNEY_STEPS.length - 1 && (
+              <span
+                aria-hidden
+                className={`h-px w-3 shrink-0 lg:w-5 ${complete ? 'bg-emerald-300' : 'bg-slate-200'}`}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function AssistantTurnAvatar({ busy }: { busy?: boolean }) {
+  return (
+    <div
+      aria-hidden
+      className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#087f69]/15 bg-gradient-to-br from-[#087f69]/10 to-[#00c2c9]/10 text-[#087f69] ${busy ? 'motion-safe:animate-pulse' : ''}`}
+    >
+      <Sparkles size={15} strokeWidth={2} />
+    </div>
+  );
+}
+
+function wrapAssistantTurn(
+  content: ReactNode,
+  key: string,
+  busy?: boolean,
+) {
+  return (
+    <li key={key} className="flex items-start gap-2.5 sm:gap-3">
+      <AssistantTurnAvatar busy={busy} />
+      <div className="min-w-0 flex-1">{content}</div>
+    </li>
+  );
+}
+
+function NextStepBanner({
+  title,
+  detail,
+  proposalId,
+  primaryHref,
+  primaryLabel,
+  onPrimaryClick,
+  primaryBusy,
+}: {
+  title: string;
+  detail: string;
+  proposalId: string | null;
+  primaryHref?: string;
+  primaryLabel?: string;
+  onPrimaryClick?: () => void;
+  primaryBusy?: boolean;
+}) {
+  return (
+    <div className="shrink-0 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-white px-4 py-3 sm:px-5">
+      <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#087f69]">
+            Recommended next step
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-slate-900">
+            {title}
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
+            {detail}
+          </p>
+        </div>
+        {primaryHref && proposalId && (
+          <Link
+            href={primaryHref}
+            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-[#087f69] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#0a9a81] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087f69]"
+          >
+            {primaryLabel}
+          </Link>
+        )}
+        {onPrimaryClick && !primaryHref && (
+          <button
+            type="button"
+            onClick={onPrimaryClick}
+            disabled={primaryBusy}
+            aria-busy={primaryBusy}
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#087f69] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#0a9a81] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087f69] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {primaryBusy && (
+              <Loader2
+                size={12}
+                className="animate-spin"
+                aria-hidden
+              />
+            )}
+            {primaryLabel}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1060,20 +1792,28 @@ export default function AssistantWorkspacePage({
   initialProposalId?: string;
   /** Task to start on arrival, e.g. from the workflow shell's
       "Create my first draft" deep link (?task=generate_draft). */
-  autoTask?: "generate_draft";
+  autoTask?: 'generate_draft';
 }) {
-  const [proposalId, setProposalId] = useState<string | null>(initialProposalId ?? null);
+  const [proposalId, setProposalId] = useState<string | null>(
+    initialProposalId ?? null,
+  );
   const [firstName, setFirstName] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string | null>(null);
   // The full proposal document backs the captured-details overview; the
   // breadcrumb reads its event name from the same fetch.
-  const [proposal, setProposal] = useState<Record<string, unknown> | null>(null);
-  const [text, setText] = useState("");
+  const [proposal, setProposal] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [text, setText] = useState('');
   // Guided clarification flow: progress across this session plus the latest
   // confirmed value ("Rooms: 6") shown after a successful answer.
   const [answeredCount, setAnsweredCount] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
-  const [lastConfirmed, setLastConfirmed] = useState<{ label: string; value: string } | null>(null);
+  const [lastConfirmed, setLastConfirmed] = useState<{
+    label: string;
+    value: string;
+  } | null>(null);
   // ChatGPT-style staged attachments: picking a file only adds a chip to the
   // composer; the actual upload happens when the message is sent.
   const [staged, setStaged] = useState<File[]>([]);
@@ -1083,12 +1823,18 @@ export default function AssistantWorkspacePage({
   // a retry does not upload them a second time.
   const uploadedRef = useRef(new Map<File, string>());
   const [notesOpen, setNotesOpen] = useState(false);
-  const [notesText, setNotesText] = useState("");
+  const [notesText, setNotesText] = useState('');
   // Rail source removal: which row is asking for confirmation, which one has a
   // delete in flight, and per-row failure messages.
-  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
-  const [removingSourceId, setRemovingSourceId] = useState<string | null>(null);
-  const [removeErrors, setRemoveErrors] = useState<Record<string, string>>({});
+  const [confirmRemoveId, setConfirmRemoveId] = useState<
+    string | null
+  >(null);
+  const [removingSourceId, setRemovingSourceId] = useState<
+    string | null
+  >(null);
+  const [removeErrors, setRemoveErrors] = useState<
+    Record<string, string>
+  >({});
   const [createError, setCreateError] = useState<string | null>(null);
   const [localCards, setLocalCards] = useState<LocalCard[]>([]);
   const [guidanceBusy, setGuidanceBusy] = useState(false);
@@ -1097,13 +1843,20 @@ export default function AssistantWorkspacePage({
   const [proposalVersion, setProposalVersion] = useState<number>();
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
-  const [retryingExtractionId, setRetryingExtractionId] = useState<string | null>(null);
-  const [continuedAfterExtractionFailure, setContinuedAfterExtractionFailure] = useState<string[]>([]);
+  const [retryingExtractionId, setRetryingExtractionId] = useState<
+    string | null
+  >(null);
+  const [continuedAfterExtractionFailure, setContinuedAfterExtractionFailure] =
+    useState<string[]>([]);
   // Completion progress summary: one deterministic guidance run per
   // proposal+version, kept out of render by a ref guard.
-  const [completionReport, setCompletionReport] = useState<GuidanceReport | null>(null);
+  const [completionReport, setCompletionReport] =
+    useState<GuidanceReport | null>(null);
   const [completionChecking, setCompletionChecking] = useState(false);
-  const completionRunRef = useRef<{ proposalId: string; version: number | null } | null>(null);
+  const completionRunRef = useRef<{
+    proposalId: string;
+    version: number | null;
+  } | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
@@ -1127,83 +1880,171 @@ export default function AssistantWorkspacePage({
     const textarea = composerRef.current;
     if (!textarea) return;
 
-    textarea.style.height = "auto";
+    textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
-    textarea.style.overflowY = textarea.scrollHeight > 160 ? "auto" : "hidden";
+    textarea.style.overflowY =
+      textarea.scrollHeight > 160 ? 'auto' : 'hidden';
   }, [text]);
 
   const {
-    data, loading, loadError, pending, sendMessage, retrySend,
-    resolveQuestion, questionBusyId, questionError,
+    data,
+    loading,
+    loadError,
+    pending,
+    sendMessage,
+    retrySend,
+    resolveQuestion,
+    questionBusyId,
+    questionError,
   } = useConversation(proposalId);
-  const { notesJob, notesJobId, notesError, notesBusy, submitNotes } = useNotesScan(proposalId);
-  const { uploadJob, uploadJobId, uploadError, upload } = useSourceUpload(proposalId);
+  const { notesJob, notesJobId, notesError, notesBusy, submitNotes } =
+    useNotesScan(proposalId);
+  const { uploadJob, uploadJobId, uploadError, upload } =
+    useSourceUpload(proposalId);
   // Auto-orchestration: a send with attachments queues a watch on the new
   // sources' scans; when all of them are ready one extract_requirements message
   // is sent automatically (exactly once per originating send).
-  const { queueAutoExtract, dropSource, autoScanning, scanCount, failedNotices } = useAutoExtraction(proposalId, sendMessage);
-  const { sources, refresh: refreshSources } = useProposalSources(proposalId, `${notesJobId ?? ""}:${uploadJobId ?? ""}:${notesJob?.status ?? ""}:${uploadJob?.status ?? ""}:${autoScanning}`);
+  const {
+    queueAutoExtract,
+    dropSource,
+    autoScanning,
+    scanCount,
+    failedNotices,
+  } = useAutoExtraction(proposalId, sendMessage);
+  const { sources, refresh: refreshSources } = useProposalSources(
+    proposalId,
+    `${notesJobId ?? ''}:${uploadJobId ?? ''}:${notesJob?.status ?? ''}:${uploadJob?.status ?? ''}:${autoScanning}`,
+  );
 
   const messages = useMemo(() => data?.messages ?? [], [data]);
-  const displayedMessages = useMemo(() => visibleRunMessages(messages), [messages]);
-  const latestContextRun = useMemo(
-    () => messages.reduce<ConversationMessage | null>(
-      (latest, message) => message.runType === "proposal_context" && (!latest || message.ordinal > latest.ordinal) ? message : latest,
-      null,
-    ),
+  const displayedMessages = useMemo(
+    () => visibleRunMessages(messages),
     [messages],
   );
-  const extractionFailureBlocksQuestions = latestContextRun?.status === "failed"
-    && !continuedAfterExtractionFailure.includes(latestContextRun.id);
-  const chatExtractionEnabled = data?.capabilities?.conversationExtraction === true;
-  const openQuestions = (data?.questions ?? []).filter(item => item.status === "open");
+  const latestContextRun = useMemo(
+    () =>
+      messages.reduce<ConversationMessage | null>(
+        (latest, message) =>
+          message.runType === 'proposal_context' &&
+          (!latest || message.ordinal > latest.ordinal)
+            ? message
+            : latest,
+        null,
+      ),
+    [messages],
+  );
+  const extractionFailureBlocksQuestions =
+    latestContextRun?.status === 'failed' &&
+    !continuedAfterExtractionFailure.includes(latestContextRun.id);
+  const chatExtractionEnabled =
+    data?.capabilities?.conversationExtraction === true;
+  const openQuestions = (data?.questions ?? []).filter(
+    (item) => item.status === 'open',
+  );
   // answer message id -> the question it answered, so the thread can replay the
   // question above the answer instead of showing a bare value.
   const askedByAnswerMessageId = useMemo(
-    () => new Map((data?.questions ?? []).flatMap(item => (item.answeredMessageId ? [[item.answeredMessageId, item] as const] : []))),
+    () =>
+      new Map(
+        (data?.questions ?? []).flatMap((item) =>
+          item.answeredMessageId
+            ? [[item.answeredMessageId, item] as const]
+            : [],
+        ),
+      ),
     [data],
   );
-  const readySources = sources.filter(item => item.status === "ready" && item.confidentiality === "non_confidential");
-  const sourcesById = useMemo(() => new Map(sources.map(source => [source.id, source])), [sources]);
-  const sending = pending.some(item => item.state === "sending");
-  const assistantResponding = messages.some(message =>
-    message.role === "assistant" && !message.runType && message.status === "pending");
+  const readySources = sources.filter(
+    (item) =>
+      item.status === 'ready' &&
+      item.confidentiality === 'non_confidential',
+  );
+  const sourcesById = useMemo(
+    () => new Map(sources.map((source) => [source.id, source])),
+    [sources],
+  );
+  const sending = pending.some((item) => item.state === 'sending');
+  const assistantResponding = messages.some(
+    (message) =>
+      message.role === 'assistant' &&
+      !message.runType &&
+      message.status === 'pending',
+  );
   const chatBusy = sending || assistantResponding;
   // A refresh can land the persisted message before the optimistic entry is
   // retired, briefly showing the planner their own message twice. Hide an
   // in-flight entry once its text is already in the thread; a failed entry
   // always stays, because it carries the retry.
   const unsentPending = useMemo(() => {
-    const sentContent = new Set(messages.filter(m => m.role === "user").map(m => m.content.trim()));
-    return pending.filter(entry => entry.state === "failed" || !sentContent.has(entry.content.trim()));
+    const sentContent = new Set(
+      messages
+        .filter((m) => m.role === 'user')
+        .map((m) => m.content.trim()),
+    );
+    return pending.filter(
+      (entry) =>
+        entry.state === 'failed' ||
+        !sentContent.has(entry.content.trim()),
+    );
   }, [pending, messages]);
-  const started = !!proposalId || messages.length > 0 || pending.length > 0 || localCards.length > 0;
-  const completedContextRuns = messages.filter(m => m.runType === "proposal_context" && m.status === "complete").length;
+  const started =
+    !!proposalId ||
+    messages.length > 0 ||
+    pending.length > 0 ||
+    localCards.length > 0;
+  const completedContextRuns = messages.filter(
+    (m) =>
+      m.runType === 'proposal_context' && m.status === 'complete',
+  ).length;
 
   // Captured-details overview: shown once an extraction has completed, no open
   // clarification question is waiting (the guided flow always goes first).
   // Extracted candidates remain read-only until the user reviews them in the
   // editor; this workspace never saves review decisions or applies fields.
-  const hasDraftRun = messages.some(message => message.runType === "proposal_draft" && message.status === "complete");
-  const overviewRows = useMemo(() => buildOverviewRows(proposal), [proposal]);
+  const hasDraftRun = messages.some(
+    (message) =>
+      message.runType === 'proposal_draft' &&
+      message.status === 'complete',
+  );
+  const overviewRows = useMemo(
+    () => buildOverviewRows(proposal),
+    [proposal],
+  );
   // A proposal built by conversation alone never has an extraction run, so the
   // hand-off also opens once questions have been answered or the proposal has
   // real content — otherwise that path dead-ends with no way to reach a draft.
-  const answeredQuestions = (data?.questions ?? []).filter(question => question.status === "answered").length;
-  const hasCapturedContent = completedContextRuns > 0 || answeredQuestions > 0 || overviewRows.length > 0;
-  const showOverview = hasCapturedContent && !loading && !!data
-    && openQuestions.length === 0 && !hasDraftRun;
+  const answeredQuestions = (data?.questions ?? []).filter(
+    (question) => question.status === 'answered',
+  ).length;
+  const hasCapturedContent =
+    completedContextRuns > 0 ||
+    answeredQuestions > 0 ||
+    overviewRows.length > 0;
+  const showOverview =
+    hasCapturedContent &&
+    !loading &&
+    !!data &&
+    openQuestions.length === 0 &&
+    !hasDraftRun;
   const overviewDetailCount = overviewRows.length;
   const overviewPendingReview = completedContextRuns > 0 ? 1 : 0;
   // Details reach a proposal by extraction, by answered questions, or both.
-  const overviewDetailSource: "sources" | "answers" | "both" =
-    completedContextRuns > 0 && answeredQuestions > 0 ? "both" : completedContextRuns > 0 ? "sources" : "answers";
+  const overviewDetailSource: 'sources' | 'answers' | 'both' =
+    completedContextRuns > 0 && answeredQuestions > 0
+      ? 'both'
+      : completedContextRuns > 0
+        ? 'sources'
+        : 'answers';
 
   // The right rail only exists once the conversation has begun: messages exist
   // (including a proposal resumed from its route with history), a send is pending, or a
   // staged upload is in progress. Once shown it stays shown; its entrance is a
   // CSS-only slide-in-from-right keyframe animation played on mount.
-  const conversationActive = messages.length > 0 || pending.length > 0 || sendBusy || localCards.length > 0;
+  const conversationActive =
+    messages.length > 0 ||
+    pending.length > 0 ||
+    sendBusy ||
+    localCards.length > 0;
   const [railVisible, setRailVisible] = useState(false);
   useEffect(() => {
     if (!conversationActive || railVisible) return;
@@ -1214,12 +2055,14 @@ export default function AssistantWorkspacePage({
   // Greeting name comes from the backend profile via the existing user action.
   useEffect(() => {
     let active = true;
-    void getUserData().then(result => {
+    void getUserData().then((result) => {
       if (!active || !result.ok || !isRecord(result.data)) return;
       const name = firstNameOf(result.data.name);
       if (name) setFirstName(name);
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   // One proposal read backs the breadcrumb, captured-details overview, and
@@ -1235,12 +2078,17 @@ export default function AssistantWorkspacePage({
       if (!active) return;
       if (current.success && isRecord(current.data)) {
         setProposal(current.data);
-        const event = isRecord(current.data.event) ? current.data.event : null;
-        const name = typeof event?.eventName === "string" ? event.eventName.trim() : "";
+        const event = isRecord(current.data.event)
+          ? current.data.event
+          : null;
+        const name =
+          typeof event?.eventName === 'string'
+            ? event.eventName.trim()
+            : '';
         if (name) setEventName(name);
         // The proposal document is authoritative for new and conversation-only
         // proposals, which may never have an extraction review.
-        if (typeof current.data.version === "number") {
+        if (typeof current.data.version === 'number') {
           setProposalVersion(current.data.version);
           return;
         }
@@ -1250,44 +2098,94 @@ export default function AssistantWorkspacePage({
       // read-only extraction-review fallback without issuing a second proposal
       // request.
       const latest = await getLatestProposalContextAction(proposalId);
-      if (!active || !latest.success || !isRecord(latest.data.run) || typeof latest.data.run.id !== "string") return;
-      const review = await getCandidateReviewAction(proposalId, latest.data.run.id);
-      if (active && review.success) setProposalVersion(review.data.proposalVersion);
+      if (
+        !active ||
+        !latest.success ||
+        !isRecord(latest.data.run) ||
+        typeof latest.data.run.id !== 'string'
+      )
+        return;
+      const review = await getCandidateReviewAction(
+        proposalId,
+        latest.data.run.id,
+      );
+      if (active && review.success)
+        setProposalVersion(review.data.proposalVersion);
     })();
-    return () => { active = false; };
-  }, [proposalId, loading, completedContextRuns, data?.conversation?.updatedAt]);
+    return () => {
+      active = false;
+    };
+  }, [
+    proposalId,
+    loading,
+    completedContextRuns,
+    data?.conversation?.updatedAt,
+  ]);
 
   // Draft generation revalidates the version at click time when the background
   // refresh has not produced one yet. This is intentionally on-demand; the
   // polling effect above still performs only one proposal read per update.
-  const fetchProposalVersion = useCallback(async (id: string): Promise<number | undefined> => {
-    const current = await getProposalByIdAction(id);
-    if (current.success && isRecord(current.data) && typeof current.data.version === "number") return current.data.version;
-    const latest = await getLatestProposalContextAction(id);
-    if (!latest.success || !isRecord(latest.data.run) || typeof latest.data.run.id !== "string") return undefined;
-    const review = await getCandidateReviewAction(id, latest.data.run.id);
-    return review.success ? review.data.proposalVersion : undefined;
-  }, []);
+  const fetchProposalVersion = useCallback(
+    async (id: string): Promise<number | undefined> => {
+      const current = await getProposalByIdAction(id);
+      if (
+        current.success &&
+        isRecord(current.data) &&
+        typeof current.data.version === 'number'
+      )
+        return current.data.version;
+      const latest = await getLatestProposalContextAction(id);
+      if (
+        !latest.success ||
+        !isRecord(latest.data.run) ||
+        typeof latest.data.run.id !== 'string'
+      )
+        return undefined;
+      const review = await getCandidateReviewAction(
+        id,
+        latest.data.run.id,
+      );
+      return review.success ? review.data.proposalVersion : undefined;
+    },
+    [],
+  );
 
   useEffect(() => {
-    threadEndRef.current?.scrollIntoView?.({ block: "end" });
-  }, [messages.length, pending.length, localCards.length, autoScanning, failedNotices.length, openQuestions.length, lastConfirmed, showOverview]);
+    threadEndRef.current?.scrollIntoView?.({ block: 'end' });
+  }, [
+    messages.length,
+    pending.length,
+    localCards.length,
+    autoScanning,
+    failedNotices.length,
+    openQuestions.length,
+    lastConfirmed,
+    showOverview,
+  ]);
 
   // Lazy creation: the proposal only exists once the user contributes content.
-  const ensureProposal = useCallback(async (): Promise<string | null> => {
+  const ensureProposal = useCallback(async (): Promise<
+    string | null
+  > => {
     if (proposalId) return proposalId;
     if (creatingRef.current) return null;
     creatingRef.current = true;
     setCreateError(null);
     const result = await createProposalAction({
-      event: { eventName: "Untitled proposal" },
-      status: "unsubmitted",
+      event: { eventName: 'Untitled proposal' },
+      status: 'unsubmitted',
       isDraft: true,
-    } as unknown as ProposalData & { status?: "unsubmitted" });
+    } as unknown as ProposalData & { status?: 'unsubmitted' });
     creatingRef.current = false;
-    const id = isRecord(result.data) && typeof result.data._id === "string" ? result.data._id : null;
+    const id =
+      isRecord(result.data) && typeof result.data._id === 'string'
+        ? result.data._id
+        : null;
     if (!result.success || !id) {
-      setCreateError(result.message || "The proposal could not be created. Please try again.");
+      setCreateError(
+        result.message ||
+          'The proposal could not be created. Please try again.',
+      );
       return null;
     }
     setProposalId(id);
@@ -1297,7 +2195,11 @@ export default function AssistantWorkspacePage({
     // races the message send dispatched right after it, and when the
     // navigation wins Next aborts the in-flight server action POST — the send
     // never reaches the backend and the composer hangs on "Sending…" forever.
-    window.history.replaceState(null, "", `/proposals/${id}/assistant`);
+    window.history.replaceState(
+      null,
+      '',
+      `/proposals/${id}/assistant`,
+    );
     return id;
   }, [proposalId]);
 
@@ -1317,7 +2219,8 @@ export default function AssistantWorkspacePage({
       setSendBusy(true);
       for (const file of staged) {
         let sourceId = uploadedRef.current.get(file) ?? null;
-        if (!sourceId) sourceId = await upload(file, "non_confidential", id);
+        if (!sourceId)
+          sourceId = await upload(file, 'non_confidential', id);
         if (!sourceId) {
           setSendBusy(false);
           setSendError(`${file.name} could not be uploaded.`);
@@ -1328,11 +2231,18 @@ export default function AssistantWorkspacePage({
       }
       setSendBusy(false);
     }
-    const content = value || "Please review the attached file.";
-    setText("");
+    const content = value || 'Please review the attached file.';
+    setText('');
     setStaged([]);
     uploadedRef.current.clear();
-    const sent = await sendMessage({ content, intent: "chat", ...(sourceIds.length > 0 ? { sourceIds } : {}) }, id);
+    const sent = await sendMessage(
+      {
+        content,
+        intent: 'chat',
+        ...(sourceIds.length > 0 ? { sourceIds } : {}),
+      },
+      id,
+    );
     // Attachments enter the governed source boundary and start extraction once
     // scanning succeeds. Ordinary chat remains conversation context; users can
     // explicitly promote longer text through the "Add notes" source control.
@@ -1343,11 +2253,13 @@ export default function AssistantWorkspacePage({
   // upload runs when the message is sent. Up to three files can be staged.
   const stageFile = useCallback((file: File) => {
     setSendError(null);
-    setStaged(prev => (prev.length >= MAX_STAGED_FILES ? prev : [...prev, file]));
+    setStaged((prev) =>
+      prev.length >= MAX_STAGED_FILES ? prev : [...prev, file],
+    );
   }, []);
 
   const removeStaged = useCallback((index: number) => {
-    setStaged(prev => {
+    setStaged((prev) => {
       const file = prev[index];
       if (file) uploadedRef.current.delete(file);
       return prev.filter((_, i) => i !== index);
@@ -1358,41 +2270,54 @@ export default function AssistantWorkspacePage({
   // (never a window.confirm), the source is only dropped from the list once the
   // backend has actually deleted it, and a failure leaves the row in place with
   // the safe message underneath it.
-  const handleRemoveSource = useCallback(async (sourceId: string) => {
-    if (removingSourceId) return;
-    setRemovingSourceId(sourceId);
-    setRemoveErrors(prev => {
-      const next = { ...prev };
-      delete next[sourceId];
-      return next;
-    });
-    const result = await deletePrivateDocumentSource(sourceId);
-    setRemovingSourceId(null);
-    setConfirmRemoveId(null);
-    if (!result.success) {
-      setRemoveErrors(prev => ({ ...prev, [sourceId]: result.message }));
-      return;
-    }
-    // A removed source can never become ready, so it leaves any pending
-    // extraction selection before the authoritative list is re-read.
-    dropSource(sourceId);
-    await refreshSources();
-  }, [removingSourceId, dropSource, refreshSources]);
+  const handleRemoveSource = useCallback(
+    async (sourceId: string) => {
+      if (removingSourceId) return;
+      setRemovingSourceId(sourceId);
+      setRemoveErrors((prev) => {
+        const next = { ...prev };
+        delete next[sourceId];
+        return next;
+      });
+      const result = await deletePrivateDocumentSource(sourceId);
+      setRemovingSourceId(null);
+      setConfirmRemoveId(null);
+      if (!result.success) {
+        setRemoveErrors((prev) => ({
+          ...prev,
+          [sourceId]: result.message,
+        }));
+        return;
+      }
+      // A removed source can never become ready, so it leaves any pending
+      // extraction selection before the authoritative list is re-read.
+      dropSource(sourceId);
+      await refreshSources();
+    },
+    [removingSourceId, dropSource, refreshSources],
+  );
 
   const handleSaveNotes = async () => {
     if (!notesText.trim() || notesBusy) return;
     const id = await ensureProposal();
     if (!id) return;
-    const saved = await submitNotes(notesText, "non_confidential", id);
-    if (saved) { setNotesText(""); setNotesOpen(false); }
+    const saved = await submitNotes(
+      notesText,
+      'non_confidential',
+      id,
+    );
+    if (saved) {
+      setNotesText('');
+      setNotesOpen(false);
+    }
   };
 
   const runExtract = async () => {
     if (readySources.length === 0 || sending || !proposalId) return;
     await sendMessage({
       content: taskContent.extract_requirements,
-      intent: "extract_requirements",
-      sourceIds: readySources.slice(0, 5).map(source => source.id),
+      intent: 'extract_requirements',
+      sourceIds: readySources.slice(0, 5).map((source) => source.id),
     });
   };
 
@@ -1404,7 +2329,7 @@ export default function AssistantWorkspacePage({
     try {
       await sendMessage({
         content: taskContent.extract_requirements,
-        intent: "extract_requirements",
+        intent: 'extract_requirements',
         sourceIds,
       });
     } finally {
@@ -1415,13 +2340,14 @@ export default function AssistantWorkspacePage({
   const sendDraftMessage = async (version: number) => {
     await sendMessage({
       content: taskContent.generate_draft,
-      intent: "generate_draft",
+      intent: 'generate_draft',
       expectedProposalVersion: version,
     });
   };
 
   const runDraft = async () => {
-    if (typeof proposalVersion !== "number" || sending || !proposalId) return;
+    if (typeof proposalVersion !== 'number' || sending || !proposalId)
+      return;
     await sendDraftMessage(proposalVersion);
   };
 
@@ -1433,14 +2359,16 @@ export default function AssistantWorkspacePage({
     if (!proposalId || sending || draftBusy) return;
     setDraftError(null);
     let version = proposalVersion;
-    if (typeof version !== "number") {
+    if (typeof version !== 'number') {
       setDraftBusy(true);
       version = await fetchProposalVersion(proposalId);
       setDraftBusy(false);
-      if (typeof version === "number") setProposalVersion(version);
+      if (typeof version === 'number') setProposalVersion(version);
     }
-    if (typeof version !== "number") {
-      setDraftError("I couldn’t confirm the current version of your proposal. Open the editor, review the details, and try again.");
+    if (typeof version !== 'number') {
+      setDraftError(
+        'I couldn’t confirm the current version of your proposal. Open the editor, review the details, and try again.',
+      );
       return;
     }
     await sendDraftMessage(version);
@@ -1452,7 +2380,12 @@ export default function AssistantWorkspacePage({
   // URL so a refresh or back-navigation cannot start a second draft.
   const autoTaskFired = useRef(false);
   useEffect(() => {
-    if (autoTask !== "generate_draft" || autoTaskFired.current || !proposalId) return;
+    if (
+      autoTask !== 'generate_draft' ||
+      autoTaskFired.current ||
+      !proposalId
+    )
+      return;
     // Wait for the workspace to be idle: runDraftFromCard silently no-ops
     // while another run is in flight (e.g. the arrival readiness check),
     // which would consume this one-shot without generating anything — and a
@@ -1460,7 +2393,7 @@ export default function AssistantWorkspacePage({
     // busy flags are deps, so the effect retries as they settle.
     if (sending || draftBusy) return;
     autoTaskFired.current = true;
-    window.history.replaceState(null, "", window.location.pathname);
+    window.history.replaceState(null, '', window.location.pathname);
     void runDraftFromCard();
     // runDraftFromCard is recreated per render; the fired ref makes this one-shot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1473,9 +2406,21 @@ export default function AssistantWorkspacePage({
     setSegmentBusy(true);
     const result = await closeConversationSegmentAction(proposalId);
     setSegmentBusy(false);
-    setLocalCards(prev => [...prev, result.success
-      ? { id: crypto.randomUUID(), kind: "segment", created: result.data.created, reason: result.data.reason }
-      : { id: crypto.randomUUID(), kind: "error", message: result.message }]);
+    setLocalCards((prev) => [
+      ...prev,
+      result.success
+        ? {
+            id: crypto.randomUUID(),
+            kind: 'segment',
+            created: result.data.created,
+            reason: result.data.reason,
+          }
+        : {
+            id: crypto.randomUUID(),
+            kind: 'error',
+            message: result.message,
+          },
+    ]);
     // A new source and its extraction run only show up on a refresh.
     if (result.success && result.data.created) await refreshSources();
   };
@@ -1486,7 +2431,8 @@ export default function AssistantWorkspacePage({
   // latest of each on load, once.
   const restoredReportsRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!proposalId || restoredReportsRef.current === proposalId) return;
+    if (!proposalId || restoredReportsRef.current === proposalId)
+      return;
     restoredReportsRef.current = proposalId;
     let active = true;
     void (async () => {
@@ -1495,16 +2441,34 @@ export default function AssistantWorkspacePage({
         getLatestInvestmentGuidanceAction(proposalId),
       ]);
       if (!active) return;
-      setLocalCards(prev => {
+      setLocalCards((prev) => {
         const restored: LocalCard[] = [];
-        if (guidance.success && guidance.data && !prev.some(card => card.kind === "guidance"))
-          restored.push({ id: `restored-guidance-${proposalId}`, kind: "guidance", report: guidance.data });
-        if (investment.success && investment.data && !prev.some(card => card.kind === "investment"))
-          restored.push({ id: `restored-investment-${proposalId}`, kind: "investment", report: investment.data });
+        if (
+          guidance.success &&
+          guidance.data &&
+          !prev.some((card) => card.kind === 'guidance')
+        )
+          restored.push({
+            id: `restored-guidance-${proposalId}`,
+            kind: 'guidance',
+            report: guidance.data,
+          });
+        if (
+          investment.success &&
+          investment.data &&
+          !prev.some((card) => card.kind === 'investment')
+        )
+          restored.push({
+            id: `restored-investment-${proposalId}`,
+            kind: 'investment',
+            report: investment.data,
+          });
         return restored.length ? [...restored, ...prev] : prev;
       });
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [proposalId]);
 
   const runGuidance = async () => {
@@ -1512,9 +2476,20 @@ export default function AssistantWorkspacePage({
     setGuidanceBusy(true);
     const result = await generateGuidanceAction(proposalId);
     setGuidanceBusy(false);
-    setLocalCards(prev => [...prev, result.success
-      ? { id: crypto.randomUUID(), kind: "guidance", report: result.data }
-      : { id: crypto.randomUUID(), kind: "error", message: result.message }]);
+    setLocalCards((prev) => [
+      ...prev,
+      result.success
+        ? {
+            id: crypto.randomUUID(),
+            kind: 'guidance',
+            report: result.data,
+          }
+        : {
+            id: crypto.randomUUID(),
+            kind: 'error',
+            message: result.message,
+          },
+    ]);
   };
 
   const runInvestment = async () => {
@@ -1522,9 +2497,20 @@ export default function AssistantWorkspacePage({
     setInvestmentBusy(true);
     const result = await generateInvestmentGuidanceAction(proposalId);
     setInvestmentBusy(false);
-    setLocalCards(prev => [...prev, result.success
-      ? { id: crypto.randomUUID(), kind: "investment", report: result.data }
-      : { id: crypto.randomUUID(), kind: "error", message: result.message }]);
+    setLocalCards((prev) => [
+      ...prev,
+      result.success
+        ? {
+            id: crypto.randomUUID(),
+            kind: 'investment',
+            report: result.data,
+          }
+        : {
+            id: crypto.randomUUID(),
+            kind: 'error',
+            message: result.message,
+          },
+    ]);
   };
 
   // Guided question flow: answer the current question inline; a success
@@ -1538,19 +2524,46 @@ export default function AssistantWorkspacePage({
   // client-side scan watch, the optimistic extract_requirements send, and the
   // persisted run before it reaches a terminal status. Each clears on success
   // or failure, so a question can never stay hidden past a terminal outcome.
-  const extractionPending = autoScanning
-    || pending.some(item => item.intent === "extract_requirements" && item.state === "sending")
-    || messages.some(message => message.runType === "proposal_context" && message.status === "pending");
-  const currentVenueSchedule = proposal && isRecord(proposal.venueSchedule) ? proposal.venueSchedule : {};
-  const currentLoadInDate = typeof currentVenueSchedule.loadInDate === "string" ? currentVenueSchedule.loadInDate : undefined;
-  const currentLoadInTime = typeof currentVenueSchedule.loadInTime === "string" ? currentVenueSchedule.loadInTime : undefined;
+  const extractionPending =
+    autoScanning ||
+    pending.some(
+      (item) =>
+        item.intent === 'extract_requirements' &&
+        item.state === 'sending',
+    ) ||
+    messages.some(
+      (message) =>
+        message.runType === 'proposal_context' &&
+        message.status === 'pending',
+    );
+  const currentVenueSchedule =
+    proposal && isRecord(proposal.venueSchedule)
+      ? proposal.venueSchedule
+      : {};
+  const currentLoadInDate =
+    typeof currentVenueSchedule.loadInDate === 'string'
+      ? currentVenueSchedule.loadInDate
+      : undefined;
+  const currentLoadInTime =
+    typeof currentVenueSchedule.loadInTime === 'string'
+      ? currentVenueSchedule.loadInTime
+      : undefined;
   // Answers persist, so the resolved count must come from the conversation and
   // not only from this session — otherwise a refresh hides the progress card on
   // a proposal whose questions were all answered earlier.
-  const resolvedQuestions = (data?.questions ?? []).filter(question => question.status !== "open").length;
-  const answeredTotal = Math.max(answeredCount + skippedCount, resolvedQuestions);
+  const resolvedQuestions = (data?.questions ?? []).filter(
+    (question) => question.status !== 'open',
+  ).length;
+  const answeredTotal = Math.max(
+    answeredCount + skippedCount,
+    resolvedQuestions,
+  );
   const questionProgressCurrent = answeredTotal + 1;
-  const questionsComplete = answeredTotal > 0 && !loading && !!data && openQuestions.length === 0;
+  const questionsComplete =
+    answeredTotal > 0 &&
+    !loading &&
+    !!data &&
+    openQuestions.length === 0;
 
   // Finishing the questions is a progress moment, so the card reports real
   // numbers: the guidance engine is deterministic and synchronous, so it is run
@@ -1560,11 +2573,15 @@ export default function AssistantWorkspacePage({
   // headline — the flow is never blocked and no raw error is shown.
   useEffect(() => {
     if (!questionsComplete || !proposalId) return;
-    const version = typeof proposalVersion === "number" ? proposalVersion : null;
+    const version =
+      typeof proposalVersion === 'number' ? proposalVersion : null;
     const previous = completionRunRef.current;
-    const stale = !previous
-      || previous.proposalId !== proposalId
-      || (version !== null && previous.version !== null && previous.version !== version);
+    const stale =
+      !previous ||
+      previous.proposalId !== proposalId ||
+      (version !== null &&
+        previous.version !== null &&
+        previous.version !== version);
     if (!stale) return;
     completionRunRef.current = { proposalId, version };
     let active = true;
@@ -1576,25 +2593,39 @@ export default function AssistantWorkspacePage({
         setCompletionReport(result?.success ? result.data : null);
         // The report knows the version it was computed for; recording it keeps
         // the "version changed" refresh accurate even if the lookup lagged.
-        if (result?.success) completionRunRef.current = { proposalId, version: result.data.proposalVersion || version };
+        if (result?.success)
+          completionRunRef.current = {
+            proposalId,
+            version: result.data.proposalVersion || version,
+          };
       } catch {
         if (active) setCompletionReport(null);
       } finally {
         if (active) setCompletionChecking(false);
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [questionsComplete, proposalId, proposalVersion]);
 
-  const answerCurrentQuestion = async (answer: ConversationQuestionAnswer) => {
+  const answerCurrentQuestion = async (
+    answer: ConversationQuestionAnswer,
+  ) => {
     if (!currentQuestion) return;
     const question = currentQuestion;
-    const resolved = await resolveQuestion(question.id, { status: "answered", answer });
+    const resolved = await resolveQuestion(question.id, {
+      status: 'answered',
+      answer,
+    });
     if (resolved) {
-      setAnsweredCount(count => count + 1);
+      setAnsweredCount((count) => count + 1);
       setLastConfirmed({
         label: questionFieldLabel(question),
-        value: typeof answer === "string" ? answer : `${answer.date} at ${answer.time}`,
+        value:
+          typeof answer === 'string'
+            ? answer
+            : `${answer.date} at ${answer.time}`,
       });
     }
   };
@@ -1602,43 +2633,67 @@ export default function AssistantWorkspacePage({
   const skipCurrentQuestion = async () => {
     if (!currentQuestion) return;
     const question = currentQuestion;
-    const resolved = await resolveQuestion(question.id, { status: "dismissed" });
+    const resolved = await resolveQuestion(question.id, {
+      status: 'dismissed',
+    });
     if (!resolved) return;
-    setSkippedCount(count => count + 1);
+    setSkippedCount((count) => count + 1);
     // Leave a trace with a way back, so skipping is deferral rather than a
     // silent, unrecoverable decision.
-    const target = question.paths.length === 1 ? stepForPath(question.paths[0]) : undefined;
-    setLocalCards(prev => [...prev, {
-      id: crypto.randomUUID(),
-      kind: "skipped",
-      label: questionFieldLabel(question),
-      step: target?.step,
-      stepLabel: target?.label,
-    }]);
+    const target =
+      question.paths.length === 1
+        ? stepForPath(question.paths[0])
+        : undefined;
+    setLocalCards((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        kind: 'skipped',
+        label: questionFieldLabel(question),
+        step: target?.step,
+        stepLabel: target?.label,
+      },
+    ]);
   };
 
   // A readiness report already on screen (the completion card's own numbers, or
   // a card produced by the rail action) retires the secondary button so the
   // user is never offered a check whose result they are already reading.
-  const guidanceDisplayed = !!completionReport || localCards.some(card => card.kind === "guidance");
+  const guidanceDisplayed =
+    !!completionReport ||
+    localCards.some((card) => card.kind === 'guidance');
 
-  const onComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+  const onComposerKeyDown = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       void handleSend();
     }
   };
 
   const renderMessage = (message: ConversationMessage) => {
-    if (message.role === "system_event") {
-      return <li key={message.id} className="text-center text-xs text-slate-400">{message.content}</li>;
+    if (message.role === 'system_event') {
+      return (
+        <li
+          key={message.id}
+          className="text-center text-xs text-slate-400"
+        >
+          {message.content}
+        </li>
+      );
     }
-    const mine = message.role === "user";
+    const mine = message.role === 'user';
     if (mine) {
       // An answer on its own ("2027-04-14") carries no meaning, so the question
       // it resolved is replayed above it as quiet, assistant-side history.
-      const asked = message.kind === "question_answer" ? askedByAnswerMessageId.get(message.id) ?? null : null;
-      const askedImpact = asked?.impact ? impactLabels[asked.impact] : null;
+      const asked =
+        message.kind === 'question_answer'
+          ? (askedByAnswerMessageId.get(message.id) ?? null)
+          : null;
+      const askedImpact = asked?.impact
+        ? impactLabels[asked.impact]
+        : null;
       return (
         <li key={message.id} className="flex flex-col gap-1.5">
           {asked && (
@@ -1646,7 +2701,11 @@ export default function AssistantWorkspacePage({
               <div className="max-w-[75%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600">
                 <p className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                   Asked
-                  {askedImpact && <span className="font-semibold normal-case tracking-normal text-slate-400">· {askedImpact}</span>}
+                  {askedImpact && (
+                    <span className="font-semibold normal-case tracking-normal text-slate-400">
+                      · {askedImpact}
+                    </span>
+                  )}
                 </p>
                 <p className="whitespace-pre-wrap">{asked.prompt}</p>
               </div>
@@ -1654,13 +2713,25 @@ export default function AssistantWorkspacePage({
           )}
           <div className="flex justify-end">
             <div className="max-w-[75%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900">
-              {message.kind === "question_answer" && <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#087f69]">Answer</p>}
+              {message.kind === 'question_answer' && (
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#087f69]">
+                  Answer
+                </p>
+              )}
               <p className="whitespace-pre-wrap">{message.content}</p>
               {message.attachments.length > 0 && (
                 <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {message.attachments.map(attachment => (
-                    <li key={attachment.sourceId} className="rounded-full border border-[#00c2c9]/40 bg-white px-2 py-0.5 text-xs text-slate-600">
-                      <span className="max-w-[10rem] truncate align-middle" title={attachment.filename}>{attachment.filename || "Attached source"}</span>
+                  {message.attachments.map((attachment) => (
+                    <li
+                      key={attachment.sourceId}
+                      className="rounded-full border border-[#00c2c9]/40 bg-white px-2 py-0.5 text-xs text-slate-600"
+                    >
+                      <span
+                        className="max-w-[10rem] truncate align-middle"
+                        title={attachment.filename}
+                      >
+                        {attachment.filename || 'Attached source'}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -1670,93 +2741,135 @@ export default function AssistantWorkspacePage({
         </li>
       );
     }
-    const labels = message.runType ? runLabels[message.runType] : null;
-    if (!labels && message.status === "pending") {
-      return <li key={message.id} className="flex justify-start"><TypingIndicator label="The assistant is responding" /></li>;
-    }
-    if (!labels && message.status === "failed") {
-      return (
-        <li key={message.id} className="flex justify-start">
-          <p role="alert" className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            {message.content || "The assistant could not complete this response. Please try again."}
-          </p>
-        </li>
+    const labels = message.runType
+      ? runLabels[message.runType]
+      : null;
+    if (!labels && message.status === 'pending') {
+      return wrapAssistantTurn(
+        <TypingIndicator label="The assistant is responding" />,
+        message.id,
+        true,
       );
     }
-    if (labels && message.status === "pending") {
-      return <li key={message.id} className="flex justify-start"><SkeletonCard label={labels.pending} /></li>;
+    if (!labels && message.status === 'failed') {
+      return wrapAssistantTurn(
+        <p
+          role="alert"
+          className="max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+        >
+          {message.content ||
+            'The assistant could not complete this response. Please try again.'}
+        </p>,
+        message.id,
+      );
     }
-    if (labels && message.status === "failed") {
-      const extractionSourceIds = message.runType === "proposal_context"
-        ? sourceIdsForFailedExtraction(messages, message)
-        : [];
-      return (
-        <li key={message.id} className="flex justify-start">
-          <div className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            <p role="alert">{labels.failed}</p>
-            {message.runType === "proposal_context" && (
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => void retryFailedExtraction(message)}
-                  disabled={extractionSourceIds.length === 0 || retryingExtractionId === message.id}
-                  aria-busy={retryingExtractionId === message.id}
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {retryingExtractionId === message.id && <Loader2 size={12} className="animate-spin" aria-hidden />}
-                  Retry extraction
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setContinuedAfterExtractionFailure((current) => current.includes(message.id) ? current : [...current, message.id])}
-                  className="min-h-9 text-xs font-semibold text-red-800 underline underline-offset-2"
-                >
-                  Continue without extraction
-                </button>
-                {extractionSourceIds.length === 0 && (
-                  <span className="text-xs text-red-700">
-                    The original sources are no longer attached. Add them again to retry.
-                  </span>
+    if (labels && message.status === 'pending') {
+      return wrapAssistantTurn(
+        <SkeletonCard label={labels.pending} />,
+        message.id,
+        true,
+      );
+    }
+    if (labels && message.status === 'failed') {
+      const extractionSourceIds =
+        message.runType === 'proposal_context'
+          ? sourceIdsForFailedExtraction(messages, message)
+          : [];
+      return wrapAssistantTurn(
+        <div
+          className="max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+        >
+          <p role="alert">{labels.failed}</p>
+          {message.runType === 'proposal_context' && (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => void retryFailedExtraction(message)}
+                disabled={
+                  extractionSourceIds.length === 0 ||
+                  retryingExtractionId === message.id
+                }
+                aria-busy={retryingExtractionId === message.id}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {retryingExtractionId === message.id && (
+                  <Loader2 size={12} className="animate-spin" aria-hidden />
                 )}
-              </div>
-            )}
-          </div>
-        </li>
-      );
-    }
-    if (message.runType === "proposal_context" && message.status === "complete" && proposalId) {
-      return <li key={message.id} className="flex justify-start"><ContextRunCard proposalId={proposalId} message={message} sourcesById={sourcesById} /></li>;
-    }
-    if (message.runType === "proposal_draft" && message.status === "complete" && proposalId) {
-      return (
-        <li key={message.id} className="flex justify-start">
-          <DraftRunCard
-            proposalId={proposalId}
-            message={message}
-            currentProposalVersion={proposalVersion}
-            draftBusy={draftBusy || chatBusy}
-            onRegenerate={() => void runDraftFromCard()}
-          />
-        </li>
-      );
-    }
-    return (
-      <li key={message.id} className="flex justify-start">
-        <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800 shadow-sm">
-          <p className="whitespace-pre-wrap">{message.content}</p>
-          {(message.actions?.length ?? 0) > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-              {message.actions?.includes("download_room_schedule_template") && (
-                <a
-                  href="/files/RFPilot%20schedule-example-sheet.xlsx"
-                  download
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#008ad2] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#006fa8]"
-                >
-                  <Download size={14} aria-hidden />
-                  Download Sample Sheet
-                </a>
+                Retry extraction
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setContinuedAfterExtractionFailure((current) =>
+                    current.includes(message.id)
+                      ? current
+                      : [...current, message.id],
+                  )
+                }
+                className="min-h-9 text-xs font-semibold text-red-800 underline underline-offset-2"
+              >
+                Continue without extraction
+              </button>
+              {extractionSourceIds.length === 0 && (
+                <span className="text-xs text-red-700">
+                  The original sources are no longer attached. Add them again to retry.
+                </span>
               )}
-              {message.actions?.includes("open_room_specifications") && proposalId && (
+            </div>
+          )}
+        </div>,
+        message.id,
+      );
+    }
+    if (
+      message.runType === 'proposal_context' &&
+      message.status === 'complete' &&
+      proposalId
+    ) {
+      return wrapAssistantTurn(
+        <ContextRunCard
+          proposalId={proposalId}
+          message={message}
+          sourcesById={sourcesById}
+        />,
+        message.id,
+      );
+    }
+    if (
+      message.runType === 'proposal_draft' &&
+      message.status === 'complete' &&
+      proposalId
+    ) {
+      return wrapAssistantTurn(
+        <DraftRunCard
+          proposalId={proposalId}
+          message={message}
+          currentProposalVersion={proposalVersion}
+          draftBusy={draftBusy || chatBusy}
+          onRegenerate={() => void runDraftFromCard()}
+        />,
+        message.id,
+      );
+    }
+    return wrapAssistantTurn(
+      <div className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800 shadow-sm">
+        <p className="whitespace-pre-wrap">{message.content}</p>
+        {(message.actions?.length ?? 0) > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+            {message.actions?.includes(
+              'download_room_schedule_template',
+            ) && (
+              <a
+                href="/files/RFPilot%20schedule-example-sheet.xlsx"
+                download
+                className="inline-flex items-center gap-2 rounded-lg bg-[#008ad2] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#006fa8]"
+              >
+                <Download size={14} aria-hidden />
+                Download Sample Sheet
+              </a>
+            )}
+            {message.actions?.includes('open_room_specifications') &&
+              proposalId && (
                 <Link
                   href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposalId)}&step=3`}
                   className="inline-flex items-center gap-2 rounded-lg border border-[#008ad2] bg-white px-3 py-2 text-xs font-semibold text-[#008ad2] transition-colors hover:bg-[#008ad2]/5"
@@ -1765,10 +2878,10 @@ export default function AssistantWorkspacePage({
                   Open Room Specifications &amp; Upload
                 </Link>
               )}
-            </div>
-          )}
-        </div>
-      </li>
+          </div>
+        )}
+      </div>,
+      message.id,
     );
   };
 
@@ -1776,33 +2889,72 @@ export default function AssistantWorkspacePage({
   const uploadPresentation = uploadJob ? presentJob(uploadJob) : null;
   // Attaching only stages a chip, so the pickers stay enabled while scans run;
   // they are disabled once three files are staged or while a send uploads.
-  const attachDisabled = staged.length >= MAX_STAGED_FILES || sendBusy;
+  const attachDisabled =
+    staged.length >= MAX_STAGED_FILES || sendBusy;
   const attachDisabledTitle = attachDisabled
-    ? (sendBusy ? "Wait for the current send to finish." : `You can attach up to ${MAX_STAGED_FILES} files per message.`)
+    ? sendBusy
+      ? 'Wait for the current send to finish.'
+      : `You can attach up to ${MAX_STAGED_FILES} files per message.`
     : undefined;
 
   const composer = (
     <div className="w-full">
       {sendBusy && (
-        <p role="status" className="mb-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
-          <Loader2 size={13} className="animate-spin text-[#00c2c9]" aria-hidden />
-          Uploading {staged.length === 1 ? "your attachment" : "your attachments"}…
+        <p
+          role="status"
+          className="mb-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm"
+        >
+          <Loader2
+            size={13}
+            className="animate-spin text-[#00c2c9]"
+            aria-hidden
+          />
+          Uploading{' '}
+          {staged.length === 1
+            ? 'your attachment'
+            : 'your attachments'}
+          …
         </p>
       )}
       {sendError && (
-        <p role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-          <span className="min-w-0 truncate" title={sendError}>{sendError}</span>
-          <button type="button" onClick={() => void handleSend()} className="shrink-0 font-semibold underline underline-offset-2">Retry</button>
+        <p
+          role="alert"
+          className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800"
+        >
+          <span className="min-w-0 truncate" title={sendError}>
+            {sendError}
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleSend()}
+            className="shrink-0 font-semibold underline underline-offset-2"
+          >
+            Retry
+          </button>
         </p>
       )}
       <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-[#00c2c9]">
         {staged.length > 0 && (
           <ul className="mb-1.5 flex flex-wrap gap-1.5 px-1 pt-1">
             {staged.map((file, index) => (
-              <li key={`${file.name}-${index}`} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
-                <FileText size={12} className="shrink-0 text-slate-400" aria-hidden />
-                <span className="max-w-[10rem] truncate" title={file.name}>{file.name}</span>
-                <span className="shrink-0 text-[10px] text-slate-400">{formatFileSize(file.size)}</span>
+              <li
+                key={`${file.name}-${index}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700"
+              >
+                <FileText
+                  size={12}
+                  className="shrink-0 text-slate-400"
+                  aria-hidden
+                />
+                <span
+                  className="max-w-[10rem] truncate"
+                  title={file.name}
+                >
+                  {file.name}
+                </span>
+                <span className="shrink-0 text-[10px] text-slate-400">
+                  {formatFileSize(file.size)}
+                </span>
                 <button
                   type="button"
                   aria-label={`Remove ${file.name}`}
@@ -1823,7 +2975,11 @@ export default function AssistantWorkspacePage({
             accept=".pdf,.docx,.xlsx,.csv,.txt"
             className="hidden"
             aria-label="Attach a file"
-            onChange={event => { const file = event.target.files?.[0]; if (file) stageFile(file); event.target.value = ""; }}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) stageFile(file);
+              event.target.value = '';
+            }}
           />
           <button
             type="button"
@@ -1838,7 +2994,7 @@ export default function AssistantWorkspacePage({
           <textarea
             ref={composerRef}
             value={text}
-            onChange={event => setText(event.target.value)}
+            onChange={(event) => setText(event.target.value)}
             onKeyDown={onComposerKeyDown}
             rows={1}
             placeholder="Describe your event or ask for help…"
@@ -1849,30 +3005,69 @@ export default function AssistantWorkspacePage({
             type="button"
             aria-label="Send message"
             onClick={() => void handleSend()}
-            disabled={(!text.trim() && staged.length === 0) || chatBusy || sendBusy}
+            disabled={
+              (!text.trim() && staged.length === 0) ||
+              chatBusy ||
+              sendBusy
+            }
             className="shrink-0 rounded-full p-2.5 text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${DEEP} 100%)` }}
+            style={{
+              background: `linear-gradient(135deg, ${ACCENT} 0%, ${DEEP} 100%)`,
+            }}
           >
             <ArrowUp size={16} aria-hidden />
           </button>
         </div>
       </div>
-      {createError && <p role="alert" className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-800">{createError}</p>}
+      {createError && (
+        <p
+          role="alert"
+          className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-800"
+        >
+          {createError}
+        </p>
+      )}
     </div>
   );
 
-  const aiWorking = chatBusy || autoScanning || draftBusy || guidanceBusy || investmentBusy;
+  const aiWorking =
+    chatBusy ||
+    autoScanning ||
+    draftBusy ||
+    guidanceBusy ||
+    investmentBusy;
   const aiStatus = autoScanning
-    ? { title: "Reading your sources", detail: "Checking evidence and preparing requirements." }
+    ? {
+        title: 'Reading your sources',
+        detail: 'Checking evidence and preparing requirements.',
+      }
     : draftBusy
-      ? { title: "Writing your draft", detail: "Building cited sections from approved details." }
+      ? {
+          title: 'Writing your draft',
+          detail: 'Building cited sections from approved details.',
+        }
       : guidanceBusy
-        ? { title: "Checking readiness", detail: "Reviewing completeness, risks, and open decisions." }
+        ? {
+            title: 'Checking readiness',
+            detail:
+              'Reviewing completeness, risks, and open decisions.',
+          }
         : investmentBusy
-          ? { title: "Building investment guidance", detail: "Calculating a scope-based planning range." }
+          ? {
+              title: 'Building investment guidance',
+              detail: 'Calculating a scope-based planning range.',
+            }
           : chatBusy
-            ? { title: "Thinking through your request", detail: "The assistant is preparing the next response." }
-            : { title: "Ready to help", detail: "Add information or choose a suggested next step." };
+            ? {
+                title: 'Thinking through your request',
+                detail:
+                  'The assistant is preparing the next response.',
+              }
+            : {
+                title: 'Ready to help',
+                detail:
+                  'Add information or choose a suggested next step.',
+              };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-100/70 px-4 py-4 sm:px-6">
@@ -1887,12 +3082,24 @@ export default function AssistantWorkspacePage({
       `}</style>
       {/* Top bar */}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 pb-4">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm">
-          <Link href="/proposals" className="font-medium text-slate-500 hover:text-slate-800">Proposals</Link>
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center gap-1.5 text-sm"
+        >
+          <Link
+            href="/proposals"
+            className="font-medium text-slate-500 hover:text-slate-800"
+          >
+            Proposals
+          </Link>
           {proposalId && (
             <>
-              <span aria-hidden className="text-slate-300">/</span>
-              <span className="font-semibold text-slate-900">{eventName || "Untitled proposal"}</span>
+              <span aria-hidden className="text-slate-300">
+                /
+              </span>
+              <span className="font-semibold text-slate-900">
+                {eventName || 'Untitled proposal'}
+              </span>
             </>
           )}
         </nav>
@@ -1913,15 +3120,22 @@ export default function AssistantWorkspacePage({
         {/* Workspace card */}
         {/* The card is height-bounded so the thread scrolls inside it and the
             composer stays put, instead of the whole page growing. */}
-        <section aria-label="Proposal assistant workspace" className="flex max-h-[calc(100vh-8rem)] min-h-[70vh] flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <section
+          aria-label="Proposal assistant workspace"
+          className="flex max-h-[calc(100vh-8rem)] min-h-[70vh] flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+        >
           {!started ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
               <AssistantOrb />
               <div>
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Good {dayPart()}{firstName ? `, ${firstName}` : ""}
+                  Good {dayPart()}
+                  {firstName ? `, ${firstName}` : ''}
                 </h1>
-                <p className="mt-2 text-xl font-semibold" style={{ color: ACCENT }}>
+                <p
+                  className="mt-2 text-xl font-semibold"
+                  style={{ color: ACCENT }}
+                >
                   Tell me about your event?
                 </p>
               </div>
@@ -1929,9 +3143,23 @@ export default function AssistantWorkspacePage({
             </div>
           ) : (
             <>
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1" aria-live="polite">
-                {loadError && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{loadError}</p>}
-                {loading && <p role="status" className="text-sm text-slate-500">Loading the conversation…</p>}
+              <div
+                className="min-h-0 flex-1 overflow-y-auto pr-1"
+                aria-live="polite"
+              >
+                {loadError && (
+                  <p
+                    role="alert"
+                    className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-800"
+                  >
+                    {loadError}
+                  </p>
+                )}
+                {loading && (
+                  <p role="status" className="text-sm text-slate-500">
+                    Loading the conversation…
+                  </p>
+                )}
                 <ol className="space-y-3">
                   {displayedMessages.map(renderMessage)}
                   {showOverview && proposalId && (
@@ -1947,31 +3175,54 @@ export default function AssistantWorkspacePage({
                         error={draftError}
                         showActions={!questionsComplete}
                         hasDraft={hasDraftRun}
-                        onGenerateDraft={() => void runDraftFromCard()}
-                        onRunReadiness={guidanceDisplayed ? undefined : () => void runGuidance()}
+                        onGenerateDraft={() =>
+                          void runDraftFromCard()
+                        }
+                        onRunReadiness={
+                          guidanceDisplayed
+                            ? undefined
+                            : () => void runGuidance()
+                        }
                         readinessBusy={guidanceBusy}
                       />
                     </li>
                   )}
-                  {localCards.map(card => (
+                  {localCards.map((card) => (
                     <li key={card.id} className="flex justify-start">
-                      {card.kind === "guidance" && <GuidanceCard report={card.report} />}
-                      {card.kind === "investment" && <InvestmentCard report={card.report} declaredBudget={budgetTierLabel(proposal)} />}
-                      {card.kind === "segment" && (
+                      {card.kind === 'guidance' && (
+                        <GuidanceCard report={card.report} />
+                      )}
+                      {card.kind === 'investment' && (
+                        <InvestmentCard
+                          report={card.report}
+                          declaredBudget={budgetTierLabel(proposal)}
+                        />
+                      )}
+                      {card.kind === 'segment' && (
                         // Extraction from typed messages is otherwise silent:
                         // a source and applied fields would simply appear.
-                        <p role="status" className="max-w-[85%] rounded-2xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900">
+                        <p
+                          role="status"
+                          className="max-w-[85%] rounded-2xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900"
+                        >
                           {card.created
                             ? "I saved what you've told me as a source and I'm pulling requirements from it. Anything I'm unsure about will come back as a question."
-                            : segmentSkipReasons[card.reason ?? ""] ?? "There's nothing new for me to read yet."}
+                            : (segmentSkipReasons[
+                                card.reason ?? ''
+                              ] ??
+                              "There's nothing new for me to read yet.")}
                         </p>
                       )}
-                      {card.kind === "skipped" && (
-                        <p role="status" className="max-w-[85%] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                          Skipped <strong>{card.label}</strong> — you can add it later.
+                      {card.kind === 'skipped' && (
+                        <p
+                          role="status"
+                          className="max-w-[85%] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700"
+                        >
+                          Skipped <strong>{card.label}</strong> — you
+                          can add it later.
                           {card.step && proposalId && (
                             <>
-                              {" "}
+                              {' '}
                               <Link
                                 href={`/proposals/proposal-edit?proposalId=${proposalId}&step=${card.step}`}
                                 className="font-semibold text-[#008ad2] underline underline-offset-2"
@@ -1982,26 +3233,63 @@ export default function AssistantWorkspacePage({
                           )}
                         </p>
                       )}
-                      {card.kind === "error" && <p role="alert" className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{card.message}</p>}
+                      {card.kind === 'error' && (
+                        <p
+                          role="alert"
+                          className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                        >
+                          {card.message}
+                        </p>
+                      )}
                     </li>
                   ))}
-                  {unsentPending.map(entry => (
-                    <li key={entry.localId} className="flex justify-end">
+                  {unsentPending.map((entry) => (
+                    <li
+                      key={entry.localId}
+                      className="flex justify-end"
+                    >
                       <div className="max-w-[75%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 opacity-90">
-                        <p className="whitespace-pre-wrap">{entry.content}</p>
-                        {entry.state === "sending" && <p role="status" className="mt-1 text-xs text-slate-500">Sending…</p>}
-                        {entry.state === "failed" && (
-                          <p role="alert" className="mt-1 text-xs text-red-700">
-                            {entry.errorMessage ?? "The message could not be sent."}{" "}
-                            <button type="button" onClick={() => void retrySend(entry.localId)} className="font-semibold underline underline-offset-2">Retry</button>
+                        <p className="whitespace-pre-wrap">
+                          {entry.content}
+                        </p>
+                        {entry.state === 'sending' && (
+                          <p
+                            role="status"
+                            className="mt-1 text-xs text-slate-500"
+                          >
+                            Sending…
+                          </p>
+                        )}
+                        {entry.state === 'failed' && (
+                          <p
+                            role="alert"
+                            className="mt-1 text-xs text-red-700"
+                          >
+                            {entry.errorMessage ??
+                              'The message could not be sent.'}{' '}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void retrySend(entry.localId)
+                              }
+                              className="font-semibold underline underline-offset-2"
+                            >
+                              Retry
+                            </button>
                           </p>
                         )}
                       </div>
                     </li>
                   ))}
-                  {failedNotices.map(notice => (
-                    <li key={notice.sourceId} className="flex justify-start">
-                      <p role="alert" className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                  {failedNotices.map((notice) => (
+                    <li
+                      key={notice.sourceId}
+                      className="flex justify-start"
+                    >
+                      <p
+                        role="alert"
+                        className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                      >
                         {`${notice.filename} couldn’t be processed — try re-uploading.`}
                       </p>
                     </li>
@@ -2013,14 +3301,23 @@ export default function AssistantWorkspacePage({
                   )}
                   {autoScanning && !sending && (
                     <li className="flex justify-start">
-                      <p role="status" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-500 shadow-sm">
-                        Checking your {scanCount === 1 ? "file" : "files"}…
-                        <span aria-hidden className="ml-0.5 flex items-center gap-0.5">
-                          {[0, 1, 2].map(dot => (
+                      <p
+                        role="status"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-500 shadow-sm"
+                      >
+                        Checking your{' '}
+                        {scanCount === 1 ? 'file' : 'files'}…
+                        <span
+                          aria-hidden
+                          className="ml-0.5 flex items-center gap-0.5"
+                        >
+                          {[0, 1, 2].map((dot) => (
                             <span
                               key={dot}
                               className="h-1 w-1 rounded-full bg-[#00c2c9] motion-safe:animate-[typing-bounce_1.2s_ease-in-out_infinite]"
-                              style={{ animationDelay: `${dot * 150}ms` }}
+                              style={{
+                                animationDelay: `${dot * 150}ms`,
+                              }}
                             />
                           ))}
                         </span>
@@ -2029,12 +3326,21 @@ export default function AssistantWorkspacePage({
                   )}
                   {(guidanceBusy || investmentBusy) && (
                     <li className="flex justify-start">
-                      <SkeletonCard label={guidanceBusy ? "Running the readiness check…" : "Preparing investment guidance…"} />
+                      <SkeletonCard
+                        label={
+                          guidanceBusy
+                            ? 'Running the readiness check…'
+                            : 'Preparing investment guidance…'
+                        }
+                      />
                     </li>
                   )}
                   {lastConfirmed && (
                     <li className="flex justify-start">
-                      <p role="status" className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-800">
+                      <p
+                        role="status"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-800"
+                      >
                         {lastConfirmed.label}: {lastConfirmed.value} ✓
                       </p>
                     </li>
@@ -2043,28 +3349,49 @@ export default function AssistantWorkspacePage({
                       questions may synchronize before the assistant reply is
                       ready, but the next question must not jump ahead of that
                       reply in the thread. */}
-                  {currentQuestion && !sending && extractionPending && (
-                    <li className="flex justify-start">
-                      <SkeletonCard label="Reading your sources before asking the next question…" />
-                    </li>
-                  )}
-                  {currentQuestion && !sending && !extractionPending && !extractionFailureBlocksQuestions && (
-                    <li className="flex justify-start">
-                      <GuidedQuestionCard
-                        key={currentQuestion.id}
-                        question={currentQuestion}
-                        current={questionProgressCurrent}
-                        busy={questionBusyId === currentQuestion.id}
-                        error={questionError}
-                        minimumDate={minimumDateForQuestion(currentQuestion, proposal)}
-                        maximumDate={maximumDateForQuestion(currentQuestion, proposal)}
-                        initialDate={currentQuestion.answerType === "date_time" ? currentLoadInDate : undefined}
-                        initialTime={currentQuestion.answerType === "date_time" ? currentLoadInTime : undefined}
-                        onAnswer={answer => void answerCurrentQuestion(answer)}
-                        onSkip={() => void skipCurrentQuestion()}
-                      />
-                    </li>
-                  )}
+                  {currentQuestion &&
+                    !sending &&
+                    extractionPending && (
+                      <li className="flex justify-start">
+                        <SkeletonCard label="Reading your sources before asking the next question…" />
+                      </li>
+                    )}
+                  {currentQuestion &&
+                    !sending &&
+                    !extractionPending &&
+                    !extractionFailureBlocksQuestions && (
+                      <li className="flex justify-start">
+                        <GuidedQuestionCard
+                          key={currentQuestion.id}
+                          question={currentQuestion}
+                          current={questionProgressCurrent}
+                          busy={questionBusyId === currentQuestion.id}
+                          error={questionError}
+                          minimumDate={minimumDateForQuestion(
+                            currentQuestion,
+                            proposal,
+                          )}
+                          maximumDate={maximumDateForQuestion(
+                            currentQuestion,
+                            proposal,
+                          )}
+                          initialDate={
+                            currentQuestion.answerType === 'date_time'
+                              ? currentLoadInDate
+                              : undefined
+                          }
+                          initialTime={
+                            currentQuestion.answerType === 'date_time'
+                              ? currentLoadInTime
+                              : undefined
+                          }
+                          onAnswer={(answer) =>
+                            void answerCurrentQuestion(answer)
+                          }
+                          onSkip={() => void skipCurrentQuestion()}
+                        />
+                      </li>
+                    )}
                   {questionsComplete && proposalId && (
                     <li className="flex justify-start">
                       <CompletionCard
@@ -2074,8 +3401,14 @@ export default function AssistantWorkspacePage({
                         hasDraft={hasDraftRun}
                         draftBusy={draftBusy || sending}
                         draftError={draftError}
-                        onGenerateDraft={() => void runDraftFromCard()}
-                        onRunReadiness={guidanceDisplayed ? undefined : () => void runGuidance()}
+                        onGenerateDraft={() =>
+                          void runDraftFromCard()
+                        }
+                        onRunReadiness={
+                          guidanceDisplayed
+                            ? undefined
+                            : () => void runGuidance()
+                        }
                         readinessBusy={guidanceBusy}
                       />
                     </li>
@@ -2091,244 +3424,394 @@ export default function AssistantWorkspacePage({
         {/* Right rail — hidden until the conversation begins, then slides in
             from the right (CSS-only; skipped under prefers-reduced-motion). */}
         {railVisible && (
-        <aside aria-label="Proposal assistant tools" className="w-full shrink-0 space-y-4 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-[rail-slide-in_300ms_ease-out_both] lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:overflow-y-auto">
-          <section
-            aria-labelledby="rail-ai-title"
-            tabIndex={0}
-            className="relative overflow-hidden rounded-2xl border border-cyan-200/80 bg-gradient-to-br from-[#062f3a] via-[#075569] to-[#087f69] p-4 text-white shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
+          <aside
+            aria-label="Proposal assistant tools"
+            className="w-full shrink-0 space-y-4 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-[rail-slide-in_300ms_ease-out_both] lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:overflow-y-auto"
           >
-            <div aria-hidden className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-[#00c2c9]/30 blur-2xl motion-safe:animate-[ai-glow_2.8s_ease-in-out_infinite]" />
-            <div className="relative flex items-start gap-3">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10">
-                {aiWorking && <span className="absolute inset-[-4px] rounded-2xl border border-dashed border-[#67e8f9]/70 motion-safe:animate-[ai-orbit_5s_linear_infinite]" />}
-                <Sparkles size={18} aria-hidden />
+            <section
+              aria-labelledby="rail-ai-title"
+              tabIndex={0}
+              className="relative overflow-hidden rounded-2xl border border-cyan-200/80 bg-gradient-to-br from-[#062f3a] via-[#075569] to-[#087f69] p-4 text-white shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
+            >
+              <div
+                aria-hidden
+                className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-[#00c2c9]/30 blur-2xl motion-safe:animate-[ai-glow_2.8s_ease-in-out_infinite]"
+              />
+              <div className="relative flex items-start gap-3">
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10">
+                  {aiWorking && (
+                    <span className="absolute inset-[-4px] rounded-2xl border border-dashed border-[#67e8f9]/70 motion-safe:animate-[ai-orbit_5s_linear_infinite]" />
+                  )}
+                  <Sparkles size={18} aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-100">
+                    AI workspace
+                  </p>
+                  <h2
+                    id="rail-ai-title"
+                    className="mt-1 text-sm font-bold"
+                  >
+                    {aiStatus.title}
+                  </h2>
+                  <p className="mt-1 text-xs leading-relaxed text-cyan-50/80">
+                    {aiStatus.detail}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-100">AI workspace</p>
-                <h2 id="rail-ai-title" className="mt-1 text-sm font-bold">{aiStatus.title}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-cyan-50/80">{aiStatus.detail}</p>
+              <dl className="relative mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-xl border border-white/15 bg-white/10 p-2">
+                  <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
+                    Sources
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-bold">
+                    {readySources.length}
+                  </dd>
+                </div>
+                <div className="rounded-xl border border-white/15 bg-white/10 p-2">
+                  <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
+                    Captured
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-bold">
+                    {overviewDetailCount}
+                  </dd>
+                </div>
+                <div className="rounded-xl border border-white/15 bg-white/10 p-2">
+                  <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
+                    Questions
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-bold">
+                    {openQuestions.length}
+                  </dd>
+                </div>
+              </dl>
+              <div className="relative mt-3 flex items-center gap-2 text-[10px] font-semibold text-cyan-50/80">
+                <span
+                  className={`h-2 w-2 rounded-full ${aiWorking ? 'bg-cyan-300 motion-safe:animate-pulse' : 'bg-emerald-300'}`}
+                />
+                {aiWorking
+                  ? 'AI is actively working'
+                  : 'Secure proposal context is ready'}
               </div>
-            </div>
-            <dl className="relative mt-4 grid grid-cols-3 gap-2">
-              <div className="rounded-xl border border-white/15 bg-white/10 p-2">
-                <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">Sources</dt>
-                <dd className="mt-0.5 text-sm font-bold">{readySources.length}</dd>
-              </div>
-              <div className="rounded-xl border border-white/15 bg-white/10 p-2">
-                <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">Captured</dt>
-                <dd className="mt-0.5 text-sm font-bold">{overviewDetailCount}</dd>
-              </div>
-              <div className="rounded-xl border border-white/15 bg-white/10 p-2">
-                <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">Questions</dt>
-                <dd className="mt-0.5 text-sm font-bold">{openQuestions.length}</dd>
-              </div>
-            </dl>
-            <div className="relative mt-3 flex items-center gap-2 text-[10px] font-semibold text-cyan-50/80">
-              <span className={`h-2 w-2 rounded-full ${aiWorking ? "bg-cyan-300 motion-safe:animate-pulse" : "bg-emerald-300"}`} />
-              {aiWorking ? "AI is actively working" : "Secure proposal context is ready"}
-            </div>
-          </section>
-          {/* Sources — the three rail cards share the slide-in but each fades
+            </section>
+            {/* Sources — the three rail cards share the slide-in but each fades
               and translates in with a ~100ms stagger for a noticeable entrance. */}
-          <section aria-labelledby="rail-sources-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]" style={{ animationDelay: "80ms" }}>
-            <h2 id="rail-sources-title" className="text-sm font-bold text-slate-900">Sources</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Add files or notes to this proposal</p>
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={attachDisabled}
-                title={attachDisabledTitle}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
+            <section
+              aria-labelledby="rail-sources-title"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
+              style={{ animationDelay: '80ms' }}
+            >
+              <h2
+                id="rail-sources-title"
+                className="text-sm font-bold text-slate-900"
               >
-                <Upload size={13} aria-hidden />
-                Upload file
-              </button>
-              <button
-                type="button"
-                onClick={() => setNotesOpen(open => !open)}
-                aria-expanded={notesOpen}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                <StickyNote size={13} aria-hidden />
-                Add notes
-              </button>
-            </div>
-            {notesOpen && (
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <label className="block text-xs font-semibold text-slate-700">
-                  Notes
-                  <textarea
-                    value={notesText}
-                    onChange={event => setNotesText(event.target.value)}
-                    rows={4}
-                    placeholder="Paste or type notes to attach to this proposal…"
-                    className="mt-1 w-full resize-none rounded-lg border border-slate-300 bg-white p-2 text-sm font-normal"
-                  />
-                </label>
+                Sources
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Add files or notes to this proposal
+              </p>
+              <div className="mt-3 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => void handleSaveNotes()}
-                  disabled={!notesText.trim() || notesBusy}
-                  className="mt-2 w-full rounded-lg bg-[#087f69] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={attachDisabled}
+                  title={attachDisabledTitle}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
                 >
-                  {notesBusy ? "Saving notes…" : "Save notes"}
+                  <Upload size={13} aria-hidden />
+                  Upload file
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNotesOpen((open) => !open)}
+                  aria-expanded={notesOpen}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  <StickyNote size={13} aria-hidden />
+                  Add notes
                 </button>
               </div>
-            )}
-            {(uploadPresentation || notesPresentation) && (
-              <div role="status" className="mt-3 rounded-lg border border-cyan-200 bg-cyan-50 p-2.5 text-xs text-slate-700">
-                {uploadPresentation && <p><span className="font-semibold">File:</span> {uploadPresentation.title}</p>}
-                {notesPresentation && <p className={uploadPresentation ? "mt-1" : ""}><span className="font-semibold">Notes:</span> {notesPresentation.title}</p>}
-              </div>
-            )}
-            {(uploadError || notesError) && (
-              <p role="alert" className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-800">{uploadError || notesError}</p>
-            )}
-            {sources.length > 0 ? (
-              <ul aria-label="Attached sources" className="mt-3 space-y-1.5">
-                {sources.map(source => {
-                  const removing = removingSourceId === source.id;
-                  const removeError = removeErrors[source.id];
-                  return (
-                    <li key={source.id} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 flex-1 truncate text-slate-700" title={source.originalFilename}>{source.originalFilename}</span>
-                        {source.origin === "conversation" && (
-                          // The planner never pressed "add this as a source" for
-                          // these — the system built them from what was typed —
-                          // so they must not look like an attached file.
+              {notesOpen && (
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Notes
+                    <textarea
+                      value={notesText}
+                      onChange={(event) =>
+                        setNotesText(event.target.value)
+                      }
+                      rows={4}
+                      placeholder="Paste or type notes to attach to this proposal…"
+                      className="mt-1 w-full resize-none rounded-lg border border-slate-300 bg-white p-2 text-sm font-normal"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveNotes()}
+                    disabled={!notesText.trim() || notesBusy}
+                    className="mt-2 w-full rounded-lg bg-[#087f69] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {notesBusy ? 'Saving notes…' : 'Save notes'}
+                  </button>
+                </div>
+              )}
+              {(uploadPresentation || notesPresentation) && (
+                <div
+                  role="status"
+                  className="mt-3 rounded-lg border border-cyan-200 bg-cyan-50 p-2.5 text-xs text-slate-700"
+                >
+                  {uploadPresentation && (
+                    <p>
+                      <span className="font-semibold">File:</span>{' '}
+                      {uploadPresentation.title}
+                    </p>
+                  )}
+                  {notesPresentation && (
+                    <p className={uploadPresentation ? 'mt-1' : ''}>
+                      <span className="font-semibold">Notes:</span>{' '}
+                      {notesPresentation.title}
+                    </p>
+                  )}
+                </div>
+              )}
+              {(uploadError || notesError) && (
+                <p
+                  role="alert"
+                  className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-800"
+                >
+                  {uploadError || notesError}
+                </p>
+              )}
+              {sources.length > 0 ? (
+                <ul
+                  aria-label="Attached sources"
+                  className="mt-3 space-y-1.5"
+                >
+                  {sources.map((source) => {
+                    const removing = removingSourceId === source.id;
+                    const removeError = removeErrors[source.id];
+                    return (
+                      <li
+                        key={source.id}
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
                           <span
-                            className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800"
-                            title="Built from your messages and used for extraction"
+                            className="min-w-0 flex-1 truncate text-slate-700"
+                            title={source.originalFilename}
                           >
-                            from chat
+                            {source.originalFilename}
                           </span>
-                        )}
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${source.status === "ready" ? "bg-emerald-100 text-emerald-800" : source.status === "failed" ? "bg-red-100 text-red-800" : "bg-white text-slate-600"}`}>
-                          {source.status.replaceAll("_", " ")}
-                        </span>
-                        {confirmRemoveId === source.id ? (
-                          // Inline confirmation, so nothing leaves the page and
-                          // the row keeps its own context while deciding.
-                          <span className="flex shrink-0 items-center gap-1">
+                          {source.origin === 'conversation' && (
+                            // The planner never pressed "add this as a source" for
+                            // these — the system built them from what was typed —
+                            // so they must not look like an attached file.
+                            <span
+                              className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800"
+                              title="Built from your messages and used for extraction"
+                            >
+                              from chat
+                            </span>
+                          )}
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${source.status === 'ready' ? 'bg-emerald-100 text-emerald-800' : source.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-white text-slate-600'}`}
+                          >
+                            {source.status.replaceAll('_', ' ')}
+                          </span>
+                          {confirmRemoveId === source.id ? (
+                            // Inline confirmation, so nothing leaves the page and
+                            // the row keeps its own context while deciding.
+                            <span className="flex shrink-0 items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleRemoveSource(source.id)
+                                }
+                                disabled={removing}
+                                className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {removing ? 'Removing…' : 'Remove?'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConfirmRemoveId(null)
+                                }
+                                disabled={removing}
+                                className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                            </span>
+                          ) : (
                             <button
                               type="button"
-                              onClick={() => void handleRemoveSource(source.id)}
-                              disabled={removing}
-                              className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label={`Remove ${source.originalFilename}`}
+                              onClick={() => {
+                                setConfirmRemoveId(source.id);
+                              }}
+                              disabled={!!removingSourceId}
+                              className="shrink-0 rounded-full p-0.5 text-slate-300 transition-colors hover:bg-slate-200 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                              {removing ? "Removing…" : "Remove?"}
+                              <X size={12} aria-hidden />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmRemoveId(null)}
-                              disabled={removing}
-                              className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Cancel
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            aria-label={`Remove ${source.originalFilename}`}
-                            onClick={() => { setConfirmRemoveId(source.id); }}
-                            disabled={!!removingSourceId}
-                            className="shrink-0 rounded-full p-0.5 text-slate-300 transition-colors hover:bg-slate-200 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                          )}
+                        </div>
+                        {removeError && (
+                          <p
+                            role="alert"
+                            className="mt-1 text-[11px] text-red-700"
                           >
-                            <X size={12} aria-hidden />
-                          </button>
+                            {removeError}
+                          </p>
                         )}
-                      </div>
-                      {removeError && <p role="alert" className="mt-1 text-[11px] text-red-700">{removeError}</p>}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="mt-3 text-xs text-slate-400">No sources yet. Add a file or notes to get started.</p>
-            )}
-            <p className="mt-3 text-[11px] text-slate-400">Files are scanned and processed privately for this proposal.</p>
-          </section>
-
-          {/* Suggested tasks */}
-          <section aria-labelledby="rail-tasks-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]" style={{ animationDelay: "160ms" }}>
-            <h2 id="rail-tasks-title" className="text-sm font-bold text-slate-900">Suggested tasks</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void runUseMessages()}
-                disabled={segmentBusy || sending || messages.length === 0 || !chatExtractionEnabled}
-                title={
-                  !chatExtractionEnabled
-                    ? segmentSkipReasons.disabled
-                    : messages.length === 0
-                      ? "Tell me about your event first."
-                      : "Turn what you've typed into a source and pull requirements from it."
-                }
-                aria-busy={segmentBusy}
-                className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-              >
-                {segmentBusy ? "Reading your messages…" : "Use what I've told you"}
-              </button>
-              <button
-                type="button"
-                onClick={() => void runExtract()}
-                disabled={readySources.length === 0 || sending}
-                title={readySources.length === 0 ? "Add at least one ready source first." : undefined}
-                className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-              >
-                Extract requirements
-              </button>
-              <button
-                type="button"
-                onClick={() => void runDraft()}
-                disabled={typeof proposalVersion !== "number" || sending}
-                title={typeof proposalVersion !== "number" ? "Review extracted requirements first to establish the proposal version." : undefined}
-                className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-              >
-                Generate draft
-              </button>
-              <button
-                type="button"
-                onClick={() => void runGuidance()}
-                disabled={!proposalId || guidanceBusy}
-                title={!proposalId ? "Start the conversation to create the proposal first." : undefined}
-                className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-              >
-                {guidanceBusy && <Loader2 size={11} className="mr-1 inline animate-spin" aria-hidden />}
-                Run readiness check
-              </button>
-              <button
-                type="button"
-                onClick={() => void runInvestment()}
-                disabled={!proposalId || investmentBusy}
-                title={!proposalId ? "Start the conversation to create the proposal first." : undefined}
-                className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-              >
-                {investmentBusy && <Loader2 size={11} className="mr-1 inline animate-spin" aria-hidden />}
-                Investment guidance
-              </button>
-            </div>
-          </section>
-
-          {/* Suggested questions */}
-          <section aria-labelledby="rail-questions-title" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]" style={{ animationDelay: "240ms" }}>
-            <h2 id="rail-questions-title" className="text-sm font-bold text-slate-900">Suggested questions</h2>
-            {openQuestions.length === 0 ? (
-              <p className="mt-2 text-xs text-slate-400">
-                {questionsComplete
-                  ? "All key questions answered."
-                  : "Open clarification questions from the assistant will appear here."}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="mt-3 text-xs text-slate-400">
+                  No sources yet. Add a file or notes to get started.
+                </p>
+              )}
+              <p className="mt-3 text-[11px] text-slate-400">
+                Files are scanned and processed privately for this
+                proposal.
               </p>
-            ) : (
-              <p className="mt-2 text-xs text-slate-600">
-                {`${openQuestions.length} ${openQuestions.length === 1 ? "question is" : "questions are"} open now. Follow-up questions may appear as earlier answers unlock venue details.`}
-              </p>
-            )}
-          </section>
-        </aside>
+            </section>
+
+            {/* Suggested tasks */}
+            <section
+              aria-labelledby="rail-tasks-title"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
+              style={{ animationDelay: '160ms' }}
+            >
+              <h2
+                id="rail-tasks-title"
+                className="text-sm font-bold text-slate-900"
+              >
+                Suggested tasks
+              </h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void runUseMessages()}
+                  disabled={
+                    segmentBusy ||
+                    sending ||
+                    messages.length === 0 ||
+                    !chatExtractionEnabled
+                  }
+                  title={
+                    !chatExtractionEnabled
+                      ? segmentSkipReasons.disabled
+                      : messages.length === 0
+                        ? 'Tell me about your event first.'
+                        : "Turn what you've typed into a source and pull requirements from it."
+                  }
+                  aria-busy={segmentBusy}
+                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                >
+                  {segmentBusy
+                    ? 'Reading your messages…'
+                    : "Use what I've told you"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runExtract()}
+                  disabled={readySources.length === 0 || sending}
+                  title={
+                    readySources.length === 0
+                      ? 'Add at least one ready source first.'
+                      : undefined
+                  }
+                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                >
+                  Extract requirements
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runDraft()}
+                  disabled={
+                    typeof proposalVersion !== 'number' || sending
+                  }
+                  title={
+                    typeof proposalVersion !== 'number'
+                      ? 'Review extracted requirements first to establish the proposal version.'
+                      : undefined
+                  }
+                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                >
+                  Generate draft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runGuidance()}
+                  disabled={!proposalId || guidanceBusy}
+                  title={
+                    !proposalId
+                      ? 'Start the conversation to create the proposal first.'
+                      : undefined
+                  }
+                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                >
+                  {guidanceBusy && (
+                    <Loader2
+                      size={11}
+                      className="mr-1 inline animate-spin"
+                      aria-hidden
+                    />
+                  )}
+                  Run readiness check
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runInvestment()}
+                  disabled={!proposalId || investmentBusy}
+                  title={
+                    !proposalId
+                      ? 'Start the conversation to create the proposal first.'
+                      : undefined
+                  }
+                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                >
+                  {investmentBusy && (
+                    <Loader2
+                      size={11}
+                      className="mr-1 inline animate-spin"
+                      aria-hidden
+                    />
+                  )}
+                  Investment guidance
+                </button>
+              </div>
+            </section>
+
+            {/* Suggested questions */}
+            <section
+              aria-labelledby="rail-questions-title"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
+              style={{ animationDelay: '240ms' }}
+            >
+              <h2
+                id="rail-questions-title"
+                className="text-sm font-bold text-slate-900"
+              >
+                Suggested questions
+              </h2>
+              {openQuestions.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-400">
+                  {questionsComplete
+                    ? 'All key questions answered.'
+                    : 'Open clarification questions from the assistant will appear here.'}
+                </p>
+              ) : (
+                <p className="mt-2 text-xs text-slate-600">
+                  {`${openQuestions.length} ${openQuestions.length === 1 ? 'question is' : 'questions are'} open now. Follow-up questions may appear as earlier answers unlock venue details.`}
+                </p>
+              )}
+            </section>
+          </aside>
         )}
       </div>
     </div>

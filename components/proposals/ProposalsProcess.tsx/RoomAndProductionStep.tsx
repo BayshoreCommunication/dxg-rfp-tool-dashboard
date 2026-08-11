@@ -1587,7 +1587,7 @@ const RoomForm = ({
             <label className={labelClass}>
               Describe Your Scenic Vision
               <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span>
-              <InfoTooltip text="Set pieces, branded elements, color direction, reference materials. You can upload mood boards on Page 8." />
+              <InfoTooltip text="Set pieces, branded elements, color direction, and reference materials. Upload mood boards in Section 7 — Uploads & Co-Vendors." />
             </label>
             <textarea
               rows={3}
@@ -1610,7 +1610,7 @@ const RoomForm = ({
               onClick={onOpenScenicInspirations}
               className="mt-2 text-xs font-semibold text-[#1DBFD3] hover:underline"
             >
-              Add scenic inspiration files in Reference Materials →
+              Upload scenic inspiration files in Section 7 — Uploads &amp; Co-Vendors →
             </button>
           </div>
         )}

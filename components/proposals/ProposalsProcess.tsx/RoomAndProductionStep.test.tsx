@@ -1,7 +1,9 @@
+import { fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import * as XLSX from "xlsx";
-import {
+import type { ProposalSettings } from "../AddNewProposal";
+import RoomAndProductionStep, {
   defaultRoom,
   functionScheduleDateIsWithinEventRange,
   functionDateTimeValue,
@@ -13,7 +15,10 @@ import {
   ROOM_TEMPLATES,
   venueTimeValue,
 } from "./RoomAndProductionStep";
-import { SCREEN_SIZE_OTHER, SCREEN_SIZE_VENDOR_RECOMMENDATION } from "../screenSize";
+import {
+  SCREEN_SIZE_OTHER,
+  SCREEN_SIZE_VENDOR_RECOMMENDATION,
+} from "../screenSize";
 
 jest.mock("@/app/actions/proposals", () => ({
   normalizeScheduleTimesAction: jest.fn(),
@@ -28,6 +33,44 @@ const workbookBuffer = (rows: Record<string, unknown>[]) => {
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "Schedule");
   return XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
 };
+
+const proposalSettings: ProposalSettings = {
+  branding: { linkPrefix: "", defaultFont: "Inter" },
+  proposals: {
+    proposalLanguage: "English",
+    defaultCurrency: "USD",
+    expiryDate: "",
+    priceSeparator: ",",
+    dateFormat: "MM-DD-YYYY",
+    decimalPrecision: "2",
+  },
+};
+
+describe("scenic inspiration navigation", () => {
+  it("directs planners from scenic notes to Section 7", () => {
+    const onOpenScenicInspirations = jest.fn();
+
+    render(
+      <RoomAndProductionStep
+        rooms={[{ ...defaultRoom(), scenicStageDesign: "Yes" }]}
+        onRoomsChange={jest.fn()}
+        numberOfEventRooms="1"
+        onNumberOfEventRoomsChange={jest.fn()}
+        onContinue={jest.fn()}
+        onBack={jest.fn()}
+        proposalSettings={proposalSettings}
+        onOpenScenicInspirations={onOpenScenicInspirations}
+      />,
+    );
+
+    const uploadLink = screen.getByRole("button", {
+      name: "Upload scenic inspiration files in Section 7 — Uploads & Co-Vendors →",
+    });
+    fireEvent.click(uploadLink);
+
+    expect(onOpenScenicInspirations).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("parseScheduleWorkbook", () => {
   it("groups multiple functions in the same physical room under one shared AV module", async () => {
