@@ -9,6 +9,7 @@ import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
 import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import GlobalSelect from "@/components/shared/GlobalSelect";
+import GlobalTimeInput from "@/components/shared/GlobalTimeInput";
 import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./eventTimeZone";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
 import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
@@ -63,6 +64,35 @@ const isoDateToLocalDate = (iso: string): Date | null => {
 const localDateToIsoDate = (date: Date | null): string => {
   if (!date || isNaN(date.getTime())) return "";
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+export const functionScheduleDateIsWithinEventRange = (
+  scheduleDate: string,
+  eventStartDate?: string,
+  eventEndDate?: string,
+): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(scheduleDate)) return false;
+  if (eventStartDate && scheduleDate < eventStartDate) return false;
+  if (eventEndDate && scheduleDate > eventEndDate) return false;
+  return true;
+};
+
+const formatScheduleDate = (iso: string): string => {
+  const date = isoDateToLocalDate(iso);
+  return date
+    ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date)
+    : iso;
+};
+
+const eventDateWindowLabel = (startDate: string, endDate: string): string => {
+  if (startDate && endDate) {
+    return startDate === endDate
+      ? `Event date: ${formatScheduleDate(startDate)}`
+      : `Event dates: ${formatScheduleDate(startDate)} – ${formatScheduleDate(endDate)}`;
+  }
+  if (startDate) return `On or after ${formatScheduleDate(startDate)}`;
+  if (endDate) return `On or before ${formatScheduleDate(endDate)}`;
+  return "Choose the function date.";
 };
 
 // ─── Schedule upload (Excel) helpers ──────────────────────────────────────────
@@ -144,6 +174,19 @@ const parse24HourTime = (val: string): { hours: number; minutes: number } | null
   const min = parseInt(m[2], 10);
   if (h > 23 || min > 59) return null;
   return { hours: h, minutes: min };
+};
+
+const timeValueToMinutes = (value: string): number | null => {
+  const time = parse24HourTime(value);
+  return time ? time.hours * 60 + time.minutes : null;
+};
+
+const addMinutesToTimeValue = (value: string, minutesToAdd: number): string => {
+  const minutes = timeValueToMinutes(value);
+  if (minutes === null) return "";
+  const next = minutes + minutesToAdd;
+  if (next > 23 * 60 + 45) return "";
+  return `${String(Math.floor(next / 60)).padStart(2, "0")}:${String(next % 60).padStart(2, "0")}`;
 };
 
 /** HH:MM venue wall-clock value for a stored schedule instant. */
@@ -416,6 +459,12 @@ const TELEPROMPTER_LANGUAGES = [
 
 // ─── Room Setup options (schedule upload / manual entry) ─────────────────────
 const ROOM_SETUP_OPTIONS = ["Round of 8", "Rounds of 10", "Classroom", "Theater"];
+const FUNCTION_DURATION_OPTIONS = [
+  { label: "30 min", minutes: 30 },
+  { label: "1 hr", minutes: 60 },
+  { label: "90 min", minutes: 90 },
+  { label: "2 hr", minutes: 120 },
+] as const;
 
 // ─── LED Wall switcher / processor options ────────────────────────────────────
 const LED_SWITCHER_OPTIONS = [
@@ -571,6 +620,8 @@ const RoomForm = ({
   showErrors,
   roomIndex,
   eventTimeZone,
+  eventStartDate,
+  eventEndDate,
   onOpenScenicInspirations,
   mode,
 }: {
@@ -580,6 +631,8 @@ const RoomForm = ({
   roomIndex: number;
   /** Schedule times are wall-clock at the venue, so they render in its zone. */
   eventTimeZone?: string | null;
+  eventStartDate?: string;
+  eventEndDate?: string;
   onOpenScenicInspirations?: () => void;
   mode: ProposalExperienceMode;
 }) => {
@@ -641,6 +694,7 @@ const RoomForm = ({
       data.loadInDateTime || data.rehearsalDateTime || data.showStartDateTime || data.showEndDateTime,
     ),
   );
+  const [openTimePicker, setOpenTimePicker] = useState<string | null>(null);
 
   return (
     <div className="space-y-5 px-6 py-6">
@@ -661,7 +715,28 @@ const RoomForm = ({
 
       <Group label="Functions & Schedule" />
       <div className="space-y-4">
-        {functionSchedules.map((entry, functionIndex) => (
+        {functionSchedules.map((entry, functionIndex) => {
+          const startTimeValue = venueTimeValue(entry.showStartDateTime, eventTimeZone);
+          const endTimeValue = venueTimeValue(entry.showEndDateTime, eventTimeZone);
+          const dateIsOutsideEvent = Boolean(
+            entry.scheduleDate &&
+            !functionScheduleDateIsWithinEventRange(entry.scheduleDate, eventStartDate, eventEndDate),
+          );
+          const dateError = dateIsOutsideEvent
+            ? `Choose a date within the event dates (${formatScheduleDate(eventStartDate || "")} – ${formatScheduleDate(eventEndDate || "")}).`
+            : showErrors && !entry.scheduleDate
+              ? "Date is required."
+              : undefined;
+          const endTimeError = showErrors
+            ? !entry.showEndDateTime
+              ? "End time is required."
+              : !functionScheduleEndIsAfterStart(entry)
+                ? "End time must be later than the start time."
+                : undefined
+            : undefined;
+          const minimumEndTime = addMinutesToTimeValue(startTimeValue, 15);
+
+          return (
           <div key={`${uid}-function-${functionIndex}`} className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] p-4">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-bold text-[#222628]">Function {functionIndex + 1}</p>
@@ -702,37 +777,6 @@ const RoomForm = ({
                 )}
               </div>
               <div>
-                <label htmlFor={`${uid}-function-${functionIndex}-date`} className={labelClass}>Date <span className="text-red-500">*</span></label>
-                {/* A native date input renders in the browser's locale, so this
-                    showed 10/03/2027 beside a start time reading 03/10/2027 —
-                    the same day in two orders, one card apart. */}
-                <GlobalDateInput
-                  id={`${uid}-function-${functionIndex}-date`}
-                  hideLabel
-                  showFormatInLabel={false}
-                  showErrorMessage={false}
-                  format="MM-dd-yyyy"
-                  value={isoDateToLocalDate(entry.scheduleDate)}
-                  onChange={(date) => {
-                    const iso = localDateToIsoDate(date);
-                    updateFunction(functionIndex, {
-                      scheduleDate: iso,
-                      scheduleDay: dayOfWeekFromDate(iso),
-                      showStartDateTime: functionDateTimeValue(iso, venueTimeValue(entry.showStartDateTime, eventTimeZone), eventTimeZone),
-                      showEndDateTime: functionDateTimeValue(iso, venueTimeValue(entry.showEndDateTime, eventTimeZone), eventTimeZone),
-                    });
-                  }}
-                  error={showErrors && !entry.scheduleDate ? "Date is required." : undefined}
-                  ariaInvalid={showErrors && !entry.scheduleDate}
-                  inputClassName={`${inputClass} pr-12 ${showErrors && !entry.scheduleDate ? "border-red-400 focus:border-red-400" : ""}`}
-                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3]"
-                  placeholder="Select date"
-                />
-                {showErrors && !entry.scheduleDate && (
-                  <p className="mt-1 text-xs text-red-500">Date is required.</p>
-                )}
-              </div>
-              <div>
                 <label className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
                 <GlobalSelect
                   className={inputClass}
@@ -743,50 +787,108 @@ const RoomForm = ({
                   {ROOM_SETUP_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                 </GlobalSelect>
               </div>
-              <div>
-                <label htmlFor={`${uid}-function-${functionIndex}-start-time`} className={labelClass}>Start Time <span className="text-red-500">*</span></label>
-                <input
-                  id={`${uid}-function-${functionIndex}-start-time`}
-                  type="time"
-                  step={300}
-                  disabled={!entry.scheduleDate}
-                  aria-invalid={showErrors && !entry.showStartDateTime ? true : undefined}
-                  aria-describedby={showErrors && !entry.showStartDateTime ? `${uid}-function-${functionIndex}-start-error` : undefined}
-                  value={venueTimeValue(entry.showStartDateTime, eventTimeZone)}
-                  onChange={(event) => updateFunction(functionIndex, {
-                    showStartDateTime: functionDateTimeValue(entry.scheduleDate, event.target.value, eventTimeZone),
+              <fieldset className="md:col-span-2 rounded-xl border border-sky-100 bg-white p-4">
+                <legend className="px-1 text-xs font-extrabold uppercase tracking-wide text-[#173744]">Function schedule</legend>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label htmlFor={`${uid}-function-${functionIndex}-date`} className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#3d4143]">Date <span className="text-red-500">*</span></label>
+                    <GlobalDateInput
+                      id={`${uid}-function-${functionIndex}-date`}
+                      hideLabel
+                      showFormatInLabel={false}
+                      showErrorMessage={false}
+                      format="MM/dd/yyyy"
+                      localeAware
+                      value={isoDateToLocalDate(entry.scheduleDate)}
+                      minDate={isoDateToLocalDate(eventStartDate || "") || undefined}
+                      maxDate={isoDateToLocalDate(eventEndDate || "") || undefined}
+                      showTodayShortcut
+                      onChange={(date) => {
+                        const iso = localDateToIsoDate(date);
+                        updateFunction(functionIndex, {
+                          scheduleDate: iso,
+                          scheduleDay: dayOfWeekFromDate(iso),
+                          showStartDateTime: functionDateTimeValue(iso, startTimeValue, eventTimeZone),
+                          showEndDateTime: functionDateTimeValue(iso, endTimeValue, eventTimeZone),
+                        });
+                      }}
+                      error={dateError}
+                      ariaInvalid={Boolean(dateError)}
+                      ariaDescribedBy={`${uid}-function-${functionIndex}-date-help`}
+                      inputClassName={`${inputClass} pr-12 ${dateError ? "border-red-400 focus:border-red-400" : ""}`}
+                    />
+                    <p id={`${uid}-function-${functionIndex}-date-help`} className={`mt-1 text-xs ${dateError ? "text-red-500" : "text-slate-500"}`}>
+                      {dateError || eventDateWindowLabel(eventStartDate || "", eventEndDate || "")}
+                    </p>
+                  </div>
+                  <GlobalTimeInput
+                    id={`${uid}-function-${functionIndex}-start-time`}
+                    label="Start time"
+                    value={startTimeValue}
+                    disabled={!entry.scheduleDate || dateIsOutsideEvent}
+                    maxTime="23:30"
+                    error={showErrors && !entry.showStartDateTime ? "Start time is required." : undefined}
+                    ariaDescribedBy={`${uid}-function-${functionIndex}-start-error`}
+                    open={openTimePicker === `${functionIndex}-start`}
+                    onOpenChange={(open) => setOpenTimePicker(open ? `${functionIndex}-start` : null)}
+                    onChange={(value) => {
+                      const currentEndMinutes = timeValueToMinutes(endTimeValue);
+                      const nextStartMinutes = timeValueToMinutes(value);
+                      const suggestedEnd = addMinutesToTimeValue(value, 60) || addMinutesToTimeValue(value, 15);
+                      const shouldReplaceEnd =
+                        !value ||
+                        currentEndMinutes === null ||
+                        nextStartMinutes === null ||
+                        currentEndMinutes <= nextStartMinutes;
+                      updateFunction(functionIndex, {
+                        showStartDateTime: functionDateTimeValue(entry.scheduleDate, value, eventTimeZone),
+                        ...(shouldReplaceEnd
+                          ? { showEndDateTime: functionDateTimeValue(entry.scheduleDate, suggestedEnd, eventTimeZone) }
+                          : {}),
+                      });
+                    }}
+                  />
+                  <GlobalTimeInput
+                    id={`${uid}-function-${functionIndex}-end-time`}
+                    label="End time"
+                    value={endTimeValue}
+                    disabled={!entry.scheduleDate || dateIsOutsideEvent || !startTimeValue}
+                    minTime={minimumEndTime || undefined}
+                    maxTime="23:45"
+                    error={endTimeError}
+                    ariaDescribedBy={`${uid}-function-${functionIndex}-end-error`}
+                    open={openTimePicker === `${functionIndex}-end`}
+                    onOpenChange={(open) => setOpenTimePicker(open ? `${functionIndex}-end` : null)}
+                    onChange={(value) => updateFunction(functionIndex, {
+                      showEndDateTime: functionDateTimeValue(entry.scheduleDate, value, eventTimeZone),
+                    })}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sky-100 pt-3">
+                  <span className="mr-1 text-xs text-slate-500">Set duration:</span>
+                  {FUNCTION_DURATION_OPTIONS.map((duration) => {
+                    const nextEnd = addMinutesToTimeValue(startTimeValue, duration.minutes);
+                    return (
+                      <button
+                        key={duration.minutes}
+                        type="button"
+                        disabled={!nextEnd || dateIsOutsideEvent}
+                        onClick={() => updateFunction(functionIndex, {
+                          showEndDateTime: functionDateTimeValue(entry.scheduleDate, nextEnd, eventTimeZone),
+                        })}
+                        className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 transition hover:border-sky-400 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {duration.label}
+                      </button>
+                    );
                   })}
-                  className={`${inputClass} ${showErrors && !entry.showStartDateTime ? "border-red-400 focus:border-red-400" : ""} disabled:cursor-not-allowed disabled:bg-slate-100`}
-                />
-                {showErrors && !entry.showStartDateTime && (
-                  <p id={`${uid}-function-${functionIndex}-start-error`} className="mt-1 text-xs text-red-500">Start Time is required.</p>
-                )}
-              </div>
-              <div>
-                <label htmlFor={`${uid}-function-${functionIndex}-end-time`} className={labelClass}>End Time <span className="text-red-500">*</span></label>
-                <input
-                  id={`${uid}-function-${functionIndex}-end-time`}
-                  type="time"
-                  step={300}
-                  disabled={!entry.scheduleDate}
-                  aria-invalid={showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? true : undefined}
-                  aria-describedby={showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? `${uid}-function-${functionIndex}-end-error` : undefined}
-                  value={venueTimeValue(entry.showEndDateTime, eventTimeZone)}
-                  onChange={(event) => updateFunction(functionIndex, {
-                    showEndDateTime: functionDateTimeValue(entry.scheduleDate, event.target.value, eventTimeZone),
-                  })}
-                  className={`${inputClass} ${showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? "border-red-400 focus:border-red-400" : ""} disabled:cursor-not-allowed disabled:bg-slate-100`}
-                />
-                {showErrors && !entry.showEndDateTime && (
-                  <p id={`${uid}-function-${functionIndex}-end-error`} className="mt-1 text-xs text-red-500">End Time is required.</p>
-                )}
-                {showErrors && entry.showStartDateTime && entry.showEndDateTime && !functionScheduleEndIsAfterStart(entry) && (
-                  <p id={`${uid}-function-${functionIndex}-end-error`} className="mt-1 text-xs text-red-500">End Time must be after Start Time.</p>
-                )}
-              </div>
+                  <span className="ml-auto text-xs text-slate-500">15-minute increments · {eventTimeZone || "venue time"}</span>
+                </div>
+              </fieldset>
             </div>
           </div>
-        ))}
+          );
+        })}
         <button
           type="button"
           onClick={() => updateFunctionSchedules([...functionSchedules, defaultFunctionSchedule()])}
@@ -1890,6 +1992,8 @@ const RoomCard = ({
   canDelete,
   showErrors,
   eventTimeZone,
+  eventStartDate,
+  eventEndDate,
   onOpenScenicInspirations,
   mode,
 }: {
@@ -1904,6 +2008,8 @@ const RoomCard = ({
   canDelete: boolean;
   showErrors: boolean;
   eventTimeZone?: string | null;
+  eventStartDate?: string;
+  eventEndDate?: string;
   onOpenScenicInspirations?: () => void;
   mode: ProposalExperienceMode;
 }) => {
@@ -1979,6 +2085,8 @@ const RoomCard = ({
             showErrors={showErrors}
             roomIndex={index}
             eventTimeZone={eventTimeZone}
+            eventStartDate={eventStartDate}
+            eventEndDate={eventEndDate}
             onOpenScenicInspirations={onOpenScenicInspirations}
             mode={mode}
           />
@@ -1997,6 +2105,8 @@ const RoomCard = ({
 export const missingRoomFields = (
   room: RoomByRoomData,
   mode: ProposalExperienceMode = "advanced",
+  eventStartDate?: string,
+  eventEndDate?: string,
 ): string[] => {
   const missing: string[] = [];
   if (!room.roomLocation.trim()) missing.push("physical room name");
@@ -2005,6 +2115,10 @@ export const missingRoomFields = (
     if (schedules.some((entry) => !entry.functionName.trim())) missing.push("function name");
     if (schedules.some((entry) => !isPositiveIntegerText(entry.estimatedAttendees))) missing.push("number of attendees");
     if (schedules.some((entry) => !entry.scheduleDate.trim())) missing.push("date");
+    if (schedules.some((entry) =>
+      entry.scheduleDate.trim() &&
+      !functionScheduleDateIsWithinEventRange(entry.scheduleDate, eventStartDate, eventEndDate)
+    )) missing.push("date within event dates");
     if (schedules.some((entry) => !entry.showStartDateTime.trim())) missing.push("start time");
     if (schedules.some((entry) => !entry.showEndDateTime.trim())) missing.push("end time");
     if (schedules.some((entry) => !functionScheduleEndIsAfterStart(entry))) missing.push("end time after start time");
@@ -2012,6 +2126,10 @@ export const missingRoomFields = (
     if (!room.roomFunction.trim()) missing.push("function name");
     if (!isPositiveIntegerText(room.estimatedAttendeesInRoom)) missing.push("number of attendees");
     if (!room.scheduleDate.trim()) missing.push("date");
+    if (
+      room.scheduleDate.trim() &&
+      !functionScheduleDateIsWithinEventRange(room.scheduleDate, eventStartDate, eventEndDate)
+    ) missing.push("date within event dates");
     if (!room.showStartDateTime.trim()) missing.push("start time");
     if (!room.showEndDateTime.trim()) missing.push("end time");
     if (!functionScheduleEndIsAfterStart({
@@ -2051,9 +2169,11 @@ export const roomLabel = (room: RoomByRoomData, index: number): string =>
 export const firstIncompleteRoom = (
   rooms: RoomByRoomData[],
   mode: ProposalExperienceMode = "advanced",
+  eventStartDate?: string,
+  eventEndDate?: string,
 ): { index: number; label: string; missing: string[] } | null => {
   for (const [index, room] of rooms.entries()) {
-    const missing = missingRoomFields(room, mode);
+    const missing = missingRoomFields(room, mode, eventStartDate, eventEndDate);
     if (missing.length) return { index, label: roomLabel(room, index), missing };
   }
   return null;
@@ -2457,6 +2577,8 @@ const RoomAndProductionStep = ({
               canDelete={rooms.length > 1}
               showErrors={showErrors}
               eventTimeZone={eventTimeZone}
+              eventStartDate={eventStartDate}
+              eventEndDate={eventEndDate}
               onOpenScenicInspirations={onOpenScenicInspirations}
               mode={mode}
             />

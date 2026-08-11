@@ -1623,7 +1623,12 @@ const AddNewProposal = ({
 
   const isEventStepValid = () => eventValidationIssues().length === 0;
 
-  const isRoomAndProductionStepValid = () => firstIncompleteRoom(rooms, experienceMode) === null;
+  const isRoomAndProductionStepValid = () => firstIncompleteRoom(
+    rooms,
+    experienceMode,
+    toIsoDate(proposalData.event.startDate),
+    toIsoDate(proposalData.event.endDate),
+  ) === null;
 
   /**
    * Blocking Continue silently is indistinguishable from a broken button when
@@ -1631,7 +1636,12 @@ const AddNewProposal = ({
    * the room and what it needs, then ask the step to open and reveal it.
    */
   const reportIncompleteRoom = () => {
-    const incomplete = firstIncompleteRoom(rooms, experienceMode);
+    const incomplete = firstIncompleteRoom(
+      rooms,
+      experienceMode,
+      toIsoDate(proposalData.event.startDate),
+      toIsoDate(proposalData.event.endDate),
+    );
     if (!incomplete) return;
     toast.error(`${incomplete.label} still needs: ${incomplete.missing.join(", ")}.`);
     setFocusRoom({ index: incomplete.index, token: Date.now() });
@@ -1810,7 +1820,12 @@ const AddNewProposal = ({
       };
     }
     if (proposalProcessStep === 3) {
-      const incomplete = firstIncompleteRoom(rooms, experienceMode);
+      const incomplete = firstIncompleteRoom(
+        rooms,
+        experienceMode,
+        toIsoDate(proposalData.event.startDate),
+        toIsoDate(proposalData.event.endDate),
+      );
       return {
         section: "Room Specifications",
         issues: incomplete
@@ -1849,7 +1864,12 @@ const AddNewProposal = ({
     add(1, "Event Overview", eventValidationIssues());
     add(2, "Venue & Schedule", venueScheduleStepIssues());
     rooms.forEach((room, index) => {
-      const missing = firstIncompleteRoom([room], experienceMode);
+      const missing = firstIncompleteRoom(
+        [room],
+        experienceMode,
+        toIsoDate(proposalData.event.startDate),
+        toIsoDate(proposalData.event.endDate),
+      );
       if (missing) {
         add(3, "Room Specifications", missing.missing.map((label) => `${roomLabel(room, index)}: ${label}`));
       }

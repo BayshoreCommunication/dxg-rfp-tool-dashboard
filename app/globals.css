@@ -208,6 +208,47 @@ body {
 
 .dxg-datepicker .react-datepicker__day--disabled {
   color: #a6b5bb;
+  background: #f4f7f8;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.dxg-datepicker .react-datepicker__today-button {
+  border-top: 1px solid #e2f2f5;
+  background: #f0fbfd;
+  padding: 10px 12px;
+  color: #087f91;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dxg-datepicker .react-datepicker__today-button:hover {
+  background: #dcf7fa;
+}
+
+.dxg-timepicker.react-datepicker {
+  width: 200px !important;
+}
+
+.dxg-timepicker .react-datepicker__time-container,
+.dxg-timepicker .react-datepicker__time,
+.dxg-timepicker .react-datepicker__time-box {
+  width: 200px !important;
+}
+
+.dxg-timepicker .react-datepicker__time-list {
+  width: 100% !important;
+  height: 250px !important;
+  padding: 6px !important;
+}
+
+.dxg-timepicker .react-datepicker__time-list-item {
+  box-sizing: border-box;
+  width: 100% !important;
+  height: auto !important;
+  padding: 9px 12px !important;
+  white-space: nowrap;
 }
 
 .dxg-datepicker .react-datepicker__navigation {

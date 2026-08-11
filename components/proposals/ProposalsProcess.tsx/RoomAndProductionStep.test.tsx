@@ -3,6 +3,7 @@ import path from "node:path";
 import * as XLSX from "xlsx";
 import {
   defaultRoom,
+  functionScheduleDateIsWithinEventRange,
   functionDateTimeValue,
   functionScheduleEndIsAfterStart,
   missingRoomFields,
@@ -123,6 +124,21 @@ describe("mandatory function schedules", () => {
 
     expect(functionScheduleEndIsAfterStart(room.functions[0])).toBe(false);
     expect(missingRoomFields(room)).toContain("end time after start time");
+  });
+
+  it("accepts function dates on either event boundary and rejects dates outside it", () => {
+    expect(functionScheduleDateIsWithinEventRange("2026-08-10", "2026-08-10", "2026-08-12")).toBe(true);
+    expect(functionScheduleDateIsWithinEventRange("2026-08-12", "2026-08-10", "2026-08-12")).toBe(true);
+    expect(functionScheduleDateIsWithinEventRange("2026-08-09", "2026-08-10", "2026-08-12")).toBe(false);
+    expect(functionScheduleDateIsWithinEventRange("2026-08-13", "2026-08-10", "2026-08-12")).toBe(false);
+  });
+
+  it("blocks Continue when a function date is outside the event window", () => {
+    const room = completeRoom();
+    room.functions[0].scheduleDate = "2026-08-13";
+
+    expect(missingRoomFields(room, "advanced", "2026-08-10", "2026-08-12"))
+      .toContain("date within event dates");
   });
 
   it("anchors time-only input to the function date in the venue time zone", () => {
