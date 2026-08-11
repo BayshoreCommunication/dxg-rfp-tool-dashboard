@@ -158,12 +158,12 @@ const Sidebar = ({
   const avatarUrl = "/assets/logo/rfpilot-primary-logo.png"; // Replace with your actual logo URL or logic to fetch it
 
   return (
-    <aside className="fixed left-0 top-0 z-50 flex h-screen w-[90px] flex-col border-r border-gray-200 bg-white">
-      <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200">
+    <aside className="fixed inset-y-0 left-0 z-50 flex h-dvh w-[90px] min-h-0 flex-col overflow-hidden border-r border-gray-200 bg-white">
+      <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200 max-[800px]:h-14">
         <Link
           href="/dashboard"
           aria-label="Go to dashboard"
-          className="group flex h-12 w-12 items-center justify-center overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+          className="group flex h-12 w-12 items-center justify-center overflow-hidden transition-all duration-200 hover:-translate-y-0.5 max-[800px]:h-10 max-[800px]:w-10"
         >
           {avatarUrl ? (
             <Image
@@ -181,7 +181,10 @@ const Sidebar = ({
         </Link>
       </div>
 
-      <nav className="flex flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto px-3 py-4">
+      <nav
+        aria-label="Primary navigation"
+        className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-3 max-[800px]:gap-0 max-[800px]:py-2"
+      >
         {navigationConfig.map((item) => {
           const isActive = isItemActive(item);
           const badge =
@@ -198,7 +201,7 @@ const Sidebar = ({
             >
               <div
                 className={cn(
-                  "group relative flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-3 transition-all duration-200",
+                  "group relative flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-3 transition-all duration-200 max-[800px]:gap-0.5 max-[800px]:py-1.5",
                   isActive
                     ? "bg-linear-to-b from-primary/10 to-primary/5"
                     : "hover:bg-primary/5",
@@ -210,7 +213,7 @@ const Sidebar = ({
 
                 <div
                   className={cn(
-                    "relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+                    "relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 max-[800px]:h-9 max-[800px]:w-9",
                     isActive
                       ? "bg-primary/15 text-primary"
                       : "text-gray-400 group-hover:bg-primary/10 group-hover:text-primary",
@@ -226,7 +229,7 @@ const Sidebar = ({
 
                 <span
                   className={cn(
-                    "mt-0.5 w-full whitespace-normal break-normal text-center text-[9.5px] font-bold leading-[1.08] tracking-wide",
+                    "mt-0.5 w-full whitespace-normal break-normal text-center text-[9.5px] font-bold leading-[1.08] tracking-wide max-[800px]:mt-0 max-[800px]:text-[9px]",
                     isActive
                       ? "text-primary"
                       : "text-gray-500 group-hover:text-primary",
@@ -241,7 +244,7 @@ const Sidebar = ({
       </nav>
 
       {onOpenAssistant && (
-        <div className="flex shrink-0 justify-center px-2.5 pb-3">
+        <div className="flex shrink-0 justify-center px-2.5 pb-3 max-[800px]:pb-1.5">
           <button
             id="ai-assistant-launcher"
             type="button"
@@ -255,7 +258,7 @@ const Sidebar = ({
             title="AI Assistant"
             onClick={onOpenAssistant}
             className={cn(
-              "group relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-[background-color,border-color,color,box-shadow] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+              "group relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-[background-color,border-color,color,box-shadow] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 max-[800px]:h-10 max-[800px]:w-10 max-[800px]:rounded-xl",
               assistantOpen
                 ? "border-[#0e1b2b] bg-[#0e1b2b] text-white shadow-[0_14px_30px_-16px_rgba(14,27,43,0.9)]"
                 : "border-primary/25 bg-primary/10 text-[#009da4] shadow-[0_14px_30px_-18px_rgba(0,194,201,0.9)] hover:border-primary/45 hover:bg-primary/15",
@@ -279,12 +282,12 @@ const Sidebar = ({
         className="mx-4 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent"
       />
 
-      <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3">
+      <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3 max-[800px]:gap-1 max-[800px]:py-1.5">
         <Link
           href="/notification"
           title="Notifications"
           className={cn(
-            "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200",
+            "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200 max-[800px]:h-10 max-[800px]:w-10 max-[800px]:rounded-xl",
             pathname === "/notification"
               ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(0,138,210,0.95)]"
               : "border-slate-200 bg-white text-slate-500 hover:border-primary/10 hover:bg-primary/5 hover:text-primary",
@@ -304,9 +307,9 @@ const Sidebar = ({
           disabled={signingOut}
           aria-label="Sign out of your account"
           title="Sign out"
-          className="group flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 disabled:cursor-wait disabled:opacity-60"
+          className="group flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 disabled:cursor-wait disabled:opacity-60 max-[800px]:gap-0.5 max-[800px]:py-1"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white transition group-hover:border-rose-200 group-hover:bg-rose-50">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white transition group-hover:border-rose-200 group-hover:bg-rose-50 max-[800px]:h-7 max-[800px]:w-7 max-[800px]:rounded-lg">
             {signingOut ? (
               <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
             ) : (

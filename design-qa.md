@@ -40,6 +40,24 @@ final result: passed
 
 ---
 
+## Dashboard Sidebar Laptop Responsiveness — Verification Status
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-8c1ba130-cc61-4dd9-9e50-6ded9d78faa5.png` (1920 × 1080 px, browser chrome included).
+- Intended implementation route and viewport: authenticated `/dashboard` at 1366 × 768 CSS px, device scale factor 1, AI Assistant closed.
+- Implementation capture: unavailable because no browser surface was available.
+- Full-view and focused comparison evidence: blocked. The source was opened and inspected, but the rendered implementation could not be captured for a combined comparison.
+- Responsive implementation: the sidebar now uses dynamic viewport height and clipped outer overflow; its primary navigation has a constrained flex height and overscroll containment; header, nav items, assistant, notifications, and sign-out compact at viewport heights of 800 px or less.
+- Required fidelity surfaces: existing typography, labels, color tokens, logo asset, Lucide icons, interaction states, and copy are preserved. Rendered text wrapping and vertical rhythm remain visually unverified.
+- Automated verification: focused Sidebar and LayoutWrapper suites passed 5/5 tests; Sidebar ESLint passed; `git diff --check` passed.
+- TypeScript verification: blocked by unrelated existing missing generated conversation route types and unresolved `@vercel/speed-insights/next` imports.
+- Browser interactions and console: not checked because no browser surface was available.
+- Finding: [P2] confirm that all five primary navigation items and the assistant, notification, and sign-out controls remain visible without an internal scrollbar at the target laptop height.
+- Comparison history: initial source showed an internal navigation scrollbar and loose vertical spacing; the responsive height constraints and compact breakpoint were applied; post-fix visual evidence remains blocked.
+
+final result: blocked
+
+---
+
 ## Proposal Journey Neutral and Selected Indicators — Verification Status
 
 - Source visual truths: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-88f24d3b-1357-42b6-ab98-36ac78093bad.png` (160 × 192 px), showing the requested white neutral stage, and `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-5ccb676c-2740-4330-9abd-d45ae62a2334.png` (221 × 256 px), showing the requested blue selected stage.
