@@ -1064,7 +1064,7 @@ const BudgetProposalPreferences = ({
         <div className="mb-6">
           <label className={labelClass}>
             Call with DXG Producer? <span className="text-red-500">*</span>
-            <InfoTooltip text="A brief discovery call with your DXG producer helps clarify requirements and speeds up the proposal process. Strongly recommended for Enterprise and Signature tier events." />
+            <InfoTooltip text="A brief discovery call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement." />
           </label>
           <YesNo
             value={safeData.callWithDxgProducer}
