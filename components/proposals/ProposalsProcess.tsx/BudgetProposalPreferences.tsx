@@ -1061,7 +1061,10 @@ const BudgetProposalPreferences = ({
         {/* ── Producer Consultation ── */}
         <Group label="Producer Consultation" />
 
-        <div className="mb-6">
+        <div
+          className="mb-6"
+          data-assistant-field-key="/content/budgetPreferences/producerCallRequested"
+        >
           <label className={labelClass}>
             Call with DXG Producer? <span className="text-red-500">*</span>
             <InfoTooltip text="A brief discovery call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement." />

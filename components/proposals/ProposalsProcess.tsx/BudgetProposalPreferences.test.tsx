@@ -101,6 +101,10 @@ describe("producer consultation guidance", () => {
 
     const fieldLabel = screen.getByText(/Call with DXG Producer\?/i).closest("label");
     expect(fieldLabel).not.toBeNull();
+    expect(fieldLabel?.closest("[data-assistant-field-key]")).toHaveAttribute(
+      "data-assistant-field-key",
+      "/content/budgetPreferences/producerCallRequested",
+    );
     await user.hover(within(fieldLabel as HTMLLabelElement).getByRole("button", { name: /About this field/i }));
 
     expect(await screen.findByText(
