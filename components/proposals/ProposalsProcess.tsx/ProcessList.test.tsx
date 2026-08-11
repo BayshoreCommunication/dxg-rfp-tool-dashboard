@@ -17,7 +17,7 @@ describe("ProcessList", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Go to Contact & Submit" }),
+      screen.getByRole("button", { name: "Go to Contact & Publish" }),
     );
 
     expect(onStepChange).toHaveBeenCalledWith(10);
@@ -76,5 +76,13 @@ describe("ProcessList", () => {
     );
     expect(screen.getByRole("button", { name: "Go to Event Overview" }).parentElement)
       .toHaveClass("min-w-[180px]", "@min-[1000px]:min-w-0");
+  });
+
+  it("uses sequential visible numbering without introducing a second progress indicator", () => {
+    render(<ProcessList activeStep={3} hideStepIds={[4]} completedStepIds={[1, 2]} />);
+
+    expect(screen.queryByText("2B")).not.toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.getByText("Workflow sections")).toBeInTheDocument();
   });
 });

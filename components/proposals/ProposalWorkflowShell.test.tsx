@@ -77,8 +77,8 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.queryByText(/The assistant drafts the RFP/)).toBeInTheDocument();
     expect(screen.getByText("Keep control")).toBeInTheDocument();
     expect(screen.getByText("Nothing is published automatically.")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "Proposal journey progress" }))
-      .toHaveAttribute("aria-valuenow", "0");
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.getByText("0 of 5 stages ready")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });
 
@@ -223,6 +223,39 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.getByTestId("historical-insights")).toBeInTheDocument();
     expect(screen.queryByText("Investment guidance")).not.toBeInTheDocument();
     expect(screen.queryByTestId("investment-guidance")).not.toBeInTheDocument();
+  });
+
+  test("continues to Contact & Publish with a smooth, focused transition", async () => {
+    mockedGetWorkflow.mockResolvedValue({
+      success: true,
+      data: {
+        ...workflow.data,
+        workflow: { currentStep: 5 },
+      },
+    } as never);
+    const onNavigateToFormStep = jest.fn();
+    const target = document.createElement("section");
+    const scrollIntoView = jest.fn();
+    target.id = "contact-publish-section";
+    target.tabIndex = -1;
+    target.scrollIntoView = scrollIntoView;
+    document.body.appendChild(target);
+
+    render(
+      <ProposalWorkflowShell
+        proposalId={PROPOSAL_ID}
+        onNavigateToFormStep={onNavigateToFormStep}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Continue to final details" }));
+
+    expect(onNavigateToFormStep).toHaveBeenCalledWith(10);
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+      expect(target).toHaveFocus();
+    });
+    target.remove();
   });
 
   test("no longer renders the private document panel, but keeps the banner and the remaining panels", async () => {

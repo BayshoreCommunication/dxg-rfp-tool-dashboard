@@ -111,7 +111,22 @@ line and an unsaved-changes warning on unload; the previous model held every
 step in memory behind a single save on page 9. Autosave is confined to
 `status: "unsubmitted"` proposals so a background write can never alter what
 vendors already see — a published proposal still requires an explicit
-`Update RFP`. Explicit saves record the snapshot so the two paths cannot fight.
+`Publish updated RFP`. Explicit saves record the snapshot so the two paths cannot fight.
+
+## Proposal editor UX contract
+
+The editor deliberately labels its two progress systems separately: the
+five-stage assistant workflow is `AI preparation progress`, while the manual
+planner rail is `Detailed proposal form progress`. Visible form steps use
+sequential numbering after conditional steps are removed.
+
+After a blocked Continue or Publish attempt, a persistent validation summary
+names the current section and every outstanding requirement while the existing
+inline field errors remain authoritative. The final action uses explicit
+publish language and states that publishing makes the proposal vendor-visible
+but does not email vendors. Email composition must distinguish loading,
+successful-empty, and load-failure states rather than presenting an empty list
+before the submitted-proposal request resolves.
 
 ## Evaluation weightings
 

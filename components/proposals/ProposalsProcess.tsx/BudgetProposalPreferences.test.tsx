@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import BudgetProposalPreferences from "./BudgetProposalPreferences";
@@ -91,5 +91,24 @@ describe("evaluation weightings", () => {
     renderStep(budget({ evaluationMatrixConfirmed: true }));
     expect(screen.getByText(/Weightings confirmed/i)).toBeInTheDocument();
     expect(screen.queryByText(/suggested weightings/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("producer consultation guidance", () => {
+  test("explains the value of a discovery call before venue contracting", async () => {
+    const user = userEvent.setup();
+    renderStep(budget());
+
+    const fieldLabel = screen.getByText(/Call with DXG Producer\?/i).closest("label");
+    expect(fieldLabel).not.toBeNull();
+    expect(fieldLabel?.closest("[data-assistant-field-key]")).toHaveAttribute(
+      "data-assistant-field-key",
+      "/content/budgetPreferences/producerCallRequested",
+    );
+    await user.hover(within(fieldLabel as HTMLLabelElement).getByRole("button", { name: /About this field/i }));
+
+    expect(await screen.findByText(
+      "A brief discovery call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement.",
+    )).toBeInTheDocument();
   });
 });

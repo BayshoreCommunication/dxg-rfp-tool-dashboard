@@ -14,6 +14,7 @@ import {
   Eye,
   Siren,
   Sparkles,
+  SlidersHorizontal,
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
@@ -212,6 +213,12 @@ export default function NotificationList({
               <CheckCheck size={16} />
               Mark all read
             </button>
+            <Link
+              href="/notification/settings"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#2fc6f5] to-[#008ad2] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2] focus-visible:ring-offset-2"
+            >
+              <SlidersHorizontal size={16} aria-hidden="true" /> Notification settings
+            </Link>
           </div>
         </div>
       </div>
@@ -255,7 +262,13 @@ export default function NotificationList({
                         {notification.title}
                       </p>
                       <span className="text-xs font-medium text-slate-500">
-                        {formatDateTime(notification.createdAt)}
+                        {mounted ? (
+                          formatDateTime(notification.createdAt)
+                        ) : (
+                          <span aria-hidden="true" className="opacity-0">
+                            Loading time
+                          </span>
+                        )}
                       </span>
                     </div>
                     <p className="mt-1 text-sm leading-6 text-slate-600">

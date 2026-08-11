@@ -40,6 +40,76 @@ final result: passed
 
 ---
 
+# Procurement Timeline Date Bounds — Design QA
+
+## Evidence
+
+- Source visual truth (validation state): `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_8YwBqv/Screenshot 2026-08-11 at 6.01.14 PM.png`
+- Source visual truth (open calendar): `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_R4ztQp/Screenshot 2026-08-11 at 6.01.26 PM.png`
+- Browser-rendered implementation: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/procurement-date-bounds-localhost-qa.png`
+- Combined comparison: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/procurement-date-bounds-comparison.png`
+- Route: `http://localhost:3000/proposals/proposal-edit?proposalId=6a7ad926334f978be434d136`
+- State: Investment & Evaluation, Presentation Date calendar open, stored Presentation Date `08-19-2026`, Shortlist Notification `08-30-2026`, Vendor Selection `08-31-2026`.
+
+## Viewport and normalization
+
+- Source validation capture: 858 × 149 pixels at supplied 1× density.
+- Source calendar capture: 424 × 406 pixels at supplied 1× density.
+- Browser implementation capture: 1444 × 952 pixels at 1× density; the focused calendar region was cropped to 900 × 405 pixels without resizing.
+- The combined 1200 × 1220 comparison places both source states and the focused implementation crop in one review image. Layout scale differs because the source was tightly cropped; calendar typography, tokens, selected/disabled states, and interaction affordances were compared at original pixel density.
+
+## Full-view comparison evidence
+
+The implementation preserves the existing proposal editor, procurement-card layout, field label, input, calendar trigger, validation copy, and workflow rail. No unrelated layout, typography, or navigation changes appear in the browser capture.
+
+## Focused-region comparison evidence
+
+The source calendar visually presents every day as selectable, including `08-19-2026`, even though the adjacent validation says the presentation must be on or after `08-30-2026`. In the implementation, August 1–29 and September 1–5 are exposed as “Not available” disabled grid cells, while August 30–31 are the only selectable dates. The stored invalid 19th remains visible for correction but no longer receives the cyan selected treatment; it is grey and struck through like every other blocked date.
+
+## Required fidelity surfaces
+
+- Fonts and typography: the existing product font, heading weight, field label, helper text, and calendar hierarchy are unchanged.
+- Spacing and layout rhythm: the input, popover alignment, card padding, day grid, and workflow rail retain their existing dimensions and rhythm with no clipping or overflow.
+- Colors and visual tokens: cyan remains reserved for active/available states. Disabled dates use the existing muted neutral token, line-through affordance, and no hover elevation or selected shadow.
+- Image quality and asset fidelity: no raster imagery was introduced. The existing calendar icon and date-picker controls remain sharp and consistent with the product icon system.
+- Copy and content: the existing field label and direct validation message remain unchanged. Accessibility names now identify every unavailable date as “Not available”.
+
+## Interaction and runtime checks
+
+- Opening Presentation Date with Shortlist Notification `08-30-2026` and Vendor Selection `08-31-2026` leaves only August 30–31 selectable.
+- Attempting to activate the disabled August 19 grid cell was blocked by the browser; the stored input value remained unchanged.
+- The same dynamic bounds are applied to Vendor Questions Due, Response to Vendor Questions, Proposal Submission Due, Shortlist Notification, Presentation Date, Vendor Selection, and Target Decision Date.
+- Past dates are disabled, later populated milestones cap earlier pickers, earlier populated milestones set later-picker minimums, and every procurement date is capped to the day before the event starts.
+- Browser error state was checked: no app runtime, hydration, or error overlay appeared. The local Next.js toolbar retained one pre-existing advisory issue badge unrelated to this interaction.
+
+## Comparison history
+
+### Pass 1
+
+- [P2] The old invalid selected date was functionally disabled but retained the cyan selected style, making it appear actionable. Fix: disabled and disabled-hover styling now overrides selected and keyboard-selected states, removes elevation, and prevents hover movement.
+
+### Pass 2
+
+- Post-fix browser evidence shows the invalid selected date using the same grey, struck-through visual language as all blocked dates.
+- No actionable P0, P1, or P2 findings remain.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+
+## Implementation checklist
+
+- [x] Bound each procurement calendar to the latest earlier milestone.
+- [x] Bound each procurement calendar to the earliest later milestone.
+- [x] Disable past dates and dates on or after the event start.
+- [x] Keep viable same-day milestones selectable in line with existing validation rules.
+- [x] Make disabled, selected-invalid, hover, and accessibility states unambiguous.
+- [x] Verify the open-calendar state and blocked click in localhost.
+- [x] Verify the full automated test suite, lint, and type-check.
+
+final result: passed
+---
+
 ## Proposal Journey Neutral and Selected Indicators — Verification Status
 
 - Source visual truths: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-88f24d3b-1357-42b6-ab98-36ac78093bad.png` (160 × 192 px), showing the requested white neutral stage, and `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-5ccb676c-2740-4330-9abd-d45ae62a2334.png` (221 × 256 px), showing the requested blue selected stage.
@@ -367,5 +437,158 @@ The references and implementation differ in source image size and crop. Comparis
 - Runtime verification: no browser errors were observed. One pre-existing image-loading performance warning was present for `rfpilot-primary-logo.png`.
 - Visual comparison: the proposal header omits the DXG wordmark, the live-status band, five-step workflow, Event Overview fields, narrative textarea, footer actions, and white Intake Form rail match the approved direction. The global application rail remains outside the proposal canvas, and proposal text/status reflect live backend data rather than the static mock.
 - Iteration: removed the duplicate Technical details panel, moved the narrative field above the fold, eliminated duplicate Ask AI labels, and replaced the dark intake rail with the approved light treatment.
+
+final result: passed
+
+---
+
+# Vendor Response Redesign — Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_6CRw5C/Screenshot 2026-08-11 at 4.31.43 PM.png`
+- Browser-rendered implementation viewport: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/vendor-response-redesign.jpg`
+- Browser-rendered implementation full page: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/vendor-response-redesign-full.jpg`
+- Combined comparison: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/vendor-response-comparison.jpg`
+- Route: `http://localhost:3000/vendor-response/general-av-services-rfp-6a7aa6f2c7e1575700216e0a`
+- State: first-time vendor response, empty form, light theme.
+
+## Viewport and normalization
+
+- Source: 712 × 849 pixels, supplied at 1× density.
+- Browser viewport: 1280 × 720 CSS pixels at device pixel ratio 1.
+- Browser viewport capture: 1265 × 712 pixels (the in-app browser excludes its scrollbar area).
+- Full-page evidence was assembled from three browser viewport captures at scroll positions 0, 700, and 867 CSS pixels. The resulting implementation image is 1265 × 1568 pixels.
+- For the combined full-view comparison, both panels were fit into equal 712 × 849 review frames without cropping the app-owned content. The source is portrait while the available in-app browser viewport is landscape, so the comparison is used for hierarchy, typography, color, and full-flow density rather than false pixel-level alignment.
+
+## Full-view comparison evidence
+
+The redesign preserves the source screen's light surface, centered response form, navy typography, cyan brand accent, proposal title, required contact fields, optional proposal details, document upload, primary submission action, and DXG footer. It intentionally expands the single undifferentiated card into three clearly labeled sections and adds submission reassurance, upload guidance, validation states, and review copy.
+
+No app-owned raster assets appear in the source or implementation. All interface icons use the product's existing Lucide icon system and inherit accessible text labels from their controls.
+
+## Focused-region comparison evidence
+
+The original-pixel viewport capture provides a readable focused comparison for the header and contact-information region. It confirms:
+
+- the proposal title remains immediately visible;
+- the headline retains the source's weight and hierarchy;
+- required fields preserve clear labels and familiar input proportions;
+- the security panel is visually secondary to the primary task;
+- the two-column desktop layout reduces scrolling without compressing controls.
+
+The accessibility-tree review separately confirmed unique form/section headings, associated labels, field-level alerts, focus on the first invalid field, and a single accessible file-selection control.
+
+## Required fidelity surfaces
+
+- Fonts and typography: Proxima Nova remains the inherited product font. The redesigned heading, section titles, labels, helper copy, and button weights create a clearer hierarchy without introducing a new typeface. Text remains readable at the tested viewport.
+- Spacing and layout rhythm: the source's centered-card rhythm is retained. The header, three form sections, upload area, and submission footer use consistent 20–40 px spacing, 12–24 px radii, and restrained elevation. No content clips or overlaps.
+- Colors and visual tokens: slate/navy neutrals and DXG cyan/blue accents remain consistent with the source and global tokens. Rose, amber, and emerald are limited to validation, update, and success states. Contrast is sufficient in the reviewed states.
+- Image quality and asset fidelity: no source imagery or logos required recreation. Existing vector icons remain sharp at 1× and are decorative where adjacent copy provides the meaning.
+- Copy and content: the original fields and submission purpose are preserved. New copy explains what to include, how uploads are handled, where confirmation is sent, and what submission means.
+
+## Interaction and runtime checks
+
+- Empty submission exposes three direct field errors and moves focus to the first invalid field.
+- Correcting values clears their error messages.
+- Drag-and-drop and file-picker behavior, duplicate detection, 10 MB limits, file readiness, and removal are covered by component tests.
+- Existing-response update mode and the successful confirmation state are covered by component tests.
+- Browser navigation, initial render, validation interaction, corrected field state, and accessibility structure were tested on the real localhost route.
+- No browser-visible Next.js error overlay or hydration error remained in the final route state.
+
+## Comparison history
+
+### Pass 1
+
+- [P2] Proposal context disappeared when the public proposal lookup was unavailable. Fix: added a deterministic human-readable title fallback from the route slug, preserving known acronyms such as AV and RFP. Post-fix evidence shows `General AV Services RFP` in the header.
+- [P2] The visually hidden native file input appeared as a second unlabeled file control in the accessibility tree. Fix: removed it from the accessibility tree while retaining the labeled `Choose files` button as the single entry point. Post-fix accessibility evidence contains only the labeled button.
+
+### Pass 2
+
+- No actionable P0, P1, or P2 differences remain.
+- P3 follow-up: the fuller guidance makes the page longer than the source on narrow screens. This is an intentional usability trade-off; the three section headings keep the scroll understandable.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+
+## Implementation checklist
+
+- [x] Preserve public submit and update behavior.
+- [x] Strengthen RFP context and submission trust.
+- [x] Group contact, proposal, and document tasks.
+- [x] Add direct accessible validation.
+- [x] Add drag-and-drop upload feedback and limits.
+- [x] Verify browser rendering and primary interactions.
+- [x] Verify focused and full-page visual evidence.
+
+final result: passed
+
+---
+
+# Items Remaining Floating Popover — Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_xhdUbX/Screenshot 2026-08-11 at 6.15.39 PM.png`
+- Browser-rendered implementation: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/items-remaining-floating-popover-localhost.png`
+- Combined comparison: `/Users/swoptechnologies/Documents/Codex/2026-08-11/ope/outputs/items-remaining-floating-popover-comparison.png`
+- Route: `http://localhost:3000/proposals/proposal-edit?proposalId=6a7ad926334f978be434d136`
+- State: Advanced production mode, seven checklist items, checklist open.
+
+## Viewport and normalization
+
+- Source: 1276 × 475 pixels at supplied 1× density.
+- Browser implementation: 1265 × 712 pixels at 1× density; the comparison uses an unscaled 1265 × 540 top-of-page crop.
+- Source and implementation are both desktop light-theme states. Live readiness changed from 9/10 in the source capture to 6/10 in the browser data; this does not affect the popover geometry or styling under review.
+
+## Full-view comparison evidence
+
+The source checklist participates in the proposal-builder grid and increases the card height to match the full checklist. The implementation keeps the proposal-builder card compact and anchors the checklist eight pixels below its trigger as a layered panel above the following proposal content. The panel remains aligned to the trigger's right and width, with its own bounded scroll area.
+
+## Focused-region comparison evidence
+
+The comparison shows unchanged trigger typography, icon, count, border radius, label hierarchy, and row density. The new elevation, border, white surface, and independent scrollbar clearly distinguish the checklist as temporary floating content. The open trigger retains a visible focus/active treatment, while the underlying page remains readable and structurally unchanged.
+
+## Required fidelity surfaces
+
+- Fonts and typography: existing product font, weights, label casing, and line heights are preserved.
+- Spacing and layout rhythm: the builder card no longer acquires empty vertical space; the popover uses an 8 px anchor gap, 12 px radius, and the existing 288 px maximum list height.
+- Colors and visual tokens: existing slate, white, cyan, and blue tokens remain; elevation is consistent with other product popovers.
+- Image quality and asset fidelity: no raster assets were introduced. Existing Lucide checklist and chevron icons are preserved.
+- Copy and content: all checklist counts, section names, and issue labels remain unchanged.
+
+## Interaction and runtime checks
+
+- Trigger toggles the floating region and exposes `aria-expanded` and `aria-controls`.
+- Selecting an issue closes the popover before navigating to the issue.
+- Clicking outside closes the popover.
+- Escape closes the popover and restores keyboard focus to the trigger.
+- Long lists scroll within the panel without changing the proposal-builder card height.
+- No browser-visible runtime, hydration, or error overlay appeared during the verified interaction.
+
+## Comparison history
+
+### Pass 1
+
+- [P1] The checklist expanded the full proposal-builder card, producing a large empty left column and pushing primary proposal content down. Fix: replaced the in-flow disclosure body with a controlled, absolutely positioned popover anchored to the existing trigger.
+
+### Pass 2
+
+- Post-fix evidence shows the builder card retaining its compact height while the complete checklist floats over the following content.
+- No actionable P0, P1, or P2 findings remain.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+
+## Implementation checklist
+
+- [x] Remove open checklist content from document flow.
+- [x] Preserve the existing trigger and checklist visual language.
+- [x] Keep long lists independently scrollable.
+- [x] Support toggle, issue selection, outside-click, and Escape dismissal.
+- [x] Restore trigger focus after keyboard dismissal.
+- [x] Verify browser rendering and the full automated suite.
 
 final result: passed

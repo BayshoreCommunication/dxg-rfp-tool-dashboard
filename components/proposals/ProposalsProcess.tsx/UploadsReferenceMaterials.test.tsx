@@ -1,13 +1,23 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { uploadProposalFilesAction } from "@/app/actions/proposals";
 import ProposalRfpTemplate from "@/components/proposalTemplate/ProposalRfpTemplate";
 import type { ProposalSettings, UploadsData } from "../AddNewProposal";
-import UploadsReferenceMaterials from "./UploadsReferenceMaterials";
+import UploadsReferenceMaterials, { UploadBox } from "./UploadsReferenceMaterials";
 
 jest.mock("@/app/actions/proposals", () => ({
   uploadProposalFilesAction: jest.fn(),
 }));
+
+const uploadFilesMock = jest.mocked(uploadProposalFilesAction);
+const uploadResult = (supportDocumentUrls: string[] = []) => ({
+  success: true,
+  supportDocumentUrls,
+  avQuoteFileUrls: [],
+  scenicInspirationFileUrls: [],
+  venueCoiFileUrls: [],
+});
 
 const settings = {
   branding: { linkPrefix: "", defaultFont: "Inter" },
@@ -65,5 +75,79 @@ describe("categorized reference materials", () => {
     expect(html).toContain("scenic-mood-board.pdf");
     expect(html).toContain("Venue / COI Documents");
     expect(html).toContain("venue-coi.pdf");
+  });
+});
+
+describe("UploadBox", () => {
+  beforeEach(() => {
+    uploadFilesMock.mockReset();
+  });
+
+  it("shows a distinct drag target and documents file constraints", () => {
+    render(
+      <UploadBox
+        files={[]}
+        onFiles={jest.fn()}
+        accept=".pdf,.png"
+        hint="PDF or PNG"
+        maxFiles={3}
+        maxSizeMb={10}
+      />,
+    );
+
+    const dropzone = screen.getByTestId("file-dropzone");
+    expect(screen.getByRole("button", { name: /choose files/i })).toBeInTheDocument();
+    expect(screen.getByText("Maximum 10 MB per file · 3 files total")).toBeInTheDocument();
+
+    fireEvent.dragEnter(dropzone);
+    expect(screen.getByText("Release files to upload")).toBeInTheDocument();
+
+    fireEvent.dragLeave(dropzone, { relatedTarget: document.body });
+    expect(screen.getByText("Drop files here or click to browse")).toBeInTheDocument();
+  });
+
+  it("rejects unsupported files inline before calling the upload action", async () => {
+    render(
+      <UploadBox files={[]} onFiles={jest.fn()} accept=".pdf" hint="PDF only" maxFiles={1} />,
+    );
+
+    fireEvent.drop(screen.getByTestId("file-dropzone"), {
+      dataTransfer: { files: [new File(["bad"], "malware.exe", { type: "application/x-msdownload" })] },
+    });
+
+    expect(await screen.findByText(/file type is not supported/i)).toBeInTheDocument();
+    expect(uploadFilesMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /remove malware.exe/i })).toBeInTheDocument();
+  });
+
+  it("shows upload success and adds the returned URL", async () => {
+    const onFiles = jest.fn();
+    uploadFilesMock.mockResolvedValue(uploadResult(["https://cdn.example.com/brief.pdf"]));
+    render(<UploadBox files={[]} onFiles={onFiles} accept=".pdf" hint="PDF only" />);
+
+    fireEvent.drop(screen.getByTestId("file-dropzone"), {
+      dataTransfer: { files: [new File(["brief"], "brief.pdf", { type: "application/pdf" })] },
+    });
+
+    expect(await screen.findByText(/uploaded successfully/i)).toBeInTheDocument();
+    expect(onFiles).toHaveBeenCalledWith(["https://cdn.example.com/brief.pdf"]);
+  });
+
+  it("lets a user retry a failed upload", async () => {
+    const onFiles = jest.fn();
+    uploadFilesMock
+      .mockResolvedValueOnce({ ...uploadResult(), success: false, message: "Temporary upload error" })
+      .mockResolvedValueOnce(uploadResult(["https://cdn.example.com/recovered.pdf"]));
+    render(<UploadBox files={[]} onFiles={onFiles} accept=".pdf" hint="PDF only" />);
+
+    fireEvent.drop(screen.getByTestId("file-dropzone"), {
+      dataTransfer: { files: [new File(["brief"], "recover.pdf", { type: "application/pdf" })] },
+    });
+
+    expect(await screen.findByText("Temporary upload error")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /retry recover.pdf/i }));
+
+    await waitFor(() => expect(onFiles).toHaveBeenCalledWith(["https://cdn.example.com/recovered.pdf"]));
+    expect(screen.getByText(/uploaded successfully/i)).toBeInTheDocument();
   });
 });

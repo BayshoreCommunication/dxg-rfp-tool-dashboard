@@ -285,7 +285,7 @@ const Sidebar = ({
           title="Notifications"
           className={cn(
             "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200",
-            pathname === "/notification"
+            pathname.startsWith("/notification")
               ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(0,138,210,0.95)]"
               : "border-slate-200 bg-white text-slate-500 hover:border-primary/10 hover:bg-primary/5 hover:text-primary",
           )}

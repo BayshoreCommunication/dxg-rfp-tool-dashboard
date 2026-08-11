@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   AudioLines,
@@ -8,12 +9,17 @@ import {
   BriefcaseBusiness,
   Building2,
   Camera,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
+  CloudUpload,
+  File as FileIcon,
   FileText,
   Loader2,
   Palette,
   PlusCircle,
+  RotateCcw,
+  Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -70,12 +76,47 @@ const Group = ({ label }: { label: string }) => (
 );
 
 /* ─── Upload Box ─── */
-const UploadBox = ({
+type PendingUpload = {
+  id: string;
+  file: File;
+  status: "queued" | "uploading" | "success" | "error";
+  error?: string;
+  remoteUrl?: string;
+  retryable: boolean;
+};
+
+const getUploadedFileName = (url: string) => {
+  const fallback = url.split("/").pop() || url;
+  try {
+    return decodeURIComponent(fallback.split("?")[0]);
+  } catch {
+    return fallback.split("?")[0];
+  }
+};
+
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const isAcceptedFile = (file: File, accept: string) => {
+  const rules = accept.split(",").map((rule) => rule.trim().toLowerCase());
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return rules.some((rule) => {
+    if (rule.startsWith(".")) return name.endsWith(rule);
+    if (rule.endsWith("/*")) return type.startsWith(rule.slice(0, -1));
+    return type === rule;
+  });
+};
+
+export const UploadBox = ({
   files,
   onFiles,
   accept = ".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg",
   hint = "Accepts PDFs, PowerPoint, Docs, Images",
   maxFiles,
+  maxSizeMb = 50,
   uploadField = "supportDocuments",
 }: {
   files: string[];
@@ -83,98 +124,261 @@ const UploadBox = ({
   accept?: string;
   hint?: string;
   maxFiles?: number;
+  maxSizeMb?: number;
   uploadField?: "supportDocuments" | "avQuoteFiles" | "scenicInspirationFiles" | "venueCoiFiles";
 }) => {
   const ref = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
+  const filesRef = useRef(files);
+  const [pending, setPending] = useState<PendingUpload[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
-    const remaining = maxFiles !== undefined ? maxFiles - files.length : Infinity;
-    const toUpload = Array.from(e.target.files).slice(0, remaining);
-    if (!toUpload.length) return;
-    setBusy(true);
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  const getUrls = (res: Awaited<ReturnType<typeof uploadProposalFilesAction>>) =>
+    uploadField === "supportDocuments"
+      ? res.supportDocumentUrls
+      : uploadField === "avQuoteFiles"
+        ? res.avQuoteFileUrls
+        : uploadField === "scenicInspirationFiles"
+          ? res.scenicInspirationFileUrls
+          : res.venueCoiFileUrls;
+
+  const updatePending = (id: string, updates: Partial<PendingUpload>) =>
+    setPending((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...updates } : item)),
+    );
+
+  const uploadOne = async (item: PendingUpload) => {
+    updatePending(item.id, { status: "uploading", error: undefined });
     const fd = new FormData();
-    toUpload.forEach((f) => fd.append(uploadField, f));
+    fd.append(uploadField, item.file);
     try {
       const res = await uploadProposalFilesAction(fd);
-      if (res.success) {
-        const urls = uploadField === "supportDocuments"
-          ? res.supportDocumentUrls
-          : uploadField === "avQuoteFiles"
-            ? res.avQuoteFileUrls
-            : uploadField === "scenicInspirationFiles"
-              ? res.scenicInspirationFileUrls
-              : res.venueCoiFileUrls;
-        onFiles([...files, ...urls]);
-      } else {
-        alert(res.message || "Upload failed");
+      const uploadedUrl = getUrls(res)[0];
+      if (!res.success || !uploadedUrl) {
+        updatePending(item.id, {
+          status: "error",
+          error: res.message || "Upload failed. Check your connection and try again.",
+          retryable: true,
+        });
+        return;
       }
+      const nextFiles = [...filesRef.current, uploadedUrl];
+      filesRef.current = nextFiles;
+      onFiles(nextFiles);
+      updatePending(item.id, { status: "success", remoteUrl: uploadedUrl, retryable: false });
     } catch {
-      alert("Upload failed. Please try again.");
-    } finally {
-      setBusy(false);
-      if (ref.current) ref.current.value = "";
+      updatePending(item.id, {
+        status: "error",
+        error: "Could not upload this file. Check your connection and try again.",
+        retryable: true,
+      });
     }
   };
 
-  const atMax = maxFiles !== undefined && files.length >= maxFiles;
+  const addFiles = async (selected: File[]) => {
+    const activeCount = pending.filter((item) =>
+      item.status === "queued" || item.status === "uploading",
+    ).length;
+    let remaining = maxFiles === undefined ? Infinity : Math.max(0, maxFiles - files.length - activeCount);
+    const items = selected.map<PendingUpload>((file) => {
+      const id = `${file.name}-${file.lastModified}-${crypto.randomUUID()}`;
+      if (remaining <= 0) {
+        return {
+          id,
+          file,
+          status: "error",
+          error: `This upload accepts a maximum of ${maxFiles} ${maxFiles === 1 ? "file" : "files"}.`,
+          retryable: false,
+        };
+      }
+      if (!isAcceptedFile(file, accept)) {
+        return {
+          id,
+          file,
+          status: "error",
+          error: "This file type is not supported. Choose one of the formats listed above.",
+          retryable: false,
+        };
+      }
+      if (file.size > maxSizeMb * 1024 * 1024) {
+        return {
+          id,
+          file,
+          status: "error",
+          error: `This file is larger than ${maxSizeMb} MB. Choose a smaller file and try again.`,
+          retryable: false,
+        };
+      }
+      remaining -= 1;
+      return { id, file, status: "queued", retryable: true };
+    });
+
+    setPending((current) => [...current, ...items]);
+    for (const item of items) {
+      if (item.status === "queued") await uploadOne(item);
+    }
+    if (ref.current) ref.current.value = "";
+  };
+
+  const handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files?.length) await addFiles(Array.from(event.target.files));
+  };
+
+  const removeUploaded = (url: string) => {
+    const nextFiles = filesRef.current.filter((file) => file !== url);
+    filesRef.current = nextFiles;
+    onFiles(nextFiles);
+    setPending((current) => current.filter((item) => item.remoteUrl !== url));
+  };
+
+  const uploadingCount = pending.filter((item) => item.status === "uploading").length;
+  const queuedCount = pending.filter((item) => item.status === "queued").length;
+  const finishedCount = pending.filter((item) =>
+    item.status === "success" || item.status === "error",
+  ).length;
+  const batchCount = pending.length;
+  const progress = batchCount ? Math.round((finishedCount / batchCount) * 100) : 0;
+  const busy = uploadingCount > 0 || queuedCount > 0;
+  const atMax = maxFiles !== undefined && files.length + queuedCount + uploadingCount >= maxFiles;
+  const shadowedUrls = new Set(
+    pending.filter((item) => item.status === "success").map((item) => item.remoteUrl),
+  );
+  const persistedFiles = files.filter((file) => !shadowedUrls.has(file));
+  const hasFiles = persistedFiles.length > 0 || pending.length > 0;
 
   return (
-    <div className="flex w-full flex-col items-center rounded-xl border-2 border-dashed border-[#38bdf8] bg-white px-4 pb-6 pt-8">
-      <div className="mb-3">
-        <svg width="56" height="44" viewBox="0 0 84 64" fill="none">
-          <path
-            d="M42 0C32.148 0 23.772 5.964 19.824 14.532C8.61 15.666 0 25.032 0 36.5714C0 49.1914 10.29 59.4286 23.1 59.4286H63C74.592 59.4286 84 50.02 84 38.4C84 27.2457 75.348 18.2857 65.436 17.5543C62.454 7.63429 53.088 0 42 0Z"
-            fill="#7DD3FC"
-          />
-          <path
-            d="M42 22.8571L31.5 34.2857H37.8V45.7143H46.2V34.2857H52.5L42 22.8571Z"
-            fill="white"
-          />
-        </svg>
-      </div>
-      <p className="mb-1 text-sm font-bold text-[#222628]">Drag &amp; drop or browse</p>
-      <p className="mb-5 text-xs font-medium text-[#969798]">{hint}</p>
-      {atMax ? (
-        <p className="text-xs text-slate-400">
-          Max {maxFiles} {maxFiles === 1 ? "file" : "files"} reached
+    <div className="w-full">
+      <div
+        data-testid="file-dropzone"
+        onDragEnter={(event) => {
+          event.preventDefault();
+          if (!atMax && !busy) setIsDragging(true);
+        }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) setIsDragging(false);
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setIsDragging(false);
+          if (!atMax && !busy && event.dataTransfer.files.length) {
+            void addFiles(Array.from(event.dataTransfer.files));
+          }
+        }}
+        className={`flex min-h-[190px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-7 text-center transition-all ${
+          isDragging
+            ? "scale-[1.01] border-[#1DBFD3] bg-cyan-50 shadow-sm"
+            : atMax
+              ? "border-slate-200 bg-slate-50"
+              : "border-sky-300 bg-sky-50/30 hover:border-[#1DBFD3] hover:bg-cyan-50/60"
+        }`}
+      >
+        <input
+          ref={ref}
+          type="file"
+          multiple={!maxFiles || maxFiles > 1}
+          accept={accept}
+          className="hidden"
+          onChange={handleChange}
+          disabled={busy || atMax}
+        />
+        <span className={`mb-3 grid h-12 w-12 place-items-center rounded-xl ${isDragging ? "bg-[#1DBFD3] text-white" : "bg-white text-[#109aaf] shadow-sm ring-1 ring-sky-100"}`}>
+          {busy ? <Loader2 size={24} className="animate-spin" /> : <CloudUpload size={25} />}
+        </span>
+        <p className="text-sm font-bold text-[#222628]">
+          {isDragging
+            ? "Release files to upload"
+            : atMax
+              ? `Maximum of ${maxFiles} ${maxFiles === 1 ? "file" : "files"} reached`
+              : busy
+                ? "Uploading your files…"
+                : "Drop files here or click to browse"}
         </p>
-      ) : (
-        <label
-          className={`flex cursor-pointer items-center gap-2 rounded-lg bg-[#1DBFD3] px-7 py-2.5 text-xs font-bold tracking-wide text-white transition-colors hover:bg-[#0069a0] ${
-            busy ? "pointer-events-none opacity-70" : ""
-          }`}
-        >
-          {busy && <Loader2 size={13} className="animate-spin" />}
-          <span>{busy ? "UPLOADING…" : "BROWSE FILES"}</span>
-          <input
-            ref={ref}
-            type="file"
-            multiple={!maxFiles || maxFiles > 1}
-            accept={accept}
-            className="hidden"
-            onChange={handleChange}
+        <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500">{hint}</p>
+        <p className="mt-1 text-[11px] font-medium text-slate-400">
+          Maximum {maxSizeMb} MB per file{maxFiles ? ` · ${maxFiles} ${maxFiles === 1 ? "file" : "files"} total` : ""}
+        </p>
+        {!atMax && (
+          <button
+            type="button"
+            onClick={() => ref.current?.click()}
             disabled={busy}
-          />
-        </label>
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#1DBFD3] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#087f90] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/30 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
+          >
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}
+            {busy ? "Uploading…" : "Choose files"}
+          </button>
+        )}
+      </div>
+
+      {busy && batchCount > 0 && (
+        <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50/70 px-3 py-2.5" aria-live="polite">
+          <div className="mb-2 flex items-center justify-between text-xs font-semibold text-slate-600">
+            <span>Uploading {finishedCount + 1} of {batchCount}</span>
+            <span>{progress}% complete</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-sky-100">
+            <div className="h-full rounded-full bg-[#1DBFD3] transition-all" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
       )}
-      {files.length > 0 && (
-        <div className="mt-4 flex w-full flex-wrap justify-center gap-2">
-          {files.map((f, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1.5 rounded-full border border-[#38bdf8] bg-sky-50 px-3 py-1.5 text-xs font-semibold text-[#222628]"
+
+      {hasFiles && (
+        <div className="mt-3 space-y-2" aria-live="polite">
+          {pending.map((item) => (
+            <div
+              key={item.id}
+              className={`flex items-start gap-3 rounded-xl border px-3 py-3 ${
+                item.status === "error"
+                  ? "border-rose-200 bg-rose-50/60"
+                  : item.status === "success"
+                    ? "border-emerald-200 bg-emerald-50/50"
+                    : "border-sky-100 bg-white"
+              }`}
             >
-              <span className="max-w-[180px] truncate">{f.split("/").pop() || f}</span>
-              <button
-                type="button"
-                onClick={() => onFiles(files.filter((_, j) => j !== i))}
-                className="ml-1 text-gray-400 hover:text-red-400"
-              >
-                ✕
+              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-slate-500 shadow-sm ring-1 ring-slate-100">
+                <FileIcon size={17} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-700">{item.file.name}</p>
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs">
+                  {item.status === "uploading" && <><Loader2 size={13} className="animate-spin text-[#109aaf]" /><span className="text-[#087f90]">Uploading · {formatFileSize(item.file.size)}</span></>}
+                  {item.status === "queued" && <span className="text-slate-500">Waiting to upload · {formatFileSize(item.file.size)}</span>}
+                  {item.status === "success" && <><CheckCircle2 size={13} className="text-emerald-600" /><span className="font-medium text-emerald-700">Uploaded successfully · {formatFileSize(item.file.size)}</span></>}
+                  {item.status === "error" && <><AlertCircle size={13} className="shrink-0 text-rose-600" /><span className="text-rose-700">{item.error}</span></>}
+                </div>
+              </div>
+              {item.status === "error" && item.retryable && (
+                <button type="button" onClick={() => void uploadOne(item)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-[#087f90] hover:bg-white" aria-label={`Retry ${item.file.name}`}>
+                  <RotateCcw size={13} /> Retry
+                </button>
+              )}
+              {item.status !== "uploading" && item.status !== "queued" && (
+                <button
+                  type="button"
+                  onClick={() => item.remoteUrl ? removeUploaded(item.remoteUrl) : setPending((current) => current.filter((entry) => entry.id !== item.id))}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-rose-600"
+                  aria-label={`Remove ${item.file.name}`}
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+            </div>
+          ))}
+          {persistedFiles.map((file) => (
+            <div key={file} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-50 text-slate-500"><FileIcon size={17} /></span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-700">{getUploadedFileName(file)}</p>
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-emerald-700"><CheckCircle2 size={13} /> Uploaded</p>
+              </div>
+              <button type="button" onClick={() => removeUploaded(file)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${getUploadedFileName(file)}`}>
+                <Trash2 size={15} />
               </button>
-            </span>
+            </div>
           ))}
         </div>
       )}
@@ -249,12 +453,15 @@ const CoVendorCard = ({
 }) => {
   const hasData = !!(value.companyName || value.contactName || value.status);
   const up = (p: Partial<CoVendorEntry>) => onChange({ ...value, ...p });
+  const completedDetails = [value.companyName, value.contactName, value.status].filter(Boolean).length;
+  const statusLabel = statuses.find((status) => status.value === value.status)?.label;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
+    <div className={`overflow-hidden rounded-xl border bg-white transition-shadow ${open ? "border-[#1DBFD3]/40 shadow-sm" : "border-[#e4e4e4] hover:shadow-sm"}`}>
       <button
         type="button"
         onClick={onToggle}
+        aria-expanded={open}
         className="group flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
       >
         <div className="flex items-center gap-3">
@@ -266,15 +473,24 @@ const CoVendorCard = ({
           </span>
           <div>
             <span className="text-sm font-bold text-[#222628]">{title}</span>
-            {hasData && !open && (
-              <span className="ml-2 text-xs text-slate-400">
-                {value.companyName || value.contactName}
-              </span>
-            )}
+            <p className="mt-0.5 text-xs text-slate-500">
+              {hasData
+                ? [value.companyName, value.contactName].filter(Boolean).join(" · ") || "Coordination details started"
+                : "Add company, contact, and coordination status"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {hasData && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
+          {statusLabel && (
+            <span className="hidden max-w-[210px] truncate rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 sm:inline-block">
+              {statusLabel}
+            </span>
+          )}
+          {!statusLabel && hasData && (
+            <span className="hidden rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 sm:inline-block">
+              Status needed
+            </span>
+          )}
           {open ? (
             <ChevronUp size={16} className="text-slate-400" />
           ) : (
@@ -292,7 +508,15 @@ const CoVendorCard = ({
               <p className="text-xs text-amber-700">{advisory}</p>
             </div>
           )}
-          <p className="mb-4 text-xs text-slate-500">{helpText}</p>
+          <div className="mb-4 flex flex-col gap-3 rounded-lg bg-slate-50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-slate-600">{helpText}</p>
+            <div className="shrink-0">
+              <p className="mb-1 text-[11px] font-semibold text-slate-500">{completedDetails} of 3 key details</p>
+              <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
+                <div className="h-full rounded-full bg-[#1DBFD3] transition-all" style={{ width: `${(completedDetails / 3) * 100}%` }} />
+              </div>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
@@ -575,6 +799,11 @@ const UploadsReferenceMaterials = ({
       scope: "Stage access windows, lighting coordination",
     },
   ].filter((r) => r.entry.status !== "not_applicable");
+  const coVendorEntries = Object.values(safeData.coVendors);
+  const configuredCoVendors = coVendorEntries.filter((entry) => entry.status).length;
+  const coVendorsNeedingStatus = coVendorEntries.filter(
+    (entry) => (entry.companyName || entry.contactName || entry.contactEmail) && !entry.status,
+  ).length;
 
   return (
     <section
@@ -583,11 +812,6 @@ const UploadsReferenceMaterials = ({
     >
       {/* ── Header ── */}
       <div className="border-b border-[#e4e4e4] px-8 py-6">
-        <div className="mb-1 flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 8 of 9
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">Uploads &amp; Co-Vendors</h2>
         <p className="mt-1 text-sm text-[#969798]">
           Reference files, brand assets, co-vendor coordination, and NDA settings.
@@ -759,11 +983,24 @@ const UploadsReferenceMaterials = ({
         ══════════════════════════════════════════ */}
         <Group label="Co-Vendor Coordination" />
 
-        <p className="mb-5 text-xs text-slate-500">
-          Co-vendor details auto-populate Section 7 of the RFP. Expand each card to add contacts
-          and confirm coordination status. Rows marked &quot;Not Applicable&quot; are omitted from
-          the PDF table.
-        </p>
+        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold text-slate-800">Coordinate every production partner in one place</p>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+              These details populate Section 7 of the RFP. Add only the partners involved in this event; vendors marked Not Applicable are left out of the PDF.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#087f90]">
+              {configuredCoVendors} of {coVendorEntries.length} statuses set
+            </span>
+            {coVendorsNeedingStatus > 0 && (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
+                {coVendorsNeedingStatus} need {coVendorsNeedingStatus === 1 ? "a status" : "statuses"}
+              </span>
+            )}
+          </div>
+        </div>
 
         {/* Pre-fill banner for In-House AV */}
         {prefillAvailable && (
@@ -776,7 +1013,7 @@ const UploadsReferenceMaterials = ({
             </span>
             <div className="flex-1">
               <p className="text-sm font-bold text-brand-dark">
-                Venue AV contact available from Page 6
+                Venue AV contact available from Venue &amp; Technical
               </p>
               <p className="mt-0.5 text-xs text-[#0069a0]">
                 {inHouseAvCompanyName && (
@@ -1025,6 +1262,7 @@ const UploadsReferenceMaterials = ({
                 accept=".pdf,.docx"
                 hint="PDF or DOCX — max 1 file · 10 MB"
                 maxFiles={1}
+                maxSizeMb={10}
                 uploadField="avQuoteFiles"
               />
             </div>

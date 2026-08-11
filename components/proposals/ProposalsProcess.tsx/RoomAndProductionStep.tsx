@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Download, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Download, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
@@ -9,9 +9,12 @@ import { InfoTooltip, PillCheckbox, PillRadio, toggleItem } from "./shared";
 import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import GlobalSelect from "@/components/shared/GlobalSelect";
+import GlobalTimeInput from "@/components/shared/GlobalTimeInput";
 import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./eventTimeZone";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
 import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
+import RoomDeletionDialog from "../RoomDeletionDialog";
+import ToastMessage from "@/components/ui/ToastMessage";
 import {
   SCREEN_SIZE_OTHER,
   SCREEN_SIZE_VENDOR_RECOMMENDATION,
@@ -36,6 +39,7 @@ import {
   ledWallPlanMissingFields,
   normalizeLedWalls,
 } from "../ledWallPlan";
+import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -62,6 +66,35 @@ const isoDateToLocalDate = (iso: string): Date | null => {
 const localDateToIsoDate = (date: Date | null): string => {
   if (!date || isNaN(date.getTime())) return "";
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+export const functionScheduleDateIsWithinEventRange = (
+  scheduleDate: string,
+  eventStartDate?: string,
+  eventEndDate?: string,
+): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(scheduleDate)) return false;
+  if (eventStartDate && scheduleDate < eventStartDate) return false;
+  if (eventEndDate && scheduleDate > eventEndDate) return false;
+  return true;
+};
+
+const formatScheduleDate = (iso: string): string => {
+  const date = isoDateToLocalDate(iso);
+  return date
+    ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date)
+    : iso;
+};
+
+const eventDateWindowLabel = (startDate: string, endDate: string): string => {
+  if (startDate && endDate) {
+    return startDate === endDate
+      ? `Event date: ${formatScheduleDate(startDate)}`
+      : `Event dates: ${formatScheduleDate(startDate)} – ${formatScheduleDate(endDate)}`;
+  }
+  if (startDate) return `On or after ${formatScheduleDate(startDate)}`;
+  if (endDate) return `On or before ${formatScheduleDate(endDate)}`;
+  return "Choose the function date.";
 };
 
 // ─── Schedule upload (Excel) helpers ──────────────────────────────────────────
@@ -143,6 +176,19 @@ const parse24HourTime = (val: string): { hours: number; minutes: number } | null
   const min = parseInt(m[2], 10);
   if (h > 23 || min > 59) return null;
   return { hours: h, minutes: min };
+};
+
+const timeValueToMinutes = (value: string): number | null => {
+  const time = parse24HourTime(value);
+  return time ? time.hours * 60 + time.minutes : null;
+};
+
+const addMinutesToTimeValue = (value: string, minutesToAdd: number): string => {
+  const minutes = timeValueToMinutes(value);
+  if (minutes === null) return "";
+  const next = minutes + minutesToAdd;
+  if (next > 23 * 60 + 45) return "";
+  return `${String(Math.floor(next / 60)).padStart(2, "0")}:${String(next % 60).padStart(2, "0")}`;
 };
 
 /** HH:MM venue wall-clock value for a stored schedule instant. */
@@ -415,6 +461,12 @@ const TELEPROMPTER_LANGUAGES = [
 
 // ─── Room Setup options (schedule upload / manual entry) ─────────────────────
 const ROOM_SETUP_OPTIONS = ["Round of 8", "Rounds of 10", "Classroom", "Theater"];
+const FUNCTION_DURATION_OPTIONS = [
+  { label: "30 min", minutes: 30 },
+  { label: "1 hr", minutes: 60 },
+  { label: "90 min", minutes: 90 },
+  { label: "2 hr", minutes: 120 },
+] as const;
 
 // ─── LED Wall switcher / processor options ────────────────────────────────────
 const LED_SWITCHER_OPTIONS = [
@@ -563,6 +615,86 @@ const schedulesForRoom = (room: RoomByRoomData): RoomFunctionSchedule[] => {
     : [defaultFunctionSchedule()];
 };
 
+const PRODUCTION_ACCESS_LEAD_DAYS = 7;
+
+const shiftIsoDate = (isoDate: string, days: number): string => {
+  const date = isoDateToLocalDate(isoDate);
+  if (!date) return "";
+  date.setDate(date.getDate() + days);
+  return localDateToIsoDate(date);
+};
+
+const earliestFunctionStart = (room: RoomByRoomData): string => {
+  let earliest = "";
+  let earliestAt = Number.POSITIVE_INFINITY;
+  for (const entry of schedulesForRoom(room)) {
+    const at = Date.parse(entry.showStartDateTime);
+    if (Number.isFinite(at) && at < earliestAt) {
+      earliest = entry.showStartDateTime;
+      earliestAt = at;
+    }
+  }
+  return earliest;
+};
+
+export type RoomProductionAccessErrors = {
+  loadIn?: string;
+  rehearsal?: string;
+};
+
+/**
+ * Room access can start before the event, but a date more than a week early is
+ * almost always a typo. Both optional milestones must also happen before the
+ * first function, and rehearsal cannot precede load-in.
+ */
+export const roomProductionAccessTimeErrors = (
+  room: RoomByRoomData,
+  eventStartDate?: string,
+  eventEndDate?: string,
+  eventTimeZone?: string | null,
+): RoomProductionAccessErrors => {
+  const errors: RoomProductionAccessErrors = {};
+  const loadInAt = Date.parse(room.loadInDateTime);
+  const rehearsalAt = Date.parse(room.rehearsalDateTime);
+  const firstFunctionIso = earliestFunctionStart(room);
+  const firstFunctionAt = Date.parse(firstFunctionIso);
+  const earliestDate = eventStartDate
+    ? shiftIsoDate(eventStartDate, -PRODUCTION_ACCESS_LEAD_DAYS)
+    : "";
+  const earliestAt = Date.parse(
+    earliestDate ? wallClockToIso(earliestDate, { hours: 0, minutes: 0 }, eventTimeZone) : "",
+  );
+  const fallbackEndAt = Date.parse(
+    eventEndDate
+      ? wallClockToIso(eventEndDate, { hours: 23, minutes: 59 }, eventTimeZone)
+      : "",
+  );
+  const latestAt = Number.isFinite(firstFunctionAt) ? firstFunctionAt : fallbackEndAt;
+  const latestMessage = Number.isFinite(firstFunctionAt)
+    ? "must be before the room’s first function."
+    : "must be within the event’s production window.";
+
+  if (Number.isFinite(loadInAt)) {
+    if (Number.isFinite(earliestAt) && loadInAt < earliestAt) {
+      errors.loadIn = `Load-in can be no more than ${PRODUCTION_ACCESS_LEAD_DAYS} days before the event.`;
+    } else if (Number.isFinite(latestAt) && loadInAt >= latestAt) {
+      errors.loadIn = `Load-in ${latestMessage}`;
+    }
+  }
+
+  if (Number.isFinite(rehearsalAt)) {
+    if (Number.isFinite(earliestAt) && rehearsalAt < earliestAt) {
+      errors.rehearsal = `Rehearsal can be no more than ${PRODUCTION_ACCESS_LEAD_DAYS} days before the event.`;
+    } else if (Number.isFinite(latestAt) && rehearsalAt >= latestAt) {
+      errors.rehearsal = `Rehearsal ${latestMessage}`;
+    } else if (Number.isFinite(loadInAt) && rehearsalAt < loadInAt) {
+      errors.rehearsal = "Rehearsal must be on or after load-in.";
+    }
+  }
+
+  return errors;
+};
+
 // ─── Single room form ─────────────────────────────────────────────────────────
 const RoomForm = ({
   data,
@@ -570,7 +702,10 @@ const RoomForm = ({
   showErrors,
   roomIndex,
   eventTimeZone,
+  eventStartDate,
+  eventEndDate,
   onOpenScenicInspirations,
+  mode,
 }: {
   data: RoomByRoomData;
   onChange: (u: Partial<RoomByRoomData>) => void;
@@ -578,7 +713,10 @@ const RoomForm = ({
   roomIndex: number;
   /** Schedule times are wall-clock at the venue, so they render in its zone. */
   eventTimeZone?: string | null;
+  eventStartDate?: string;
+  eventEndDate?: string;
   onOpenScenicInspirations?: () => void;
+  mode: ProposalExperienceMode;
 }) => {
   const uid = `room-${roomIndex}`;
   const errCls = (v: string) =>
@@ -596,6 +734,29 @@ const RoomForm = ({
   if (lighting.includes("Moving Lights / Programmable Effects")) autoSuggest.push("L1 (Lighting Director)");
   const unaddedSuggestions = autoSuggest.filter((r) => !data.showCrewNeeded.includes(r));
   const functionSchedules = schedulesForRoom(data);
+  const productionAccessErrors = roomProductionAccessTimeErrors(
+    data,
+    eventStartDate,
+    eventEndDate,
+    eventTimeZone,
+  );
+  const productionWindowStartDate = eventStartDate
+    ? shiftIsoDate(eventStartDate, -PRODUCTION_ACCESS_LEAD_DAYS)
+    : "";
+  const firstFunctionIso = earliestFunctionStart(data);
+  const firstFunctionDisplay = toEventZoneDisplay(firstFunctionIso, eventTimeZone);
+  const productionWindowEndDate = firstFunctionDisplay
+    ? localDateToIsoDate(firstFunctionDisplay)
+    : eventEndDate || eventStartDate || "";
+  const loadInDisplay = toEventZoneDisplay(data.loadInDateTime, eventTimeZone);
+  const rehearsalMinDate = loadInDisplay
+    ? new Date(loadInDisplay.getFullYear(), loadInDisplay.getMonth(), loadInDisplay.getDate(), 12)
+    : isoDateToLocalDate(productionWindowStartDate) ?? undefined;
+  const productionWindowLabel = productionWindowStartDate && productionWindowEndDate
+    ? firstFunctionDisplay
+      ? `${formatScheduleDate(productionWindowStartDate)} until the first function on ${formatScheduleDate(productionWindowEndDate)}`
+      : `${formatScheduleDate(productionWindowStartDate)} through ${formatScheduleDate(productionWindowEndDate)}`
+    : "before the room’s first function";
   const activeLedWallCount = ledWallCount(data);
   const ledWalls = ensureLedWallSlots(normalizeLedWalls(data), activeLedWallCount);
 
@@ -638,6 +799,7 @@ const RoomForm = ({
       data.loadInDateTime || data.rehearsalDateTime || data.showStartDateTime || data.showEndDateTime,
     ),
   );
+  const [openTimePicker, setOpenTimePicker] = useState<string | null>(null);
 
   return (
     <div className="space-y-5 px-6 py-6">
@@ -658,7 +820,28 @@ const RoomForm = ({
 
       <Group label="Functions & Schedule" />
       <div className="space-y-4">
-        {functionSchedules.map((entry, functionIndex) => (
+        {functionSchedules.map((entry, functionIndex) => {
+          const startTimeValue = venueTimeValue(entry.showStartDateTime, eventTimeZone);
+          const endTimeValue = venueTimeValue(entry.showEndDateTime, eventTimeZone);
+          const dateIsOutsideEvent = Boolean(
+            entry.scheduleDate &&
+            !functionScheduleDateIsWithinEventRange(entry.scheduleDate, eventStartDate, eventEndDate),
+          );
+          const dateError = dateIsOutsideEvent
+            ? `Choose a date within the event dates (${formatScheduleDate(eventStartDate || "")} – ${formatScheduleDate(eventEndDate || "")}).`
+            : showErrors && !entry.scheduleDate
+              ? "Date is required."
+              : undefined;
+          const endTimeError = showErrors
+            ? !entry.showEndDateTime
+              ? "End time is required."
+              : !functionScheduleEndIsAfterStart(entry)
+                ? "End time must be later than the start time."
+                : undefined
+            : undefined;
+          const minimumEndTime = addMinutesToTimeValue(startTimeValue, 15);
+
+          return (
           <div key={`${uid}-function-${functionIndex}`} className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] p-4">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-bold text-[#222628]">Function {functionIndex + 1}</p>
@@ -699,37 +882,6 @@ const RoomForm = ({
                 )}
               </div>
               <div>
-                <label htmlFor={`${uid}-function-${functionIndex}-date`} className={labelClass}>Date <span className="text-red-500">*</span></label>
-                {/* A native date input renders in the browser's locale, so this
-                    showed 10/03/2027 beside a start time reading 03/10/2027 —
-                    the same day in two orders, one card apart. */}
-                <GlobalDateInput
-                  id={`${uid}-function-${functionIndex}-date`}
-                  hideLabel
-                  showFormatInLabel={false}
-                  showErrorMessage={false}
-                  format="MM-dd-yyyy"
-                  value={isoDateToLocalDate(entry.scheduleDate)}
-                  onChange={(date) => {
-                    const iso = localDateToIsoDate(date);
-                    updateFunction(functionIndex, {
-                      scheduleDate: iso,
-                      scheduleDay: dayOfWeekFromDate(iso),
-                      showStartDateTime: functionDateTimeValue(iso, venueTimeValue(entry.showStartDateTime, eventTimeZone), eventTimeZone),
-                      showEndDateTime: functionDateTimeValue(iso, venueTimeValue(entry.showEndDateTime, eventTimeZone), eventTimeZone),
-                    });
-                  }}
-                  error={showErrors && !entry.scheduleDate ? "Date is required." : undefined}
-                  ariaInvalid={showErrors && !entry.scheduleDate}
-                  inputClassName={`${inputClass} pr-12 ${showErrors && !entry.scheduleDate ? "border-red-400 focus:border-red-400" : ""}`}
-                  buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3]"
-                  placeholder="Select date"
-                />
-                {showErrors && !entry.scheduleDate && (
-                  <p className="mt-1 text-xs text-red-500">Date is required.</p>
-                )}
-              </div>
-              <div>
                 <label className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
                 <GlobalSelect
                   className={inputClass}
@@ -740,50 +892,109 @@ const RoomForm = ({
                   {ROOM_SETUP_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                 </GlobalSelect>
               </div>
-              <div>
-                <label htmlFor={`${uid}-function-${functionIndex}-start-time`} className={labelClass}>Start Time <span className="text-red-500">*</span></label>
-                <input
-                  id={`${uid}-function-${functionIndex}-start-time`}
-                  type="time"
-                  step={300}
-                  disabled={!entry.scheduleDate}
-                  aria-invalid={showErrors && !entry.showStartDateTime ? true : undefined}
-                  aria-describedby={showErrors && !entry.showStartDateTime ? `${uid}-function-${functionIndex}-start-error` : undefined}
-                  value={venueTimeValue(entry.showStartDateTime, eventTimeZone)}
-                  onChange={(event) => updateFunction(functionIndex, {
-                    showStartDateTime: functionDateTimeValue(entry.scheduleDate, event.target.value, eventTimeZone),
+              <fieldset className="md:col-span-2 rounded-xl border border-sky-100 bg-white p-4">
+                <legend className="px-1 text-xs font-extrabold uppercase tracking-wide text-[#173744]">Function schedule</legend>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label htmlFor={`${uid}-function-${functionIndex}-date`} className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#3d4143]">Date <span className="text-red-500">*</span></label>
+                    <GlobalDateInput
+                      id={`${uid}-function-${functionIndex}-date`}
+                      label={`Function ${functionIndex + 1} date`}
+                      hideLabel
+                      showFormatInLabel={false}
+                      showErrorMessage={false}
+                      format="MM/dd/yyyy"
+                      localeAware
+                      value={isoDateToLocalDate(entry.scheduleDate)}
+                      minDate={isoDateToLocalDate(eventStartDate || "") || undefined}
+                      maxDate={isoDateToLocalDate(eventEndDate || "") || undefined}
+                      showTodayShortcut
+                      onChange={(date) => {
+                        const iso = localDateToIsoDate(date);
+                        updateFunction(functionIndex, {
+                          scheduleDate: iso,
+                          scheduleDay: dayOfWeekFromDate(iso),
+                          showStartDateTime: functionDateTimeValue(iso, startTimeValue, eventTimeZone),
+                          showEndDateTime: functionDateTimeValue(iso, endTimeValue, eventTimeZone),
+                        });
+                      }}
+                      error={dateError}
+                      ariaInvalid={Boolean(dateError)}
+                      ariaDescribedBy={`${uid}-function-${functionIndex}-date-help`}
+                      inputClassName={`${inputClass} pr-12 ${dateError ? "border-red-400 focus:border-red-400" : ""}`}
+                    />
+                    <p id={`${uid}-function-${functionIndex}-date-help`} className={`mt-1 text-xs ${dateError ? "text-red-500" : "text-slate-500"}`}>
+                      {dateError || eventDateWindowLabel(eventStartDate || "", eventEndDate || "")}
+                    </p>
+                  </div>
+                  <GlobalTimeInput
+                    id={`${uid}-function-${functionIndex}-start-time`}
+                    label="Start time"
+                    value={startTimeValue}
+                    disabled={!entry.scheduleDate || dateIsOutsideEvent}
+                    maxTime="23:30"
+                    error={showErrors && !entry.showStartDateTime ? "Start time is required." : undefined}
+                    ariaDescribedBy={`${uid}-function-${functionIndex}-start-error`}
+                    open={openTimePicker === `${functionIndex}-start`}
+                    onOpenChange={(open) => setOpenTimePicker(open ? `${functionIndex}-start` : null)}
+                    onChange={(value) => {
+                      const currentEndMinutes = timeValueToMinutes(endTimeValue);
+                      const nextStartMinutes = timeValueToMinutes(value);
+                      const suggestedEnd = addMinutesToTimeValue(value, 60) || addMinutesToTimeValue(value, 15);
+                      const shouldReplaceEnd =
+                        !value ||
+                        currentEndMinutes === null ||
+                        nextStartMinutes === null ||
+                        currentEndMinutes <= nextStartMinutes;
+                      updateFunction(functionIndex, {
+                        showStartDateTime: functionDateTimeValue(entry.scheduleDate, value, eventTimeZone),
+                        ...(shouldReplaceEnd
+                          ? { showEndDateTime: functionDateTimeValue(entry.scheduleDate, suggestedEnd, eventTimeZone) }
+                          : {}),
+                      });
+                    }}
+                  />
+                  <GlobalTimeInput
+                    id={`${uid}-function-${functionIndex}-end-time`}
+                    label="End time"
+                    value={endTimeValue}
+                    disabled={!entry.scheduleDate || dateIsOutsideEvent || !startTimeValue}
+                    minTime={minimumEndTime || undefined}
+                    maxTime="23:45"
+                    error={endTimeError}
+                    ariaDescribedBy={`${uid}-function-${functionIndex}-end-error`}
+                    open={openTimePicker === `${functionIndex}-end`}
+                    onOpenChange={(open) => setOpenTimePicker(open ? `${functionIndex}-end` : null)}
+                    onChange={(value) => updateFunction(functionIndex, {
+                      showEndDateTime: functionDateTimeValue(entry.scheduleDate, value, eventTimeZone),
+                    })}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sky-100 pt-3">
+                  <span className="mr-1 text-xs text-slate-500">Set duration:</span>
+                  {FUNCTION_DURATION_OPTIONS.map((duration) => {
+                    const nextEnd = addMinutesToTimeValue(startTimeValue, duration.minutes);
+                    return (
+                      <button
+                        key={duration.minutes}
+                        type="button"
+                        disabled={!nextEnd || dateIsOutsideEvent}
+                        onClick={() => updateFunction(functionIndex, {
+                          showEndDateTime: functionDateTimeValue(entry.scheduleDate, nextEnd, eventTimeZone),
+                        })}
+                        className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 transition hover:border-sky-400 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {duration.label}
+                      </button>
+                    );
                   })}
-                  className={`${inputClass} ${showErrors && !entry.showStartDateTime ? "border-red-400 focus:border-red-400" : ""} disabled:cursor-not-allowed disabled:bg-slate-100`}
-                />
-                {showErrors && !entry.showStartDateTime && (
-                  <p id={`${uid}-function-${functionIndex}-start-error`} className="mt-1 text-xs text-red-500">Start Time is required.</p>
-                )}
-              </div>
-              <div>
-                <label htmlFor={`${uid}-function-${functionIndex}-end-time`} className={labelClass}>End Time <span className="text-red-500">*</span></label>
-                <input
-                  id={`${uid}-function-${functionIndex}-end-time`}
-                  type="time"
-                  step={300}
-                  disabled={!entry.scheduleDate}
-                  aria-invalid={showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? true : undefined}
-                  aria-describedby={showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? `${uid}-function-${functionIndex}-end-error` : undefined}
-                  value={venueTimeValue(entry.showEndDateTime, eventTimeZone)}
-                  onChange={(event) => updateFunction(functionIndex, {
-                    showEndDateTime: functionDateTimeValue(entry.scheduleDate, event.target.value, eventTimeZone),
-                  })}
-                  className={`${inputClass} ${showErrors && (!entry.showEndDateTime || !functionScheduleEndIsAfterStart(entry)) ? "border-red-400 focus:border-red-400" : ""} disabled:cursor-not-allowed disabled:bg-slate-100`}
-                />
-                {showErrors && !entry.showEndDateTime && (
-                  <p id={`${uid}-function-${functionIndex}-end-error`} className="mt-1 text-xs text-red-500">End Time is required.</p>
-                )}
-                {showErrors && entry.showStartDateTime && entry.showEndDateTime && !functionScheduleEndIsAfterStart(entry) && (
-                  <p id={`${uid}-function-${functionIndex}-end-error`} className="mt-1 text-xs text-red-500">End Time must be after Start Time.</p>
-                )}
-              </div>
+                  <span className="ml-auto text-xs text-slate-500">15-minute increments · {eventTimeZone || "venue time"}</span>
+                </div>
+              </fieldset>
             </div>
           </div>
-        ))}
+          );
+        })}
         <button
           type="button"
           onClick={() => updateFunctionSchedules([...functionSchedules, defaultFunctionSchedule()])}
@@ -793,6 +1004,8 @@ const RoomForm = ({
         </button>
       </div>
 
+      {mode === "advanced" ? (
+      <>
       {/* Room-wide production access times */}
       <div>
         <button
@@ -804,40 +1017,84 @@ const RoomForm = ({
           Add room load-in &amp; rehearsal times
         </button>
         {showManualTimes && (
-          <div className="mt-3 grid gap-4 md:grid-cols-2">
+          <fieldset className="mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            <legend className="px-1 text-xs font-bold uppercase tracking-wide text-slate-700">
+              Production access schedule
+            </legend>
+            <p id={`${uid}-production-access-guidance`} className="mb-4 text-xs leading-5 text-slate-600">
+              Select a date and time in one control. Allowed window: {productionWindowLabel}; 15-minute increments · {eventTimeZone || "venue time"}.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className={`${labelClass} mt-0`}>Load-In</label>
+              <label id={`${uid}-load-in-label`} htmlFor={`${uid}-load-in`} className={`${labelClass} mt-0`}>
+                Load-In
+                <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span>
+              </label>
               <GlobalDateTimeInput
+                id={`${uid}-load-in`}
+                label="Load-In"
                 hideLabel
                 showFormatInLabel={false}
-                format="MM/dd/yyyy"
+                localeAware
+                showTodayShortcut
                 showTime
                 use12Hours
                 timeIntervals={15}
-                value={toEventZoneDisplay(data.loadInDateTime, eventTimeZone)}
+                value={loadInDisplay}
                 onChange={(d) => onChange({ loadInDateTime: fromEventZoneDisplay(d, eventTimeZone) })}
-                inputClassName={`${inputClass} pr-12`}
+                minDate={isoDateToLocalDate(productionWindowStartDate) ?? undefined}
+                maxDate={isoDateToLocalDate(productionWindowEndDate) ?? undefined}
+                error={productionAccessErrors.loadIn}
+                ariaInvalid={Boolean(productionAccessErrors.loadIn)}
+                ariaLabelledBy={`${uid}-load-in-label`}
+                ariaDescribedBy={`${uid}-production-access-guidance${productionAccessErrors.loadIn ? ` ${uid}-load-in-error` : ""}`}
+                inputClassName={`${inputClass} pr-12 ${productionAccessErrors.loadIn ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
                 placeholder="Select date & time"
+                showErrorMessage={false}
               />
+              {productionAccessErrors.loadIn && (
+                <p id={`${uid}-load-in-error`} className="mt-1 text-xs text-red-500">
+                  {productionAccessErrors.loadIn}
+                </p>
+              )}
             </div>
             <div>
-              <label className={`${labelClass} mt-0`}>Rehearsal</label>
+              <label id={`${uid}-rehearsal-label`} htmlFor={`${uid}-rehearsal`} className={`${labelClass} mt-0`}>
+                Rehearsal
+                <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span>
+              </label>
               <GlobalDateTimeInput
+                id={`${uid}-rehearsal`}
+                label="Rehearsal"
                 hideLabel
                 showFormatInLabel={false}
-                format="MM/dd/yyyy"
+                localeAware
+                showTodayShortcut
                 showTime
                 use12Hours
                 timeIntervals={15}
                 value={toEventZoneDisplay(data.rehearsalDateTime, eventTimeZone)}
                 onChange={(d) => onChange({ rehearsalDateTime: fromEventZoneDisplay(d, eventTimeZone) })}
-                inputClassName={`${inputClass} pr-12`}
+                minDate={rehearsalMinDate}
+                maxDate={isoDateToLocalDate(productionWindowEndDate) ?? undefined}
+                error={productionAccessErrors.rehearsal}
+                ariaInvalid={Boolean(productionAccessErrors.rehearsal)}
+                ariaLabelledBy={`${uid}-rehearsal-label`}
+                ariaDescribedBy={`${uid}-production-access-guidance${productionAccessErrors.rehearsal ? ` ${uid}-rehearsal-error` : ""}`}
+                inputClassName={`${inputClass} pr-12 ${productionAccessErrors.rehearsal ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
-                placeholder="Select date & time"
+                placeholder="Select date & time (optional)"
+                showErrorMessage={false}
               />
+              {productionAccessErrors.rehearsal && (
+                <p id={`${uid}-rehearsal-error`} className="mt-1 text-xs text-red-500">
+                  {productionAccessErrors.rehearsal}
+                </p>
+              )}
             </div>
-          </div>
+            </div>
+          </fieldset>
         )}
       </div>
 
@@ -1857,6 +2114,17 @@ const RoomForm = ({
           onChange={(e) => onChange({ otherRolesNeeded: e.target.value })}
         />
       </div>
+      </>
+      ) : (
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+          <p className="flex items-center gap-2 text-sm font-extrabold text-violet-950">
+            <Sparkles size={16} aria-hidden="true" /> Vendor-recommended production scope
+          </p>
+          <p className="mt-1 text-xs leading-5 text-violet-800">
+            Basic mode keeps the room schedule concise and asks vendors to recommend the right audio, video, lighting, and show crew. Open Advanced production to edit the technical specification directly.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
@@ -1874,7 +2142,10 @@ const RoomCard = ({
   canDelete,
   showErrors,
   eventTimeZone,
+  eventStartDate,
+  eventEndDate,
   onOpenScenicInspirations,
+  mode,
 }: {
   room: RoomByRoomData;
   index: number;
@@ -1887,7 +2158,10 @@ const RoomCard = ({
   canDelete: boolean;
   showErrors: boolean;
   eventTimeZone?: string | null;
+  eventStartDate?: string;
+  eventEndDate?: string;
   onOpenScenicInspirations?: () => void;
+  mode: ProposalExperienceMode;
 }) => {
   const roomLabel = room.roomLocation.trim() || room.roomFunction.trim() || `Room ${index + 1}`;
   const functionCount = schedulesForRoom(room).filter((entry) => entry.functionName.trim()).length;
@@ -1895,11 +2169,16 @@ const RoomCard = ({
   return (
     <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
       <div
-        className="flex cursor-pointer items-center justify-between px-5 py-4 transition-colors hover:bg-slate-50"
+        className="flex items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-slate-50"
         style={{ borderBottom: isExpanded ? "1px solid #e4e4e4" : "none" }}
-        onClick={onToggle}
       >
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isExpanded}
+          aria-controls={`room-panel-${index}`}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]"
+        >
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
             style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
@@ -1920,8 +2199,11 @@ const RoomCard = ({
               </p>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <span className="ml-auto text-[#969798]" aria-hidden="true">
+            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </span>
+        </button>
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onDuplicate}
@@ -1942,21 +2224,23 @@ const RoomCard = ({
               Remove
             </button>
           )}
-          <div className="ml-1 text-[#969798]">
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </div>
         </div>
       </div>
 
       {isExpanded && (
-        <RoomForm
-          data={room}
-          onChange={onChange}
-          showErrors={showErrors}
-          roomIndex={index}
-          eventTimeZone={eventTimeZone}
-          onOpenScenicInspirations={onOpenScenicInspirations}
-        />
+        <div id={`room-panel-${index}`}>
+          <RoomForm
+            data={room}
+            onChange={onChange}
+            showErrors={showErrors}
+            roomIndex={index}
+            eventTimeZone={eventTimeZone}
+            eventStartDate={eventStartDate}
+            eventEndDate={eventEndDate}
+            onOpenScenicInspirations={onOpenScenicInspirations}
+            mode={mode}
+          />
+        </div>
       )}
     </div>
   );
@@ -1968,7 +2252,13 @@ const RoomCard = ({
  * the inputs so the wizard's blocking check and the on-screen errors can never
  * disagree about what "complete" means.
  */
-export const missingRoomFields = (room: RoomByRoomData): string[] => {
+export const missingRoomFields = (
+  room: RoomByRoomData,
+  mode: ProposalExperienceMode = "advanced",
+  eventStartDate?: string,
+  eventEndDate?: string,
+  eventTimeZone?: string | null,
+): string[] => {
   const missing: string[] = [];
   if (!room.roomLocation.trim()) missing.push("physical room name");
   const schedules = room.functions.length > 0 ? room.functions : [];
@@ -1976,6 +2266,10 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
     if (schedules.some((entry) => !entry.functionName.trim())) missing.push("function name");
     if (schedules.some((entry) => !isPositiveIntegerText(entry.estimatedAttendees))) missing.push("number of attendees");
     if (schedules.some((entry) => !entry.scheduleDate.trim())) missing.push("date");
+    if (schedules.some((entry) =>
+      entry.scheduleDate.trim() &&
+      !functionScheduleDateIsWithinEventRange(entry.scheduleDate, eventStartDate, eventEndDate)
+    )) missing.push("date within event dates");
     if (schedules.some((entry) => !entry.showStartDateTime.trim())) missing.push("start time");
     if (schedules.some((entry) => !entry.showEndDateTime.trim())) missing.push("end time");
     if (schedules.some((entry) => !functionScheduleEndIsAfterStart(entry))) missing.push("end time after start time");
@@ -1983,6 +2277,10 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
     if (!room.roomFunction.trim()) missing.push("function name");
     if (!isPositiveIntegerText(room.estimatedAttendeesInRoom)) missing.push("number of attendees");
     if (!room.scheduleDate.trim()) missing.push("date");
+    if (
+      room.scheduleDate.trim() &&
+      !functionScheduleDateIsWithinEventRange(room.scheduleDate, eventStartDate, eventEndDate)
+    ) missing.push("date within event dates");
     if (!room.showStartDateTime.trim()) missing.push("start time");
     if (!room.showEndDateTime.trim()) missing.push("end time");
     if (!functionScheduleEndIsAfterStart({
@@ -1995,9 +2293,19 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
       estimatedAttendees: room.estimatedAttendeesInRoom,
     })) missing.push("end time after start time");
   }
-  if (room.showCrewNeeded.length === 0) missing.push("show crew");
-  missing.push(...cameraPlanMissingFields(room.cameras));
-  missing.push(...ledWallPlanMissingFields(room));
+  if (mode === "advanced") {
+    if (room.showCrewNeeded.length === 0) missing.push("show crew");
+    missing.push(...cameraPlanMissingFields(room.cameras));
+    missing.push(...ledWallPlanMissingFields(room));
+    const productionAccessErrors = roomProductionAccessTimeErrors(
+      room,
+      eventStartDate,
+      eventEndDate,
+      eventTimeZone,
+    );
+    if (productionAccessErrors.loadIn) missing.push("valid load-in time");
+    if (productionAccessErrors.rehearsal) missing.push("valid rehearsal time");
+  }
   if (
     Number(room.largeMonitorsOrScreenProjector.numberOfScreens) > 0 &&
     customScreenSizeIsMissing(room.largeMonitorsOrScreenProjector)
@@ -2019,9 +2327,13 @@ export const roomLabel = (room: RoomByRoomData, index: number): string =>
 /** First room that still blocks the step, or null when every room is complete. */
 export const firstIncompleteRoom = (
   rooms: RoomByRoomData[],
+  mode: ProposalExperienceMode = "advanced",
+  eventStartDate?: string,
+  eventEndDate?: string,
+  eventTimeZone?: string | null,
 ): { index: number; label: string; missing: string[] } | null => {
   for (const [index, room] of rooms.entries()) {
-    const missing = missingRoomFields(room);
+    const missing = missingRoomFields(room, mode, eventStartDate, eventEndDate, eventTimeZone);
     if (missing.length) return { index, label: roomLabel(room, index), missing };
   }
   return null;
@@ -2052,7 +2364,79 @@ interface Props {
   /** Venue & Schedule time-zone label; uploaded schedule times are wall-clock there. */
   eventTimeZone?: string | null;
   onOpenScenicInspirations?: () => void;
+  eventStartDate?: string;
+  eventEndDate?: string;
+  eventAttendance?: string;
+  onTemplateApplied?: (template: string, confidence: number, explanation: string) => void;
+  mode?: ProposalExperienceMode;
 }
+
+export const ROOM_TEMPLATES = [
+  { id: "general", label: "General Session", setup: "Theater", share: 1, description: "Main stage, screens, audio, cameras, lighting" },
+  { id: "breakout", label: "Breakout", setup: "Classroom", share: 0.25, description: "Presentation, speech audio, flexible display" },
+  { id: "workshop", label: "Workshop", setup: "Classroom", share: 0.15, description: "Facilitated learning with presentation support" },
+  { id: "reception", label: "Reception", setup: "Round of 8", share: 0.5, description: "Background audio, announcements, ambient lighting" },
+] as const;
+
+type RoomTemplate = (typeof ROOM_TEMPLATES)[number];
+
+export const roomFromTemplate = (
+  template: RoomTemplate,
+  eventStartDate: string,
+  eventEndDate: string,
+  eventAttendance: string,
+  eventTimeZone?: string | null,
+): RoomByRoomData => {
+  const totalAttendance = Math.max(1, Number(eventAttendance) || 100);
+  const attendees = String(Math.max(10, Math.round(totalAttendance * template.share)));
+  const start = eventStartDate
+    ? wallClockToIso(eventStartDate, { hours: 9, minutes: 0 }, eventTimeZone)
+    : "";
+  const endDate = eventEndDate || eventStartDate;
+  const end = endDate
+    ? wallClockToIso(endDate, { hours: 17, minutes: 0 }, eventTimeZone)
+    : "";
+  const isReception = template.id === "reception";
+  const needsCamera = template.id === "general";
+
+  return {
+    ...defaultRoom(),
+    roomLocation: template.label,
+    roomFunction: template.label,
+    roomSetup: template.setup,
+    scheduleDate: eventStartDate,
+    showStartDateTime: start,
+    showEndDateTime: end,
+    estimatedAttendeesInRoom: attendees,
+    functions: [{
+      functionName: template.label,
+      scheduleDate: eventStartDate,
+      scheduleDay: "",
+      showStartDateTime: start,
+      showEndDateTime: end,
+      roomSetup: template.setup,
+      estimatedAttendees: attendees,
+    }],
+    audioSystemRequired: "Yes",
+    audioSystemForHowManyPpl: attendees,
+    podiumMic: { podiumMic: isReception ? "No" : "Yes", podiumMicQty: isReception ? "" : "1" },
+    cameras: {
+      ...defaultRoom().cameras,
+      cameras: needsCamera ? "Yes" : "No",
+      cameraPlanMode: needsCamera ? CAMERA_PLAN_VENDOR_RECOMMENDATION : "",
+    },
+    largeMonitorsOrScreenProjector: {
+      ...defaultRoom().largeMonitorsOrScreenProjector,
+      largeMonitorsOrScreenProjector: "Yes",
+      numberOfScreens: "1",
+      screenSize: SCREEN_SIZE_VENDOR_RECOMMENDATION,
+    },
+    lightingRequirements: isReception
+      ? ["None / Minimal — House lighting only"]
+      : ["Stage Wash"],
+    showCrewNeeded: ["Vendor Recommendation Requested"],
+  };
+};
 
 const RoomAndProductionStep = ({
   rooms,
@@ -2069,9 +2453,20 @@ const RoomAndProductionStep = ({
   focusRoom = null,
   eventTimeZone = null,
   onOpenScenicInspirations,
+  eventStartDate = "",
+  eventEndDate = "",
+  eventAttendance = "",
+  onTemplateApplied,
+  mode = "advanced",
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
   const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
+  const [roomPendingDeletion, setRoomPendingDeletion] = useState<{
+    index: number;
+    label: string;
+    functionCount: number;
+    peakAttendance: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const roomCardRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const roomCount = Math.max(1, Number(numberOfEventRooms) || 1);
@@ -2101,6 +2496,27 @@ const RoomAndProductionStep = ({
   const updateRoom = (i: number, updates: Partial<RoomByRoomData>) =>
     onRoomsChange(rooms.map((r, idx) => (idx === i ? { ...r, ...updates } : r)));
 
+  const applyRoomTemplate = (template: RoomTemplate) => {
+    const templatedRoom = roomFromTemplate(
+      template,
+      eventStartDate,
+      eventEndDate,
+      eventAttendance,
+      eventTimeZone,
+    );
+    const firstRoomIsEmpty = rooms.length === 1 && !rooms[0]?.roomLocation.trim() && !rooms[0]?.roomFunction.trim();
+    const nextRooms = firstRoomIsEmpty ? [templatedRoom] : [...rooms, templatedRoom];
+    onRoomsChange(nextRooms);
+    onNumberOfEventRoomsChange(String(nextRooms.length));
+    setExpandedRooms(new Set([nextRooms.length - 1]));
+    onTemplateApplied?.(
+      template.label,
+      eventStartDate && eventAttendance ? 0.86 : 0.68,
+      `Based on ${eventAttendance ? "attendance" : "default attendance"}, event dates, and a typical ${template.label.toLowerCase()} AV profile.`,
+    );
+    toast.success(`${template.label} template added. Review the assumptions before publishing.`);
+  };
+
   const duplicateRoom = (i: number) => {
     const source = rooms[i];
     if (!source) return;
@@ -2115,23 +2531,40 @@ const RoomAndProductionStep = ({
     setExpandedRooms(new Set([nextRooms.length - 1]));
   };
 
-  const deleteRoom = (i: number) => {
+  const requestRoomDeletion = (i: number) => {
     if (rooms.length <= 1) return;
     const room = rooms[i];
-    const label = room?.roomLocation.trim() || room?.roomFunction.trim() || `Room ${i + 1}`;
-    if (!window.confirm(`Remove "${label}"? This can't be undone.`)) return;
+    if (!room) return;
+    setRoomPendingDeletion({
+      index: i,
+      label: roomLabel(room, i),
+      functionCount: schedulesForRoom(room).filter((entry) => entry.functionName.trim()).length,
+      peakAttendance: room.estimatedAttendeesInRoom,
+    });
+  };
 
-    const nextRooms = rooms.filter((_, idx) => idx !== i);
+  const confirmRoomDeletion = () => {
+    if (!roomPendingDeletion || rooms.length <= 1) return;
+    const { index, label } = roomPendingDeletion;
+    const nextRooms = rooms.filter((_, idx) => idx !== index);
+    setRoomPendingDeletion(null);
     onRoomsChange(nextRooms);
     onNumberOfEventRoomsChange(String(nextRooms.length));
     setExpandedRooms((prev) => {
       const next = new Set<number>();
       prev.forEach((idx) => {
-        if (idx < i) next.add(idx);
-        else if (idx > i) next.add(idx - 1);
+        if (idx < index) next.add(idx);
+        else if (idx > index) next.add(idx - 1);
       });
       return next;
     });
+    toast.success(
+      <ToastMessage
+        title="Room removed"
+        description={`“${label}” was removed. ${nextRooms.length} room${nextRooms.length === 1 ? " remains" : "s remain"}.`}
+      />,
+      { ariaLabel: `${label} removed` },
+    );
   };
 
   const handleScheduleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -2181,14 +2614,6 @@ const RoomAndProductionStep = ({
     >
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 2B of 9
-          </span>
-          <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-600">
-            Repeating Module
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">Room Specifications &amp; Schedule</h2>
         <p className="mt-1 text-sm text-[#969798]">
           One module per room — each room generates its own section in the RFP.
@@ -2201,6 +2626,32 @@ const RoomAndProductionStep = ({
           <RoomRecommendationsPanel proposalId={proposalId} onApplied={onRecommendationsApplied} />
         </div>
       )}
+
+      <div className="px-6 pt-6">
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+          <div className="flex items-start gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-violet-700 shadow-sm"><Sparkles size={18} aria-hidden="true" /></span>
+            <div>
+              <p className="text-sm font-extrabold text-violet-950">Start with a reusable room template</p>
+              <p className="mt-1 text-xs leading-5 text-violet-800">Templates generate a schedule and recommended AV starting point. Every applied assumption remains editable and appears in Final Review.</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {ROOM_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => applyRoomTemplate(template)}
+                className="min-h-20 rounded-xl border border-violet-200 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+                aria-label={`Add ${template.label} room template`}
+              >
+                <span className="block text-sm font-extrabold text-slate-900">{template.label}</span>
+                <span className="mt-1 block text-xs leading-4 text-slate-500">{template.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Number of Event Rooms — stepper */}
       <div className="px-6 pt-6">
@@ -2305,15 +2756,29 @@ const RoomAndProductionStep = ({
               onToggle={() => toggleRoom(i)}
               onChange={(u) => updateRoom(i, u)}
               onDuplicate={() => duplicateRoom(i)}
-              onDelete={() => deleteRoom(i)}
+              onDelete={() => requestRoomDeletion(i)}
               canDelete={rooms.length > 1}
               showErrors={showErrors}
               eventTimeZone={eventTimeZone}
+              eventStartDate={eventStartDate}
+              eventEndDate={eventEndDate}
               onOpenScenicInspirations={onOpenScenicInspirations}
+              mode={mode}
             />
           </div>
         ))}
       </div>
+
+      {roomPendingDeletion && (
+        <RoomDeletionDialog
+          roomName={roomPendingDeletion.label}
+          roomPosition={`Room ${roomPendingDeletion.index + 1} of ${rooms.length}`}
+          functionCount={roomPendingDeletion.functionCount}
+          peakAttendance={roomPendingDeletion.peakAttendance}
+          onCancel={() => setRoomPendingDeletion(null)}
+          onConfirm={confirmRoomDeletion}
+        />
+      )}
 
       {/* Footer nav */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
@@ -2332,7 +2797,11 @@ const RoomAndProductionStep = ({
           style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-          {isInPersonOnly ? "Content & Creative" : "Hybrid & Virtual"}
+          {mode === "basic"
+            ? "Investment & timeline"
+            : isInPersonOnly
+              ? "Content & Creative"
+              : "Hybrid & Virtual"}
           <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>

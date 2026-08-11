@@ -15,6 +15,7 @@ import {
   maximumToneSelections,
   toneGroups,
 } from "@/lib/proposals/eventOverviewFieldUi";
+import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
 
 /* ─── Shared style constants ─── */
 const labelClass =
@@ -74,6 +75,7 @@ interface EventFormProps {
   onSaveDraft?: () => void;
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
+  mode?: ProposalExperienceMode;
 }
 
 const EventForm = ({
@@ -84,6 +86,7 @@ const EventForm = ({
   onSaveDraft,
   showErrors = false,
   proposalSettings,
+  mode = "advanced",
 }: EventFormProps) => {
   const currentDateFormat = normalizeDateFormat(
     proposalSettings.proposals.dateFormat,
@@ -127,11 +130,12 @@ const EventForm = ({
       {/* Header */}
       <div className="border-t border-[#edf0f2] bg-[#fbfcfd] px-8 pb-6 pt-7">
         <h2 className="text-[30px] font-extrabold tracking-tight text-[#172b3a]">
-          Event Overview &amp; Narrative
+          {mode === "basic" ? "Event Essentials" : "Event Overview & Narrative"}
         </h2>
         <p className="mt-2 max-w-4xl text-[15px] leading-6 text-[#687782]">
-          These fields power the auto-generated narrative on your RFP cover page
-          and set the tone for every section that follows.
+          {mode === "basic"
+            ? "Capture the event, format, dates, and attendance. You can add narrative and audience strategy in Advanced production."
+            : "These fields power the auto-generated narrative on your RFP cover page and set the tone for every section that follows."}
         </p>
       </div>
 
@@ -144,7 +148,7 @@ const EventForm = ({
           <div className="space-y-5">
 
             {/* Row 1: Event Name + Edition/Year */}
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <div className={`grid grid-cols-1 gap-8 ${mode === "advanced" ? "lg:grid-cols-2" : ""}`}>
               <div data-assistant-field-key="/content/event/name">
                 <label className={labelClass}>
                   Event Name <span className="text-red-500">*</span>
@@ -167,7 +171,7 @@ const EventForm = ({
                 </div>
               </div>
 
-              <div data-assistant-field-key="/content/event/edition">
+              {mode === "advanced" && <div data-assistant-field-key="/content/event/edition">
                 <label className={labelClass}>
                   Edition / Year
                   <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -180,10 +184,10 @@ const EventForm = ({
                   value={data.editionYear ?? ""}
                   onChange={(e) => onChange({ editionYear: e.target.value })}
                 />
-              </div>
+              </div>}
             </div>
 
-            <div data-assistant-field-key="/content/event/objectives">
+            {mode === "advanced" && <div data-assistant-field-key="/content/event/objectives">
               <label className={labelClass}>
                 Event summary / Narrative <span className="text-red-500">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
@@ -202,10 +206,10 @@ const EventForm = ({
               <div className="mt-1 flex justify-end">
                 <span className={`text-xs ${objLen > 720 ? "text-amber-600" : "text-[#969798]"}`}>{objLen}/800</span>
               </div>
-            </div>
+            </div>}
 
             {/* Row 2: Event Type + Theme/Tagline */}
-            <div className="grid grid-cols-2 gap-5">
+            <div className={`grid grid-cols-1 gap-5 ${mode === "advanced" ? "sm:grid-cols-2" : ""}`}>
               <div data-assistant-field-key="/content/event/type">
                 <label className={labelClass}>
                   Event Type <span className="text-red-500">*</span>
@@ -261,7 +265,7 @@ const EventForm = ({
                 )}
               </div>
 
-              <div data-assistant-field-key="/content/event/theme">
+              {mode === "advanced" && <div data-assistant-field-key="/content/event/theme">
                 <label className={labelClass}>
                   Event Theme / Tagline
                   <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -274,11 +278,11 @@ const EventForm = ({
                   value={data.eventTheme ?? ""}
                   onChange={(e) => onChange({ eventTheme: e.target.value })}
                 />
-              </div>
+              </div>}
             </div>
 
             {/* Row 3: Event Website */}
-            <div className="grid grid-cols-2 gap-5">
+            {mode === "advanced" && <div className="grid grid-cols-2 gap-5">
               <div data-assistant-field-key="/content/event/website">
                 <label className={labelClass}>
                   Event Website
@@ -294,7 +298,7 @@ const EventForm = ({
                   onChange={(e) => onChange({ eventWebsite: e.target.value })}
                 />
               </div>
-            </div>
+            </div>}
           </div>
         </div>
 
@@ -310,7 +314,7 @@ const EventForm = ({
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/format")} />
               </label>
               <p className="mb-3 text-xs text-slate-500 normal-case">
-                Your selection unlocks Step 3 — Hybrid &amp; Virtual Production if applicable.
+                Your selection adds Hybrid &amp; Virtual Production when applicable.
               </p>
               <div className="flex flex-col gap-3">
                 {formatOptions.map((fmt) => (
@@ -334,14 +338,14 @@ const EventForm = ({
                 <div className="mt-3 flex items-start gap-2 rounded-md border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-4 py-3 text-sm text-brand-dark">
                   <span className="font-bold">⚡</span>
                   <span>
-                    <strong>Step 3 Unlocked:</strong> Hybrid &amp; Virtual Production fields are now active.
+                    <strong>Hybrid scope added:</strong> Hybrid &amp; Virtual Production fields are now active in Advanced production.
                   </span>
                 </div>
               )}
             </div>
 
             {/* Primary Audience */}
-            <div data-assistant-field-key="/content/event/primaryAudiences/*">
+            {mode === "advanced" && <div data-assistant-field-key="/content/event/primaryAudiences/*">
               <label className={labelClass}>
                 Primary Audience <span className="text-red-500">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/primaryAudiences/*")} />
@@ -381,7 +385,7 @@ const EventForm = ({
                   Please select at least one audience type.
                 </p>
               )}
-            </div>
+            </div>}
           </div>
         </div>
 
@@ -485,7 +489,7 @@ const EventForm = ({
         </div>
 
         {/* ── Group: Company Information ── */}
-        <div>
+        {mode === "advanced" && <div>
           <p className={groupLabelClass}>Company Information</p>
           <div className="space-y-6">
 
@@ -647,7 +651,7 @@ const EventForm = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ── Footer Nav ── */}

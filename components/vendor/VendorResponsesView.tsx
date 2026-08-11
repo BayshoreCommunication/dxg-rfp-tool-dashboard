@@ -22,6 +22,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import VendorAnalysisSection from "./VendorAnalysisSection";
+import VendorComparisonPanel from "./VendorComparisonPanel";
 
 type Props = {
   initialResponses: VendorResponseItem[];
@@ -329,6 +330,10 @@ export default function VendorResponsesView({
 
             <div className="dxg-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-8 lg:px-9 lg:py-8">
               <div className="mx-auto w-full max-w-5xl">
+                <VendorComparisonPanel
+                  responses={responses}
+                  proposalId={selected.proposalId}
+                />
                 <div className="flex items-start gap-4">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#008ad2] text-base font-extrabold text-white shadow-[0_12px_28px_-16px_rgba(0,138,210,0.9)]">
                     {initials(selected.vendorName)}

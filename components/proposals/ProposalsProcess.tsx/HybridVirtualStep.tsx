@@ -168,11 +168,6 @@ const HybridVirtualStep = ({
     >
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 3 of 9
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">
           {isVirtualOnly ? "Virtual" : "Hybrid"} &amp; Virtual Production
         </h2>

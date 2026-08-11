@@ -3,6 +3,7 @@ import GlobalDateTimeInput from "@/components/shared/GlobalDateTimeInput";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
 
 const toDateObj = (dateStr: string, timeStr: string): Date | null => {
   if (!dateStr) return null;
@@ -393,6 +394,7 @@ interface Props {
   /** Event Overview dates (YYYY-MM-DD) bounding the show window */
   eventStartDate?: string;
   eventEndDate?: string;
+  mode?: ProposalExperienceMode;
 }
 
 const VenueScheduleStep = ({
@@ -403,6 +405,7 @@ const VenueScheduleStep = ({
   showErrors,
   eventStartDate,
   eventEndDate,
+  mode = "advanced",
 }: Props) => {
   const safeData: VenueScheduleData = { ...defaultVenueSchedule(), ...data };
 
@@ -459,16 +462,13 @@ const VenueScheduleStep = ({
     <section className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white">
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 2 of 9
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">
           Venue and Overall Event Schedule
         </h2>
         <p className="mt-1 text-sm text-[#969798]">
-          Venue details, union detection, and production timeline.
+          {mode === "basic"
+            ? "Confirm the venue and location. Production timing can be added in Advanced mode."
+            : "Venue details, union detection, and production timeline."}
         </p>
       </div>
 
@@ -642,7 +642,7 @@ const VenueScheduleStep = ({
         </section>
 
         {/* ── Group: Union Status ── */}
-        <section className="mb-10">
+        {mode === "advanced" && <section className="mb-10">
           <p className={groupLabelClass}>Union Status</p>
 
           <div className="mb-5">
@@ -750,10 +750,10 @@ const VenueScheduleStep = ({
               </div>
             )}
           </div>
-        </section>
+        </section>}
 
         {/* ── Group: Production Schedule ── */}
-        <section className="mb-8">
+        {mode === "advanced" && <section className="mb-8">
           <p className={groupLabelClass}>Production Schedule</p>
 
           {/* Load-In + Rehearsal */}
@@ -764,8 +764,11 @@ const VenueScheduleStep = ({
                 <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue — this is the earliest you can start setup, not the show start. Typical load-in is 1–3 days before show day for large events." />
               </label>
               <GlobalDateTimeInput
+                label="Load-In date and time"
                 hideLabel
                 showFormatInLabel={false}
+                localeAware
+                showTodayShortcut
                 showTime
                 use12Hours
                 timeIntervals={15}
@@ -797,8 +800,11 @@ const VenueScheduleStep = ({
                 <InfoTooltip text="When is your speaker/tech rehearsal scheduled? Most productions run a full tech rehearsal the day before show day. Leave blank if no formal rehearsal is planned — timeline column will display 'TBD'." />
               </label>
               <GlobalDateTimeInput
+                label="Rehearsal date and time"
                 hideLabel
                 showFormatInLabel={false}
+                localeAware
+                showTodayShortcut
                 showTime
                 use12Hours
                 timeIntervals={15}
@@ -930,7 +936,7 @@ const VenueScheduleStep = ({
               )}
             </div>
           </div>
-        </section>
+        </section>}
       </div>
 
       {/* ── Footer Nav ── */}

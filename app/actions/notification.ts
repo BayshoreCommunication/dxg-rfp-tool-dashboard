@@ -3,6 +3,10 @@
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 import { BACKEND_URL as API_URL } from "@/lib/config";
+import {
+  normalizeNotificationPreferences,
+  type NotificationPreferences,
+} from "@/lib/notifications/preferences";
 
 type ApiResponse = {
   success: boolean;
@@ -157,6 +161,53 @@ export async function getNotificationSocketConfigAction(): Promise<ApiResponse> 
     return {
       success: true,
       socketUrl: `${wsBase}/api/notifications/ws?ticket=${encodeURIComponent(ticket)}`,
+    };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Network error",
+    };
+  }
+}
+
+export async function getNotificationPreferencesAction(): Promise<ApiResponse> {
+  try {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/settings`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "Notification preferences fetched" : "Failed to fetch preferences"),
+      data: normalizeNotificationPreferences(data.data?.notifications),
+    };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Network error",
+      data: normalizeNotificationPreferences(undefined),
+    };
+  }
+}
+
+export async function updateNotificationPreferencesAction(
+  preferences: NotificationPreferences,
+): Promise<ApiResponse> {
+  try {
+    const normalized = normalizeNotificationPreferences(preferences);
+    const form = new FormData();
+    form.append("settings", JSON.stringify({ notifications: normalized }));
+    const res = await authenticatedBackendFetch(`${API_URL}/api/settings`, {
+      method: "PUT",
+      body: form,
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "Notification preferences saved" : "Failed to save preferences"),
+      data: normalizeNotificationPreferences(data.data?.notifications),
     };
   } catch (error: unknown) {
     return {

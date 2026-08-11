@@ -3,10 +3,14 @@ import path from "node:path";
 import * as XLSX from "xlsx";
 import {
   defaultRoom,
+  functionScheduleDateIsWithinEventRange,
   functionDateTimeValue,
   functionScheduleEndIsAfterStart,
   missingRoomFields,
   parseScheduleWorkbook,
+  roomProductionAccessTimeErrors,
+  roomFromTemplate,
+  ROOM_TEMPLATES,
   venueTimeValue,
 } from "./RoomAndProductionStep";
 import { SCREEN_SIZE_OTHER, SCREEN_SIZE_VENDOR_RECOMMENDATION } from "../screenSize";
@@ -123,6 +127,21 @@ describe("mandatory function schedules", () => {
     expect(missingRoomFields(room)).toContain("end time after start time");
   });
 
+  it("accepts function dates on either event boundary and rejects dates outside it", () => {
+    expect(functionScheduleDateIsWithinEventRange("2026-08-10", "2026-08-10", "2026-08-12")).toBe(true);
+    expect(functionScheduleDateIsWithinEventRange("2026-08-12", "2026-08-10", "2026-08-12")).toBe(true);
+    expect(functionScheduleDateIsWithinEventRange("2026-08-09", "2026-08-10", "2026-08-12")).toBe(false);
+    expect(functionScheduleDateIsWithinEventRange("2026-08-13", "2026-08-10", "2026-08-12")).toBe(false);
+  });
+
+  it("blocks Continue when a function date is outside the event window", () => {
+    const room = completeRoom();
+    room.functions[0].scheduleDate = "2026-08-13";
+
+    expect(missingRoomFields(room, "advanced", "2026-08-10", "2026-08-12"))
+      .toContain("date within event dates");
+  });
+
   it("anchors time-only input to the function date in the venue time zone", () => {
     const start = functionDateTimeValue("2026-08-10", "09:15", "Central Time (CT)");
 
@@ -193,6 +212,85 @@ describe("mandatory function schedules", () => {
     };
 
     expect(missingRoomFields(room)).not.toContain("custom monitor size");
+  });
+
+  it("keeps Basic mode validation to room and schedule essentials", () => {
+    const room = completeRoom();
+    room.showCrewNeeded = [];
+    room.cameras = { ...room.cameras, cameras: "Yes", cameraPlanMode: "" };
+
+    expect(missingRoomFields(room, "basic")).toEqual([]);
+    expect(missingRoomFields(room, "advanced")).toEqual(
+      expect.arrayContaining(["show crew", "camera plan"]),
+    );
+  });
+
+  it("anchors generated room-template times to the venue time zone", () => {
+    const room = roomFromTemplate(
+      ROOM_TEMPLATES[0],
+      "2026-08-20",
+      "2026-08-20",
+      "300",
+      "Central Time (CT)",
+    );
+
+    expect(venueTimeValue(room.showStartDateTime, "Central Time (CT)")).toBe("09:00");
+    expect(venueTimeValue(room.showEndDateTime, "Central Time (CT)")).toBe("17:00");
+  });
+
+  it("allows room access up to seven days before the event and rejects an eighth day", () => {
+    const room = completeRoom();
+    room.loadInDateTime = functionDateTimeValue("2026-08-03", "09:00", "Central Time (CT)");
+
+    expect(roomProductionAccessTimeErrors(
+      room,
+      "2026-08-10",
+      "2026-08-12",
+      "Central Time (CT)",
+    )).toEqual({});
+
+    room.loadInDateTime = functionDateTimeValue("2026-08-02", "09:00", "Central Time (CT)");
+    expect(roomProductionAccessTimeErrors(
+      room,
+      "2026-08-10",
+      "2026-08-12",
+      "Central Time (CT)",
+    ).loadIn).toBe("Load-in can be no more than 7 days before the event.");
+  });
+
+  it("requires rehearsal to be on or after room load-in", () => {
+    const room = completeRoom();
+    room.loadInDateTime = functionDateTimeValue("2026-08-09", "12:00", "Central Time (CT)");
+    room.rehearsalDateTime = functionDateTimeValue("2026-08-09", "11:45", "Central Time (CT)");
+
+    expect(roomProductionAccessTimeErrors(
+      room,
+      "2026-08-10",
+      "2026-08-12",
+      "Central Time (CT)",
+    ).rehearsal).toBe("Rehearsal must be on or after load-in.");
+  });
+
+  it("requires both room access milestones to precede the first function", () => {
+    const room = completeRoom();
+    room.loadInDateTime = room.functions[0].showStartDateTime;
+    room.rehearsalDateTime = functionDateTimeValue("2026-08-10", "09:00", "Central Time (CT)");
+    const errors = roomProductionAccessTimeErrors(
+      room,
+      "2026-08-10",
+      "2026-08-12",
+      "Central Time (CT)",
+    );
+
+    expect(errors.loadIn).toBe("Load-in must be before the room’s first function.");
+    expect(errors.rehearsal).toBe("Rehearsal must be before the room’s first function.");
+    expect(missingRoomFields(
+      room,
+      "advanced",
+      "2026-08-10",
+      "2026-08-12",
+      "Central Time (CT)",
+    )).toEqual(expect.arrayContaining(["valid load-in time", "valid rehearsal time"]));
   });
 });
 

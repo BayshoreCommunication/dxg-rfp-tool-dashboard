@@ -211,11 +211,6 @@ const ContentCreativeStep = ({
     >
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 4 of 9
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">Content &amp; Creative</h2>
         <p className="mt-1 text-sm text-[#969798]">
           Graphics, presentations, video, and content ownership matrix.
@@ -408,7 +403,7 @@ const ContentCreativeStep = ({
                   {/* Field 9 */}
                   <MatrixRow
                     label="Sponsor Recognition Content"
-                    helpText="Who provides and manages sponsor logo files, sponsored segment slates, and sponsor recognition assets? Often delivered late — requires careful version control. If stream sponsor overlays were selected on Page 3, this row needs an owner."
+                    helpText="Who provides and manages sponsor logo files, sponsored segment slates, and sponsor recognition assets? Often delivered late — requires careful version control. If stream sponsor overlays were selected in Hybrid & Virtual, this row needs an owner."
                     value={safeData.sponsorRecognitionContent}
                     onChange={(v) => onChange({ sponsorRecognitionContent: v })}
                     warning={sponsorWarning}
@@ -444,13 +439,13 @@ const ContentCreativeStep = ({
                 <span className="ml-2 text-xs font-normal normal-case tracking-normal text-slate-400">
                   (Optional)
                 </span>
-                <InfoTooltip text="Describe your visual identity, color palette, theme direction, creative references, or anything that helps vendors understand your aesthetic. Brand guides and logo files can be uploaded on Page 8. The more specific you are, the better vendors can tailor their creative pitch." />
+                <InfoTooltip text="Describe your visual identity, color palette, theme direction, creative references, or anything that helps vendors understand your aesthetic. Brand guides and logo files can be added under Uploads & Co-Vendors. The more specific you are, the better vendors can tailor their creative pitch." />
               </label>
               <textarea
                 rows={5}
                 maxLength={1000}
                 className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
-                placeholder={`e.g., "The Summit visual identity uses a dark navy and electric teal palette with bold, kinetic typography. The 2026 theme is 'Velocity' — content should feel forward-momentum, cinematic, with high-contrast graphics. Brand guide attached on Page 8."`}
+                placeholder={`e.g., "The Summit visual identity uses a dark navy and electric teal palette with bold, kinetic typography. The 2026 theme is 'Velocity' — content should feel forward-momentum, cinematic, with high-contrast graphics. Brand guide attached under Uploads & Co-Vendors."`}
                 value={safeData.creativeDirectionNotes}
                 onChange={(e) => onChange({ creativeDirectionNotes: e.target.value })}
               />

@@ -4,8 +4,15 @@ import { CalendarRangeIcon } from "lucide-react";
 import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useDatePickerLocalePresentation } from "./datePickerLocale";
 
-type DateFormatType = "yyyy-dd-MM" | "dd-MM-yyyy" | "MM-dd-yyyy" | "yyyy-MM-dd";
+type DateFormatType =
+  | "yyyy-dd-MM"
+  | "dd-MM-yyyy"
+  | "MM-dd-yyyy"
+  | "yyyy-MM-dd"
+  | "MM/dd/yyyy"
+  | "dd/MM/yyyy";
 
 interface GlobalDatePickerProps {
   label?: string;
@@ -29,6 +36,10 @@ interface GlobalDatePickerProps {
   buttonClassName?: string;
   ariaInvalid?: boolean;
   ariaDescribedBy?: string;
+  /** Show a Today shortcut when today is inside the allowed date window. */
+  showTodayShortcut?: boolean;
+  /** Match numeric field order and the first weekday to the browser locale. */
+  localeAware?: boolean;
 }
 
 const formatLabelMap: Record<DateFormatType, string> = {
@@ -36,6 +47,8 @@ const formatLabelMap: Record<DateFormatType, string> = {
   "dd-MM-yyyy": "DD-MM-YYYY",
   "MM-dd-yyyy": "MM-DD-YYYY",
   "yyyy-MM-dd": "YYYY-MM-DD",
+  "MM/dd/yyyy": "MM/DD/YYYY",
+  "dd/MM/yyyy": "DD/MM/YYYY",
 };
 
 const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
@@ -60,8 +73,16 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
   buttonClassName = "absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg bg-[#eafafd] text-[#1DBFD3] transition hover:bg-[#d8f6fa] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35",
   ariaInvalid = false,
   ariaDescribedBy,
+  showTodayShortcut = false,
+  localeAware = false,
 }) => {
   const dateRef = useRef<DatePicker>(null);
+  const localePresentation = useDatePickerLocalePresentation();
+  const resolvedFormat = localeAware ? localePresentation.format : format;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const todayIsSelectable =
+    (!minDate || today >= minDate) && (!maxDate || today <= maxDate);
 
   const resolvedInputClassName =
     inputClassName ||
@@ -76,7 +97,7 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
       {!hideLabel && (
         <label htmlFor={id} className={labelClassName}>
           {label}
-          {showFormatInLabel ? ` (${formatLabelMap[format]})` : ""}
+          {showFormatInLabel ? ` (${formatLabelMap[resolvedFormat]})` : ""}
         </label>
       )}
 
@@ -87,12 +108,15 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
           name={name}
           selected={value}
           onChange={onChange}
-          dateFormat={format}
-          placeholderText={placeholder || formatLabelMap[format]}
+          dateFormat={resolvedFormat}
+          placeholderText={placeholder || formatLabelMap[resolvedFormat]}
           disabled={disabled}
           required={required}
           minDate={minDate}
           maxDate={maxDate}
+          openToDate={value || minDate || undefined}
+          todayButton={showTodayShortcut && todayIsSelectable ? "Today" : undefined}
+          calendarStartDay={localeAware ? localePresentation.calendarStartDay : undefined}
           popperPlacement="bottom-start"
           className={resolvedInputClassName}
           wrapperClassName="w-full"
