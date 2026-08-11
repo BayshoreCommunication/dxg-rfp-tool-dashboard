@@ -13,6 +13,7 @@ import GlobalTimeInput from "@/components/shared/GlobalTimeInput";
 import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./eventTimeZone";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
 import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
+import RoomDeletionDialog from "../RoomDeletionDialog";
 import {
   SCREEN_SIZE_OTHER,
   SCREEN_SIZE_VENDOR_RECOMMENDATION,
@@ -2459,6 +2460,12 @@ const RoomAndProductionStep = ({
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
   const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
+  const [roomPendingDeletion, setRoomPendingDeletion] = useState<{
+    index: number;
+    label: string;
+    functionCount: number;
+    peakAttendance: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const roomCardRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const roomCount = Math.max(1, Number(numberOfEventRooms) || 1);
@@ -2523,23 +2530,34 @@ const RoomAndProductionStep = ({
     setExpandedRooms(new Set([nextRooms.length - 1]));
   };
 
-  const deleteRoom = (i: number) => {
+  const requestRoomDeletion = (i: number) => {
     if (rooms.length <= 1) return;
     const room = rooms[i];
-    const label = room?.roomLocation.trim() || room?.roomFunction.trim() || `Room ${i + 1}`;
-    if (!window.confirm(`Remove "${label}"? This can't be undone.`)) return;
+    if (!room) return;
+    setRoomPendingDeletion({
+      index: i,
+      label: roomLabel(room, i),
+      functionCount: schedulesForRoom(room).filter((entry) => entry.functionName.trim()).length,
+      peakAttendance: room.estimatedAttendeesInRoom,
+    });
+  };
 
-    const nextRooms = rooms.filter((_, idx) => idx !== i);
+  const confirmRoomDeletion = () => {
+    if (!roomPendingDeletion || rooms.length <= 1) return;
+    const { index, label } = roomPendingDeletion;
+    const nextRooms = rooms.filter((_, idx) => idx !== index);
+    setRoomPendingDeletion(null);
     onRoomsChange(nextRooms);
     onNumberOfEventRoomsChange(String(nextRooms.length));
     setExpandedRooms((prev) => {
       const next = new Set<number>();
       prev.forEach((idx) => {
-        if (idx < i) next.add(idx);
-        else if (idx > i) next.add(idx - 1);
+        if (idx < index) next.add(idx);
+        else if (idx > index) next.add(idx - 1);
       });
       return next;
     });
+    toast.success(`${label} removed. ${nextRooms.length} room${nextRooms.length === 1 ? " remains" : "s remain"}.`);
   };
 
   const handleScheduleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -2731,7 +2749,7 @@ const RoomAndProductionStep = ({
               onToggle={() => toggleRoom(i)}
               onChange={(u) => updateRoom(i, u)}
               onDuplicate={() => duplicateRoom(i)}
-              onDelete={() => deleteRoom(i)}
+              onDelete={() => requestRoomDeletion(i)}
               canDelete={rooms.length > 1}
               showErrors={showErrors}
               eventTimeZone={eventTimeZone}
@@ -2743,6 +2761,17 @@ const RoomAndProductionStep = ({
           </div>
         ))}
       </div>
+
+      {roomPendingDeletion && (
+        <RoomDeletionDialog
+          roomName={roomPendingDeletion.label}
+          roomPosition={`Room ${roomPendingDeletion.index + 1} of ${rooms.length}`}
+          functionCount={roomPendingDeletion.functionCount}
+          peakAttendance={roomPendingDeletion.peakAttendance}
+          onCancel={() => setRoomPendingDeletion(null)}
+          onConfirm={confirmRoomDeletion}
+        />
+      )}
 
       {/* Footer nav */}
       <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
