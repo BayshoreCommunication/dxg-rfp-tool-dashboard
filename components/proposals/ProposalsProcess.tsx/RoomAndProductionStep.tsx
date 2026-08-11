@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Download, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Download, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
@@ -36,6 +36,7 @@ import {
   ledWallPlanMissingFields,
   normalizeLedWalls,
 } from "../ledWallPlan";
+import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -571,6 +572,7 @@ const RoomForm = ({
   roomIndex,
   eventTimeZone,
   onOpenScenicInspirations,
+  mode,
 }: {
   data: RoomByRoomData;
   onChange: (u: Partial<RoomByRoomData>) => void;
@@ -579,6 +581,7 @@ const RoomForm = ({
   /** Schedule times are wall-clock at the venue, so they render in its zone. */
   eventTimeZone?: string | null;
   onOpenScenicInspirations?: () => void;
+  mode: ProposalExperienceMode;
 }) => {
   const uid = `room-${roomIndex}`;
   const errCls = (v: string) =>
@@ -793,6 +796,8 @@ const RoomForm = ({
         </button>
       </div>
 
+      {mode === "advanced" ? (
+      <>
       {/* Room-wide production access times */}
       <div>
         <button
@@ -1857,6 +1862,17 @@ const RoomForm = ({
           onChange={(e) => onChange({ otherRolesNeeded: e.target.value })}
         />
       </div>
+      </>
+      ) : (
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+          <p className="flex items-center gap-2 text-sm font-extrabold text-violet-950">
+            <Sparkles size={16} aria-hidden="true" /> Vendor-recommended production scope
+          </p>
+          <p className="mt-1 text-xs leading-5 text-violet-800">
+            Basic mode keeps the room schedule concise and asks vendors to recommend the right audio, video, lighting, and show crew. Open Advanced production to edit the technical specification directly.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
@@ -1875,6 +1891,7 @@ const RoomCard = ({
   showErrors,
   eventTimeZone,
   onOpenScenicInspirations,
+  mode,
 }: {
   room: RoomByRoomData;
   index: number;
@@ -1888,6 +1905,7 @@ const RoomCard = ({
   showErrors: boolean;
   eventTimeZone?: string | null;
   onOpenScenicInspirations?: () => void;
+  mode: ProposalExperienceMode;
 }) => {
   const roomLabel = room.roomLocation.trim() || room.roomFunction.trim() || `Room ${index + 1}`;
   const functionCount = schedulesForRoom(room).filter((entry) => entry.functionName.trim()).length;
@@ -1895,11 +1913,16 @@ const RoomCard = ({
   return (
     <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
       <div
-        className="flex cursor-pointer items-center justify-between px-5 py-4 transition-colors hover:bg-slate-50"
+        className="flex items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-slate-50"
         style={{ borderBottom: isExpanded ? "1px solid #e4e4e4" : "none" }}
-        onClick={onToggle}
       >
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isExpanded}
+          aria-controls={`room-panel-${index}`}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]"
+        >
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
             style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
@@ -1920,8 +1943,11 @@ const RoomCard = ({
               </p>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <span className="ml-auto text-[#969798]" aria-hidden="true">
+            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </span>
+        </button>
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onDuplicate}
@@ -1942,21 +1968,21 @@ const RoomCard = ({
               Remove
             </button>
           )}
-          <div className="ml-1 text-[#969798]">
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </div>
         </div>
       </div>
 
       {isExpanded && (
-        <RoomForm
-          data={room}
-          onChange={onChange}
-          showErrors={showErrors}
-          roomIndex={index}
-          eventTimeZone={eventTimeZone}
-          onOpenScenicInspirations={onOpenScenicInspirations}
-        />
+        <div id={`room-panel-${index}`}>
+          <RoomForm
+            data={room}
+            onChange={onChange}
+            showErrors={showErrors}
+            roomIndex={index}
+            eventTimeZone={eventTimeZone}
+            onOpenScenicInspirations={onOpenScenicInspirations}
+            mode={mode}
+          />
+        </div>
       )}
     </div>
   );
@@ -1968,7 +1994,10 @@ const RoomCard = ({
  * the inputs so the wizard's blocking check and the on-screen errors can never
  * disagree about what "complete" means.
  */
-export const missingRoomFields = (room: RoomByRoomData): string[] => {
+export const missingRoomFields = (
+  room: RoomByRoomData,
+  mode: ProposalExperienceMode = "advanced",
+): string[] => {
   const missing: string[] = [];
   if (!room.roomLocation.trim()) missing.push("physical room name");
   const schedules = room.functions.length > 0 ? room.functions : [];
@@ -1995,9 +2024,11 @@ export const missingRoomFields = (room: RoomByRoomData): string[] => {
       estimatedAttendees: room.estimatedAttendeesInRoom,
     })) missing.push("end time after start time");
   }
-  if (room.showCrewNeeded.length === 0) missing.push("show crew");
-  missing.push(...cameraPlanMissingFields(room.cameras));
-  missing.push(...ledWallPlanMissingFields(room));
+  if (mode === "advanced") {
+    if (room.showCrewNeeded.length === 0) missing.push("show crew");
+    missing.push(...cameraPlanMissingFields(room.cameras));
+    missing.push(...ledWallPlanMissingFields(room));
+  }
   if (
     Number(room.largeMonitorsOrScreenProjector.numberOfScreens) > 0 &&
     customScreenSizeIsMissing(room.largeMonitorsOrScreenProjector)
@@ -2019,9 +2050,10 @@ export const roomLabel = (room: RoomByRoomData, index: number): string =>
 /** First room that still blocks the step, or null when every room is complete. */
 export const firstIncompleteRoom = (
   rooms: RoomByRoomData[],
+  mode: ProposalExperienceMode = "advanced",
 ): { index: number; label: string; missing: string[] } | null => {
   for (const [index, room] of rooms.entries()) {
-    const missing = missingRoomFields(room);
+    const missing = missingRoomFields(room, mode);
     if (missing.length) return { index, label: roomLabel(room, index), missing };
   }
   return null;
@@ -2052,7 +2084,79 @@ interface Props {
   /** Venue & Schedule time-zone label; uploaded schedule times are wall-clock there. */
   eventTimeZone?: string | null;
   onOpenScenicInspirations?: () => void;
+  eventStartDate?: string;
+  eventEndDate?: string;
+  eventAttendance?: string;
+  onTemplateApplied?: (template: string, confidence: number, explanation: string) => void;
+  mode?: ProposalExperienceMode;
 }
+
+export const ROOM_TEMPLATES = [
+  { id: "general", label: "General Session", setup: "Theater", share: 1, description: "Main stage, screens, audio, cameras, lighting" },
+  { id: "breakout", label: "Breakout", setup: "Classroom", share: 0.25, description: "Presentation, speech audio, flexible display" },
+  { id: "workshop", label: "Workshop", setup: "Classroom", share: 0.15, description: "Facilitated learning with presentation support" },
+  { id: "reception", label: "Reception", setup: "Round of 8", share: 0.5, description: "Background audio, announcements, ambient lighting" },
+] as const;
+
+type RoomTemplate = (typeof ROOM_TEMPLATES)[number];
+
+export const roomFromTemplate = (
+  template: RoomTemplate,
+  eventStartDate: string,
+  eventEndDate: string,
+  eventAttendance: string,
+  eventTimeZone?: string | null,
+): RoomByRoomData => {
+  const totalAttendance = Math.max(1, Number(eventAttendance) || 100);
+  const attendees = String(Math.max(10, Math.round(totalAttendance * template.share)));
+  const start = eventStartDate
+    ? wallClockToIso(eventStartDate, { hours: 9, minutes: 0 }, eventTimeZone)
+    : "";
+  const endDate = eventEndDate || eventStartDate;
+  const end = endDate
+    ? wallClockToIso(endDate, { hours: 17, minutes: 0 }, eventTimeZone)
+    : "";
+  const isReception = template.id === "reception";
+  const needsCamera = template.id === "general";
+
+  return {
+    ...defaultRoom(),
+    roomLocation: template.label,
+    roomFunction: template.label,
+    roomSetup: template.setup,
+    scheduleDate: eventStartDate,
+    showStartDateTime: start,
+    showEndDateTime: end,
+    estimatedAttendeesInRoom: attendees,
+    functions: [{
+      functionName: template.label,
+      scheduleDate: eventStartDate,
+      scheduleDay: "",
+      showStartDateTime: start,
+      showEndDateTime: end,
+      roomSetup: template.setup,
+      estimatedAttendees: attendees,
+    }],
+    audioSystemRequired: "Yes",
+    audioSystemForHowManyPpl: attendees,
+    podiumMic: { podiumMic: isReception ? "No" : "Yes", podiumMicQty: isReception ? "" : "1" },
+    cameras: {
+      ...defaultRoom().cameras,
+      cameras: needsCamera ? "Yes" : "No",
+      cameraPlanMode: needsCamera ? CAMERA_PLAN_VENDOR_RECOMMENDATION : "",
+    },
+    largeMonitorsOrScreenProjector: {
+      ...defaultRoom().largeMonitorsOrScreenProjector,
+      largeMonitorsOrScreenProjector: "Yes",
+      numberOfScreens: "1",
+      screenSize: SCREEN_SIZE_VENDOR_RECOMMENDATION,
+    },
+    lightingRequirements: isReception
+      ? ["None / Minimal — House lighting only"]
+      : ["Stage Wash"],
+    showCrewNeeded: ["Vendor Recommendation Requested"],
+  };
+};
 
 const RoomAndProductionStep = ({
   rooms,
@@ -2069,6 +2173,11 @@ const RoomAndProductionStep = ({
   focusRoom = null,
   eventTimeZone = null,
   onOpenScenicInspirations,
+  eventStartDate = "",
+  eventEndDate = "",
+  eventAttendance = "",
+  onTemplateApplied,
+  mode = "advanced",
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
   const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
@@ -2100,6 +2209,27 @@ const RoomAndProductionStep = ({
 
   const updateRoom = (i: number, updates: Partial<RoomByRoomData>) =>
     onRoomsChange(rooms.map((r, idx) => (idx === i ? { ...r, ...updates } : r)));
+
+  const applyRoomTemplate = (template: RoomTemplate) => {
+    const templatedRoom = roomFromTemplate(
+      template,
+      eventStartDate,
+      eventEndDate,
+      eventAttendance,
+      eventTimeZone,
+    );
+    const firstRoomIsEmpty = rooms.length === 1 && !rooms[0]?.roomLocation.trim() && !rooms[0]?.roomFunction.trim();
+    const nextRooms = firstRoomIsEmpty ? [templatedRoom] : [...rooms, templatedRoom];
+    onRoomsChange(nextRooms);
+    onNumberOfEventRoomsChange(String(nextRooms.length));
+    setExpandedRooms(new Set([nextRooms.length - 1]));
+    onTemplateApplied?.(
+      template.label,
+      eventStartDate && eventAttendance ? 0.86 : 0.68,
+      `Based on ${eventAttendance ? "attendance" : "default attendance"}, event dates, and a typical ${template.label.toLowerCase()} AV profile.`,
+    );
+    toast.success(`${template.label} template added. Review the assumptions before publishing.`);
+  };
 
   const duplicateRoom = (i: number) => {
     const source = rooms[i];
@@ -2181,14 +2311,6 @@ const RoomAndProductionStep = ({
     >
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 2B of 9
-          </span>
-          <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-600">
-            Repeating Module
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">Room Specifications &amp; Schedule</h2>
         <p className="mt-1 text-sm text-[#969798]">
           One module per room — each room generates its own section in the RFP.
@@ -2201,6 +2323,32 @@ const RoomAndProductionStep = ({
           <RoomRecommendationsPanel proposalId={proposalId} onApplied={onRecommendationsApplied} />
         </div>
       )}
+
+      <div className="px-6 pt-6">
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+          <div className="flex items-start gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-violet-700 shadow-sm"><Sparkles size={18} aria-hidden="true" /></span>
+            <div>
+              <p className="text-sm font-extrabold text-violet-950">Start with a reusable room template</p>
+              <p className="mt-1 text-xs leading-5 text-violet-800">Templates generate a schedule and recommended AV starting point. Every applied assumption remains editable and appears in Final Review.</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {ROOM_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => applyRoomTemplate(template)}
+                className="min-h-20 rounded-xl border border-violet-200 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+                aria-label={`Add ${template.label} room template`}
+              >
+                <span className="block text-sm font-extrabold text-slate-900">{template.label}</span>
+                <span className="mt-1 block text-xs leading-4 text-slate-500">{template.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Number of Event Rooms — stepper */}
       <div className="px-6 pt-6">
@@ -2310,6 +2458,7 @@ const RoomAndProductionStep = ({
               showErrors={showErrors}
               eventTimeZone={eventTimeZone}
               onOpenScenicInspirations={onOpenScenicInspirations}
+              mode={mode}
             />
           </div>
         ))}
@@ -2332,7 +2481,11 @@ const RoomAndProductionStep = ({
           style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-          {isInPersonOnly ? "Content & Creative" : "Hybrid & Virtual"}
+          {mode === "basic"
+            ? "Investment & timeline"
+            : isInPersonOnly
+              ? "Content & Creative"
+              : "Hybrid & Virtual"}
           <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>

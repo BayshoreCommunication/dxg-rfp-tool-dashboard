@@ -7,6 +7,8 @@ import {
   functionScheduleEndIsAfterStart,
   missingRoomFields,
   parseScheduleWorkbook,
+  roomFromTemplate,
+  ROOM_TEMPLATES,
   venueTimeValue,
 } from "./RoomAndProductionStep";
 import { SCREEN_SIZE_OTHER, SCREEN_SIZE_VENDOR_RECOMMENDATION } from "../screenSize";
@@ -193,6 +195,30 @@ describe("mandatory function schedules", () => {
     };
 
     expect(missingRoomFields(room)).not.toContain("custom monitor size");
+  });
+
+  it("keeps Basic mode validation to room and schedule essentials", () => {
+    const room = completeRoom();
+    room.showCrewNeeded = [];
+    room.cameras = { ...room.cameras, cameras: "Yes", cameraPlanMode: "" };
+
+    expect(missingRoomFields(room, "basic")).toEqual([]);
+    expect(missingRoomFields(room, "advanced")).toEqual(
+      expect.arrayContaining(["show crew", "camera plan"]),
+    );
+  });
+
+  it("anchors generated room-template times to the venue time zone", () => {
+    const room = roomFromTemplate(
+      ROOM_TEMPLATES[0],
+      "2026-08-20",
+      "2026-08-20",
+      "300",
+      "Central Time (CT)",
+    );
+
+    expect(venueTimeValue(room.showStartDateTime, "Central Time (CT)")).toBe("09:00");
+    expect(venueTimeValue(room.showEndDateTime, "Central Time (CT)")).toBe("17:00");
   });
 });
 

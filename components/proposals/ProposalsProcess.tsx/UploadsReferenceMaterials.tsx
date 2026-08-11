@@ -583,11 +583,6 @@ const UploadsReferenceMaterials = ({
     >
       {/* ── Header ── */}
       <div className="border-b border-[#e4e4e4] px-8 py-6">
-        <div className="mb-1 flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 8 of 9
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">Uploads &amp; Co-Vendors</h2>
         <p className="mt-1 text-sm text-[#969798]">
           Reference files, brand assets, co-vendor coordination, and NDA settings.
@@ -776,7 +771,7 @@ const UploadsReferenceMaterials = ({
             </span>
             <div className="flex-1">
               <p className="text-sm font-bold text-brand-dark">
-                Venue AV contact available from Page 6
+                Venue AV contact available from Venue &amp; Technical
               </p>
               <p className="mt-0.5 text-xs text-[#0069a0]">
                 {inHouseAvCompanyName && (

@@ -739,9 +739,8 @@ export default function AddProposalUpload({
               <div>
                 <h3 className="text-lg font-bold text-white">Quick guide</h3>
                 <p className="mt-0.5 text-xs leading-5 text-white/80">
-                  Upload any file and our AI pre-fills all 9 steps — event, venue
-                  schedule, AV, hybrid/virtual, content, video recording,
-                  technical, budget &amp; contact.
+                  Upload a brief and our AI structures the event, venue, room,
+                  production, budget, timeline, and contact fields for your review.
                 </p>
               </div>
             </div>

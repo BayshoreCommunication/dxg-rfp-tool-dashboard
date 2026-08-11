@@ -4,6 +4,10 @@ import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import type { BudgetData, ProposalSettings } from "../AddNewProposal";
+import {
+  procurementTimelineIssues,
+  type ProposalExperienceMode,
+} from "@/lib/proposals/proposalExperience";
 import { InfoTooltip, toggleItem } from "./shared";
 
 /* ─── Style constants ─── */
@@ -59,10 +63,10 @@ const YesNo = ({
   onChange: (v: "YES" | "NO") => void;
 }) => (
   <div className="flex gap-3">
-    <button type="button" className={yesNoCls("YES", value)} onClick={() => onChange("YES")}>
+    <button type="button" aria-pressed={value === "YES"} className={yesNoCls("YES", value)} onClick={() => onChange("YES")}>
       ✓ Yes
     </button>
-    <button type="button" className={yesNoCls("NO", value)} onClick={() => onChange("NO")}>
+    <button type="button" aria-pressed={value === "NO"} className={yesNoCls("NO", value)} onClick={() => onChange("NO")}>
       ✗ No
     </button>
   </div>
@@ -266,6 +270,8 @@ interface Props {
   hasLedWallOnAnyRoom?: boolean;
   contentServicesNeeded?: string;
   venueName?: string;
+  eventStartDate?: string;
+  mode?: ProposalExperienceMode;
 }
 
 const defaultEvalMatrix = () => ({
@@ -290,6 +296,8 @@ const BudgetProposalPreferences = ({
   hasLedWallOnAnyRoom,
   contentServicesNeeded,
   venueName,
+  eventStartDate,
+  mode = "advanced",
 }: Props) => {
   const pickerFormat = toPickerFormat(proposalSettings.proposals.dateFormat);
   /* ─── Safe data ─── */
@@ -340,6 +348,9 @@ const BudgetProposalPreferences = ({
   );
   const matrixOk = activeSum === 100;
   const remaining = 100 - activeSum;
+  const timelineIssues = procurementTimelineIssues(safeData, eventStartDate);
+  const timelineError = (field: keyof BudgetData) =>
+    timelineIssues.find((issue) => issue.field === field)?.message;
 
   /* ─── Quick-balance: proportionally scale active rows to sum to 100 ─── */
   const quickBalance = () => {
@@ -436,16 +447,13 @@ const BudgetProposalPreferences = ({
     >
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 7 of 9
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">
-          Investment &amp; Evaluation
+          {mode === "basic" ? "Investment & Timeline" : "Investment & Evaluation"}
         </h2>
         <p className="mt-1 text-sm text-[#969798]">
-          Investment tier, evaluation matrix, proposal format requirements, and procurement timeline.
+          {mode === "basic"
+            ? "Confirm a planning budget and a realistic procurement timeline."
+            : "Investment tier, evaluation matrix, proposal format requirements, and procurement timeline."}
         </p>
       </div>
 
@@ -469,6 +477,7 @@ const BudgetProposalPreferences = ({
                 key={tier.value}
                 type="button"
                 onClick={() => onChange({ estimatedAvBudget: tier.value })}
+                aria-pressed={safeData.estimatedAvBudget === tier.value}
                 className={tierCardCls(tier.value, safeData.estimatedAvBudget)}
               >
                 {tier.producerCall && (
@@ -539,6 +548,7 @@ const BudgetProposalPreferences = ({
                 key={opt}
                 type="button"
                 onClick={() => onChange({ budgetFlexibility: opt })}
+                aria-pressed={safeData.budgetFlexibility === opt}
                 className={flexPillCls(opt, safeData.budgetFlexibility)}
               >
                 {opt}
@@ -547,6 +557,7 @@ const BudgetProposalPreferences = ({
           </div>
         </div>
 
+        {mode === "advanced" && <>
         {/* ════════════════════════════════════════
             BLOCK B — Proposal Format Requirements
         ════════════════════════════════════════ */}
@@ -574,6 +585,7 @@ const BudgetProposalPreferences = ({
                       ),
                     })
                   }
+                  aria-pressed={checked}
                   className={formatCardCls(checked)}
                 >
                   <span className={formatCheckCls(checked)}>
@@ -821,6 +833,8 @@ const BudgetProposalPreferences = ({
           />
         </div>
 
+        </>}
+
         {/* ════════════════════════════════════════
             BLOCK D — Procurement Timeline
         ════════════════════════════════════════ */}
@@ -842,11 +856,12 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.vendorQuestionsDueDate)}
               onChange={(value) => onChange({ vendorQuestionsDueDate: fromDateToIso(value) })}
-              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.vendorQuestionsDueDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorQuestionsDueDate) || timelineError("vendorQuestionsDueDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.vendorQuestionsDueDate && (
               <p className={errorClass}>Required.</p>
             )}
+            {timelineError("vendorQuestionsDueDate") && <p className={errorClass}>{timelineError("vendorQuestionsDueDate")}</p>}
           </div>
           <div>
             <label className={labelClass}>
@@ -862,11 +877,12 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.responseToVendorQuestionsDate)}
               onChange={(value) => onChange({ responseToVendorQuestionsDate: fromDateToIso(value) })}
-              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.responseToVendorQuestionsDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.responseToVendorQuestionsDate) || timelineError("responseToVendorQuestionsDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.responseToVendorQuestionsDate && (
               <p className={errorClass}>Required.</p>
             )}
+            {timelineError("responseToVendorQuestionsDate") && <p className={errorClass}>{timelineError("responseToVendorQuestionsDate")}</p>}
           </div>
         </div>
 
@@ -886,11 +902,12 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.proposalSubmissionDueDate)}
               onChange={(value) => onChange({ proposalSubmissionDueDate: fromDateToIso(value) })}
-              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.proposalSubmissionDueDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.proposalSubmissionDueDate) || timelineError("proposalSubmissionDueDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.proposalSubmissionDueDate && (
               <p className={errorClass}>Required.</p>
             )}
+            {timelineError("proposalSubmissionDueDate") && <p className={errorClass}>{timelineError("proposalSubmissionDueDate")}</p>}
           </div>
           <div>
             <label className={labelClass}>
@@ -906,11 +923,12 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.shortlistNotificationDate)}
               onChange={(value) => onChange({ shortlistNotificationDate: fromDateToIso(value) })}
-              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.shortlistNotificationDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.shortlistNotificationDate) || timelineError("shortlistNotificationDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.shortlistNotificationDate && (
               <p className={errorClass}>Required.</p>
             )}
+            {timelineError("shortlistNotificationDate") && <p className={errorClass}>{timelineError("shortlistNotificationDate")}</p>}
           </div>
         </div>
 
@@ -948,12 +966,13 @@ const BudgetProposalPreferences = ({
                   format={pickerFormat}
                   value={fromIsoToDate(safeData.vendorPresentationDate)}
                   onChange={(value) => onChange({ vendorPresentationDate: fromDateToIso(value) })}
-                  inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.vendorPresentationDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+                  inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorPresentationDate) || timelineError("vendorPresentationDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
                 />
               </div>
               {showErrors && !safeData.vendorPresentationDate && (
                 <p className={errorClass}>Required.</p>
               )}
+              {timelineError("vendorPresentationDate") && <p className={errorClass}>{timelineError("vendorPresentationDate")}</p>}
             </div>
           )}
         </div>
@@ -974,12 +993,13 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.vendorSelectionDate)}
               onChange={(value) => onChange({ vendorSelectionDate: fromDateToIso(value) })}
-              inputClassName={`${inputClass} pr-12 ${showErrors && !safeData.vendorSelectionDate ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorSelectionDate) || timelineError("vendorSelectionDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
           </div>
           {showErrors && !safeData.vendorSelectionDate && (
             <p className={errorClass}>Required.</p>
           )}
+          {timelineError("vendorSelectionDate") && <p className={errorClass}>{timelineError("vendorSelectionDate")}</p>}
         </div>
 
         {/* Target Decision Date */}
@@ -998,9 +1018,10 @@ const BudgetProposalPreferences = ({
               format={pickerFormat}
               value={fromIsoToDate(safeData.decisionDate)}
               onChange={(value) => onChange({ decisionDate: fromDateToIso(value) })}
-              inputClassName={`${inputClass} pr-12`}
+              inputClassName={`${inputClass} pr-12 ${timelineError("decisionDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
             />
           </div>
+          {timelineError("decisionDate") && <p className={errorClass}>{timelineError("decisionDate")}</p>}
         </div>
 
         {/* Competitive Bid */}
@@ -1036,6 +1057,7 @@ const BudgetProposalPreferences = ({
           )}
         </div>
 
+        {mode === "advanced" && <>
         {/* ── Producer Consultation ── */}
         <Group label="Producer Consultation" />
 
@@ -1107,6 +1129,7 @@ const BudgetProposalPreferences = ({
               <p className={errorClass}>Please specify how you heard about us.</p>
             )}
         </div>
+        </>}
 
       </div>
 
@@ -1118,7 +1141,7 @@ const BudgetProposalPreferences = ({
           className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
-          Venue &amp; Technical
+          {mode === "basic" ? "Room specifications" : "Venue & Technical"}
         </button>
         <button
           type="button"
@@ -1127,7 +1150,7 @@ const BudgetProposalPreferences = ({
           style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-          Uploads &amp; Co-Vendors
+          {mode === "basic" ? "Final review" : "Uploads & Co-Vendors"}
           <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>

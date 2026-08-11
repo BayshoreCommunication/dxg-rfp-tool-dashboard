@@ -13,7 +13,7 @@ jest.mock('next/navigation', () => ({
 }))
 
 jest.mock('react-toastify', () => ({
-  toast: { success: jest.fn(), error: jest.fn(), warning: jest.fn() },
+  toast: { success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn() },
 }))
 
 const mockGetProposals = jest.fn()
@@ -200,6 +200,33 @@ describe('EmailSend — send validation', () => {
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Please enter an email subject.'))
   })
+
+  it('requires explicit review approval before sending', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'vendor@test.com' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Review the recipients and invitation, then approve sending.',
+      ),
+    )
+    expect(mockSendEmail).not.toHaveBeenCalled()
+  })
+})
+
+describe('EmailSend — personalized invitation', () => {
+  it('generates proposal-specific copy and marks it for review', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    fireEvent.click(screen.getByRole('button', { name: /generate personalized draft/i }))
+    expect(screen.getByLabelText('Subject')).toHaveValue('Invitation to respond: Bayshore Summit 2026')
+    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toContain('Bayshore Summit 2026')
+    expect(screen.getByText(/AI-generated · 86% confidence/i)).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /reviewed the recipients/i })).not.toBeChecked()
+  })
 })
 
 describe('EmailSend — successful send', () => {
@@ -214,6 +241,7 @@ describe('EmailSend — successful send', () => {
     const input = screen.getByPlaceholderText(/john@email.com/i)
     fireEvent.change(input, { target: { value: 'vendor@test.com' } })
     fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('checkbox', { name: /reviewed the recipients/i }))
 
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
 
@@ -236,6 +264,7 @@ describe('EmailSend — successful send', () => {
     const input = screen.getByPlaceholderText(/john@email.com/i)
     fireEvent.change(input, { target: { value: 'vendor@test.com' } })
     fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('checkbox', { name: /reviewed the recipients/i }))
 
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
     await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith('/email'))
@@ -249,6 +278,7 @@ describe('EmailSend — successful send', () => {
     const input = screen.getByPlaceholderText(/john@email.com/i)
     fireEvent.change(input, { target: { value: 'vendor@test.com' } })
     fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('checkbox', { name: /reviewed the recipients/i }))
 
     fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Server error'))

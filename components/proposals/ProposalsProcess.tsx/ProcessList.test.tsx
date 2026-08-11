@@ -78,12 +78,11 @@ describe("ProcessList", () => {
       .toHaveClass("min-w-[180px]", "@min-[1000px]:min-w-0");
   });
 
-  it("uses sequential visible numbering and exposes detailed form progress", () => {
+  it("uses sequential visible numbering without introducing a second progress indicator", () => {
     render(<ProcessList activeStep={3} hideStepIds={[4]} completedStepIds={[1, 2]} />);
 
     expect(screen.queryByText("2B")).not.toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "Detailed proposal form progress" }))
-      .toHaveAttribute("aria-valuenow", "22");
-    expect(screen.getByText("2 of 9 complete")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.getByText("Workflow sections")).toBeInTheDocument();
   });
 });

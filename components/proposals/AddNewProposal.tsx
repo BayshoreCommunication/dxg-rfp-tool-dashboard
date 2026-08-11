@@ -15,7 +15,7 @@ import BudgetProposalPreferences from "./ProposalsProcess.tsx/BudgetProposalPref
 import ContactInfo from "./ProposalsProcess.tsx/ContactInfo";
 import EventForm from "./ProposalsProcess.tsx/EventForm";
 import ProcessList from "./ProposalsProcess.tsx/ProcessList";
-import RoomAndProductionStep, { defaultRoom, firstIncompleteRoom } from "./ProposalsProcess.tsx/RoomAndProductionStep";
+import RoomAndProductionStep, { defaultRoom, firstIncompleteRoom, roomLabel } from "./ProposalsProcess.tsx/RoomAndProductionStep";
 import HybridVirtualStep from "./ProposalsProcess.tsx/HybridVirtualStep";
 import VenueScheduleStep, { defaultVenueSchedule, venueScheduleValidationErrors, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
 import ContentCreativeStep, { defaultContentCreative, type ContentCreativeData } from "./ProposalsProcess.tsx/ContentCreativeStep";
@@ -28,6 +28,8 @@ import ProposalWorkflowShell from "./ProposalWorkflowShell";
 import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
 import ProposalValidationSummary from "./ProposalValidationSummary";
+import ProposalExperienceBar from "./ProposalExperienceBar";
+import ProposalFinalReview, { type ProposalAuditEntry } from "./ProposalFinalReview";
 import { CAMERA_PLAN_SPECIFIC, cameraPlanTotal } from "./cameraPlan";
 import {
   ensureLedWallSlots,
@@ -35,6 +37,16 @@ import {
   normalizeLedWalls,
   type LedWallSpecification,
 } from "./ledWallPlan";
+import {
+  buildVendorReadyStatementOfWork,
+  estimateInitialBudget,
+  procurementTimelineIssues,
+  proposalStepOrder,
+  type AnswerProvenance,
+  type AnswerSource,
+  type ProposalChecklistIssue,
+  type ProposalExperienceMode,
+} from "@/lib/proposals/proposalExperience";
 
 /* ─── Proposal data by step ─── */
 export type EventData = {
@@ -1340,6 +1352,47 @@ const AddNewProposal = ({
   const [copyingSaving, setCopyingSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [experienceMode, setExperienceMode] = useState<ProposalExperienceMode>(
+    isEditMode ? "advanced" : "basic",
+  );
+  const [fieldProvenance, setFieldProvenance] = useState<Record<string, AnswerProvenance>>({});
+  const [auditTrail, setAuditTrail] = useState<ProposalAuditEntry[]>([]);
+  const [assumptionsApproved, setAssumptionsApproved] = useState(false);
+  const auditHydratedRef = useRef(false);
+  const auditStorageKey = `rfpilot:proposal-audit:${proposalId || "new"}`;
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(auditStorageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as {
+          version?: number;
+          trail?: ProposalAuditEntry[];
+          provenance?: Record<string, AnswerProvenance>;
+        };
+        if (parsed.version === 1 && Array.isArray(parsed.trail)) setAuditTrail(parsed.trail.slice(-50));
+        if (parsed.version === 1 && parsed.provenance && typeof parsed.provenance === "object") {
+          setFieldProvenance(parsed.provenance);
+        }
+      }
+    } catch {
+      // A corrupt local audit should never block proposal authoring.
+    } finally {
+      auditHydratedRef.current = true;
+    }
+  }, [auditStorageKey]);
+
+  useEffect(() => {
+    if (!auditHydratedRef.current) return;
+    try {
+      window.localStorage.setItem(
+        auditStorageKey,
+        JSON.stringify({ version: 1, trail: auditTrail.slice(-50), provenance: fieldProvenance }),
+      );
+    } catch {
+      // Storage can be unavailable in private browsing; the in-session audit remains visible.
+    }
+  }, [auditStorageKey, auditTrail, fieldProvenance]);
 
   // Room the step should open and scroll to after it blocked Continue. The
   // token makes a repeat attempt on the same room re-trigger the scroll.
@@ -1509,28 +1562,68 @@ const AddNewProposal = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proposalData.venueSchedule.numberOfEventRooms]);
 
+  const addAuditEntry = (
+    label: string,
+    source: AnswerSource,
+  ) => {
+    setAuditTrail((current) => [
+      ...current,
+      {
+        id: `${Date.now()}-${current.length}`,
+        label,
+        source,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  };
+
   const updateProposalSection = <K extends ProposalSectionKey>(
     section: K,
     updates: Partial<ProposalData[K]>,
+    provenance: AnswerProvenance = { source: "user" },
   ) => {
     setProposalData((prev) => ({
       ...prev,
       [section]: { ...prev[section], ...updates },
     }));
+    setFieldProvenance((current) => ({
+      ...current,
+      [String(section)]: provenance,
+    }));
+    setAssumptionsApproved(false);
+  };
+
+  const markExtractedSections = (normalized: Partial<ProposalData>) => {
+    const next: Record<string, AnswerProvenance> = {};
+    Object.keys(normalized).forEach((section) => {
+      next[section] = {
+        source: "ai",
+        confidence: 0.78,
+        explanation: "Extracted from the uploaded brief and left editable for review.",
+      };
+    });
+    setFieldProvenance((current) => ({ ...current, ...next }));
+    setAssumptionsApproved(false);
+    addAuditEntry(`AI extracted ${Object.keys(next).length} proposal sections from the uploaded brief`, "ai");
   };
 
   const eventValidationIssues = () => {
-    const { eventName, startDate, endDate } = proposalData.event;
+    const { eventName, startDate, endDate, attendees, eventType } = proposalData.event;
     return [
       !eventName.trim() ? "Event name" : "",
+      !eventType.eventType.trim() ? "Event type" : "",
+      eventType.eventType === "Other" && !eventType.eventTypeOther.trim()
+        ? "Custom event type"
+        : "",
       !startDate.trim() ? "Start date" : "",
       !endDate.trim() ? "End date" : "",
+      !(Number(attendees) > 0) ? "Total attendance" : "",
     ].filter(Boolean);
   };
 
   const isEventStepValid = () => eventValidationIssues().length === 0;
 
-  const isRoomAndProductionStepValid = () => firstIncompleteRoom(rooms) === null;
+  const isRoomAndProductionStepValid = () => firstIncompleteRoom(rooms, experienceMode) === null;
 
   /**
    * Blocking Continue silently is indistinguishable from a broken button when
@@ -1538,11 +1631,40 @@ const AddNewProposal = ({
    * the room and what it needs, then ask the step to open and reveal it.
    */
   const reportIncompleteRoom = () => {
-    const incomplete = firstIncompleteRoom(rooms);
+    const incomplete = firstIncompleteRoom(rooms, experienceMode);
     if (!incomplete) return;
     toast.error(`${incomplete.label} still needs: ${incomplete.missing.join(", ")}.`);
     setFocusRoom({ index: incomplete.index, token: Date.now() });
   };
+
+  const venueScheduleStepIssues = () => {
+    const data = proposalData.venueSchedule;
+    const required = [
+      !data.venueName.trim() ? "Venue name" : "",
+      !data.venueState.trim() ? "Venue state" : "",
+      !data.venueCity.trim() ? "Venue city" : "",
+      !data.venueType.trim() ? "Venue type" : "",
+      !data.venueConfirmedStatus.trim() ? "Venue confirmation status" : "",
+      !data.timeZone.trim() ? "Venue time zone" : "",
+      experienceMode === "advanced" && !data.isUnionVenue ? "Union labor status" : "",
+      experienceMode === "advanced" && !data.loadInDate ? "Load-in date and time" : "",
+      experienceMode === "advanced" && !data.showStartDate ? "Show start date and time" : "",
+      experienceMode === "advanced" && !data.showEndDate ? "Show end date and time" : "",
+      experienceMode === "advanced" && !data.strikeDate ? "Strike date and time" : "",
+    ].filter(Boolean);
+    const contradictions = experienceMode === "advanced"
+      ? Object.values(
+          venueScheduleValidationErrors(
+            data,
+            toIsoDate(proposalData.event.startDate),
+            toIsoDate(proposalData.event.endDate),
+          ),
+        ).filter(Boolean)
+      : [];
+    return [...required, ...contradictions];
+  };
+
+  const isVenueScheduleStepValid = () => venueScheduleStepIssues().length === 0;
 
   const venueValidationIssues = () => {
     const { riggingRequired, powerDropsRequired, wirelessInternetRequired } =
@@ -1595,6 +1717,10 @@ const AddNewProposal = ({
       (scenicActive ? evaluationMatrix.creativeScenic : 0) +
       evaluationMatrix.responsiveness +
       evaluationMatrix.sustainabilityDei;
+    const timelineIssues = procurementTimelineIssues(
+      proposalData.budget,
+      toIsoDate(proposalData.event.startDate),
+    ).map((issue) => issue.message);
     return [
       !estimatedAvBudget.trim() ? "Estimated AV budget range" : "",
       !vendorQuestionsDueDate.trim() ? "Vendor questions due date" : "",
@@ -1606,17 +1732,21 @@ const AddNewProposal = ({
         ? "Vendor presentation date"
         : "",
       !vendorSelectionDate.trim() ? "Vendor selection date" : "",
-      !callWithDxgProducer.trim() ? "DXG producer call choice" : "",
-      !howDidYouHear.trim() ? "How you heard about DXG" : "",
-      howDidYouHear === "Other" && !howDidYouHearOther.trim()
+      experienceMode === "advanced" && !callWithDxgProducer.trim() ? "DXG producer call choice" : "",
+      experienceMode === "advanced" && !howDidYouHear.trim() ? "How you heard about DXG" : "",
+      experienceMode === "advanced" && howDidYouHear === "Other" && !howDidYouHearOther.trim()
         ? "How you heard about DXG details"
         : "",
-      !proposalFormatPreferences || proposalFormatPreferences.length === 0
+      experienceMode === "advanced" && (!proposalFormatPreferences || proposalFormatPreferences.length === 0)
         ? "Proposal format preference"
         : "",
-      matrixSum !== 100
+      experienceMode === "advanced" && matrixSum !== 100
         ? `Evaluation weights must total 100% (currently ${matrixSum}%)`
         : "",
+      experienceMode === "advanced" && !proposalData.budget.evaluationMatrixConfirmed
+        ? "Approve the evaluation matrix"
+        : "",
+      ...timelineIssues,
     ].filter(Boolean);
   };
 
@@ -1631,11 +1761,14 @@ const AddNewProposal = ({
     return [
       !contactFirstName.trim() ? "Contact first name" : "",
       !contactLastName.trim() ? "Contact last name" : "",
-      !contactTitle.trim() ? "Contact title" : "",
+      experienceMode === "advanced" && !contactTitle.trim() ? "Contact title" : "",
       !contactOrganization.trim() ? "Organization display name" : "",
       !contactEmail.trim() ? "Contact email" : "",
-      !contactPhone.trim() ? "Contact phone" : "",
-      !organizationLegalName.trim() ? "Organization legal name" : "",
+      contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)
+        ? "Valid contact email"
+        : "",
+      experienceMode === "advanced" && !contactPhone.trim() ? "Contact phone" : "",
+      experienceMode === "advanced" && !organizationLegalName.trim() ? "Organization legal name" : "",
     ].filter(Boolean);
   };
 
@@ -1649,6 +1782,7 @@ const AddNewProposal = ({
   const completedStepIds = (() => {
     const validators: Record<number, () => boolean> = {
       1: isEventStepValid,
+      2: isVenueScheduleStepValid,
       3: isRoomAndProductionStepValid,
       7: isVenueStepValid,
       8: isBudgetStepValid,
@@ -1672,17 +1806,11 @@ const AddNewProposal = ({
     if (proposalProcessStep === 2) {
       return {
         section: "Venue & Schedule",
-        issues: Object.values(
-          venueScheduleValidationErrors(
-            proposalData.venueSchedule,
-            toIsoDate(proposalData.event.startDate),
-            toIsoDate(proposalData.event.endDate),
-          ),
-        ).filter(Boolean),
+        issues: venueScheduleStepIssues(),
       };
     }
     if (proposalProcessStep === 3) {
-      const incomplete = firstIncompleteRoom(rooms);
+      const incomplete = firstIncompleteRoom(rooms, experienceMode);
       return {
         section: "Room Specifications",
         issues: incomplete
@@ -1704,6 +1832,69 @@ const AddNewProposal = ({
     }
     return null;
   })();
+
+  const checklistIssues: ProposalChecklistIssue[] = (() => {
+    const issues: ProposalChecklistIssue[] = [];
+    const add = (stepId: number, section: string, labels: string[]) => {
+      labels.forEach((label, index) => {
+        issues.push({
+          id: `${stepId}-${index}-${label}`,
+          stepId,
+          section,
+          label,
+        });
+      });
+    };
+
+    add(1, "Event Overview", eventValidationIssues());
+    add(2, "Venue & Schedule", venueScheduleStepIssues());
+    rooms.forEach((room, index) => {
+      const missing = firstIncompleteRoom([room], experienceMode);
+      if (missing) {
+        add(3, "Room Specifications", missing.missing.map((label) => `${roomLabel(room, index)}: ${label}`));
+      }
+    });
+    add(8, "Investment & Evaluation", budgetValidationIssues());
+    add(10, "Contact & Publish", contactValidationIssues());
+    if (experienceMode === "advanced") {
+      add(7, "Venue & Technical", venueValidationIssues());
+      add(9, "Uploads & Co-Vendors", uploadsValidationIssues());
+    }
+    return issues;
+  })();
+
+  const basicAssumptions = experienceMode === "basic"
+    ? [
+        !proposalData.venue.riggingRequired || !proposalData.venue.powerDropsRequired || !proposalData.venue.wirelessInternetRequired
+          ? "Rigging, power-drop, and internet requirements remain unspecified for vendor confirmation."
+          : "",
+        !proposalData.uploads.ndaRequired
+          ? "No NDA preference or supporting-reference package has been confirmed."
+          : "",
+        !proposalData.contentCreative.contentServicesNeeded
+          ? "Creative/content ownership remains outside the essential intake and should be clarified if needed."
+          : "",
+        !proposalData.videoRecordingStep.videoRecordingRequired
+          ? "Recording and post-production requirements remain unspecified."
+          : "",
+        !proposalData.contact.contactTitle || !proposalData.contact.contactPhone || !proposalData.contact.organizationLegalName
+          ? "Contact title, phone, and legal organization name remain optional until Advanced production is completed."
+          : "",
+      ].filter(Boolean)
+    : [];
+
+  const visibleStepOrder = proposalStepOrder(
+    experienceMode,
+    proposalData.event.eventFormat,
+  );
+  const visibleCompletedSteps = visibleStepOrder.filter((step) =>
+    completedStepIds.includes(step),
+  ).length;
+  const budgetEstimate = estimateInitialBudget({
+    attendees: proposalData.event.attendees,
+    rooms: proposalData.venueSchedule.numberOfEventRooms,
+    eventFormat: proposalData.event.eventFormat,
+  });
 
   const normalizeRoomByRoomForSubmit = (
     roomByRoom: RoomByRoomData,
@@ -2131,6 +2322,7 @@ const AddNewProposal = ({
         ) {
           // Normalize enum/dropdown fields so they exactly match option strings
           const normalized = normalizeExtracted(result.data);
+          markExtractedSections(normalized);
           setProposalData((prev) => ({
             ...prev,
             event: { ...prev.event, ...(normalized.event ?? {}) },
@@ -2171,20 +2363,10 @@ const AddNewProposal = ({
     if (proposalProcessStep === 1 && !isEventStepValid()) {
       return;
     }
-    // Step 2 = Venue & Schedule — empty fields don't block, but a
-    // chronologically impossible schedule or a show outside the event
-    // date range does.
-    if (proposalProcessStep === 2) {
-      const scheduleErrors = venueScheduleValidationErrors(
-        proposalData.venueSchedule,
-        toIsoDate(proposalData.event.startDate),
-        toIsoDate(proposalData.event.endDate),
-      );
-      const firstError = Object.values(scheduleErrors)[0];
-      if (firstError) {
-        toast.error(`Production schedule needs attention: ${firstError}`);
-        return;
-      }
+    if (proposalProcessStep === 2 && !isVenueScheduleStepValid()) {
+      const firstIssue = venueScheduleStepIssues()[0];
+      if (firstIssue) toast.error(`Venue and schedule need attention: ${firstIssue}`);
+      return;
     }
     if (proposalProcessStep === 3 && !isRoomAndProductionStepValid()) {
       reportIncompleteRoom();
@@ -2202,16 +2384,21 @@ const AddNewProposal = ({
     }
 
     if (proposalProcessStep === 10) {
-      if (!isContactStepValid()) {
+      if (checklistIssues.length > 0) {
+        toast.error(`Complete the ${checklistIssues.length} remaining required item${checklistIssues.length === 1 ? "" : "s"} before publishing.`);
+        return;
+      }
+      if (basicAssumptions.length > 0 && !assumptionsApproved) {
+        toast.error("Review and approve the Basic mode assumptions before publishing.");
         return;
       }
       void handleSubmit("submitted");
       return;
     }
 
-    setProposalProcessStep((s) => {
-      const next = s + 1;
-      return isInPersonOnly && next === 4 ? 5 : next;
+    setProposalProcessStep((current) => {
+      const index = visibleStepOrder.indexOf(current);
+      return visibleStepOrder[index + 1] ?? current;
     });
     setShowErrors(false);
   };
@@ -2227,6 +2414,7 @@ const AddNewProposal = ({
         Object.keys(result.data).length > 0
       ) {
         const normalized = normalizeExtracted(result.data);
+        markExtractedSections(normalized);
         setProposalData((prev) => ({
           ...prev,
           event: { ...prev.event, ...(normalized.event ?? {}) },
@@ -2257,16 +2445,67 @@ const AddNewProposal = ({
     setShowErrors(false);
   };
   const backHandler = () =>
-    setProposalProcessStep((s) => {
-      const prev = Math.max(0, s - 1);
-      return isInPersonOnly && prev === 4 ? 3 : prev;
+    setProposalProcessStep((current) => {
+      const index = visibleStepOrder.indexOf(current);
+      if (index <= 0) return isEditMode ? current : 0;
+      return visibleStepOrder[index - 1];
     });
 
   const navigateToStep = (step: number) => {
-    if (!isEditMode || step < 1 || step > 10) return;
-    if (isInPersonOnly && step === 4) return;
+    if (!visibleStepOrder.includes(step)) return;
     setProposalProcessStep(step);
     setShowErrors(false);
+  };
+
+  const handleModeChange = (mode: ProposalExperienceMode) => {
+    if (mode === experienceMode) return;
+    setExperienceMode(mode);
+    setAssumptionsApproved(false);
+    const nextOrder = proposalStepOrder(mode, proposalData.event.eventFormat);
+    if (!nextOrder.includes(proposalProcessStep)) setProposalProcessStep(nextOrder[0]);
+    addAuditEntry(
+      mode === "basic" ? "Switched to essential-question mode" : "Opened advanced production controls",
+      "user",
+    );
+  };
+
+  const handleChecklistIssue = (issue: ProposalChecklistIssue) => {
+    navigateToStep(issue.stepId);
+    setShowErrors(true);
+    window.setTimeout(() => {
+      document.getElementById("manual-proposal-details")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
+  };
+
+  const handleGenerateStatementOfWork = () => {
+    const statementOfWork = buildVendorReadyStatementOfWork({
+      eventName: proposalData.event.eventName,
+      eventType: proposalData.event.eventType.eventType,
+      eventFormat: proposalData.event.eventFormat,
+      attendees: proposalData.event.attendees,
+      roomCount: proposalData.venueSchedule.numberOfEventRooms,
+      venueName: proposalData.venueSchedule.venueName,
+      startDate: proposalData.event.startDate,
+      endDate: proposalData.event.endDate,
+    });
+    setProposalData((current) => ({
+      ...current,
+      event: { ...current.event, statementOfWork },
+    }));
+    setFieldProvenance((current) => ({
+      ...current,
+      statementOfWork: {
+        source: "ai",
+        confidence: 0.82,
+        explanation: "Generated from confirmed event, venue, date, attendance, and room inputs.",
+      },
+    }));
+    setAssumptionsApproved(false);
+    addAuditEntry("Generated a vendor-ready statement of work", "ai");
+    toast.success("Statement of work generated. Review it in Advanced mode before publishing.");
   };
 
   const refreshProposalAfterQuestion = async () => {
@@ -2393,6 +2632,15 @@ const AddNewProposal = ({
 
       {/* ── Steps 1–7: Multi-step form ── */}
       {!loadingExisting && proposalProcessStep >= 1 && (
+        <>
+        <ProposalExperienceBar
+          mode={experienceMode}
+          onModeChange={handleModeChange}
+          completedSteps={visibleCompletedSteps}
+          totalSteps={visibleStepOrder.length}
+          issues={checklistIssues}
+          onIssueClick={handleChecklistIssue}
+        />
         <div data-testid="proposal-editor-layout" className="flex w-full flex-col items-stretch gap-4 bg-[#f4f7f9] p-0 sm:p-3 lg:p-5 @min-[1000px]:flex-row @min-[1000px]:items-start @min-[1000px]:gap-5">
           {/* Form area */}
           <div
@@ -2429,6 +2677,7 @@ const AddNewProposal = ({
                 onSaveDraft={() => void handleSubmit(undefined, true)}
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
+                mode={experienceMode}
               />
             )}
             {proposalProcessStep === 2 && (
@@ -2441,6 +2690,7 @@ const AddNewProposal = ({
                 proposalSettings={proposalSettings}
                 eventStartDate={toIsoDate(proposalData.event.startDate)}
                 eventEndDate={toIsoDate(proposalData.event.endDate)}
+                mode={experienceMode}
               />
             )}
             {proposalProcessStep === 3 && (
@@ -2460,6 +2710,18 @@ const AddNewProposal = ({
                 onRecommendationsApplied={refreshProposalAfterQuestion}
                 focusRoom={focusRoom}
                 eventTimeZone={proposalData.venueSchedule.timeZone}
+                eventStartDate={toIsoDate(proposalData.event.startDate)}
+                eventEndDate={toIsoDate(proposalData.event.endDate)}
+                eventAttendance={proposalData.event.attendees}
+                mode={experienceMode}
+                onTemplateApplied={(template, confidence, explanation) => {
+                  setFieldProvenance((current) => ({
+                    ...current,
+                    roomByRoom: { source: "assumed", confidence, explanation },
+                  }));
+                  setAssumptionsApproved(false);
+                  addAuditEntry(`Applied ${template} room template`, "assumed");
+                }}
                 onOpenScenicInspirations={() => {
                   setReferenceMaterialsTarget("scenic_inspiration");
                   setProposalProcessStep(9);
@@ -2555,6 +2817,8 @@ const AddNewProposal = ({
                   proposalData.contentCreative?.contentServicesNeeded
                 }
                 venueName={proposalData.venueSchedule.venueName}
+                eventStartDate={toIsoDate(proposalData.event.startDate)}
+                mode={experienceMode}
               />
             )}
             {proposalProcessStep === 9 && (
@@ -2580,6 +2844,26 @@ const AddNewProposal = ({
               />
             )}
             {proposalProcessStep === 10 && (
+              <>
+              <ProposalFinalReview
+                event={proposalData.event}
+                venue={proposalData.venueSchedule}
+                rooms={rooms}
+                budget={proposalData.budget}
+                contact={proposalData.contact}
+                issues={checklistIssues}
+                budgetEstimate={budgetEstimate}
+                provenance={fieldProvenance}
+                auditTrail={auditTrail}
+                assumptions={basicAssumptions}
+                assumptionsApproved={assumptionsApproved}
+                onAssumptionsApprovedChange={(approved) => {
+                  setAssumptionsApproved(approved);
+                  if (approved) addAuditEntry("Approved Basic mode assumptions for publishing", "user");
+                }}
+                onEditStep={navigateToStep}
+                onGenerateStatementOfWork={handleGenerateStatementOfWork}
+              />
               <ContactInfo
                 data={proposalData.contact}
                 onChange={(updates) =>
@@ -2593,7 +2877,20 @@ const AddNewProposal = ({
                 isEditMode={isEditMode}
                 isSubmitting={isSubmitting}
                 isSavingDraft={isSavingDraft}
+                publishDisabled={
+                  checklistIssues.length > 0 ||
+                  (basicAssumptions.length > 0 && !assumptionsApproved)
+                }
+                publishBlockReason={
+                  checklistIssues.length > 0
+                    ? `${checklistIssues.length} required item${checklistIssues.length === 1 ? " remains" : "s remain"}.`
+                    : basicAssumptions.length > 0 && !assumptionsApproved
+                      ? "Review and approve the Basic mode assumptions above."
+                      : undefined
+                }
+                mode={experienceMode}
               />
+              </>
             )}
           </div>
           {/* Proposal progress sidebar */}
@@ -2612,12 +2909,16 @@ const AddNewProposal = ({
             )}
             <ProcessList
               activeStep={proposalProcessStep}
-              hideStepIds={isInPersonOnly ? [4] : []}
-              onStepChange={isEditMode ? navigateToStep : undefined}
+              hideStepIds={Array.from({ length: 10 }, (_, index) => index + 1).filter(
+                (step) => !visibleStepOrder.includes(step),
+              )}
+              onStepChange={navigateToStep}
               completedStepIds={completedStepIds}
+              mode={experienceMode}
             />
           </div>
         </div>
+        </>
       )}
     </div>
   );

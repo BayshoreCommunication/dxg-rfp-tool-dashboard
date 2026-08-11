@@ -1,4 +1,5 @@
 ﻿import { Check } from "lucide-react";
+import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
 
 interface Step {
   id: number;       // numeric id used for activeStep comparison
@@ -50,53 +51,44 @@ const ProcessList = ({
   hideStepIds = [],
   onStepChange,
   completedStepIds,
+  mode = "advanced",
 }: {
   activeStep?: number;
   hideStepIds?: number[];
   onStepChange?: (step: number) => void;
   /** Steps whose required fields are actually filled. Omit for positional. */
   completedStepIds?: number[];
+  mode?: ProposalExperienceMode;
 }) => {
-  const visibleSteps = steps.filter((s) => !hideStepIds.includes(s.id));
+  const visibleSteps = steps
+    .filter((s) => !hideStepIds.includes(s.id))
+    .map((step) => mode === "basic"
+      ? ({
+          ...step,
+          label: step.id === 8 ? "Investment & Timeline" : step.label,
+          sub: step.id === 1
+            ? "Event essentials"
+            : step.id === 2
+              ? "Location details"
+              : step.id === 3
+                ? "Schedule & vendor guidance"
+                : step.id === 8
+                  ? "Budget & procurement"
+                  : step.sub,
+        })
+      : step);
   const badgedSteps = visibleSteps.map((step, index) => ({
     ...step,
     badge: String(index + 1),
   }));
 
-  const completedCount = badgedSteps.filter((step) =>
-    completedStepIds
-      ? completedStepIds.includes(step.id) && step.id !== activeStep
-      : activeStep > step.id,
-  ).length;
-  const progress = Math.round((completedCount / badgedSteps.length) * 100);
-
   return (
     <aside data-testid="proposal-process-list" className="w-full border-b border-[#e1e8ed] bg-[#fbfdfe] px-3 py-4 font-sans shadow-[0_8px_24px_rgba(15,42,67,0.035)] sm:px-4 @min-[1000px]:min-h-screen @min-[1000px]:border-b-0 @min-[1000px]:border-l @min-[1000px]:px-5 @min-[1000px]:py-7 @min-[1000px]:shadow-[-10px_0_30px_rgba(15,42,67,0.025)]">
-      <div className="mb-4 rounded-2xl border border-[#e5edf2] bg-white p-4 shadow-[0_6px_20px_rgba(15,42,67,0.05)] @min-[1000px]:mb-7">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#647582]">
-              Detailed form
-            </p>
-            <p className="mt-1 text-xs text-[#8a98a3]">Required information</p>
-          </div>
-          <span className="rounded-full bg-[#eef8fd] px-2.5 py-1 text-[10px] font-bold text-[#0786cf]">
-            {completedCount} of {badgedSteps.length} complete
-          </span>
-        </div>
-        <div
-          className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#edf2f5]"
-          role="progressbar"
-          aria-label="Detailed proposal form progress"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progress}
-        >
-          <div
-            className="h-full rounded-full bg-[#10B981] transition-[width] duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+      <div className="mb-3 px-1 @min-[1000px]:mb-5">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#647582]">
+          Workflow sections
+        </p>
+        <p className="mt-1 text-xs text-[#8a98a3]">Select any section to review or edit.</p>
       </div>
 
       <div data-testid="proposal-step-scroller" className="relative flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 [scrollbar-width:thin] @min-[1000px]:flex-col @min-[1000px]:overflow-visible @min-[1000px]:pb-0">

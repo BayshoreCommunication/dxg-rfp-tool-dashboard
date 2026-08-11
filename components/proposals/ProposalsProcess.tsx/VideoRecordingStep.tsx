@@ -185,11 +185,6 @@ const VideoRecordingStep = ({
     >
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 5 of 9
-          </span>
-        </div>
         <h2 className="text-[22px] font-bold text-[#222628]">Video Recording &amp; Broadcast</h2>
         <p className="mt-1 text-sm text-[#969798]">
           Cameras, recording specs, deliverables, and post-production requirements.
@@ -204,7 +199,7 @@ const VideoRecordingStep = ({
           <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <span className="font-bold shrink-0">⚠</span>
             <span>
-              You indicated on-demand recording of the stream is needed (Page 3). Recording must be enabled here as well.
+              You indicated on-demand recording of the stream is needed in Hybrid &amp; Virtual. Recording must be enabled here as well.
             </span>
           </div>
         )}
@@ -321,7 +316,7 @@ const VideoRecordingStep = ({
                   </label>
                   {suggestEdited && (
                     <p className="mb-2 text-xs font-medium text-[#1DBFD3]">
-                      ⚡ You assigned Sizzle/Recap Video to the AV vendor on Page 4 — enabling an edited deliverable here is recommended.
+                      ⚡ You assigned Sizzle/Recap Video to the AV vendor under Content &amp; Creative — enabling an edited deliverable here is recommended.
                     </p>
                   )}
                   <YesNo

@@ -143,7 +143,6 @@ export default function ProposalWorkflowShell({
       : "Review key questions";
   const stagesComplete = data ? data.steps.filter((s) => s.status === "complete").length : 0;
   const stageCount = data?.steps.length ?? 5;
-  const progressPercent = data ? Math.round((stagesComplete / stageCount) * 100) : 0;
   return <section aria-label="Proposal assistance" className="@container mb-0 border-b border-[#e5eaee] bg-white">
     <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-[#edf0f2] px-6 py-5 sm:px-8">
       <div>
@@ -183,21 +182,10 @@ export default function ProposalWorkflowShell({
           {!isPublished && (
             <div className="mt-5 border-t border-[#d9ebf4] pt-4">
               <div className="flex items-center justify-between gap-4 text-xs font-bold text-[#476577]">
-                <span>AI preparation progress</span>
-                <span className="tabular-nums text-[#172b3a]">{data ? `${stagesComplete} of ${stageCount} stages` : "Loading progress…"}</span>
-              </div>
-              <div
-                className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#d9eaf3]"
-                role="progressbar"
-                aria-label="AI preparation progress"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={progressPercent}
-              >
-                <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,#2fc6f5,#0786cf)] transition-all duration-500"
-                  style={{ width: `${data ? Math.max(4, progressPercent) : 0}%` }}
-                />
+                <span>AI preparation</span>
+                <span className="rounded-full bg-white px-2.5 py-1 tabular-nums text-[#172b3a] ring-1 ring-[#d9eaf3]">
+                  {data ? `${stagesComplete} of ${stageCount} stages ready` : "Loading status…"}
+                </span>
               </div>
             </div>
           )}

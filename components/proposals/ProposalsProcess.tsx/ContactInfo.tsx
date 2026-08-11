@@ -5,6 +5,7 @@ import { useState } from "react";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import type { AdditionalContact, ContactData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip } from "./shared";
+import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
 
 /* ─── Style constants ─── */
 const labelClass =
@@ -211,6 +212,9 @@ interface ContactInfoProps {
   isEditMode?: boolean;
   isSubmitting?: boolean;
   isSavingDraft?: boolean;
+  publishDisabled?: boolean;
+  publishBlockReason?: string;
+  mode?: ProposalExperienceMode;
 }
 
 /* ─── Main component ─── */
@@ -225,6 +229,9 @@ const ContactInfo = ({
   isEditMode = false,
   isSubmitting = false,
   isSavingDraft = false,
+  publishDisabled = false,
+  publishBlockReason,
+  mode = "advanced",
 }: ContactInfoProps) => {
   /* ─── Safe data ─── */
   const safeData: ContactData = {
@@ -284,12 +291,7 @@ const ContactInfo = ({
     >
       {/* ── Header ── */}
       <div className="border-b border-[#e4e4e4] px-8 py-6">
-        <div className="mb-1 flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#1DBFD3]/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            Page 9 of 9
-          </span>
-        </div>
-        <h2 className="text-[22px] font-bold text-[#222628]">Contact &amp; Submit</h2>
+        <h2 className="text-[22px] font-bold text-[#222628]">Contact &amp; Publish</h2>
         <p className="mt-1 text-sm text-[#969798]">
           Primary contact details for proposal delivery, vendor communications, and the RFPilot portal.
         </p>
@@ -303,7 +305,7 @@ const ContactInfo = ({
         <Group label="Primary Contact" />
 
         {/* Field 1 — First + Last Name */}
-        <div className="mb-6 grid grid-cols-2 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="contactFirstName" className={labelClass}>
               First Name <span className="text-red-500">*</span>
@@ -341,8 +343,8 @@ const ContactInfo = ({
         </div>
 
         {/* Field 2 — Job Title + Organization Display */}
-        <div className="mb-6 grid grid-cols-2 gap-4">
-          <div>
+        <div className={`mb-6 grid grid-cols-1 gap-4 ${mode === "advanced" ? "sm:grid-cols-2" : ""}`}>
+          {mode === "advanced" && <div>
             <label htmlFor="contactTitle" className={labelClass}>
               Job Title <span className="text-red-500">*</span>
               <InfoTooltip text="Your professional title as it should appear on the RFP. Appears in the Primary Contact box on the cover page alongside your organization." />
@@ -358,7 +360,7 @@ const ContactInfo = ({
             {showErrors && !safeData.contactTitle.trim() && (
               <p className={errorClass}>Job title is required.</p>
             )}
-          </div>
+          </div>}
           <div>
             <label htmlFor="contactOrganization" className={labelClass}>
               Organization (Display Name) <span className="text-red-500">*</span>
@@ -390,10 +392,17 @@ const ContactInfo = ({
             value={safeData.contactEmail}
             onChange={(e) => onChange({ contactEmail: e.target.value })}
             placeholder="e.g. s.jennings@apexdynamics.com"
-            className={errInputCls(safeData.contactEmail, showErrors)}
+            className={
+              showErrors && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeData.contactEmail)
+                ? `${inputClass} border-red-400 ring-1 ring-red-400/20 bg-red-50/30`
+                : inputClass
+            }
           />
           {showErrors && !safeData.contactEmail.trim() && (
             <p className={errorClass}>Email address is required.</p>
+          )}
+          {showErrors && safeData.contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeData.contactEmail) && (
+            <p className={errorClass}>Enter a valid email address.</p>
           )}
           {sharedMailboxAdvisory && (
             <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
@@ -406,6 +415,7 @@ const ContactInfo = ({
           )}
         </div>
 
+        {mode === "advanced" && <>
         {/* Field 4 — Phone */}
         <div className="mb-6">
           <label htmlFor="contactPhone" className={labelClass}>
@@ -438,6 +448,7 @@ const ContactInfo = ({
                 key={pt.value}
                 type="button"
                 onClick={() => onChange({ contactPhoneType: pt.value })}
+                aria-pressed={safeData.contactPhoneType === pt.value}
                 className={phoneTypePillCls(pt.value, safeData.contactPhoneType)}
               >
                 {pt.label}
@@ -476,7 +487,7 @@ const ContactInfo = ({
               <p className="text-xs text-slate-600">
                 <span className="font-semibold">{safeData.organizationLegalName}</span>
                 {" | "}
-                <span className="text-slate-400">[Venue Name from Page 2]</span>
+                <span className="text-slate-400">[Venue name from Venue &amp; Schedule]</span>
               </p>
             </div>
           )}
@@ -539,6 +550,7 @@ const ContactInfo = ({
                       safeData.preferredContactMethod === opt ? "" : opt,
                   })
                 }
+                aria-pressed={safeData.preferredContactMethod === opt}
                 className={pillCls(safeData.preferredContactMethod === opt)}
               >
                 {opt}
@@ -562,6 +574,7 @@ const ContactInfo = ({
                     bestTimeToReach: safeData.bestTimeToReach === opt ? "" : opt,
                   })
                 }
+                aria-pressed={safeData.bestTimeToReach === opt}
                 className={pillCls(safeData.bestTimeToReach === opt)}
               >
                 {opt}
@@ -589,6 +602,7 @@ const ContactInfo = ({
             className={`${inputClass} resize-none`}
           />
         </div>
+        </>}
 
         {/* ── Cover page contact box preview ── */}
         {coverPreviewVisible && (
@@ -644,7 +658,7 @@ const ContactInfo = ({
             {isEditMode ? "Ready to publish your changes?" : "Ready to publish your RFP?"}
           </p>
           <p className="text-sm text-[#4a5a8a]">
-            <strong>{isEditMode ? "Publish updated RFP" : "Publish RFP"}</strong> saves this
+            <strong>{isEditMode ? "Publish updated proposal" : "Publish Proposal"}</strong> saves this
             information and makes the proposal live for vendors. It does not email vendors;
             invitations are sent separately.
           </p>
@@ -660,7 +674,7 @@ const ContactInfo = ({
           className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
-          Uploads &amp; Co-Vendors
+          {mode === "basic" ? "Investment & Timeline" : "Uploads & Co-Vendors"}
         </button>
 
         <div className="flex items-center gap-3">
@@ -674,15 +688,21 @@ const ContactInfo = ({
               {isSavingDraft ? "Saving…" : "Save as Draft"}
             </button>
           )}
+          {publishBlockReason && (
+            <p id="publish-block-reason" role="status" className="max-w-56 text-right text-xs font-semibold leading-5 text-amber-700">
+              {publishBlockReason}
+            </p>
+          )}
           <button
             type="button"
             onClick={onContinue}
-            disabled={isSubmitting || isSavingDraft}
+            disabled={isSubmitting || isSavingDraft || publishDisabled}
+            aria-describedby={publishBlockReason ? "publish-block-reason" : undefined}
             className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
           >
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-            {isSubmitting ? "Publishing…" : isEditMode ? "Publish updated RFP" : "Publish RFP"}
+            {isSubmitting ? "Publishing…" : isEditMode ? "Publish updated proposal" : "Publish Proposal"}
             {isSubmitting ? null : <ArrowRight size={15} className="shrink-0" />}
           </button>
         </div>

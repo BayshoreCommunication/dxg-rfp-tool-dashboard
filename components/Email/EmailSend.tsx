@@ -2,7 +2,8 @@
 
 import { sendProposalEmailAction } from "@/app/actions/email";
 import { getProposalsAction } from "@/app/actions/proposals";
-import { Mail, Send, Users, X } from "lucide-react"; // Replaced Plus and Trash2 with X
+import { buildPersonalizedInvitation } from "@/lib/proposals/proposalExperience";
+import { Mail, Send, ShieldCheck, Sparkles, Users, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { KeyboardEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -55,6 +56,8 @@ export default function EmailSend() {
   const [recipientEmails, setRecipientEmails] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState(DEFAULT_MESSAGE);
+  const [draftSource, setDraftSource] = useState<"user" | "ai">("user");
+  const [sendApproved, setSendApproved] = useState(false);
 
   const selectedProposal =
     proposals.find((item) => item._id === proposalId) || null;
@@ -157,6 +160,7 @@ export default function EmailSend() {
 
     setRecipientEmails(merged);
     setRecipientInput("");
+    setSendApproved(false);
 
     if (invalidCount > 0) {
       toast.warning(`${invalidCount} invalid email(s) were skipped.`);
@@ -172,6 +176,23 @@ export default function EmailSend() {
 
   const removeRecipient = (email: string) => {
     setRecipientEmails((prev) => prev.filter((entry) => entry !== email));
+    setSendApproved(false);
+  };
+
+  const personalizeInvitation = () => {
+    if (!selectedProposal) {
+      toast.error("Please select a proposal first.");
+      return;
+    }
+    const draft = buildPersonalizedInvitation({
+      eventName: selectedProposal.event?.eventName || "AV production RFP",
+      proposalLink: selectedProposalLink,
+    });
+    setSubject(draft.subject);
+    setMessage(draft.message);
+    setDraftSource("ai");
+    setSendApproved(false);
+    toast.info("Personalized invitation drafted. Review and approve it before sending.");
   };
 
   const handleSend = async () => {
@@ -217,6 +238,10 @@ export default function EmailSend() {
       );
       return;
     }
+    if (!sendApproved) {
+      toast.error("Review the recipients and invitation, then approve sending.");
+      return;
+    }
 
     const baseMessage = message.trim();
     const messageWithLink =
@@ -251,6 +276,7 @@ export default function EmailSend() {
 
   const handleProposalChange = (nextProposalId: string) => {
     setProposalId(nextProposalId);
+    setSendApproved(false);
     if (!subject.trim()) {
       const proposal = proposals.find((item) => item._id === nextProposalId);
       const proposalTitle = proposal?.event?.eventName || "Untitled Proposal";
@@ -380,30 +406,78 @@ export default function EmailSend() {
           </div>
         </div>
 
+        <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-extrabold text-violet-950">
+                <Sparkles size={16} aria-hidden="true" /> Personalized invitation
+              </p>
+              <p className="mt-1 text-xs leading-5 text-violet-800">
+                Draft event-specific subject and message copy, then keep you in control of the final send.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={personalizeInvitation}
+              disabled={!selectedProposal}
+              className="min-h-10 shrink-0 rounded-xl bg-violet-600 px-4 text-xs font-extrabold text-white hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Generate personalized draft
+            </button>
+          </div>
+          {draftSource === "ai" && (
+            <p role="status" className="mt-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1 text-[11px] font-bold text-violet-800">
+              AI-generated · 86% confidence · Based on proposal title and public link
+            </p>
+          )}
+        </div>
+
         <div className="mt-4 space-y-2">
-          <label className="text-[12px] font-semibold text-slate-600">
+          <label htmlFor="invitation-subject" className="text-[12px] font-semibold text-slate-600">
             Subject
           </label>
           <input
+            id="invitation-subject"
             value={subject}
-            onChange={(event) => setSubject(event.target.value)}
+            onChange={(event) => {
+              setSubject(event.target.value);
+              setDraftSource("user");
+              setSendApproved(false);
+            }}
             className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]"
           />
         </div>
 
         <div className="mt-4 space-y-2">
-          <label className="text-[12px] font-semibold text-slate-600">
+          <label htmlFor="invitation-message" className="text-[12px] font-semibold text-slate-600">
             Message
           </label>
           <textarea
+            id="invitation-message"
             value={message}
-            onChange={(event) => setMessage(event.target.value)}
+            onChange={(event) => {
+              setMessage(event.target.value);
+              setDraftSource("user");
+              setSendApproved(false);
+            }}
             rows={6}
             className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]"
           />
         </div>
 
-        <div className="mt-4 flex items-center justify-end">
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold text-slate-700 focus-within:ring-2 focus-within:ring-[#008ad2]">
+            <input
+              type="checkbox"
+              checked={sendApproved}
+              onChange={(event) => setSendApproved(event.target.checked)}
+              className="h-5 w-5 accent-[#008ad2]"
+            />
+            <span className="inline-flex items-center gap-2">
+              <ShieldCheck size={16} className="text-[#008ad2]" aria-hidden="true" />
+              I reviewed the recipients and invitation text.
+            </span>
+          </label>
           <button
             type="button"
             onClick={handleSend}
