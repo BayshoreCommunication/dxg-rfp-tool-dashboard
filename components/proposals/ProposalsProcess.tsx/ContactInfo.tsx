@@ -286,12 +286,15 @@ const ContactInfo = ({
 
   return (
     <section
-      className="flex min-h-screen flex-col rounded-md border border-[#e4e4e4] bg-white"
+      id="contact-publish-section"
+      aria-labelledby="contact-publish-heading"
+      tabIndex={-1}
+      className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-[#e4e4e4] bg-white focus:outline-none"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
       <div className="border-b border-[#e4e4e4] px-8 py-6">
-        <h2 className="text-[22px] font-bold text-[#222628]">Contact &amp; Publish</h2>
+        <h2 id="contact-publish-heading" className="text-[22px] font-bold text-[#222628]">Contact &amp; Publish</h2>
         <p className="mt-1 text-sm text-[#969798]">
           Primary contact details for proposal delivery, vendor communications, and the RFPilot portal.
         </p>

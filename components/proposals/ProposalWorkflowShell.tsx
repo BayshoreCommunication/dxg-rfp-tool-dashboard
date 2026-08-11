@@ -125,6 +125,15 @@ export default function ProposalWorkflowShell({
     if (result.success) setData(result.data);
   };
 
+  const continueToFinalDetails = () => {
+    onNavigateToFormStep?.(10);
+    window.setTimeout(() => {
+      const target = document.getElementById("contact-publish-section");
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      target?.focus({ preventScroll: true });
+    }, 0);
+  };
+
   // Rendered exactly as the server derived them. The step summaries used to be
   // patched here for step 3, which restated a count the server already computes
   // — a second definition of "answered" whose only possible contribution was to
@@ -248,7 +257,7 @@ export default function ProposalWorkflowShell({
       {!conversationsEnabled && step === 2 && <div className="space-y-5"><ProposalContextPanel proposalId={proposalId} /><ProposalDraftPanel proposalId={proposalId} /></div>}
       {!conversationsEnabled && step === 3 && <div><h2 className="text-lg font-semibold">Answer key questions</h2><p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Key questions are available when the assisted proposal workflow is enabled.</p></div>}
       {step === 4 && <div className="space-y-3"><div><h2 className="text-lg font-semibold">See Guidance</h2><p className="mt-1 text-sm text-slate-600">Review the most important changes before you send this proposal to vendors.</p></div>{conversationsEnabled && data?.steps.some((item) => item.id === 4 && item.status !== "gated") ? <><GuidancePanel proposalId={proposalId} onNavigateToStep={onNavigateToFormStep} /><HistoricalInsightsPanel proposalId={proposalId} /></> : <p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700"><strong>Proposal readiness is not available yet.</strong> Continue completing the proposal and check again before publishing.</p>}</div>}
-      {step === 5 && <div><h2 className="text-lg font-semibold">Publish</h2><p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Complete the detailed proposal form and use the existing final validation and publish controls below. This workflow cannot automatically publish or send a proposal.</p><a href="#manual-proposal-details" className="mt-3 inline-block rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white">Continue to final details</a></div>}
+      {step === 5 && <div><h2 className="text-lg font-semibold">Publish</h2><p className="mt-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Complete the detailed proposal form and use the existing final validation and publish controls below. This workflow cannot automatically publish or send a proposal.</p><button type="button" onClick={continueToFinalDetails} className="mt-3 inline-block rounded-lg bg-[#087f69] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#076b59] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087f69]">Continue to final details</button></div>}
     </div>
   </section>;
 }

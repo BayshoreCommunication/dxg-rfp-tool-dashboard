@@ -225,6 +225,39 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.queryByTestId("investment-guidance")).not.toBeInTheDocument();
   });
 
+  test("continues to Contact & Publish with a smooth, focused transition", async () => {
+    mockedGetWorkflow.mockResolvedValue({
+      success: true,
+      data: {
+        ...workflow.data,
+        workflow: { currentStep: 5 },
+      },
+    } as never);
+    const onNavigateToFormStep = jest.fn();
+    const target = document.createElement("section");
+    const scrollIntoView = jest.fn();
+    target.id = "contact-publish-section";
+    target.tabIndex = -1;
+    target.scrollIntoView = scrollIntoView;
+    document.body.appendChild(target);
+
+    render(
+      <ProposalWorkflowShell
+        proposalId={PROPOSAL_ID}
+        onNavigateToFormStep={onNavigateToFormStep}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Continue to final details" }));
+
+    expect(onNavigateToFormStep).toHaveBeenCalledWith(10);
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+      expect(target).toHaveFocus();
+    });
+    target.remove();
+  });
+
   test("no longer renders the private document panel, but keeps the banner and the remaining panels", async () => {
     render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
     await screen.findByText("2 sources ready");
