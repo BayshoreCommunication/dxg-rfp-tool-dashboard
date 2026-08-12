@@ -151,15 +151,6 @@ body {
   background: rgba(100, 116, 139, 0.72);
 }
 
-.app-sidebar {
-  --sidebar-logo-size: clamp(2.5rem, 7dvh, 3rem);
-  --sidebar-nav-slot-size: clamp(3.5rem, 10.5dvh, 4.5rem);
-  --sidebar-nav-icon-size: clamp(2rem, 5.8dvh, 2.5rem);
-  --sidebar-action-size: clamp(2.25rem, 6.5dvh, 3rem);
-  --sidebar-signout-icon-size: clamp(1.75rem, 4.5dvh, 2rem);
-  --sidebar-glyph-size: clamp(1rem, 2.8dvh, 1.375rem);
-}
-
 /* Proposal date pickers use the bright cyan from the RFPilot mark throughout. */
 .dxg-datepicker.react-datepicker {
   overflow: hidden;
