@@ -60,6 +60,27 @@ export const generateProposalPdf = async ({
     await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45_000 });
     await page.waitForSelector(".rfp-root .page", { timeout: 30_000 });
+    await page.waitForFunction(
+      () => document.readyState === "complete" && !document.querySelector('[aria-busy="true"]'),
+      { timeout: 30_000 },
+    );
+    await page.evaluate(async () => {
+      let previousSignature = "";
+      let stableChecks = 0;
+      const deadline = Date.now() + 15_000;
+      while (Date.now() < deadline && stableChecks < 3) {
+        const root = document.querySelector(".rfp-root");
+        const signature = [
+          document.querySelectorAll(".rfp-root .page").length,
+          root?.textContent?.length || 0,
+          root?.scrollHeight || 0,
+        ].join(":");
+        stableChecks = signature === previousSignature ? stableChecks + 1 : 0;
+        previousSignature = signature;
+        await new Promise<void>((resolve) => setTimeout(resolve, 400));
+      }
+      if (stableChecks < 3) throw new Error("Proposal render did not stabilize");
+    });
     await page.evaluate(async () => {
       await document.fonts?.ready;
       const pendingImages = Array.from(document.images).filter(
@@ -78,6 +99,9 @@ export const generateProposalPdf = async ({
         ),
         new Promise<void>((resolve) => setTimeout(resolve, 10_000)),
       ]);
+      await Promise.all(
+        Array.from(document.images).map((image) => image.decode?.().catch(() => undefined)),
+      );
     });
     await page.emulateMediaType("print");
     return await page.pdf({

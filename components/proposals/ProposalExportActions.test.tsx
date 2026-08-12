@@ -13,6 +13,12 @@ describe("ProposalExportActions", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      blob: jest.fn().mockResolvedValue(new Blob(["pdf"])),
+    }) as jest.Mock;
+    URL.createObjectURL = jest.fn(() => "blob:proposal-pdf");
+    URL.revokeObjectURL = jest.fn();
   });
 
   it("places direct PDF download above the print action", () => {
@@ -38,8 +44,15 @@ describe("ProposalExportActions", () => {
     render(<ProposalExportActions proposal={proposal} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Download PDF" }));
+    expect(screen.getByRole("button", { name: "Generating PDF..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Print" })).toBeDisabled();
     await waitFor(() => expect(linkClick).toHaveBeenCalledTimes(1));
     expect(print).not.toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/proposal-pdf?path=%2F&filename=la-seminar-rfp.pdf",
+      { credentials: "same-origin" },
+    );
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:proposal-pdf");
 
     const printButton = screen.getByRole("button", { name: "Print" });
     await waitFor(() => expect(printButton).toBeEnabled());
