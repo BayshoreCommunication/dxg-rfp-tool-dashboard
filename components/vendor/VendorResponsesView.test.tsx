@@ -105,9 +105,7 @@ it("enables unread-only mode and resets pagination", () => {
 
   fireEvent.click(screen.getByRole("button", { name: "Unread only" }));
 
-  expect(push).toHaveBeenCalledWith(
-    "/vendor-responses?page=1&unreadOnly=true",
-  );
+  expect(push).toHaveBeenCalledWith("/vendor-responses?page=1&unreadOnly=true");
 });
 
 it("returns from unread-only mode to all responses", () => {
@@ -125,9 +123,14 @@ it("renders real response content without a demo label", () => {
   renderView();
 
   expect(screen.getAllByText("Apex Events")).toHaveLength(2);
-  expect(screen.getAllByText("Our proposal is ready for review.")).toHaveLength(2);
+  expect(screen.getAllByText("Our proposal is ready for review.")).toHaveLength(
+    2,
+  );
   expect(screen.queryByText("Demo")).not.toBeInTheDocument();
   expect(screen.getByText("Version 2")).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Open version history" }),
+  ).toHaveAttribute("href", "/vendor-responses/response-1");
 });
 
 it("shows a meaningful empty state when no vendor has responded", () => {

@@ -114,10 +114,13 @@ export default function VendorResponsesView({
     }
   }, []);
 
-  const openResponse = useCallback((item: VendorResponseItem) => {
-    setSelected(item);
-    void markResponseRead(item);
-  }, [markResponseRead]);
+  const openResponse = useCallback(
+    (item: VendorResponseItem) => {
+      setSelected(item);
+      void markResponseRead(item);
+    },
+    [markResponseRead],
+  );
 
   useEffect(() => {
     const initiallySelected = initialResponses[0];
@@ -391,6 +394,13 @@ export default function VendorResponsesView({
                     >
                       <ClipboardList size={14} /> Review RFP requirements
                     </Link>
+                    <Link
+                      href={`/vendor-responses/${selected._id}`}
+                      className="ml-2 mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-700 transition hover:border-[#008ad2]/30 hover:text-[#0076b4]"
+                    >
+                      <ExternalLink size={14} aria-hidden="true" /> Open version
+                      history
+                    </Link>
                   </div>
                 </div>
 
@@ -410,7 +420,9 @@ export default function VendorResponsesView({
                     <ResponseFact
                       icon={<CalendarDays size={16} />}
                       label="Received"
-                      value={formatDate(selected.versionReceivedAt ?? selected.createdAt)}
+                      value={formatDate(
+                        selected.versionReceivedAt ?? selected.createdAt,
+                      )}
                     />
                   </div>
 
@@ -421,7 +433,8 @@ export default function VendorResponsesView({
                       </p>
                     </div>
                     <div className="min-h-[118px] rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-[15px] leading-7 text-slate-700 sm:p-6">
-                      {selected.message || "No message was included with this response."}
+                      {selected.message ||
+                        "No message was included with this response."}
                     </div>
 
                     {selected.documents.length > 0 && (
@@ -438,11 +451,17 @@ export default function VendorResponsesView({
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#008ad2]/30 hover:bg-[#008ad2]/5 hover:text-[#0076b4]"
                               >
-                                <FileText size={16} className="text-[#008ad2]" />
+                                <FileText
+                                  size={16}
+                                  className="text-[#008ad2]"
+                                />
                                 <span className="min-w-0 flex-1 truncate">
                                   {document.name}
                                 </span>
-                                <ExternalLink size={13} className="text-slate-400" />
+                                <ExternalLink
+                                  size={13}
+                                  className="text-slate-400"
+                                />
                               </a>
                             </li>
                           ))}
@@ -521,7 +540,10 @@ function ResponseFact({
   href?: string;
 }) {
   const content = href ? (
-    <a href={href} className="break-all font-bold text-[#008ad2] hover:underline">
+    <a
+      href={href}
+      className="break-all font-bold text-[#008ad2] hover:underline"
+    >
       {value}
     </a>
   ) : (
