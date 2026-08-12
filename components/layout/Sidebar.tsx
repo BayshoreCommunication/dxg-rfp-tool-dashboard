@@ -204,7 +204,7 @@ const Sidebar = ({
 
       <nav
         aria-label="Primary navigation"
-        className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-3 max-[800px]:gap-0 max-[800px]:py-2"
+        className="flex min-h-0 flex-1 flex-col items-center justify-evenly overflow-hidden px-3 py-2"
       >
         {navigationConfig.map((item) => {
           const isActive = isItemActive(item);
@@ -218,11 +218,11 @@ const Sidebar = ({
               key={item.id}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              className="block w-full"
+              className="flex min-h-0 w-full flex-1 items-center"
             >
               <div
                 className={cn(
-                  "group relative flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-3 transition-all duration-200 max-[800px]:gap-0.5 max-[800px]:py-1.5",
+                  "group relative flex w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-all duration-200 max-[800px]:gap-0.5 max-[800px]:py-1",
                   isActive
                     ? "bg-linear-to-b from-primary/10 to-primary/5"
                     : "hover:bg-primary/5",
