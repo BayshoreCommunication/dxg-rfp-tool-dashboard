@@ -108,9 +108,36 @@ describe("proposal experience helpers", () => {
 
     const invitation = buildPersonalizedInvitation({
       eventName: "Summit",
-      proposalLink: "https://example.com/proposal/summit",
+      eventFormat: "Hybrid",
+      eventType: "Conference",
+      startDate: "10/10/2026",
+      endDate: "10/12/2026",
+      proposalSubmissionDueDate: "09/20/2026",
+      vendorQuestionsDueDate: "09/10/2026",
+      organizationName: "Apex Dynamics",
     });
-    expect(invitation.subject).toContain("Summit");
-    expect(invitation.message).toContain("https://example.com/proposal/summit");
+    expect(invitation.subject).toBe("Invitation to propose: Summit AV production");
+    expect(invitation.message).toContain("secure View Proposal button");
+    expect(invitation.message).not.toContain("https://");
+    expect(invitation.message).toContain("- Format: Hybrid");
+    expect(invitation.message).toContain("- Proposal due: 09/20/2026");
+    expect(invitation.message).toContain("send your questions by 09/10/2026");
+    expect(invitation.message).toContain("on behalf of Apex Dynamics");
+  });
+
+  test("formats ISO invitation dates for human-readable email copy", () => {
+    const invitation = buildPersonalizedInvitation({
+      eventName: "Summit",
+      startDate: "2026-10-10",
+      endDate: "2026-10-12",
+      proposalSubmissionDueDate: "2026-09-20",
+      vendorQuestionsDueDate: "2026-09-10",
+    });
+
+    expect(invitation.message).toContain(
+      "- Event dates: October 10, 2026 to October 12, 2026",
+    );
+    expect(invitation.message).toContain("- Proposal due: September 20, 2026");
+    expect(invitation.message).toContain("send your questions by September 10, 2026");
   });
 });

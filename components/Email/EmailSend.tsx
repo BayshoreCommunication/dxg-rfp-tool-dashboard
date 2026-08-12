@@ -1,7 +1,10 @@
 "use client";
 
 import { sendProposalEmailAction } from "@/app/actions/email";
-import { getProposalsAction } from "@/app/actions/proposals";
+import {
+  getProposalByIdAction,
+  getProposalsAction,
+} from "@/app/actions/proposals";
 import { buildPersonalizedInvitation } from "@/lib/proposals/proposalExperience";
 import { Mail, Send, ShieldCheck, Sparkles, Users, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,8 +14,18 @@ import { toast } from "react-toastify";
 
 type ProposalOption = {
   _id: string;
-  event?: { eventName?: string };
-  contact?: { contactEmail?: string };
+  event?: {
+    eventName?: string;
+    eventFormat?: string;
+    eventType?: string | { eventType?: string; eventTypeOther?: string };
+    startDate?: string;
+    endDate?: string;
+  };
+  budget?: {
+    proposalSubmissionDueDate?: string;
+    vendorQuestionsDueDate?: string;
+  };
+  contact?: { contactEmail?: string; contactOrganization?: string };
   proposalSetting?: {
     proposals?: {
       teammateEmail?: string;
@@ -25,12 +38,14 @@ type ProposalOption = {
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
-const DEFAULT_MESSAGE = `Hi,
+const DEFAULT_MESSAGE = `Hello,
 
-Please review the proposal and let us know your feedback.
+We would like to invite your team to review an upcoming audiovisual production opportunity. The complete RFP includes the project scope, schedule, technical requirements, and evaluation criteria.
 
-Best regards,
-DXG Team`;
+Please review the details and share any questions, assumptions, or recommendations that would help us understand your approach.
+
+Warm regards,
+DXG RFP Team`;
 
 const validateEmail = (email: string) =>
   EMAIL_REGEX.test(email.trim().toLowerCase());
@@ -48,6 +63,7 @@ export default function EmailSend() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>();
   const [sending, setSending] = useState(false);
+  const [drafting, setDrafting] = useState(false);
 
   const [proposals, setProposals] = useState<ProposalOption[]>([]);
 
@@ -179,19 +195,46 @@ export default function EmailSend() {
     setSendApproved(false);
   };
 
-  const personalizeInvitation = () => {
+  const personalizeInvitation = async () => {
     if (!selectedProposal) {
       toast.error("Please select a proposal first.");
       return;
     }
+
+    setDrafting(true);
+    let proposal = selectedProposal;
+    try {
+      const proposalRes = await getProposalByIdAction(selectedProposal._id);
+      if (
+        proposalRes.success &&
+        proposalRes.data &&
+        typeof proposalRes.data === "object"
+      ) {
+        proposal = proposalRes.data as ProposalOption;
+      }
+    } catch {
+      // The list record still provides a safe title-only fallback draft.
+    }
     const draft = buildPersonalizedInvitation({
-      eventName: selectedProposal.event?.eventName || "AV production RFP",
-      proposalLink: selectedProposalLink,
+      eventName: proposal.event?.eventName || "AV production RFP",
+      eventFormat: proposal.event?.eventFormat,
+      eventType:
+        typeof proposal.event?.eventType === "string"
+          ? proposal.event.eventType
+          : proposal.event?.eventType?.eventType === "Other"
+            ? proposal.event.eventType.eventTypeOther
+            : proposal.event?.eventType?.eventType,
+      startDate: proposal.event?.startDate,
+      endDate: proposal.event?.endDate,
+      proposalSubmissionDueDate: proposal.budget?.proposalSubmissionDueDate,
+      vendorQuestionsDueDate: proposal.budget?.vendorQuestionsDueDate,
+      organizationName: proposal.contact?.contactOrganization,
     });
     setSubject(draft.subject);
     setMessage(draft.message);
     setDraftSource("ai");
     setSendApproved(false);
+    setDrafting(false);
     toast.info("Personalized invitation drafted. Review and approve it before sending.");
   };
 
@@ -232,29 +275,17 @@ export default function EmailSend() {
       toast.error("Please enter an email subject.");
       return;
     }
-    if (!selectedProposalLink) {
-      toast.error(
-        "Proposal link is missing. Please refresh and select proposal again.",
-      );
-      return;
-    }
     if (!sendApproved) {
       toast.error("Review the recipients and invitation, then approve sending.");
       return;
     }
-
-    const baseMessage = message.trim();
-    const messageWithLink =
-      selectedProposalLink && !baseMessage.includes(selectedProposalLink)
-        ? `${baseMessage}\n\nProposal link: ${selectedProposalLink}`
-        : baseMessage;
 
     setSending(true);
     const res = await sendProposalEmailAction({
       proposalId,
       recipientEmails: finalRecipients,
       subject: subject.trim(),
-      message: messageWithLink,
+      message: message.trim(),
     });
     setSending(false);
 
@@ -334,7 +365,7 @@ export default function EmailSend() {
             </div>
             {selectedProposalLink ? (
               <div className="rounded-lg border border-[#008ad2]/20 bg-[#008ad2]/5 px-3 py-2 text-[12px] text-brand-dark">
-                Proposal link:{" "}
+                Proposal:{" "}
                 <a
                   href={previewProposalLink}
                   target="_blank"
@@ -343,12 +374,10 @@ export default function EmailSend() {
                 >
                   Open proposal
                 </a>
-                {selectedProposalLink.includes("localhost") ? (
-                  <p className="mt-1 text-amber-700">
-                    Warning: this link is localhost. External recipients cannot
-                    open it.
-                  </p>
-                ) : null}
+                <p className="mt-1 text-slate-600">
+                  A secure, recipient-specific access link is added when the
+                  campaign is sent.
+                </p>
               </div>
             ) : null}
           </div>
@@ -418,16 +447,16 @@ export default function EmailSend() {
             </div>
             <button
               type="button"
-              onClick={personalizeInvitation}
-              disabled={!selectedProposal}
+              onClick={() => void personalizeInvitation()}
+              disabled={!selectedProposal || drafting}
               className="min-h-10 shrink-0 rounded-xl bg-violet-600 px-4 text-xs font-extrabold text-white hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Generate personalized draft
+              {drafting ? "Drafting invitation…" : "Generate personalized draft"}
             </button>
           </div>
           {draftSource === "ai" && (
             <p role="status" className="mt-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1 text-[11px] font-bold text-violet-800">
-              AI-generated · 86% confidence · Based on proposal title and public link
+              AI-generated · 86% confidence · Based on proposal details
             </p>
           )}
         </div>

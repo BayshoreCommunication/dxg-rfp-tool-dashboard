@@ -247,11 +247,61 @@ export const buildVendorReadyStatementOfWork = ({
 
 export const buildPersonalizedInvitation = ({
   eventName,
-  proposalLink,
+  eventFormat,
+  eventType,
+  startDate,
+  endDate,
+  proposalSubmissionDueDate,
+  vendorQuestionsDueDate,
+  organizationName,
 }: {
   eventName: string;
-  proposalLink: string;
-}) => ({
-  subject: `Invitation to respond: ${eventName || "AV production RFP"}`,
-  message: `Hello,\n\nYou are invited to review and respond to the AV production RFP for ${eventName || "our upcoming event"}. Please review the scope, timeline, and evaluation criteria at the link below. We welcome clarifying questions before the stated deadline.\n\n${proposalLink ? `Proposal link: ${proposalLink}\n\n` : ""}Best regards,\nDXG Team`,
-});
+  eventFormat?: string;
+  eventType?: string;
+  startDate?: string;
+  endDate?: string;
+  proposalSubmissionDueDate?: string;
+  vendorQuestionsDueDate?: string;
+  organizationName?: string;
+}) => {
+  const formatDate = (value?: string): string => {
+    const trimmed = value?.trim() || "";
+    const isoDate = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!isoDate) return trimmed;
+
+    const [, year, month, day] = isoDate;
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))));
+  };
+  const name = eventName.trim() || "our upcoming event";
+  const formattedStartDate = formatDate(startDate);
+  const formattedEndDate = formatDate(endDate);
+  const formattedSubmissionDate = formatDate(proposalSubmissionDueDate);
+  const formattedQuestionsDate = formatDate(vendorQuestionsDueDate);
+  const details = [
+    `- Event: ${name}`,
+    eventType?.trim() ? `- Event type: ${eventType.trim()}` : "",
+    eventFormat?.trim() ? `- Format: ${eventFormat.trim()}` : "",
+    formattedStartDate
+      ? `- Event dates: ${formattedStartDate}${formattedEndDate ? ` to ${formattedEndDate}` : ""}`
+      : "",
+    formattedSubmissionDate
+      ? `- Proposal due: ${formattedSubmissionDate}`
+      : "",
+  ].filter(Boolean);
+  const organizationContext = organizationName?.trim()
+    ? ` on behalf of ${organizationName.trim()}`
+    : "";
+  const questionGuidance = formattedQuestionsDate
+    ? `If anything needs clarification, please send your questions by ${formattedQuestionsDate} so we can respond before the proposal deadline.`
+    : "If anything needs clarification, we welcome your questions and will be happy to provide additional context.";
+
+  return {
+    subject: `Invitation to propose: ${name} AV production`,
+    message: `Hello,\n\nWe are pleased to invite your team to review an audiovisual production opportunity for ${name}${organizationContext}. We are looking for a thoughtful production partner who can bring strong technical execution, proactive collaboration, and practical recommendations to the event.\n\nOpportunity at a glance:\n${details.join("\n")}\n\nThe RFP includes the production objectives, technical scope, schedule expectations, and evaluation criteria. Please review it carefully and call out any assumptions, alternatives, or value-added ideas that could strengthen the attendee experience.\n\nUse the secure View Proposal button in this email to open the complete RFP. When you are ready, the Submit Your Proposal button will take you to the response form.\n\n${questionGuidance}\n\nWe appreciate the time and expertise your team will bring to this process and look forward to reviewing your approach.\n\nWarm regards,\nDXG RFP Team`,
+  };
+};

@@ -17,10 +17,12 @@ jest.mock('react-toastify', () => ({
 }))
 
 const mockGetProposals = jest.fn()
+const mockGetProposalById = jest.fn()
 const mockSendEmail = jest.fn()
 
 jest.mock('@/app/actions/proposals', () => ({
   getProposalsAction: (...a: unknown[]) => mockGetProposals(...a),
+  getProposalByIdAction: (...a: unknown[]) => mockGetProposalById(...a),
 }))
 
 jest.mock('@/app/actions/email', () => ({
@@ -31,8 +33,22 @@ jest.mock('@/app/actions/email', () => ({
 
 const mockProposal = {
   _id: 'prop-001',
-  event: { eventName: 'Bayshore Summit 2026' },
-  contact: { contactEmail: 'client@example.com' },
+  event: {
+    eventName: 'Bayshore Summit 2026',
+    eventFormat: 'Hybrid',
+    eventType: { eventType: 'Conference', eventTypeOther: '' },
+    startDate: '10/10/2026',
+    endDate: '10/12/2026',
+  },
+  budget: {
+    proposalSubmissionDueDate: '09/20/2026',
+    vendorQuestionsDueDate: '09/10/2026',
+  },
+  contact: {
+    contactEmail: 'client@example.com',
+    contactOrganization: 'Apex Dynamics',
+  },
+  proposalSlug: 'bayshore-summit-prop-001',
   proposalLink: 'https://example.com/proposal/bayshore-summit-prop-001',
   publicProposalLink: 'https://example.com/proposal/bayshore-summit-prop-001',
 }
@@ -56,6 +72,7 @@ beforeEach(() => {
   // Explicitly reset return values since clearAllMocks does not clear mockReturnValue
   mockSearchParamsGet.mockReturnValue(null)
   mockGetProposals.mockResolvedValue({ success: true, data: [mockProposal] })
+  mockGetProposalById.mockResolvedValue({ success: true, data: mockProposal })
 })
 
 // Wait until the Send Campaign button is enabled (loading=false)
@@ -222,10 +239,29 @@ describe('EmailSend — personalized invitation', () => {
     render(<EmailSend />)
     await waitForLoad()
     fireEvent.click(screen.getByRole('button', { name: /generate personalized draft/i }))
-    expect(screen.getByLabelText('Subject')).toHaveValue('Invitation to respond: Bayshore Summit 2026')
-    expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toContain('Bayshore Summit 2026')
+    await waitFor(() => {
+      expect(screen.getByLabelText('Subject')).toHaveValue('Invitation to propose: Bayshore Summit 2026 AV production')
+    })
+    const message = (screen.getByLabelText('Message') as HTMLTextAreaElement).value
+    expect(message).toContain('Bayshore Summit 2026')
+    expect(message).toContain('- Format: Hybrid')
+    expect(message).toContain('- Proposal due: 09/20/2026')
+    expect(message).toContain('secure View Proposal button')
+    expect(message).not.toContain('https://')
     expect(screen.getByText(/AI-generated · 86% confidence/i)).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: /reviewed the recipients/i })).not.toBeChecked()
+    expect(mockGetProposalById).toHaveBeenCalledWith('prop-001')
+  })
+
+  it('uses an authenticated sender preview and explains secure recipient links', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+
+    expect(screen.getByRole('link', { name: /open proposal/i })).toHaveAttribute(
+      'href',
+      'http://localhost/proposal/bayshore-summit-prop-001',
+    )
+    expect(screen.getByText(/secure, recipient-specific access link/i)).toBeInTheDocument()
   })
 })
 
@@ -251,6 +287,7 @@ describe('EmailSend — successful send', () => {
           proposalId: 'prop-001',
           recipientEmails: expect.arrayContaining(['vendor@test.com']),
           subject: expect.stringContaining('Bayshore Summit'),
+          message: expect.not.stringContaining('https://'),
         }),
       )
     })
