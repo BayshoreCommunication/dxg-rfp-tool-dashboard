@@ -34,24 +34,6 @@ const waitForPageAssets = async (pages: HTMLElement[]) => {
   );
 };
 
-export const preparePageCloneForPdf = (page: HTMLElement) => {
-  page.style.display = "flex";
-  page.style.flexDirection = "column";
-  page.style.height = "auto";
-  page.style.minHeight = "297mm";
-  page.style.margin = "0";
-  page.style.overflow = "visible";
-  page.style.pageBreakAfter = "auto";
-
-  const footer = page.querySelector<HTMLElement>(".footer");
-  if (footer) {
-    footer.style.position = "static";
-    footer.style.inset = "auto";
-    footer.style.marginTop = "auto";
-    footer.style.flexShrink = "0";
-  }
-};
-
 export const proposalPdfFilename = (title?: string) => {
   const safeTitle = (title || "proposal")
     .trim()
@@ -89,19 +71,18 @@ export const downloadProposalPdf = async (
     const page = pages[index];
     const bounds = page.getBoundingClientRect();
     const captureWidth = Math.ceil(Math.max(bounds.width, page.scrollWidth));
+    const captureHeight = Math.ceil(Math.max(bounds.height, page.scrollHeight));
     const canvas = await html2canvas(page, {
       backgroundColor: "#ffffff",
       scale: 2,
       useCORS: true,
       logging: false,
+      width: captureWidth,
+      height: captureHeight,
       windowWidth: captureWidth,
-      onclone: (clonedDocument) => {
-        const clonedPages = clonedDocument.querySelectorAll<HTMLElement>(
-          ".rfp-root .page",
-        );
-        const clonedPage = clonedPages.item(index);
-        if (clonedPage) preparePageCloneForPdf(clonedPage);
-      },
+      windowHeight: captureHeight,
+      scrollX: 0,
+      scrollY: -window.scrollY,
       ignoreElements: (element) => element.classList.contains("no-print"),
     });
 
