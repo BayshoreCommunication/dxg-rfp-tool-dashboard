@@ -1,4 +1,26 @@
-import { fitPageToA4, proposalPdfFilename } from "./downloadProposalPdf";
+import {
+  downloadProposalPdf,
+  fitPageToA4,
+  proposalPdfFilename,
+} from "./downloadProposalPdf";
+
+const html2canvasMock = jest.fn();
+const saveMock = jest.fn();
+
+jest.mock("html2canvas", () => ({
+  __esModule: true,
+  default: (...args: unknown[]) => html2canvasMock(...args),
+}));
+
+jest.mock("jspdf", () => ({
+  jsPDF: jest.fn().mockImplementation(() => ({
+    addPage: jest.fn(),
+    setFillColor: jest.fn(),
+    rect: jest.fn(),
+    addImage: jest.fn(),
+    save: saveMock,
+  })),
+}));
 
 describe("proposalPdfFilename", () => {
   it("creates a safe PDF filename from the proposal title", () => {
@@ -28,5 +50,45 @@ describe("fitPageToA4", () => {
     expect(result.width).toBeCloseTo(194.90625);
     expect(result.x).toBeCloseTo(7.546875);
     expect(result.y).toBe(0);
+  });
+});
+
+describe("downloadProposalPdf", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    html2canvasMock.mockResolvedValue({
+      width: 794,
+      height: 1123,
+      toDataURL: () => "data:image/jpeg;base64,test",
+    });
+  });
+
+  it("captures every proposal page in document coordinates", async () => {
+    const container = document.createElement("div");
+    container.innerHTML = '<div class="rfp-root"><div class="page"></div></div>';
+    const page = container.querySelector<HTMLElement>(".page")!;
+    Object.defineProperties(page, {
+      scrollWidth: { value: 794 },
+      scrollHeight: { value: 1123 },
+    });
+    page.getBoundingClientRect = () =>
+      ({ width: 794, height: 1123 }) as DOMRect;
+
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 1800,
+    });
+
+    await downloadProposalPdf(container, "proposal-rfp.pdf");
+
+    const capturedPage = html2canvasMock.mock.calls[0][0] as HTMLElement;
+    expect(capturedPage).not.toBe(page);
+    expect(capturedPage.classList).toContain("page");
+    expect(html2canvasMock).toHaveBeenCalledWith(
+      capturedPage,
+      expect.objectContaining({ scrollX: 0, scrollY: 0 }),
+    );
+    expect(document.body.querySelector(".rfp-root .page")).toBeNull();
+    expect(saveMock).toHaveBeenCalledWith("proposal-rfp.pdf");
   });
 });

@@ -210,7 +210,7 @@ export default function ProposalPublicView({
 
   return (
     <div ref={proposalDocumentRef}>
-      {canDownload && <ProposalExportActions proposal={proposal} containerRef={proposalDocumentRef} />}
+      {canDownload && <ProposalExportActions proposal={proposal} />}
       <ProposalRfpTemplate proposal={proposal} />
     </div>
   );

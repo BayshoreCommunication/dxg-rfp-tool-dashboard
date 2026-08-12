@@ -1,9 +1,7 @@
-import { downloadProposalPdf } from "@/lib/proposals/downloadProposalPdf";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ProposalExportActions from "./ProposalExportActions";
 
 jest.mock("@/lib/proposals/downloadProposalPdf", () => ({
-  downloadProposalPdf: jest.fn().mockResolvedValue(undefined),
   proposalPdfFilename: (title?: string) =>
     `${(title || "proposal").toLowerCase().replace(/\s+/g, "-")}-rfp.pdf`,
 }));
@@ -18,12 +16,8 @@ describe("ProposalExportActions", () => {
   });
 
   it("places direct PDF download above the print action", () => {
-    const container = document.createElement("div");
     render(
-      <ProposalExportActions
-        proposal={proposal}
-        containerRef={{ current: container }}
-      />,
+      <ProposalExportActions proposal={proposal} />,
     );
 
     const downloadButton = screen.getByRole("button", {
@@ -37,26 +31,21 @@ describe("ProposalExportActions", () => {
   });
 
   it("downloads without opening print and keeps print as a separate action", async () => {
-    const container = document.createElement("div");
     const print = jest.spyOn(window, "print").mockImplementation(() => {});
-    render(
-      <ProposalExportActions
-        proposal={proposal}
-        containerRef={{ current: container }}
-      />,
-    );
+    const linkClick = jest
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    render(<ProposalExportActions proposal={proposal} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Download PDF" }));
-    await waitFor(() => {
-      expect(downloadProposalPdf).toHaveBeenCalledWith(
-        container,
-        "la-seminar-rfp.pdf",
-      );
-    });
+    await waitFor(() => expect(linkClick).toHaveBeenCalledTimes(1));
     expect(print).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Print" }));
+    const printButton = screen.getByRole("button", { name: "Print" });
+    await waitFor(() => expect(printButton).toBeEnabled());
+    fireEvent.click(printButton);
     expect(print).toHaveBeenCalledTimes(1);
+    linkClick.mockRestore();
     print.mockRestore();
   });
 });

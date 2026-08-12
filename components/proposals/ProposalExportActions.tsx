@@ -1,21 +1,15 @@
 "use client";
 
 import type { RfpProposalData } from "@/components/proposalTemplate/ProposalRfpTemplate";
-import {
-  downloadProposalPdf,
-  proposalPdfFilename,
-} from "@/lib/proposals/downloadProposalPdf";
+import { proposalPdfFilename } from "@/lib/proposals/downloadProposalPdf";
 import { Download, Printer } from "lucide-react";
-import type { RefObject } from "react";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
 export default function ProposalExportActions({
   proposal,
-  containerRef,
 }: {
   proposal: RfpProposalData;
-  containerRef: RefObject<HTMLDivElement | null>;
 }) {
   const [downloading, setDownloading] = useState(false);
   const title =
@@ -24,18 +18,24 @@ export default function ProposalExportActions({
     "proposal";
 
   const handleDirectDownload = async () => {
-    if (downloading || !containerRef.current) return;
+    if (downloading) return;
     setDownloading(true);
     try {
-      await downloadProposalPdf(
-        containerRef.current,
-        proposalPdfFilename(title),
-      );
+      const filename = proposalPdfFilename(title);
+      const link = document.createElement("a");
+      const params = new URLSearchParams({
+        path: `${window.location.pathname}${window.location.search}`,
+        filename,
+      });
+      link.href = `/api/proposal-pdf?${params.toString()}`;
+      document.body.append(link);
+      link.click();
+      link.remove();
     } catch (error) {
       console.error("Proposal PDF download failed:", error);
       toast.error("PDF could not be generated. Please try again.");
     } finally {
-      setDownloading(false);
+      window.setTimeout(() => setDownloading(false), 1_000);
     }
   };
 

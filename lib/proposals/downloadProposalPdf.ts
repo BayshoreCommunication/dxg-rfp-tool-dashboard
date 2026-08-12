@@ -34,6 +34,36 @@ const waitForPageAssets = async (pages: HTMLElement[]) => {
   );
 };
 
+const createCapturePage = (page: HTMLElement, width: number, height: number) => {
+  const stage = document.createElement("div");
+  stage.className = "rfp-root";
+  Object.assign(stage.style, {
+    position: "fixed",
+    top: "0",
+    left: `${-(width + 100)}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+    overflow: "hidden",
+    pointerEvents: "none",
+    background: "#ffffff",
+  });
+
+  const capturePage = page.cloneNode(true) as HTMLElement;
+  Object.assign(capturePage.style, {
+    width: `${width}px`,
+    height: `${height}px`,
+    minHeight: `${height}px`,
+    margin: "0",
+  });
+  stage.append(capturePage);
+  document.body.append(stage);
+
+  return {
+    page: capturePage,
+    remove: () => stage.remove(),
+  };
+};
+
 export const proposalPdfFilename = (title?: string) => {
   const safeTitle = (title || "proposal")
     .trim()
@@ -72,19 +102,25 @@ export const downloadProposalPdf = async (
     const bounds = page.getBoundingClientRect();
     const captureWidth = Math.ceil(Math.max(bounds.width, page.scrollWidth));
     const captureHeight = Math.ceil(Math.max(bounds.height, page.scrollHeight));
-    const canvas = await html2canvas(page, {
-      backgroundColor: "#ffffff",
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: captureWidth,
-      height: captureHeight,
-      windowWidth: captureWidth,
-      windowHeight: captureHeight,
-      scrollX: 0,
-      scrollY: -window.scrollY,
-      ignoreElements: (element) => element.classList.contains("no-print"),
-    });
+    const capture = createCapturePage(page, captureWidth, captureHeight);
+    let canvas: HTMLCanvasElement;
+    try {
+      canvas = await html2canvas(capture.page, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: captureWidth,
+        height: captureHeight,
+        windowWidth: captureWidth,
+        windowHeight: captureHeight,
+        scrollX: 0,
+        scrollY: 0,
+        ignoreElements: (element) => element.classList.contains("no-print"),
+      });
+    } finally {
+      capture.remove();
+    }
 
     const fitted = fitPageToA4(canvas.width, canvas.height);
 
