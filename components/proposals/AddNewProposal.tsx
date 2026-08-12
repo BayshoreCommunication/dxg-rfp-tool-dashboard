@@ -153,6 +153,8 @@ export type RoomByRoomData = {
   videoRecording: {
     videoRecording: string;
     videoRecordingType: string;
+    recordingCodec: "H.264" | "H.265" | "ProRes" | "";
+    recordIn4k: "Yes" | "No" | "";
   };
   stageWashLighting: {
     stageWashLighting: string;
@@ -750,15 +752,24 @@ const normalizeExtracted = (
       videoRecording: ((): RoomByRoomData["videoRecording"] => {
         const raw_n = r?.videoRecording;
         if (raw_n && typeof raw_n === "object") {
-          const v = raw_n as { videoRecording?: string; videoRecordingType?: string };
+          const v = raw_n as {
+            videoRecording?: string;
+            videoRecordingType?: string;
+            recordingCodec?: string;
+            recordIn4k?: string;
+          };
           return {
             videoRecording: matchOption(v.videoRecording ?? "", ["Yes", "No"]),
             videoRecordingType: matchOption(v.videoRecordingType ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]),
+            recordingCodec: matchOption(v.recordingCodec ?? "", ["H.264", "H.265", "ProRes"]) as RoomByRoomData["videoRecording"]["recordingCodec"],
+            recordIn4k: matchOption(v.recordIn4k ?? "", ["Yes", "No"]) as RoomByRoomData["videoRecording"]["recordIn4k"],
           };
         }
         return {
           videoRecording: matchOption((raw_n as unknown as string) ?? "", ["Yes", "No"]),
           videoRecordingType: matchOption((rRec.videoRecordingType as string) ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]),
+          recordingCodec: matchOption((rRec.recordingCodec as string) ?? "", ["H.264", "H.265", "ProRes"]) as RoomByRoomData["videoRecording"]["recordingCodec"],
+          recordIn4k: matchOption((rRec.recordIn4k as string) ?? "", ["Yes", "No"]) as RoomByRoomData["videoRecording"]["recordIn4k"],
         };
       })(),
       stageWashLighting: ((): RoomByRoomData["stageWashLighting"] => {
@@ -2062,6 +2073,8 @@ const AddNewProposal = ({
       normalized.videoRecording = {
         ...normalized.videoRecording,
         videoRecordingType: "",
+        recordingCodec: "",
+        recordIn4k: "",
       };
     }
     if (normalized.stageWashLighting.stageWashLighting !== "Yes") {

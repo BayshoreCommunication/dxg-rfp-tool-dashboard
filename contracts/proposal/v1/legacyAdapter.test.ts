@@ -52,6 +52,12 @@ const legacyProposal = {
         ptzCameraQty: "1",
         studioCameraQty: "2",
       },
+      videoRecording: {
+        videoRecording: "Yes",
+        videoRecordingType: "Camera Feed Only",
+        recordingCodec: "ProRes",
+        recordIn4k: "Yes",
+      },
       scenicStageDesign: "Yes",
       unionLabor: "Not Sure",
       showCrewNeeded: ["A1", "V1"],
@@ -191,6 +197,8 @@ describe("legacy proposal adapter", () => {
       ptzCameraCount: 1,
       studioCameraCount: 2,
       cameraCount: 3,
+      recordingCodec: "ProRes",
+      recordIn4k: true,
     }));
     expect(result.proposal.content.rooms[0].scheduleEntries).toHaveLength(2);
     expect(result.proposal.content.rooms[0].scheduleEntries?.[1].function).toBe("Leadership Panel");

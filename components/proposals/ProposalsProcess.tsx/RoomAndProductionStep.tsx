@@ -553,7 +553,7 @@ export const defaultRoom = (): RoomByRoomData => ({
     cameras: "", camerasQty: "", cameraPlanMode: "", cameraType: "",
     ptzCameraQty: "", studioCameraQty: "", otherCameraType: "", otherCameraQty: "",
   },
-  videoRecording: { videoRecording: "", videoRecordingType: "" },
+  videoRecording: { videoRecording: "", videoRecordingType: "", recordingCodec: "", recordIn4k: "" },
   lightingRequirements: [],
   stageWashLighting: { stageWashLighting: "", stageWashLightingStageSize: "" },
   backlightingFor: "",
@@ -1767,27 +1767,64 @@ const RoomForm = ({
               videoRecording: {
                 videoRecording: v,
                 videoRecordingType: v !== "Yes" ? "" : data.videoRecording.videoRecordingType,
+                recordingCodec: v !== "Yes" ? "" : data.videoRecording.recordingCodec,
+                recordIn4k: v !== "Yes" ? "" : data.videoRecording.recordIn4k,
               },
             })
           }
         />
         {data.videoRecording.videoRecording === "Yes" && (
-          <div className="mt-3 flex flex-wrap gap-3">
-            {["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"].map(
-              (opt) => (
-                <PillRadio
-                  key={opt}
-                  name={`${uid}-recordingType`}
-                  value={opt}
-                  checked={data.videoRecording.videoRecordingType === opt}
-                  onChange={() =>
+          <div className="mt-3 space-y-4">
+            <div className="flex flex-wrap gap-3">
+              {["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"].map(
+                (opt) => (
+                  <PillRadio
+                    key={opt}
+                    name={`${uid}-recordingType`}
+                    value={opt}
+                    checked={data.videoRecording.videoRecordingType === opt}
+                    onChange={() =>
+                      onChange({
+                        videoRecording: { ...data.videoRecording, videoRecordingType: opt },
+                      })
+                    }
+                  />
+                ),
+              )}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className={labelClass}>Recording Format</label>
+                <GlobalSelect
+                  className={`${inputClass} appearance-none`}
+                  value={data.videoRecording.recordingCodec}
+                  onChange={(event) =>
                     onChange({
-                      videoRecording: { ...data.videoRecording, videoRecordingType: opt },
+                      videoRecording: {
+                        ...data.videoRecording,
+                        recordingCodec: event.target.value as RoomByRoomData["videoRecording"]["recordingCodec"],
+                      },
+                    })
+                  }
+                >
+                  <option value="">Select format...</option>
+                  <option>H.264</option>
+                  <option>H.265</option>
+                  <option>ProRes</option>
+                </GlobalSelect>
+              </div>
+              <div>
+                <label className={labelClass}>4K Recording?</label>
+                <YesNo
+                  value={data.videoRecording.recordIn4k}
+                  onChange={(recordIn4k) =>
+                    onChange({
+                      videoRecording: { ...data.videoRecording, recordIn4k },
                     })
                   }
                 />
-              ),
-            )}
+              </div>
+            </div>
           </div>
         )}
       </div>

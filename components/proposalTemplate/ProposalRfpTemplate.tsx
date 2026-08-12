@@ -328,6 +328,8 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     const vrRaw = room.videoRecording;
     const vrVal = vrRaw && typeof vrRaw === "object" ? p((vrRaw as RD).videoRecording) : p(vrRaw as string);
     const vrType = vrRaw && typeof vrRaw === "object" ? p((vrRaw as RD).videoRecordingType) : "";
+    const vrCodec = vrRaw && typeof vrRaw === "object" ? p((vrRaw as RD).recordingCodec) : "";
+    const vr4k = vrRaw && typeof vrRaw === "object" ? p((vrRaw as RD).recordIn4k) : "";
 
     const swRaw = room.stageWashLighting;
     const swVal = swRaw && typeof swRaw === "object" ? p((swRaw as RD).stageWashLighting) : p(swRaw as string);
@@ -478,6 +480,8 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           value={vpVal === "Yes" ? `Yes${vpCount ? ` (${vpCount})` : ""}${vpFormat ? ` — ${vpFormat}` : ""}` : vpVal}
         />
         <InfoRow label="Video Recording" value={vrVal === "Yes" && vrType ? `Yes — ${vrType}` : vrVal} />
+        {vrVal === "Yes" && <InfoRow label="Recording Format" value={vrCodec} />}
+        {vrVal === "Yes" && <InfoRow label="4K Recording" value={vr4k} />}
         <InfoRow label="Cameras" value={camSummary} />
 
         {/* Presentation */}
