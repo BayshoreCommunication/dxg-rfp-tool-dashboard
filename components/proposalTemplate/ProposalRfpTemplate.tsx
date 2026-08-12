@@ -191,11 +191,11 @@ const yn = (v: unknown): string => {
 };
 
 /* ─── Sub-components ─── */
-function IntHeader({ brand, title }: { brand: string; title: string }) {
+function IntHeader({ title }: { title: string }) {
   return (
     <>
       <div className="int-header">
-        <span className="int-header-left">{brand} | RFPilot</span>
+        <span className="int-header-left">RFPilot</span>
         <span className="int-header-right">{title} — CONFIDENTIAL</span>
       </div>
       <hr className="divider" />
@@ -282,7 +282,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     ...(hasContent ? [{ label: "CONTENT & CREATIVE", cls: "green" }] : []),
   ];
 
-  const footerLeft = `${brandName} | RFPilot — ${eventName} — CONFIDENTIAL`;
+  const footerLeft = `RFPilot — ${eventName} — CONFIDENTIAL`;
   const headerTitle = `${eventName}`;
 
   /* Covendors */
@@ -660,12 +660,12 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </div>
         )}
 
-        <Footer left={`© ${new Date().getFullYear()} ${brandName} | RFPilot`} page={nextPage()} />
+        <Footer left={`© ${new Date().getFullYear()} RFPilot`} page={nextPage()} />
       </div>
 
       {/* ══════════════ PAGE 2: SCOPE AT A GLANCE ══════════════ */}
       <div className="page">
-        <IntHeader brand={brandName} title={headerTitle} />
+        <IntHeader title={headerTitle} />
         <SectionTitle num={nextSec()}>Scope at a Glance</SectionTitle>
 
         {(() => {
@@ -769,7 +769,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
       {/* ══════════════ PAGE 3+: ROOM-BY-ROOM ══════════════ */}
       {rooms.length > 0 && (
         <div className="page rooms-page">
-          <IntHeader brand={brandName} title={headerTitle} />
+          <IntHeader title={headerTitle} />
           <SectionTitle num={nextSec()}>Room-by-Room Technical Specifications</SectionTitle>
 
           {rooms.length === 1 ? (
@@ -793,7 +793,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
       {/* ══════════════ HYBRID & VIRTUAL ══════════════ */}
       {isHybrid && (
         <div className="page">
-          <IntHeader brand={brandName} title={headerTitle} />
+          <IntHeader title={headerTitle} />
           <SectionTitle num={nextSec()}>Hybrid &amp; Virtual Production</SectionTitle>
 
           <p style={{ fontSize: "10.5px", color: "#64748b", lineHeight: 1.6, marginBottom: 12 }}>
@@ -836,7 +836,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
       {/* ══════════════ CONTENT & CREATIVE ══════════════ */}
       {hasContent && (
         <div className="page">
-          <IntHeader brand={brandName} title={headerTitle} />
+          <IntHeader title={headerTitle} />
           <SectionTitle num={nextSec()}>Content &amp; Creative Scope</SectionTitle>
 
           <table>
@@ -904,7 +904,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
       {/* ══════════════ VIDEO RECORDING ══════════════ */}
       {p(vr.videoRecordingRequired) === "YES" && (
         <div className="page">
-          <IntHeader brand={brandName} title={headerTitle} />
+          <IntHeader title={headerTitle} />
           <SectionTitle num={nextSec()}>Video Recording &amp; Broadcast</SectionTitle>
 
           <div className="section-subtitle">Recording Strategy</div>
@@ -943,7 +943,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
       {/* ══════════════ VENUE & INFRASTRUCTURE ══════════════ */}
       <div className="page">
-        <IntHeader brand={brandName} title={headerTitle} />
+        <IntHeader title={headerTitle} />
         <SectionTitle num={nextSec()}>Venue &amp; Infrastructure</SectionTitle>
 
         <table>
@@ -992,7 +992,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
       {/* ══════════════ VENDOR COORDINATION ══════════════ */}
       {coVendorList.length > 0 && (
         <div className="page">
-          <IntHeader brand={brandName} title={headerTitle} />
+          <IntHeader title={headerTitle} />
           <SectionTitle num={nextSec()}>Vendor Coordination</SectionTitle>
 
           <p style={{ fontSize: "10.5px", color: "#64748b", lineHeight: 1.6, marginBottom: 12 }}>
@@ -1033,7 +1033,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
       {/* ══════════════ EVALUATION ══════════════ */}
       <div className="page">
-        <IntHeader brand={brandName} title={headerTitle} />
+        <IntHeader title={headerTitle} />
         <SectionTitle num={nextSec()}>Proposal Requirements &amp; Evaluation</SectionTitle>
 
         <div className="section-subtitle">Required Response Format</div>
@@ -1188,7 +1188,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
         return (
           <div className="page">
-            <IntHeader brand={brandName} title={headerTitle} />
+            <IntHeader title={headerTitle} />
             <SectionTitle num={nextSec()}>Reference Materials &amp; Co-Vendor Coordination</SectionTitle>
 
             {hasFiles && (
@@ -1315,7 +1315,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
       {/* ══════════════ SUBMISSION TERMS ══════════════ */}
       <div className="page">
-        <IntHeader brand={brandName} title={headerTitle} />
+        <IntHeader title={headerTitle} />
         <SectionTitle num={nextSec()}>Submission Terms &amp; Next Steps</SectionTitle>
 
         <table>

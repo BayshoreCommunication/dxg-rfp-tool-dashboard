@@ -22,20 +22,30 @@ export default function ProposalExportActions({
     setDownloading(true);
     try {
       const filename = proposalPdfFilename(title);
-      const link = document.createElement("a");
       const params = new URLSearchParams({
         path: `${window.location.pathname}${window.location.search}`,
         filename,
       });
-      link.href = `/api/proposal-pdf?${params.toString()}`;
+      const response = await fetch(`/api/proposal-pdf?${params.toString()}`, {
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        throw new Error(`PDF generation failed with status ${response.status}`);
+      }
+
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
       document.body.append(link);
       link.click();
       link.remove();
+      URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("Proposal PDF download failed:", error);
       toast.error("PDF could not be generated. Please try again.");
     } finally {
-      window.setTimeout(() => setDownloading(false), 1_000);
+      setDownloading(false);
     }
   };
 
