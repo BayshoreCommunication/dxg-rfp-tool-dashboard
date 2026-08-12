@@ -11,22 +11,29 @@ const TEMPLATE_CSS = `
   body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
   .rfp-root { --primary: #222628; --accent: #008ad2; --gray: #565859; --border: #e4e4e4; --light: #fbfbfb; --orange: #f97316; --amber: #fffbeb; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #1a1a2e; line-height: 1.45; background: #e5e7eb; }
   .rfp-root .page { width: 210mm; min-height: 297mm; padding: 11mm 13mm 10mm; margin: 0 auto 8px; background: #fff; position: relative; page-break-after: always; }
-  @media print { body, .rfp-root { background: #fff; } .rfp-root .page { box-sizing: border-box; width: 210mm; height: 297mm; min-height: 297mm; overflow: hidden; margin: 0; padding: 9mm 11mm 8mm; break-after: page; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rfp-root .page:last-child { break-after: auto; page-break-after: auto; } .no-print { display: none !important; } .rfp-root .cover-header { margin: -9mm -11mm 14px; padding: 24px 11mm; } .rfp-root .rooms-page .info-row { padding: 3px 0; } .rfp-root .rooms-page .info-label, .rfp-root .rooms-page .info-value { font-size: 10px; } .rfp-root .rooms-page .crew-box { margin-top: 5px; padding: 5px 9px; } .rfp-root .rooms-page .two-col + .two-col { margin-top: 7px !important; } }
+  @media print { body, .rfp-root { background: #fff; } .rfp-root .page { box-sizing: border-box; width: 210mm; height: 297mm; min-height: 297mm; overflow: hidden; margin: 0; padding: 9mm 11mm 8mm; break-after: page; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rfp-root .page:last-child { break-after: auto; page-break-after: auto; } .no-print { display: none !important; } .rfp-root .cover-header { margin: -9mm -11mm 14px; padding: 24px 11mm; } }
   .rfp-root .int-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
   .rfp-root .int-header-left { font-size: 10.5px; font-weight: 700; color: #222628; letter-spacing: 0.2px; }
   .rfp-root .int-header-right { font-size: 10.5px; font-weight: 700; color: #008ad2; letter-spacing: 0.2px; }
   .rfp-root .divider { border: none; border-top: 1px solid #e2e8f0; margin: 0 0 8px; }
   .rfp-root .divider-thick { border: none; border-top: 4px solid #008ad2; margin: 10px 0 13px; border-radius: 2px; }
   .rfp-root .footer { position: absolute; bottom: 7mm; left: 13mm; right: 13mm; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px; }
-  .rfp-root .cover-header { background: #222628; margin: -11mm -13mm 14px; padding: 26px 13mm; display: flex; justify-content: space-between; align-items: center; }
+  .rfp-root .cover-header { position: relative; overflow: hidden; background: linear-gradient(118deg, #1d2327 0%, #222628 60%, #172e38 100%); margin: -11mm -13mm 14px; padding: 24px 13mm 22px; display: flex; justify-content: space-between; align-items: center; gap: 24px; border-bottom: 4px solid #2bb4df; }
+  .rfp-root .cover-header::after { content: ""; position: absolute; right: -48px; bottom: -86px; width: 210px; height: 210px; border: 1px solid rgba(43,180,223,0.16); border-radius: 50%; box-shadow: 0 0 0 26px rgba(43,180,223,0.035), 0 0 0 54px rgba(43,180,223,0.025); pointer-events: none; }
   .rfp-root .cover-header-left { display: flex; flex-direction: column; align-items: flex-start; }
   .rfp-root .dxg-brand { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 8px; background: #fff; }
   .rfp-root .dxg-brand-logo { display: block; width: 34px; height: 34px; object-fit: contain; }
   .rfp-root .dxg-brand-wordmark { color: #222628; font-size: 21px; font-weight: 900; line-height: 1; letter-spacing: -0.5px; }
   .rfp-root .dxg-brand-wordmark-accent { color: #2bb4df; }
+  .rfp-root .cover-brand-caption { margin-top: 7px; color: #9fb4c0; font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: 1.25px; text-transform: uppercase; }
+  .rfp-root .cover-document-meta { position: relative; z-index: 1; display: flex; max-width: 360px; flex-direction: column; align-items: flex-end; text-align: right; }
+  .rfp-root .cover-document-row { display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-bottom: 7px; }
+  .rfp-root .cover-document-type { color: #7dd3f0; font-size: 10px; font-weight: 800; line-height: 1; letter-spacing: 1.1px; text-transform: uppercase; }
+  .rfp-root .cover-document-event { color: #fff; font-size: 16px; font-weight: 800; line-height: 1.2; letter-spacing: -0.1px; }
+  .rfp-root .cover-document-issued { margin-top: 5px; color: #9fb4c0; font-size: 9px; font-weight: 600; letter-spacing: 0.25px; }
   .rfp-root .dxg-logo { display: block; font-size: 24px; font-weight: 900; color: #fff; letter-spacing: -0.5px; line-height: 1.15; }
   .rfp-root .dxg-name { font-size: 12px; font-weight: 600; color: #c5d9f4; }
-  .rfp-root .badge-confidential { display: inline-flex; align-items: center; margin-top: 7px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.6px; width: fit-content; }
+  .rfp-root .badge-confidential { display: inline-flex; align-items: center; background: #ef4444; color: #fff; font-size: 9px; font-weight: 800; padding: 4px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.65px; width: fit-content; box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
   .rfp-root .badge-rfpilot { display: inline-flex; align-items: center; background: #008ad2; color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; border-radius: 8px; letter-spacing: 0.3px; white-space: nowrap; }
   .rfp-root .logo-chip { display: inline-flex; align-items: center; background: #fff; padding: 10px 18px; border-radius: 10px; }
   .rfp-root .logo-chip img { display: block; height: 42px; width: auto; }
@@ -80,6 +87,15 @@ const TEMPLATE_CSS = `
   .rfp-root .crew-box { margin-top: 7px; padding: 6px 10px; background: rgba(0,138,210,0.07); border-left: 3px solid #008ad2; border-radius: 4px; }
   .rfp-root .crew-title { font-size: 10px; font-weight: 800; color: #008ad2; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
   .rfp-root .crew-list { font-size: 11px; color: #374151; line-height: 1.5; }
+  .rfp-root .rooms-page { padding-bottom: 18mm; }
+  .rfp-root .rooms-page .section-title { margin-bottom: 7px; padding: 6px 11px; }
+  .rfp-root .rooms-page .sec-num { min-width: 22px; height: 22px; font-size: 12px; }
+  .rfp-root .rooms-page .info-card { padding: 6px 10px; }
+  .rfp-root .rooms-page .info-card h3 { margin-bottom: 4px; font-size: 11px; }
+  .rfp-root .rooms-page .info-row { padding: 2px 0; gap: 7px; }
+  .rfp-root .rooms-page .info-label, .rfp-root .rooms-page .info-value { font-size: 9.5px; line-height: 1.25; }
+  .rfp-root .rooms-page .crew-box, .rfp-root .rooms-page .note-box { margin-top: 4px; padding: 4px 8px; }
+  .rfp-root .rooms-page .crew-list, .rfp-root .rooms-page .note-text { font-size: 9.5px; line-height: 1.3; }
   .rfp-root .note-box { margin-top: 6px; padding: 6px 10px; background: #fffbeb; border-left: 3px solid #f97316; border-radius: 4px; }
   .rfp-root .note-title { font-size: 10px; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
   .rfp-root .note-text { font-size: 11px; color: #78350f; line-height: 1.5; }
@@ -551,14 +567,23 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
               />
               <span className="dxg-brand-wordmark">RFP<span className="dxg-brand-wordmark-accent">ilot</span></span>
             </div>
-            <div className="badge-confidential">Confidential</div>
+            <div className="cover-brand-caption">AV &amp; Event Production Sourcing</div>
+          </div>
+          <div className="cover-document-meta">
+            <div className="cover-document-row">
+              <span className="cover-document-type">Request for Proposal</span>
+              <span className="badge-confidential">Confidential</span>
+            </div>
+            <div className="cover-document-event">{eventName}</div>
+            <div className="cover-document-issued">
+              Issued {fmtDate(proposal.createdAt) || "Date pending"}
+            </div>
           </div>
         </div>
 
         <div className="divider-thick" />
 
         <div className="cover-title-block">
-          <div className="rfp-label">Request for Proposal</div>
           <div className="event-name">{eventName}</div>
           {(org || p(vs.venueName)) && (
             <div className="event-client">
@@ -767,28 +792,16 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
       </div>
 
       {/* ══════════════ PAGE 3+: ROOM-BY-ROOM ══════════════ */}
-      {rooms.length > 0 && (
-        <div className="page rooms-page">
+      {rooms.map((room, roomIndex) => (
+        <div className="page rooms-page" data-room-page={roomIndex + 1} key={`room-page-${roomIndex}`}>
           <IntHeader title={headerTitle} />
-          <SectionTitle num={nextSec()}>Room-by-Room Technical Specifications</SectionTitle>
-
-          {rooms.length === 1 ? (
-            renderRoom(rooms[0], 0, 1)
-          ) : (
-            <div className="two-col">
-              {rooms.slice(0, 2).map((r, i) => renderRoom(r, i, rooms.length))}
-            </div>
-          )}
-
-          {rooms.length > 2 && (
-            <div className="two-col" style={{ marginTop: 12 }}>
-              {rooms.slice(2, 4).map((r, i) => renderRoom(r, i + 2, rooms.length))}
-            </div>
-          )}
-
+          <SectionTitle num={roomIndex === 0 ? nextSec() : sectionNum}>
+            Room-by-Room Technical Specifications
+          </SectionTitle>
+          {renderRoom(room, roomIndex, rooms.length)}
           <Footer left={footerLeft} page={nextPage()} />
         </div>
-      )}
+      ))}
 
       {/* ══════════════ HYBRID & VIRTUAL ══════════════ */}
       {isHybrid && (
