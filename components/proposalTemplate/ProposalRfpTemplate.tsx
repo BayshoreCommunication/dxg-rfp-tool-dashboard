@@ -526,6 +526,8 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
   let sectionNum = 0;
   const nextSec = () => ++sectionNum;
+  let pageNum = 0;
+  const nextPage = () => ++pageNum;
 
   return (
     <div className="rfp-root proposal-print-root">
@@ -655,7 +657,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </div>
         )}
 
-        <Footer left={`© ${new Date().getFullYear()} ${brandName} | RFPilot`} page={1} />
+        <Footer left={`© ${new Date().getFullYear()} ${brandName} | RFPilot`} page={nextPage()} />
       </div>
 
       {/* ══════════════ PAGE 2: SCOPE AT A GLANCE ══════════════ */}
@@ -759,7 +761,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </div>
         )}
 
-        <Footer left={footerLeft} page={2} />
+        <Footer left={footerLeft} page={nextPage()} />
       </div>
 
       {/* ══════════════ PAGE 3+: ROOM-BY-ROOM ══════════════ */}
@@ -782,7 +784,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             </div>
           )}
 
-          <Footer left={footerLeft} page={3} />
+          <Footer left={footerLeft} page={nextPage()} />
         </div>
       )}
 
@@ -825,7 +827,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             </tbody>
           </table>
 
-          <Footer left={footerLeft} page={4} />
+          <Footer left={footerLeft} page={nextPage()} />
         </div>
       )}
 
@@ -893,7 +895,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             </div>
           )}
 
-          <Footer left={footerLeft} page={5} />
+          <Footer left={footerLeft} page={nextPage()} />
         </div>
       )}
 
@@ -933,7 +935,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             </tbody>
           </table>
 
-          <Footer left={footerLeft} page={6} />
+          <Footer left={footerLeft} page={nextPage()} />
         </div>
       )}
 
@@ -982,7 +984,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </div>
         )}
 
-        <Footer left={footerLeft} page={7} />
+        <Footer left={footerLeft} page={nextPage()} />
       </div>
 
       {/* ══════════════ VENDOR COORDINATION ══════════════ */}
@@ -1023,7 +1025,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
             </div>
           )}
 
-          <Footer left={footerLeft} page={8} />
+          <Footer left={footerLeft} page={nextPage()} />
         </div>
       )}
 
@@ -1121,7 +1123,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </div>
         )}
 
-        <Footer left={footerLeft} page={9} />
+        <Footer left={footerLeft} page={nextPage()} />
       </div>
 
       {/* ══════════════ UPLOADS & CO-VENDORS ══════════════ */}
@@ -1178,7 +1180,9 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         ].filter(({ raw }) => p(raw.companyName) || p(raw.contactName));
 
         const hasFiles = brandFiles.length || logoFiles.length || refFiles.length || refUrls.length || scenicFiles.length || venueDocs.length || venueCoiFiles.length || ndaDocs.length || p(up.brandGuideUrl);
-        if (!hasFiles && !cvEntries.length && !ndaRequired) return null;
+        // NDA status is already included on the submission page. Avoid adding
+        // an otherwise empty reference page when there are no files or contacts.
+        if (!hasFiles && !cvEntries.length) return null;
 
         return (
           <div className="page">
@@ -1302,7 +1306,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
               </>
             )}
 
-            <Footer left={footerLeft} page={10} />
+            <Footer left={footerLeft} page={nextPage()} />
           </div>
         );
       })()}
@@ -1406,7 +1410,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
           </p>
         </div>
 
-        <Footer left={footerLeft} page={10} />
+        <Footer left={footerLeft} page={nextPage()} />
       </div>
     </div>
   );
