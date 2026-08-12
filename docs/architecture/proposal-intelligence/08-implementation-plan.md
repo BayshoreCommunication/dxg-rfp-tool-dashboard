@@ -54,7 +54,7 @@ Acceptance: complete narrative and structured requirements; source locator; mand
 
 Confirmation: approved by the user on 2026-08-12.
 
-Implemented: PostgreSQL migration 045; deterministic safe-field plus accepted-rendered-narrative generation; exact locators; tenant/owner authorization; idempotent version creation; optimistic requirement review; confirmed evaluation weights; blocking approval validation; database immutability; version/checksum freshness; linked supersession; and the feature-gated `/proposals/[id]/intelligence/requirements` workspace. No vendor evidence extraction or scoring was added; those remain behind the Task 4 confirmation gate.
+Implemented: PostgreSQL migration 045; deterministic safe-field plus accepted-rendered-narrative generation; exact locators; tenant/owner authorization; idempotent version creation; optimistic requirement review; confirmed evaluation weights; blocking approval validation; database immutability; version/checksum freshness; linked supersession; and the default-available `/proposals/[id]/intelligence/requirements` workspace. No environment flag is required. No vendor evidence extraction or scoring was added; those remain behind the Task 4 confirmation gate.
 
 ## Task 4 — Evidence Extraction
 

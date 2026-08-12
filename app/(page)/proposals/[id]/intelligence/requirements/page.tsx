@@ -7,7 +7,7 @@ export const maxDuration = 60;
 
 export default async function RequirementRegistryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (process.env.NEXT_PUBLIC_PROPOSAL_INTELLIGENCE_ENABLED !== "true" || !/^[0-9a-f]{24}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{24}$/i.test(id)) notFound();
   const proposal = await getProposalByIdAction(id);
   if (!proposal.success) notFound();
   const list = await listRequirementSetsAction(id);

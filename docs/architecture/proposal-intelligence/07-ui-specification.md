@@ -128,14 +128,11 @@ Components consume generated/validated view contracts through server actions. Th
 - Mobile: requirement cards with vendor accordion; no compressed unreadable grid.
 - Exports provide the full matrix for offline review.
 
-## Feature gates
+## Availability and future release controls
 
-Suggested deny-by-default flags:
+The Task 3 requirement registry is available by default to authorized proposal owners and does not require backend or dashboard environment flags. Tenant membership, proposal ownership, scoped read/write authorization, idempotency, optimistic locking, audit, and PostgreSQL RLS remain authoritative.
 
-- backend `PROPOSAL_INTELLIGENCE_ENABLED`
-- backend `PROPOSAL_INTELLIGENCE_WRITES_ENABLED`
+Future tasks may introduce release controls for capabilities that perform model inference or change evaluator workflows:
+
 - backend `COMMERCIAL_NORMALIZATION_ENABLED`
 - backend `EVALUATOR_WORKFLOW_ENABLED`
-- dashboard `NEXT_PUBLIC_PROPOSAL_INTELLIGENCE_ENABLED`
-
-Organization/cohort entitlement remains authoritative. The dashboard build flag alone never grants access.

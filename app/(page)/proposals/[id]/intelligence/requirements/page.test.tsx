@@ -17,33 +17,24 @@ jest.mock("@/components/proposalIntelligence/RequirementRegistryWorkspace", () =
 
 const ID = "abc123abc123abc123abc123";
 type PageType = (props: { params: Promise<{ id: string }> }) => Promise<React.ReactElement>;
-const loadPage = async (enabled: string) => {
-  process.env.NEXT_PUBLIC_PROPOSAL_INTELLIGENCE_ENABLED = enabled;
-  jest.resetModules();
-  return (await import("./page")).default as PageType;
-};
+const loadPage = async () => (await import("./page")).default as PageType;
 
 describe("requirement registry route", () => {
-  const saved = process.env.NEXT_PUBLIC_PROPOSAL_INTELLIGENCE_ENABLED;
   beforeEach(() => {
     jest.clearAllMocks();
     getProposal.mockResolvedValue({ success: true, data: { _id: ID } });
     listSets.mockResolvedValue({ success: true, data: [] });
   });
-  afterAll(() => {
-    if (saved === undefined) delete process.env.NEXT_PUBLIC_PROPOSAL_INTELLIGENCE_ENABLED;
-    else process.env.NEXT_PUBLIC_PROPOSAL_INTELLIGENCE_ENABLED = saved;
-  });
   test("revalidates proposal ownership before rendering", async () => {
-    const Page = await loadPage("true");
+    const Page = await loadPage();
     render(await Page({ params: Promise.resolve({ id: ID }) }));
     expect(screen.getByTestId("registry")).toHaveTextContent(ID);
     expect(getProposal).toHaveBeenCalledWith(ID);
     expect(listSets).toHaveBeenCalledWith(ID);
   });
-  test("fails closed when the feature is disabled", async () => {
-    const Page = await loadPage("false");
-    await expect(Page({ params: Promise.resolve({ id: ID }) })).rejects.toThrow("NEXT_NOT_FOUND");
+  test("rejects an unsafe proposal identifier before backend access", async () => {
+    const Page = await loadPage();
+    await expect(Page({ params: Promise.resolve({ id: "../../settings" }) })).rejects.toThrow("NEXT_NOT_FOUND");
     expect(getProposal).not.toHaveBeenCalled();
   });
 });

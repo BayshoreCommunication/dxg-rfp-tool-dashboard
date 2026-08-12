@@ -62,8 +62,6 @@ export type RequirementSetSummary = RequirementRegistryView["set"] & {
 type Result<T> = { success: true; data: T } | { success: false; code: string; message: string };
 
 const safeMessages: Record<string, string> = {
-  REQUIREMENT_REGISTRY_DISABLED: "Proposal intelligence is not enabled in this environment.",
-  REQUIREMENT_REGISTRY_WRITES_DISABLED: "Proposal intelligence editing is not enabled in this environment.",
   REQUIREMENT_SET_NOT_FOUND: "This requirement set could not be found.",
   REQUIREMENT_SET_VERSION_CONFLICT: "Someone changed this registry. Refresh it before saving again.",
   REQUIREMENT_SET_STALE: "The proposal changed. Create a superseding version before continuing.",

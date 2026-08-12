@@ -49,7 +49,7 @@ The central product object is a versioned comparison snapshot. Analyze, Compare,
 - Requirement compliance, commercial normalization, evaluator scoring, and the final decision remain distinct records.
 - Results derived from changed inputs are visibly stale and cannot be represented as current.
 - Unsupported, invalid, or uncited model output is rejected or routed to human review, not softened into a confident conclusion.
-- Tenant RLS, proposal ownership, scoped authorization, audit events, private storage, and deny-by-default feature gates remain mandatory.
+- Tenant RLS, proposal ownership, scoped authorization, audit events, and private storage remain mandatory. Task 3 is available by default without environment flags; future inference/evaluator releases still require explicit release controls.
 
 ## Delivery status
 
