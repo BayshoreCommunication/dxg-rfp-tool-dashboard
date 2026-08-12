@@ -26,6 +26,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VendorAnalysisSection from "./VendorAnalysisSection";
 import VendorComparisonPanel from "./VendorComparisonPanel";
+import VendorExtractionSection from "./VendorExtractionSection";
 
 type Props = {
   initialResponses: VendorResponseItem[];
@@ -448,6 +449,17 @@ export default function VendorResponsesView({
                     )}
                   </div>
                 </article>
+
+                {selected.submissionId && selected.currentVersionId && (
+                  <div className="mt-5">
+                    <VendorExtractionSection
+                      key={`${selected.submissionId}:${selected.currentVersionId}`}
+                      proposalId={selected.proposalId}
+                      submissionId={selected.submissionId}
+                      versionId={selected.currentVersionId}
+                    />
+                  </div>
+                )}
 
                 <div className="mt-5">
                   <VendorAnalysisSection
