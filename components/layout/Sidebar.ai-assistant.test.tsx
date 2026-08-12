@@ -1,4 +1,6 @@
 import { signOutAction } from "@/app/actions/auth";
+import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
+import { VENDOR_UNREAD_COUNT_CHANGED_EVENT } from "@/lib/vendorResponses/unreadEvents";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Sidebar from "./Sidebar";
 
@@ -26,6 +28,12 @@ jest.mock("@/config/navigation", () => ({
       title: "Proposals",
       href: "/proposals",
       icon: <span aria-hidden>P</span>,
+    },
+    {
+      id: "vendor-responses",
+      title: "Vendor Response",
+      href: "/vendor-responses",
+      icon: <span aria-hidden>V</span>,
     },
   ],
 }));
@@ -82,6 +90,25 @@ describe("Sidebar AI Assistant launcher", () => {
       expect(mockedSignOutAction).toHaveBeenCalledTimes(1);
       expect(signOutButton).toBeDisabled();
       expect(signOutButton).toHaveTextContent("Signing out");
+    });
+  });
+
+  test("updates the vendor response badge without a reload", async () => {
+    jest.mocked(getVendorUnreadCountAction).mockResolvedValueOnce(1);
+    render(<Sidebar />);
+
+    await waitFor(() => {
+      expect(screen.getByText("1")).toBeInTheDocument();
+    });
+
+    window.dispatchEvent(
+      new CustomEvent(VENDOR_UNREAD_COUNT_CHANGED_EVENT, {
+        detail: { count: 0 },
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("1")).not.toBeInTheDocument();
     });
   });
 });

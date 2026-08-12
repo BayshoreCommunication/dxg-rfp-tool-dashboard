@@ -8,6 +8,7 @@ import {
 import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { VENDOR_UNREAD_COUNT_CHANGED_EVENT } from "@/lib/vendorResponses/unreadEvents";
 import { BellDot, Bot, LoaderCircle, LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -63,6 +64,26 @@ const Sidebar = ({
 
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateVendorUnreadCount = (event: Event) => {
+      const count = (event as CustomEvent<{ count?: number }>).detail?.count;
+      if (typeof count === "number") {
+        setVendorUnreadCount(Math.max(0, count));
+      }
+    };
+
+    window.addEventListener(
+      VENDOR_UNREAD_COUNT_CHANGED_EVENT,
+      updateVendorUnreadCount,
+    );
+    return () => {
+      window.removeEventListener(
+        VENDOR_UNREAD_COUNT_CHANGED_EVENT,
+        updateVendorUnreadCount,
+      );
     };
   }, []);
 

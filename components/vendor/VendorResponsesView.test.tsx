@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { markVendorResponseReadAction } from "@/app/actions/vendorResponse";
+import { VENDOR_UNREAD_COUNT_CHANGED_EVENT } from "@/lib/vendorResponses/unreadEvents";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import VendorResponsesView from "./VendorResponsesView";
 
 const push = jest.fn();
@@ -45,8 +47,34 @@ const renderView = () =>
   );
 
 beforeEach(() => {
+  jest.clearAllMocks();
   push.mockClear();
   currentSearch = "";
+});
+
+it("marks the initially opened response as read and publishes the new unread count", async () => {
+  const unreadCountChanged = jest.fn();
+  window.addEventListener(
+    VENDOR_UNREAD_COUNT_CHANGED_EVENT,
+    unreadCountChanged,
+  );
+
+  renderView();
+
+  await waitFor(() => {
+    expect(markVendorResponseReadAction).toHaveBeenCalledWith("response-1");
+    expect(unreadCountChanged).toHaveBeenCalledTimes(1);
+  });
+
+  expect((unreadCountChanged.mock.calls[0][0] as CustomEvent).detail).toEqual({
+    count: 0,
+  });
+  expect(screen.queryByText(/1 unread/)).not.toBeInTheDocument();
+
+  window.removeEventListener(
+    VENDOR_UNREAD_COUNT_CHANGED_EVENT,
+    unreadCountChanged,
+  );
 });
 
 it("enables unread-only mode and resets pagination", () => {
