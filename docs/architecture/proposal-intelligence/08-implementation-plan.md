@@ -20,6 +20,8 @@ Acceptance:
 
 ## Task 2 — Submission Versioning
 
+Status: completed on `agent/proposal-intelligence-submission-versioning` on 2026-08-12.
+
 Repositories: backend, then dashboard vendor form/inbox compatibility.
 
 Scope:

@@ -38,6 +38,8 @@ const response = {
   isRead: false,
   createdAt: "2026-08-04T10:30:00.000Z",
   updatedAt: "2026-08-04T10:30:00.000Z",
+  currentVersionNumber: 2,
+  versionReceivedAt: "2026-08-05T11:45:00.000Z",
 };
 
 const renderView = () =>
@@ -110,6 +112,7 @@ it("renders real response content without a demo label", () => {
   expect(screen.getAllByText("Apex Events")).toHaveLength(2);
   expect(screen.getAllByText("Our proposal is ready for review.")).toHaveLength(2);
   expect(screen.queryByText("Demo")).not.toBeInTheDocument();
+  expect(screen.getByText("Version 2")).toBeInTheDocument();
 });
 
 it("shows a meaningful empty state when no vendor has responded", () => {

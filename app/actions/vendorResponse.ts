@@ -6,6 +6,11 @@ import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 export type VendorDocument = {
   name: string;
   url: string;
+  documentId?: string;
+  sourceId?: string;
+  sha256?: string | null;
+  sizeBytes?: number | null;
+  scanStatus?: "clean" | "skipped" | "legacy_unknown";
 };
 
 export type VendorResponseItem = {
@@ -21,6 +26,12 @@ export type VendorResponseItem = {
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
+  submissionId?: string;
+  currentVersionId?: string;
+  currentVersionNumber?: number;
+  versionReason?: string;
+  versionReceivedAt?: string;
+  manifestChecksum?: string;
 };
 
 export const getVendorResponsesAction = async ({

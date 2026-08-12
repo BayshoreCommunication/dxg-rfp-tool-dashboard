@@ -371,7 +371,7 @@ export default function VendorResponsesView({
                         {selected.vendorName}
                       </h2>
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                        Submitted
+                        Version {selected.currentVersionNumber ?? 1}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
@@ -399,7 +399,7 @@ export default function VendorResponsesView({
                     <ResponseFact
                       icon={<CalendarDays size={16} />}
                       label="Received"
-                      value={formatDate(selected.createdAt)}
+                      value={formatDate(selected.versionReceivedAt ?? selected.createdAt)}
                     />
                   </div>
 

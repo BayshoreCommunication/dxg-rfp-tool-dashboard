@@ -136,3 +136,16 @@ the defaults are a suggestion until accepted. `budget.evaluationMatrixConfirmed`
 gates both the published RFP table and the backend's draft evidence; adjusting
 any weight counts as accepting. Unconfirmed, the RFP states that scoring
 criteria are not finalised rather than printing numbers nobody chose.
+
+## Vendor submission versioning
+
+The public vendor-response form treats every accepted send as an immutable
+submission version. It supplies a stable idempotency key across retries, labels
+revisions with the next version number, and renders the versioned receipt
+returned by the backend. The inbox continues to use the backend's latest-version
+compatibility projection, but visibly labels that projection as `Version N`.
+The same-origin receipt BFF forwards only the proposal, immutable version,
+normalized vendor email, and scoped public grant; it never forwards arbitrary
+query parameters or exposes storage URLs.
+Historical version navigation remains part of Task 8; the dashboard must not
+reconstruct history from the compatibility response.
