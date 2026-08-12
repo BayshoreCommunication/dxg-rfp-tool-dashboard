@@ -411,18 +411,48 @@ body {
   background: #dcf7fa;
 }
 
-/* react-datepicker absolutely positions the time column outside the calendar
-   whenever a Today shortcut is present. Keep it in the calendar flow so the
-   rounded wrapper does not clip it. */
+/* Keep date, time, and the Today shortcut inside one compact responsive panel.
+   react-datepicker otherwise positions the Today-time column outside the
+   calendar, which can create a tall overlapping popup in narrow form columns. */
+.dxg-datepicker--with-time.react-datepicker {
+  display: grid;
+  grid-template-columns: minmax(252px, auto) 96px;
+}
+
+.dxg-datepicker--with-time .react-datepicker__month-container {
+  grid-column: 1;
+  grid-row: 1;
+  float: none;
+  min-width: 0;
+}
+
+.dxg-datepicker--with-time .react-datepicker__time-container,
 .dxg-datepicker--with-time
   .react-datepicker__time-container--with-today-button {
   position: static;
+  grid-column: 2;
+  grid-row: 1;
   top: auto;
   right: auto;
-  float: right;
+  float: none;
+  width: 96px;
   border: 0;
   border-left: 1px solid #e2f2f5;
   border-radius: 0;
+}
+
+.dxg-datepicker--with-time .react-datepicker__time,
+.dxg-datepicker--with-time .react-datepicker__time-box {
+  width: 95px;
+}
+
+.dxg-datepicker--with-time .react-datepicker__time-list {
+  height: 252px !important;
+}
+
+.dxg-datepicker--with-time .react-datepicker__today-button {
+  grid-column: 1 / -1;
+  grid-row: 2;
 }
 
 .dxg-timepicker.react-datepicker {
@@ -472,13 +502,21 @@ body {
   will-change: opacity;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 520px) {
   .dxg-datepicker-popper {
     max-width: calc(100vw - 16px);
   }
 
-  .dxg-datepicker--with-time .react-datepicker__month-container {
-    float: none;
+  .dxg-datepicker--with-time.react-datepicker {
+    display: block;
+    width: min(100%, 300px);
+  }
+
+  .dxg-datepicker--with-time .react-datepicker__month-container,
+  .dxg-datepicker--with-time .react-datepicker__time-container,
+  .dxg-datepicker--with-time .react-datepicker__today-button {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .dxg-datepicker--with-time .react-datepicker__time-container,
