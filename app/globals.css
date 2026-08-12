@@ -411,6 +411,20 @@ body {
   background: #dcf7fa;
 }
 
+/* react-datepicker absolutely positions the time column outside the calendar
+   whenever a Today shortcut is present. Keep it in the calendar flow so the
+   rounded wrapper does not clip it. */
+.dxg-datepicker--with-time
+  .react-datepicker__time-container--with-today-button {
+  position: static;
+  top: auto;
+  right: auto;
+  float: right;
+  border: 0;
+  border-left: 1px solid #e2f2f5;
+  border-radius: 0;
+}
+
 .dxg-timepicker.react-datepicker {
   width: 200px !important;
 }
@@ -456,6 +470,35 @@ body {
   z-index: 60 !important;
   animation: dxg-datepicker-in 120ms ease-out;
   will-change: opacity;
+}
+
+@media (max-width: 420px) {
+  .dxg-datepicker-popper {
+    max-width: calc(100vw - 16px);
+  }
+
+  .dxg-datepicker--with-time .react-datepicker__month-container {
+    float: none;
+  }
+
+  .dxg-datepicker--with-time .react-datepicker__time-container,
+  .dxg-datepicker--with-time
+    .react-datepicker__time-container--with-today-button {
+    float: none;
+    clear: both;
+    width: 100%;
+    border: 0;
+    border-top: 1px solid #e2f2f5;
+  }
+
+  .dxg-datepicker--with-time .react-datepicker__time,
+  .dxg-datepicker--with-time .react-datepicker__time-box {
+    width: 100%;
+  }
+
+  .dxg-datepicker--with-time .react-datepicker__time-list {
+    height: 132px !important;
+  }
 }
 
 @keyframes dxg-datepicker-in {

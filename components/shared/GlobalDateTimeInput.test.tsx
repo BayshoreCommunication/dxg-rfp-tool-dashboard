@@ -14,6 +14,7 @@ jest.mock("react-datepicker", () => ({
     ariaInvalid,
     ariaDescribedBy,
     ariaLabelledBy,
+    calendarClassName,
   }: {
     dateFormat?: string;
     calendarStartDay?: number;
@@ -25,6 +26,7 @@ jest.mock("react-datepicker", () => ({
     ariaInvalid?: "true";
     ariaDescribedBy?: string;
     ariaLabelledBy?: string;
+    calendarClassName?: string;
   }) => (
     <input
       data-testid="date-time-picker"
@@ -38,6 +40,7 @@ jest.mock("react-datepicker", () => ({
       aria-invalid={ariaInvalid}
       aria-describedby={ariaDescribedBy}
       aria-labelledby={ariaLabelledBy}
+      data-calendar-class={calendarClassName}
     />
   ),
 }));
@@ -60,6 +63,10 @@ describe("GlobalDateTimeInput", () => {
     expect(picker).toHaveAttribute("data-calendar-start-day", "0");
     expect(picker).toHaveAttribute("data-show-time", "true");
     expect(picker).toHaveAttribute("data-time-intervals", "15");
+    expect(picker).toHaveAttribute(
+      "data-calendar-class",
+      "dxg-datepicker dxg-datepicker--with-time",
+    );
   });
 
   it("passes date bounds and accessible inline-error relationships", () => {
