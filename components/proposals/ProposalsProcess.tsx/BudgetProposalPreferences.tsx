@@ -806,6 +806,21 @@ const BudgetProposalPreferences = ({
           )}
         </div>
 
+        {/* Scoring Notes */}
+        <div className="mb-6">
+          <label className={labelClass}>
+            Scoring Notes / Key Decision Factors
+            <InfoTooltip text="Any additional context about how proposals will be evaluated — scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
+          </label>
+          <textarea
+            rows={3}
+            value={safeData.scoringNotes}
+            onChange={(e) => onChange({ scoringNotes: e.target.value })}
+            placeholder="Additional details to help vendors understand what will factor into the decision-making process."
+            className={`${inputClass} resize-none`}
+          />
+        </div>
+
         {/* Sustainability & DEI Practices */}
         <div className="mb-6">
           <label className={labelClass}>
@@ -818,21 +833,6 @@ const BudgetProposalPreferences = ({
             value={safeData.sustainabilityDeiNotes}
             onChange={(e) => onChange({ sustainabilityDeiNotes: e.target.value })}
             placeholder="e.g. Preference for vendors with documented sustainability practices (equipment lifecycle, waste reduction) and a supplier diversity program…"
-            className={`${inputClass} resize-none`}
-          />
-        </div>
-
-        {/* Scoring Notes */}
-        <div className="mb-6">
-          <label className={labelClass}>
-            Scoring Notes / Key Decision Factors
-            <InfoTooltip text="Any additional context about how proposals will be evaluated — scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
-          </label>
-          <textarea
-            rows={3}
-            value={safeData.scoringNotes}
-            onChange={(e) => onChange({ scoringNotes: e.target.value })}
-            placeholder="e.g. Creative vision accounts for 30% because this is a brand-defining event — we want to see bold ideas…"
             className={`${inputClass} resize-none`}
           />
         </div>
@@ -1084,8 +1084,7 @@ const BudgetProposalPreferences = ({
           data-assistant-field-key="/content/budgetPreferences/producerCallRequested"
         >
           <label className={labelClass}>
-            Call with DXG Producer? <span className="text-red-500">*</span>
-            <InfoTooltip text="A brief discovery call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement." />
+            Setup a call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement? <span className="text-red-500">*</span>
           </label>
           <YesNo
             value={safeData.callWithDxgProducer}

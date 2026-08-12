@@ -95,20 +95,16 @@ describe("evaluation weightings", () => {
 });
 
 describe("producer consultation guidance", () => {
-  test("explains the value of a discovery call before venue contracting", async () => {
-    const user = userEvent.setup();
+  test("explains the value of a producer call before venue contracting", () => {
     renderStep(budget());
 
-    const fieldLabel = screen.getByText(/Call with DXG Producer\?/i).closest("label");
+    const fieldLabel = screen.getByText(
+      /Setup a call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement\?/i,
+    ).closest("label");
     expect(fieldLabel).not.toBeNull();
     expect(fieldLabel?.closest("[data-assistant-field-key]")).toHaveAttribute(
       "data-assistant-field-key",
       "/content/budgetPreferences/producerCallRequested",
     );
-    await user.hover(within(fieldLabel as HTMLLabelElement).getByRole("button", { name: /About this field/i }));
-
-    expect(await screen.findByText(
-      "A brief discovery call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement.",
-    )).toBeInTheDocument();
   });
 });
