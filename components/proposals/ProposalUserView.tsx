@@ -4,7 +4,8 @@ import { getProposalByIdAction } from "@/app/actions/proposals";
 import ProposalRfpTemplate, {
   type RfpProposalData,
 } from "@/components/proposalTemplate/ProposalRfpTemplate";
-import { useEffect, useMemo, useState } from "react";
+import ProposalExportActions from "@/components/proposals/ProposalExportActions";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const extractObjectId = (slugOrId?: string | null) => {
   if (!slugOrId || typeof slugOrId !== "string") return "";
@@ -30,8 +31,8 @@ export default function ProposalUserView({
 }) {
   const [proposal, setProposal] = useState<RfpProposalData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
+  const proposalDocumentRef = useRef<HTMLDivElement>(null);
   const isPublicAccess = source === "email" || source === "public";
 
   const proposalId = useMemo(() => extractObjectId(slug), [slug]);
@@ -177,45 +178,11 @@ export default function ProposalUserView({
     );
   }
 
-  const handleDownloadProposal = () => {
-    if (downloading) return;
-    setDownloading(true);
-
-    const originalTitle = document.title;
-    const printableTitle =
-      proposal.event?.eventName?.trim() ||
-      proposal.contact?.contactOrganization?.trim() ||
-      "proposal";
-    document.title = `${printableTitle}-rfp`;
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        try {
-          window.print();
-        } finally {
-          document.title = originalTitle;
-          setDownloading(false);
-        }
-      });
-    });
-  };
-
   const canDownload = resolveDownloadPreview(proposal);
 
   return (
-    <div>
-      {canDownload && (
-        <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[99] no-print">
-          <button
-            type="button"
-            onClick={handleDownloadProposal}
-            disabled={downloading}
-            className="rounded-2xl border border-slate-200 bg-white/90 !px-6 !py-2.5 text-sm font-bold text-slate-800 shadow-xl backdrop-blur-md disabled:opacity-60 hover:bg-white transition"
-          >
-            {downloading ? "Generating PDF..." : "Download PDF"}
-          </button>
-        </div>
-      )}
+    <div ref={proposalDocumentRef}>
+      {canDownload && <ProposalExportActions proposal={proposal} />}
       <ProposalRfpTemplate proposal={proposal} />
     </div>
   );

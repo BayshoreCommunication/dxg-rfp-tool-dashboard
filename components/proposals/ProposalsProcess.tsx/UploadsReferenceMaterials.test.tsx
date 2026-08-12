@@ -96,6 +96,28 @@ describe("categorized reference materials", () => {
     expect(html).toContain("Venue / COI Documents");
     expect(html).toContain("venue-coi.pdf");
   });
+
+  it("does not create a nearly empty reference page for NDA status alone", () => {
+    const html = renderToStaticMarkup(<ProposalRfpTemplate proposal={{
+      uploads: { ...uploads, referenceFiles: [], scenicInspirationFiles: [], venueCoiFiles: [], ndaRequired: "YES", ndaType: "one_way" },
+      event: { eventName: "NDA Only Test" },
+      roomByRoom: [],
+    }} />);
+
+    expect(html).not.toContain("Reference Materials &amp; Co-Vendor Coordination");
+    expect(html).toContain("NDA Requirement");
+  });
+
+  it("numbers only the pages that are actually rendered", () => {
+    const html = renderToStaticMarkup(<ProposalRfpTemplate proposal={{
+      uploads: { ...uploads, referenceFiles: [], scenicInspirationFiles: [], venueCoiFiles: [], ndaRequired: "YES" },
+      event: { eventName: "Sequential Pages", eventFormat: "In-Person" },
+      roomByRoom: [{ roomFunction: "General Session" }],
+    }} />);
+    const pageNumbers = [...html.matchAll(/Page (\d+)/g)].map((match) => Number(match[1]));
+
+    expect(pageNumbers).toEqual([1, 2, 3, 4, 5, 6]);
+  });
 });
 
 describe("UploadBox", () => {

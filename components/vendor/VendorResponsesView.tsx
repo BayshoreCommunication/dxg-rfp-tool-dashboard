@@ -5,6 +5,7 @@ import {
   VendorResponseItem,
 } from "@/app/actions/vendorResponse";
 import { cn } from "@/lib/utils";
+import { publishVendorUnreadCount } from "@/lib/vendorResponses/unreadEvents";
 import {
   ArrowLeft,
   CalendarDays,
@@ -20,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VendorAnalysisSection from "./VendorAnalysisSection";
 import VendorComparisonPanel from "./VendorComparisonPanel";
 
@@ -66,6 +67,8 @@ export default function VendorResponsesView({
   const searchParams = useSearchParams();
   const [responses, setResponses] = useState(initialResponses);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  const unreadCountRef = useRef(initialUnreadCount);
+  const markingReadIds = useRef(new Set<string>());
   const [selected, setSelected] = useState<VendorResponseItem | null>(
     initialResponses[0] ?? null,
   );
@@ -84,18 +87,42 @@ export default function VendorResponsesView({
     );
   }, [query, responses]);
 
-  const openResponse = async (item: VendorResponseItem) => {
-    setSelected(item);
-    if (!item.isRead) {
-      await markVendorResponseReadAction(item._id);
+  const markResponseRead = useCallback(async (item: VendorResponseItem) => {
+    if (!item.isRead && !markingReadIds.current.has(item._id)) {
+      markingReadIds.current.add(item._id);
+      const result = await markVendorResponseReadAction(item._id);
+      markingReadIds.current.delete(item._id);
+      if (!result?.success) return;
+
       setResponses((previous) =>
         previous.map((response) =>
           response._id === item._id ? { ...response, isRead: true } : response,
         ),
       );
-      setUnreadCount((count) => Math.max(0, count - 1));
+      setSelected((current) =>
+        current?._id === item._id ? { ...current, isRead: true } : current,
+      );
+      const nextCount = Math.max(0, unreadCountRef.current - 1);
+      unreadCountRef.current = nextCount;
+      setUnreadCount(nextCount);
+      publishVendorUnreadCount(nextCount);
     }
-  };
+  }, []);
+
+  const openResponse = useCallback((item: VendorResponseItem) => {
+    setSelected(item);
+    void markResponseRead(item);
+  }, [markResponseRead]);
+
+  useEffect(() => {
+    const initiallySelected = initialResponses[0];
+    if (!initiallySelected || initiallySelected.isRead) return;
+
+    const timer = window.setTimeout(() => {
+      void markResponseRead(initiallySelected);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [initialResponses, markResponseRead]);
 
   const goToPage = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
