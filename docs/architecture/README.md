@@ -30,6 +30,7 @@ Every pull request must pass locked dependency installation, ESLint, strict Type
 Architecture, API contracts, accessibility expectations, feature flags, error states, and operational behavior must be updated with each material change.
 
 - [Async status and recovery UX](./ASYNC_STATUS_UX.md)
+- [Proposal Intelligence Architecture Decision Pack](./proposal-intelligence/README.md)
 
 ## Platform AI Assistant
 
