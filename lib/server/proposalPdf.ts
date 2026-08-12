@@ -30,12 +30,19 @@ const localChromePath = async () => {
 
 const launchBrowser = async (): Promise<Browser> => {
   const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  const executablePath = isServerless
+    ? await chromium.executablePath()
+    : await localChromePath();
+
+  console.info("[proposal-pdf] launching Chromium", {
+    environment: isServerless ? "serverless" : "local",
+    executablePath,
+  });
+
   return puppeteer.launch({
     args: isServerless ? chromium.args : [],
-    executablePath: isServerless
-      ? await chromium.executablePath()
-      : await localChromePath(),
-    headless: true,
+    executablePath,
+    headless: isServerless ? "shell" : true,
   });
 };
 
