@@ -1,4 +1,8 @@
-import { fitPageToA4, proposalPdfFilename } from "./downloadProposalPdf";
+import {
+  fitPageToA4,
+  preparePageCloneForPdf,
+  proposalPdfFilename,
+} from "./downloadProposalPdf";
 
 describe("proposalPdfFilename", () => {
   it("creates a safe PDF filename from the proposal title", () => {
@@ -28,5 +32,26 @@ describe("fitPageToA4", () => {
     expect(result.width).toBeCloseTo(194.90625);
     expect(result.x).toBeCloseTo(7.546875);
     expect(result.y).toBe(0);
+  });
+});
+
+describe("preparePageCloneForPdf", () => {
+  it("keeps long page content in flow and prevents footer overlap", () => {
+    const page = document.createElement("section");
+    const footer = document.createElement("footer");
+    footer.className = "footer";
+    footer.style.position = "absolute";
+    page.appendChild(footer);
+
+    preparePageCloneForPdf(page);
+
+    expect(page.style.display).toBe("flex");
+    expect(page.style.flexDirection).toBe("column");
+    expect(page.style.height).toBe("auto");
+    expect(page.style.minHeight).toBe("297mm");
+    expect(page.style.overflow).toBe("visible");
+    expect(footer.style.position).toBe("static");
+    expect(footer.style.marginTop).toBe("auto");
+    expect(footer.style.flexShrink).toBe("0");
   });
 });
