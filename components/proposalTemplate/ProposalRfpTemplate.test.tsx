@@ -37,3 +37,18 @@ test("uses RFPilot instead of the proposal link prefix in page chrome", () => {
   expect(html).not.toContain("abuco<!-- --> | RFPilot");
   expect(html).toContain("RFPilot — General AV Services RFP — CONFIDENTIAL");
 });
+
+test("renders every room on its own page so detailed specifications cannot collide", () => {
+  const rooms = Array.from({ length: 5 }, (_, index) => ({
+    roomLocation: `Room ${index + 1}`,
+    cameras: { cameras: "Yes", cameraCount: "4" },
+  }));
+  const html = renderToStaticMarkup(
+    <ProposalRfpTemplate
+      proposal={{ event: { eventName: "Room Test" }, roomByRoom: rooms }}
+    />,
+  );
+
+  expect((html.match(/data-room-page=/g) || [])).toHaveLength(5);
+  expect(html).toContain("Room 5 of 5");
+});
