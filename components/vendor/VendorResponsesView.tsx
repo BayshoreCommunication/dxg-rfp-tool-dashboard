@@ -28,6 +28,7 @@ import VendorAnalysisSection from "./VendorAnalysisSection";
 import VendorComparisonPanel from "./VendorComparisonPanel";
 import VendorExtractionSection from "./VendorExtractionSection";
 import VendorFactsSection from "./VendorFactsSection";
+import VendorEvaluationSection from "./VendorEvaluationSection";
 
 type Props = {
   initialResponses: VendorResponseItem[];
@@ -461,6 +462,12 @@ export default function VendorResponsesView({
                     />
                     <VendorFactsSection
                       key={`intelligence:${selected.submissionId}:${selected.currentVersionId}`}
+                      proposalId={selected.proposalId}
+                      submissionId={selected.submissionId}
+                      versionId={selected.currentVersionId}
+                    />
+                    <VendorEvaluationSection
+                      key={`evaluation:${selected.submissionId}:${selected.currentVersionId}`}
                       proposalId={selected.proposalId}
                       submissionId={selected.submissionId}
                       versionId={selected.currentVersionId}
