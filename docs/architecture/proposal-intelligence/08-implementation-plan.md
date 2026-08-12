@@ -44,13 +44,17 @@ Confirmation required before starting.
 
 ## Task 3 — Requirement Registry
 
+Status: completed on `agent/proposal-intelligence-requirement-registry` on 2026-08-12.
+
 Repositories: backend and dashboard.
 
 Scope: requirement/evaluation schema and migrations, draft generation from canonical proposal plus rendered RFP, review editor, approval/versioning, validation, criterion mapping.
 
 Acceptance: complete narrative and structured requirements; source locator; mandatory/criterion review; confirmed weights; approved sets immutable; proposal changes make sets supersedable/stale.
 
-Confirmation required before starting.
+Confirmation: approved by the user on 2026-08-12.
+
+Implemented: PostgreSQL migration 045; deterministic safe-field plus accepted-rendered-narrative generation; exact locators; tenant/owner authorization; idempotent version creation; optimistic requirement review; confirmed evaluation weights; blocking approval validation; database immutability; version/checksum freshness; linked supersession; and the feature-gated `/proposals/[id]/intelligence/requirements` workspace. No vendor evidence extraction or scoring was added; those remain behind the Task 4 confirmation gate.
 
 ## Task 4 — Evidence Extraction
 

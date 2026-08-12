@@ -1,9 +1,9 @@
 # Proposal Intelligence Architecture Decision Pack
 
-> Status: Task 1 review draft
+> Status: Tasks 1–3 completed; Task 4 requires confirmation
 > Date: 2026-08-12
 > Owner: RFPilot product and engineering
-> Scope: planner dashboard and backend AI domain; no production implementation in this task
+> Scope: planner dashboard and backend AI domain
 
 ## Outcome
 
@@ -51,9 +51,9 @@ The central product object is a versioned comparison snapshot. Analyze, Compare,
 - Unsupported, invalid, or uncited model output is rejected or routed to human review, not softened into a confident conclusion.
 - Tenant RLS, proposal ownership, scoped authorization, audit events, private storage, and deny-by-default feature gates remain mandatory.
 
-## Explicitly deferred from Task 1
+## Delivery status
 
-Task 1 creates documentation only. It does not add database migrations, Mongo models, APIs, workers, provider calls, feature flags, pages, or components. Tasks 2 through 10 require separate user approval before implementation.
+Task 1 delivered this architecture pack. Task 2 delivered immutable vendor-submission versioning. Task 3 delivered the tenant-isolated requirement registry, approval/versioning API, and planner review workspace. Task 4 evidence extraction and Tasks 5–10 remain unstarted and require separate user approval.
 
 ## Research basis
 

@@ -9,6 +9,7 @@ import { publishVendorUnreadCount } from "@/lib/vendorResponses/unreadEvents";
 import {
   ArrowLeft,
   CalendarDays,
+  ClipboardList,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
@@ -20,6 +21,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VendorAnalysisSection from "./VendorAnalysisSection";
@@ -380,6 +382,14 @@ export default function VendorResponsesView({
                         {selected.proposalTitle}
                       </span>
                     </p>
+                    {process.env.NEXT_PUBLIC_PROPOSAL_INTELLIGENCE_ENABLED === "true" && (
+                      <Link
+                        href={`/proposals/${selected.proposalId}/intelligence/requirements`}
+                        className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#008ad2]/25 bg-[#eaf7fd] px-3 text-xs font-extrabold text-[#0076b4] transition hover:border-[#008ad2]/40 hover:bg-[#dff3fc]"
+                      >
+                        <ClipboardList size={14} /> Review RFP requirements
+                      </Link>
+                    )}
                   </div>
                 </div>
 
