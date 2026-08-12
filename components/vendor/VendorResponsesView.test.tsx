@@ -25,6 +25,11 @@ jest.mock("./VendorExtractionSection", () => ({
   default: () => <div data-testid="vendor-extraction" />,
 }));
 
+jest.mock("./VendorFactsSection", () => ({
+  __esModule: true,
+  default: () => <div data-testid="vendor-facts" />,
+}));
+
 jest.mock("./VendorComparisonPanel", () => ({
   __esModule: true,
   default: () => <div data-testid="vendor-comparison" />,

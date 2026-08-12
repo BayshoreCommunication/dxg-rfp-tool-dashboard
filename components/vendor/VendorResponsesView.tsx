@@ -27,6 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VendorAnalysisSection from "./VendorAnalysisSection";
 import VendorComparisonPanel from "./VendorComparisonPanel";
 import VendorExtractionSection from "./VendorExtractionSection";
+import VendorFactsSection from "./VendorFactsSection";
 
 type Props = {
   initialResponses: VendorResponseItem[];
@@ -451,9 +452,15 @@ export default function VendorResponsesView({
                 </article>
 
                 {selected.submissionId && selected.currentVersionId && (
-                  <div className="mt-5">
+                  <div className="mt-5 space-y-5">
                     <VendorExtractionSection
                       key={`${selected.submissionId}:${selected.currentVersionId}`}
+                      proposalId={selected.proposalId}
+                      submissionId={selected.submissionId}
+                      versionId={selected.currentVersionId}
+                    />
+                    <VendorFactsSection
+                      key={`intelligence:${selected.submissionId}:${selected.currentVersionId}`}
                       proposalId={selected.proposalId}
                       submissionId={selected.submissionId}
                       versionId={selected.currentVersionId}
