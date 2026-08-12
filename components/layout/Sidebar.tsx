@@ -179,12 +179,12 @@ const Sidebar = ({
   const avatarUrl = "/assets/logo/rfpilot-primary-logo.png"; // Replace with your actual logo URL or logic to fetch it
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 flex h-dvh w-[90px] min-h-0 flex-col overflow-hidden border-r border-gray-200 bg-white">
+    <aside className="app-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh w-[90px] min-h-0 flex-col overflow-hidden border-r border-gray-200 bg-white">
       <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200 max-[800px]:h-14">
         <Link
           href="/dashboard"
           aria-label="Go to dashboard"
-          className="group flex h-12 w-12 items-center justify-center overflow-hidden transition-all duration-200 hover:-translate-y-0.5 max-[800px]:h-10 max-[800px]:w-10"
+          className="group flex h-[var(--sidebar-logo-size)] w-[var(--sidebar-logo-size)] items-center justify-center overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
         >
           {avatarUrl ? (
             <Image
@@ -218,7 +218,7 @@ const Sidebar = ({
               key={item.id}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              className="flex min-h-[72px] w-full shrink-0 items-center max-[800px]:min-h-[60px]"
+              className="flex min-h-[var(--sidebar-nav-slot-size)] w-full shrink-0 items-center"
             >
               <div
                 className={cn(
@@ -234,7 +234,7 @@ const Sidebar = ({
 
                 <div
                   className={cn(
-                    "relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 max-[800px]:h-9 max-[800px]:w-9",
+                    "relative flex h-[var(--sidebar-nav-icon-size)] w-[var(--sidebar-nav-icon-size)] items-center justify-center rounded-xl transition-all duration-200 [&>svg]:h-[var(--sidebar-glyph-size)] [&>svg]:w-[var(--sidebar-glyph-size)]",
                     isActive
                       ? "bg-primary/15 text-primary"
                       : "text-gray-400 group-hover:bg-primary/10 group-hover:text-primary",
@@ -284,7 +284,7 @@ const Sidebar = ({
             title="AI Assistant"
             onClick={onOpenAssistant}
             className={cn(
-              "group relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-[background-color,border-color,color,box-shadow] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 max-[800px]:h-10 max-[800px]:w-10 max-[800px]:rounded-xl",
+              "group relative flex h-[var(--sidebar-action-size)] w-[var(--sidebar-action-size)] items-center justify-center rounded-2xl border transition-[background-color,border-color,color,box-shadow] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 [&_svg]:h-[var(--sidebar-glyph-size)] [&_svg]:w-[var(--sidebar-glyph-size)]",
               assistantOpen
                 ? "border-[#0e1b2b] bg-[#0e1b2b] text-white shadow-[0_14px_30px_-16px_rgba(14,27,43,0.9)]"
                 : "border-primary/25 bg-primary/10 text-[#009da4] shadow-[0_14px_30px_-18px_rgba(0,194,201,0.9)] hover:border-primary/45 hover:bg-primary/15",
@@ -306,7 +306,7 @@ const Sidebar = ({
           href="/notification"
           title="Notifications"
           className={cn(
-            "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200 max-[800px]:h-10 max-[800px]:w-10 max-[800px]:rounded-xl",
+            "relative flex h-[var(--sidebar-action-size)] w-[var(--sidebar-action-size)] items-center justify-center rounded-2xl border transition-all duration-200 [&>svg]:h-[var(--sidebar-glyph-size)] [&>svg]:w-[var(--sidebar-glyph-size)]",
             pathname === "/notification"
               ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(0,138,210,0.95)]"
               : "border-slate-200 bg-white text-slate-500 hover:border-primary/10 hover:bg-primary/5 hover:text-primary",
@@ -328,7 +328,7 @@ const Sidebar = ({
           title="Sign out"
           className="group flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 disabled:cursor-wait disabled:opacity-60 max-[800px]:gap-0.5 max-[800px]:py-1"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white transition group-hover:border-rose-200 group-hover:bg-rose-50 max-[800px]:h-7 max-[800px]:w-7 max-[800px]:rounded-lg">
+          <span className="flex h-[var(--sidebar-signout-icon-size)] w-[var(--sidebar-signout-icon-size)] items-center justify-center rounded-xl border border-slate-200 bg-white transition group-hover:border-rose-200 group-hover:bg-rose-50 [&>svg]:h-[calc(var(--sidebar-glyph-size)*0.8)] [&>svg]:w-[calc(var(--sidebar-glyph-size)*0.8)]">
             {signingOut ? (
               <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
