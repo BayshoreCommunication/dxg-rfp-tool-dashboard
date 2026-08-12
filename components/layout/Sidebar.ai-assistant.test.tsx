@@ -43,7 +43,7 @@ describe("Sidebar AI Assistant launcher", () => {
     jest.clearAllMocks();
   });
 
-  test("opens the dialog from above notifications without adding a route link", () => {
+  test("opens the dialog in the fixed footer without adding a route link", () => {
     const onOpenAssistant = jest.fn();
     render(
       <Sidebar
@@ -65,7 +65,7 @@ describe("Sidebar AI Assistant launcher", () => {
 
     const divider = screen.getByTestId("sidebar-footer-divider");
     expect(
-      launcher.compareDocumentPosition(divider) &
+      divider.compareDocumentPosition(launcher) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });

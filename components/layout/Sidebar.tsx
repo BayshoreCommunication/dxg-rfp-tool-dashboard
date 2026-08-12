@@ -204,7 +204,7 @@ const Sidebar = ({
 
       <nav
         aria-label="Primary navigation"
-        className="flex min-h-0 flex-1 flex-col items-center justify-evenly overflow-hidden px-3 py-2"
+        className="sidebar-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-x-hidden overflow-y-auto overscroll-contain px-2 py-2"
       >
         {navigationConfig.map((item) => {
           const isActive = isItemActive(item);
@@ -218,7 +218,7 @@ const Sidebar = ({
               key={item.id}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
-              className="flex min-h-0 w-full flex-1 items-center"
+              className="flex min-h-[72px] w-full shrink-0 items-center max-[800px]:min-h-[60px]"
             >
               <div
                 className={cn(
@@ -264,8 +264,13 @@ const Sidebar = ({
         })}
       </nav>
 
-      {onOpenAssistant && (
-        <div className="flex shrink-0 justify-center px-2.5 pb-3 max-[800px]:pb-1.5">
+      <div
+        data-testid="sidebar-footer-divider"
+        className="mx-4 h-px shrink-0 bg-linear-to-r from-transparent via-gray-200 to-transparent"
+      />
+
+      <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3 max-[800px]:gap-1.5 max-[800px]:py-2">
+        {onOpenAssistant && (
           <button
             id="ai-assistant-launcher"
             type="button"
@@ -295,15 +300,8 @@ const Sidebar = ({
               <Bot size={21} strokeWidth={2.2} aria-hidden />
             </span>
           </button>
-        </div>
-      )}
+        )}
 
-      <div
-        data-testid="sidebar-footer-divider"
-        className="mx-4 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent"
-      />
-
-      <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3 max-[800px]:gap-1 max-[800px]:py-1.5">
         <Link
           href="/notification"
           title="Notifications"

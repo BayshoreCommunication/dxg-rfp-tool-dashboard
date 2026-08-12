@@ -127,6 +127,30 @@ body {
   background: rgba(71, 85, 105, 0.58);
 }
 
+/* Keep the compact app rail centered while its navigation scrolls. */
+.sidebar-scrollbar {
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.5);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.72);
+}
+
 /* Proposal date pickers use the bright cyan from the RFPilot mark throughout. */
 .dxg-datepicker.react-datepicker {
   overflow: hidden;
