@@ -5,6 +5,7 @@ import {
   downloadProposalPdf,
   proposalPdfFilename,
 } from "@/lib/proposals/downloadProposalPdf";
+import { Download, Printer } from "lucide-react";
 import type { RefObject } from "react";
 import { useState } from "react";
 import { toast } from "react-toastify";
@@ -49,22 +50,24 @@ export default function ProposalExportActions({
   };
 
   return (
-    <div className="no-print fixed bottom-4 right-4 z-[99] flex flex-col items-stretch gap-2 md:bottom-6 md:right-6">
+    <div className="no-print fixed bottom-4 right-4 z-[99] flex w-[142px] flex-col items-stretch gap-2 md:bottom-6 md:right-6">
       <button
         type="button"
         onClick={() => void handleDirectDownload()}
         disabled={downloading}
-        className="rounded-2xl bg-[#008ad2] px-6 py-2.5 text-sm font-bold text-white shadow-xl transition hover:bg-[#0079ba] disabled:cursor-wait disabled:opacity-60"
+        className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-2xl bg-[#008ad2] !px-4 !py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_-10px_rgba(0,138,210,0.8)] transition hover:-translate-y-0.5 hover:bg-[#0079ba] hover:shadow-[0_14px_28px_-10px_rgba(0,138,210,0.85)] active:translate-y-0 disabled:cursor-wait disabled:opacity-60"
       >
-        {downloading ? "Generating PDF..." : "Download PDF"}
+        <Download className="h-4 w-4 shrink-0" aria-hidden />
+        <span>{downloading ? "Generating..." : "Download PDF"}</span>
       </button>
       <button
         type="button"
         onClick={handlePrint}
         disabled={downloading}
-        className="rounded-2xl border border-slate-200 bg-white/90 px-6 py-2.5 text-sm font-bold text-slate-800 shadow-xl backdrop-blur-md transition hover:bg-white disabled:opacity-60"
+        className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/95 !px-4 !py-2.5 text-sm font-bold text-slate-700 shadow-[0_10px_24px_-12px_rgba(15,23,42,0.45)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 active:translate-y-0 disabled:opacity-60"
       >
-        Print
+        <Printer className="h-4 w-4 shrink-0" aria-hidden />
+        <span>Print</span>
       </button>
     </div>
   );
