@@ -158,7 +158,7 @@ const Sidebar = ({
   const avatarUrl = "/assets/logo/rfpilot-primary-logo.png"; // Replace with your actual logo URL or logic to fetch it
 
   return (
-    <aside className="fixed left-0 top-0 z-50 flex h-screen w-[90px] flex-col border-r border-gray-200 bg-white">
+    <aside className="fixed inset-y-0 left-0 z-50 flex h-dvh min-h-0 w-[90px] flex-col overflow-hidden border-r border-gray-200 bg-white">
       <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200">
         <Link
           href="/dashboard"
@@ -181,7 +181,10 @@ const Sidebar = ({
         </Link>
       </div>
 
-      <nav className="flex flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto px-3 py-4">
+      <nav
+        aria-label="Primary navigation"
+        className="sidebar-scrollbar flex min-h-0 flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-4"
+      >
         {navigationConfig.map((item) => {
           const isActive = isItemActive(item);
           const badge =
@@ -240,8 +243,13 @@ const Sidebar = ({
         })}
       </nav>
 
-      {onOpenAssistant && (
-        <div className="flex shrink-0 justify-center px-2.5 pb-3">
+      <div
+        data-testid="sidebar-footer-divider"
+        className="mx-4 h-px shrink-0 bg-linear-to-r from-transparent via-gray-200 to-transparent"
+      />
+
+      <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3">
+        {onOpenAssistant && (
           <button
             id="ai-assistant-launcher"
             type="button"
@@ -271,15 +279,8 @@ const Sidebar = ({
               <Bot size={21} strokeWidth={2.2} aria-hidden />
             </span>
           </button>
-        </div>
-      )}
+        )}
 
-      <div
-        data-testid="sidebar-footer-divider"
-        className="mx-4 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent"
-      />
-
-      <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3">
         <Link
           href="/notification"
           title="Notifications"
