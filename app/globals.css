@@ -502,7 +502,7 @@ body {
   will-change: opacity;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 420px) {
   .dxg-datepicker-popper {
     max-width: calc(100vw - 16px);
   }
