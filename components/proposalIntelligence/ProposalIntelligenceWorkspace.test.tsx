@@ -38,7 +38,7 @@ test("keeps every tab bound to the same run and opens exact cited evidence", asy
   render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="requirements" initialWorkspace={value} runs={runs(value)} />);
   expect(screen.getByRole("link", { name: "Commercial" })).toHaveAttribute("href", expect.stringContaining(`${runId}/commercial`));
   expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", expect.stringContaining(`${runId}/reports`));
-  expect(screen.getByRole("link", { name: "Audit" })).toHaveAttribute("href", expect.stringContaining(`${runId}/audit`));
+  expect(screen.queryByRole("link", { name: "Audit" })).not.toBeInTheDocument();
   await userEvent.click(screen.getAllByRole("button", { name: /Inspect 1 citation/ })[0]);
   expect(screen.getByRole("dialog", { name: "Provide plenary audio" })).toBeInTheDocument();
   expect(screen.getByText("Technical response.pdf")).toBeInTheDocument();

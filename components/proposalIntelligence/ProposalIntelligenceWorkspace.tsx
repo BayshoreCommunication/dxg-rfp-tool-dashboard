@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
-export const intelligenceTabs = ["overview", "requirements", "technical", "commercial", "risks", "evaluation", "reports", "audit"] as const;
+export const intelligenceTabs = ["overview", "requirements", "technical", "commercial", "risks", "evaluation", "reports"] as const;
 export type IntelligenceTab = (typeof intelligenceTabs)[number];
 type EvidenceSelection = {
   title: string;
@@ -28,7 +28,6 @@ type Props = {
 };
 
 const ReportCenter = dynamic(() => import("@/components/proposalIntelligence/ProposalIntelligenceOperationsWorkspace").then((module) => module.ReportCenter));
-const AuditOperationsCenter = dynamic(() => import("@/components/proposalIntelligence/ProposalIntelligenceOperationsWorkspace").then((module) => module.AuditOperationsCenter));
 
 const terminal = new Set(["succeeded", "succeeded_with_warnings", "failed", "cancelled"]);
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
@@ -681,7 +680,6 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
             </>
           )}
           {tab === "reports" && (operationsBundle ? <ReportCenter proposalId={proposalId} runId={workspace.run.runId} initialBundle={operationsBundle} viewCommercial={workspace.intelligence.permissions.viewCommercial} /> : <EmptyState title="Reports are temporarily unavailable" text="The comparison remains available, but its operations metadata could not be loaded. Refresh before exporting a report." />)}
-          {tab === "audit" && (operationsBundle ? <AuditOperationsCenter proposalId={proposalId} runId={workspace.run.runId} initialBundle={operationsBundle} /> : <EmptyState title="Audit data is temporarily unavailable" text="The frozen comparison remains unchanged. Refresh to load governance and operational history." />)}
         </section>
         {selection && <EvidenceDrawer selection={selection} onClose={() => setSelection(undefined)} />}
         <p className="mt-6 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
