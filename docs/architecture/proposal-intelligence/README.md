@@ -1,6 +1,6 @@
 # Proposal Intelligence Architecture Decision Pack
 
-> Status: Tasks 1–9 completed; Task 10 in progress
+> Status: Tasks 1–10 completed
 > Date: 2026-08-12
 > Owner: RFPilot product and engineering
 > Scope: planner dashboard and backend AI domain
@@ -54,7 +54,7 @@ The central product object is a versioned comparison snapshot. Analyze, Compare,
 
 ## Delivery status
 
-Tasks 1–9 delivered immutable submissions, requirements, evidence extraction, vendor intelligence, evaluation, comparison orchestration, and planner workspaces. Task 10 adds report exports, clarification governance, audit/operations views, retention and legal-hold records, acceptance thresholds, and the release runbook.
+Tasks 1–10 delivered immutable submissions, requirements, evidence extraction, vendor intelligence, evaluation, comparison orchestration, planner workspaces, report exports, clarification governance, audit/operations views, retention and legal-hold records, acceptance thresholds, and the release runbook.
 
 ## Research basis
 
