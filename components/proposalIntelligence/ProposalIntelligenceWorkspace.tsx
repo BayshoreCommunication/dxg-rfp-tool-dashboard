@@ -1,10 +1,8 @@
 "use client";
 
 import { getComparisonWorkspaceAction, recordComparisonDecisionAction, type ComparisonEvidence, type ComparisonRequirement, type ComparisonView, type ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
-import type { IntelligenceOperationsBundle } from "@/app/actions/proposalIntelligenceOperations";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, FileSearch, History, LockKeyhole, Scale, ShieldAlert, Users, X } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
@@ -24,10 +22,7 @@ type Props = {
   tab: IntelligenceTab;
   initialWorkspace: ComparisonWorkspace;
   runs: ComparisonView[];
-  operationsBundle?: IntelligenceOperationsBundle;
 };
-
-const ReportCenter = dynamic(() => import("@/components/proposalIntelligence/ProposalIntelligenceOperationsWorkspace").then((module) => module.ReportCenter));
 
 const terminal = new Set(["succeeded", "succeeded_with_warnings", "failed", "cancelled"]);
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
@@ -569,7 +564,7 @@ function DecisionWorkspace({ proposalId, workspace, onChanged }: { proposalId: s
   );
 }
 
-export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitle, tab, initialWorkspace, runs, operationsBundle }: Props) {
+export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitle, tab, initialWorkspace, runs }: Props) {
   const router = useRouter();
   const [workspace, setWorkspace] = useState(initialWorkspace);
   const [selection, setSelection] = useState<EvidenceSelection>();
@@ -845,12 +840,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
               <DecisionWorkspace proposalId={proposalId} workspace={workspace} onChanged={setWorkspace} />
             </>
           )}
-          {tab === "reports" && (
-            <>
-              <ExecutiveReport proposalId={proposalId} workspace={workspace} />
-              {operationsBundle ? <ReportCenter proposalId={proposalId} runId={workspace.run.runId} initialBundle={operationsBundle} viewCommercial={workspace.intelligence.permissions.viewCommercial} /> : <div className="mt-4"><EmptyState title="Export options are temporarily unavailable" text="The in-app executive report remains available. Refresh before exporting a PDF, Excel workbook, or clarification pack." /></div>}
-            </>
-          )}
+          {tab === "reports" && <ExecutiveReport proposalId={proposalId} workspace={workspace} />}
         </section>
         {selection && <EvidenceDrawer selection={selection} onClose={() => setSelection(undefined)} />}
         <p className="mt-6 flex items-center gap-2 text-[10px] font-semibold text-slate-400">

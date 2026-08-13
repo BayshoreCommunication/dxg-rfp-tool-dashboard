@@ -60,7 +60,7 @@ test("shows the comparison snapshot directly as a readable executive report with
   expect(screen.getByText("$100,000.00")).toBeInTheDocument();
   expect(screen.getByText("1/2 evaluators complete")).toBeInTheDocument();
   expect(screen.getByText(/does not generate an automatic winner/i)).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Export options are temporarily unavailable" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: /Export options/i })).not.toBeInTheDocument();
 });
 
 test("shows a sealed state without rendering pricing when the API denies commercial access", () => {
