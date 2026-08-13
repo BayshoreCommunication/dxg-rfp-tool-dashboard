@@ -25,30 +25,27 @@ const bundle: IntelligenceOperationsBundle = {
   },
 };
 
-test("report downloads stay on one run and explain sealed pricing", () => {
-  render(<ReportCenter proposalId={proposalId} runId={runId} initialBundle={bundle} viewCommercial={false} hasEvaluatorScores={false} />);
-  expect(screen.getByText(/Commercial values are sealed and omitted/)).toBeInTheDocument();
-  const links = screen.getAllByRole("link", { name: "Download" });
-  expect(links).toHaveLength(3);
+test("optional exports stay on one run and explain sealed pricing", () => {
+  render(<ReportCenter proposalId={proposalId} runId={runId} initialBundle={bundle} viewCommercial={false} />);
+  expect(screen.getByText(/Commercial values are sealed and omitted from every exported file/)).toBeInTheDocument();
+  const links = screen.getAllByRole("link");
+  expect(links).toHaveLength(2);
   expect(links.every((link) => link.getAttribute("href")?.includes(`/${proposalId}/${runId}/`))).toBe(true);
-  expect(screen.getByRole("heading", { name: "Executive report" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Detailed comparison workbook" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Decision record" })).toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "Evaluator report" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "Accessible executive HTML" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "Audit archive" })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Export executive PDF" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Download comparison Excel" })).toBeInTheDocument();
   expect(screen.getByText(/sending remains a separately authorized campaign or manual action/i)).toBeInTheDocument();
 });
 
-test("shows evaluator and clarification downloads only when their records are ready", () => {
+test("keeps completed evaluation and clarification records in the in-app workflow instead of adding downloads", () => {
   const readyBundle: IntelligenceOperationsBundle = {
     ...bundle,
     operations: { ...bundle.operations, decision_count: 0, approved_clarification_count: 1 },
     clarifications: [{ setId: "set", setVersion: 1, status: "approved", manifestChecksum: "m", contentChecksum: "c", lockVersion: 1, approvedAt: "2026-08-13T00:00:00.000Z", dispatchRecordedAt: null, createdAt: "2026-08-13T00:00:00.000Z", updatedAt: "2026-08-13T00:00:00.000Z", questions: [] }],
   };
-  render(<ReportCenter proposalId={proposalId} runId={runId} initialBundle={readyBundle} viewCommercial hasEvaluatorScores />);
-  expect(screen.getByRole("heading", { name: "Evaluator report" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Clarification pack" })).toBeInTheDocument();
+  render(<ReportCenter proposalId={proposalId} runId={runId} initialBundle={readyBundle} viewCommercial />);
+  expect(screen.getAllByRole("link")).toHaveLength(2);
+  expect(screen.getByRole("heading", { name: "Clarification approval center" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Evaluator report" })).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Decision record" })).not.toBeInTheDocument();
 });
 

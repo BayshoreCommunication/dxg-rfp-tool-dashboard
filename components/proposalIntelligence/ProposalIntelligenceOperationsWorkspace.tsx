@@ -2,28 +2,25 @@
 
 import { approveClarificationSetAction, createClarificationSetAction, getIntelligenceOperationsBundleAction, placeIntelligenceLegalHoldAction, recordClarificationDispatchAction, releaseIntelligenceLegalHoldAction, updateClarificationQuestionAction, updateIntelligenceRetentionPolicyAction, type ClarificationSet, type IntelligenceOperationsBundle } from "@/app/actions/proposalIntelligenceOperations";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Download, FileSpreadsheet, FileText, Gavel, History, LockKeyhole, MailCheck, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, FileText, History, LockKeyhole, MailCheck, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const formatBytes = (bytes: number) => (bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`);
-const primaryReportDefinitions = [
+const reportDefinitions = [
   {
     type: "executive_pdf",
-    name: "Executive report",
-    detail: "Share a concise PDF summary with leadership or a review committee.",
+    name: "Export executive PDF",
+    detail: "Create a portable copy for external sharing, printing, or an approval packet.",
     icon: FileText,
   },
   {
     type: "comparison_xlsx",
-    name: "Detailed comparison workbook",
-    detail: "Review and filter the complete requirement, pricing, risk, and evaluation detail in Excel.",
+    name: "Download comparison Excel",
+    detail: "Use the full requirement, pricing, risk, and evaluation detail for offline analysis.",
     icon: FileSpreadsheet,
   },
 ] as const;
-const evaluatorReportDefinition = { type: "evaluator_html", name: "Evaluator report", detail: "Share completed human scores and evaluator participation without presenting an automated vendor rank.", icon: ClipboardCheck } as const;
-const decisionReportDefinition = { type: "decision_html", name: "Decision record", detail: "Document the recorded shortlist or selection and its human-written rationale.", icon: Gavel } as const;
-const clarificationReportDefinition = { type: "clarification_html", name: "Clarification pack", detail: "Send the approved evidence-backed questions to vendors through an authorized channel.", icon: MailCheck } as const;
 
 function ClarificationQuestionEditor({ proposalId, runId, set, question, onChanged }: { proposalId: string; runId: string; set: ClarificationSet; question: ClarificationSet["questions"][number]; onChanged: (set: ClarificationSet) => void }) {
   const [text, setText] = useState(question.question);
@@ -182,35 +179,30 @@ function ClarificationCenter({ proposalId, runId, clarifications, onChanged }: {
   );
 }
 
-export function ReportCenter({ proposalId, runId, initialBundle, viewCommercial, hasEvaluatorScores }: { proposalId: string; runId: string; initialBundle: IntelligenceOperationsBundle; viewCommercial: boolean; hasEvaluatorScores: boolean }) {
+export function ReportCenter({ proposalId, runId, initialBundle, viewCommercial }: { proposalId: string; runId: string; initialBundle: IntelligenceOperationsBundle; viewCommercial: boolean }) {
   const [bundle, setBundle] = useState(initialBundle);
   const reportBase = `/api/proposal-intelligence/reports/${proposalId}/${runId}`;
-  const hasDecision = bundle.operations.decision_count > 0;
-  const hasApprovedClarifications = bundle.operations.approved_clarification_count > 0 || bundle.clarifications.some((set) => set.status === "approved" || set.status === "dispatch_recorded");
-  const availableReports = [
-    ...primaryReportDefinitions,
-    ...(hasEvaluatorScores ? [evaluatorReportDefinition] : []),
-    ...(hasDecision ? [decisionReportDefinition] : []),
-    ...(hasApprovedClarifications ? [clarificationReportDefinition] : []),
-  ];
   return (
     <div>
-      <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-        <h2 className="font-extrabold text-sky-950">Download and share results</h2>
-        <p className="mt-1 text-sm leading-6 text-sky-900">Reports use this completed comparison and do not rerun the analysis. Additional downloads appear after evaluator scores, decisions, or clarification questions are completed. {viewCommercial ? "Your authorized downloads may include commercial values." : "Commercial values are sealed and omitted from every download."}</p>
-      </section>
-      <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {availableReports.map((report) => (
+      <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="report-export-title">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Optional file handoff</p>
+          <h2 id="report-export-title" className="mt-1 font-extrabold text-slate-950">Export options</h2>
+          <p className="mt-1 max-w-4xl text-xs leading-5 text-slate-500">The report above is the primary view. Export only when you need to share, print, archive, or continue analysis outside RFPilot. {viewCommercial ? "Your authorized files may include commercial values." : "Commercial values are sealed and omitted from every exported file."}</p>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {reportDefinitions.map((report) => (
           <article key={report.type} className="rounded-2xl border border-slate-200 bg-white p-5">
             <report.icon size={20} className="text-[#008ad2]" />
-            <h2 className="mt-3 font-extrabold text-slate-950">{report.name}</h2>
+            <h3 className="mt-3 font-extrabold text-slate-950">{report.name}</h3>
             <p className="mt-1 min-h-10 text-xs leading-5 text-slate-500">{report.detail}</p>
-            <a href={`${reportBase}/${report.type}`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-extrabold text-white">
+            <a href={`${reportBase}/${report.type}`} aria-label={report.name} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-extrabold text-white">
               <Download size={14} />
-              Download
+              {report.name}
             </a>
           </article>
-        ))}
+          ))}
+        </div>
       </section>
       <ClarificationCenter proposalId={proposalId} runId={runId} clarifications={bundle.clarifications} onChanged={(clarifications) => setBundle((current) => ({ ...current, clarifications }))} />
     </div>

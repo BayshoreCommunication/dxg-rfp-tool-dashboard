@@ -37,13 +37,24 @@ test("keeps every tab bound to the same run and opens exact cited evidence", asy
   const value = workspace();
   render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="requirements" initialWorkspace={value} runs={runs(value)} />);
   expect(screen.getByRole("link", { name: "Commercial" })).toHaveAttribute("href", expect.stringContaining(`${runId}/commercial`));
-  expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("href", expect.stringContaining(`${runId}/reports`));
+  expect(screen.getByRole("link", { name: "Executive report" })).toHaveAttribute("href", expect.stringContaining(`${runId}/reports`));
   expect(screen.queryByRole("link", { name: "Audit" })).not.toBeInTheDocument();
   await userEvent.click(screen.getAllByRole("button", { name: /Inspect 1 citation/ })[0]);
   expect(screen.getByRole("dialog", { name: "Provide plenary audio" })).toBeInTheDocument();
   expect(screen.getByText("Technical response.pdf")).toBeInTheDocument();
   expect(screen.getByText(/redundant digital audio system/)).toBeInTheDocument();
   expect(screen.getByRole("combobox", { name: "Comparison run" })).toHaveTextContent("Aug 12, 2026, 12:00 AM UTC");
+});
+
+test("shows the frozen comparison directly as an executive report without requiring an export", () => {
+  const value = workspace();
+  render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="reports" initialWorkspace={value} runs={runs(value)} />);
+  expect(screen.getByRole("heading", { name: "Comparison summary" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Vendor comparison" })).toBeInTheDocument();
+  expect(screen.getByText("$100,000.00")).toBeInTheDocument();
+  expect(screen.getByText("1/2 evaluators complete")).toBeInTheDocument();
+  expect(screen.getByText(/does not generate an automatic winner/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Export options are temporarily unavailable" })).toBeInTheDocument();
 });
 
 test("shows a sealed state without rendering pricing when the API denies commercial access", () => {

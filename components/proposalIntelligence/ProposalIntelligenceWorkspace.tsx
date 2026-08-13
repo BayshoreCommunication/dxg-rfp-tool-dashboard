@@ -268,6 +268,165 @@ function EmptyState({ title, text }: { title: string; text: string }) {
   );
 }
 
+function ExecutiveReport({ proposalId, workspace }: { proposalId: string; workspace: ComparisonWorkspace }) {
+  const overview = workspace.intelligence.overview;
+  const reportBase = `/proposals/${proposalId}/intelligence/comparisons/${workspace.run.runId}`;
+  const summary = [
+    { label: "Vendor responses", value: overview.responseCount },
+    { label: "Approved requirements", value: overview.approvedRequirementCount },
+    { label: "Mandatory gaps", value: overview.mandatoryGapCount },
+    { label: "Unresolved reviews", value: overview.unresolvedReviewCount },
+    { label: "Evaluator completion", value: `${overview.evaluatorCompletedCount}/${overview.evaluatorAssignedCount}` },
+  ];
+  const vendorSnapshots = workspace.participants.map((participant) => ({
+    participant,
+    commercial: workspace.intelligence.commercial.find((item) => item.participantId === participant.participantId),
+    evaluation: workspace.intelligence.evaluation.find((item) => item.participantId === participant.participantId),
+    risks: workspace.intelligence.risks.filter((item) => item.participantId === participant.participantId),
+  }));
+  const latestDecision = workspace.intelligence.decisions[0];
+  const formatMoney = (amount: number | null, currency: string | null) =>
+    amount === null
+      ? "Not submitted"
+      : new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: currency || "USD",
+          maximumFractionDigits: 2,
+        }).format(amount);
+
+  return (
+    <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" aria-labelledby="executive-report-title">
+      <header className="border-b border-slate-200 bg-slate-950 px-5 py-7 text-white sm:px-7">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-sky-300">Frozen comparison · Executive report</p>
+        <h2 id="executive-report-title" className="mt-2 text-2xl font-extrabold tracking-tight">Comparison summary</h2>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">Read the completed proposal intelligence directly in RFPilot. The content below comes from immutable run {workspace.run.runId.slice(0, 8)} and does not rerun AI analysis or select a vendor.</p>
+        <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Completed {workspace.run.completedAt ? formatIntelligenceTimestamp(workspace.run.completedAt) : "status pending"} · Manifest {workspace.manifest.checksum.slice(0, 12)}…</p>
+      </header>
+
+      <div className="p-5 sm:p-7">
+        <section aria-labelledby="report-snapshot-title">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 id="report-snapshot-title" className="font-extrabold text-slate-950">Procurement snapshot</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Backend-owned counts from the same frozen comparison.</p>
+            </div>
+            <span className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold ${workspace.freshness.state === "current" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{workspace.freshness.state === "current" ? "Current inputs" : "Historical inputs"}</span>
+          </div>
+          <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {summary.map((item) => (
+              <div key={item.label} className="rounded-2xl bg-slate-50 p-4">
+                <dt className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500">{item.label}</dt>
+                <dd className="mt-2 text-2xl font-extrabold text-slate-950">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <section className="mt-8" aria-labelledby="vendor-report-title">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 id="vendor-report-title" className="font-extrabold text-slate-950">Vendor comparison</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Vendors remain in frozen manifest order; this is not a rank or recommendation.</p>
+            </div>
+            <Link href={`${reportBase}/requirements`} className="inline-flex min-h-9 items-center gap-1 text-xs font-extrabold text-[#0077b6] hover:underline">Open requirement matrix <ChevronRight size={13} /></Link>
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            {vendorSnapshots.map(({ participant, commercial, evaluation, risks }) => (
+              <article key={participant.participantId} className="rounded-2xl border border-slate-200 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-extrabold text-slate-950">{participant.vendorLabel}</h4>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Response version {participant.versionId.slice(0, 8)}</p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${participant.warningCount ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-800"}`}>{participant.warningCount ? `${participant.warningCount} source warning${participant.warningCount === 1 ? "" : "s"}` : "Sources ready"}</span>
+                </div>
+
+                <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500">Commercial position</p>
+                  {!workspace.intelligence.permissions.viewCommercial ? (
+                    <p className="mt-2 text-sm font-extrabold text-slate-800">Commercial values sealed</p>
+                  ) : commercial ? (
+                    <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <p className="text-lg font-extrabold text-slate-950">{formatMoney(commercial.submittedTotal, commercial.submittedCurrency)}</p>
+                        <p className="text-[10px] font-semibold text-slate-500">Vendor-submitted total</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${commercial.comparable ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{commercial.comparable ? `Normalized ${formatMoney(commercial.normalizedTotal, commercial.normalizedCurrency)}` : "Normalization refused"}</span>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm font-extrabold text-slate-800">No commercial summary available</p>
+                  )}
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500">Human evaluation</p>
+                    <p className="mt-1 text-sm font-extrabold text-slate-900">{evaluation ? `${evaluation.completedEvaluatorCount}/${evaluation.evaluatorCount} evaluators complete` : "Not available"}</p>
+                    {evaluation ? <p className="mt-1 text-xs text-slate-500">Persisted contribution {evaluation.weightedContributionTotal.toFixed(2)}</p> : null}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500">Risk highlights</p>
+                    {risks.length ? (
+                      <ul className="mt-1 space-y-1 text-xs leading-5 text-slate-600">
+                        {risks.slice(0, 2).map((risk) => <li key={risk.riskId}>• {risk.title}</li>)}
+                      </ul>
+                    ) : <p className="mt-1 text-sm font-extrabold text-slate-900">No persisted risk flags</p>}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-4 lg:grid-cols-2" aria-label="Review and decision summary">
+          <article className="rounded-2xl border border-slate-200 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-extrabold text-slate-950">Priority review signals</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Evidence-backed items requiring procurement attention.</p>
+              </div>
+              <Link href={`${reportBase}/risks`} className="shrink-0 text-xs font-extrabold text-[#0077b6] hover:underline">View all risks</Link>
+            </div>
+            {workspace.intelligence.risks.length ? (
+              <ul className="mt-4 space-y-3">
+                {workspace.intelligence.risks.slice(0, 5).map((risk) => (
+                  <li key={risk.riskId} className="rounded-xl bg-slate-50 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold ${riskTone[risk.severity] ?? riskTone.low}`}>{label(risk.severity)}</span>
+                      <span className="text-[10px] font-bold text-slate-500">{risk.vendorLabel}</span>
+                    </div>
+                    <p className="mt-2 text-xs font-extrabold text-slate-800">{risk.title}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No evidence-backed risk flags were persisted for this run.</p>}
+          </article>
+
+          <article className="rounded-2xl border border-slate-200 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-extrabold text-slate-950">Human decision</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Only a recorded procurement decision appears here.</p>
+              </div>
+              <Link href={`${reportBase}/evaluation`} className="shrink-0 text-xs font-extrabold text-[#0077b6] hover:underline">Open evaluation</Link>
+            </div>
+            {latestDecision ? (
+              <div className="mt-4 rounded-xl bg-violet-50 p-4">
+                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-extrabold text-violet-800">{label(latestDecision.decisionType)}</span>
+                {latestDecision.selectedParticipantIds.length ? <p className="mt-3 text-sm font-extrabold text-violet-950">{latestDecision.selectedParticipantIds.map((id) => workspace.participants.find((participant) => participant.participantId === id)?.vendorLabel ?? "Historical participant").join(", ")}</p> : null}
+                <p className="mt-2 text-sm leading-6 text-violet-900">{latestDecision.rationale}</p>
+                <p className="mt-2 text-[10px] font-semibold text-violet-600">Recorded {formatIntelligenceTimestamp(latestDecision.createdAt)}</p>
+              </div>
+            ) : <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No human shortlist or selection has been recorded. RFPilot does not generate an automatic winner.</p>}
+          </article>
+        </section>
+
+        <footer className="mt-8 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-xs leading-5 text-sky-900">This report summarizes persisted evidence and human evaluation state. Use the detailed tabs to inspect citations, resolve reviews, and record the procurement decision.</footer>
+      </div>
+    </article>
+  );
+}
+
 function DecisionWorkspace({ proposalId, workspace, onChanged }: { proposalId: string; workspace: ComparisonWorkspace; onChanged: (workspace: ComparisonWorkspace) => void }) {
   const [decisionType, setDecisionType] = useState<"" | "shortlist" | "selection" | "no_award">("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -509,7 +668,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
           <div className="flex min-w-max gap-1">
             {intelligenceTabs.map((item) => (
               <Link key={item} href={tabHref(item)} aria-current={tab === item ? "page" : undefined} className={`rounded-xl px-4 py-2.5 text-xs font-extrabold ${tab === item ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-50"}`}>
-                {label(item)}
+                {item === "reports" ? "Executive report" : label(item)}
               </Link>
             ))}
           </div>
@@ -679,7 +838,12 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
               <DecisionWorkspace proposalId={proposalId} workspace={workspace} onChanged={setWorkspace} />
             </>
           )}
-          {tab === "reports" && (operationsBundle ? <ReportCenter proposalId={proposalId} runId={workspace.run.runId} initialBundle={operationsBundle} viewCommercial={workspace.intelligence.permissions.viewCommercial} hasEvaluatorScores={workspace.intelligence.evaluation.some((item) => item.submittedScores > 0 || item.submittedEvaluators > 0)} /> : <EmptyState title="Reports are temporarily unavailable" text="The comparison remains available, but its operations metadata could not be loaded. Refresh before exporting a report." />)}
+          {tab === "reports" && (
+            <>
+              <ExecutiveReport proposalId={proposalId} workspace={workspace} />
+              {operationsBundle ? <ReportCenter proposalId={proposalId} runId={workspace.run.runId} initialBundle={operationsBundle} viewCommercial={workspace.intelligence.permissions.viewCommercial} /> : <div className="mt-4"><EmptyState title="Export options are temporarily unavailable" text="The in-app executive report remains available. Refresh before exporting a PDF, Excel workbook, or clarification pack." /></div>}
+            </>
+          )}
         </section>
         {selection && <EvidenceDrawer selection={selection} onClose={() => setSelection(undefined)} />}
         <p className="mt-6 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
