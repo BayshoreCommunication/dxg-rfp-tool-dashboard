@@ -51,6 +51,8 @@ test("shows the frozen comparison directly as an executive report without requir
   render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="reports" initialWorkspace={value} runs={runs(value)} />);
   expect(screen.getByRole("heading", { name: "Comparison summary" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Vendor comparison" })).toBeInTheDocument();
+  expect(screen.getByText(/Results are based on the selected vendor responses and evaluation criteria/)).toBeInTheDocument();
+  expect(screen.queryByText(/Read the completed proposal intelligence directly in RFPilot/)).not.toBeInTheDocument();
   expect(screen.getByText("$100,000.00")).toBeInTheDocument();
   expect(screen.getByText("1/2 evaluators complete")).toBeInTheDocument();
   expect(screen.getByText(/does not generate an automatic winner/i)).toBeInTheDocument();

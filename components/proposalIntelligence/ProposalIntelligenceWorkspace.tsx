@@ -299,7 +299,7 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
       <header className="border-b border-slate-200 bg-slate-950 px-5 py-7 text-white sm:px-7">
         <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-sky-300">Frozen comparison · Executive report</p>
         <h2 id="executive-report-title" className="mt-2 text-2xl font-extrabold tracking-tight">Comparison summary</h2>
-        <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">Read the completed proposal intelligence directly in RFPilot. The content below comes from immutable run {workspace.run.runId.slice(0, 8)} and does not rerun AI analysis or select a vendor.</p>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">Review the completed comparison below. Results are based on the selected vendor responses and evaluation criteria. RFPilot supports your review but does not automatically select a vendor.</p>
         <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Completed {workspace.run.completedAt ? formatIntelligenceTimestamp(workspace.run.completedAt) : "status pending"} · Manifest {workspace.manifest.checksum.slice(0, 12)}…</p>
       </header>
 
