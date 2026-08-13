@@ -26,12 +26,30 @@ const bundle: IntelligenceOperationsBundle = {
 };
 
 test("report downloads stay on one run and explain sealed pricing", () => {
-  render(<ReportCenter proposalId={proposalId} runId={runId} initialBundle={bundle} viewCommercial={false} />);
+  render(<ReportCenter proposalId={proposalId} runId={runId} initialBundle={bundle} viewCommercial={false} hasEvaluatorScores={false} />);
   expect(screen.getByText(/Commercial values are sealed and omitted/)).toBeInTheDocument();
   const links = screen.getAllByRole("link", { name: "Download" });
-  expect(links).toHaveLength(7);
+  expect(links).toHaveLength(3);
   expect(links.every((link) => link.getAttribute("href")?.includes(`/${proposalId}/${runId}/`))).toBe(true);
+  expect(screen.getByRole("heading", { name: "Executive report" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Detailed comparison workbook" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Decision record" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Evaluator report" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Accessible executive HTML" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Audit archive" })).not.toBeInTheDocument();
   expect(screen.getByText(/sending remains a separately authorized campaign or manual action/i)).toBeInTheDocument();
+});
+
+test("shows evaluator and clarification downloads only when their records are ready", () => {
+  const readyBundle: IntelligenceOperationsBundle = {
+    ...bundle,
+    operations: { ...bundle.operations, decision_count: 0, approved_clarification_count: 1 },
+    clarifications: [{ setId: "set", setVersion: 1, status: "approved", manifestChecksum: "m", contentChecksum: "c", lockVersion: 1, approvedAt: "2026-08-13T00:00:00.000Z", dispatchRecordedAt: null, createdAt: "2026-08-13T00:00:00.000Z", updatedAt: "2026-08-13T00:00:00.000Z", questions: [] }],
+  };
+  render(<ReportCenter proposalId={proposalId} runId={runId} initialBundle={readyBundle} viewCommercial hasEvaluatorScores />);
+  expect(screen.getByRole("heading", { name: "Evaluator report" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Clarification pack" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Decision record" })).not.toBeInTheDocument();
 });
 
 test("audit view exposes additive governance controls without a delete action", () => {

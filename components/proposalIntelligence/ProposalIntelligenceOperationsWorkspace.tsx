@@ -2,55 +2,28 @@
 
 import { approveClarificationSetAction, createClarificationSetAction, getIntelligenceOperationsBundleAction, placeIntelligenceLegalHoldAction, recordClarificationDispatchAction, releaseIntelligenceLegalHoldAction, updateClarificationQuestionAction, updateIntelligenceRetentionPolicyAction, type ClarificationSet, type IntelligenceOperationsBundle } from "@/app/actions/proposalIntelligenceOperations";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Download, FileArchive, FileJson, FileSpreadsheet, FileText, Gavel, History, LockKeyhole, MailCheck, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Download, FileSpreadsheet, FileText, Gavel, History, LockKeyhole, MailCheck, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const formatBytes = (bytes: number) => (bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`);
-const reportDefinitions = [
+const primaryReportDefinitions = [
   {
     type: "executive_pdf",
     name: "Executive report",
-    detail: "Polished PDF summary with frozen provenance, risks, evaluations, and human decisions.",
+    detail: "Share a concise PDF summary with leadership or a review committee.",
     icon: FileText,
   },
   {
     type: "comparison_xlsx",
-    name: "Comparison schedule",
-    detail: "Full requirement matrix, permitted commercial values, risks, evaluation, decisions, and clarifications.",
+    name: "Detailed comparison workbook",
+    detail: "Review and filter the complete requirement, pricing, risk, and evaluation detail in Excel.",
     icon: FileSpreadsheet,
   },
-  {
-    type: "executive_html",
-    name: "Accessible executive HTML",
-    detail: "Responsive, printable executive report with the same permission boundary.",
-    icon: FileArchive,
-  },
-  {
-    type: "evaluator_html",
-    name: "Evaluator report",
-    detail: "Human score contribution and completion state without vendor ranking.",
-    icon: ClipboardCheck,
-  },
-  {
-    type: "decision_html",
-    name: "Decision record",
-    detail: "Human selection history, rationale, and frozen context.",
-    icon: Gavel,
-  },
-  {
-    type: "clarification_html",
-    name: "Clarification pack",
-    detail: "Evidence-backed risks and approved questions for separately authorized dispatch.",
-    icon: MailCheck,
-  },
-  {
-    type: "audit_json",
-    name: "Audit archive",
-    detail: "Machine-readable manifest, export, decision, clarification, and governance history.",
-    icon: FileJson,
-  },
 ] as const;
+const evaluatorReportDefinition = { type: "evaluator_html", name: "Evaluator report", detail: "Share completed human scores and evaluator participation without presenting an automated vendor rank.", icon: ClipboardCheck } as const;
+const decisionReportDefinition = { type: "decision_html", name: "Decision record", detail: "Document the recorded shortlist or selection and its human-written rationale.", icon: Gavel } as const;
+const clarificationReportDefinition = { type: "clarification_html", name: "Clarification pack", detail: "Send the approved evidence-backed questions to vendors through an authorized channel.", icon: MailCheck } as const;
 
 function ClarificationQuestionEditor({ proposalId, runId, set, question, onChanged }: { proposalId: string; runId: string; set: ClarificationSet; question: ClarificationSet["questions"][number]; onChanged: (set: ClarificationSet) => void }) {
   const [text, setText] = useState(question.question);
@@ -209,17 +182,25 @@ function ClarificationCenter({ proposalId, runId, clarifications, onChanged }: {
   );
 }
 
-export function ReportCenter({ proposalId, runId, initialBundle, viewCommercial }: { proposalId: string; runId: string; initialBundle: IntelligenceOperationsBundle; viewCommercial: boolean }) {
+export function ReportCenter({ proposalId, runId, initialBundle, viewCommercial, hasEvaluatorScores }: { proposalId: string; runId: string; initialBundle: IntelligenceOperationsBundle; viewCommercial: boolean; hasEvaluatorScores: boolean }) {
   const [bundle, setBundle] = useState(initialBundle);
   const reportBase = `/api/proposal-intelligence/reports/${proposalId}/${runId}`;
+  const hasDecision = bundle.operations.decision_count > 0;
+  const hasApprovedClarifications = bundle.operations.approved_clarification_count > 0 || bundle.clarifications.some((set) => set.status === "approved" || set.status === "dispatch_recorded");
+  const availableReports = [
+    ...primaryReportDefinitions,
+    ...(hasEvaluatorScores ? [evaluatorReportDefinition] : []),
+    ...(hasDecision ? [decisionReportDefinition] : []),
+    ...(hasApprovedClarifications ? [clarificationReportDefinition] : []),
+  ];
   return (
     <div>
       <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-        <h2 className="font-extrabold text-sky-950">Permission-safe report center</h2>
-        <p className="mt-1 text-sm leading-6 text-sky-900">Every download is generated from this frozen run, records a checksum-only export event, and includes manifest, freshness, policy, and permission provenance. {viewCommercial ? "Your authorized exports may include commercial values." : "Commercial values are sealed and omitted from every export."}</p>
+        <h2 className="font-extrabold text-sky-950">Download and share results</h2>
+        <p className="mt-1 text-sm leading-6 text-sky-900">Reports use this completed comparison and do not rerun the analysis. Additional downloads appear after evaluator scores, decisions, or clarification questions are completed. {viewCommercial ? "Your authorized downloads may include commercial values." : "Commercial values are sealed and omitted from every download."}</p>
       </section>
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {reportDefinitions.map((report) => (
+        {availableReports.map((report) => (
           <article key={report.type} className="rounded-2xl border border-slate-200 bg-white p-5">
             <report.icon size={20} className="text-[#008ad2]" />
             <h2 className="mt-3 font-extrabold text-slate-950">{report.name}</h2>

@@ -679,7 +679,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
               <DecisionWorkspace proposalId={proposalId} workspace={workspace} onChanged={setWorkspace} />
             </>
           )}
-          {tab === "reports" && (operationsBundle ? <ReportCenter proposalId={proposalId} runId={workspace.run.runId} initialBundle={operationsBundle} viewCommercial={workspace.intelligence.permissions.viewCommercial} /> : <EmptyState title="Reports are temporarily unavailable" text="The comparison remains available, but its operations metadata could not be loaded. Refresh before exporting a report." />)}
+          {tab === "reports" && (operationsBundle ? <ReportCenter proposalId={proposalId} runId={workspace.run.runId} initialBundle={operationsBundle} viewCommercial={workspace.intelligence.permissions.viewCommercial} hasEvaluatorScores={workspace.intelligence.evaluation.some((item) => item.submittedScores > 0 || item.submittedEvaluators > 0)} /> : <EmptyState title="Reports are temporarily unavailable" text="The comparison remains available, but its operations metadata could not be loaded. Refresh before exporting a report." />)}
         </section>
         {selection && <EvidenceDrawer selection={selection} onClose={() => setSelection(undefined)} />}
         <p className="mt-6 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
