@@ -40,6 +40,60 @@ final result: passed
 
 ---
 
+# Executive report header design QA
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_Q5vRnj/Screenshot 2026-08-13 at 3.44.29 PM.png`
+- Implementation screenshot: `/Users/swoptechnologies/Desktop/rfp/tasks/2026-08-13/in-app-executive-report/redesigned-report-viewport-clean.jpg`
+- Focused implementation crop: `/Users/swoptechnologies/Desktop/rfp/tasks/2026-08-13/in-app-executive-report/redesigned-report-header-clean.png`
+- Combined comparison evidence: `/Users/swoptechnologies/Desktop/rfp/tasks/2026-08-13/in-app-executive-report/report-header-comparison.png`
+- Route: `http://localhost:3000/proposals/6a7d6aa0556f07bff684ad67/intelligence/comparisons/019ffa0e-cfd3-73cc-be9e-e2c07765682c/reports`
+- State: authenticated desktop, Executive report selected, comparison details collapsed
+- Browser viewport: 1016 x 900 CSS px at device pixel ratio 1
+- Browser screenshot: 1001 x 887 px
+- Source region: 802 x 183 px
+- Implementation header region: approximately 813 x 322 CSS px; focused crop normalized to 812 x 322 px
+
+## Full-view comparison evidence
+
+The rendered page preserves the existing RFPilot navigation, report container, slate background, sky accent, and rounded-card language. The redesigned header is intentionally taller than the supplied source because it adds a clear completion status and a disclosure for technical details while increasing text size and line spacing.
+
+## Focused region comparison evidence
+
+The combined comparison image places the supplied header above the redesigned header at a common 812 px width. It confirms that the redesigned section replaces the technical eyebrow, dense paragraph, and exposed manifest checksum with a plain-language title, readable supporting copy, review status, and collapsed comparison details.
+
+## Findings
+
+No actionable P0, P1, or P2 issues remain.
+
+- Fonts and typography: Existing application typography is retained. The headline is larger and stronger, supporting text uses a more readable line height, and small uppercase text is contained in a labeled pill instead of floating above the title.
+- Spacing and layout rhythm: Padding and vertical gaps are consistent with the surrounding report. The increased height is an intentional usability change, not accidental drift.
+- Colors and visual tokens: Existing slate, sky, and emerald tokens are reused. Foreground/background contrast is visibly stronger than the source for the supporting copy and completion state.
+- Image quality and asset fidelity: The source and implementation contain no raster imagery, logo treatment, illustration, or custom asset in this section. The existing Lucide status icon matches the product's icon system.
+- Copy and content: `Frozen comparison` is replaced with `Comparison snapshot`. Internal manifest details are removed from the primary reading path, and the new copy clearly states that reviewers retain the final decision.
+- Interaction: The native comparison-details disclosure opens and closes correctly and reveals completion time, response count, and comparison ID.
+- Browser health: The authenticated page produced no console errors during the QA interaction.
+
+## Comparison history
+
+- Pass 1: The supplied source showed technical terminology, low-emphasis metadata, and a dense one-block hierarchy. The implementation addressed those source issues. The post-build comparison found no P0/P1/P2 mismatch requiring another visual iteration.
+
+## Follow-up polish
+
+- P3: A separate mobile screenshot was not required by the desktop source. Responsive behavior is covered by the component's existing breakpoint classes but can receive a dedicated mobile visual pass later.
+
+## Implementation checklist
+
+- [x] Replace `Frozen comparison` with user-friendly snapshot language.
+- [x] Improve heading and paragraph readability.
+- [x] Add a clear review-ready status.
+- [x] Move technical identifiers into an expandable detail area.
+- [x] Preserve the existing RFPilot visual system and route behavior.
+- [x] Verify the disclosure interaction and browser console.
+
+final result: passed
+
+---
+
 # Procurement Timeline Date Bounds — Design QA
 
 ## Evidence

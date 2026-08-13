@@ -143,7 +143,7 @@ function EvidenceDrawer({ selection, onClose }: { selection: EvidenceSelection; 
 
 function RequirementMatrix({ requirements, onEvidence }: { requirements: ComparisonRequirement[]; onEvidence: (selection: EvidenceSelection) => void }) {
   const vendors = requirements[0]?.vendors ?? [];
-  if (!requirements.length) return <EmptyState title="No requirements in this view" text="The frozen comparison does not contain requirements for this category." />;
+  if (!requirements.length) return <EmptyState title="No requirements in this view" text="This comparison snapshot does not contain requirements for this category." />;
   return (
     <>
       <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white md:block" aria-label="Vendor requirement comparison matrix">
@@ -297,10 +297,34 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
   return (
     <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" aria-labelledby="executive-report-title">
       <header className="border-b border-slate-200 bg-slate-950 px-5 py-7 text-white sm:px-7">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-sky-300">Frozen comparison · Executive report</p>
-        <h2 id="executive-report-title" className="mt-2 text-2xl font-extrabold tracking-tight">Comparison summary</h2>
-        <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">Review the completed comparison below. Results are based on the selected vendor responses and evaluation criteria. RFPilot supports your review but does not automatically select a vendor.</p>
-        <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-slate-400">Completed {workspace.run.completedAt ? formatIntelligenceTimestamp(workspace.run.completedAt) : "status pending"} · Manifest {workspace.manifest.checksum.slice(0, 12)}…</p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-4xl">
+            <p className="inline-flex rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-sky-200">Comparison snapshot · Executive report</p>
+            <h2 id="executive-report-title" className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">Your vendor comparison at a glance</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-200 sm:text-base sm:leading-7">Review the key findings from the selected vendor responses and evaluation criteria. RFPilot organizes the evidence for your team; the final vendor decision always remains with your reviewers.</p>
+          </div>
+          <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-emerald-400/15 px-3 py-2 text-xs font-extrabold text-emerald-200">
+            <CheckCircle2 size={14} />
+            Comparison ready to review
+          </span>
+        </div>
+        <details className="mt-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-slate-200">
+          <summary className="cursor-pointer text-xs font-extrabold text-sky-200">View comparison details</summary>
+          <dl className="mt-4 grid gap-4 border-t border-white/10 pt-4 text-xs sm:grid-cols-3">
+            <div>
+              <dt className="font-bold text-slate-400">Completed</dt>
+              <dd className="mt-1 font-semibold text-slate-100">{workspace.run.completedAt ? formatIntelligenceTimestamp(workspace.run.completedAt) : "Completion pending"}</dd>
+            </div>
+            <div>
+              <dt className="font-bold text-slate-400">Vendor responses included</dt>
+              <dd className="mt-1 font-semibold text-slate-100">{workspace.run.participantCount}</dd>
+            </div>
+            <div>
+              <dt className="font-bold text-slate-400">Comparison ID</dt>
+              <dd className="mt-1 font-mono font-semibold text-slate-100">{workspace.run.runId.slice(0, 8)}</dd>
+            </div>
+          </dl>
+        </details>
       </header>
 
       <div className="p-5 sm:p-7">
@@ -308,7 +332,7 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 id="report-snapshot-title" className="font-extrabold text-slate-950">Procurement snapshot</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Backend-owned counts from the same frozen comparison.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Key counts from this completed comparison.</p>
             </div>
             <span className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold ${workspace.freshness.state === "current" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{workspace.freshness.state === "current" ? "Current inputs" : "Historical inputs"}</span>
           </div>
@@ -326,7 +350,7 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 id="vendor-report-title" className="font-extrabold text-slate-950">Vendor comparison</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Vendors remain in frozen manifest order; this is not a rank or recommendation.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Vendors are shown in the saved response order, not ranked or recommended.</p>
             </div>
             <Link href={`${reportBase}/requirements`} className="inline-flex min-h-9 items-center gap-1 text-xs font-extrabold text-[#0077b6] hover:underline">Open requirement matrix <ChevronRight size={13} /></Link>
           </div>
@@ -625,7 +649,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
         <header className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Frozen comparison workspace</p>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Comparison snapshot workspace</p>
               <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{proposalTitle}</h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 Run {workspace.run.runId.slice(0, 8)} · {workspace.run.participantCount} vendor versions · Manifest {workspace.manifest.checksum.slice(0, 12)}…
@@ -688,7 +712,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <article className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <h2 className="font-extrabold text-slate-950">Frozen vendor versions</h2>
+                  <h2 className="font-extrabold text-slate-950">Vendor responses included</h2>
                   <ul className="mt-3 space-y-2">
                     {workspace.participants.map((participant) => (
                       <li key={participant.participantId} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-xs">
@@ -716,7 +740,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
           {tab === "technical" && (
             <>
               <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
-                <strong>Technical view:</strong> technical, staffing, reference, and sustainability requirements from the same frozen run. Open a cell to inspect its source evidence.
+                <strong>Technical view:</strong> technical, staffing, reference, and sustainability requirements from this comparison snapshot. Open a cell to inspect its source evidence.
               </div>
               <RequirementMatrix requirements={workspace.intelligence.technical} onEvidence={setSelection} />
             </>
@@ -803,7 +827,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
                 ))}
               </div>
             ) : (
-              <EmptyState title="No persisted risks" text="This frozen comparison did not produce any evidence-backed risk flags." />
+              <EmptyState title="No persisted risks" text="This comparison snapshot did not produce any evidence-backed risk flags." />
             ))}
           {tab === "evaluation" && (
             <>
@@ -811,7 +835,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
                 {workspace.intelligence.evaluation.map((item) => (
                   <article key={item.participantId} className="rounded-2xl border border-slate-200 bg-white p-5">
                     <h2 className="font-extrabold text-slate-950">{item.vendorLabel}</h2>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">Backend-owned human scoring state. Vendor order is the frozen manifest order, not a rank.</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">Human scoring recorded for this comparison. Vendors are shown in saved response order, not ranked.</p>
                     <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <div>
                         <dt className="text-[10px] font-extrabold uppercase text-slate-500">Contribution</dt>
@@ -848,7 +872,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
         {selection && <EvidenceDrawer selection={selection} onClose={() => setSelection(undefined)} />}
         <p className="mt-6 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
           <History size={12} />
-          Viewing immutable run {currentRun?.run.runId ?? workspace.run.runId}; changing tabs does not change the run.
+          Viewing comparison snapshot {currentRun?.run.runId ?? workspace.run.runId}; changing tabs keeps the same comparison.
         </p>
       </div>
     </main>
