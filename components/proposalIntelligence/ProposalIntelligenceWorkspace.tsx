@@ -379,30 +379,6 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
           </div>
         </section>
 
-        <section className="mt-8" aria-label="Review summary">
-          <article className="rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-extrabold text-slate-950">Priority review signals</h3>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Evidence-backed items requiring procurement attention.</p>
-              </div>
-              <Link href={`${reportBase}/risks`} className="shrink-0 text-xs font-extrabold text-[#0077b6] hover:underline">View all risks</Link>
-            </div>
-            {workspace.intelligence.risks.length ? (
-              <ul className="mt-4 space-y-3">
-                {workspace.intelligence.risks.slice(0, 5).map((risk) => (
-                  <li key={risk.riskId} className="rounded-xl bg-slate-50 p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold ${riskTone[risk.severity] ?? riskTone.low}`}>{label(risk.severity)}</span>
-                      <span className="text-[10px] font-bold text-slate-500">{risk.vendorLabel}</span>
-                    </div>
-                    <p className="mt-2 text-xs font-extrabold text-slate-800">{risk.title}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No evidence-backed risk flags were persisted for this run.</p>}
-          </article>
-        </section>
       </div>
     </article>
   );

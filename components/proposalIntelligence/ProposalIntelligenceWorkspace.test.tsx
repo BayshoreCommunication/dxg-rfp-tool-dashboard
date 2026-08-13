@@ -61,6 +61,7 @@ test("shows the comparison snapshot directly as a readable executive report with
   expect(screen.getByText("$100,000.00")).toBeInTheDocument();
   expect(screen.getByText("1/2 evaluators complete")).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Human decision" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Priority review signals" })).not.toBeInTheDocument();
   expect(screen.queryByText(/This report summarizes persisted evidence/i)).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: /Export options/i })).not.toBeInTheDocument();
 });
