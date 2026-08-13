@@ -1,10 +1,11 @@
 import { getComparisonWorkspaceAction, listComparisonsAction } from "@/app/actions/comparisonOrchestration";
 import { getIntelligenceOperationsBundleAction } from "@/app/actions/proposalIntelligenceOperations";
 import { getProposalByIdAction } from "@/app/actions/proposals";
-import ProposalIntelligenceWorkspace, { intelligenceTabs, type IntelligenceTab } from "@/components/proposalIntelligence/ProposalIntelligenceWorkspace";
+import ProposalIntelligenceWorkspace, { type IntelligenceTab } from "@/components/proposalIntelligence/ProposalIntelligenceWorkspace";
 import { notFound } from "next/navigation";
 
 export const maxDuration = 60;
+const intelligenceTabs: readonly IntelligenceTab[] = ["overview", "requirements", "technical", "commercial", "risks", "evaluation", "reports", "audit"];
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
 export default async function ComparisonViewPage({ params }: { params: Promise<{ id: string; runId: string; tab: string }> }) {

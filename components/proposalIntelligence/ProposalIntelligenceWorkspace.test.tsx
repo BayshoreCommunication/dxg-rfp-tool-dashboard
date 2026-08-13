@@ -43,6 +43,7 @@ test("keeps every tab bound to the same run and opens exact cited evidence", asy
   expect(screen.getByRole("dialog", { name: "Provide plenary audio" })).toBeInTheDocument();
   expect(screen.getByText("Technical response.pdf")).toBeInTheDocument();
   expect(screen.getByText(/redundant digital audio system/)).toBeInTheDocument();
+  expect(screen.getByRole("combobox", { name: "Comparison run" })).toHaveTextContent("Aug 12, 2026, 12:00 AM UTC");
 });
 
 test("shows a sealed state without rendering pricing when the API denies commercial access", () => {
