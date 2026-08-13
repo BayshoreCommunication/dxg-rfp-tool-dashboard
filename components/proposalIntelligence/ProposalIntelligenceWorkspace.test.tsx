@@ -57,6 +57,7 @@ test("shows the comparison snapshot directly as a readable executive report with
   expect(screen.queryByText("Comparison ID")).not.toBeInTheDocument();
   expect(screen.queryByText(/Read the completed proposal intelligence directly in RFPilot/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Frozen comparison/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Viewing comparison snapshot/i)).not.toBeInTheDocument();
   expect(screen.getByText("$100,000.00")).toBeInTheDocument();
   expect(screen.getByText("1/2 evaluators complete")).toBeInTheDocument();
   expect(screen.getByText(/does not generate an automatic winner/i)).toBeInTheDocument();

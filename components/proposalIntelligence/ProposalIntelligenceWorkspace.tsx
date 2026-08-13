@@ -2,7 +2,7 @@
 
 import { getComparisonWorkspaceAction, recordComparisonDecisionAction, type ComparisonEvidence, type ComparisonRequirement, type ComparisonView, type ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, FileSearch, History, LockKeyhole, Scale, ShieldAlert, Users, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, FileSearch, LockKeyhole, Scale, ShieldAlert, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
@@ -583,7 +583,6 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
     }, 3000);
     return () => window.clearTimeout(timer);
   }, [proposalId, visible, workspace.run.runId, workspace.run.status]);
-  const currentRun = runs.find((run) => run.run.runId === workspace.run.runId);
   const overview = workspace.intelligence.overview;
   const formatMoney = (amount: number | null, currency: string | null) =>
     amount === null
@@ -843,10 +842,6 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
           {tab === "reports" && <ExecutiveReport proposalId={proposalId} workspace={workspace} />}
         </section>
         {selection && <EvidenceDrawer selection={selection} onClose={() => setSelection(undefined)} />}
-        <p className="mt-6 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
-          <History size={12} />
-          Viewing comparison snapshot {currentRun?.run.runId ?? workspace.run.runId}; changing tabs keeps the same comparison.
-        </p>
       </div>
     </main>
   );
