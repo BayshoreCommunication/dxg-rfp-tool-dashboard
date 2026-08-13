@@ -1,6 +1,6 @@
 # Proposal Intelligence Architecture Decision Pack
 
-> Status: Tasks 1–3 completed; Task 4 requires confirmation
+> Status: Tasks 1–9 completed; Task 10 in progress
 > Date: 2026-08-12
 > Owner: RFPilot product and engineering
 > Scope: planner dashboard and backend AI domain
@@ -38,6 +38,7 @@ The central product object is a versioned comparison snapshot. Analyze, Compare,
 6. [AI and evaluation architecture](./06-ai-architecture.md)
 7. [UI specification](./07-ui-specification.md)
 8. [Implementation tasks and confirmation gates](./08-implementation-plan.md)
+9. [Release and operations runbook](./09-release-operations.md)
 
 ## Non-negotiable invariants
 
@@ -53,7 +54,7 @@ The central product object is a versioned comparison snapshot. Analyze, Compare,
 
 ## Delivery status
 
-Task 1 delivered this architecture pack. Task 2 delivered immutable vendor-submission versioning. Task 3 delivered the tenant-isolated requirement registry, approval/versioning API, and planner review workspace. Task 4 evidence extraction and Tasks 5–10 remain unstarted and require separate user approval.
+Tasks 1–9 delivered immutable submissions, requirements, evidence extraction, vendor intelligence, evaluation, comparison orchestration, and planner workspaces. Task 10 adds report exports, clarification governance, audit/operations views, retention and legal-hold records, acceptance thresholds, and the release runbook.
 
 ## Research basis
 
