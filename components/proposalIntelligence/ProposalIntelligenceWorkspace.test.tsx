@@ -53,7 +53,8 @@ test("shows the comparison snapshot directly as a readable executive report with
   expect(screen.getByRole("heading", { name: "Vendor comparison" })).toBeInTheDocument();
   expect(screen.getByText(/RFPilot organizes the evidence for your team/)).toBeInTheDocument();
   expect(screen.getByText("Comparison ready to review")).toBeInTheDocument();
-  expect(screen.getByText("View comparison details")).toBeInTheDocument();
+  expect(screen.queryByText("View comparison details")).not.toBeInTheDocument();
+  expect(screen.queryByText("Comparison ID")).not.toBeInTheDocument();
   expect(screen.queryByText(/Read the completed proposal intelligence directly in RFPilot/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Frozen comparison/i)).not.toBeInTheDocument();
   expect(screen.getByText("$100,000.00")).toBeInTheDocument();

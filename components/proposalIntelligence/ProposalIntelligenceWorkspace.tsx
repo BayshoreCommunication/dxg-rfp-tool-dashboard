@@ -308,23 +308,6 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
             Comparison ready to review
           </span>
         </div>
-        <details className="mt-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-slate-200">
-          <summary className="cursor-pointer text-xs font-extrabold text-sky-200">View comparison details</summary>
-          <dl className="mt-4 grid gap-4 border-t border-white/10 pt-4 text-xs sm:grid-cols-3">
-            <div>
-              <dt className="font-bold text-slate-400">Completed</dt>
-              <dd className="mt-1 font-semibold text-slate-100">{workspace.run.completedAt ? formatIntelligenceTimestamp(workspace.run.completedAt) : "Completion pending"}</dd>
-            </div>
-            <div>
-              <dt className="font-bold text-slate-400">Vendor responses included</dt>
-              <dd className="mt-1 font-semibold text-slate-100">{workspace.run.participantCount}</dd>
-            </div>
-            <div>
-              <dt className="font-bold text-slate-400">Comparison ID</dt>
-              <dd className="mt-1 font-mono font-semibold text-slate-100">{workspace.run.runId.slice(0, 8)}</dd>
-            </div>
-          </dl>
-        </details>
       </header>
 
       <div className="p-5 sm:p-7">

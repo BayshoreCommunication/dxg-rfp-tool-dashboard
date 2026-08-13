@@ -42,40 +42,40 @@ final result: passed
 
 # Executive report header design QA
 
-- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_Q5vRnj/Screenshot 2026-08-13 at 3.44.29 PM.png`
-- Implementation screenshot: `/Users/swoptechnologies/Desktop/rfp/tasks/2026-08-13/in-app-executive-report/redesigned-report-viewport-clean.jpg`
-- Focused implementation crop: `/Users/swoptechnologies/Desktop/rfp/tasks/2026-08-13/in-app-executive-report/redesigned-report-header-clean.png`
-- Combined comparison evidence: `/Users/swoptechnologies/Desktop/rfp/tasks/2026-08-13/in-app-executive-report/report-header-comparison.png`
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_6O9JQp/Screenshot 2026-08-13 at 4.49.07 PM.png`
+- Implementation screenshot: `/Users/swoptechnologies/Desktop/rfp/tasks/2026-08-13/in-app-executive-report/remove-details/report-header-without-details.png`
+- Combined comparison evidence: `/Users/swoptechnologies/Desktop/rfp/tasks/2026-08-13/in-app-executive-report/remove-details/remove-details-comparison.png`
 - Route: `http://localhost:3000/proposals/6a7d6aa0556f07bff684ad67/intelligence/comparisons/019ffa0e-cfd3-73cc-be9e-e2c07765682c/reports`
-- State: authenticated desktop, Executive report selected, comparison details collapsed
+- State: authenticated desktop, Executive report selected, page scrolled to the report header
 - Browser viewport: 1016 x 900 CSS px at device pixel ratio 1
 - Browser screenshot: 1001 x 887 px
-- Source region: 802 x 183 px
-- Implementation header region: approximately 813 x 322 CSS px; focused crop normalized to 812 x 322 px
+- Source region: 781 x 130 px
+- Implementation screenshot: 1001 x 887 px
 
 ## Full-view comparison evidence
 
-The rendered page preserves the existing RFPilot navigation, report container, slate background, sky accent, and rounded-card language. The redesigned header is intentionally taller than the supplied source because it adds a clear completion status and a disclosure for technical details while increasing text size and line spacing.
+The rendered page preserves the existing RFPilot navigation, report container, slate background, sky accent, rounded-card language, heading, explanatory copy, and completion status. The unwanted comparison-details panel is no longer present, so the report now flows directly into the procurement snapshot.
 
 ## Focused region comparison evidence
 
-The combined comparison image places the supplied header above the redesigned header at a common 812 px width. It confirms that the redesigned section replaces the technical eyebrow, dense paragraph, and exposed manifest checksum with a plain-language title, readable supporting copy, review status, and collapsed comparison details.
+The combined comparison image places the supplied panel marked for removal above the current report page. It confirms that `View comparison details`, `Completed`, `Vendor responses included`, and `Comparison ID` have all been removed from the executive report header.
 
 ## Findings
 
 No actionable P0, P1, or P2 issues remain.
 
 - Fonts and typography: Existing application typography is retained. The headline is larger and stronger, supporting text uses a more readable line height, and small uppercase text is contained in a labeled pill instead of floating above the title.
-- Spacing and layout rhythm: Padding and vertical gaps are consistent with the surrounding report. The increased height is an intentional usability change, not accidental drift.
+- Spacing and layout rhythm: Header padding and vertical gaps remain consistent, and removing the panel eliminates unnecessary height before the report content.
 - Colors and visual tokens: Existing slate, sky, and emerald tokens are reused. Foreground/background contrast is visibly stronger than the source for the supporting copy and completion state.
 - Image quality and asset fidelity: The source and implementation contain no raster imagery, logo treatment, illustration, or custom asset in this section. The existing Lucide status icon matches the product's icon system.
-- Copy and content: `Frozen comparison` is replaced with `Comparison snapshot`. Internal manifest details are removed from the primary reading path, and the new copy clearly states that reviewers retain the final decision.
-- Interaction: The native comparison-details disclosure opens and closes correctly and reveals completion time, response count, and comparison ID.
+- Copy and content: `Frozen comparison` remains replaced with `Comparison snapshot`. The internal completion date, response count, and comparison ID are no longer exposed in this report header.
+- Interaction: The removed disclosure leaves no inactive or orphaned control behind; report navigation and content remain available.
 - Browser health: The authenticated page produced no console errors during the QA interaction.
 
 ## Comparison history
 
-- Pass 1: The supplied source showed technical terminology, low-emphasis metadata, and a dense one-block hierarchy. The implementation addressed those source issues. The post-build comparison found no P0/P1/P2 mismatch requiring another visual iteration.
+- Pass 1: The original report header replaced technical terminology with clearer snapshot language and moved metadata into a disclosure.
+- Pass 2: The user determined that the disclosure itself was unnecessary. It and all three metadata fields were removed; the post-change browser check found no leftover labels, layout gap, or console error.
 
 ## Follow-up polish
 
@@ -86,7 +86,7 @@ No actionable P0, P1, or P2 issues remain.
 - [x] Replace `Frozen comparison` with user-friendly snapshot language.
 - [x] Improve heading and paragraph readability.
 - [x] Add a clear review-ready status.
-- [x] Move technical identifiers into an expandable detail area.
+- [x] Remove the comparison-details panel and its technical metadata.
 - [x] Preserve the existing RFPilot visual system and route behavior.
 - [x] Verify the disclosure interaction and browser console.
 
