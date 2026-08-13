@@ -279,7 +279,6 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
     evaluation: workspace.intelligence.evaluation.find((item) => item.participantId === participant.participantId),
     risks: workspace.intelligence.risks.filter((item) => item.participantId === participant.participantId),
   }));
-  const latestDecision = workspace.intelligence.decisions[0];
   const formatMoney = (amount: number | null, currency: string | null) =>
     amount === null
       ? "Not submitted"
@@ -380,7 +379,7 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
           </div>
         </section>
 
-        <section className="mt-8 grid gap-4 lg:grid-cols-2" aria-label="Review and decision summary">
+        <section className="mt-8" aria-label="Review summary">
           <article className="rounded-2xl border border-slate-200 p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -403,27 +402,7 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
               </ul>
             ) : <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No evidence-backed risk flags were persisted for this run.</p>}
           </article>
-
-          <article className="rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-extrabold text-slate-950">Human decision</h3>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Only a recorded procurement decision appears here.</p>
-              </div>
-              <Link href={`${reportBase}/evaluation`} className="shrink-0 text-xs font-extrabold text-[#0077b6] hover:underline">Open evaluation</Link>
-            </div>
-            {latestDecision ? (
-              <div className="mt-4 rounded-xl bg-violet-50 p-4">
-                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-extrabold text-violet-800">{label(latestDecision.decisionType)}</span>
-                {latestDecision.selectedParticipantIds.length ? <p className="mt-3 text-sm font-extrabold text-violet-950">{latestDecision.selectedParticipantIds.map((id) => workspace.participants.find((participant) => participant.participantId === id)?.vendorLabel ?? "Historical participant").join(", ")}</p> : null}
-                <p className="mt-2 text-sm leading-6 text-violet-900">{latestDecision.rationale}</p>
-                <p className="mt-2 text-[10px] font-semibold text-violet-600">Recorded {formatIntelligenceTimestamp(latestDecision.createdAt)}</p>
-              </div>
-            ) : <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No human shortlist or selection has been recorded. RFPilot does not generate an automatic winner.</p>}
-          </article>
         </section>
-
-        <footer className="mt-8 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-xs leading-5 text-sky-900">This report summarizes persisted evidence and human evaluation state. Use the detailed tabs to inspect citations, resolve reviews, and record the procurement decision.</footer>
       </div>
     </article>
   );
