@@ -828,8 +828,12 @@ const normalizeExtracted = (
           estimatedAvBudget: matchOption((rb.estimatedAvBudget as string) ?? "", ["Essential", "Standard", "Production", "Premium", "Enterprise", "Signature", "Not Yet Determined"]) || (rb.estimatedAvBudget as string) || "",
           budgetFlexibility: (rb.budgetFlexibility as string) ?? "",
           proposalFormatPreferences: matchOptionsArray(
-            Array.isArray(rb.proposalFormatPreferences) ? rb.proposalFormatPreferences as string[] : [],
-            ["Itemized Gear List", "Labor Breakdown", "All-In Total Estimate", "Alternate / Value-Engineered Option", "Creative / Scenic Approach Narrative", "Crew Bios", "References", "LED Wall Line-Itemed Separately"],
+            (Array.isArray(rb.proposalFormatPreferences) ? rb.proposalFormatPreferences as string[] : []).map((value) =>
+              value === "LED Wall Line-Itemed Separately"
+                ? "Value Added Solutions Detailed Separately"
+                : value,
+            ),
+            ["Itemized Gear List", "Labor Breakdown", "All-In Total Estimate", "Alternate / Value-Engineered Option", "Creative / Scenic Approach Narrative", "Crew Bios", "References", "Value Added Solutions Detailed Separately"],
           ),
           evaluationMatrix: rm && typeof rm === "object"
             ? {

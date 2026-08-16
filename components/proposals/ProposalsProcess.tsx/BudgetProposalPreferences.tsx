@@ -186,8 +186,8 @@ const FORMAT_OPTIONS: {
     suggestIf: "enterprise",
   },
   {
-    label: "LED Wall Line-Itemed Separately",
-    desc: "LED wall must be line-itemed separately from the main gear package.",
+    label: "Value Added Solutions Detailed Separately",
+    desc: "Value-added solutions that could enhance the conference experience should be detailed and proposed separately from the main proposal.",
     suggestIf: "ledwall",
   },
 ];
