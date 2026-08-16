@@ -58,6 +58,8 @@ import {
   Download,
   FileText,
   Loader2,
+  Mic,
+  Square,
   Paperclip,
   PencilLine,
   Sparkles,
@@ -83,6 +85,457 @@ import {
   useSourceUpload,
 } from './useConversation';
 import { takeProposalHandoffDraft } from '@/lib/aiAssistant/handoff';
+
+type SpeechRecognitionResultLike = {
+  0: { transcript: string };
+};
+type SpeechRecognitionEventLike = {
+  results: ArrayLike<SpeechRecognitionResultLike>;
+};
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+const getSpeechRecognition = (): SpeechRecognitionConstructor | null => {
+  if (typeof window === 'undefined') return null;
+  const speechWindow = window as typeof window & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null;
+};
+
+const FIELD_COMMAND = /\b(fill|set|apply|enter|put|answer|update)\b/i;
+const SKIP_QUESTION_COMMAND = /^(?:please\s+)?(?:skip|pass)(?:\s+(?:this|it|question))?$|^(?:go\s+to\s+)?next\s+question$/i;
+const FIELD_HELP_COMMAND = /^(?:please\s+)?(?:help|hint|show\s+(?:me\s+)?(?:a\s+)?hint|how\s+(?:do|should|can)\s+i\s+(?:answer|say|fill)(?:\s+this)?|what\s+should\s+i\s+say|(?:eta|eita|এটা|এটি)\s+(?:kivabe|কীভাবে|কিভাবে)\s+(?:bolbo|বলব|fill\s+korbo|ফিল\s+করব))\??$/i;
+const MONTH_NUMBER: Record<string, number> = {
+  january: 1,
+  february: 2,
+  march: 3,
+  april: 4,
+  may: 5,
+  june: 6,
+  july: 7,
+  august: 8,
+  september: 9,
+  october: 10,
+  november: 11,
+  december: 12,
+};
+
+export const naturalDateToIso = (
+  input: string,
+  referenceDate = new Date(),
+): string | null => {
+  const normalized = input
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/(\d{4})([A-Za-z])/g, '$1 $2')
+    .toLowerCase()
+    .replace(/\b(?:of|in)\b/g, ' ')
+    .replace(/,/g, ' ');
+  const relativeDays = /\bday after tomorrow\b/.test(normalized)
+    ? 2
+    : /\btomorrow\b/.test(normalized)
+      ? 1
+      : /\btoday\b/.test(normalized)
+        ? 0
+        : null;
+  if (relativeDays !== null) {
+    const relative = new Date(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth(),
+      referenceDate.getDate() + relativeDays,
+    );
+    return `${relative.getFullYear()}-${String(relative.getMonth() + 1).padStart(2, '0')}-${String(relative.getDate()).padStart(2, '0')}`;
+  }
+  const iso = input.match(/\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
+  let year: number;
+  let month: number;
+  let day: number;
+  if (iso) {
+    [, year, month, day] = iso.map(Number);
+  } else {
+    // Do not turn a clipped speech-recognition year such as "August 21 202"
+    // into a confident date. The composer will ask the planner to repeat it.
+    if (
+      /\b(?:january|february|march|april|may|june|july|august|september|october|november|december)[,\s]+\d{1,2}(?:st|nd|rd|th)?[,]?\s+\d{1,3}\b/i.test(input) ||
+      /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)[,]?\s+\d{1,3}\b/i.test(input)
+    ) return null;
+    const yearFirst = normalized.match(
+      new RegExp(`\\b(\\d{4})\\s+(${Object.keys(MONTH_NUMBER).join('|')})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, 'i'),
+    );
+    const dayFirst = normalized.match(
+      /\b(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)(?:,?\s+(\d{4}))?\b/i,
+    );
+    const monthFirst = normalized.match(
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b/i,
+    );
+    const numeric = normalized.match(/\b(\d{1,2})[/.](\d{1,2})[/.](\d{4})\b/);
+    if (yearFirst) {
+      year = Number(yearFirst[1]);
+      month = MONTH_NUMBER[yearFirst[2].toLowerCase()];
+      day = Number(yearFirst[3]);
+    } else if (dayFirst) {
+      day = Number(dayFirst[1]);
+      month = MONTH_NUMBER[dayFirst[2].toLowerCase()];
+      year = dayFirst[3] ? Number(dayFirst[3]) : referenceDate.getFullYear();
+    } else if (monthFirst) {
+      month = MONTH_NUMBER[monthFirst[1].toLowerCase()];
+      day = Number(monthFirst[2]);
+      year = monthFirst[3] ? Number(monthFirst[3]) : referenceDate.getFullYear();
+    } else if (numeric) {
+      const first = Number(numeric[1]);
+      const second = Number(numeric[2]);
+      if (first <= 12 && second <= 12) return null;
+      day = first > 12 ? first : second;
+      month = first > 12 ? second : first;
+      year = Number(numeric[3]);
+    } else {
+      return null;
+    }
+  }
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    candidate.getUTCFullYear() !== year ||
+    candidate.getUTCMonth() !== month - 1 ||
+    candidate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return `${year.toString().padStart(4, '0')}-${month
+    .toString()
+    .padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+};
+
+export const naturalTimeTo24Hour = (input: string): string | null => {
+  const normalized = input
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/(\d{4})([A-Za-z])/g, '$1 $2');
+  if (/\bnoon\b/i.test(normalized)) return '12:00';
+  if (/\bmidnight\b/i.test(normalized)) return '00:00';
+  const matches = normalized.matchAll(
+    /\b(\d{1,2})(?::([0-5]\d))?\s*(a\.?m\.?|p\.?m\.?)?\b/gi,
+  );
+  for (const match of matches) {
+    let hour = Number(match[1]);
+    const minute = Number(match[2] ?? '00');
+    const meridiem = match[3]?.replaceAll('.', '').toLowerCase();
+    if (!match[2] && !meridiem) continue;
+    if (meridiem) {
+      if (hour < 1 || hour > 12) continue;
+      if (meridiem === 'pm' && hour !== 12) hour += 12;
+      if (meridiem === 'am' && hour === 12) hour = 0;
+    } else if (hour > 23) {
+      continue;
+    }
+    return `${hour.toString().padStart(2, '0')}:${minute
+      .toString()
+      .padStart(2, '0')}`;
+  }
+  return null;
+};
+
+const looksLikeDateInstruction = (input: string) =>
+  new RegExp(`\\b(?:${Object.keys(MONTH_NUMBER).join('|')})\\b`, 'i').test(input) ||
+  /\b(today|tomorrow|day after tomorrow)\b/i.test(input) ||
+  /\b(?:\d{4}[-/.]\d{1,2}(?:[-/.]\d{0,2})?|\d{1,2}[/.]\d{1,2}[/.]\d{2,4})\b/.test(input);
+
+const comparableWords = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const cleanSpeechCandidate = (value: string) => {
+  const words = value.trim().split(/\s+/);
+  return words.reduce<string[]>((cleaned, word) => {
+    if (cleaned.at(-1)?.toLowerCase() === word.toLowerCase()) {
+      cleaned[cleaned.length - 1] = word;
+    } else {
+      cleaned.push(word);
+    }
+    return cleaned;
+  }, []).join(' ');
+};
+
+const ALIAS_STOP_WORDS = new Set([
+  'what', 'which', 'when', 'where', 'how', 'many', 'much', 'does', 'will',
+  'would', 'should', 'could', 'this', 'that', 'there', 'event', 'please',
+  'provide', 'enter', 'add', 'use', 'still', 'expected', 'required', 'host',
+  'need', 'needs', 'called', 'planning', 'selected', 'example', 'ambiguous',
+]);
+
+export const questionFieldContract = (question: ConversationQuestion) => {
+  const leaf = question.paths.at(-1)?.split('/').at(-1) ?? '';
+  const pathWords = comparableWords(leaf.replace(/([a-z])([A-Z])/g, '$1 $2'));
+  const pathTokens = pathWords.split(' ').filter(Boolean);
+  const promptBase = question.prompt.split(/[?(]/)[0];
+  const promptTokens = comparableWords(promptBase)
+    .split(' ')
+    .filter((word) => word.length >= 4 && !ALIAS_STOP_WORDS.has(word));
+  const promptPhrases = promptTokens.flatMap((word, index) => [
+    word,
+    ...(index < promptTokens.length - 1 ? [`${word} ${promptTokens[index + 1]}`] : []),
+  ]);
+  const pathSuffixes = pathTokens.flatMap((_, index) => {
+    const suffix = pathTokens.slice(index).join(' ');
+    if (suffix.length < 3) return [];
+    if (['name', 'date', 'time', 'type', 'status', 'required'].includes(suffix)) return [];
+    return [suffix];
+  });
+  const distinctivePathTokens = pathTokens.filter(
+    (word) => word.length >= 3 && !['name', 'date', 'time', 'type', 'status', 'required', 'number'].includes(word),
+  );
+  const aliases = [...new Set([
+    pathWords,
+    comparableWords(questionFieldLabel(question)),
+    ...pathSuffixes,
+    ...distinctivePathTokens,
+    ...promptPhrases,
+  ].filter((value) => value.length >= 3))].sort((a, b) => b.length - a.length);
+  return {
+    modelPath: question.paths,
+    modelName: leaf,
+    label: questionFieldLabel(question),
+    prompt: question.prompt,
+    answerType: question.answerType,
+    options: question.options,
+    aliases,
+  };
+};
+
+export const questionAnswerHint = (question: ConversationQuestion): string => {
+  const label = questionFieldLabel(question);
+  const pathName = question.paths.at(-1)?.split('/').at(-1) ?? '';
+  const effectiveType = question.answerType === 'text'
+    ? /^numberOf/i.test(pathName)
+      ? 'number'
+      : /Date$/i.test(pathName)
+        ? 'date'
+        : /Time$/i.test(pathName)
+          ? 'time'
+          : 'text'
+    : question.answerType;
+  if (effectiveType === 'choice') {
+    return `Choose or say one of: ${question.options.join(', ')}.`;
+  }
+  if (effectiveType === 'date_time') {
+    return `For ${label}, say for example: “20 August 2026 at 3 PM”.`;
+  }
+  if (effectiveType === 'date') {
+    return `For ${label}, say for example: “20 August 2026”, “2026-08-20”, or “tomorrow”.`;
+  }
+  if (effectiveType === 'time') {
+    return `For ${label}, say for example: “3 PM”, “15:00”, “noon”, or “midnight”.`;
+  }
+  if (effectiveType === 'number') {
+    return `For ${label}, say just the number or a short phrase, for example: “300” or “three hundred”.`;
+  }
+  return `For ${label}, give a short direct answer using the wording in this question. For example: “${label} is …”. You can also say “skip”.`;
+};
+
+const mentionedChoice = (options: string[], input: string) => {
+  const words = ` ${comparableWords(input)} `;
+  return options.find((option) =>
+    words.includes(` ${comparableWords(option)} `),
+  ) ?? null;
+};
+
+const NUMBER_WORDS: Record<string, number> = {
+  zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+  twenty: 20, thirty: 30, forty: 40, fifty: 50,
+  sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+};
+
+const naturalNumber = (input: string): string | null => {
+  const digits = input.match(/\b\d+(?:\.\d+)?\b/)?.[0];
+  if (digits) return digits;
+  const tokens = comparableWords(input).split(' ');
+  let total = 0;
+  let current = 0;
+  let found = false;
+  for (const token of tokens) {
+    if (token === 'and') continue;
+    if (token in NUMBER_WORDS) {
+      current += NUMBER_WORDS[token];
+      found = true;
+    } else if (token === 'hundred' && found) {
+      current = Math.max(current, 1) * 100;
+    } else if (token === 'thousand' && found) {
+      total += Math.max(current, 1) * 1000;
+      current = 0;
+    } else if (found) {
+      break;
+    }
+  }
+  return found ? String(total + current) : null;
+};
+
+export const fieldAnswerFromInstruction = (
+  question: ConversationQuestion,
+  instruction: string,
+): ConversationQuestionAnswer | null => {
+  const input = instruction.trim();
+  if (!input) return null;
+  const pathName = question.paths.at(-1)?.split('/').at(-1) ?? '';
+  const conciseBoolean = comparableWords(input);
+  if (
+    question.answerType === 'text' &&
+    /^(?:are|is|do|does|will|would|should|must|can)\b/i.test(question.prompt.trim()) &&
+    /^(yes|no|none|not sure)$/.test(conciseBoolean)
+  ) {
+    return conciseBoolean === 'none'
+      ? 'None'
+      : conciseBoolean.replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+  if (question.answerType === 'date' || /Date$/i.test(pathName)) {
+    const naturalDate = naturalDateToIso(input);
+    if (naturalDate) return naturalDate;
+  }
+  if (question.answerType === 'time') {
+    const naturalTime = naturalTimeTo24Hour(input);
+    if (naturalTime) return naturalTime;
+  }
+  if (question.answerType === 'date_time') {
+    const date = naturalDateToIso(input);
+    const time = naturalTimeTo24Hour(input);
+    if (date && time) return { date, time };
+  }
+  if (question.answerType === 'choice') {
+    const mentioned = mentionedChoice(question.options, input);
+    // The active guided question supplies field context. A backend-provided
+    // option appearing in a short/natural reply is therefore enough; the
+    // frontend never needs a hard-coded event-format or yes/no list.
+    if (mentioned) {
+      return mentioned;
+    }
+  }
+  // Older persisted guidance rows may predate typed controls and still report
+  // `text`. A canonical numberOf* path is nevertheless unambiguously numeric.
+  if (question.answerType === 'number' || /^numberOf/i.test(pathName)) {
+    const number = naturalNumber(input);
+    const fieldStem = pathName.replace(/numberOf/i, '').replace(/([A-Z])/g, ' $1').trim();
+    const conciseReply = input.split(/\s+/).length <= 8 && !input.includes('?');
+    if (number && (FIELD_COMMAND.test(input) || new RegExp(fieldStem, 'i').test(input) || conciseReply)) {
+      return number;
+    }
+  }
+  // Browser speech recognition often joins the copula to the next word
+  // ("event name isAttack") or repeats nearby prompt words. Since the active
+  // question supplies unambiguous field context, handle these common event-name
+  // utterances before the generic command grammar.
+  if (/eventName$/i.test(pathName)) {
+    const eventNamePatterns = [
+      /\b(?:event\s+)+(?:name\s*)?(?:is\s*|=\s*|:\s*|to\s+)(.+)$/i,
+      /\bname\s*(?:is\s*|=\s*|:\s*|to\s+)(.+)$/i,
+      /\bevent(?:\s+event)*\s+called(?:\s+name)?\s*(?:is\s*)?(.+)$/i,
+    ];
+    for (const pattern of eventNamePatterns) {
+      const matched = input.match(pattern)?.[1]
+        ?.replace(/\s+(please|for me)$/i, '')
+        .trim();
+      if (matched) return cleanSpeechCandidate(matched).slice(0, 4000);
+    }
+  }
+  // The visible question can define a natural relationship even when the
+  // answer comes before the label: "Data Path will host the event". This is
+  // derived from the active prompt (not a backend field-name special case), so
+  // a renamed model path continues to work with the same frontend wording.
+  if (
+    question.answerType === 'text' &&
+    /\bhost\b.*\bevent\b/i.test(question.prompt) &&
+    !input.includes('?')
+  ) {
+    const reverseHostPatterns = [
+      /^(.+?)\s+(?:is|will\s+be)\s+(?:the\s+)?(?:place\s+)?(?:that\s+)?(?:will\s+)?host(?:ing)?\s+(?:the\s+)?event\b/i,
+      /^(.+?)\s+(?:will\s+)?host(?:s|ing)?\s+(?:the\s+)?event\b/i,
+      /^(?:the\s+)?event\s+(?:is|will\s+be)\s+(?:hosted\s+)?at\s+(.+)$/i,
+    ];
+    for (const pattern of reverseHostPatterns) {
+      const matched = input.match(pattern)?.[1]?.trim();
+      if (matched) return cleanSpeechCandidate(matched).slice(0, 4000);
+    }
+  }
+  const aliases = questionFieldContract(question).aliases
+    .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const mentionsField = aliases.some((alias) =>
+    new RegExp(`\\b${alias}\\b`, 'i').test(input),
+  );
+  const explicitCommand = FIELD_COMMAND.test(input);
+  const assignsMentionedField = mentionsField && /\b(is|are|equals|to|as|will be)\b|=|:/i.test(input);
+  const conciseContextualText =
+    question.answerType === 'text' &&
+    input.split(/\s+/).length <= 6 &&
+    !input.includes('?') &&
+    !/^(?:plan|create|make|generate|check|review|help|explain|show|tell|what|why|how|can|could|would|please)\b/i.test(input);
+  if (!explicitCommand && !assignsMentionedField && !conciseContextualText) return null;
+
+  let candidate = input
+    .replace(/^(please\s+)?(can you\s+)?/i, '')
+    .replace(/\b(fill|set|apply|enter|put|answer|update)\b(\s+(in|up|the|this|current|input|field|box))*\s*/gi, '')
+    .trim();
+  for (const alias of aliases) {
+    const stripped = candidate
+      .replace(new RegExp(`^(the\\s+)?${alias}(?:\\s+name)?\\s*(is|are|will\\s+be|=|to|as|with|:)\\s*`, 'i'), '')
+      .replace(new RegExp(`^(the\\s+)?${alias}\\s+`, 'i'), '')
+      .trim();
+    if (stripped !== candidate) {
+      candidate = stripped;
+      break;
+    }
+  }
+  candidate = candidate
+    .replace(/^(is|are|will\s+be|=|to|as|with|:)\s*/i, '')
+    .replace(/\s+(please|for me)$/i, '')
+    .trim();
+  if (!candidate || /^(it|this|that|input|field|box)$/i.test(candidate)) return null;
+
+  if (question.answerType === 'choice') {
+    return mentionedChoice(question.options, candidate);
+  }
+  if (question.answerType === 'number') {
+    return naturalNumber(candidate);
+  }
+  if (question.answerType === 'date') {
+    return naturalDateToIso(candidate);
+  }
+  if (question.answerType === 'time') {
+    return candidate.match(/\b(?:[01]\d|2[0-3]):[0-5]\d\b/)?.[0] ?? null;
+  }
+  if (question.answerType === 'date_time') return null;
+  return cleanSpeechCandidate(candidate).slice(0, 4000);
+};
+
+export const mentionedFieldAnswers = (
+  questions: ConversationQuestion[],
+  instruction: string,
+): Array<{ question: ConversationQuestion; answer: ConversationQuestionAnswer }> => {
+  const normalized = comparableWords(instruction);
+  const located = questions.flatMap((question) => {
+    const positions = questionFieldContract(question).aliases
+      .map((alias) => normalized.indexOf(alias))
+      .filter((position) => position >= 0);
+    const position = positions.length ? Math.min(...positions) : -1;
+    return position >= 0 ? [{ question, position }] : [];
+  }).sort((a, b) => a.position - b.position);
+
+  return located.flatMap((item, index) => {
+    const end = located[index + 1]?.position ?? normalized.length;
+    const segment = normalized.slice(item.position, end).trim();
+    const answer = fieldAnswerFromInstruction(item.question, segment);
+    return answer === null ? [] : [{ question: item.question, answer }];
+  });
+};
 
 const ACCENT = '#00c2c9';
 const DEEP = '#087f69';
@@ -1806,6 +2259,8 @@ export default function AssistantWorkspacePage({
     unknown
   > | null>(null);
   const [text, setText] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   // Guided clarification flow: progress across this session plus the latest
   // confirmed value ("Rooms: 6") shown after a successful answer.
   const [answeredCount, setAnsweredCount] = useState(0);
@@ -1819,6 +2274,7 @@ export default function AssistantWorkspacePage({
   const [staged, setStaged] = useState<File[]>([]);
   const [sendBusy, setSendBusy] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [inputClarification, setInputClarification] = useState<string | null>(null);
   // Files already uploaded during a failed send attempt keep their source id so
   // a retry does not upload them a second time.
   const uploadedRef = useRef(new Map<File, string>());
@@ -1858,6 +2314,19 @@ export default function AssistantWorkspacePage({
     version: number | null;
   } | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceDraftRef = useRef('');
+  // SpeechRecognition can emit its final result immediately before `onend`.
+  // React may not have committed that last setText yet, so auto-submit reads
+  // this synchronous ref instead of a stale render closure.
+  const voiceLatestTextRef = useRef('');
+  const voiceShouldSubmitRef = useRef(false);
+  const handleSendRef = useRef<(
+    textOverride?: string,
+    source?: 'voice',
+  ) => Promise<void>>(
+    async () => undefined,
+  );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
   const creatingRef = useRef(false);
@@ -1885,6 +2354,96 @@ export default function AssistantWorkspacePage({
     textarea.style.overflowY =
       textarea.scrollHeight > 160 ? 'auto' : 'hidden';
   }, [text]);
+
+  useEffect(
+    () => () => {
+      recognitionRef.current?.abort();
+    },
+    [],
+  );
+
+  const startVoiceInput = (draftOverride?: string) => {
+    const SpeechRecognition = getSpeechRecognition();
+    if (!SpeechRecognition) {
+      setVoiceError(
+        'Voice input is not supported by this browser. Try the latest Chrome or Edge.',
+      );
+      return;
+    }
+
+    setVoiceError(null);
+    voiceDraftRef.current = draftOverride ?? text.trimEnd();
+    voiceLatestTextRef.current = voiceDraftRef.current;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || 'en-US';
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let index = 0; index < event.results.length; index += 1) {
+        transcript += event.results[index][0].transcript;
+      }
+      const prefix = voiceDraftRef.current;
+      const latest = `${prefix}${prefix && transcript ? ' ' : ''}${transcript}`;
+      voiceLatestTextRef.current = latest;
+      setText(latest);
+    };
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      if (event.error === 'aborted') return;
+      setVoiceError(
+        event.error === 'not-allowed' || event.error === 'service-not-allowed'
+          ? 'Microphone access was blocked. Allow microphone access and try again.'
+          : event.error === 'no-speech'
+            ? 'No speech was detected. Try again and speak closer to your microphone.'
+            : 'Voice input stopped unexpectedly. Please try again.',
+      );
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      if (voiceShouldSubmitRef.current) {
+        voiceShouldSubmitRef.current = false;
+        const latest = voiceLatestTextRef.current;
+        requestAnimationFrame(() => void handleSendRef.current(latest, 'voice'));
+      } else {
+        requestAnimationFrame(() => composerRef.current?.focus());
+      }
+    };
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+      setVoiceError('Voice input could not start. Please try again.');
+    }
+  };
+
+  const finishVoiceInput = () => {
+    voiceShouldSubmitRef.current = true;
+    recognitionRef.current?.stop();
+  };
+
+  const cancelVoiceInput = () => {
+    const original = voiceDraftRef.current;
+    voiceShouldSubmitRef.current = false;
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    setIsListening(false);
+    voiceLatestTextRef.current = original;
+    setText(original);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  };
+
+  const continueVoiceAfterClarification = (message: string) => {
+    setInputClarification(message);
+    setText('');
+    // Clarification stays visual; the assistant never speaks back. Reopen the
+    // microphone so the planner can immediately correct the active field.
+    requestAnimationFrame(() => startVoiceInput(''));
+  };
 
   const {
     data,
@@ -1941,6 +2500,19 @@ export default function AssistantWorkspacePage({
   const openQuestions = (data?.questions ?? []).filter(
     (item) => item.status === 'open',
   );
+  const currentQuestion = openQuestions[0] ?? null;
+  const sourceExtractionInProgress =
+    autoScanning ||
+    pending.some(
+      (item) =>
+        item.intent === 'extract_requirements' &&
+        item.state === 'sending',
+    ) ||
+    messages.some(
+      (message) =>
+        message.runType === 'proposal_context' &&
+        message.status === 'pending',
+    );
   // answer message id -> the question it answered, so the thread can replay the
   // question above the answer instead of showing a bare value.
   const askedByAnswerMessageId = useMemo(
@@ -2203,13 +2775,152 @@ export default function AssistantWorkspacePage({
     return id;
   }, [proposalId]);
 
-  const handleSend = async () => {
-    const value = text.trim();
+  const handleSend = async (textOverride?: string, source?: 'voice') => {
+    const value = (textOverride ?? text).trim();
     if (chatBusy || sendBusy) return;
     if (!value && staged.length === 0) return;
     setSendError(null);
+    setInputClarification(null);
     const id = await ensureProposal();
     if (!id) return;
+    if (
+      value &&
+      staged.length === 0 &&
+      currentQuestion &&
+      !sourceExtractionInProgress
+    ) {
+      if (FIELD_HELP_COMMAND.test(value)) {
+        setText('');
+        setInputClarification(questionAnswerHint(currentQuestion));
+        return;
+      }
+      if (SKIP_QUESTION_COMMAND.test(value)) {
+        setText('');
+        const skipped = await resolveQuestion(currentQuestion.id, {
+          status: 'dismissed',
+        });
+        if (skipped) {
+          setSkippedCount((count) => count + 1);
+          setLastConfirmed({
+            label: questionFieldLabel(currentQuestion),
+            value: 'Skipped',
+          });
+        } else if (source === 'voice') {
+          continueVoiceAfterClarification(
+            `I couldn't skip ${questionFieldLabel(currentQuestion)}. Please try again.`,
+          );
+        } else setText(value);
+        return;
+      }
+      const bundledAnswers = mentionedFieldAnswers(openQuestions, value);
+      if (bundledAnswers.length > 1) {
+        setText('');
+        let applied = 0;
+        let latest = bundledAnswers[0];
+        for (const item of bundledAnswers) {
+          const resolved = await resolveQuestion(item.question.id, {
+            status: 'answered',
+            answer: item.answer,
+          });
+          if (!resolved) {
+            setText(value);
+            return;
+          }
+          applied += 1;
+          latest = item;
+        }
+        setAnsweredCount((count) => count + applied);
+        setLastConfirmed({
+          label: `${applied} details`,
+          value: `last: ${questionFieldLabel(latest.question)} = ${
+            typeof latest.answer === 'string'
+              ? latest.answer
+              : `${latest.answer.date} at ${latest.answer.time}`
+          }`,
+        });
+        return;
+      }
+      const isFillCommand = FIELD_COMMAND.test(value);
+      const directAnswer = fieldAnswerFromInstruction(currentQuestion, value);
+      const currentPathName = currentQuestion.paths.at(-1)?.split('/').at(-1) ?? '';
+      const expectsDate =
+        currentQuestion.answerType === 'date' ||
+        currentQuestion.answerType === 'date_time' ||
+        /Date$/i.test(currentPathName);
+      if (expectsDate && !directAnswer && looksLikeDateInstruction(value)) {
+        // A clipped/invalid date must never fall through to chat or silently
+        // confirm an extracted suggestion. Keep the words editable and ask for
+        // the one missing fact in plain language.
+        const clarification = currentQuestion.answerType === 'date_time'
+          ? 'I heard part of the load-in date and time, but it was not complete or unambiguous. Please say it again, for example: Load-in is 20 August 2026 at 3 PM.'
+          : 'I heard part of the date, but not a complete valid date. Please say it again, for example: 21 August 2026.';
+        if (source === 'voice') continueVoiceAfterClarification(clarification);
+        else {
+          setText(value);
+          setInputClarification(clarification);
+        }
+        return;
+      }
+      const conciseReply = value.split(/\s+/).length <= 8 && !value.includes('?');
+      if (!directAnswer && conciseReply && currentQuestion.answerType === 'choice') {
+        const clarification = `I couldn't match that confidently. Please say one of: ${currentQuestion.options.join(', ')}.`;
+        if (source === 'voice') continueVoiceAfterClarification(clarification);
+        else {
+          setText(value);
+          setInputClarification(clarification);
+        }
+        return;
+      }
+      if (!directAnswer && conciseReply && currentQuestion.answerType === 'number') {
+        const clarification = `I couldn't hear a clear number for ${questionFieldLabel(currentQuestion)}. Please say the number again, for example: 300.`;
+        if (source === 'voice') continueVoiceAfterClarification(clarification);
+        else {
+          setText(value);
+          setInputClarification(clarification);
+        }
+        return;
+      }
+      const earlierAnswer = isFillCommand
+        ? [...messages]
+            .reverse()
+            .filter((message) => message.role === 'user')
+            .map((message) =>
+              fieldAnswerFromInstruction(currentQuestion, message.content),
+            )
+            .find((answer): answer is ConversationQuestionAnswer => answer !== null) ?? null
+        : null;
+      // A source-derived suggestion wins for a generic "fill this field"
+      // command. The planner must state a different value explicitly to
+      // replace what document extraction detected.
+      const answer =
+        directAnswer ??
+        (isFillCommand ? currentQuestion.suggestedAnswer : null) ??
+        earlierAnswer;
+      if (answer) {
+        setText('');
+        const resolved = await resolveQuestion(currentQuestion.id, {
+          status: 'answered',
+          answer,
+        });
+        if (resolved) {
+          setAnsweredCount((count) => count + 1);
+          setLastConfirmed({
+            label: questionFieldLabel(currentQuestion),
+            value:
+              typeof answer === 'string'
+                ? answer
+                : `${answer.date} at ${answer.time}`,
+          });
+        } else {
+          if (source === 'voice') {
+            continueVoiceAfterClarification(
+              `That value wasn't accepted for ${questionFieldLabel(currentQuestion)}. Please say it again.`,
+            );
+          } else setText(value);
+        }
+        return;
+      }
+    }
     // Upload every staged file first (sequentially): upload session -> PUT ->
     // complete -> scan job, all as non_confidential. On any failure the chips
     // stay staged and an inline error offers a retry of the whole send; files
@@ -2248,6 +2959,7 @@ export default function AssistantWorkspacePage({
     // explicitly promote longer text through the "Add notes" source control.
     if (sent && sourceIds.length > 0) queueAutoExtract(id, sourceIds);
   };
+  handleSendRef.current = handleSend;
 
   // ChatGPT-style staged attach: picking a file only adds a composer chip; the
   // upload runs when the message is sent. Up to three files can be staged.
@@ -2516,7 +3228,6 @@ export default function AssistantWorkspacePage({
   // Guided question flow: answer the current question inline; a success
   // confirms the value and advances, a validation failure (422) re-asks with
   // the friendly message. Skip dismisses the question and advances.
-  const currentQuestion = openQuestions[0] ?? null;
   // A gap question stays open (and keeps its id) for its whole lifetime — it
   // is only superseded once its target field is actually filled — so showing
   // it the instant a source is attached surfaces a blank control that only
@@ -2524,18 +3235,7 @@ export default function AssistantWorkspacePage({
   // client-side scan watch, the optimistic extract_requirements send, and the
   // persisted run before it reaches a terminal status. Each clears on success
   // or failure, so a question can never stay hidden past a terminal outcome.
-  const extractionPending =
-    autoScanning ||
-    pending.some(
-      (item) =>
-        item.intent === 'extract_requirements' &&
-        item.state === 'sending',
-    ) ||
-    messages.some(
-      (message) =>
-        message.runType === 'proposal_context' &&
-        message.status === 'pending',
-    );
+  const extractionPending = sourceExtractionInProgress;
   const currentVenueSchedule =
     proposal && isRecord(proposal.venueSchedule)
       ? proposal.venueSchedule
@@ -2933,6 +3633,52 @@ export default function AssistantWorkspacePage({
           </button>
         </p>
       )}
+      {inputClarification && (
+        <p
+          role="alert"
+          className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+        >
+          {inputClarification}
+        </p>
+      )}
+      {isListening ? (
+        <div
+          role="status"
+          aria-label="Voice input is listening"
+          className="flex min-h-14 items-center gap-3 rounded-[1.75rem] border border-slate-700 bg-[#202020] px-2.5 py-2 text-white shadow-lg"
+        >
+          <button
+            type="button"
+            aria-label="Cancel voice input"
+            onClick={cancelVoiceInput}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <X size={19} aria-hidden />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center gap-[3px] overflow-hidden" aria-hidden>
+            {Array.from({ length: 44 }, (_, index) => (
+              <span
+                key={index}
+                className="w-[3px] shrink-0 animate-pulse rounded-full bg-slate-300/80"
+                style={{
+                  height: `${6 + ((index * 7) % 22)}px`,
+                  animationDelay: `${(index % 9) * 70}ms`,
+                  animationDuration: `${650 + (index % 5) * 90}ms`,
+                }}
+              />
+            ))}
+          </div>
+          <span className="sr-only">Listening. Speak naturally.</span>
+          <button
+            type="button"
+            aria-label="Finish voice input"
+            onClick={finishVoiceInput}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white text-[#202020] transition-colors hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <Square size={13} fill="currentColor" aria-hidden />
+          </button>
+        </div>
+      ) : (
       <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-[#00c2c9]">
         {staged.length > 0 && (
           <ul className="mb-1.5 flex flex-wrap gap-1.5 px-1 pt-1">
@@ -2991,6 +3737,16 @@ export default function AssistantWorkspacePage({
           >
             <Paperclip size={17} aria-hidden />
           </button>
+          <button
+            type="button"
+            aria-label="Start voice input"
+            onClick={() => startVoiceInput()}
+            disabled={sendBusy}
+            title="Describe your event by voice"
+            className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Mic size={17} aria-hidden />
+          </button>
           <textarea
             ref={composerRef}
             value={text}
@@ -3019,6 +3775,12 @@ export default function AssistantWorkspacePage({
           </button>
         </div>
       </div>
+      )}
+      {voiceError && (
+        <p role="alert" className="mt-2 text-xs text-red-700">
+          {voiceError}
+        </p>
+      )}
       {createError && (
         <p
           role="alert"

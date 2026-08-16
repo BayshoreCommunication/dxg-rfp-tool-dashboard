@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import AssistantWorkspacePage, { displayQuestionPrompt, isBeforeLocalToday, maximumDateForQuestion, minimumDateForQuestion, sourceIdsForFailedExtraction, visibleRunMessages } from "./AssistantWorkspacePage";
+import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
@@ -179,6 +179,12 @@ const formatQuestion = guidedQuestion("q-format", "Is the event in-person, hybri
   answerType: "choice",
   options: ["In-Person", "Hybrid", "Virtual"],
 });
+const eventNameQuestion = guidedQuestion(
+  "q-event-name",
+  "What is this event called?",
+  "/content/event/eventName",
+  "scope",
+);
 
 const conversationWithGuidedQuestions = (questions: Array<ReturnType<typeof guidedQuestion>>) => ({
   success: true as const,
@@ -242,6 +248,8 @@ describe("AssistantWorkspacePage", () => {
 
   afterEach(() => {
     replaceStateSpy.mockRestore();
+    delete (window as typeof window & { webkitSpeechRecognition?: unknown })
+      .webkitSpeechRecognition;
   });
 
   test("empty state greets the signed-in user by first name", async () => {
@@ -253,6 +261,133 @@ describe("AssistantWorkspacePage", () => {
     // No proposal exists yet, so nothing was created or loaded.
     expect(mockedCreateProposal).not.toHaveBeenCalled();
     expect(mockedGetConversation).not.toHaveBeenCalled();
+  });
+
+  test("transcribes voice and submits it when the planner finishes", async () => {
+    mockedCreateProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID } });
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: null },
+    });
+    class MockSpeechRecognition {
+      static latest: MockSpeechRecognition;
+      onstart: (() => void) | null = null;
+      onresult: ((event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void) | null = null;
+      onerror: ((event: { error: string }) => void) | null = null;
+      onend: (() => void) | null = null;
+      continuous = false;
+      interimResults = false;
+      lang = '';
+      start = jest.fn(() => this.onstart?.());
+      // Chrome may deliver the last recognition result and `onend` in the same
+      // turn. The final word must be submitted even before React re-renders.
+      stop = jest.fn(() => {
+        this.onresult?.({
+          results: [{ 0: { transcript: "Plan a 300-person conference" } }],
+        });
+        this.onend?.();
+      });
+      abort = jest.fn();
+      constructor() {
+        MockSpeechRecognition.latest = this;
+      }
+    }
+    Object.defineProperty(window, "webkitSpeechRecognition", {
+      configurable: true,
+      value: MockSpeechRecognition,
+    });
+
+    render(<AssistantWorkspacePage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Start voice input" }));
+    const recognition = MockSpeechRecognition.latest;
+    expect(screen.getByRole("status", { name: "Voice input is listening" })).toBeInTheDocument();
+
+    act(() => {
+      recognition.onresult?.({
+        results: [{ 0: { transcript: "Plan a 300-person confer" } }],
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Finish voice input" }));
+    expect(recognition.stop).toHaveBeenCalled();
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { content: "Plan a 300-person conference", intent: "chat" },
+      expect.any(String),
+    ));
+  });
+
+  test("cancels voice capture and restores the previous composer draft", async () => {
+    class MockSpeechRecognition {
+      static latest: MockSpeechRecognition;
+      onstart: (() => void) | null = null;
+      onresult: ((event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void) | null = null;
+      onerror: ((event: { error: string }) => void) | null = null;
+      onend: (() => void) | null = null;
+      continuous = false;
+      interimResults = false;
+      lang = '';
+      start = jest.fn(() => this.onstart?.());
+      stop = jest.fn();
+      abort = jest.fn();
+      constructor() {
+        MockSpeechRecognition.latest = this;
+      }
+    }
+    Object.defineProperty(window, "webkitSpeechRecognition", {
+      configurable: true,
+      value: MockSpeechRecognition,
+    });
+
+    render(<AssistantWorkspacePage />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "Existing details" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start voice input" }));
+    act(() => {
+      MockSpeechRecognition.latest.onresult?.({
+        results: [{ 0: { transcript: "discard this" } }],
+      });
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel voice input" }));
+
+    expect(MockSpeechRecognition.latest.abort).toHaveBeenCalled();
+    expect(screen.getByLabelText("Message the proposal assistant")).toHaveValue(
+      "Existing details",
+    );
+  });
+
+  test("shows a targeted clarification and silently reopens voice input for an incomplete date", async () => {
+    mockedGetConversation.mockResolvedValue(
+      conversationWithGuidedQuestions([datePickerQuestion]),
+    );
+    class MockSpeechRecognition {
+      static instances: MockSpeechRecognition[] = [];
+      onstart: (() => void) | null = null;
+      onresult: ((event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void) | null = null;
+      onerror: ((event: { error: string }) => void) | null = null;
+      onend: (() => void) | null = null;
+      continuous = false;
+      interimResults = false;
+      lang = '';
+      start = jest.fn(() => this.onstart?.());
+      stop = jest.fn(() => this.onend?.());
+      abort = jest.fn();
+      constructor() { MockSpeechRecognition.instances.push(this); }
+    }
+    Object.defineProperty(window, "webkitSpeechRecognition", { configurable: true, value: MockSpeechRecognition });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Start voice input" }));
+    act(() => MockSpeechRecognition.instances[0].onresult?.({
+      results: [{ 0: { transcript: "Event date is 21 August 202" } }],
+    }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish voice input" }));
+
+    expect(await screen.findByText(/21 August 2026/)).toBeInTheDocument();
+    await waitFor(() => expect(MockSpeechRecognition.instances).toHaveLength(2));
+    expect(MockSpeechRecognition.instances[1].start).toHaveBeenCalled();
+    expect(mockedPatchQuestion).not.toHaveBeenCalled();
   });
 
   test("consumes a general-assistant handoff as an unsent draft", async () => {
@@ -302,6 +437,422 @@ describe("AssistantWorkspacePage", () => {
     // mid-flight, leaving the composer stuck on "Sending…".
     expect(replaceStateSpy).toHaveBeenCalledWith(null, "", `/proposals/${PROPOSAL_ID}/assistant`);
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  test("extracts a guided field value from an explicit typed instruction", () => {
+    expect(
+      fieldAnswerFromInstruction(
+        eventNameQuestion,
+        "Set the event name to Tech and Startup",
+      ),
+    ).toBe("Tech and Startup");
+    expect(
+      fieldAnswerFromInstruction(eventNameQuestion, "How is the proposal looking?"),
+    ).toBeNull();
+    expect(
+      fieldAnswerFromInstruction(
+        eventNameQuestion,
+        "Uh the event name isAttack and startup",
+      ),
+    ).toBe("Attack and startup");
+    expect(
+      fieldAnswerFromInstruction(
+        eventNameQuestion,
+        "Feel please feel the event event called either event called name is take and startup",
+      ),
+    ).toBe("take and startup");
+    const cityQuestion = guidedQuestion(
+      "q-city",
+      "Which city will host the event? Add the state for ambiguous city names.",
+      "/content/venueSchedule/venueCity",
+      "cost",
+    );
+    expect(
+      fieldAnswerFromInstruction(cityQuestion, "The city name is new New York"),
+    ).toBe("New York");
+  });
+
+  test("derives natural text labels from dynamic backend paths", () => {
+    const cases = [
+      ["/content/venueSchedule/venueName", "Which venue will host the event?", "Venue name is Creator Showcase", "Creator Showcase"],
+      ["/content/venueSchedule/venueCity", "Which city will host the event?", "City is Dhaka", "Dhaka"],
+      ["/content/venueSchedule/venueState", "Which state or region will host the event?", "Region is New York", "New York"],
+      ["/content/venue/venueAccessRequirements", "Are there loading dock, freight elevator, security, parking, or access restrictions?", "Access restrictions are loading dock only", "loading dock only"],
+    ] as const;
+    for (const [path, prompt, instruction, expected] of cases) {
+      expect(
+        fieldAnswerFromInstruction(
+          guidedQuestion(`q-${path}`, prompt, path, "cost"),
+          instruction,
+        ),
+      ).toBe(expected);
+    }
+  });
+
+  test("understands a venue value spoken before the frontend relationship", () => {
+    const venueQuestion = guidedQuestion(
+      "q-venue",
+      "Which venue will host the event? Enter the venue name, or use Skip if it is still undecided.",
+      "/content/venueSchedule/venueName",
+      "cost",
+    );
+    expect(fieldAnswerFromInstruction(venueQuestion, "Data Path is host the event")).toBe("Data Path");
+    expect(fieldAnswerFromInstruction(venueQuestion, "Data Path will host the event")).toBe("Data Path");
+    expect(fieldAnswerFromInstruction(venueQuestion, "The event will be at Data Path")).toBe("Data Path");
+  });
+
+  test("builds one frontend-label and backend-model contract for every control type", () => {
+    const questions = [
+      eventNameQuestion,
+      datePickerQuestion,
+      loadInTimePickerQuestion,
+      combinedLoadInQuestion,
+      formatQuestion,
+      roomsQuestion,
+    ];
+    for (const question of questions) {
+      const contract = questionFieldContract(question);
+      expect(contract.modelPath).toEqual(question.paths);
+      expect(contract.modelName).toBe(question.paths.at(-1)?.split('/').at(-1));
+      expect(contract.label).not.toBe('');
+      expect(contract.prompt).toBe(question.prompt);
+      expect(contract.answerType).toBe(question.answerType);
+      expect(contract.options).toEqual(question.options);
+      expect(contract.aliases.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("builds hints dynamically from answer types and backend options", () => {
+    expect(questionAnswerHint(formatQuestion)).toContain("In-Person, Hybrid, Virtual");
+    expect(questionAnswerHint(combinedLoadInQuestion)).toContain("20 August 2026 at 3 PM");
+    expect(questionAnswerHint(datePickerQuestion)).toContain("tomorrow");
+    expect(questionAnswerHint(loadInTimePickerQuestion)).toContain("15:00");
+    expect(questionAnswerHint(roomsQuestion)).toContain("three hundred");
+    expect(questionAnswerHint(eventNameQuestion)).toContain("Event name is");
+  });
+
+  test("accepts concise relative text answers but keeps assistant commands as chat", () => {
+    const cityQuestion = guidedQuestion(
+      "q-city",
+      "Which city will host the event?",
+      "/content/venueSchedule/venueCity",
+      "cost",
+    );
+    expect(fieldAnswerFromInstruction(cityQuestion, "Dhaka")).toBe("Dhaka");
+    expect(fieldAnswerFromInstruction(cityQuestion, "New York, NY")).toBe("New York, NY");
+    expect(fieldAnswerFromInstruction(cityQuestion, "Plan a hybrid summit")).toBeNull();
+    expect(fieldAnswerFromInstruction(cityQuestion, "Check readiness")).toBeNull();
+  });
+
+  test("shows contextual help without answering, skipping, or chatting", async () => {
+    mockedGetConversation.mockResolvedValue(
+      conversationWithGuidedQuestions([formatQuestion]),
+    );
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "How should I answer this?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText(/In-Person, Hybrid, Virtual/)).toBeInTheDocument();
+    expect(mockedPatchQuestion).not.toHaveBeenCalled();
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("prefers the visible frontend wording when it differs from the backend model name", () => {
+    const mismatchedQuestion = guidedQuestion(
+      "q-location-code",
+      "Which city will host the event?",
+      "/content/internal/locationCode",
+      "cost",
+    );
+    expect(questionFieldContract(mismatchedQuestion).aliases).toContain("city");
+    expect(
+      fieldAnswerFromInstruction(mismatchedQuestion, "City is Dhaka"),
+    ).toBe("Dhaka");
+  });
+
+  test("normalizes natural spoken dates for the active date question", () => {
+    expect(naturalDateToIso("Date is 16 August 2026")).toBe("2026-08-16");
+    expect(naturalDateToIso("August 16, 2026")).toBe("2026-08-16");
+    expect(naturalDateToIso("16th August 2026")).toBe("2026-08-16");
+    expect(naturalDateToIso("31 February 2026")).toBeNull();
+    expect(naturalDateToIso("Date is 21 August")).toBe(
+      `${new Date().getFullYear()}-08-21`,
+    );
+    expect(naturalDateToIso("Event in that is 21 August 202")).toBeNull();
+    expect(naturalDateToIso("The date is 2026 August 21")).toBe("2026-08-21");
+    expect(naturalDateToIso("2026/8/21")).toBe("2026-08-21");
+    expect(naturalDateToIso("21/08/2026")).toBe("2026-08-21");
+    expect(naturalDateToIso("08/09/2026")).toBeNull();
+    expect(naturalDateToIso("tomorrow", new Date(2026, 7, 13))).toBe("2026-08-14");
+    expect(
+      fieldAnswerFromInstruction(datePickerQuestion, "Date is 16 August 2026"),
+    ).toBe("2026-08-16");
+  });
+
+  test("asks for a clipped spoken year instead of sending or applying a fallback", async () => {
+    mockedGetConversation.mockResolvedValue(
+      conversationWithGuidedQuestions([datePickerQuestion]),
+    );
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, {
+      target: { value: "Event in that is 21 August 202" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(
+      await screen.findByText(/not a complete valid date/i),
+    ).toBeInTheDocument();
+    expect(composer).toHaveValue("Event in that is 21 August 202");
+    expect(mockedPatchQuestion).not.toHaveBeenCalled();
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("normalizes natural time, choice, number, and combined voice answers", () => {
+    expect(naturalTimeTo24Hour("Load in is at 7:30 PM")).toBe("19:30");
+    expect(naturalTimeTo24Hour("Time is 07:30")).toBe("07:30");
+    expect(naturalTimeTo24Hour("at noon")).toBe("12:00");
+    expect(naturalTimeTo24Hour("midnight")).toBe("00:00");
+    expect(
+      fieldAnswerFromInstruction(formatQuestion, "The event is hybrid"),
+    ).toBe("Hybrid");
+    expect(
+      fieldAnswerFromInstruction(formatQuestion, "The event will be in person"),
+    ).toBe("In-Person");
+    expect(
+      fieldAnswerFromInstruction(roomsQuestion, "We need 6 event rooms"),
+    ).toBe("6");
+    expect(fieldAnswerFromInstruction(roomsQuestion, "six rooms")).toBe("6");
+    expect(
+      fieldAnswerFromInstruction(
+        guidedQuestion("q-attendees", "How many attendees?", "/content/event/attendees", "cost", { answerType: "number" }),
+        "around three hundred attendees",
+      ),
+    ).toBe("300");
+    expect(
+      fieldAnswerFromInstruction(
+        combinedLoadInQuestion,
+        "Load in is 16 August 2026 at 7:30 PM",
+      ),
+    ).toEqual({ date: "2026-08-16", time: "19:30" });
+    expect(
+      fieldAnswerFromInstruction(
+        combinedLoadInQuestion,
+        "Production load in 20 in August 2026At 3 pm",
+      ),
+    ).toEqual({ date: "2026-08-20", time: "15:00" });
+    expect(
+      fieldAnswerFromInstruction(
+        combinedLoadInQuestion,
+        "Production load in 2019 August 2026At 3 pm",
+      ),
+    ).toBeNull();
+  });
+
+  test("keeps a garbled load-in date-time out of chat and asks for a precise retry", async () => {
+    mockedGetConversation.mockResolvedValue(
+      conversationWithGuidedQuestions([combinedLoadInQuestion]),
+    );
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, {
+      target: { value: "Uh the date and timeProduction load in 2019 August 2026At 3 pm" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText(/Load-in is 20 August 2026 at 3 PM/)).toBeInTheDocument();
+    expect(composer).toHaveValue("Uh the date and timeProduction load in 2019 August 2026At 3 pm");
+    expect(mockedPatchQuestion).not.toHaveBeenCalled();
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("uses backend choice options for a targeted clarification", async () => {
+    mockedGetConversation.mockResolvedValue(
+      conversationWithGuidedQuestions([formatQuestion]),
+    );
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "at the venue" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText(/In-Person, Hybrid, Virtual/)).toBeInTheDocument();
+    expect(mockedPatchQuestion).not.toHaveBeenCalled();
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("accepts concise yes or no for an active frontend yes-no text question", () => {
+    const accessQuestion = guidedQuestion(
+      "q-access",
+      "Are there loading dock, freight elevator, security, parking, or access restrictions?",
+      "/content/venue/venueAccessRequirements",
+      "production",
+    );
+    expect(fieldAnswerFromInstruction(accessQuestion, "Yes")).toBe("Yes");
+    expect(fieldAnswerFromInstruction(accessQuestion, "no")).toBe("No");
+    expect(fieldAnswerFromInstruction(accessQuestion, "none")).toBe("None");
+    expect(fieldAnswerFromInstruction(accessQuestion, "not sure")).toBe("Not Sure");
+  });
+
+  test("treats typed skip as the guided action instead of an assistant chat message", async () => {
+    const accessQuestion = guidedQuestion(
+      "q-access",
+      "Are there loading dock, freight elevator, security, parking, or access restrictions?",
+      "/content/venue/venueAccessRequirements",
+      "production",
+    );
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([accessQuestion]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-access", status: "dismissed", answeredMessageId: null, appliedField: null },
+    });
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "Skip" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-access",
+      { status: "dismissed" },
+    ));
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("applies standalone yes through the active guided question", async () => {
+    const accessQuestion = guidedQuestion(
+      "q-access",
+      "Are there loading dock, freight elevator, security, parking, or access restrictions?",
+      "/content/venue/venueAccessRequirements",
+      "production",
+    );
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([accessQuestion]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-access", status: "answered", answeredMessageId: null, appliedField: null },
+    });
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "Yes" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-access",
+      { status: "answered", answer: "Yes" },
+    ));
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("resolves multiple explicitly labeled fields from one natural instruction", () => {
+    expect(
+      mentionedFieldAnswers(
+        [datePickerQuestion, endDatePickerQuestion, formatQuestion],
+        "Start is 21 August 2026, end is 23 August 2026, event format is in person",
+      ).map(({ question, answer }) => [question.id, answer]),
+    ).toEqual([
+      ["q-start", "2026-08-21"],
+      ["q-end", "2026-08-23"],
+      ["q-format", "In-Person"],
+    ]);
+  });
+
+  test("applies a typed field instruction through the current guided question", async () => {
+    mockedGetConversation.mockResolvedValue(
+      conversationWithGuidedQuestions([eventNameQuestion]),
+    );
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        id: "q-event-name",
+        status: "answered",
+        answeredMessageId: null,
+        appliedField: {
+          path: "/content/event/eventName",
+          mongoPath: "event.eventName",
+          value: "Tech and Startup",
+        },
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, {
+      target: { value: "Event name is Tech and Startup" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() =>
+      expect(mockedPatchQuestion).toHaveBeenCalledWith(
+        PROPOSAL_ID,
+        "q-event-name",
+        { status: "answered", answer: "Tech and Startup" },
+      ),
+    );
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("applies the natural city-name wording shown in the guided flow", async () => {
+    const cityQuestion = guidedQuestion(
+      "q-city",
+      "Which city will host the event? Add the state for ambiguous city names.",
+      "/content/venueSchedule/venueCity",
+      "cost",
+    );
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([cityQuestion]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-city", status: "answered", answeredMessageId: null, appliedField: null },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "The city name is new New York" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-city",
+      { status: "answered", answer: "New York" },
+    ));
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("applies the screenshot venue wording through the full guided flow", async () => {
+    const venueQuestion = guidedQuestion(
+      "q-venue",
+      "Which venue will host the event? Enter the venue name, or use Skip if it is still undecided.",
+      "/content/venueSchedule/venueName",
+      "cost",
+    );
+    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([venueQuestion]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { id: "q-venue", status: "answered", answeredMessageId: null, appliedField: null },
+    });
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "Data Path is host the event" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      "q-venue",
+      { status: "answered", answer: "Data Path" },
+    ));
+    expect(mockedPostMessage).not.toHaveBeenCalled();
   });
 
   test("a send whose action rejects marks the message failed with a retry and frees the composer", async () => {
