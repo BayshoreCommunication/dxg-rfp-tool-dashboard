@@ -101,6 +101,153 @@ describe("useConversation send recovery", () => {
     await waitFor(() => expect(result.current.pending).toHaveLength(0));
   });
 
+  test("keeps the optimistic turn until the authoritative refresh finishes", async () => {
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: null },
+    });
+    let finishRefresh: ((value: unknown) => void) | undefined;
+    mockedGetConversation.mockImplementationOnce(
+      () => new Promise((resolve) => { finishRefresh = resolve; }) as never,
+    );
+    const { result } = renderHook(() => useConversation(null));
+
+    let sendPromise: Promise<boolean> | undefined;
+    act(() => {
+      sendPromise = result.current.sendMessage(
+        { content: "hello", intent: "chat" },
+        PROPOSAL_ID,
+      );
+    });
+
+    await waitFor(() => expect(mockedGetConversation).toHaveBeenCalledWith(PROPOSAL_ID));
+    expect(result.current.pending).toHaveLength(1);
+    expect(result.current.pending[0].state).toBe("sending");
+
+    await act(async () => {
+      finishRefresh?.({
+        success: true,
+        correlationId: "test-correlation",
+        data: { conversation: null, messages: [], questions: [] },
+      });
+      await sendPromise;
+    });
+    expect(result.current.pending).toHaveLength(0);
+  });
+
+  test("ignores a stale initial read that finishes after the send refresh", async () => {
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: null },
+    });
+    let finishInitial: ((value: unknown) => void) | undefined;
+    let finishRefresh: ((value: unknown) => void) | undefined;
+    mockedGetConversation
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { finishInitial = resolve; }) as never,
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { finishRefresh = resolve; }) as never,
+      );
+    const { result } = renderHook(() => useConversation(PROPOSAL_ID));
+
+    let sendPromise: Promise<boolean> | undefined;
+    act(() => {
+      sendPromise = result.current.sendMessage({ content: "hello", intent: "chat" });
+    });
+    await waitFor(() => expect(mockedGetConversation).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      finishRefresh?.({
+        success: true,
+        correlationId: "refresh-correlation",
+        data: {
+          conversation: null,
+          messages: [{
+            id: "persisted-user-message",
+            ordinal: 1,
+            role: "user",
+            kind: "instruction",
+            content: "hello",
+            intent: "chat",
+            runType: null,
+            runId: null,
+            jobId: null,
+            status: "complete",
+            createdAt: "2026-08-17T00:00:00.000Z",
+            attachments: [],
+          }],
+          questions: [],
+        },
+      });
+      await sendPromise;
+    });
+    expect(result.current.data?.messages).toHaveLength(1);
+
+    await act(async () => {
+      finishInitial?.({
+        success: true,
+        correlationId: "stale-initial-correlation",
+        data: { conversation: null, messages: [], questions: [] },
+      });
+    });
+    expect(result.current.data?.messages).toHaveLength(1);
+    expect(result.current.data?.messages[0].content).toBe("hello");
+  });
+
+  test("keeps an acknowledged optimistic send until that message is readable", async () => {
+    const persistedMessage = {
+      id: "persisted-after-replica-catches-up",
+      ordinal: 1,
+      role: "user" as const,
+      kind: "instruction" as const,
+      content: "hello",
+      intent: "chat",
+      runType: null,
+      runId: null,
+      jobId: null,
+      status: "complete" as const,
+      createdAt: "2026-08-17T00:00:00.000Z",
+      attachments: [],
+    };
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        created: true,
+        message: persistedMessage,
+        assistantMessageId: "assistant-pending",
+        run: null,
+      },
+    });
+    mockedGetConversation
+      .mockResolvedValueOnce({
+        success: true,
+        correlationId: "stale-read",
+        data: { conversation: null, messages: [], questions: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        correlationId: "caught-up-read",
+        data: { conversation: null, messages: [persistedMessage], questions: [] },
+      });
+    const { result } = renderHook(() => useConversation(null));
+
+    await act(async () => {
+      await result.current.sendMessage({ content: "hello", intent: "chat" }, PROPOSAL_ID);
+    });
+    expect(result.current.pending).toHaveLength(1);
+    expect(result.current.pending[0].acknowledgedMessageId).toBe(persistedMessage.id);
+
+    await act(async () => {
+      await result.current.refresh(PROPOSAL_ID);
+    });
+    expect(result.current.pending).toHaveLength(0);
+    expect(result.current.data?.messages).toEqual([persistedMessage]);
+  });
+
   test("durable conversation polling is fast while pending and backs off when idle", () => {
     expect(conversationPollDelay(0, true)).toBe(1_000);
     expect(conversationPollDelay(9, true)).toBe(1_000);

@@ -56,6 +56,7 @@ export type PendingSend = {
   sourceIds: string[];
   expectedProposalVersion?: number;
   idempotencyKey: string;
+  acknowledgedMessageId?: string;
   state: "sending" | "failed";
   errorMessage?: string;
 };
@@ -81,25 +82,44 @@ export function useConversation(proposalId: string | null) {
   const [pending, setPending] = useState<PendingSend[]>([]);
   const [questionBusyId, setQuestionBusyId] = useState<string | null>(null);
   const [questionFailure, setQuestionFailure] = useState<{ questionId: string; message: string } | null>(null);
+  // Initial load, mutation refreshes, polling, and visibility refreshes can
+  // overlap. A slower request that started earlier must never replace a newer
+  // conversation snapshot (it used to make the populated thread go blank
+  // until the following poll restored it).
+  const latestReadRef = useRef(0);
   const pendingMessageCount = data?.messages.filter(item => item.status === "pending").length ?? 0;
 
   const refresh = useCallback(async (targetProposalId?: string) => {
     const target = targetProposalId ?? proposalId;
-    if (!target) return;
+    if (!target) return null;
+    const readId = ++latestReadRef.current;
     const result = await getConversationAction(target);
+    if (readId !== latestReadRef.current) return null;
     if (!result.success) {
       setLoadError(result.message);
-      return;
+      return null;
     }
+    setSettledFor(target);
     setLoadError(null);
     setData(result.data);
+    // A successful POST is only retired from the optimistic layer after its
+    // persisted user message is visible in the authoritative conversation.
+    // Atlas/read timing can briefly return an older empty snapshot; retaining
+    // the entry across that gap prevents both a blank/loading frame and a
+    // second send while the first turn is still settling.
+    const persistedIds = new Set(result.data.messages.map(message => message.id));
+    setPending(prev => prev.filter(item =>
+      !item.acknowledgedMessageId || !persistedIds.has(item.acknowledgedMessageId),
+    ));
+    return result.data;
   }, [proposalId]);
 
   useEffect(() => {
     if (!proposalId) return;
     let active = true;
+    const readId = ++latestReadRef.current;
     void getConversationAction(proposalId).then(result => {
-      if (!active) return;
+      if (!active || readId !== latestReadRef.current) return;
       setSettledFor(proposalId);
       if (!result.success) { setLoadError(result.message); return; }
       setLoadError(null);
@@ -179,9 +199,23 @@ export function useConversation(proposalId: string | null) {
       setPending(prev => prev.map(item => item.localId === entry.localId ? { ...item, state: "failed", errorMessage: result.message } : item));
       return false;
     }
-    // The send succeeded, so this idempotency key is retired with its entry.
-    setPending(prev => prev.filter(item => item.localId !== entry.localId));
-    await refresh(entry.proposalId);
+    const acknowledgedMessageId = result.data.message?.id;
+    if (acknowledgedMessageId) {
+      setPending(prev => prev.map(item => item.localId === entry.localId
+        ? { ...item, acknowledgedMessageId }
+        : item));
+    }
+    // Keep the optimistic turn mounted until the authoritative conversation
+    // has been re-read. Retiring it first creates an empty intermediate frame:
+    // loading can flash again and newly-synchronised questions can appear
+    // before the user/assistant messages that explain them.
+    const snapshot = await refresh(entry.proposalId);
+    // Older backend versions may acknowledge without returning the created
+    // message. Preserve their previous behaviour; current versions return the
+    // id and use the authoritative reconciliation above.
+    if (!acknowledgedMessageId || snapshot?.messages.some(message => message.id === acknowledgedMessageId)) {
+      setPending(prev => prev.filter(item => item.localId !== entry.localId));
+    }
     return true;
   }, [refresh]);
 
@@ -213,7 +247,11 @@ export function useConversation(proposalId: string | null) {
     await performSend({ ...entry, state: "sending" });
   }, [pending, performSend]);
 
-  const resolveQuestion = useCallback(async (questionId: string, input: { status: "answered" | "dismissed"; answer?: ConversationQuestionAnswer }) => {
+  const resolveQuestion = useCallback(async (
+    questionId: string,
+    input: { status: "answered" | "dismissed"; answer?: ConversationQuestionAnswer },
+    options?: { refresh?: boolean },
+  ) => {
     if (!proposalId) return false;
     setQuestionBusyId(questionId);
     setQuestionFailure(null);
@@ -228,8 +266,9 @@ export function useConversation(proposalId: string | null) {
       // failures deliberately stay on the same question and keep their useful
       // inline message.
       if (result.code !== "INVALID_CANDIDATE_VALUE" && result.code !== "INVALID_QUESTION_ANSWER") {
+        const readId = ++latestReadRef.current;
         const latest = await getConversationAction(proposalId);
-        if (latest.success) {
+        if (readId === latestReadRef.current && latest.success) {
           setLoadError(null);
           setData(latest.data);
           const stillOpen = latest.data.questions.some(question => question.id === questionId && question.status === "open");
@@ -242,7 +281,7 @@ export function useConversation(proposalId: string | null) {
       setQuestionFailure({ questionId, message: result.message });
       return false;
     }
-    await refresh();
+    if (options?.refresh !== false) await refresh();
     return true;
   }, [proposalId, refresh]);
 

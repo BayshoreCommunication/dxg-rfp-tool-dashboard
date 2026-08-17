@@ -297,6 +297,7 @@ const ALIAS_STOP_WORDS = new Set([
   'would', 'should', 'could', 'this', 'that', 'there', 'event', 'please',
   'provide', 'enter', 'add', 'use', 'still', 'expected', 'required', 'host',
   'need', 'needs', 'called', 'planning', 'selected', 'example', 'ambiguous',
+  'person',
 ]);
 
 export const questionFieldContract = (question: ConversationQuestion) => {
@@ -556,12 +557,108 @@ export const mentionedFieldAnswers = (
     return position >= 0 ? [{ question, position }] : [];
   }).sort((a, b) => a.position - b.position);
 
-  return located.flatMap((item, index) => {
+  const explicit = located.flatMap((item, index) => {
     const end = located[index + 1]?.position ?? normalized.length;
     const segment = normalized.slice(item.position, end).trim();
     const answer = fieldAnswerFromInstruction(item.question, segment);
     return answer === null ? [] : [{ question: item.question, answer }];
   });
+
+  // Natural speech rarely repeats form labels. A planner is more likely to
+  // say "The event is Horizon Summit, an in-person conference at Javits in
+  // New York, from 21 August to 22 August, with 300 attendees." Infer the
+  // remaining values from the live question prompts, answer types and options
+  // so renamed frontend labels/backend paths continue to drive the mapping.
+  const claimed = new Set(explicit.map(item => item.question.id));
+  const inferred: Array<{ question: ConversationQuestion; answer: ConversationQuestionAnswer }> = [];
+  const add = (question: ConversationQuestion, answer: ConversationQuestionAnswer | null) => {
+    if (answer === null || claimed.has(question.id)) return;
+    claimed.add(question.id);
+    inferred.push({ question, answer });
+  };
+
+  for (const question of questions) {
+    if (claimed.has(question.id)) continue;
+    if (question.answerType === 'choice') {
+      add(question, mentionedChoice(question.options, instruction));
+      continue;
+    }
+    const pathName = question.paths.at(-1)?.split('/').at(-1) ?? '';
+    if (question.answerType === 'number' || /^numberOf/i.test(pathName)) {
+      const aliases = questionFieldContract(question).aliases;
+      const aliasPositions = aliases.flatMap(alias => {
+        const position = normalized.indexOf(alias);
+        return position >= 0 ? [position] : [];
+      });
+      const numericMentions = [...normalized.matchAll(/\b\d+(?:\.\d+)?\b/g)];
+      const nearest = aliasPositions.length
+        ? numericMentions
+            .map(match => ({
+              value: match[0],
+              distance: Math.min(...aliasPositions.map(position => Math.abs((match.index ?? 0) - position))),
+            }))
+            .sort((a, b) => a.distance - b.distance)[0]
+        : null;
+      add(
+        question,
+        nearest && nearest.distance <= 24
+          ? nearest.value
+          : fieldAnswerFromInstruction(question, instruction),
+      );
+    }
+  }
+
+  const monthNames = Object.keys(MONTH_NUMBER).join('|');
+  const datePattern = new RegExp(
+    `\\b(?:\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${monthNames})(?:,?\\s+\\d{4})?|(?:${monthNames})\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?)\\b`,
+    'gi',
+  );
+  const mentionedDates = [...instruction.matchAll(datePattern)].flatMap(match => {
+    const value = naturalDateToIso(match[0]);
+    return value ? [value] : [];
+  });
+  if (/\bfrom\b[\s\S]*\b(?:to|through|until)\b/i.test(instruction) && mentionedDates.length >= 2) {
+    const dateQuestions = questions.filter(question => {
+      const pathName = question.paths.at(-1)?.split('/').at(-1) ?? '';
+      return question.answerType === 'date' || /Date$/i.test(pathName);
+    });
+    const startQuestion = dateQuestions.find(question => /\bstart\b/i.test(`${question.prompt} ${questionFieldLabel(question)}`));
+    const endQuestion = dateQuestions.find(question => /\bend\b/i.test(`${question.prompt} ${questionFieldLabel(question)}`));
+    if (startQuestion) add(startQuestion, mentionedDates[0]);
+    if (endQuestion) add(endQuestion, mentionedDates[1]);
+  }
+
+  for (const question of questions) {
+    if (claimed.has(question.id) || question.answerType !== 'text') continue;
+    const wording = comparableWords(`${question.prompt} ${questionFieldLabel(question)}`);
+    if (/\b(?:called|event name)\b/.test(wording)) {
+      const name = instruction.match(
+        /\b(?:the\s+)?event\s+(?:is|called)\s+(.+?)(?=,\s*(?:an?|the|from|at|in|with)\b|$)/i,
+      )?.[1]?.trim();
+      if (name) add(question, cleanSpeechCandidate(name).slice(0, 4000));
+      continue;
+    }
+    if (/\bcity\b/.test(wording) && /\bhost\b/.test(wording)) {
+      const city = instruction.match(
+        /\bin\s+(.+?)(?=,\s*(?:from|with)\b|\s+from\b|$)/i,
+      )?.[1]?.trim();
+      if (city && !/^(?:person|house)$/i.test(city)) {
+        add(question, cleanSpeechCandidate(city).slice(0, 4000));
+      }
+      continue;
+    }
+    if (/\bvenue\b/.test(wording) && /\bhost\b/.test(wording)) {
+      const venue = instruction.match(
+        /\bat\s+(.+?)(?=\s+in\s+|,\s*(?:from|with)\b|$)/i,
+      )?.[1]?.trim();
+      if (venue) add(question, cleanSpeechCandidate(venue).slice(0, 4000));
+    }
+  }
+
+  const questionOrder = new Map(questions.map((question, index) => [question.id, index]));
+  return [...explicit, ...inferred].sort(
+    (a, b) => (questionOrder.get(a.question.id) ?? 0) - (questionOrder.get(b.question.id) ?? 0),
+  );
 };
 
 const ACCENT = '#00c2c9';
@@ -1656,17 +1753,19 @@ function DraftRunCard({
   const [run, setRun] = useState<Record<string, unknown> | null>(
     null,
   );
+  const [previewLoading, setPreviewLoading] = useState(Boolean(message.runId));
 
   useEffect(() => {
     if (!message.runId) return;
     let active = true;
-    void getProposalDraftAction(proposalId, message.runId).then(
-      (result) => {
-        if (!active || !result.success) return;
+    void getProposalDraftAction(proposalId, message.runId).then((result) => {
+      if (!active) return;
+      if (result.success) {
         setSections(result.data.sections ?? []);
         setRun(isRecord(result.data.run) ? result.data.run : null);
-      },
-    );
+      }
+      setPreviewLoading(false);
+    });
     return () => {
       active = false;
     };
@@ -1681,16 +1780,31 @@ function DraftRunCard({
 
   const detailsHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   return (
-    <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-        Results
-      </p>
-      <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-800">
-        {message.content}
-      </p>
+    <div className="max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]">
+      <header className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-cyan-50/60 px-4 py-4 sm:px-5">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#087f69] text-white shadow-sm">
+            <FileText size={17} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-900">Proposal draft ready</h3>
+              {!previewLoading && sections.length > 0 && (
+                <span className="rounded-full border border-emerald-200 bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                  {sections.length} {sections.length === 1 ? 'section' : 'sections'}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+              {message.content}
+            </p>
+          </div>
+        </div>
+      </header>
       {stale && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-          <p className="min-w-0 text-xs text-amber-900">
+        <div className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 sm:mx-5">
+          <p className="flex min-w-0 items-start gap-2 text-xs leading-relaxed text-amber-900">
+            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
             This draft was written before your latest answers.
           </p>
           <button
@@ -1700,44 +1814,54 @@ function DraftRunCard({
             aria-busy={draftBusy}
             className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {draftBusy && (
-              <Loader2
-                size={12}
-                className="animate-spin"
-                aria-hidden
-              />
-            )}
+            {draftBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
             {draftBusy ? 'Generating…' : 'Regenerate draft'}
           </button>
         </div>
       )}
-      {/* The draft reads as a document: every section open, so a planner can
-          scan the whole thing without opening eight disclosures. */}
-      {sections.length > 0 && (
-        <article className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-slate-50/70">
-          {sections.map((section) => (
-            <section key={section.id} className="p-3">
-              <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
-                {section.heading}
-              </h4>
-              <div className="mt-1.5 space-y-2">
+      <div className="px-4 py-4 sm:px-5">
+        {previewLoading ? (
+          <div role="status" className="space-y-3" aria-label="Loading draft preview">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                <div className="h-2.5 w-28 animate-pulse rounded bg-slate-200" />
+                <div className="mt-3 h-2.5 w-full animate-pulse rounded bg-slate-100" />
+                <div className="mt-2 h-2.5 w-4/5 animate-pulse rounded bg-slate-100" />
+              </div>
+            ))}
+            <span className="sr-only">Loading draft preview</span>
+          </div>
+        ) : sections.length > 0 ? (
+          <article className="space-y-3" aria-label="Proposal draft preview">
+            {sections.map((section, sectionIndex) => (
+              <section key={section.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_4px_14px_-12px_rgba(15,23,42,0.45)]">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-bold text-[#087f69]">
+                    {sectionIndex + 1}
+                  </span>
+                  <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-600">
+                    {section.heading}
+                  </h4>
+                </div>
+                <div className="mt-3 space-y-3 pl-8">
                 {section.paragraphs.length > 0 ? (
                   section.paragraphs.map((paragraph, index) => (
                     <div key={index}>
-                      <p className="text-sm leading-relaxed text-slate-700">
+                      <p className="text-sm leading-6 text-slate-700">
                         {paragraph.text}
                       </p>
                       {paragraph.citations.length > 0 && (
                         <div
-                          className="mt-1 flex flex-wrap gap-1"
+                          className="mt-2 flex flex-wrap gap-1.5"
                           aria-label="Sources"
                         >
                           {paragraph.citations.map((citation) => (
                             <span
                               key={citation}
                               data-citation={citation}
-                              className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-500"
+                              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500"
                             >
+                              <Check size={9} className="text-emerald-600" aria-hidden />
                               {citationLabel(citation)}
                             </span>
                           ))}
@@ -1746,20 +1870,28 @@ function DraftRunCard({
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm italic text-slate-400">
+                  <p className="text-sm italic leading-6 text-slate-400">
                     Nothing supported by evidence yet for this
                     section.
                   </p>
                 )}
               </div>
-            </section>
-          ))}
-        </article>
-      )}
-      <CardFooter
-        detailsHref={detailsHref}
-        detailsLabel="View draft"
-      />
+              </section>
+            ))}
+          </article>
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center">
+            <p className="text-sm font-medium text-slate-700">The draft is ready to review in the editor.</p>
+            <p className="mt-1 text-xs text-slate-500">Open it to review and refine the full proposal.</p>
+          </div>
+        )}
+      </div>
+      <footer className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-5">
+        <Link href={detailsHref} className={ACTION_PRIMARY}>
+          <PencilLine size={13} aria-hidden />
+          Review &amp; edit draft
+        </Link>
+      </footer>
     </div>
   );
 }
@@ -2297,10 +2429,15 @@ export default function AssistantWorkspacePage({
     label: string;
     value: string;
   } | null>(null);
+  const [bulkAnswerProgress, setBulkAnswerProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   // ChatGPT-style staged attachments: picking a file only adds a chip to the
   // composer; the actual upload happens when the message is sent.
   const [staged, setStaged] = useState<File[]>([]);
   const [sendBusy, setSendBusy] = useState(false);
+  const [sendLocked, setSendLocked] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [inputClarification, setInputClarification] = useState<string | null>(null);
   // Files already uploaded during a failed send attempt keep their source id so
@@ -2342,6 +2479,10 @@ export default function AssistantWorkspacePage({
     version: number | null;
   } | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  // React state does not disable the control until the next render. This lock
+  // closes that small gap so a double-click or Enter+click combination cannot
+  // start two sends in the same turn.
+  const sendLockRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceDraftRef = useRef('');
   // SpeechRecognition can emit its final result immediately before `onend`.
@@ -2497,6 +2638,7 @@ export default function AssistantWorkspacePage({
     sendMessage,
     retrySend,
     resolveQuestion,
+    refresh: refreshConversation,
     questionBusyId,
     questionError,
   } = useConversation(proposalId);
@@ -2652,21 +2794,13 @@ export default function AssistantWorkspacePage({
         ? 'sources'
         : 'answers';
 
-  // The right rail only exists once the conversation has begun: messages exist
-  // (including a proposal resumed from its route with history), a send is pending, or a
-  // staged upload is in progress. Once shown it stays shown; its entrance is a
-  // CSS-only slide-in-from-right keyframe animation played on mount.
-  const conversationActive =
-    messages.length > 0 ||
-    pending.length > 0 ||
-    sendBusy ||
-    localCards.length > 0;
-  const [railVisible, setRailVisible] = useState(false);
-  useEffect(() => {
-    if (!conversationActive || railVisible) return;
-    const frame = requestAnimationFrame(() => setRailVisible(true));
-    return () => cancelAnimationFrame(frame);
-  }, [conversationActive, railVisible]);
+  // Keep the rail mounted as soon as a proposal exists. During the first send,
+  // `pending` can clear one render before the persisted assistant message is
+  // fetched. Deriving visibility from transient message state made the rail
+  // disappear for that frame, expand the thread to full width, then snap back.
+  // `started` includes the stable proposal id, so onboarding stays two-column
+  // from the first appearance onward.
+  const railVisible = started;
 
   // Greeting name comes from the backend profile via the existing user action.
   useEffect(() => {
@@ -2819,7 +2953,7 @@ export default function AssistantWorkspacePage({
     return id;
   }, [proposalId]);
 
-  const handleSend = async (textOverride?: string, source?: 'voice') => {
+  const performSend = async (textOverride?: string, source?: 'voice') => {
     const value = (textOverride ?? text).trim();
     if (chatBusy || sendBusy) return;
     if (!value && staged.length === 0) return;
@@ -2887,20 +3021,26 @@ export default function AssistantWorkspacePage({
       const bundledAnswers = mentionedFieldAnswers(openQuestions, value);
       if (bundledAnswers.length > 1) {
         setText('');
+        setBulkAnswerProgress({ current: 0, total: bundledAnswers.length });
         let applied = 0;
         let latest = bundledAnswers[0];
         for (const item of bundledAnswers) {
           const resolved = await resolveQuestion(item.question.id, {
             status: 'answered',
             answer: item.answer,
-          });
+          }, { refresh: false });
           if (!resolved) {
+            await refreshConversation();
+            setBulkAnswerProgress(null);
             setText(value);
             return;
           }
           applied += 1;
           latest = item;
+          setBulkAnswerProgress({ current: applied, total: bundledAnswers.length });
         }
+        await refreshConversation();
+        setBulkAnswerProgress(null);
         setAnsweredCount((count) => count + applied);
         setLastConfirmed({
           label: `${applied} details`,
@@ -3030,6 +3170,18 @@ export default function AssistantWorkspacePage({
     // scanning succeeds. Ordinary chat remains conversation context; users can
     // explicitly promote longer text through the "Add notes" source control.
     if (sent && sourceIds.length > 0) queueAutoExtract(id, sourceIds);
+  };
+
+  const handleSend = async (textOverride?: string, source?: 'voice') => {
+    if (sendLockRef.current) return;
+    sendLockRef.current = true;
+    setSendLocked(true);
+    try {
+      await performSend(textOverride, source);
+    } finally {
+      sendLockRef.current = false;
+      setSendLocked(false);
+    }
   };
   // ChatGPT-style staged attach: picking a file only adds a composer chip; the
   // upload runs when the message is sent. Up to three files can be staged.
@@ -3444,7 +3596,11 @@ export default function AssistantWorkspacePage({
   const onComposerKeyDown = (
     event: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
       event.preventDefault();
       void handleSend();
     }
@@ -3776,7 +3932,7 @@ export default function AssistantWorkspacePage({
           </div>
         </div>
       ) : (
-      <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-[#00c2c9]">
+      <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-[#00c2c9] focus-within:shadow-[0_0_0_3px_rgba(0,194,201,0.12)]">
         {staged.length > 0 && (
           <ul className="mb-1.5 flex flex-wrap gap-1.5 px-1 pt-1">
             {staged.map((file, index) => (
@@ -3857,18 +4013,25 @@ export default function AssistantWorkspacePage({
           <button
             type="button"
             aria-label="Send message"
+            aria-busy={chatBusy || sendBusy || sendLocked}
+            title={chatBusy || sendBusy || sendLocked ? 'Sending message' : 'Send message'}
             onClick={() => void handleSend()}
             disabled={
               (!text.trim() && staged.length === 0) ||
               chatBusy ||
-              sendBusy
+              sendBusy ||
+              sendLocked
             }
-            className="shrink-0 rounded-full p-2.5 text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/30 p-0 text-white shadow-[0_5px_14px_-5px_rgba(8,145,150,0.85)] transition-[transform,box-shadow,filter,opacity] duration-150 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_8px_18px_-6px_rgba(8,145,150,0.9)] active:translate-y-0 active:scale-90 active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:translate-y-0 disabled:scale-100 disabled:opacity-55 disabled:shadow-none"
             style={{
               background: `linear-gradient(135deg, ${ACCENT} 0%, ${DEEP} 100%)`,
             }}
           >
-            <ArrowUp size={16} aria-hidden />
+            {chatBusy || sendBusy || sendLocked ? (
+              <Loader2 size={17} className="animate-spin" aria-hidden />
+            ) : (
+              <ArrowUp size={17} strokeWidth={2.4} aria-hidden />
+            )}
           </button>
         </div>
       </div>
@@ -3930,12 +4093,9 @@ export default function AssistantWorkspacePage({
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-100/70 px-4 py-4 sm:px-6">
-      {/* Shared keyframes: typing dots in the thread, rail slide-in and the
-          staggered card entrance. All are gated behind motion-safe classes. */}
+      {/* Shared keyframes for continuous status indicators. */}
       <style>{`
         @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-0.25rem); opacity: 1; } }
-        @keyframes rail-slide-in { from { opacity: 0; transform: translateX(1.5rem); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes rail-card-in { from { opacity: 0; transform: translateX(0.75rem) translateY(0.375rem); } to { opacity: 1; transform: translateX(0) translateY(0); } }
         @keyframes ai-glow { 0%, 100% { opacity: 0.35; transform: scale(0.9); } 50% { opacity: 0.75; transform: scale(1.08); } }
         @keyframes ai-orbit { to { transform: rotate(360deg); } }
       `}</style>
@@ -3967,7 +4127,7 @@ export default function AssistantWorkspacePage({
         {proposalId && (
           <Link
             href={`/proposals/proposal-edit?proposalId=${proposalId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 motion-safe:animate-[rail-card-in_0.3s_ease-out]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
           >
             <PencilLine size={14} aria-hidden />
             Edit all details
@@ -4014,7 +4174,7 @@ export default function AssistantWorkspacePage({
                     {loadError}
                   </p>
                 )}
-                {loading && (
+                {loading && pending.length === 0 && messages.length === 0 && (
                   <p role="status" className="text-sm text-slate-500">
                     Loading the conversation…
                   </p>
@@ -4194,6 +4354,17 @@ export default function AssistantWorkspacePage({
                       />
                     </li>
                   )}
+                  {bulkAnswerProgress && (
+                    <li className="flex justify-start">
+                      <p
+                        role="status"
+                        className="inline-flex items-center gap-2 rounded-full border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-3.5 py-2 text-xs font-semibold text-[#087f69]"
+                      >
+                        <Loader2 size={13} className="animate-spin" aria-hidden />
+                        Saving {bulkAnswerProgress.current} of {bulkAnswerProgress.total} details…
+                      </p>
+                    </li>
+                  )}
                   {lastConfirmed && (
                     <li className="flex justify-start">
                       <p
@@ -4209,14 +4380,18 @@ export default function AssistantWorkspacePage({
                       ready, but the next question must not jump ahead of that
                       reply in the thread. */}
                   {currentQuestion &&
-                    !sending &&
+                    !chatBusy &&
+                    !loading &&
+                    !bulkAnswerProgress &&
                     extractionPending && (
                       <li className="flex justify-start">
                         <SkeletonCard label="Reading your sources before asking the next question…" />
                       </li>
                     )}
                   {currentQuestion &&
-                    !sending &&
+                    !chatBusy &&
+                    !loading &&
+                    !bulkAnswerProgress &&
                     !extractionPending &&
                     !extractionFailureBlocksQuestions && (
                       <li className="flex justify-start">
@@ -4280,17 +4455,17 @@ export default function AssistantWorkspacePage({
           )}
         </section>
 
-        {/* Right rail — hidden until the conversation begins, then slides in
-            from the right (CSS-only; skipped under prefers-reduced-motion). */}
+        {/* Right rail — hidden until the conversation begins, then softly
+            fades in without translating the panel or its child cards. */}
         {railVisible && (
           <aside
             aria-label="Proposal assistant tools"
-            className="w-full shrink-0 space-y-4 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-[rail-slide-in_300ms_ease-out_both] lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:overflow-y-auto"
+            className="w-full shrink-0 space-y-4 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:overflow-y-auto lg:[scrollbar-gutter:stable]"
           >
             <section
               aria-labelledby="rail-ai-title"
               tabIndex={0}
-              className="relative overflow-hidden rounded-2xl border border-cyan-200/80 bg-gradient-to-br from-[#062f3a] via-[#075569] to-[#087f69] p-4 text-white shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
+              className="relative overflow-hidden rounded-2xl border border-cyan-200/80 bg-gradient-to-br from-[#062f3a] via-[#075569] to-[#087f69] p-4 text-white shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
             >
               <div
                 aria-hidden
@@ -4353,12 +4528,11 @@ export default function AssistantWorkspacePage({
                   : 'Secure proposal context is ready'}
               </div>
             </section>
-            {/* Sources — the three rail cards share the slide-in but each fades
-              and translates in with a ~100ms stagger for a noticeable entrance. */}
+            {/* Tool cards remain stationary so async content cannot create a
+                layered or shaking entrance. */}
             <section
               aria-labelledby="rail-sources-title"
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
-              style={{ animationDelay: '80ms' }}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:shadow-md"
             >
               <h2
                 id="rail-sources-title"
@@ -4542,8 +4716,7 @@ export default function AssistantWorkspacePage({
             {/* Suggested tasks */}
             <section
               aria-labelledby="rail-tasks-title"
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
-              style={{ animationDelay: '160ms' }}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:shadow-md"
             >
               <h2
                 id="rail-tasks-title"
@@ -4649,8 +4822,7 @@ export default function AssistantWorkspacePage({
             {/* Suggested questions */}
             <section
               aria-labelledby="rail-questions-title"
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:-translate-y-0.5 hover:shadow-md motion-safe:animate-[rail-card-in_360ms_ease-out_both]"
-              style={{ animationDelay: '240ms' }}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:shadow-md"
             >
               <h2
                 id="rail-questions-title"

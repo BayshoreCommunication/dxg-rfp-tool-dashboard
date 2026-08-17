@@ -791,6 +791,50 @@ describe("AssistantWorkspacePage", () => {
     ]);
   });
 
+  test("resolves an unlabeled natural event brief from the live question contracts", () => {
+    const eventTypeQuestion = guidedQuestion(
+      "q-type",
+      "What type of event is this?",
+      "/content/event/eventType",
+      "scope",
+      { answerType: "choice", options: ["Corporate Conference", "Trade Show", "Fundraiser"] },
+    );
+    const venueQuestion = guidedQuestion(
+      "q-venue",
+      "Which venue will host the event?",
+      "/content/venueSchedule/venueName",
+      "cost",
+    );
+    const cityQuestion = guidedQuestion(
+      "q-city",
+      "Which city will host the event?",
+      "/content/venueSchedule/venueCity",
+      "cost",
+    );
+    const attendeesQuestion = guidedQuestion(
+      "q-attendees",
+      "How many in-person attendees are expected?",
+      "/content/event/attendees",
+      "cost",
+      { answerType: "number" },
+    );
+    expect(
+      mentionedFieldAnswers(
+        [eventNameQuestion, datePickerQuestion, endDatePickerQuestion, formatQuestion, eventTypeQuestion, venueQuestion, cityQuestion, attendeesQuestion],
+        "The event is Horizon Tech Summit, an in-person corporate conference at Javits Center in New York, from 21 August 2026 to 22 August 2026, with 300 attendees.",
+      ).map(({ question, answer }) => [question.id, answer]),
+    ).toEqual([
+      ["q-event-name", "Horizon Tech Summit"],
+      ["q-start", "2026-08-21"],
+      ["q-end", "2026-08-22"],
+      ["q-format", "In-Person"],
+      ["q-type", "Corporate Conference"],
+      ["q-venue", "Javits Center"],
+      ["q-city", "New York"],
+      ["q-attendees", "300"],
+    ]);
+  });
+
   test("applies a typed field instruction through the current guided question", async () => {
     mockedGetConversation.mockResolvedValue(
       conversationWithGuidedQuestions([eventNameQuestion]),
@@ -1981,6 +2025,85 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByText("Suggested questions")).toBeInTheDocument();
   });
 
+  test("right rail stays mounted while a created proposal is waiting for its first persisted message", async () => {
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: {
+          id: "conv-1",
+          title: "Proposal assistant",
+          status: "active",
+          messageCount: 0,
+          updatedAt: "2026-07-21T10:00:00.000Z",
+        },
+        messages: [],
+        questions: [],
+      },
+    } as never);
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByLabelText("Proposal assistant tools")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ready to help" })).toBeInTheDocument();
+  });
+
+  test("sends once on a rapid double-click", async () => {
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 0, updatedAt: "2026-07-21T10:00:00.000Z" },
+        messages: [],
+        questions: [],
+      },
+    } as never);
+    let finishSend: ((value: unknown) => void) | undefined;
+    mockedPostMessage.mockImplementationOnce(
+      () => new Promise((resolve) => { finishSend = resolve; }) as never,
+    );
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "I want to create a proposal" } });
+    const sendButton = screen.getByRole("button", { name: "Send message" });
+    fireEvent.click(sendButton);
+    expect(sendButton).toBeDisabled();
+    expect(sendButton).toHaveAttribute("aria-busy", "true");
+    fireEvent.click(sendButton);
+
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      finishSend?.({ success: true, correlationId: "test-correlation", data: { created: true, message: null, assistantMessageId: null, run: null } });
+    });
+  });
+
+  test("Enter sends while Shift+Enter keeps editing", async () => {
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 0, updatedAt: "2026-07-21T10:00:00.000Z" },
+        messages: [],
+        questions: [],
+      },
+    } as never);
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: null },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "First line" } });
+    fireEvent.keyDown(composer, { key: "Enter", code: "Enter", shiftKey: true });
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(composer, { key: "Enter", code: "Enter" });
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledTimes(1));
+  });
+
   const mockUploadChain = (sourceId = "src-new") => {
     mockedCreateSession.mockResolvedValue({
       success: true,
@@ -2128,6 +2251,8 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     expect(await screen.findByLabelText("The assistant is responding")).toBeInTheDocument();
+    expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("What is the event date?")).not.toBeInTheDocument();
     const composer = screen.getByLabelText("Message the proposal assistant");
     fireEvent.change(composer, { target: { value: "Do not send this twice." } });
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
@@ -2473,6 +2598,13 @@ describe("AssistantWorkspacePage", () => {
       "Northstar Summit is a hybrid event.",
     );
     expect(draftParagraph).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Proposal draft ready" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Proposal draft preview")).toBeInTheDocument();
+    expect(screen.getByText("1 section")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review & edit draft" })).toHaveAttribute(
+      "href",
+      `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`,
+    );
     const citationSources = draftParagraph.parentElement?.querySelector(
       '[aria-label="Sources"]',
     );
