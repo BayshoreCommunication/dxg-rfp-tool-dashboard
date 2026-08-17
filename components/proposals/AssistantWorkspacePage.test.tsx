@@ -2020,7 +2020,21 @@ describe("AssistantWorkspacePage", () => {
     // Once the send lands the rail slides in and stays.
     expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
     expect(screen.getByText("AI workspace")).toBeInTheDocument();
-    expect(screen.getByLabelText("Proposal assistant tools")).toBeInTheDocument();
+    expect(screen.getByLabelText("Proposal assistant tools")).toHaveClass(
+      "lg:overflow-hidden",
+    );
+    expect(
+      screen.getByTestId("proposal-conversation-scroll"),
+    ).toHaveClass("-mr-3", "pr-4");
+    expect(
+      screen.getByTestId("proposal-assistant-tools-scroll"),
+    ).toHaveClass(
+      "lg:-mr-1",
+      "lg:overflow-x-hidden",
+      "lg:overflow-y-auto",
+      "lg:pr-2",
+      "lg:[scrollbar-gutter:stable]",
+    );
     expect(screen.getByText("Suggested tasks")).toBeInTheDocument();
     expect(screen.getByText("Suggested questions")).toBeInTheDocument();
   });

@@ -99,7 +99,7 @@ export default function ProposalFilters({
         </button>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 -mb-2 no-scrollbar">
+      <div className="-mb-2 flex items-center gap-2 overflow-x-auto pb-2">
         {TAB_CONFIG.map((tab) => {
           const isActive = activeFilter === tab.key;
           return (
@@ -128,4 +128,3 @@ export default function ProposalFilters({
     </div>
   );
 }
-

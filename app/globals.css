@@ -93,6 +93,41 @@ body {
   font-weight: 400;
 }
 
+/* One quiet scrollbar treatment for every app-owned scroll surface. */
+:root {
+  --dxg-scrollbar-size: 3px;
+  --dxg-scrollbar-thumb: rgba(148, 163, 184, 0.5);
+  --dxg-scrollbar-thumb-hover: rgba(100, 116, 139, 0.72);
+}
+
+* {
+  scrollbar-color: var(--dxg-scrollbar-thumb) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: var(--dxg-scrollbar-size);
+  height: var(--dxg-scrollbar-size);
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--dxg-scrollbar-thumb);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--dxg-scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+}
+
 /* Product notifications: roomy, calm, and consistent across every workflow. */
 .dxg-toast-container.Toastify__toast-container {
   top: 20px;
@@ -242,62 +277,9 @@ body {
   }
 }
 
-/* Quiet inbox scrollbars: hidden at rest, slim and visible on interaction. */
-.dxg-scrollbar {
-  scrollbar-color: transparent transparent;
-  scrollbar-width: thin;
-}
-
-.dxg-scrollbar:hover,
-.dxg-scrollbar:focus-within {
-  scrollbar-color: rgba(100, 116, 139, 0.42) transparent;
-}
-
-.dxg-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-
-.dxg-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.dxg-scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: transparent;
-}
-
-.dxg-scrollbar:hover::-webkit-scrollbar-thumb,
-.dxg-scrollbar:focus-within::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.38);
-}
-
-.dxg-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(71, 85, 105, 0.58);
-}
-
 /* Keep the compact app rail centered while its navigation scrolls. */
 .sidebar-scrollbar {
-  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
   scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar {
-  width: 3px;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.5);
-}
-
-.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.72);
 }
 
 /* Proposal date pickers use the bright cyan from the RFPilot mark throughout. */
@@ -660,76 +642,7 @@ strong {
 }
 
 .assistant-composer-scrollbar {
-  scrollbar-color: #a8b1bd #eef2f6;
   scrollbar-gutter: stable;
-  scrollbar-width: thin;
-}
-
-.assistant-composer-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.assistant-composer-scrollbar::-webkit-scrollbar-track {
-  margin-block: 4px;
-  border-radius: 9999px;
-  background: #eef2f6;
-}
-
-.assistant-composer-scrollbar::-webkit-scrollbar-thumb {
-  min-height: 28px;
-  border: 2px solid #eef2f6;
-  border-radius: 9999px;
-  background: #a8b1bd;
-}
-
-.assistant-composer-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #7f8b99;
-}
-
-.assistant-conversation-scrollbar {
-  scrollbar-color: #a8b1bd transparent;
-  scrollbar-width: thin;
-}
-
-.assistant-conversation-scrollbar::-webkit-scrollbar {
-  width: 5px;
-}
-
-.assistant-conversation-scrollbar::-webkit-scrollbar-track {
-  margin-block: 60px 8px;
-  background: transparent;
-}
-
-.assistant-conversation-scrollbar::-webkit-scrollbar-thumb {
-  min-height: 32px;
-  border-radius: 9999px;
-  background: rgba(148, 163, 184, 0.78);
-}
-
-.assistant-conversation-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.9);
-}
-
-.assistant-select-scrollbar {
-  scrollbar-color: rgba(148, 163, 184, 0.72) transparent;
-  scrollbar-width: thin;
-}
-
-.assistant-select-scrollbar::-webkit-scrollbar {
-  width: 5px;
-}
-
-.assistant-select-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.assistant-select-scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 9999px;
-  background: rgba(148, 163, 184, 0.72);
-}
-
-.assistant-select-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.88);
 }
 
 @keyframes assistant-active-pulse {

@@ -4163,7 +4163,8 @@ export default function AssistantWorkspacePage({
           ) : (
             <>
               <div
-                className="min-h-0 flex-1 overflow-y-auto pr-1"
+                data-testid="proposal-conversation-scroll"
+                className="-mr-3 min-h-0 flex-1 overflow-y-auto pr-4"
                 aria-live="polite"
               >
                 {loadError && (
@@ -4460,8 +4461,12 @@ export default function AssistantWorkspacePage({
         {railVisible && (
           <aside
             aria-label="Proposal assistant tools"
-            className="w-full shrink-0 space-y-4 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:overflow-y-auto lg:[scrollbar-gutter:stable]"
+            className="w-full shrink-0 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 lg:flex lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:flex-col lg:overflow-hidden"
           >
+            <div
+              data-testid="proposal-assistant-tools-scroll"
+              className="space-y-4 lg:-mr-1 lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]"
+            >
             <section
               aria-labelledby="rail-ai-title"
               tabIndex={0}
@@ -4842,6 +4847,7 @@ export default function AssistantWorkspacePage({
                 </p>
               )}
             </section>
+            </div>
           </aside>
         )}
       </div>

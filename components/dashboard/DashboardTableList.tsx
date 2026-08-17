@@ -324,7 +324,7 @@ export default function DashboardTableList({
               />
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1 no-scrollbar">
+            <div className="-mb-1 flex items-center gap-2 overflow-x-auto pb-1">
               {FILTER_TABS.map((tab) => {
                 const isActive = filter === tab.key;
                 return (
