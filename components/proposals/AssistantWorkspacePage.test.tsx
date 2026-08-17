@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, visibleRunMessages } from "./AssistantWorkspacePage";
+import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
@@ -263,13 +263,7 @@ describe("AssistantWorkspacePage", () => {
     expect(mockedGetConversation).not.toHaveBeenCalled();
   });
 
-  test("transcribes voice and submits it when the planner finishes", async () => {
-    mockedCreateProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID } });
-    mockedPostMessage.mockResolvedValue({
-      success: true,
-      correlationId: "test-correlation",
-      data: { created: true, message: null, assistantMessageId: null, run: null },
-    });
+  test("transcribes voice into an editable draft without auto-submitting", async () => {
     class MockSpeechRecognition {
       static latest: MockSpeechRecognition;
       onstart: (() => void) | null = null;
@@ -280,8 +274,7 @@ describe("AssistantWorkspacePage", () => {
       interimResults = false;
       lang = '';
       start = jest.fn(() => this.onstart?.());
-      // Chrome may deliver the last recognition result and `onend` in the same
-      // turn. The final word must be submitted even before React re-renders.
+      // Chrome may deliver the final result and `onend` in the same turn.
       stop = jest.fn(() => {
         this.onresult?.({
           results: [{ 0: { transcript: "Plan a 300-person conference" } }],
@@ -302,6 +295,7 @@ describe("AssistantWorkspacePage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Start voice input" }));
     const recognition = MockSpeechRecognition.latest;
     expect(screen.getByRole("status", { name: "Voice input is listening" })).toBeInTheDocument();
+    expect(screen.getByText("Ready when you are.")).toBeInTheDocument();
 
     act(() => {
       recognition.onresult?.({
@@ -311,11 +305,12 @@ describe("AssistantWorkspacePage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Finish voice input" }));
     expect(recognition.stop).toHaveBeenCalled();
-    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
-      PROPOSAL_ID,
-      { content: "Plan a 300-person conference", intent: "chat" },
-      expect.any(String),
-    ));
+    expect(screen.getByRole("status", { name: "Voice input is transcribing" })).toBeInTheDocument();
+    expect(screen.getByText("Transcribing…")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("Message the proposal assistant"))
+      .toHaveValue("Plan a 300-person conference"));
+    expect(mockedCreateProposal).not.toHaveBeenCalled();
+    expect(mockedPostMessage).not.toHaveBeenCalled();
   });
 
   test("cancels voice capture and restores the previous composer draft", async () => {
@@ -357,7 +352,7 @@ describe("AssistantWorkspacePage", () => {
     );
   });
 
-  test("shows a targeted clarification and silently reopens voice input for an incomplete date", async () => {
+  test("keeps an incomplete voice transcript editable until the planner sends it", async () => {
     mockedGetConversation.mockResolvedValue(
       conversationWithGuidedQuestions([datePickerQuestion]),
     );
@@ -383,10 +378,11 @@ describe("AssistantWorkspacePage", () => {
       results: [{ 0: { transcript: "Event date is 21 August 202" } }],
     }));
     fireEvent.click(screen.getByRole("button", { name: "Finish voice input" }));
-
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    expect(composer).toHaveValue("Event date is 21 August 202");
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
     expect(await screen.findByText(/21 August 2026/)).toBeInTheDocument();
-    await waitFor(() => expect(MockSpeechRecognition.instances).toHaveLength(2));
-    expect(MockSpeechRecognition.instances[1].start).toHaveBeenCalled();
+    expect(MockSpeechRecognition.instances).toHaveLength(1);
     expect(mockedPatchQuestion).not.toHaveBeenCalled();
   });
 
@@ -556,6 +552,36 @@ describe("AssistantWorkspacePage", () => {
 
     expect(await screen.findByText(/In-Person, Hybrid, Virtual/)).toBeInTheDocument();
     expect(mockedPatchQuestion).not.toHaveBeenCalled();
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("maps every visible proposal workspace action from natural commands", () => {
+    const cases = [
+      ["Generate proposal draft", "generate_draft"],
+      ["Regenerate draft", "generate_draft"],
+      ["Edit all details", "edit_details"],
+      ["Run readiness check", "readiness"],
+      ["Show investment guidance", "investment"],
+      ["Download sample sheet", "download_sample"],
+      ["Open room specifications and upload", "open_room_specifications"],
+      ["Use what I've told you", "use_messages"],
+      ["Extract requirements", "extract_requirements"],
+      ["What can I say now?", "show_actions"],
+    ] as const;
+    for (const [instruction, action] of cases) {
+      expect(proposalWorkspaceActionFromInstruction(instruction)).toBe(action);
+    }
+    expect(proposalWorkspaceActionFromInstruction("Can you improve the wording?"))
+      .toBeNull();
+  });
+
+  test("shows final action hints without posting an assistant chat message", async () => {
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "What can I say now?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText(/Generate draft[\s\S]*Edit all details/)).toBeInTheDocument();
     expect(mockedPostMessage).not.toHaveBeenCalled();
   });
 
@@ -2325,6 +2351,39 @@ describe("AssistantWorkspacePage", () => {
       { content: "Generate a proposal draft from the current information.", intent: "generate_draft", expectedProposalVersion: 9 },
       expect.any(String),
     ));
+  });
+
+  test("Generate draft command invokes the same version-safe action without posting chat", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithCompletedRun([]));
+    mockedGetProposalContext.mockResolvedValue(contextRunResult);
+    mockedGetProposal.mockResolvedValue(capturedProposal);
+    mockedGetLatestContext.mockResolvedValue({ success: true, correlationId: "test-correlation", data: { run: { id: "run-1" } } } as never);
+    mockedGetReview.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { reviewId: null, revision: 1, proposalVersion: 9, canonicalPaths: {}, currentValues: {}, appliedOperationIds: [], operations: [] },
+    } as never);
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: { runType: "proposal_draft", runId: "run-2", jobId: "job-2" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const composer = await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(composer, { target: { value: "Generate draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { content: "Generate a proposal draft from the current information.", intent: "generate_draft", expectedProposalVersion: 9 },
+      expect.any(String),
+    ));
+    expect(mockedPostMessage).not.toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      expect.objectContaining({ content: "Generate draft", intent: "chat" }),
+      expect.any(String),
+    );
   });
 
   test("the overview sends extracted suggestions to explicit review without applying them", async () => {

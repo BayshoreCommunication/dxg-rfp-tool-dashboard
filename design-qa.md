@@ -40,6 +40,42 @@ final result: passed
 
 ---
 
+# Proposal Voice Composer — Design QA
+
+## Evidence and target
+
+- Source visuals: the three ChatGPT voice-composer screenshots supplied on 2026-08-17.
+- Browser route: `http://localhost:3000/proposals/add-new-proposal`.
+- Verified states: listening, transcribing, and editable transcript review.
+- The source and browser-rendered listening state were reviewed together in one comparison input.
+
+## Fidelity review
+
+- Preserves the product's light cyan visual system while matching the source interaction hierarchy: centered readiness message, dark waveform rail, circular cancel control, and high-contrast stop control.
+- Transcribing replaces the live waveform with progress copy and an inactive send affordance.
+- Stopping never sends automatically; the recognized text returns to the standard composer for correction and explicit submission.
+- Existing Lucide icons are used; no new raster assets or environment variables were introduced.
+
+## Interaction and accessibility checks
+
+- Listening and transcribing surfaces expose named status regions.
+- Cancel restores the pre-recording draft.
+- Finish preserves the final recognition result, exits through a visible transcribing state, and focuses the editable composer.
+- Permission and recognition errors cleanly reset listening/transcribing state and show actionable feedback.
+- The automated browser denied microphone permission, so speech recognition was exercised with deterministic browser-compatible mocks; the rendered listening and transcribing states were separately captured in the live app.
+
+## Verification
+
+- TypeScript: passed.
+- ESLint: passed.
+- Jest: 96 suites, 661 tests passed.
+- `git diff --check`: passed.
+- No actionable P0, P1, or P2 visual findings remain.
+
+final result: passed
+
+---
+
 # Procurement Timeline Date Bounds — Design QA
 
 ## Evidence

@@ -118,6 +118,33 @@ const getSpeechRecognition = (): SpeechRecognitionConstructor | null => {
 const FIELD_COMMAND = /\b(fill|set|apply|enter|put|answer|update)\b/i;
 const SKIP_QUESTION_COMMAND = /^(?:please\s+)?(?:skip|pass)(?:\s+(?:this|it|question))?$|^(?:go\s+to\s+)?next\s+question$/i;
 const FIELD_HELP_COMMAND = /^(?:please\s+)?(?:help|hint|show\s+(?:me\s+)?(?:a\s+)?hint|how\s+(?:do|should|can)\s+i\s+(?:answer|say|fill)(?:\s+this)?|what\s+should\s+i\s+say|(?:eta|eita|এটা|এটি)\s+(?:kivabe|কীভাবে|কিভাবে)\s+(?:bolbo|বলব|fill\s+korbo|ফিল\s+করব))\??$/i;
+
+export type ProposalWorkspaceAction =
+  | 'generate_draft'
+  | 'edit_details'
+  | 'readiness'
+  | 'investment'
+  | 'download_sample'
+  | 'open_room_specifications'
+  | 'use_messages'
+  | 'extract_requirements'
+  | 'show_actions';
+
+export const proposalWorkspaceActionFromInstruction = (
+  input: string,
+): ProposalWorkspaceAction | null => {
+  const value = comparableWords(input);
+  if (/^(?:please )?(?:generate|regenerate|create|make)(?: the| my| proposal)? draft$/.test(value)) return 'generate_draft';
+  if (/^(?:please )?(?:edit|open|update|change)(?: all| my| proposal)? details$/.test(value) || /^(?:please )?open(?: the)? proposal editor$/.test(value)) return 'edit_details';
+  if (/^(?:please )?(?:run|do|start|check)(?: the| my| proposal)? readiness(?: check)?$/.test(value)) return 'readiness';
+  if (/^(?:please )?(?:run|show|get|open)(?: the)? investment guidance$/.test(value)) return 'investment';
+  if (/^(?:please )?(?:download|get)(?: the)? (?:sample|schedule)(?: sheet| template)$/.test(value)) return 'download_sample';
+  if (/^(?:please )?(?:open|go to)(?: the)? room specifications(?: and upload)?$/.test(value)) return 'open_room_specifications';
+  if (/^(?:please )?use what i (?:(?:have|ve) )?told you$/.test(value)) return 'use_messages';
+  if (/^(?:please )?(?:extract|read)(?: the)? requirements$/.test(value)) return 'extract_requirements';
+  if (/^(?:please )?(?:show|list|tell me)(?: the| my)? (?:available )?(?:actions|options|commands)$/.test(value) || /^what can i (?:do|say) now$/.test(value)) return 'show_actions';
+  return null;
+};
 const MONTH_NUMBER: Record<string, number> = {
   january: 1,
   february: 2,
@@ -2260,6 +2287,7 @@ export default function AssistantWorkspacePage({
   > | null>(null);
   const [text, setText] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   // Guided clarification flow: progress across this session plus the latest
   // confirmed value ("Rooms: 6") shown after a successful answer.
@@ -2320,13 +2348,18 @@ export default function AssistantWorkspacePage({
   // React may not have committed that last setText yet, so auto-submit reads
   // this synchronous ref instead of a stale render closure.
   const voiceLatestTextRef = useRef('');
-  const voiceShouldSubmitRef = useRef(false);
-  const handleSendRef = useRef<(
-    textOverride?: string,
-    source?: 'voice',
-  ) => Promise<void>>(
-    async () => undefined,
-  );
+  const voiceFinishingRef = useRef(false);
+  const transcriptionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const workspaceActionRefs = useRef<Record<
+    Exclude<ProposalWorkspaceAction, 'edit_details' | 'download_sample' | 'open_room_specifications' | 'show_actions'>,
+    () => Promise<void>
+  >>({
+    generate_draft: async () => undefined,
+    readiness: async () => undefined,
+    investment: async () => undefined,
+    use_messages: async () => undefined,
+    extract_requirements: async () => undefined,
+  });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadEndRef = useRef<HTMLDivElement | null>(null);
   const creatingRef = useRef(false);
@@ -2358,6 +2391,8 @@ export default function AssistantWorkspacePage({
   useEffect(
     () => () => {
       recognitionRef.current?.abort();
+      if (transcriptionTimerRef.current)
+        clearTimeout(transcriptionTimerRef.current);
     },
     [],
   );
@@ -2372,6 +2407,8 @@ export default function AssistantWorkspacePage({
     }
 
     setVoiceError(null);
+    setIsTranscribing(false);
+    voiceFinishingRef.current = false;
     voiceDraftRef.current = draftOverride ?? text.trimEnd();
     voiceLatestTextRef.current = voiceDraftRef.current;
     const recognition = new SpeechRecognition();
@@ -2391,6 +2428,8 @@ export default function AssistantWorkspacePage({
     };
     recognition.onerror = (event) => {
       setIsListening(false);
+      setIsTranscribing(false);
+      voiceFinishingRef.current = false;
       if (event.error === 'aborted') return;
       setVoiceError(
         event.error === 'not-allowed' || event.error === 'service-not-allowed'
@@ -2403,10 +2442,13 @@ export default function AssistantWorkspacePage({
     recognition.onend = () => {
       setIsListening(false);
       recognitionRef.current = null;
-      if (voiceShouldSubmitRef.current) {
-        voiceShouldSubmitRef.current = false;
-        const latest = voiceLatestTextRef.current;
-        requestAnimationFrame(() => void handleSendRef.current(latest, 'voice'));
+      if (voiceFinishingRef.current) {
+        voiceFinishingRef.current = false;
+        transcriptionTimerRef.current = setTimeout(() => {
+          setIsTranscribing(false);
+          transcriptionTimerRef.current = null;
+          requestAnimationFrame(() => composerRef.current?.focus());
+        }, 350);
       } else {
         requestAnimationFrame(() => composerRef.current?.focus());
       }
@@ -2422,13 +2464,15 @@ export default function AssistantWorkspacePage({
   };
 
   const finishVoiceInput = () => {
-    voiceShouldSubmitRef.current = true;
+    voiceFinishingRef.current = true;
+    setIsTranscribing(true);
     recognitionRef.current?.stop();
   };
 
   const cancelVoiceInput = () => {
     const original = voiceDraftRef.current;
-    voiceShouldSubmitRef.current = false;
+    voiceFinishingRef.current = false;
+    setIsTranscribing(false);
     recognitionRef.current?.abort();
     recognitionRef.current = null;
     setIsListening(false);
@@ -2783,6 +2827,34 @@ export default function AssistantWorkspacePage({
     setInputClarification(null);
     const id = await ensureProposal();
     if (!id) return;
+    const workspaceAction =
+      value && staged.length === 0
+        ? proposalWorkspaceActionFromInstruction(value)
+        : null;
+    if (workspaceAction) {
+      setText('');
+      if (workspaceAction === 'show_actions') {
+        setInputClarification(
+          'You can say: “Generate draft”, “Edit all details”, “Run readiness check”, “Show investment guidance”, “Download sample sheet”, “Open room specifications”, “Use what I’ve told you”, or “Extract requirements”.',
+        );
+      } else if (workspaceAction === 'edit_details') {
+        window.location.assign(
+          `/proposals/proposal-edit?proposalId=${encodeURIComponent(id)}`,
+        );
+      } else if (workspaceAction === 'open_room_specifications') {
+        window.location.assign(
+          `/proposals/proposal-edit?proposalId=${encodeURIComponent(id)}&step=3`,
+        );
+      } else if (workspaceAction === 'download_sample') {
+        const link = document.createElement('a');
+        link.href = '/files/RFPilot%20schedule-example-sheet.xlsx';
+        link.download = 'RFPilot schedule-example-sheet.xlsx';
+        link.click();
+      } else {
+        await workspaceActionRefs.current[workspaceAction]();
+      }
+      return;
+    }
     if (
       value &&
       staged.length === 0 &&
@@ -2959,8 +3031,6 @@ export default function AssistantWorkspacePage({
     // explicitly promote longer text through the "Add notes" source control.
     if (sent && sourceIds.length > 0) queueAutoExtract(id, sourceIds);
   };
-  handleSendRef.current = handleSend;
-
   // ChatGPT-style staged attach: picking a file only adds a composer chip; the
   // upload runs when the message is sent. Up to three files can be staged.
   const stageFile = useCallback((file: File) => {
@@ -3223,6 +3293,14 @@ export default function AssistantWorkspacePage({
             message: result.message,
           },
     ]);
+  };
+
+  workspaceActionRefs.current = {
+    generate_draft: runDraftFromCard,
+    readiness: runGuidance,
+    investment: runInvestment,
+    use_messages: runUseMessages,
+    extract_requirements: runExtract,
   };
 
   // Guided question flow: answer the current question inline; a success
@@ -3641,42 +3719,61 @@ export default function AssistantWorkspacePage({
           {inputClarification}
         </p>
       )}
-      {isListening ? (
-        <div
-          role="status"
-          aria-label="Voice input is listening"
-          className="flex min-h-14 items-center gap-3 rounded-[1.75rem] border border-slate-700 bg-[#202020] px-2.5 py-2 text-white shadow-lg"
-        >
-          <button
-            type="button"
-            aria-label="Cancel voice input"
-            onClick={cancelVoiceInput}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+      {isListening || isTranscribing ? (
+        <div className="rounded-3xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm sm:p-5">
+          <p className="mb-4 text-center text-lg font-semibold text-slate-900">
+            {isTranscribing ? 'Transcribing…' : 'Ready when you are.'}
+          </p>
+          <div
+            role="status"
+            aria-label={isTranscribing ? 'Voice input is transcribing' : 'Voice input is listening'}
+            className="flex min-h-14 items-center gap-3 rounded-[1.75rem] border border-slate-700 bg-[#202020] px-2.5 py-2 text-white shadow-lg"
           >
-            <X size={19} aria-hidden />
-          </button>
-          <div className="flex min-w-0 flex-1 items-center gap-[3px] overflow-hidden" aria-hidden>
-            {Array.from({ length: 44 }, (_, index) => (
-              <span
-                key={index}
-                className="w-[3px] shrink-0 animate-pulse rounded-full bg-slate-300/80"
-                style={{
-                  height: `${6 + ((index * 7) % 22)}px`,
-                  animationDelay: `${(index % 9) * 70}ms`,
-                  animationDuration: `${650 + (index % 5) * 90}ms`,
-                }}
-              />
-            ))}
+            {isTranscribing ? (
+            <>
+              <span className="min-w-0 flex-1 px-3 text-sm font-medium text-slate-300">
+                Transcribing
+              </span>
+              <Loader2 size={20} className="shrink-0 animate-spin text-slate-300" aria-hidden />
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15 text-slate-400">
+                <ArrowUp size={17} aria-hidden />
+              </span>
+            </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  aria-label="Cancel voice input"
+                  onClick={cancelVoiceInput}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <X size={19} aria-hidden />
+                </button>
+                <div className="flex min-w-0 flex-1 items-center gap-[3px] overflow-hidden" aria-hidden>
+                  {Array.from({ length: 44 }, (_, index) => (
+                    <span
+                      key={index}
+                      className="w-[3px] shrink-0 animate-pulse rounded-full bg-slate-300/80"
+                      style={{
+                        height: `${6 + ((index * 7) % 22)}px`,
+                        animationDelay: `${(index % 9) * 70}ms`,
+                        animationDuration: `${650 + (index % 5) * 90}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+                <span className="sr-only">Listening. Speak naturally.</span>
+                <button
+                  type="button"
+                  aria-label="Finish voice input"
+                  onClick={finishVoiceInput}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white text-[#202020] transition-colors hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <Square size={13} fill="currentColor" aria-hidden />
+                </button>
+              </>
+            )}
           </div>
-          <span className="sr-only">Listening. Speak naturally.</span>
-          <button
-            type="button"
-            aria-label="Finish voice input"
-            onClick={finishVoiceInput}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white text-[#202020] transition-colors hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            <Square size={13} fill="currentColor" aria-hidden />
-          </button>
         </div>
       ) : (
       <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-[#00c2c9]">
