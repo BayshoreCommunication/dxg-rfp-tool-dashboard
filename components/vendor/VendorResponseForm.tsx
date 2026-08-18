@@ -47,6 +47,17 @@ type ExistingResponse = {
   message: string;
   documents: ExistingDoc[];
   updatedAt: string;
+  submissionId?: string;
+  currentVersionId?: string;
+  currentVersionNumber?: number;
+};
+
+type SubmissionReceipt = {
+  submissionId: string;
+  versionId: string;
+  versionNumber: number;
+  receivedAt: string;
+  manifestChecksum: string;
 };
 
 type RequiredField = "vendorName" | "submittedBy" | "email";
@@ -104,8 +115,11 @@ export default function VendorResponseForm({
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [existingDocs, setExistingDocs] = useState<ExistingDoc[]>([]);
   const [existingUpdatedAt, setExistingUpdatedAt] = useState<string>("");
+  const [existingVersionNumber, setExistingVersionNumber] = useState(0);
+  const [receipt, setReceipt] = useState<SubmissionReceipt | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const applyExistingResponse = (existing: ExistingResponse) => {
     setIsUpdateMode(true);
@@ -114,6 +128,7 @@ export default function VendorResponseForm({
     setMessage(existing.message);
     setExistingDocs(existing.documents ?? []);
     setExistingUpdatedAt(existing.updatedAt);
+    setExistingVersionNumber(Number(existing.currentVersionNumber ?? 1));
   };
 
   const checkEmailExists = async (emailValue: string) => {
@@ -132,6 +147,7 @@ export default function VendorResponseForm({
         setIsUpdateMode(false);
         setExistingDocs([]);
         setExistingUpdatedAt("");
+        setExistingVersionNumber(0);
       }
     } catch {
       // Checking for a prior response should never block a new submission.
@@ -232,6 +248,12 @@ export default function VendorResponseForm({
       formData.append("submittedBy", submittedBy.trim());
       formData.append("email", email.trim());
       formData.append("message", message.trim());
+      idempotencyKeyRef.current ??= crypto.randomUUID();
+      formData.append("submissionIdempotencyKey", idempotencyKeyRef.current);
+      formData.append(
+        "submissionReason",
+        isUpdateMode ? "vendor_revision" : "initial",
+      );
       if (initialTrackingId) formData.append("emailTrackingId", initialTrackingId);
       if (accessGrant) formData.append("accessGrant", accessGrant);
       files.forEach(({ file }) => formData.append("documents", file));
@@ -246,6 +268,15 @@ export default function VendorResponseForm({
         return;
       }
       setWasUpdate(Boolean(json.isUpdate));
+      if (json.submission) {
+        setReceipt({
+          submissionId: String(json.submission.submissionId ?? ""),
+          versionId: String(json.submission.versionId ?? ""),
+          versionNumber: Number(json.submission.versionNumber ?? 1),
+          receivedAt: String(json.submission.receivedAt ?? ""),
+          manifestChecksum: String(json.submission.manifestChecksum ?? ""),
+        });
+      }
       setSubmitted(true);
     } catch {
       setError("We could not reach the server. Check your connection and try again.");
@@ -271,9 +302,24 @@ export default function VendorResponseForm({
             </h1>
             <p className="mx-auto mt-3 max-w-md text-[15px] leading-6 text-slate-600">
               {wasUpdate
-                ? "Your latest changes are saved and ready for the event planner to review."
+                ? `Version ${receipt?.versionNumber ?? existingVersionNumber + 1} is saved without changing your earlier submission and is ready for the event planner to review.`
                 : "Your proposal response is now ready for the event planner to review."}
             </p>
+
+            {receipt ? (
+              <dl className="mt-6 grid grid-cols-2 gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left">
+                <div>
+                  <dt className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">Version</dt>
+                  <dd className="mt-1 text-sm font-extrabold text-emerald-950">{receipt.versionNumber}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">Receipt</dt>
+                  <dd className="mt-1 truncate font-mono text-xs font-bold text-emerald-950" title={receipt.versionId}>
+                    {receipt.versionId}
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
 
             <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left">
               <div className="flex items-start gap-3">
@@ -343,7 +389,7 @@ export default function VendorResponseForm({
             <div>
               <p className="text-sm font-extrabold text-amber-950">We found your earlier response</p>
               <p className="mt-1 text-sm leading-5 text-amber-800">
-                Review the details below, attach any additional documents, then update your response.
+                Your current response is version {existingVersionNumber || 1}. Review the details below and submit a new immutable version; the earlier version remains preserved.
                 {existingUpdatedAt ? ` Last updated ${new Date(existingUpdatedAt).toLocaleString()}.` : ""}
               </p>
             </div>
@@ -429,6 +475,7 @@ export default function VendorResponseForm({
                         setIsUpdateMode(false);
                         setExistingDocs([]);
                         setExistingUpdatedAt("");
+                        setExistingVersionNumber(0);
                       }
                     }}
                     onBlur={() => {
@@ -580,7 +627,7 @@ export default function VendorResponseForm({
                 {submitting ? (
                   <><Loader2 size={17} className="animate-spin" aria-hidden="true" /> {isUpdateMode ? "Updating response…" : "Submitting response…"}</>
                 ) : isUpdateMode ? (
-                  <><RefreshCw size={17} aria-hidden="true" /> Update response</>
+                  <><RefreshCw size={17} aria-hidden="true" /> Submit version {existingVersionNumber + 1}</>
                 ) : (
                   <><Send size={17} aria-hidden="true" /> Submit response</>
                 )}

@@ -65,6 +65,8 @@
     "Proxima Nova", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui,
     sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
     "Noto Color Emoji";
+  --font-mono:
+    "SFMono-Regular", Consolas, "Liberation Mono", ui-monospace, monospace;
 }
 
 /* Brand gradient — Medium Turquoise → Water Blue */

@@ -9,6 +9,7 @@ import { publishVendorUnreadCount } from "@/lib/vendorResponses/unreadEvents";
 import {
   ArrowLeft,
   CalendarDays,
+  ClipboardList,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
@@ -20,17 +21,25 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VendorAnalysisSection from "./VendorAnalysisSection";
 import VendorComparisonPanel from "./VendorComparisonPanel";
+import VendorExtractionSection from "./VendorExtractionSection";
+import VendorFactsSection from "./VendorFactsSection";
+import VendorEvaluationSection from "./VendorEvaluationSection";
 
 type Props = {
   initialResponses: VendorResponseItem[];
   initialUnreadCount: number;
+  initialGlobalUnreadCount?: number;
   currentPage: number;
   totalPages: number;
   totalCount: number;
+  basePath?: string;
+  backHref?: string;
+  proposalTitle?: string;
 };
 
 const formatDate = (iso: string) =>
@@ -59,15 +68,20 @@ const initials = (name: string) =>
 export default function VendorResponsesView({
   initialResponses,
   initialUnreadCount,
+  initialGlobalUnreadCount = initialUnreadCount,
   currentPage,
   totalPages,
   totalCount,
+  basePath = "/vendor-responses",
+  backHref,
+  proposalTitle,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [responses, setResponses] = useState(initialResponses);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const unreadCountRef = useRef(initialUnreadCount);
+  const globalUnreadCountRef = useRef(initialGlobalUnreadCount);
   const markingReadIds = useRef(new Set<string>());
   const [selected, setSelected] = useState<VendorResponseItem | null>(
     initialResponses[0] ?? null,
@@ -105,14 +119,19 @@ export default function VendorResponsesView({
       const nextCount = Math.max(0, unreadCountRef.current - 1);
       unreadCountRef.current = nextCount;
       setUnreadCount(nextCount);
-      publishVendorUnreadCount(nextCount);
+      const nextGlobalCount = Math.max(0, globalUnreadCountRef.current - 1);
+      globalUnreadCountRef.current = nextGlobalCount;
+      publishVendorUnreadCount(nextGlobalCount);
     }
   }, []);
 
-  const openResponse = useCallback((item: VendorResponseItem) => {
-    setSelected(item);
-    void markResponseRead(item);
-  }, [markResponseRead]);
+  const openResponse = useCallback(
+    (item: VendorResponseItem) => {
+      setSelected(item);
+      void markResponseRead(item);
+    },
+    [markResponseRead],
+  );
 
   useEffect(() => {
     const initiallySelected = initialResponses[0];
@@ -127,14 +146,14 @@ export default function VendorResponsesView({
   const goToPage = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(page));
-    router.push(`/vendor-responses?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   };
 
   const toggleUnreadOnly = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", "1");
     params.set("unreadOnly", unreadOnly ? "false" : "true");
-    router.push(`/vendor-responses?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   };
 
   return (
@@ -145,13 +164,21 @@ export default function VendorResponsesView({
             <Inbox size={20} strokeWidth={2.2} />
           </div>
           <div>
+            {backHref && (
+              <Link
+                href={backHref}
+                className="mb-1 inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-[#008ad2] hover:text-[#0076b4]"
+              >
+                <ArrowLeft size={12} aria-hidden="true" /> All proposals
+              </Link>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
-                Vendor Responses
+                {proposalTitle || "Vendor Responses"}
               </h1>
             </div>
             <p className="mt-0.5 text-xs text-slate-500">
-              {totalCount} total responses
+              {totalCount} {totalCount === 1 ? "vendor response" : "vendor responses"}
               {unreadCount > 0 && (
                 <span className="ml-2 font-bold text-[#008ad2]">
                   · {unreadCount} unread
@@ -371,7 +398,7 @@ export default function VendorResponsesView({
                         {selected.vendorName}
                       </h2>
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                        Submitted
+                        Version {selected.currentVersionNumber ?? 1}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
@@ -380,6 +407,19 @@ export default function VendorResponsesView({
                         {selected.proposalTitle}
                       </span>
                     </p>
+                    <Link
+                      href={`/proposals/${selected.proposalId}/intelligence/requirements`}
+                      className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#008ad2]/25 bg-[#eaf7fd] px-3 text-xs font-extrabold text-[#0076b4] transition hover:border-[#008ad2]/40 hover:bg-[#dff3fc]"
+                    >
+                      <ClipboardList size={14} /> Review RFP requirements
+                    </Link>
+                    <Link
+                      href={`/vendor-responses/${selected._id}`}
+                      className="ml-2 mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-700 transition hover:border-[#008ad2]/30 hover:text-[#0076b4]"
+                    >
+                      <ExternalLink size={14} aria-hidden="true" /> Open version
+                      history
+                    </Link>
                   </div>
                 </div>
 
@@ -399,7 +439,9 @@ export default function VendorResponsesView({
                     <ResponseFact
                       icon={<CalendarDays size={16} />}
                       label="Received"
-                      value={formatDate(selected.createdAt)}
+                      value={formatDate(
+                        selected.versionReceivedAt ?? selected.createdAt,
+                      )}
                     />
                   </div>
 
@@ -410,7 +452,8 @@ export default function VendorResponsesView({
                       </p>
                     </div>
                     <div className="min-h-[118px] rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-[15px] leading-7 text-slate-700 sm:p-6">
-                      {selected.message || "No message was included with this response."}
+                      {selected.message ||
+                        "No message was included with this response."}
                     </div>
 
                     {selected.documents.length > 0 && (
@@ -427,11 +470,17 @@ export default function VendorResponsesView({
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#008ad2]/30 hover:bg-[#008ad2]/5 hover:text-[#0076b4]"
                               >
-                                <FileText size={16} className="text-[#008ad2]" />
+                                <FileText
+                                  size={16}
+                                  className="text-[#008ad2]"
+                                />
                                 <span className="min-w-0 flex-1 truncate">
                                   {document.name}
                                 </span>
-                                <ExternalLink size={13} className="text-slate-400" />
+                                <ExternalLink
+                                  size={13}
+                                  className="text-slate-400"
+                                />
                               </a>
                             </li>
                           ))}
@@ -440,6 +489,29 @@ export default function VendorResponsesView({
                     )}
                   </div>
                 </article>
+
+                {selected.submissionId && selected.currentVersionId && (
+                  <div className="mt-5 space-y-5">
+                    <VendorExtractionSection
+                      key={`${selected.submissionId}:${selected.currentVersionId}`}
+                      proposalId={selected.proposalId}
+                      submissionId={selected.submissionId}
+                      versionId={selected.currentVersionId}
+                    />
+                    <VendorFactsSection
+                      key={`intelligence:${selected.submissionId}:${selected.currentVersionId}`}
+                      proposalId={selected.proposalId}
+                      submissionId={selected.submissionId}
+                      versionId={selected.currentVersionId}
+                    />
+                    <VendorEvaluationSection
+                      key={`evaluation:${selected.submissionId}:${selected.currentVersionId}`}
+                      proposalId={selected.proposalId}
+                      submissionId={selected.submissionId}
+                      versionId={selected.currentVersionId}
+                    />
+                  </div>
+                )}
 
                 <div className="mt-5">
                   <VendorAnalysisSection
@@ -487,7 +559,10 @@ function ResponseFact({
   href?: string;
 }) {
   const content = href ? (
-    <a href={href} className="break-all font-bold text-[#008ad2] hover:underline">
+    <a
+      href={href}
+      className="break-all font-bold text-[#008ad2] hover:underline"
+    >
       {value}
     </a>
   ) : (
