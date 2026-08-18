@@ -113,17 +113,30 @@ describe("parseScheduleWorkbook", () => {
     expect(result.rooms[0].estimatedAttendeesInRoom).toBe("500");
   });
 
-  it("ships the downloadable schedule template without sample records", () => {
+  it("ships the downloadable schedule template with sample records", () => {
     const template = readFileSync(
       path.join(process.cwd(), "public/files/RFPilot schedule-example-sheet.xlsx"),
     );
     const workbook = XLSX.read(template, { type: "buffer" });
     const scheduleSheet = workbook.Sheets["in person schedule"];
 
+    expect(workbook.SheetNames).toEqual(["in person schedule"]);
     expect(scheduleSheet).toBeDefined();
-    expect(
-      XLSX.utils.sheet_to_json(scheduleSheet, { defval: "" }),
-    ).toEqual([]);
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+      scheduleSheet,
+      { defval: "" },
+    );
+
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatchObject({
+      "Function Name": "Opening Keynote",
+      "Room Name": "Grand Ballroom",
+      "# of Attendees": 300,
+    });
+    expect(rows[1]).toMatchObject({
+      "Function Name": "Leadership Panel",
+      "Room Name": "Grand Ballroom",
+    });
   });
 });
 

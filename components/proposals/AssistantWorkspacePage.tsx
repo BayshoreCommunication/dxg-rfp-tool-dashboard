@@ -55,6 +55,7 @@ import { presentJob } from '@/lib/asyncOperations';
 import {
   ArrowUp,
   Check,
+  ChevronDown,
   Download,
   FileText,
   Loader2,
@@ -1196,6 +1197,78 @@ function SkeletonCard({ label }: { label: string }) {
   );
 }
 
+function DraftProgressCard({ updating }: { updating: boolean }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={
+        updating
+          ? 'Updating your proposal draft'
+          : 'Creating your proposal draft'
+      }
+      data-testid="draft-progress-card"
+      className="max-w-3xl overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]"
+    >
+      <div className="flex items-start gap-3 bg-gradient-to-r from-emerald-50 via-white to-cyan-50/70 px-4 py-4 sm:px-5">
+        <span className="relative mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#087f69] text-white shadow-sm">
+          <FileText size={17} aria-hidden />
+          <span
+            aria-hidden
+            className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full border-2 border-white bg-[#00c2c9]"
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-900">
+              {updating
+                ? 'Updating your proposal draft…'
+                : 'Creating your proposal draft…'}
+            </h3>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+              <Loader2 size={10} className="animate-spin" aria-hidden />
+              In progress
+            </span>
+          </div>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">
+            Using your latest proposal details and answers. You can keep
+            working while this finishes.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DraftSendFailureCard({
+  message,
+  hasCurrentDraft,
+  onRetry,
+}: {
+  message: string;
+  hasCurrentDraft: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 shadow-sm">
+      <p role="alert" className="font-semibold">
+        The draft update could not be started.
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-red-800">
+        {message}
+        {hasCurrentDraft ? ' Your current draft is unchanged.' : ''}
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-3 inline-flex min-h-9 items-center justify-center rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+      >
+        Retry draft generation
+      </button>
+    </div>
+  );
+}
+
 // ChatGPT-style guided clarification flow: ONE question at a time in the
 // thread, with progress, an impact tag, a typed answer control (date picker,
 // choice pills, number or free text, chosen by the backend) and a Skip action.
@@ -1732,6 +1805,39 @@ const draftRunVersion = (run: unknown): number | null => {
   return Number.isFinite(value) && value > 0 ? value : null;
 };
 
+function PreviousDraftCard({ message }: { message: ConversationMessage }) {
+  return (
+    <details className="group max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-left marker:content-none sm:px-5">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-600">
+          <FileText size={15} aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-bold text-slate-700">
+              Previous proposal draft
+            </span>
+            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+              Superseded
+            </span>
+          </span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            A newer draft is now the current version.
+          </span>
+        </span>
+        <ChevronDown
+          size={16}
+          className="shrink-0 text-slate-400 transition-transform group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="border-t border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 sm:px-5">
+        <p className="whitespace-pre-wrap">{message.content}</p>
+      </div>
+    </details>
+  );
+}
+
 // Details of a completed draft run: read-only sections rendered inline, plus a
 // quiet staleness hint when the proposal moved on after the draft was written.
 function DraftRunCard({
@@ -1740,12 +1846,14 @@ function DraftRunCard({
   currentProposalVersion,
   draftBusy,
   onRegenerate,
+  updated,
 }: {
   proposalId: string;
   message: ConversationMessage;
   currentProposalVersion: number | undefined;
   draftBusy: boolean;
   onRegenerate: () => void;
+  updated: boolean;
 }) {
   const [sections, setSections] = useState<ProposalDraftSection[]>(
     [],
@@ -1788,7 +1896,14 @@ function DraftRunCard({
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-900">Proposal draft ready</h3>
+              <h3 className="text-sm font-bold text-slate-900">
+                {updated
+                  ? 'Updated proposal draft ready'
+                  : 'Proposal draft ready'}
+              </h3>
+              <span className="rounded-full border border-emerald-200 bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                Current draft
+              </span>
               {!previewLoading && sections.length > 0 && (
                 <span className="rounded-full border border-emerald-200 bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
                   {sections.length} {sections.length === 1 ? 'section' : 'sections'}
@@ -2464,6 +2579,13 @@ export default function AssistantWorkspacePage({
   const [proposalVersion, setProposalVersion] = useState<number>();
   const [draftBusy, setDraftBusy] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
+  // Holds the latest run ordinal at click time until the new persisted draft
+  // activity appears. The POST can finish before the conversation replica
+  // exposes its pending run; without this bridge the progress card flashes
+  // away and the old draft returns for a polling interval.
+  const [draftRequestBaseline, setDraftRequestBaseline] = useState<
+    number | null
+  >(null);
   const [retryingExtractionId, setRetryingExtractionId] = useState<
     string | null
   >(null);
@@ -2666,6 +2788,68 @@ export default function AssistantWorkspacePage({
     () => visibleRunMessages(messages),
     [messages],
   );
+  const draftRunMessages = useMemo(
+    () =>
+      displayedMessages.filter(
+        (message) => message.runType === 'proposal_draft',
+      ),
+    [displayedMessages],
+  );
+  const latestDraftActivity = useMemo(
+    () =>
+      draftRunMessages.reduce<ConversationMessage | null>(
+        (latest, message) =>
+          !latest || message.ordinal > latest.ordinal ? message : latest,
+        null,
+      ),
+    [draftRunMessages],
+  );
+  const completedDraftMessages = useMemo(
+    () =>
+      draftRunMessages.filter((message) => message.status === 'complete'),
+    [draftRunMessages],
+  );
+  const latestCompleteDraft = useMemo(
+    () =>
+      completedDraftMessages.reduce<ConversationMessage | null>(
+        (latest, message) =>
+          !latest || message.ordinal > latest.ordinal ? message : latest,
+        null,
+      ),
+    [completedDraftMessages],
+  );
+  const draftSendPending = pending.some(
+    (entry) =>
+      entry.intent === 'generate_draft' && entry.state === 'sending',
+  );
+  const draftSendFailure = pending.find(
+    (entry) =>
+      entry.intent === 'generate_draft' && entry.state === 'failed',
+  );
+  const awaitingPersistedDraftActivity =
+    draftRequestBaseline !== null &&
+    (latestDraftActivity?.ordinal ?? -1) <= draftRequestBaseline;
+  const draftInProgress =
+    draftSendPending ||
+    awaitingPersistedDraftActivity ||
+    latestDraftActivity?.status === 'pending';
+  // The current draft is an artifact, not a transient chat reply. Anchor it at
+  // the bottom of the active workflow so generation begins and completes in
+  // the same visible place. Older drafts stay in history as compact summaries.
+  const threadMessages = useMemo(
+    () =>
+      displayedMessages.filter((message) => {
+        if (
+          message.role === 'user' &&
+          message.intent === 'generate_draft'
+        )
+          return false;
+        if (message.id === latestCompleteDraft?.id) return false;
+        if (message.id === latestDraftActivity?.id) return false;
+        return true;
+      }),
+    [displayedMessages, latestCompleteDraft?.id, latestDraftActivity?.id],
+  );
   const latestContextRun = useMemo(
     () =>
       messages.reduce<ConversationMessage | null>(
@@ -2722,6 +2906,10 @@ export default function AssistantWorkspacePage({
     [sources],
   );
   const sending = pending.some((item) => item.state === 'sending');
+  const nonDraftSending = pending.some(
+    (item) =>
+      item.state === 'sending' && item.intent !== 'generate_draft',
+  );
   const assistantResponding = messages.some(
     (message) =>
       message.role === 'assistant' &&
@@ -2741,8 +2929,9 @@ export default function AssistantWorkspacePage({
     );
     return pending.filter(
       (entry) =>
-        entry.state === 'failed' ||
-        !sentContent.has(entry.content.trim()),
+        entry.intent !== 'generate_draft' &&
+        (entry.state === 'failed' ||
+          !sentContent.has(entry.content.trim())),
     );
   }, [pending, messages]);
   const started =
@@ -2911,6 +3100,9 @@ export default function AssistantWorkspacePage({
     openQuestions.length,
     lastConfirmed,
     showOverview,
+    draftInProgress,
+    latestDraftActivity?.status,
+    latestCompleteDraft?.id,
   ]);
 
   // Lazy creation: the proposal only exists once the user contributes content.
@@ -3272,15 +3464,22 @@ export default function AssistantWorkspacePage({
   };
 
   const sendDraftMessage = async (version: number) => {
-    await sendMessage({
+    setDraftRequestBaseline(latestDraftActivity?.ordinal ?? -1);
+    const sent = await sendMessage({
       content: taskContent.generate_draft,
       intent: 'generate_draft',
       expectedProposalVersion: version,
     });
+    if (!sent) setDraftRequestBaseline(null);
   };
 
   const runDraft = async () => {
-    if (typeof proposalVersion !== 'number' || sending || !proposalId)
+    if (
+      typeof proposalVersion !== 'number' ||
+      sending ||
+      draftInProgress ||
+      !proposalId
+    )
       return;
     await sendDraftMessage(proposalVersion);
   };
@@ -3290,7 +3489,7 @@ export default function AssistantWorkspacePage({
   // before the version lookup settled — in that case the CURRENT version is
   // re-read first so the draft never runs against a stale one.
   const runDraftFromCard = async () => {
-    if (!proposalId || sending || draftBusy) return;
+    if (!proposalId || sending || draftBusy || draftInProgress) return;
     setDraftError(null);
     let version = proposalVersion;
     if (typeof version !== 'number') {
@@ -3774,6 +3973,12 @@ export default function AssistantWorkspacePage({
       message.status === 'complete' &&
       proposalId
     ) {
+      if (message.id !== latestCompleteDraft?.id) {
+        return wrapAssistantTurn(
+          <PreviousDraftCard message={message} />,
+          message.id,
+        );
+      }
       return wrapAssistantTurn(
         <DraftRunCard
           proposalId={proposalId}
@@ -3781,6 +3986,7 @@ export default function AssistantWorkspacePage({
           currentProposalVersion={proposalVersion}
           draftBusy={draftBusy || chatBusy}
           onRegenerate={() => void runDraftFromCard()}
+          updated={completedDraftMessages.length > 1}
         />,
         message.id,
       );
@@ -4056,6 +4262,7 @@ export default function AssistantWorkspacePage({
     chatBusy ||
     autoScanning ||
     draftBusy ||
+    draftInProgress ||
     guidanceBusy ||
     investmentBusy;
   const aiStatus = autoScanning
@@ -4063,10 +4270,13 @@ export default function AssistantWorkspacePage({
         title: 'Reading your sources',
         detail: 'Checking evidence and preparing requirements.',
       }
-    : draftBusy
+    : draftBusy || draftInProgress
       ? {
-          title: 'Writing your draft',
-          detail: 'Building cited sections from approved details.',
+          title: latestCompleteDraft
+            ? 'Updating your draft'
+            : 'Writing your draft',
+          detail:
+            'Building cited sections from your latest proposal details.',
         }
       : guidanceBusy
         ? {
@@ -4092,7 +4302,7 @@ export default function AssistantWorkspacePage({
               };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-100/70 px-4 py-4 sm:px-6">
+    <div className="min-h-[calc(100dvh-3rem)] bg-slate-100/70 px-4 py-4 sm:px-6 lg:flex lg:h-[calc(100dvh-3rem)] lg:min-h-0 lg:flex-col lg:overflow-hidden">
       {/* Shared keyframes for continuous status indicators. */}
       <style>{`
         @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-0.25rem); opacity: 1; } }
@@ -4135,13 +4345,13 @@ export default function AssistantWorkspacePage({
         )}
       </div>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-5 lg:flex-row">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:min-h-0 lg:flex-1 lg:flex-row">
         {/* Workspace card */}
         {/* The card is height-bounded so the thread scrolls inside it and the
             composer stays put, instead of the whole page growing. */}
         <section
           aria-label="Proposal assistant workspace"
-          className="flex max-h-[calc(100vh-8rem)] min-h-[70vh] flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+          className="flex max-h-[calc(100dvh-8rem)] min-h-[70vh] flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:h-full lg:min-h-0 lg:max-h-none"
         >
           {!started ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
@@ -4181,7 +4391,7 @@ export default function AssistantWorkspacePage({
                   </p>
                 )}
                 <ol className="space-y-3">
-                  {displayedMessages.map(renderMessage)}
+                  {threadMessages.map(renderMessage)}
                   {showOverview && proposalId && (
                     <li className="flex justify-start">
                       <OverviewCard
@@ -4191,7 +4401,7 @@ export default function AssistantWorkspacePage({
                         detailCount={overviewDetailCount}
                         detailSource={overviewDetailSource}
                         pendingReview={overviewPendingReview}
-                        busy={draftBusy || sending}
+                        busy={draftBusy || sending || draftInProgress}
                         error={draftError}
                         showActions={!questionsComplete}
                         hasDraft={hasDraftRun}
@@ -4314,7 +4524,7 @@ export default function AssistantWorkspacePage({
                       </p>
                     </li>
                   ))}
-                  {sending && !assistantResponding && (
+                  {nonDraftSending && !assistantResponding && (
                     <li className="flex justify-start">
                       <TypingIndicator label="The assistant is responding" />
                     </li>
@@ -4434,7 +4644,7 @@ export default function AssistantWorkspacePage({
                         report={completionReport}
                         checking={completionChecking}
                         hasDraft={hasDraftRun}
-                        draftBusy={draftBusy || sending}
+                        draftBusy={draftBusy || sending || draftInProgress}
                         draftError={draftError}
                         onGenerateDraft={() =>
                           void runDraftFromCard()
@@ -4448,6 +4658,45 @@ export default function AssistantWorkspacePage({
                       />
                     </li>
                   )}
+                  {draftInProgress &&
+                    wrapAssistantTurn(
+                      <DraftProgressCard updating={!!latestCompleteDraft} />,
+                      'draft-progress',
+                      true,
+                    )}
+                  {!draftInProgress &&
+                    draftSendFailure &&
+                    wrapAssistantTurn(
+                      <DraftSendFailureCard
+                        message={
+                          draftSendFailure.errorMessage ??
+                          'Please try again.'
+                        }
+                        hasCurrentDraft={!!latestCompleteDraft}
+                        onRetry={() =>
+                          void retrySend(draftSendFailure.localId)
+                        }
+                      />,
+                      'draft-send-failure',
+                    )}
+                  {!draftInProgress &&
+                    !draftSendFailure &&
+                    latestDraftActivity?.status === 'failed' &&
+                    renderMessage(latestDraftActivity)}
+                  {!draftInProgress &&
+                    latestCompleteDraft &&
+                    proposalId &&
+                    wrapAssistantTurn(
+                      <DraftRunCard
+                        proposalId={proposalId}
+                        message={latestCompleteDraft}
+                        currentProposalVersion={proposalVersion}
+                        draftBusy={draftBusy || chatBusy}
+                        onRegenerate={() => void runDraftFromCard()}
+                        updated={completedDraftMessages.length > 1}
+                      />,
+                      `current-draft-${latestCompleteDraft.id}`,
+                    )}
                 </ol>
                 <div ref={threadEndRef} />
               </div>
@@ -4461,7 +4710,7 @@ export default function AssistantWorkspacePage({
         {railVisible && (
           <aside
             aria-label="Proposal assistant tools"
-            className="w-full shrink-0 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 lg:flex lg:max-h-[calc(100vh-8rem)] lg:w-80 lg:flex-col lg:overflow-hidden"
+            className="w-full shrink-0 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 lg:flex lg:h-full lg:min-h-0 lg:w-80 lg:flex-col lg:overflow-hidden"
           >
             <div
               data-testid="proposal-assistant-tools-scroll"
@@ -4769,8 +5018,11 @@ export default function AssistantWorkspacePage({
                 <button
                   type="button"
                   onClick={() => void runDraft()}
+                  aria-busy={draftInProgress}
                   disabled={
-                    typeof proposalVersion !== 'number' || sending
+                    typeof proposalVersion !== 'number' ||
+                    sending ||
+                    draftInProgress
                   }
                   title={
                     typeof proposalVersion !== 'number'
@@ -4779,7 +5031,7 @@ export default function AssistantWorkspacePage({
                   }
                   className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
                 >
-                  Generate draft
+                  {draftInProgress ? 'Generating…' : 'Generate draft'}
                 </button>
                 <button
                   type="button"

@@ -248,9 +248,9 @@ export const parseScheduleWorkbook = async (
   // JavaScript Date objects can introduce historical local-time offsets (for
   // example 1:45 becoming 1:51 in some time zones).
   const workbook = XLSX.read(buffer, { type: "array", cellDates: false });
-  // The shipped template carries several tabs (pivot, virtual schedule, room
-  // list), and planners reorder them. Read the first sheet that actually looks
-  // like a schedule rather than assuming it is the leftmost one.
+  // Uploaded planner workbooks may carry several tabs or reorder them. Read the
+  // first sheet that actually looks like a schedule rather than assuming it is
+  // the leftmost one.
   const readSheet = (name: string) =>
     XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[name], { defval: "" });
   const looksLikeSchedule = (rows: Record<string, unknown>[]) =>

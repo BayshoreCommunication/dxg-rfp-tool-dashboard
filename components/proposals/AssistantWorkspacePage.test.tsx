@@ -2744,6 +2744,114 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByText(STALE_HINT)).not.toBeInTheDocument();
   });
 
+  test("regenerating creates an accessible progress card at the bottom of the active workflow", async () => {
+    let resolvePost: (value: unknown) => void = () => undefined;
+    mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
+    mockedGetDraft.mockResolvedValue(draftRun(5));
+    mockedGetProposal.mockResolvedValue(proposalAtVersion(7));
+    mockedPostMessage.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePost = resolve as (value: unknown) => void;
+        }) as never,
+    );
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Regenerate draft" }),
+    );
+
+    const progress = await screen.findByTestId("draft-progress-card");
+    expect(progress).toHaveAttribute(
+      "aria-label",
+      "Updating your proposal draft",
+    );
+    expect(progress).toHaveTextContent("Using your latest proposal details and answers");
+    expect(screen.queryByText("The assistant is responding")).not.toBeInTheDocument();
+    expect(screen.queryByText("Generate a proposal draft from the current information.")).not.toBeInTheDocument();
+
+    expect(progress.closest("li")).toBe(
+      progress.closest("ol")?.lastElementChild,
+    );
+
+    await act(async () => {
+      resolvePost({
+        success: true,
+        correlationId: "test-correlation",
+        data: {
+          created: true,
+          message: null,
+          assistantMessageId: null,
+          run: {
+            runType: "proposal_draft",
+            runId: "run-3",
+            jobId: "job-3",
+          },
+        },
+      });
+    });
+  });
+
+  test("a regenerated draft is current and older drafts collapse into history", async () => {
+    const updatedDraftMessage = {
+      ...draftMessage,
+      id: "msg-draft-updated",
+      ordinal: 3,
+      content: "I updated your draft using the latest proposal details.",
+      runId: "run-3",
+      jobId: "job-3",
+      createdAt: "2026-07-21T10:10:00.000Z",
+    };
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: {
+          id: "conv-1",
+          title: "Proposal assistant",
+          status: "active",
+          messageCount: 3,
+          updatedAt: "2026-07-21T10:10:00.000Z",
+        },
+        capabilities: { conversationExtraction: true },
+        messages: [
+          ...conversationWithQuestion.data.messages,
+          draftMessage,
+          updatedDraftMessage,
+        ],
+        questions: [],
+      },
+    } as never);
+    mockedGetDraft.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        run: {
+          id: "run-3",
+          model: "gpt-test",
+          expected_proposal_version: 7,
+        },
+        sections: [],
+        gaps: [],
+        regenerations: [],
+        proposalMutation: false,
+      },
+    } as never);
+    mockedGetProposal.mockResolvedValue(proposalAtVersion(7));
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Updated proposal draft ready",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Current draft")).toBeInTheDocument();
+    expect(screen.getByText("Previous proposal draft")).toBeInTheDocument();
+    expect(screen.getByText("Superseded")).toBeInTheDocument();
+    expect(screen.getByText("I updated your draft using the latest proposal details.")).toBeInTheDocument();
+  });
+
   test("the staleness hint shows only when the proposal moved past the draft's version", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
     mockedGetDraft.mockResolvedValue(draftRun(5));
