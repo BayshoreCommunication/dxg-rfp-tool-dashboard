@@ -16,7 +16,7 @@ const view: EvaluationView = {
   run: { runId: "run-1", status: "ready", sealedPrice: false, assessmentCount: 1, riskCount: 1, questionCount: 1, scoringPolicyVersion: "confirmed-rubric-score.v1", createdAt: "2026-08-12" },
   permission: { owner: true, assigned: true, canViewCommercial: true },
   assignment: { assignmentId: "assignment-1", role: "combined", conflictStatus: "clear", conflictNote: "", status: "open", version: 2, criterionIds: ["criterion-1"], complete: false, overallScore: null },
-  criteria: [{ criterionId: "criterion-1", key: "technical", name: "Technical Approach", description: "Evaluate the cited technical response.", weight: 25, rubricMaximum: 5, priceVisibility: "reviewers", humanOnly: false, requirementIds: ["requirement-1"] }],
+  criteria: [{ criterionId: "criterion-1", key: "technical", name: "Technical Approach", description: "Evaluate the cited technical response.", weight: 25, rubricMaximum: 5, rubricAnchors: [{ score: 3, label: "Meets", description: "The cited response evidence adequately meets the approved requirements." }], priceVisibility: "reviewers", humanOnly: false, requirementIds: ["requirement-1"] }],
   assessments: [{ assessmentId: "assessment-1", requirementId: "requirement-1", requirementTitle: "Provide redundant streaming", mandatory: true, eligibility: false, verdict: "partially_addressed", rationale: "Only partial cited coverage exists.", confidence: 0.42, needsHumanReview: true, reviewReasons: ["low_extraction_confidence"], evidence: [{ fragmentId: "fragment-1", sourceLabel: "Vendor.pdf", locator: { page: 8 }, content: "A backup encoder is available as an option." }] }],
   risks: [{ riskId: "risk-1", category: "mandatory_gap", severity: "high", title: "Mandatory item needs disposition", basis: "This is a review flag, not an automatic disqualification.", question: "Please clarify the redundancy plan.", evidence: [] }],
   commercial: { submittedTotal: 120000, submittedCurrency: "USD", comparable: false, normalizedTotal: null, normalizedCurrency: null, arithmeticStatus: "refused", assumptions: [], refusalCodes: ["UNRESOLVED_OPTIONS_OR_EXCLUSIONS"], policyVersion: "commercial-normalization.v1", lineItems: [] },
@@ -69,4 +69,18 @@ test("sealed price returns no hidden value and offers explicit owner authorizati
   expect(screen.getByText("Commercial values are sealed")).toBeInTheDocument();
   expect(screen.queryByText("$120,000.00")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Grant my assignment access" })).toBeInTheDocument();
+});
+
+test("observer assignments can inspect the evaluation but cannot enter scores", async () => {
+  latest.mockResolvedValue({
+    success: true,
+    data: { ...view, assignment: { ...view.assignment!, role: "observer" } },
+  });
+  render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
+  await screen.findByText("Provide redundant streaming");
+  fireEvent.click(screen.getByRole("button", { name: "Scorecard" }));
+
+  expect(screen.getByText(/observer assignment is read-only/i)).toBeInTheDocument();
+  expect(screen.queryByLabelText("Technical Approach score")).not.toBeInTheDocument();
+  expect(record).not.toHaveBeenCalled();
 });

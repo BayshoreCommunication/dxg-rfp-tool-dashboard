@@ -57,6 +57,7 @@ const messages: Record<string, string> = {
   REQUIREMENT_SET_NOT_APPROVED: "Approve the RFP requirements before generating proposal intelligence.",
   SOURCE_NOT_READY: "Extract this response’s evidence before generating proposal intelligence.",
   CITATION_VALIDATION_FAILED: "The generated claims could not be tied safely to this vendor’s evidence.",
+  CITATION_GROUNDING_FAILED: "A generated numeric claim did not appear in its cited vendor text, so the run was rejected.",
   SCHEMA_VALIDATION_FAILED: "The generated intelligence did not meet the required data contract.",
   AUTHORIZATION_DENIED: "You do not have permission to review this response.",
 };

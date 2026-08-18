@@ -48,7 +48,7 @@ test("restores persisted progress without showing an AI readiness score", async 
   expect(await screen.findByText("1 of 2 vendor snapshots complete")).toBeInTheDocument();
   expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "45");
   expect(screen.queryByText(/readiness/i)).not.toBeInTheDocument();
-  expect(screen.getByText(/does not rank or select vendors/i)).toBeInTheDocument();
+  expect(screen.getByText(/produces an advisory ranking; it never records the final selection/i)).toBeInTheDocument();
 });
 
 test("labels stale runs as readable historical comparisons", async () => {

@@ -39,6 +39,10 @@ const statusTone = {
   superseded: "bg-violet-100 text-violet-800",
 } as const;
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+const freshnessLabel = (reasons: string[]) => reasons.includes("requirement_policy_changed") ? "Generation policy changed" : "Proposal changed";
+const freshnessDetail = (reasons: string[]) => reasons.includes("requirement_policy_changed")
+  ? "The requirement-generation policy has changed, so this historical registry may include descriptive metadata or lack current scoring anchors."
+  : "The proposal version or content has changed since this registry was generated.";
 const sourceLabel = (requirement: RegistryRequirement) => {
   if (requirement.source_kind === "rendered_rfp") {
     return `Rendered RFP · ${String(requirement.source_locator.sectionKey ?? "section").replaceAll("_", " ")}`;
@@ -66,6 +70,7 @@ function RequirementEditor({
   const [importance, setImportance] = useState(requirement.importance);
   const [verification, setVerification] = useState(requirement.verification_method);
   const [eligibility, setEligibility] = useState(requirement.eligibility);
+  const [included, setIncluded] = useState(requirement.included);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const editable = registry.set.status === "draft" || registry.set.status === "in_review";
@@ -89,6 +94,8 @@ function RequirementEditor({
         criterionReviewed: Boolean(criterionId),
         importance,
         verificationMethod: verification,
+        included,
+        inclusionReviewed: true,
       },
     );
     setSaving(false);
@@ -98,7 +105,7 @@ function RequirementEditor({
     } else setMessage(result.message);
   };
 
-  const unresolved = !requirement.mandatory_reviewed || !requirement.criterion_reviewed || requirement.verification_method === "pending";
+  const unresolved = !requirement.inclusion_reviewed || (requirement.included && (!requirement.mandatory_reviewed || !requirement.criterion_reviewed || requirement.verification_method === "pending"));
   return (
     <details className={`group rounded-2xl border bg-white ${unresolved ? "border-amber-200" : "border-slate-200"}`}>
       <summary className="cursor-pointer list-none p-4 marker:hidden">
@@ -110,6 +117,7 @@ function RequirementEditor({
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-extrabold text-slate-900">{requirement.title}</h3>
               {requirement.mandatory_status === "mandatory" && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold uppercase text-rose-700">Mandatory</span>}
+              {!requirement.included && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-600">Excluded</span>}
               {unresolved && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold uppercase text-amber-800">Review needed</span>}
             </div>
             <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-600">{requirement.normalized_text}</p>
@@ -119,6 +127,10 @@ function RequirementEditor({
         </div>
       </summary>
       <form onSubmit={save} className="border-t border-slate-100 p-4 sm:p-5">
+        <label className="mb-4 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700">
+          <input disabled={!editable} type="checkbox" checked={included} onChange={(event) => setIncluded(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+          <span>Include in vendor evaluation<span className="mt-0.5 block font-normal text-slate-500">Exclude planning metadata, repeated narrative, and items that should not affect vendor scoring.</span></span>
+        </label>
         <div className="grid gap-4 lg:grid-cols-2">
           <label className="text-xs font-extrabold text-slate-700 lg:col-span-2">
             Requirement title
@@ -130,32 +142,32 @@ function RequirementEditor({
           </label>
           <label className="text-xs font-extrabold text-slate-700">
             Mandatory status
-            <select disabled={!editable} value={mandatoryStatus} onChange={(event) => setMandatoryStatus(event.target.value as RegistryRequirement["mandatory_status"])} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal disabled:bg-slate-50">
+            <select disabled={!editable || !included} value={mandatoryStatus} onChange={(event) => setMandatoryStatus(event.target.value as RegistryRequirement["mandatory_status"])} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal disabled:bg-slate-50">
               <option value="pending">Needs review</option><option value="mandatory">Mandatory</option><option value="not_mandatory">Not mandatory</option>
             </select>
           </label>
           <label className="text-xs font-extrabold text-slate-700">
             Evaluation criterion
-            <select disabled={!editable} value={criterionId} onChange={(event) => setCriterionId(event.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal disabled:bg-slate-50">
+            <select disabled={!editable || !included} value={criterionId} onChange={(event) => setCriterionId(event.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal disabled:bg-slate-50">
               <option value="">Needs review</option>
               {criteria.map((criterion) => <option key={criterion.id} value={criterion.id}>{criterion.name} · {Number(criterion.weight)}%</option>)}
             </select>
           </label>
           <label className="text-xs font-extrabold text-slate-700">
             Importance
-            <select disabled={!editable} value={importance} onChange={(event) => setImportance(event.target.value as RegistryRequirement["importance"])} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal disabled:bg-slate-50">
+            <select disabled={!editable || !included} value={importance} onChange={(event) => setImportance(event.target.value as RegistryRequirement["importance"])} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal disabled:bg-slate-50">
               <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
             </select>
           </label>
           <label className="text-xs font-extrabold text-slate-700">
             Verification method
-            <select disabled={!editable} value={verification} onChange={(event) => setVerification(event.target.value as RegistryRequirement["verification_method"])} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal disabled:bg-slate-50">
+            <select disabled={!editable || !included} value={verification} onChange={(event) => setVerification(event.target.value as RegistryRequirement["verification_method"])} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal disabled:bg-slate-50">
               <option value="pending">Needs review</option><option value="document">Document</option><option value="narrative">Narrative response</option><option value="demonstration">Demonstration</option><option value="reference">Reference check</option><option value="commercial">Commercial review</option><option value="administrative">Administrative check</option>
             </select>
           </label>
         </div>
         <label className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-700">
-          <input disabled={!editable} type="checkbox" checked={eligibility} onChange={(event) => setEligibility(event.target.checked)} className="h-4 w-4 rounded border-slate-300" /> Failure makes the vendor ineligible
+          <input disabled={!editable || !included} type="checkbox" checked={eligibility} onChange={(event) => setEligibility(event.target.checked)} className="h-4 w-4 rounded border-slate-300" /> Failure makes the vendor ineligible
         </label>
         {editable && <div className="mt-4 flex flex-wrap items-center gap-3"><button disabled={saving} type="submit" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#008ad2] px-4 text-xs font-extrabold text-white disabled:opacity-50"><Save size={14} />{saving ? "Saving…" : "Save review"}</button>{message && <p role="status" className={`text-xs font-semibold ${message.startsWith("Saved") ? "text-emerald-700" : "text-rose-700"}`}>{message}</p>}</div>}
       </form>
@@ -176,7 +188,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
     return (registry?.requirements ?? []).filter((item) => {
-      const unresolved = !item.mandatory_reviewed || !item.criterion_reviewed || item.verification_method === "pending";
+      const unresolved = !item.inclusion_reviewed || (item.included && (!item.mandatory_reviewed || !item.criterion_reviewed || item.verification_method === "pending"));
       return (group === "all" || item.group_key === group) && (!unresolvedOnly || unresolved) && (!query || `${item.title} ${item.normalized_text} ${item.criterion_name ?? ""}`.toLowerCase().includes(query));
     });
   }, [group, registry, search, unresolvedOnly]);
@@ -228,7 +240,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
             </div>
             {registry && <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${statusTone[registry.set.status]}`}>Version {registry.set.version} · {label(registry.set.status)}</span>
-              {registry.freshness.stale && <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-800"><AlertTriangle size={13} /> Proposal changed</span>}
+              {registry.freshness.stale && <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-800"><AlertTriangle size={13} /> {freshnessLabel(registry.freshness.reasons)}</span>}
             </div>}
           </div>
           {sets.length > 0 && <label className="mt-5 block max-w-sm text-xs font-extrabold text-slate-700">Registry version<select disabled={working} value={registry?.set.id ?? ""} onChange={(event) => void chooseSet(event.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal">{sets.map((set) => <option key={set.id} value={set.id}>Version {set.version} · {label(set.status)}{set.freshness.stale ? " · stale" : ""}</option>)}</select></label>}
@@ -244,7 +256,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
           </section>
         ) : (
           <>
-            {registry.freshness.stale && <section className="mt-5 flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-extrabold text-rose-900">This registry no longer matches the proposal</p><p className="mt-1 text-sm text-rose-700">The existing record stays unchanged. Create a new version from the current proposal before using it for evaluation.</p></div>{registry.set.status === "approved" ? <button disabled={working} onClick={() => void supersede()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Supersede with current proposal</button> : <button disabled={working} onClick={() => void generate()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Create current version</button>}</section>}
+            {registry.freshness.stale && <section className="mt-5 flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-extrabold text-rose-900">This registry is historical</p><p className="mt-1 text-sm text-rose-700">{freshnessDetail(registry.freshness.reasons)} The existing record stays unchanged; create a new version before evaluation.</p></div>{registry.set.status === "approved" ? <button disabled={working} onClick={() => void supersede()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Supersede with current proposal</button> : <button disabled={working} onClick={() => void generate()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Create current version</button>}</section>}
 
             <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
               <article className="rounded-2xl border border-slate-200 bg-white p-5">

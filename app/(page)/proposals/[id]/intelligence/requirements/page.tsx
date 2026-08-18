@@ -2,8 +2,10 @@ import { getRequirementSetAction, listRequirementSetsAction } from "@/app/action
 import { getProposalByIdAction } from "@/app/actions/proposals";
 import RequirementRegistryWorkspace from "@/components/proposalIntelligence/RequirementRegistryWorkspace";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 export const maxDuration = 60;
+export const metadata: Metadata = { title: "Requirement Registry | RFPilot" };
 
 export default async function RequirementRegistryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

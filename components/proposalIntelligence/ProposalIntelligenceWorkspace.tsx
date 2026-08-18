@@ -165,6 +165,7 @@ function RequirementMatrix({ requirements, onEvidence }: { requirements: Compari
                 <th scope="row" className="sticky left-0 z-10 border-b border-r border-slate-100 bg-white p-4 align-top">
                   <div className="flex flex-wrap gap-1">
                     {requirement.mandatoryStatus === "mandatory" && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold text-rose-700">Mandatory</span>}
+                    {requirement.eligibility && <span className="rounded-full bg-fuchsia-50 px-2 py-0.5 text-[10px] font-extrabold text-fuchsia-700">Eligibility gate</span>}
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{label(requirement.kind)}</span>
                   </div>
                   <p className="mt-2 text-sm font-extrabold text-slate-950">{requirement.title}</p>
@@ -172,11 +173,14 @@ function RequirementMatrix({ requirements, onEvidence }: { requirements: Compari
                 </th>
                 {requirement.vendors.map((vendor) => (
                   <td key={vendor.participantId} className="border-b border-slate-100 p-4 align-top">
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-extrabold ${verdictTone[vendor.verdict] ?? verdictTone.not_assessable}`}>{label(vendor.verdict)}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-extrabold ${verdictTone[vendor.verdict] ?? verdictTone.not_assessable}`}>{label(vendor.verdict)}</span>
+                      <span className="text-[10px] font-bold text-slate-500">AI assessment confidence {vendor.confidence === null ? "not available" : `${Math.round(vendor.confidence * 100)}%`}</span>
+                    </div>
                     {vendor.needsHumanReview && (
                       <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-amber-800">
                         <AlertTriangle size={12} />
-                        Human review needed
+                        Human review needed{vendor.reviewReasons.length ? `: ${vendor.reviewReasons.map(label).join(", ")}` : ""}
                       </p>
                     )}
                     <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-600">{vendor.rationale}</p>
@@ -216,6 +220,7 @@ function RequirementMatrix({ requirements, onEvidence }: { requirements: Compari
           >
             <div className="flex flex-wrap gap-1">
               {requirement.mandatoryStatus === "mandatory" && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold text-rose-700">Mandatory</span>}
+              {requirement.eligibility && <span className="rounded-full bg-fuchsia-50 px-2 py-0.5 text-[10px] font-extrabold text-fuchsia-700">Eligibility gate</span>}
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{label(requirement.kind)}</span>
             </div>
             <h3 className="mt-2 text-sm font-extrabold text-slate-950">{requirement.title}</h3>
@@ -227,6 +232,8 @@ function RequirementMatrix({ requirements, onEvidence }: { requirements: Compari
                     <span>{vendor.vendorLabel}</span>
                     <span className={`rounded-full px-2 py-0.5 text-[9px] ${verdictTone[vendor.verdict] ?? verdictTone.not_assessable}`}>{label(vendor.verdict)}</span>
                   </summary>
+                  <p className="mt-2 text-[10px] font-bold text-slate-500">AI assessment confidence {vendor.confidence === null ? "not available" : `${Math.round(vendor.confidence * 100)}%`}</p>
+                  {vendor.needsHumanReview && <p className="mt-2 text-[10px] font-bold text-amber-800">Human review needed{vendor.reviewReasons.length ? `: ${vendor.reviewReasons.map(label).join(", ")}` : ""}</p>}
                   <p className="mt-3 text-xs leading-5 text-slate-600">{vendor.rationale}</p>
                   <button
                     type="button"
@@ -263,6 +270,25 @@ function EmptyState({ title, text }: { title: string; text: string }) {
   );
 }
 
+function RecommendationPanel({ workspace }: { workspace: ComparisonWorkspace }) {
+  const recommendation = workspace.recommendation;
+  if (!recommendation) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><strong>No current recommendation policy result is stored for this historical snapshot.</strong> Run a new comparison to produce eligibility-gated ranking and confidence.</div>;
+  const leader = recommendation.bestParticipantId ? recommendation.ranking.find((item) => item.participantId === recommendation.bestParticipantId) : null;
+  const title = recommendation.status === "recommended" && leader
+    ? `${leader.vendorLabel} is the strongest fit`
+    : recommendation.status === "close_call" ? "The leading vendors are a close call" : "No vendor passes all eligibility gates";
+  const tone = recommendation.status === "recommended" ? "border-emerald-200 bg-emerald-50/60" : recommendation.status === "close_call" ? "border-amber-200 bg-amber-50/60" : "border-rose-200 bg-rose-50/60";
+  const confidenceTone = recommendation.confidence === "high" ? "bg-emerald-700 text-white" : recommendation.confidence === "medium" ? "bg-amber-600 text-white" : "bg-rose-700 text-white";
+  const confidenceReason = (reason: string) => ({ close_score_margin: "The leading scores are within the close-call threshold.", unresolved_evidence_reviews: "Evidence reviews remain unresolved.", insufficient_independent_evaluators: "Fewer than two independent evaluators contributed.", high_evaluator_disagreement: "Evaluator scores differ materially on at least one criterion.", mandatory_gaps: "The leading response still has mandatory gaps.", high_risks: "The leading response still has high-severity risks.", no_eligible_vendor: "No response passes every eligibility gate." }[reason] ?? label(reason));
+  return <section className={`rounded-2xl border p-5 ${tone}`} aria-labelledby="recommendation-title">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div className="max-w-4xl"><p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-500">Advisory recommendation · completed human rubric</p><h2 id="recommendation-title" className="mt-2 text-xl font-extrabold text-slate-950">{title}</h2><p className="mt-2 text-sm leading-6 text-slate-700">{recommendation.rationale}</p></div><span className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold uppercase ${confidenceTone}`}>{recommendation.confidence} confidence</span></div>
+    {recommendation.margin !== null && <p className="mt-3 text-xs font-bold text-slate-600">Weighted-score margin: {recommendation.margin.toFixed(2)} points{recommendation.status === "close_call" ? " · below the 2-point sole-leader threshold" : ""}</p>}
+    {recommendation.confidenceReasons.length > 0 && <div className="mt-3 rounded-xl border border-white/80 bg-white/70 p-3"><p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500">Why confidence is limited</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-5 text-slate-700">{recommendation.confidenceReasons.map((reason) => <li key={reason}>{confidenceReason(reason)}</li>)}</ul></div>}
+    <ol className="mt-4 grid gap-3 lg:grid-cols-2">{recommendation.ranking.map((item) => <li key={item.participantId} className="rounded-xl border border-white/80 bg-white/80 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-extrabold text-slate-950">{item.rank ? `#${item.rank} ` : ""}{item.vendorLabel}</p><p className="mt-1 text-xs text-slate-500">Human rubric contribution {item.score.toFixed(2)} / 100</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${item.eligible ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{item.eligible ? "Eligible" : `${item.eligibilityFailures} eligibility failure${item.eligibilityFailures === 1 ? "" : "s"}`}</span></div><div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold text-slate-600"><span>{item.evaluatorCount} evaluator{item.evaluatorCount === 1 ? "" : "s"}</span><span>·</span><span>max spread {item.maxCriterionSpread.toFixed(2)}</span><span>·</span><span>{item.mandatoryGaps} mandatory gap{item.mandatoryGaps === 1 ? "" : "s"}</span><span>·</span><span>{item.highRisks} high risk{item.highRisks === 1 ? "" : "s"}</span><span>·</span><span>{item.unresolvedReviews} unresolved review{item.unresolvedReviews === 1 ? "" : "s"}</span></div></li>)}</ol>
+    <p className="mt-4 text-xs leading-5 text-slate-600"><strong>Decision boundary:</strong> this result orders completed human scores after planner-defined eligibility gates. Mandatory gaps and risks remain visible trade-offs; reviewers retain the final award decision.</p>
+  </section>;
+}
+
 function ExecutiveReport({ proposalId, workspace }: { proposalId: string; workspace: ComparisonWorkspace }) {
   const overview = workspace.intelligence.overview;
   const reportBase = `/proposals/${proposalId}/intelligence/comparisons/${workspace.run.runId}`;
@@ -273,12 +299,13 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
     { label: "Unresolved reviews", value: overview.unresolvedReviewCount },
     { label: "Evaluator completion", value: `${overview.evaluatorCompletedCount}/${overview.evaluatorAssignedCount}` },
   ];
+  const recommendationOrder = new Map(workspace.recommendation?.ranking.map((item, index) => [item.participantId, index]) ?? []);
   const vendorSnapshots = workspace.participants.map((participant) => ({
     participant,
     commercial: workspace.intelligence.commercial.find((item) => item.participantId === participant.participantId),
     evaluation: workspace.intelligence.evaluation.find((item) => item.participantId === participant.participantId),
     risks: workspace.intelligence.risks.filter((item) => item.participantId === participant.participantId),
-  }));
+  })).sort((left, right) => (recommendationOrder.get(left.participant.participantId) ?? Number.MAX_SAFE_INTEGER) - (recommendationOrder.get(right.participant.participantId) ?? Number.MAX_SAFE_INTEGER));
   const formatMoney = (amount: number | null, currency: string | null) =>
     amount === null
       ? "Not submitted"
@@ -299,7 +326,7 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
           </div>
           <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-emerald-400/15 px-3 py-2 text-xs font-extrabold text-emerald-200">
             <CheckCircle2 size={14} />
-            Comparison ready to review
+            {workspace.freshness.state === "stale" ? "Historical comparison" : workspace.recommendation ? "Comparison ready to review" : "Recommendation unavailable"}
           </span>
         </div>
       </header>
@@ -323,11 +350,13 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
           </dl>
         </section>
 
+        <div className="mt-8"><RecommendationPanel workspace={workspace} /></div>
+
         <section className="mt-8" aria-labelledby="vendor-report-title">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 id="vendor-report-title" className="font-extrabold text-slate-950">Vendor comparison</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Vendors are shown in the saved response order, not ranked or recommended.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{workspace.recommendation ? "Order follows the persisted eligibility-gated human rubric ranking shown above." : "Vendor cards follow the frozen comparison manifest order because this historical snapshot has no recommendation."}</p>
             </div>
             <Link href={`${reportBase}/requirements`} className="inline-flex min-h-9 items-center gap-1 text-xs font-extrabold text-[#0077b6] hover:underline">Open requirement matrix <ChevronRight size={13} /></Link>
           </div>
@@ -542,7 +571,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
   const formatMoney = (amount: number | null, currency: string | null) =>
     amount === null
       ? "Not submitted"
-      : new Intl.NumberFormat(undefined, {
+      : new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: currency || "USD",
           maximumFractionDigits: 2,
@@ -633,7 +662,8 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
         <section className="mt-5">
           {tab === "overview" && (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <RecommendationPanel workspace={workspace} />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 {summary.map((item) => (
                   <article key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4">
                     <item.icon size={17} className="text-[#008ad2]" />
@@ -681,7 +711,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
             (!workspace.intelligence.permissions.viewCommercial ? (
               <EmptyState title="Commercial values are sealed" text="This comparison manifest hides pricing. The API has omitted submitted totals, normalized totals, and line items." />
             ) : (
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 {workspace.intelligence.commercial.map((item) => (
                   <article key={item.participantId} className="rounded-2xl border border-slate-200 bg-white p-5">
                     <div className="flex items-start justify-between gap-3">
@@ -763,11 +793,12 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
             ))}
           {tab === "evaluation" && (
             <>
+              <RecommendationPanel workspace={workspace} />
               <div className="grid gap-4 lg:grid-cols-2">
                 {workspace.intelligence.evaluation.map((item) => (
                   <article key={item.participantId} className="rounded-2xl border border-slate-200 bg-white p-5">
                     <h2 className="font-extrabold text-slate-950">{item.vendorLabel}</h2>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">Human scoring recorded for this comparison. Vendors are shown in saved response order, not ranked.</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">Human scoring recorded for this comparison. The advisory ranking above applies eligibility gates before ordering completed contributions.</p>
                     <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <div>
                         <dt className="text-[10px] font-extrabold uppercase text-slate-500">Contribution</dt>

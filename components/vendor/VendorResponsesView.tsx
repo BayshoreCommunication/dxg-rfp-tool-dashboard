@@ -33,9 +33,13 @@ import VendorEvaluationSection from "./VendorEvaluationSection";
 type Props = {
   initialResponses: VendorResponseItem[];
   initialUnreadCount: number;
+  initialGlobalUnreadCount?: number;
   currentPage: number;
   totalPages: number;
   totalCount: number;
+  basePath?: string;
+  backHref?: string;
+  proposalTitle?: string;
 };
 
 const formatDate = (iso: string) =>
@@ -64,15 +68,20 @@ const initials = (name: string) =>
 export default function VendorResponsesView({
   initialResponses,
   initialUnreadCount,
+  initialGlobalUnreadCount = initialUnreadCount,
   currentPage,
   totalPages,
   totalCount,
+  basePath = "/vendor-responses",
+  backHref,
+  proposalTitle,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [responses, setResponses] = useState(initialResponses);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const unreadCountRef = useRef(initialUnreadCount);
+  const globalUnreadCountRef = useRef(initialGlobalUnreadCount);
   const markingReadIds = useRef(new Set<string>());
   const [selected, setSelected] = useState<VendorResponseItem | null>(
     initialResponses[0] ?? null,
@@ -110,7 +119,9 @@ export default function VendorResponsesView({
       const nextCount = Math.max(0, unreadCountRef.current - 1);
       unreadCountRef.current = nextCount;
       setUnreadCount(nextCount);
-      publishVendorUnreadCount(nextCount);
+      const nextGlobalCount = Math.max(0, globalUnreadCountRef.current - 1);
+      globalUnreadCountRef.current = nextGlobalCount;
+      publishVendorUnreadCount(nextGlobalCount);
     }
   }, []);
 
@@ -135,14 +146,14 @@ export default function VendorResponsesView({
   const goToPage = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(page));
-    router.push(`/vendor-responses?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   };
 
   const toggleUnreadOnly = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", "1");
     params.set("unreadOnly", unreadOnly ? "false" : "true");
-    router.push(`/vendor-responses?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   };
 
   return (
@@ -153,13 +164,21 @@ export default function VendorResponsesView({
             <Inbox size={20} strokeWidth={2.2} />
           </div>
           <div>
+            {backHref && (
+              <Link
+                href={backHref}
+                className="mb-1 inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-[#008ad2] hover:text-[#0076b4]"
+              >
+                <ArrowLeft size={12} aria-hidden="true" /> All proposals
+              </Link>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
-                Vendor Responses
+                {proposalTitle || "Vendor Responses"}
               </h1>
             </div>
             <p className="mt-0.5 text-xs text-slate-500">
-              {totalCount} total responses
+              {totalCount} {totalCount === 1 ? "vendor response" : "vendor responses"}
               {unreadCount > 0 && (
                 <span className="ml-2 font-bold text-[#008ad2]">
                   · {unreadCount} unread

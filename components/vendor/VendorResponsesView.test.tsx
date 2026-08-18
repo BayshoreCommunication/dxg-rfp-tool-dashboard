@@ -119,6 +119,62 @@ it("returns from unread-only mode to all responses", () => {
   );
 });
 
+it("keeps filtering and paging inside the opened proposal", () => {
+  currentSearch = "page=2";
+  render(
+    <VendorResponsesView
+      initialResponses={[response]}
+      initialUnreadCount={1}
+      currentPage={2}
+      totalPages={3}
+      totalCount={41}
+      proposalTitle="Annual Summit"
+      basePath="/vendor-responses/proposals/proposal-1"
+      backHref="/vendor-responses"
+    />,
+  );
+
+  expect(
+    screen.getByRole("link", { name: "All proposals" }),
+  ).toHaveAttribute("href", "/vendor-responses");
+  fireEvent.click(screen.getByRole("button", { name: "Unread only" }));
+  expect(push).toHaveBeenCalledWith(
+    "/vendor-responses/proposals/proposal-1?page=1&unreadOnly=true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+  expect(push).toHaveBeenCalledWith(
+    "/vendor-responses/proposals/proposal-1?page=3",
+  );
+});
+
+it("publishes the global unread total while showing the proposal unread total", async () => {
+  const unreadCountChanged = jest.fn();
+  window.addEventListener(
+    VENDOR_UNREAD_COUNT_CHANGED_EVENT,
+    unreadCountChanged,
+  );
+  render(
+    <VendorResponsesView
+      initialResponses={[response]}
+      initialUnreadCount={1}
+      initialGlobalUnreadCount={5}
+      currentPage={1}
+      totalPages={1}
+      totalCount={1}
+    />,
+  );
+  await waitFor(() => {
+    expect(unreadCountChanged).toHaveBeenCalledTimes(1);
+  });
+  expect((unreadCountChanged.mock.calls[0][0] as CustomEvent).detail).toEqual({
+    count: 4,
+  });
+  window.removeEventListener(
+    VENDOR_UNREAD_COUNT_CHANGED_EVENT,
+    unreadCountChanged,
+  );
+});
+
 it("renders real response content without a demo label", () => {
   renderView();
 

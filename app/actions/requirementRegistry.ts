@@ -30,6 +30,8 @@ export type RegistryRequirement = {
   criterion_reviewed: boolean;
   importance: "high" | "medium" | "low";
   verification_method: "pending" | "document" | "narrative" | "demonstration" | "reference" | "commercial" | "administrative";
+  included: boolean;
+  inclusion_reviewed: boolean;
   group_key: string;
   ordinal: number;
 };
@@ -113,6 +115,8 @@ export const updateRegistryRequirementAction = async (
     criterionReviewed?: boolean;
     importance?: RegistryRequirement["importance"];
     verificationMethod?: RegistryRequirement["verification_method"];
+    included?: boolean;
+    inclusionReviewed?: boolean;
   },
 ) => call<RequirementRegistryView>(`${base(proposalId)}/${encodeURIComponent(setId)}/requirements/${encodeURIComponent(requirementId)}`, {
   method: "PATCH",

@@ -15,15 +15,29 @@ const workspace = (viewCommercial = true): ComparisonWorkspace => ({
   schemaVersion: "proposal-intelligence-comparison.v1",
   run: { runId, status: "succeeded", progress: 100, progressStage: "completed", participantCount: 2, completedParticipantCount: 2, warnings: [], createdAt: "2026-08-12T00:00:00.000Z", completedAt: "2026-08-12T00:10:00.000Z" },
   freshness: { state: "current", reasons: [] },
-  manifest: { manifestId: "manifest", checksum: "a".repeat(64), proposalVersion: "1", requirementSetVersion: 1, evaluationMatrixVersion: 1, priceVisibility: viewCommercial ? "reviewers" : "hidden", policies: { extraction: "v1", assessment: "v1", commercial: "v1", scoring: "v1" } },
+  manifest: { manifestId: "manifest", checksum: "a".repeat(64), proposalVersion: "1", requirementSetVersion: 1, evaluationMatrixVersion: 1, priceVisibility: viewCommercial ? "reviewers" : "hidden", policies: { extraction: "v1", assessment: "v1", commercial: "v1", scoring: "v1", comparison: "v3", recommendation: "human-rubric-recommendation.v1" } },
   participants: [
     { participantId, vendorLabel: "Northstar AV", submissionId: "1".repeat(24), versionId: "2".repeat(24), status: "succeeded", stage: "completed", warningCount: 0, safeErrorCode: null },
     { participantId: `${participantId.slice(0, -1)}c`, vendorLabel: "Civic Events", submissionId: "3".repeat(24), versionId: "4".repeat(24), status: "succeeded", stage: "completed", warningCount: 0, safeErrorCode: null },
   ],
   jobs: [],
+  recommendation: {
+    policyVersion: "human-rubric-recommendation.v1",
+    status: "recommended",
+    bestParticipantId: participantId,
+    strongestParticipantIds: [participantId],
+    confidence: "high",
+    confidenceReasons: [],
+    margin: 8,
+    rationale: "Northstar AV has the highest completed human rubric score among vendors that pass all planner-designated eligibility requirements.",
+    ranking: [
+      { participantId, vendorLabel: "Northstar AV", score: 72, evaluatorCount: 3, maxCriterionSpread: 0.5, eligible: true, eligibilityFailures: 0, mandatoryGaps: 0, unresolvedReviews: 0, highRisks: 0, rank: 1 },
+      { participantId: `${participantId.slice(0, -1)}c`, vendorLabel: "Civic Events", score: 64, evaluatorCount: 3, maxCriterionSpread: 1, eligible: true, eligibilityFailures: 0, mandatoryGaps: 1, unresolvedReviews: 0, highRisks: 1, rank: 2 },
+    ],
+  },
   intelligence: {
     overview: { responseCount: 2, versionCount: 2, approvedRequirementCount: 1, mandatoryGapCount: 0, unresolvedReviewCount: 0, evaluatorCompletedCount: 1, evaluatorAssignedCount: 2 },
-    requirements: [{ requirementId: "requirement", key: "technical_audio", kind: "technical", title: "Provide plenary audio", text: "Supply a complete plenary audio system.", mandatoryStatus: "mandatory", eligibility: false, importance: "high", verificationMethod: "document", groupKey: "production", ordinal: 0, vendors: [{ participantId, vendorLabel: "Northstar AV", assessmentId: "assessment", verdict: "addressed", rationale: "The response specifies the proposed system.", confidence: 0.9, needsHumanReview: false, reviewReasons: [], evidence: [{ evidenceId: "evidence", supportRole: "supports", sourceLabel: "Technical response.pdf", sourceChecksum: "b".repeat(64), locator: { page: 12 }, excerpt: "A redundant digital audio system will serve the plenary.", contentChecksum: "c".repeat(64), trustClass: "untrusted_vendor_content", facts: [] }], reviewHistory: [] }] }],
+    requirements: [{ requirementId: "requirement", key: "technical_audio", kind: "technical", title: "Provide plenary audio", text: "Supply a complete plenary audio system.", mandatoryStatus: "mandatory", eligibility: true, importance: "high", verificationMethod: "document", groupKey: "production", ordinal: 0, vendors: [{ participantId, vendorLabel: "Northstar AV", assessmentId: "assessment", verdict: "addressed", rationale: "The response specifies the proposed system.", confidence: 0.9, needsHumanReview: false, reviewReasons: [], evidence: [{ evidenceId: "evidence", supportRole: "supports", sourceLabel: "Technical response.pdf", sourceChecksum: "b".repeat(64), locator: { page: 12 }, excerpt: "A redundant digital audio system will serve the plenary.", contentChecksum: "c".repeat(64), trustClass: "untrusted_vendor_content", facts: [] }], reviewHistory: [] }] }],
     technical: [], permissions: { viewCommercial },
     commercial: viewCommercial ? [{ participantId, vendorLabel: "Northstar AV", submittedTotal: 100000, submittedCurrency: "USD", basis: "vendor_stated", comparable: true, normalizedTotal: 100000, normalizedCurrency: "USD", arithmeticStatus: "verified_identity", assumptions: [], refusalCodes: [], policyVersion: "v1", lineItems: [] }] : [],
     risks: [], evaluation: [{ participantId, vendorLabel: "Northstar AV", submittedScores: 1, submittedEvaluators: 1, weightedContributionTotal: 72, evaluatorCount: 2, completedEvaluatorCount: 1, conflictCount: 0 }], decisions: [],
@@ -43,6 +57,8 @@ test("keeps every tab bound to the same run and opens exact cited evidence", asy
   expect(screen.getByRole("dialog", { name: "Provide plenary audio" })).toBeInTheDocument();
   expect(screen.getByText("Technical response.pdf")).toBeInTheDocument();
   expect(screen.getByText(/redundant digital audio system/)).toBeInTheDocument();
+  expect(screen.getAllByText("Eligibility gate")).toHaveLength(2);
+  expect(screen.getAllByText("AI assessment confidence 90%")).toHaveLength(2);
   expect(screen.getByRole("combobox", { name: "Comparison run" })).toHaveTextContent("Aug 12, 2026, 12:00 AM UTC");
 });
 
@@ -51,6 +67,10 @@ test("shows the comparison snapshot directly as a readable executive report with
   render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="reports" initialWorkspace={value} runs={runs(value)} />);
   expect(screen.getByRole("heading", { name: "Your vendor comparison at a glance" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Vendor comparison" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Northstar AV is the strongest fit" })).toBeInTheDocument();
+  expect(screen.getByText(/high confidence/i)).toBeInTheDocument();
+  expect(screen.getByText("Human rubric contribution 72.00 / 100")).toBeInTheDocument();
+  expect(screen.getByText("1 mandatory gap")).toBeInTheDocument();
   expect(screen.getByText(/RFPilot organizes the evidence for your team/)).toBeInTheDocument();
   expect(screen.getByText("Comparison ready to review")).toBeInTheDocument();
   expect(screen.queryByText("View comparison details")).not.toBeInTheDocument();
@@ -86,4 +106,22 @@ test("records only an explicit human selection and starts with no vendor selecte
   await userEvent.type(screen.getByLabelText("Decision rationale"), "Best fit after committee review of the frozen evidence.");
   await userEvent.click(screen.getByRole("button", { name: "Record decision" }));
   await waitFor(() => expect(recordComparisonDecisionAction).toHaveBeenCalledWith("f".repeat(24), runId, expect.objectContaining({ decisionType: "selection", selectedParticipantIds: [participantId] })));
+});
+
+test("labels closely matched eligible vendors as a close call instead of choosing one", () => {
+  const value = workspace();
+  value.recommendation = {
+    ...value.recommendation!,
+    status: "close_call",
+    bestParticipantId: null,
+    strongestParticipantIds: value.participants.map((item) => item.participantId),
+    confidence: "low",
+    confidenceReasons: ["close_score_margin"],
+    margin: 1,
+    rationale: "The top eligible vendors are separated by less than the configured sole-leader threshold.",
+  };
+  render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="overview" initialWorkspace={value} runs={runs(value)} />);
+  expect(screen.getByRole("heading", { name: "The leading vendors are a close call" })).toBeInTheDocument();
+  expect(screen.getByText(/below the 2-point sole-leader threshold/)).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: /is the strongest fit/ })).not.toBeInTheDocument();
 });

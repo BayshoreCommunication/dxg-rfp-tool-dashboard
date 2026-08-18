@@ -1,13 +1,21 @@
-import { listComparisonsAction } from "@/app/actions/comparisonOrchestration";
+import { getComparisonWorkspaceAction, listComparisonsAction } from "@/app/actions/comparisonOrchestration";
+import { getEvidenceExtractionsAction } from "@/app/actions/evidenceExtraction";
 import { getProposalByIdAction } from "@/app/actions/proposals";
 import { listRequirementSetsAction } from "@/app/actions/requirementRegistry";
+import { getLatestVendorIntelligenceAction } from "@/app/actions/vendorIntelligence";
 import { getVendorResponsesAction, type VendorResponseItem } from "@/app/actions/vendorResponse";
+import ProposalIntelligenceLiveRun, { type ProposalAnalysisParticipant } from "@/components/proposalIntelligence/ProposalIntelligenceLiveRun";
+import ProposalComparisonMatrix from "@/components/proposalIntelligence/ProposalComparisonMatrix";
+import ProposalReweighting from "@/components/proposalIntelligence/ProposalReweighting";
+import ProposalVerdict from "@/components/proposalIntelligence/ProposalVerdict";
 import VendorComparisonPanel from "@/components/vendor/VendorComparisonPanel";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, FileStack, History, Scale, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 export const maxDuration = 60;
+export const metadata: Metadata = { title: "Proposal Intelligence | RFPilot" };
 
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
@@ -31,8 +39,31 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
   const approvedSet = sets.find((item) => item.status === "approved" && !item.freshness.stale);
   const comparisons = comparisonsResult.success ? comparisonsResult.data : [];
   const currentRun = comparisons.find((item) => item.freshness.state === "current") ?? comparisons[0];
+  const workspacePromise = currentRun?.run.status.startsWith("succeeded")
+    ? getComparisonWorkspaceAction(id, currentRun.run.runId)
+    : Promise.resolve(null);
   const readyResponses = responses.filter((item) => item.submissionId && item.currentVersionId).length;
   const readiness = approvedSet && readyResponses >= 2 ? "Ready to compare" : approvedSet ? "More responses needed" : "Requirements need approval";
+  const analysisPromise = Promise.all(responses.flatMap((response) =>
+    response.submissionId && response.currentVersionId ? [Promise.all([
+      getEvidenceExtractionsAction(id, response.submissionId, response.currentVersionId),
+      getLatestVendorIntelligenceAction(id, response.submissionId, response.currentVersionId),
+    ]).then(([extraction, intelligence]): ProposalAnalysisParticipant => ({
+      responseId: response._id,
+      vendorLabel: response.vendorName || response.submittedBy || "Unnamed respondent",
+      submissionId: response.submissionId!,
+      versionId: response.currentVersionId!,
+      documentNames: response.documents.map((document) => document.name),
+      extraction: extraction.success ? extraction.data : { status: "not_started", runs: [] },
+      intelligence: intelligence.success ? intelligence.data : null,
+      error: !extraction.success
+        ? extraction.message
+        : !intelligence.success && intelligence.code !== "INTELLIGENCE_RUN_NOT_FOUND"
+          ? intelligence.message
+          : undefined,
+    }))] : []));
+  const [workspaceResult, analysisParticipants] = await Promise.all([workspacePromise, analysisPromise]);
+  const currentWorkspace = workspaceResult?.success ? workspaceResult.data : null;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
@@ -44,7 +75,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
               <div>
                 <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Proposal intelligence</p>
                 <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{title}</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Review frozen vendor versions against approved requirements, inspect cited evidence, and record a human decision without automated ranking.</p>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Review frozen vendor versions against approved requirements, inspect cited evidence, and use an eligibility-gated advisory ranking after completed human scoring. Reviewers retain the final vendor decision.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-700">{label(status)}</span>
@@ -61,6 +92,13 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
             ].map((item) => <div key={item.label} className="bg-white p-4 sm:p-5"><item.icon size={17} className="text-[#008ad2]" /><p className="mt-3 text-xl font-extrabold text-slate-950">{item.value}</p><p className="mt-1 text-xs font-semibold text-slate-500">{item.label}</p></div>)}
           </div>
         </header>
+
+        <ProposalIntelligenceLiveRun
+          proposalId={id}
+          initialParticipants={analysisParticipants}
+          comparison={currentRun}
+        />
+        {currentWorkspace && <><ProposalComparisonMatrix workspace={currentWorkspace} /><ProposalReweighting workspace={currentWorkspace} /><ProposalVerdict workspace={currentWorkspace} proposalId={id} /></>}
 
         <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
           <article className="rounded-2xl border border-slate-200 bg-white p-5">

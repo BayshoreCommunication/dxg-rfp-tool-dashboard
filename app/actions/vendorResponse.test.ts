@@ -1,5 +1,8 @@
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
-import { getVendorSubmissionDetailAction } from "./vendorResponse";
+import {
+  getVendorResponseProposalsAction,
+  getVendorSubmissionDetailAction,
+} from "./vendorResponse";
 
 jest.mock("@/lib/server/backendClient", () => ({
   authenticatedBackendFetch: jest.fn(),
@@ -92,6 +95,82 @@ it("rejects a malformed version contract instead of showing invented history", a
     versions: [{ ...payload.versions[0], reason: "winner_selected" }],
   });
   await expect(getVendorSubmissionDetailAction("response-1")).resolves.toEqual({
+    success: false,
+    message: "The vendor response service returned an unexpected response.",
+  });
+});
+
+it("loads and validates proposal-level vendor response summaries", async () => {
+  jest.mocked(authenticatedBackendFetch).mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      success: true,
+      data: [
+        {
+          proposalId: "proposal-1",
+          proposalTitle: "Annual Summit",
+          responseCount: 4,
+          unreadCount: 2,
+          latestResponseAt: "2026-08-16T10:00:00.000Z",
+          latestVendorName: "Apex Events",
+        },
+      ],
+      pagination: { total: 1, page: 1, limit: 12, totalPages: 1 },
+      responseCount: 4,
+      unreadCount: 2,
+    }),
+  } as Response);
+
+  const result = await getVendorResponseProposalsAction({
+    page: 1,
+    search: "Annual Summit",
+  });
+
+  expect(authenticatedBackendFetch).toHaveBeenCalledWith(
+    expect.stringContaining(
+      "/api/vendor-responses/proposals?page=1&limit=12&search=Annual+Summit",
+    ),
+    { cache: "no-store" },
+  );
+  expect(result).toEqual({
+    success: true,
+    data: {
+      proposals: [
+        expect.objectContaining({
+          proposalId: "proposal-1",
+          responseCount: 4,
+          unreadCount: 2,
+        }),
+      ],
+      pagination: { total: 1, page: 1, limit: 12, totalPages: 1 },
+      responseCount: 4,
+      unreadCount: 2,
+    },
+  });
+});
+
+it("rejects impossible proposal summary counts", async () => {
+  jest.mocked(authenticatedBackendFetch).mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      success: true,
+      data: [
+        {
+          proposalId: "proposal-1",
+          proposalTitle: "Annual Summit",
+          responseCount: 1,
+          unreadCount: 2,
+          latestResponseAt: "2026-08-16T10:00:00.000Z",
+          latestVendorName: "Apex Events",
+        },
+      ],
+      pagination: { total: 1, page: 1, limit: 12, totalPages: 1 },
+      responseCount: 1,
+      unreadCount: 0,
+    }),
+  } as Response);
+
+  await expect(getVendorResponseProposalsAction()).resolves.toEqual({
     success: false,
     message: "The vendor response service returned an unexpected response.",
   });

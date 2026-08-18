@@ -52,12 +52,31 @@ test("preserves contradictory facts and supports append-only correction review",
   fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
   await waitFor(() => expect(review).toHaveBeenCalledWith(
     "proposal", "submission", "version", "run-1",
-    expect.objectContaining({ targetType: "fact", targetId: "fact-1", decision: "corrected", correctedPayload: { normalizedValue: "USD 125000", typedValue: { kind: "string", text: "USD 125000" } } }),
+    expect.objectContaining({ targetType: "fact", targetId: "fact-1", decision: "corrected", correctedPayload: { normalizedValue: "USD 125000", typedValue: { kind: "money", number: 125000, currency: "USD" } } }),
     expect.any(String),
   ));
+});
+
+test("rejects a correction that does not match the extracted fact type", async () => {
+  render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
+  await screen.findByText("Provide a complete staffing plan");
+  fireEvent.click(screen.getByRole("button", { name: "Typed facts" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Correct" })[0]);
+  fireEvent.change(screen.getByLabelText("Corrected value"), { target: { value: "not a price" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(/does not match this fact’s type/i);
+  expect(review).not.toHaveBeenCalled();
 });
 
 test("explains that intelligence cannot make an award decision", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   expect(await screen.findByText(/It does not rank, shortlist, or select the vendor/)).toBeInTheDocument();
+});
+
+test("makes incomplete source coverage visible and explains the evaluation block", async () => {
+  latest.mockResolvedValue({ success: true, data: { ...completed, run: { ...completed.run, warnings: [{ code: "SOURCE_COVERAGE_INCOMPLETE", sourceLabel: "Technical.pdf", message: "This source was only partially readable." }] } } });
+  render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/evaluation and vendor comparison are blocked/i);
+  expect(screen.getByRole("alert")).toHaveTextContent(/Technical\.pdf: This source was only partially readable/i);
 });

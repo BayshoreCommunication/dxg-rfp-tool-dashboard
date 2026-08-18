@@ -28,8 +28,20 @@ export type ComparisonRequirement = {
   importance: string; verificationMethod: string; groupKey: string; ordinal: number;
   vendors: Array<{ participantId: string; vendorLabel: string; assessmentId: string | null; verdict: string; rationale: string; confidence: number | null; needsHumanReview: boolean; reviewReasons: string[]; evidence: ComparisonEvidence[]; reviewHistory: Array<{ reviewId: string; decision: string; reasonCode: string; note: string; actorUserId: string; createdAt: string }> }>;
 };
+export type ComparisonRecommendation = {
+  policyVersion: string;
+  status: "recommended" | "close_call" | "no_eligible_vendor";
+  bestParticipantId: string | null;
+  strongestParticipantIds: string[];
+  confidence: "high" | "medium" | "low";
+  confidenceReasons: string[];
+  margin: number | null;
+  rationale: string;
+  ranking: Array<{ participantId: string; vendorLabel: string; score: number; evaluatorCount: number; maxCriterionSpread: number; eligible: boolean; eligibilityFailures: number; mandatoryGaps: number; unresolvedReviews: number; highRisks: number; rank: number | null }>;
+};
 export type ComparisonWorkspace = ComparisonView & {
-  manifest: { manifestId: string; checksum: string; proposalVersion: string; requirementSetVersion: number; evaluationMatrixVersion: number; priceVisibility: "reviewers" | "committee" | "hidden"; policies: { extraction: string; assessment: string; commercial: string; scoring: string } };
+  manifest: { manifestId: string; checksum: string; proposalVersion: string; requirementSetVersion: number; evaluationMatrixVersion: number; priceVisibility: "reviewers" | "committee" | "hidden"; policies: { extraction: string; assessment: string; commercial: string; scoring: string; comparison: string; recommendation: string } };
+  recommendation: ComparisonRecommendation | null;
   intelligence: {
     overview: { responseCount: number; versionCount: number; approvedRequirementCount: number; mandatoryGapCount: number; unresolvedReviewCount: number; evaluatorCompletedCount: number; evaluatorAssignedCount: number };
     requirements: ComparisonRequirement[];
@@ -37,7 +49,7 @@ export type ComparisonWorkspace = ComparisonView & {
     permissions: { viewCommercial: boolean };
     commercial: Array<{ participantId: string; vendorLabel: string; submittedTotal: number | null; submittedCurrency: string | null; basis: string | null; comparable: boolean; normalizedTotal: number | null; normalizedCurrency: string | null; arithmeticStatus: string | null; assumptions: unknown[]; refusalCodes: string[]; policyVersion: string | null; lineItems: Array<{ lineItemId: string; category: string; description: string; amount: number | null; currency: string | null; optionOrExclusion: boolean }> }>;
     risks: Array<{ participantId: string; vendorLabel: string; riskId: string; requirementId: string | null; category: string; severity: string; title: string; basis: string; disposition: string; questionId: string | null; question: string | null; evidence: ComparisonEvidence[] }>;
-    evaluation: Array<{ participantId: string; vendorLabel: string; submittedScores: number; submittedEvaluators: number; weightedContributionTotal: number; evaluatorCount: number; completedEvaluatorCount: number; conflictCount: number }>;
+    evaluation: Array<{ participantId: string; vendorLabel: string; submittedScores: number; submittedEvaluators: number; weightedContributionTotal: number; evaluatorCount: number; completedEvaluatorCount: number; conflictCount: number; criteria?: Array<{ criterionId: string; name: string; meanScore: number; meanWeightedContribution: number; spread: number; rubricMaximum: number; originalWeight: number }> }>;
     decisions: Array<{ decisionId: string; decisionType: "shortlist" | "selection" | "no_award"; selectedParticipantIds: string[]; rationale: string; staleAcknowledged: boolean; manifestChecksum: string; supersedesDecisionId: string | null; createdAt: string }>;
   };
 };
@@ -74,6 +86,20 @@ const parseRequirement = (value: unknown): ComparisonRequirement | null => {
   });
   return { requirementId: value.requirementId, key: String(value.key ?? ""), kind: String(value.kind ?? ""), title: value.title, text: String(value.text ?? ""), mandatoryStatus: String(value.mandatoryStatus ?? ""), eligibility: value.eligibility === true, importance: String(value.importance ?? ""), verificationMethod: String(value.verificationMethod ?? ""), groupKey: String(value.groupKey ?? ""), ordinal: num(value.ordinal), vendors };
 };
+const parseRecommendation = (value: unknown): ComparisonRecommendation | null => {
+  if (!isRecord(value) || !["recommended", "close_call", "no_eligible_vendor"].includes(String(value.status)) || !["high", "medium", "low"].includes(String(value.confidence)) || !Array.isArray(value.ranking)) return null;
+  const ranking = value.ranking.flatMap((item) => isRecord(item) && typeof item.participantId === "string" ? [{
+    participantId: item.participantId, vendorLabel: String(item.vendorLabel ?? "Vendor"), score: num(item.score), eligible: item.eligible === true,
+    evaluatorCount: num(item.evaluatorCount), maxCriterionSpread: num(item.maxCriterionSpread), eligibilityFailures: num(item.eligibilityFailures), mandatoryGaps: num(item.mandatoryGaps), unresolvedReviews: num(item.unresolvedReviews), highRisks: num(item.highRisks), rank: item.rank === null ? null : num(item.rank),
+  }] : []);
+  if (ranking.length !== value.ranking.length) return null;
+  return {
+    policyVersion: String(value.policyVersion ?? ""), status: value.status as ComparisonRecommendation["status"],
+    bestParticipantId: nullableString(value.bestParticipantId), strongestParticipantIds: strings(value.strongestParticipantIds),
+    confidence: value.confidence as ComparisonRecommendation["confidence"], confidenceReasons: strings(value.confidenceReasons), margin: value.margin === null ? null : num(value.margin),
+    rationale: String(value.rationale ?? ""), ranking,
+  };
+};
 const parseWorkspace = (value: unknown): ComparisonWorkspace | null => {
   const view = parseView(value);
   if (!view || !isRecord(value) || !isRecord(value.manifest) || !isRecord(value.intelligence)) return null;
@@ -86,13 +112,18 @@ const parseWorkspace = (value: unknown): ComparisonWorkspace | null => {
   const overview = intelligence.overview;
   const commercial = (Array.isArray(intelligence.commercial) ? intelligence.commercial : []).flatMap((item) => isRecord(item) && typeof item.participantId === "string" ? [{ participantId: item.participantId, vendorLabel: String(item.vendorLabel ?? "Vendor"), submittedTotal: item.submittedTotal === null ? null : num(item.submittedTotal), submittedCurrency: nullableString(item.submittedCurrency), basis: nullableString(item.basis), comparable: item.comparable === true, normalizedTotal: item.normalizedTotal === null ? null : num(item.normalizedTotal), normalizedCurrency: nullableString(item.normalizedCurrency), arithmeticStatus: nullableString(item.arithmeticStatus), assumptions: Array.isArray(item.assumptions) ? item.assumptions : [], refusalCodes: strings(item.refusalCodes), policyVersion: nullableString(item.policyVersion), lineItems: (Array.isArray(item.lineItems) ? item.lineItems : []).flatMap((line) => isRecord(line) && typeof line.lineItemId === "string" ? [{ lineItemId: line.lineItemId, category: String(line.category ?? ""), description: String(line.description ?? ""), amount: line.amount === null ? null : num(line.amount), currency: nullableString(line.currency), optionOrExclusion: line.optionOrExclusion === true }] : []) }] : []);
   const risks = (Array.isArray(intelligence.risks) ? intelligence.risks : []).flatMap((item) => isRecord(item) && typeof item.riskId === "string" && typeof item.participantId === "string" ? [{ participantId: item.participantId, vendorLabel: String(item.vendorLabel ?? "Vendor"), riskId: item.riskId, requirementId: nullableString(item.requirementId), category: String(item.category ?? ""), severity: String(item.severity ?? ""), title: String(item.title ?? ""), basis: String(item.basis ?? ""), disposition: String(item.disposition ?? ""), questionId: nullableString(item.questionId), question: nullableString(item.question), evidence: (Array.isArray(item.evidence) ? item.evidence : []).flatMap((evidence) => parseEvidence(evidence) ?? []) }] : []);
-  const evaluation = (Array.isArray(intelligence.evaluation) ? intelligence.evaluation : []).flatMap((item) => isRecord(item) && typeof item.participantId === "string" ? [{ participantId: item.participantId, vendorLabel: String(item.vendorLabel ?? "Vendor"), submittedScores: num(item.submittedScores), submittedEvaluators: num(item.submittedEvaluators), weightedContributionTotal: num(item.weightedContributionTotal), evaluatorCount: num(item.evaluatorCount), completedEvaluatorCount: num(item.completedEvaluatorCount), conflictCount: num(item.conflictCount) }] : []);
+  const evaluation = (Array.isArray(intelligence.evaluation) ? intelligence.evaluation : []).flatMap((item) => isRecord(item) && typeof item.participantId === "string" ? [{ participantId: item.participantId, vendorLabel: String(item.vendorLabel ?? "Vendor"), submittedScores: num(item.submittedScores), submittedEvaluators: num(item.submittedEvaluators), weightedContributionTotal: num(item.weightedContributionTotal), evaluatorCount: num(item.evaluatorCount), completedEvaluatorCount: num(item.completedEvaluatorCount), conflictCount: num(item.conflictCount), criteria: (Array.isArray(item.criteria) ? item.criteria : []).flatMap((criterion) => isRecord(criterion) && typeof criterion.criterionId === "string" ? [{ criterionId: criterion.criterionId, name: String(criterion.name ?? "Criterion"), meanScore: num(criterion.meanScore), meanWeightedContribution: num(criterion.meanWeightedContribution), spread: num(criterion.spread), rubricMaximum: num(criterion.rubricMaximum), originalWeight: num(criterion.originalWeight) }] : []) }] : []);
   const decisions = (Array.isArray(intelligence.decisions) ? intelligence.decisions : []).flatMap((item) => isRecord(item) && typeof item.decisionId === "string" && ["shortlist", "selection", "no_award"].includes(String(item.decisionType)) ? [{ decisionId: item.decisionId, decisionType: item.decisionType as "shortlist" | "selection" | "no_award", selectedParticipantIds: strings(item.selectedParticipantIds), rationale: String(item.rationale ?? ""), staleAcknowledged: item.staleAcknowledged === true, manifestChecksum: String(item.manifestChecksum ?? ""), supersedesDecisionId: nullableString(item.supersedesDecisionId), createdAt: String(item.createdAt ?? "") }] : []);
-  return { ...view, manifest: { manifestId: manifest.manifestId, checksum: manifest.checksum, proposalVersion: String(manifest.proposalVersion ?? ""), requirementSetVersion: num(manifest.requirementSetVersion), evaluationMatrixVersion: num(manifest.evaluationMatrixVersion), priceVisibility, policies: isRecord(manifest.policies) ? { extraction: String(manifest.policies.extraction ?? ""), assessment: String(manifest.policies.assessment ?? ""), commercial: String(manifest.policies.commercial ?? ""), scoring: String(manifest.policies.scoring ?? "") } : { extraction: "", assessment: "", commercial: "", scoring: "" } }, intelligence: { overview: { responseCount: num(overview.responseCount), versionCount: num(overview.versionCount), approvedRequirementCount: num(overview.approvedRequirementCount), mandatoryGapCount: num(overview.mandatoryGapCount), unresolvedReviewCount: num(overview.unresolvedReviewCount), evaluatorCompletedCount: num(overview.evaluatorCompletedCount), evaluatorAssignedCount: num(overview.evaluatorAssignedCount) }, requirements, technical, permissions: { viewCommercial: intelligence.permissions.viewCommercial === true }, commercial, risks, evaluation, decisions } };
+  const policies = isRecord(manifest.policies) ? manifest.policies : {};
+  const snapshot = isRecord(value.snapshot) ? value.snapshot : null;
+  return { ...view, manifest: { manifestId: manifest.manifestId, checksum: manifest.checksum, proposalVersion: String(manifest.proposalVersion ?? ""), requirementSetVersion: num(manifest.requirementSetVersion), evaluationMatrixVersion: num(manifest.evaluationMatrixVersion), priceVisibility, policies: { extraction: String(policies.extraction ?? ""), assessment: String(policies.assessment ?? ""), commercial: String(policies.commercial ?? ""), scoring: String(policies.scoring ?? ""), comparison: String(policies.comparison ?? ""), recommendation: String(policies.recommendation ?? "") } }, recommendation: parseRecommendation(snapshot?.recommendation), intelligence: { overview: { responseCount: num(overview.responseCount), versionCount: num(overview.versionCount), approvedRequirementCount: num(overview.approvedRequirementCount), mandatoryGapCount: num(overview.mandatoryGapCount), unresolvedReviewCount: num(overview.unresolvedReviewCount), evaluatorCompletedCount: num(overview.evaluatorCompletedCount), evaluatorAssignedCount: num(overview.evaluatorAssignedCount) }, requirements, technical, permissions: { viewCommercial: intelligence.permissions.viewCommercial === true }, commercial, risks, evaluation, decisions } };
 };
 const safe: Record<string, string> = {
   COMPARISON_NOT_FOUND: "This comparison could not be found.",
   COMPARISON_NOT_READY: "Every selected vendor needs completed proposal intelligence and evaluation before comparison.",
+  COMPARISON_EVALUATION_INCOMPLETE: "Complete every eligible evaluator scorecard before comparing or selecting vendors.",
+  COMPARISON_CRITICAL_REVIEW_INCOMPLETE: "Review every mandatory or eligibility mapping and every contradictory fact for each vendor before comparison.",
+  COMPARISON_EVALUATOR_PANEL_MISMATCH: "Assign the same reviewers, roles, conflict dispositions, and criteria to every vendor before comparison.",
   REQUIREMENT_SET_NOT_APPROVED: "Approve the proposal requirements before starting a comparison.",
   EVALUATION_MATRIX_NOT_CONFIRMED: "Confirm an evaluation matrix totaling 100% before starting a comparison.",
   SUBMISSION_VERSION_NOT_FOUND: "A selected vendor version is no longer available.",

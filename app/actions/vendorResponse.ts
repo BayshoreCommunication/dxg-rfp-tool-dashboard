@@ -34,6 +34,27 @@ export type VendorResponseItem = {
   manifestChecksum?: string;
 };
 
+export type VendorResponseProposalSummary = {
+  proposalId: string;
+  proposalTitle: string;
+  responseCount: number;
+  unreadCount: number;
+  latestResponseAt: string;
+  latestVendorName: string;
+};
+
+export type VendorResponseProposalList = {
+  proposals: VendorResponseProposalSummary[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  responseCount: number;
+  unreadCount: number;
+};
+
 export type VendorSubmissionVersion = {
   versionId: string;
   versionNumber: number;
@@ -176,6 +197,42 @@ const parseResponse = (value: unknown): VendorResponseItem | null => {
   };
 };
 
+const parseNonNegativeInteger = (value: unknown): number | null =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : null;
+
+const parsePositiveInteger = (value: unknown): number | null =>
+  typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : null;
+
+const parseProposalSummary = (
+  value: unknown,
+): VendorResponseProposalSummary | null => {
+  if (!isRecord(value)) return null;
+  const responseCount = parseNonNegativeInteger(value.responseCount);
+  const unreadCount = parseNonNegativeInteger(value.unreadCount);
+  if (
+    !isString(value.proposalId) ||
+    !isString(value.proposalTitle) ||
+    !isString(value.latestResponseAt) ||
+    !isString(value.latestVendorName) ||
+    responseCount === null ||
+    unreadCount === null ||
+    unreadCount > responseCount
+  )
+    return null;
+  return {
+    proposalId: value.proposalId,
+    proposalTitle: value.proposalTitle,
+    responseCount,
+    unreadCount,
+    latestResponseAt: value.latestResponseAt,
+    latestVendorName: value.latestVendorName,
+  };
+};
+
 const parseVersion = (value: unknown): VendorSubmissionVersion | null => {
   if (
     !isRecord(value) ||
@@ -311,6 +368,91 @@ export const getVendorResponsesAction = async ({
       success: false,
       message: "Error fetching vendor responses",
       data: [],
+    };
+  }
+};
+
+export const getVendorResponseProposalsAction = async ({
+  page = 1,
+  limit = 12,
+  search,
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+} = {}): Promise<
+  | { success: true; data: VendorResponseProposalList }
+  | { success: false; message: string }
+> => {
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (search?.trim()) params.set("search", search.trim());
+    const res = await authenticatedBackendFetch(
+      `${BACKEND_URL}/api/vendor-responses/proposals?${params}`,
+      { cache: "no-store" },
+    );
+    const json: unknown = await res.json().catch(() => ({}));
+    if (!res.ok || !isRecord(json) || json.success !== true) {
+      return {
+        success: false,
+        message:
+          isRecord(json) && isString(json.message)
+            ? json.message
+            : "Vendor response proposals could not be loaded.",
+      };
+    }
+    if (
+      !Array.isArray(json.data) ||
+      !isRecord(json.pagination)
+    ) {
+      return {
+        success: false,
+        message: "The vendor response service returned an unexpected response.",
+      };
+    }
+    const proposals = json.data.map(parseProposalSummary);
+    const total = parseNonNegativeInteger(json.pagination.total);
+    const responsePage = parsePositiveInteger(json.pagination.page);
+    const responseLimit = parsePositiveInteger(json.pagination.limit);
+    const totalPages = parseNonNegativeInteger(json.pagination.totalPages);
+    const responseCount = parseNonNegativeInteger(json.responseCount);
+    const unreadCount = parseNonNegativeInteger(json.unreadCount);
+    if (
+      proposals.some((proposal) => proposal === null) ||
+      total === null ||
+      responsePage === null ||
+      responseLimit === null ||
+      totalPages === null ||
+      responseCount === null ||
+      unreadCount === null ||
+      unreadCount > responseCount
+    ) {
+      return {
+        success: false,
+        message: "The vendor response service returned an unexpected response.",
+      };
+    }
+    return {
+      success: true,
+      data: {
+        proposals: proposals as VendorResponseProposalSummary[],
+        pagination: {
+          total,
+          page: responsePage,
+          limit: responseLimit,
+          totalPages,
+        },
+        responseCount,
+        unreadCount,
+      },
+    };
+  } catch {
+    return {
+      success: false,
+      message: "Vendor response proposals could not be loaded.",
     };
   }
 };

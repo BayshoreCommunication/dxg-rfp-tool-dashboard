@@ -49,6 +49,8 @@ const registry: RequirementRegistryView = {
     criterion_reviewed: false,
     importance: "medium",
     verification_method: "pending",
+    included: true,
+    inclusion_reviewed: false,
     group_key: "roomByRoom",
     ordinal: 0,
   }],
@@ -62,6 +64,13 @@ test("shows the generation boundary before a registry exists", async () => {
   await userEvent.click(screen.getByRole("button", { name: /generate requirement registry/i }));
   expect(generate).toHaveBeenCalledWith("abc123abc123abc123abc123");
   expect(await screen.findByRole("alert")).toHaveTextContent("Not enabled");
+});
+
+test("explains when a historical registry is stale because the generation policy changed", () => {
+  const historical = { ...registry, freshness: { ...registry.freshness, stale: true, reasons: ["requirement_policy_changed"] } };
+  render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={historical} initialSets={[]} />);
+  expect(screen.getByText("Generation policy changed")).toBeInTheDocument();
+  expect(screen.getByText(/may include descriptive metadata or lack current scoring anchors/i)).toBeInTheDocument();
 });
 
 test("renders traceable requirements, confirmed weights, and blocks premature approval", () => {
@@ -85,6 +94,21 @@ test("a saved row explicitly confirms mandatory and criterion review", async () 
     registry.set.id,
     registry.requirements[0].id,
     3,
-    expect.objectContaining({ mandatoryStatus: "mandatory", mandatoryReviewed: true, criterionReviewed: true, verificationMethod: "document" }),
+    expect.objectContaining({ mandatoryStatus: "mandatory", mandatoryReviewed: true, criterionReviewed: true, verificationMethod: "document", included: true, inclusionReviewed: true }),
+  );
+});
+
+test("a planner can exclude metadata or duplicate narrative from evaluation", async () => {
+  update.mockResolvedValue({ success: true, data: registry });
+  render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
+  await userEvent.click(screen.getByText("Audio system required"));
+  await userEvent.click(screen.getByRole("checkbox", { name: /include in vendor evaluation/i }));
+  await userEvent.click(screen.getByRole("button", { name: /save review/i }));
+  expect(update).toHaveBeenCalledWith(
+    "abc123abc123abc123abc123",
+    registry.set.id,
+    registry.requirements[0].id,
+    3,
+    expect.objectContaining({ included: false, inclusionReviewed: true }),
   );
 });
