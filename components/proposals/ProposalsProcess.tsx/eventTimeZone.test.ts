@@ -1,6 +1,12 @@
 import { ianaZoneForLabel, wallClockToIso } from "./eventTimeZone";
 
 describe("event time zone", () => {
+  it("accepts nested IANA identifiers used by city auto-selection", () => {
+    expect(ianaZoneForLabel("America/Argentina/Buenos_Aires")).toBe(
+      "America/Argentina/Buenos_Aires",
+    );
+  });
+
   test("maps the stored display labels to IANA zones", () => {
     expect(ianaZoneForLabel("Central Time (CT)")).toBe("America/Chicago");
     expect(ianaZoneForLabel("Pacific Time (PT)")).toBe("America/Los_Angeles");

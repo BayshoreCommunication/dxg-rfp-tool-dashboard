@@ -4,6 +4,14 @@ import GlobalSelect from "@/components/shared/GlobalSelect";
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
+import { useRef } from "react";
+import {
+  automaticVenueTimeZone,
+  IANA_TIME_ZONE_OPTIONS,
+  isLegacyTimeZoneLabel,
+  normalizeTimeZoneValue,
+  venueTimeZoneFor,
+} from "./venueTimeZones";
 
 const toDateObj = (dateStr: string, timeStr: string): Date | null => {
   if (!dateStr) return null;
@@ -286,37 +294,6 @@ const US_STATES = [
   { value: "OTHER", label: "Other / International" },
 ];
 
-/* ─── State → time zone auto-detect map ─── */
-const STATE_TIMEZONES: Record<string, string> = {
-  AK: "Alaska Time (AKT)",
-  AL: "Central Time (CT)", AR: "Central Time (CT)",
-  AZ: "Mountain Time (MT)",
-  CA: "Pacific Time (PT)",
-  CO: "Mountain Time (MT)",
-  CT: "Eastern Time (ET)", DC: "Eastern Time (ET)", DE: "Eastern Time (ET)",
-  FL: "Eastern Time (ET)", GA: "Eastern Time (ET)",
-  HI: "Hawaii Time (HT)",
-  ID: "Mountain Time (MT)", IL: "Central Time (CT)", IN: "Eastern Time (ET)",
-  IA: "Central Time (CT)",
-  KS: "Central Time (CT)", KY: "Eastern Time (ET)",
-  LA: "Central Time (CT)",
-  MA: "Eastern Time (ET)", MD: "Eastern Time (ET)", ME: "Eastern Time (ET)",
-  MI: "Eastern Time (ET)", MN: "Central Time (CT)", MO: "Central Time (CT)",
-  MS: "Central Time (CT)", MT: "Mountain Time (MT)",
-  NC: "Eastern Time (ET)", ND: "Central Time (CT)", NE: "Central Time (CT)",
-  NH: "Eastern Time (ET)", NJ: "Eastern Time (ET)", NM: "Mountain Time (MT)",
-  NV: "Pacific Time (PT)", NY: "Eastern Time (ET)",
-  OH: "Eastern Time (ET)", OK: "Central Time (CT)", OR: "Pacific Time (PT)",
-  PA: "Eastern Time (ET)",
-  RI: "Eastern Time (ET)",
-  SC: "Eastern Time (ET)", SD: "Central Time (CT)",
-  TN: "Central Time (CT)", TX: "Central Time (CT)",
-  UT: "Mountain Time (MT)",
-  VA: "Eastern Time (ET)", VT: "Eastern Time (ET)",
-  WA: "Pacific Time (PT)", WI: "Central Time (CT)",
-  WV: "Eastern Time (ET)", WY: "Mountain Time (MT)",
-};
-
 /* ─── Known union markets for auto-detection ─── */
 const UNION_MARKETS = [
   "las vegas", "new york", "los angeles", "chicago", "san francisco",
@@ -351,16 +328,6 @@ const VENUE_TYPE_OPTIONS = [
   "Restaurant / Private Event Space",
   "Cruise Ship",
   "Other",
-];
-
-const TIME_ZONE_OPTIONS = [
-  "Eastern Time (ET)",
-  "Central Time (CT)",
-  "Mountain Time (MT)",
-  "Pacific Time (PT)",
-  "Alaska Time (AKT)",
-  "Hawaii Time (HT)",
-  "Other / International",
 ];
 
 /* ─── Tailwind-safe class helpers ─── */
@@ -408,6 +375,7 @@ const VenueScheduleStep = ({
   mode = "advanced",
 }: Props) => {
   const safeData: VenueScheduleData = { ...defaultVenueSchedule(), ...data };
+  const lastAutomaticTimeZoneRef = useRef<string | null>(null);
 
   const unionDetected = isUnionMarket(
     `${safeData.venueCity} ${safeData.venueState}`,
@@ -449,10 +417,45 @@ const VenueScheduleStep = ({
     return { minDate, maxDate };
   };
 
-  const handleStateChange = (state: string) => {
-    const tz = STATE_TIMEZONES[state] ?? "";
-    onChange({ venueState: state, ...(tz ? { timeZone: tz } : {}) });
+  const automaticTimeZonePatch = (city: string, state: string) => {
+    const timeZone = automaticVenueTimeZone({
+      city,
+      state,
+      currentTimeZone: safeData.timeZone,
+      lastAutomaticTimeZone: lastAutomaticTimeZoneRef.current,
+    });
+    if (!timeZone) return {};
+    lastAutomaticTimeZoneRef.current = timeZone;
+    return { timeZone };
   };
+
+  const handleStateChange = (state: string) => {
+    onChange({
+      venueState: state,
+      ...automaticTimeZonePatch(safeData.venueCity, state),
+    });
+  };
+
+  const handleCityChange = (city: string) => {
+    onChange({
+      venueCity: city,
+      ...automaticTimeZonePatch(city, safeData.venueState),
+    });
+  };
+
+  const suggestedTimeZone = venueTimeZoneFor(
+    safeData.venueCity,
+    safeData.venueState,
+  );
+  const normalizedSelectedTimeZone = normalizeTimeZoneValue(safeData.timeZone);
+  const displayedTimeZoneValue = isLegacyTimeZoneLabel(safeData.timeZone)
+    ? normalizedSelectedTimeZone
+    : safeData.timeZone;
+  const hasCustomStoredTimeZone = Boolean(
+    safeData.timeZone &&
+    !isLegacyTimeZoneLabel(safeData.timeZone) &&
+    !IANA_TIME_ZONE_OPTIONS.some((option) => option.value === safeData.timeZone),
+  );
 
   const unionJurisdictions = Array.isArray(safeData.unionJurisdictions)
     ? safeData.unionJurisdictions
@@ -511,6 +514,7 @@ const VenueScheduleStep = ({
                 <InfoTooltip text="State or region. Used for jurisdiction context, union market detection, and time zone auto-detection. Selecting a state automatically suggests the correct time zone below." />
               </label>
               <GlobalSelect
+                aria-label="Venue state"
                 value={safeData.venueState}
                 onChange={(e) => handleStateChange(e.target.value)}
                 className={`${selectClass} ${showErrors && !safeData.venueState ? "border-red-400 focus:border-red-400" : ""}`}
@@ -531,8 +535,9 @@ const VenueScheduleStep = ({
               </label>
               <input
                 type="text"
+                aria-label="Venue city"
                 value={safeData.venueCity}
-                onChange={(e) => onChange({ venueCity: e.target.value })}
+                onChange={(e) => handleCityChange(e.target.value)}
                 placeholder="e.g. Las Vegas"
                 className={`${inputClass} ${err(safeData.venueCity)}`}
               />
@@ -620,21 +625,30 @@ const VenueScheduleStep = ({
                 <InfoTooltip text="Time zone of the venue. Appended to all times in the Section 1 timeline, Section 9 proposal deadline, and venue section. Auto-detected when you select a state above." />
               </label>
               <GlobalSelect
-                value={safeData.timeZone}
-                onChange={(e) => onChange({ timeZone: e.target.value })}
+                aria-label="Venue time zone"
+                value={displayedTimeZoneValue}
+                onChange={(e) => {
+                  lastAutomaticTimeZoneRef.current = null;
+                  onChange({ timeZone: e.target.value });
+                }}
                 className={`${selectClass} ${showErrors && !safeData.timeZone ? "border-red-400 focus:border-red-400" : ""}`}
               >
                 <option value="">Select time zone...</option>
-                {TIME_ZONE_OPTIONS.map((tz) => (
-                  <option key={tz} value={tz}>{tz}</option>
+                {hasCustomStoredTimeZone && (
+                  <option value={safeData.timeZone}>{safeData.timeZone}</option>
+                )}
+                {IANA_TIME_ZONE_OPTIONS.map((timeZone) => (
+                  <option key={timeZone.value} value={timeZone.value}>
+                    {timeZone.label}
+                  </option>
                 ))}
               </GlobalSelect>
               {showErrors && !safeData.timeZone && (
                 <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
-              {safeData.venueState && STATE_TIMEZONES[safeData.venueState] && safeData.timeZone === STATE_TIMEZONES[safeData.venueState] && (
+              {suggestedTimeZone && normalizedSelectedTimeZone === suggestedTimeZone && (
                 <p className="mt-1 text-xs text-[#1DBFD3] normal-case">
-                  Auto-detected from {safeData.venueState}
+                  Auto-detected from {safeData.venueCity || safeData.venueState}
                 </p>
               )}
             </div>

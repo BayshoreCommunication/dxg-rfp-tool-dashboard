@@ -6,7 +6,9 @@
  * times to vendors. Anchor to the event's own zone instead.
  */
 
-/** Venue & Schedule stores display labels, not IANA identifiers. */
+import { normalizeTimeZoneValue } from "./venueTimeZones";
+
+/** Legacy proposals stored display labels; new location selections store IANA identifiers. */
 const IANA_BY_LABEL: Record<string, string> = {
   "Eastern Time (ET)": "America/New_York",
   "Central Time (CT)": "America/Chicago",
@@ -16,13 +18,16 @@ const IANA_BY_LABEL: Record<string, string> = {
   "Hawaii Time (HT)": "Pacific/Honolulu",
 };
 
-/** IANA zone for a stored label, or null when unknown ("Other / International"). */
+/** IANA zone for a stored label/identifier, or null when it is unknown. */
 export const ianaZoneForLabel = (label: string | undefined | null): string | null => {
   if (!label) return null;
-  const zone = IANA_BY_LABEL[label.trim()];
-  if (zone) return zone;
-  // Tolerate an IANA identifier stored directly.
-  return /^[A-Za-z]+\/[A-Za-z_+-]+$/.test(label.trim()) ? label.trim() : null;
+  const zone = IANA_BY_LABEL[label.trim()] ?? normalizeTimeZoneValue(label);
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zone });
+    return zone;
+  } catch {
+    return null;
+  }
 };
 
 /** Milliseconds a zone is offset from UTC at a given instant, DST included. */
