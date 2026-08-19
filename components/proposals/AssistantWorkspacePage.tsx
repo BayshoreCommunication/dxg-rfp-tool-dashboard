@@ -2660,6 +2660,17 @@ export default function AssistantWorkspacePage({
     [],
   );
 
+  const focusComposerAtEnd = () => {
+    requestAnimationFrame(() => {
+      const composer = composerRef.current;
+      if (!composer) return;
+      composer.focus();
+      const end = composer.value.length;
+      composer.setSelectionRange(end, end);
+      composer.scrollTop = composer.scrollHeight;
+    });
+  };
+
   const startVoiceInput = (draftOverride?: string) => {
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
@@ -2710,10 +2721,10 @@ export default function AssistantWorkspacePage({
         transcriptionTimerRef.current = setTimeout(() => {
           setIsTranscribing(false);
           transcriptionTimerRef.current = null;
-          requestAnimationFrame(() => composerRef.current?.focus());
+          focusComposerAtEnd();
         }, 350);
       } else {
-        requestAnimationFrame(() => composerRef.current?.focus());
+        focusComposerAtEnd();
       }
     };
     recognitionRef.current = recognition;
@@ -2741,7 +2752,7 @@ export default function AssistantWorkspacePage({
     setIsListening(false);
     voiceLatestTextRef.current = original;
     setText(original);
-    requestAnimationFrame(() => composerRef.current?.focus());
+    focusComposerAtEnd();
   };
 
   const continueVoiceAfterClarification = (message: string) => {

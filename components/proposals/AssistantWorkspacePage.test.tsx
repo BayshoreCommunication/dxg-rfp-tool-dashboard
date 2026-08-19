@@ -307,8 +307,16 @@ describe("AssistantWorkspacePage", () => {
     expect(recognition.stop).toHaveBeenCalled();
     expect(screen.getByRole("status", { name: "Voice input is transcribing" })).toBeInTheDocument();
     expect(screen.getByText("Transcribing…")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByLabelText("Message the proposal assistant"))
+    const composer = await screen.findByLabelText(
+      "Message the proposal assistant",
+    ) as HTMLTextAreaElement;
+    await waitFor(() => expect(composer)
       .toHaveValue("Plan a 300-person conference"));
+    await waitFor(() => {
+      expect(composer).toHaveFocus();
+      expect(composer.selectionStart).toBe(composer.value.length);
+      expect(composer.selectionEnd).toBe(composer.value.length);
+    });
     expect(mockedCreateProposal).not.toHaveBeenCalled();
     expect(mockedPostMessage).not.toHaveBeenCalled();
   });
