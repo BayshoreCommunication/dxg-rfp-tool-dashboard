@@ -396,6 +396,7 @@ describe("AssistantPopup", () => {
     const resize = screen.getByRole("button", {
       name: "Resize AI Assistant from lower right",
     });
+    await waitFor(() => expect(dialog).toHaveStyle({ width: "420px", height: "540px", top: "525px" }));
     for (let index = 0; index < 100; index += 1) {
       fireEvent.keyDown(resize, {
         key: "ArrowRight",
@@ -407,7 +408,7 @@ describe("AssistantPopup", () => {
       });
     }
 
-    expect(dialog).toHaveStyle({ width: "840px", height: "1080px" });
+    expect(dialog).toHaveStyle({ width: "840px", height: "663px" });
   });
 
   test("resizes with a pointer drag from the lower-right handle", async () => {

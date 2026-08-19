@@ -75,7 +75,17 @@ describe("VendorResponseForm", () => {
 
   it("submits valid values and shows a useful confirmation state", async () => {
     mockFetch.mockResolvedValue({
-      json: async () => ({ success: true, isUpdate: false }),
+      json: async () => ({
+        success: true,
+        isUpdate: false,
+        submission: {
+          submissionId: "submission-1",
+          versionId: "version-1",
+          versionNumber: 1,
+          receivedAt: "2026-08-12T10:00:00.000Z",
+          manifestChecksum: "a".repeat(64),
+        },
+      }),
     });
     render(<VendorResponseForm {...defaultProps} />);
 
@@ -89,8 +99,11 @@ describe("VendorResponseForm", () => {
     const [, request] = mockFetch.mock.calls[0];
     expect(request.method).toBe("POST");
     expect(request.body).toBeInstanceOf(FormData);
+    expect((request.body as FormData).get("submissionIdempotencyKey")).toEqual(expect.any(String));
+    expect((request.body as FormData).get("submissionReason")).toBe("initial");
     expect(await screen.findByRole("heading", { name: "Thank you, Jordan Lee." })).toBeInTheDocument();
     expect(screen.getByText("Confirmation sent to jordan@acme.test")).toBeInTheDocument();
+    expect(screen.getByText("version-1")).toBeInTheDocument();
   });
 
   it("loads an existing response into update mode", async () => {
@@ -105,6 +118,8 @@ describe("VendorResponseForm", () => {
           message: "Original response",
           documents: [{ name: "quote.pdf", url: "https://files.test/quote.pdf" }],
           updatedAt: "2026-08-10T10:00:00.000Z",
+          currentVersionNumber: 3,
+          currentVersionId: "version-3",
         },
       }),
     });
@@ -114,7 +129,41 @@ describe("VendorResponseForm", () => {
     expect(await screen.findByRole("heading", { name: "Update your proposal" })).toBeInTheDocument();
     expect(screen.getByText("We found your earlier response")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Acme AV")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Update response" })).toBeInTheDocument();
+    expect(screen.getByText(/current response is version 3/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit version 4" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open quote.pdf" })).toHaveAttribute("href", "https://files.test/quote.pdf");
+  });
+
+  it("reuses one idempotency key when an uncertain submission is retried", async () => {
+    mockFetch
+      .mockRejectedValueOnce(new Error("connection lost"))
+      .mockResolvedValueOnce({
+        json: async () => ({
+          success: true,
+          isUpdate: false,
+          isReplay: true,
+          submission: {
+            submissionId: "submission-1",
+            versionId: "version-1",
+            versionNumber: 1,
+            receivedAt: "2026-08-12T10:00:00.000Z",
+            manifestChecksum: "a".repeat(64),
+          },
+        }),
+      });
+    render(<VendorResponseForm {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText(/company \/ vendor name/i), { target: { value: "Acme AV" } });
+    fireEvent.change(screen.getByLabelText(/submitted by/i), { target: { value: "Jordan Lee" } });
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "jordan@acme.test" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit response" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("could not reach the server");
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit response" }));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+    const firstKey = (mockFetch.mock.calls[0][1].body as FormData).get("submissionIdempotencyKey");
+    const secondKey = (mockFetch.mock.calls[1][1].body as FormData).get("submissionIdempotencyKey");
+    expect(firstKey).toBeTruthy();
+    expect(secondKey).toBe(firstKey);
   });
 });

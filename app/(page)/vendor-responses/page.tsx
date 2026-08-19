@@ -1,38 +1,26 @@
-import { getVendorResponsesAction, VendorResponseItem } from "@/app/actions/vendorResponse";
-import VendorResponsesView from "@/components/vendor/VendorResponsesView";
+import { getVendorResponseProposalsAction } from "@/app/actions/vendorResponse";
+import VendorResponseProposalList from "@/components/vendor/VendorResponseProposalList";
 
-type Pagination = {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
+const positivePage = (value?: string) => {
+  const parsed = Number.parseInt(value || "1", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 };
 
 export default async function VendorResponsesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; unreadOnly?: string }>;
+  searchParams: Promise<{ page?: string; search?: string }>;
 }) {
-  const { page: pageParam, unreadOnly: unreadParam } = await searchParams;
-  const page = Math.max(1, parseInt(pageParam || "1", 10));
-  const unreadOnly = unreadParam === "true";
-  const limit = 20;
-
-  const res = await getVendorResponsesAction({ page, limit, unreadOnly });
-  const pagination = res.pagination as Pagination | undefined;
+  const { page: pageParam, search: searchParam } = await searchParams;
+  const page = positivePage(pageParam);
+  const search = searchParam?.trim() ?? "";
+  const result = await getVendorResponseProposalsAction({ page, search });
 
   return (
-    <VendorResponsesView
-      key={`${page}-${unreadOnly}`}
-      initialResponses={
-        res.success && Array.isArray(res.data)
-          ? (res.data as VendorResponseItem[])
-          : []
-      }
-      initialUnreadCount={typeof res.unreadCount === "number" ? res.unreadCount : 0}
-      currentPage={page}
-      totalPages={pagination?.totalPages ?? 1}
-      totalCount={pagination?.total ?? 0}
+    <VendorResponseProposalList
+      data={result.success ? result.data : null}
+      errorMessage={result.success ? undefined : result.message}
+      search={search}
     />
   );
 }

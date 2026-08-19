@@ -16,6 +16,8 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+Proposal Intelligence Task 3 is available by default at `/proposals/:id/intelligence/requirements`; no feature-flag environment variables are required. Authentication, proposal ownership, organization membership, and scoped backend authorization still apply. The workspace reviews and freezes RFP requirements only. Vendor evidence extraction starts in Task 4 and is not part of this gate.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
