@@ -113,4 +113,29 @@ describe('ProposalFilters', () => {
     expect(screen.getByText('4')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
   })
+
+  it('lets mobile users collapse and reopen the status filters', () => {
+    render(
+      <ProposalFilters
+        searchValue=""
+        onSearchChange={mockOnSearchChange}
+        activeFilter="all"
+        onFilterChange={mockOnFilterChange}
+        counts={mockCounts}
+      />
+    )
+
+    const toggle = screen.getByRole('button', { name: /^filters$/i })
+    const filters = document.getElementById('proposal-status-filters')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(filters).toHaveClass('flex')
+
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(filters).toHaveClass('hidden')
+
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(filters).toHaveClass('flex')
+  })
 })

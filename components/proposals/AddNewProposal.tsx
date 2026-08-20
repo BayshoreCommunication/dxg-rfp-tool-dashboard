@@ -2679,7 +2679,7 @@ const AddNewProposal = ({
           {/* Form area */}
           <div
             data-testid="proposal-editor-form"
-            className="order-2 min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e2e8ec] bg-white shadow-[0_10px_35px_rgba(15,42,67,0.06)] @min-[1000px]:order-1"
+            className="proposal-editor-surface order-2 min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e2e8ec] bg-white shadow-[0_10px_35px_rgba(15,42,67,0.06)] @min-[1000px]:order-1"
             data-assistant-current-section="true"
             data-assistant-section-id={
               assistantSectionByStep[

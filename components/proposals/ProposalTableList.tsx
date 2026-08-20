@@ -436,7 +436,7 @@ export default function ProposalTableList({
 
   return (
     <>
-    <div className="min-h-screen py-6 font-sans text-slate-800 -mt-6 px-6">
+    <div className="-mt-6 min-h-screen px-1 py-6 font-sans text-slate-800 sm:px-2 lg:px-6">
       <div className="space-y-6">
         {loading ? (
           <div className="space-y-6">
@@ -557,13 +557,13 @@ export default function ProposalTableList({
               return (
                 <div
                   key={proposal._id || `proposal-${index}`}
-                  className="relative overflow-hidden rounded-2xl bg-white p-6 border border-slate-200 shadow-sm transition-shadow hover:shadow-md"
+                  className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6"
                 >
                   <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#008ad2]/5 blur-3xl pointer-events-none" />
                   <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-[#2563eb]/5 blur-3xl pointer-events-none" />
 
-                  <div className="relative z-10 flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="relative z-10 mb-5 flex items-start justify-between gap-3 sm:mb-6">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                       {isArchiveView ? (
                         <>
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-slate-100 text-slate-600 border-slate-300">
@@ -624,6 +624,8 @@ export default function ProposalTableList({
                     {/* Favorite button — hidden for copies (copies cannot be favourited) */}
                     {!isCopy && (
                       <button
+                        type="button"
+                        aria-label={proposal?.isFavorite ? "Remove favorite" : "Mark as favorite"}
                         title={proposal?.isFavorite ? "Remove favorite" : "Mark as favorite"}
                         disabled={favoritingId === proposal._id}
                         onClick={() => void handleToggleFavorite(proposal)}
@@ -637,9 +639,9 @@ export default function ProposalTableList({
                     )}
                   </div>
 
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                  <div className="relative z-10 flex flex-col justify-between gap-5 md:flex-row md:items-end md:gap-6">
                     <div className="flex-1 min-w-0">
-                      <h1 className="text-2xl font-black text-slate-900 tracking-tight truncate">
+                      <h1 className="break-words text-xl font-black tracking-tight text-slate-900 sm:text-2xl md:truncate">
                         {title}
                       </h1>
                       <div className="mt-3 space-y-1.5">
@@ -678,75 +680,72 @@ export default function ProposalTableList({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-5 shrink-0">
-                      <div className="text-center bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end md:w-auto md:shrink-0">
+                      <div className="flex h-12 w-full items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 sm:h-auto sm:w-auto sm:block sm:text-center">
                         <div className="text-3xl font-black text-slate-800 leading-none">
                           {views}
                         </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-400 sm:mt-1">
                           <TrendingUp size={8} className="text-emerald-500" />
                           views
                         </div>
                       </div>
 
                       {isArchiveView ? (
-                        <div className="flex items-center gap-2">
+                        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
                           <button
                             type="button"
                             onClick={() => void handleRestoreProposal(proposal)}
                             disabled={restoringId === proposal._id}
-                            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 text-[12px] font-bold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-5 sm:text-[13px]"
                           >
                             <ArchiveRestore size={15} />
                             {restoringId === proposal._id ? "Restoring..." : "Restore"}
                           </button>
-                          <IconButton
+                          <ActionButton
                             icon={<Trash2 size={16} />}
-                            tooltip={permanentDeletingId === proposal._id ? "Deleting..." : "Delete Forever"}
+                            label={permanentDeletingId === proposal._id ? "Deleting..." : "Delete forever"}
                             onClick={() => void handlePermanentDelete(proposal)}
                             disabled={permanentDeletingId === proposal._id}
                           />
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <IconButton
+                        <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:items-center">
+                          <ActionButton
                             icon={<Copy size={16} />}
-                            tooltip="Copy URL"
+                            label="Copy URL"
                             onClick={() => void handleCopyProposalUrl(proposalSlug)}
                           />
-                          <Link
+                          <ActionLink
                             href={`/proposal/${proposalSlug}`}
-                            className="cursor-pointer"
+                            label="Preview"
+                            icon={<Eye size={16} />}
                             target="_blank"
-                          >
-                            <IconButton icon={<Eye size={16} />} tooltip="Preview" />
-                          </Link>
-                          <Link
+                          />
+                          <ActionLink
                             href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`}
-                            className="cursor-pointer"
-                          >
-                            <IconButton icon={<Edit3 size={16} />} tooltip="Edit" />
-                          </Link>
+                            label="Edit"
+                            icon={<Edit3 size={16} />}
+                          />
                           {!isCopy && (
-                            <IconButton
+                            <ActionButton
                               icon={<CopyPlus size={16} />}
-                              tooltip="Save a Copy"
+                              label="Save a copy"
                               onClick={() => setCopyModalProposal(proposal)}
                             />
                           )}
-                          <IconButton
+                          <ActionButton
                             icon={<Trash size={16} />}
-                            tooltip={deletingId === proposal._id ? "Deleting..." : "Delete"}
+                            label={deletingId === proposal._id ? "Deleting..." : "Delete"}
                             onClick={() => void handleDeleteProposal(proposal)}
                             disabled={deletingId === proposal._id}
                           />
-                          <Link
+                          <ActionLink
                             href={`/email/send-email?proposalId=${proposal._id}`}
-                            className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-[#0ea5e9]/20 hover:-translate-y-0.5 transition-all duration-200"
-                            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
-                          >
-                            <Share2 size={15} /> Share
-                          </Link>
+                            label="Share"
+                            icon={<Share2 size={15} />}
+                            emphasis
+                          />
                         </div>
                       )}
                     </div>
@@ -756,9 +755,9 @@ export default function ProposalTableList({
             })}
 
             <div className="pt-2">
-              <div className="flex justify-end">
+              <div className="flex max-w-full justify-end overflow-x-auto pb-1">
                 <nav aria-label="Proposals pagination">
-                  <ul className="flex -space-x-px text-sm">
+                  <ul className="flex min-w-max -space-x-px text-sm">
                     <li>
                       <button
                         type="button"
@@ -836,25 +835,60 @@ export default function ProposalTableList({
   );
 }
 
-function IconButton({
+function ActionButton({
   icon,
-  tooltip,
+  label,
   onClick,
   disabled = false,
 }: {
   icon: React.ReactNode;
-  tooltip?: string;
+  label: string;
   onClick?: () => void;
   disabled?: boolean;
 }) {
   return (
     <button
-      title={tooltip}
+      type="button"
+      aria-label={label}
+      title={label}
       onClick={onClick}
       disabled={disabled}
-      className="w-11 h-11 flex items-center justify-center bg-white text-slate-500 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+      className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 text-[10px] font-bold text-slate-600 shadow-sm transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-11 sm:px-0"
     >
       {icon}
+      <span className="truncate sm:sr-only">{label}</span>
     </button>
+  );
+}
+
+function ActionLink({
+  href,
+  icon,
+  label,
+  target,
+  emphasis = false,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  target?: "_blank";
+  emphasis?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
+      aria-label={label}
+      title={label}
+      className={`inline-flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 text-[10px] font-bold shadow-sm transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 sm:px-0 ${
+        emphasis
+          ? "border-[#008ad2] bg-gradient-to-br from-[#2fc6f5] to-[#008ad2] text-white hover:shadow-lg hover:shadow-[#0ea5e9]/20 sm:w-auto sm:px-4 sm:text-[13px]"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 sm:w-11"
+      }`}
+    >
+      {icon}
+      <span className={emphasis ? "truncate" : "truncate sm:sr-only"}>{label}</span>
+    </Link>
   );
 }

@@ -653,6 +653,64 @@ strong {
   scrollbar-gutter: stable;
 }
 
+/* Proposal editor sections share desktop-oriented form primitives. Keep the
+   existing visual system, while letting every step shrink cleanly on phones. */
+@media (max-width: 639px) {
+  .proposal-editor-surface section {
+    min-height: auto;
+  }
+
+  .proposal-editor-surface .px-8 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .proposal-editor-surface .py-8 {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+
+  .proposal-editor-surface .pt-7 {
+    padding-top: 1.25rem !important;
+  }
+
+  .proposal-editor-surface .pb-6 {
+    padding-bottom: 1rem !important;
+  }
+
+  .proposal-editor-surface .gap-8 {
+    gap: 1.25rem !important;
+  }
+
+  .proposal-editor-surface :is(.grid-cols-2, .grid-cols-3) > * {
+    min-width: 0;
+  }
+
+  .proposal-editor-surface :is(.grid-cols-2, .grid-cols-3) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .proposal-editor-surface label {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .proposal-editor-surface :is(input, textarea, select, button) {
+    max-width: 100%;
+  }
+
+  .proposal-editor-surface .sticky.bottom-0 {
+    gap: 0.75rem;
+    padding: 0.75rem 1rem !important;
+  }
+
+  .proposal-editor-surface .flex.items-center.justify-between.border-t {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}
+
 @keyframes assistant-active-pulse {
   0%,
   100% {

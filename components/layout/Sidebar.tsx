@@ -356,6 +356,7 @@ const Sidebar = ({
         <div className="flex shrink-0 items-center gap-1">
           {onOpenAssistant && (
             <button
+              id="ai-assistant-mobile-launcher"
               type="button"
               aria-label={
                 assistantOpen

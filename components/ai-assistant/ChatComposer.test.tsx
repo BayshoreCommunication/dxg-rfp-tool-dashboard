@@ -66,9 +66,12 @@ describe("ChatComposer", () => {
 
   test("uses a short single-line placeholder in compact popups", () => {
     renderComposer({ value: "", compact: true });
-    expect(
-      screen.getByLabelText("Message the AI Assistant"),
-    ).toHaveAttribute("placeholder", "Message RFPilot Assistant…");
+    const composer = screen.getByLabelText("Message the AI Assistant");
+    expect(composer).toHaveAttribute(
+      "placeholder",
+      "Message RFPilot Assistant…",
+    );
+    expect(composer).toHaveClass("touch-manipulation", "max-sm:text-base");
   });
 
   test("keeps the rounded scrollbar to the right of the send control", () => {

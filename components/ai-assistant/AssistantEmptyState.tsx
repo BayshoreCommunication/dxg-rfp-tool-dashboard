@@ -9,6 +9,11 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
+import {
+  useRef,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import AssistantOrb from "@/components/ai/shared/AssistantOrb";
 import type { AssistantStarterPrompt } from "@/lib/aiAssistant/uiContext";
 
@@ -69,6 +74,32 @@ export default function AssistantEmptyState({
     icon?: typeof FileText;
   })[];
 }) {
+  const lastPointerActivation = useRef<number | null>(null);
+  const selectWithPointer = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    prompt: string,
+  ) => {
+    if (event.pointerType === "mouse") return;
+    event.preventDefault();
+    event.stopPropagation();
+    lastPointerActivation.current = event.timeStamp;
+    onSuggestion(prompt);
+  };
+  const selectWithClick = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+    prompt: string,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (
+      lastPointerActivation.current !== null &&
+      event.timeStamp - lastPointerActivation.current < 700
+    ) {
+      return;
+    }
+    onSuggestion(prompt);
+  };
+
   if (compact) {
     return (
       <div
@@ -109,8 +140,11 @@ export default function AssistantEmptyState({
                   <button
                     key={prompt}
                     type="button"
-                    onClick={() => onSuggestion(prompt)}
-                    className="group flex min-h-[38px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-left text-[12px] font-medium text-slate-600 shadow-[0_8px_24px_-24px_rgba(15,23,42,0.75)] transition duration-200 hover:-translate-y-0.5 hover:border-[#00c2c9]/50 hover:bg-[#f5ffff] hover:text-[#0e1b2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] motion-reduce:transform-none"
+                    onPointerUp={(event) =>
+                      selectWithPointer(event, prompt)
+                    }
+                    onClick={(event) => selectWithClick(event, prompt)}
+                    className="group flex min-h-[38px] touch-manipulation items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-left text-[12px] font-medium text-slate-600 shadow-[0_8px_24px_-24px_rgba(15,23,42,0.75)] transition duration-200 hover:-translate-y-0.5 hover:border-[#00c2c9]/50 hover:bg-[#f5ffff] hover:text-[#0e1b2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] active:scale-[0.99] motion-reduce:transform-none"
                   >
                     <Icon
                       size={15}
@@ -170,8 +204,9 @@ export default function AssistantEmptyState({
             <button
               key={prompt}
               type="button"
-              onClick={() => onSuggestion(prompt)}
-              className="group flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm text-slate-600 shadow-[0_8px_30px_-28px_rgba(15,23,42,0.75)] transition duration-200 hover:-translate-y-0.5 hover:border-[#00c2c9]/50 hover:bg-[#f4ffff] hover:text-[#0e1b2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] motion-reduce:transform-none"
+              onPointerUp={(event) => selectWithPointer(event, prompt)}
+              onClick={(event) => selectWithClick(event, prompt)}
+              className="group flex min-h-12 touch-manipulation items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm text-slate-600 shadow-[0_8px_30px_-28px_rgba(15,23,42,0.75)] transition duration-200 hover:-translate-y-0.5 hover:border-[#00c2c9]/50 hover:bg-[#f4ffff] hover:text-[#0e1b2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] active:scale-[0.99] motion-reduce:transform-none"
             >
               {Icon ? (
                 <Icon

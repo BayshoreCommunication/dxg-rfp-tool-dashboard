@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import type { ProposalSettings } from "./AddNewProposal";
 
 export type CopyOverrides = {
@@ -60,6 +61,17 @@ export default function SaveCopyModal({
     }
   }, [isOpen, defaultEventName, defaultStartDate, defaultEndDate]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving) onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose, saving]);
+
   if (!isOpen) return null;
 
   const handleConfirm = () => {
@@ -70,36 +82,41 @@ export default function SaveCopyModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="relative w-full max-w-lg rounded-2xl bg-white shadow-xl mx-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="save-copy-title"
+        className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)]"
         style={{
           fontFamily: `"${settings.branding.defaultFont}", var(--font-sans)`,
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4e4e4]">
+        <div className="flex items-start justify-between gap-4 border-b border-[#e4e4e4] px-4 py-4 sm:px-6">
           <div>
-            <h2 className="text-[18px] font-semibold text-[#222628]">Save a Copy</h2>
+            <h2 id="save-copy-title" className="text-[18px] font-semibold text-[#222628]">Save a Copy</h2>
             <p className="mt-0.5 text-xs text-slate-500">
               Customize the copy. It will be saved as a draft.
             </p>
           </div>
           <button
             type="button"
+            aria-label="Close Save a Copy dialog"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors text-xl leading-none"
+            disabled={saving}
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600 disabled:opacity-50"
           >
-            ✕
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
           {/* Event Name */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -122,7 +139,7 @@ export default function SaveCopyModal({
           </div>
 
           {/* Date row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Start Date
@@ -154,12 +171,12 @@ export default function SaveCopyModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e4e4e4]">
+        <div className="grid grid-cols-2 gap-3 border-t border-[#e4e4e4] px-4 py-4 sm:flex sm:items-center sm:justify-end sm:px-6">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="h-9 px-5 rounded-md border border-[#e4e4e4] text-sm font-semibold text-[#222628] hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="h-10 rounded-lg border border-[#e4e4e4] px-4 text-sm font-semibold text-[#222628] transition-colors hover:bg-gray-50 disabled:opacity-50 sm:px-5"
           >
             Cancel
           </button>
@@ -167,7 +184,7 @@ export default function SaveCopyModal({
             type="button"
             onClick={handleConfirm}
             disabled={saving}
-            className="h-9 px-6 rounded-md text-white text-sm font-bold shadow-[0_4px_14px_0_rgba(14,165,233,0.35)] transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+            className="h-10 rounded-lg px-4 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(14,165,233,0.35)] transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 sm:px-6"
             style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
           >
             {saving ? "Saving..." : "Save Copy"}

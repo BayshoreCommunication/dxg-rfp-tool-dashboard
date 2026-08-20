@@ -2,6 +2,7 @@
 
 import type { ProposalCounts } from "@/app/actions/proposals";
 import { Search, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
 
 export type ProposalFilterType = "all" | "draft" | "live" | "favorite" | "expired" | "archive" | "saved";
 
@@ -70,6 +71,7 @@ export default function ProposalFilters({
   onFilterChange,
   counts,
 }: ProposalFiltersProps) {
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   return (
     <div className="w-full space-y-5 px-1 py-2 sm:px-2 sm:py-4 lg:px-6">
@@ -92,6 +94,9 @@ export default function ProposalFilters({
 
         <button
           type="button"
+          aria-controls="proposal-status-filters"
+          aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((open) => !open)}
           className="flex items-center justify-center gap-2 h-12 px-5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[13px] font-bold shadow-sm hover:bg-slate-50 hover:text-[#008ad2] hover:border-[#008ad2]/30 transition-all duration-200 shrink-0"
         >
           <SlidersHorizontal size={16} />
@@ -99,7 +104,10 @@ export default function ProposalFilters({
         </button>
       </div>
 
-      <div className="-mb-2 flex items-center gap-2 overflow-x-auto pb-2">
+      <div
+        id="proposal-status-filters"
+        className={`${filtersOpen ? "flex" : "hidden"} -mb-2 items-center gap-2 overflow-x-auto pb-2`}
+      >
         {TAB_CONFIG.map((tab) => {
           const isActive = activeFilter === tab.key;
           return (

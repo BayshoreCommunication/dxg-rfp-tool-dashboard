@@ -113,6 +113,27 @@ describe('ProposalTableList — proposal cards', () => {
     await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument(), LOAD_TIMEOUT)
   })
 
+  it('exposes every proposal action with a mobile-friendly accessible label', async () => {
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await waitFor(() => screen.getByText('Bayshore Summit 2026'), LOAD_TIMEOUT)
+
+    expect(screen.getByRole('button', { name: 'Copy URL' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Preview' })).toHaveAttribute(
+      'href',
+      '/proposal/bayshore-summit-2026-prop-001'
+    )
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute(
+      'href',
+      '/proposals/proposal-edit?proposalId=prop-001'
+    )
+    expect(screen.getByRole('button', { name: 'Save a copy' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Share' })).toHaveAttribute(
+      'href',
+      '/email/send-email?proposalId=prop-001'
+    )
+  })
+
   it('shows "Submitted" status badge for submitted proposals', async () => {
     render(<ProposalTableList searchValue="" activeFilter="all" />)
     await waitFor(() => expect(screen.getByText('Submitted')).toBeInTheDocument(), LOAD_TIMEOUT)

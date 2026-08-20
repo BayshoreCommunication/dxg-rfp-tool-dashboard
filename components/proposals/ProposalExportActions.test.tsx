@@ -22,7 +22,7 @@ describe("ProposalExportActions", () => {
   });
 
   it("places direct PDF download above the print action", () => {
-    render(
+    const { container } = render(
       <ProposalExportActions proposal={proposal} />,
     );
 
@@ -34,6 +34,7 @@ describe("ProposalExportActions", () => {
       downloadButton.compareDocumentPosition(printButton) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(container.firstChild).toHaveClass("sticky", "md:fixed");
   });
 
   it("downloads without opening print and keeps print as a separate action", async () => {

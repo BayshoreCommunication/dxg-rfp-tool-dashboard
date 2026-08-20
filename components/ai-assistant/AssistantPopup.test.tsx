@@ -98,6 +98,17 @@ describe("AssistantPopup", () => {
     ).toHaveClass("assistant-popup-open");
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
+    ).toHaveClass("assistant-popup-shell");
+    expect(
+      screen.getByRole("dialog", { name: "AI Assistant" }),
+    ).toHaveClass(
+      "max-sm:!top-[calc(4rem+env(safe-area-inset-top)+0.5rem)]",
+      "max-sm:!bottom-[calc(4.5rem+env(safe-area-inset-bottom)+0.5rem)]",
+      "max-sm:!h-auto",
+      "max-sm:!w-auto",
+    );
+    expect(
+      screen.getByRole("dialog", { name: "AI Assistant" }),
     ).toHaveClass("z-[60]");
     expect(
       screen.getByRole("dialog", { name: "AI Assistant" }),
@@ -214,6 +225,34 @@ describe("AssistantPopup", () => {
     launcher.remove();
   });
 
+  test("returns focus to the visible mobile launcher after closing", async () => {
+    const onOpenChange = jest.fn();
+    const desktopLauncher = document.createElement("button");
+    desktopLauncher.id = "ai-assistant-launcher";
+    Object.defineProperty(desktopLauncher, "getClientRects", {
+      configurable: true,
+      value: () => [],
+    });
+    const mobileLauncher = document.createElement("button");
+    mobileLauncher.id = "ai-assistant-mobile-launcher";
+    Object.defineProperty(mobileLauncher, "getClientRects", {
+      configurable: true,
+      value: () => [{ width: 40, height: 40 }],
+    });
+    document.body.append(desktopLauncher, mobileLauncher);
+
+    render(<AssistantPopup open onOpenChange={onOpenChange} />);
+    await screen.findByText("Workspace presentation: popup");
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await waitFor(() => expect(mobileLauncher).toHaveFocus(), {
+      timeout: 700,
+    });
+    desktopLauncher.remove();
+    mobileLauncher.remove();
+  });
+
   test("fits within a 320px viewport and a reduced visual viewport", async () => {
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
@@ -246,6 +285,46 @@ describe("AssistantPopup", () => {
         width: "296px",
         height: "456px",
       }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Move AI Assistant" }),
+    ).toHaveClass("max-sm:hidden");
+    expect(
+      screen.getByRole("button", {
+        name: "Resize AI Assistant from lower right",
+      }),
+    ).toHaveClass("max-sm:hidden");
+  });
+
+  test("restores the default popup size after leaving a narrow viewport", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 320,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 640,
+    });
+
+    render(<AssistantPopup open onOpenChange={jest.fn()} />);
+    await screen.findByText("Workspace presentation: popup");
+    const dialog = screen.getByRole("dialog", { name: "AI Assistant" });
+    await waitFor(() =>
+      expect(dialog).toHaveStyle({ width: "296px", height: "540px" }),
+    );
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 1024,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 768,
+    });
+    fireEvent(window, new Event("resize"));
+
+    await waitFor(() =>
+      expect(dialog).toHaveStyle({ width: "420px", height: "540px" }),
     );
   });
 

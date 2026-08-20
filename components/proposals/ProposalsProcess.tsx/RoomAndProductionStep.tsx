@@ -2206,7 +2206,7 @@ const RoomCard = ({
   return (
     <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
       <div
-        className="flex items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-slate-50"
+        className="flex flex-col items-stretch gap-3 px-4 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-5"
         style={{ borderBottom: isExpanded ? "1px solid #e4e4e4" : "none" }}
       >
         <button
@@ -2222,7 +2222,7 @@ const RoomCard = ({
           >
             {index + 1}
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-[#222628]">
               {roomLabel}
               <span className="ml-2 text-xs font-normal text-[#969798]">
@@ -2240,7 +2240,7 @@ const RoomCard = ({
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </span>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
           <button
             type="button"
             onClick={onDuplicate}

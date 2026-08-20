@@ -73,6 +73,28 @@ describe("InfoTooltip field help", () => {
     });
   });
 
+  test("launches once after a mobile pointer is released", () => {
+    const requestFieldHelp = jest.fn();
+
+    render(
+      <AssistantLauncherProvider value={{ enabled: true, requestFieldHelp }}>
+        <label>
+          Venue Name
+          <InfoTooltip text="Enter the venue." />
+        </label>
+      </AssistantLauncherProvider>,
+    );
+
+    const askAi = screen.getByRole("button", {
+      name: "Ask AI about this field",
+    });
+    fireEvent.pointerUp(askAi, { pointerType: "touch" });
+    fireEvent.click(askAi);
+
+    expect(requestFieldHelp).toHaveBeenCalledTimes(1);
+    expect(askAi).toHaveClass("touch-manipulation");
+  });
+
   test("captures visible choices and limits from the current rendered field", () => {
     const requestFieldHelp = jest.fn();
 

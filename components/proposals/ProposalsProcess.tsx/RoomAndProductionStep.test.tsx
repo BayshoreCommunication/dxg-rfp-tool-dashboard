@@ -72,6 +72,34 @@ describe("scenic inspiration navigation", () => {
   });
 });
 
+describe("responsive room controls", () => {
+  it("stacks the room actions below the accordion trigger on phones", () => {
+    render(
+      <RoomAndProductionStep
+        rooms={[defaultRoom()]}
+        onRoomsChange={jest.fn()}
+        numberOfEventRooms="1"
+        onNumberOfEventRoomsChange={jest.fn()}
+        onContinue={jest.fn()}
+        onBack={jest.fn()}
+        proposalSettings={proposalSettings}
+      />,
+    );
+
+    const roomTrigger = screen.getByRole("button", { name: /Room 1/i });
+    const responsiveHeader = roomTrigger.parentElement;
+
+    expect(responsiveHeader).toHaveClass(
+      "flex-col",
+      "items-stretch",
+      "sm:flex-row",
+      "sm:items-center",
+      "sm:justify-between",
+    );
+    expect(roomTrigger).toHaveClass("min-w-0", "flex-1");
+  });
+});
+
 describe("parseScheduleWorkbook", () => {
   it("groups multiple functions in the same physical room under one shared AV module", async () => {
     const buffer = workbookBuffer([

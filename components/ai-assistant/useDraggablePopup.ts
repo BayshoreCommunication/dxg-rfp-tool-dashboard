@@ -348,7 +348,9 @@ export default function useDraggablePopup(
     });
 
     const handleResize = () => {
-      const safeSize = clampSize(sizeRef.current ?? defaultSize());
+      const safeSize = sizeModifiedRef.current
+        ? clampSize(sizeRef.current ?? defaultSize())
+        : defaultSize();
       updateSize(safeSize, sizeModifiedRef.current);
       const next = modifiedRef.current
         ? clamp(

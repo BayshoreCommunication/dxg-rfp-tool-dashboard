@@ -109,7 +109,7 @@ export default function ChatComposer({
             composingRef.current = false;
           }}
           className={cn(
-            "assistant-composer-scrollbar block max-h-36 min-h-10 w-full min-w-0 resize-none bg-transparent pl-2 pr-[68px] leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400",
+            "assistant-composer-scrollbar block max-h-36 min-h-10 w-full min-w-0 touch-manipulation resize-none bg-transparent pl-2 pr-[68px] leading-5 text-[#0e1b2b] outline-none placeholder:text-slate-400 max-sm:text-base",
             compact
               ? "py-1.5 text-[12.5px] placeholder-shown:min-h-10"
               : "py-2.5 text-[15px] placeholder-shown:min-h-20 sm:placeholder-shown:min-h-10",
@@ -121,7 +121,7 @@ export default function ChatComposer({
             onClick={onAbort}
             aria-label="Stop assistant response"
             title="Stop response"
-            className="absolute bottom-2 right-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[#0e1b2b] text-white transition-colors hover:bg-[#1c3047] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
+            className="absolute bottom-2 right-5 z-10 flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-[#0e1b2b] text-white transition-colors hover:bg-[#1c3047] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 active:scale-95"
           >
             <Square size={13} fill="currentColor" aria-hidden />
           </button>
@@ -130,7 +130,7 @@ export default function ChatComposer({
             type="submit"
             disabled={!canSend}
             aria-label="Send message"
-            className="absolute bottom-2 right-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[#00b8bf] text-white shadow-sm transition duration-200 hover:bg-[#009da4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+            className="absolute bottom-2 right-5 z-10 flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-[#00b8bf] text-white shadow-sm transition duration-200 hover:bg-[#009da4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:active:scale-100"
           >
             <ArrowUp size={17} strokeWidth={2.4} aria-hidden />
           </button>

@@ -103,7 +103,7 @@ export function useClickOutside<T extends HTMLElement>(
 export const InfoTooltip = ({ text }: { text: string }) => {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const iconRef = useRef<HTMLButtonElement>(null);
-  const lastTouchActivation = useRef(0);
+  const lastPointerActivation = useRef<number | null>(null);
   const { enabled: assistantEnabled, requestFieldHelp } =
     useAssistantLauncher();
 
@@ -191,21 +191,27 @@ export const InfoTooltip = ({ text }: { text: string }) => {
         <button
           type="button"
           aria-label="Ask AI about this field"
-          onTouchStart={(event) => {
+          onPointerUp={(event) => {
+            if (event.pointerType === "mouse") return;
             event.preventDefault();
             event.stopPropagation();
-            lastTouchActivation.current = Date.now();
+            lastPointerActivation.current = event.timeStamp;
             askAssistant(event.currentTarget);
           }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            // A touch normally emits a synthetic click after touch-end.
-            // Ignore only that duplicate; mouse and keyboard clicks launch.
-            if (Date.now() - lastTouchActivation.current < 700) return;
+            // Touch and pen activation runs after the pointer is released.
+            // Ignore only the synthetic click that follows it.
+            if (
+              lastPointerActivation.current !== null &&
+              event.timeStamp - lastPointerActivation.current < 700
+            ) {
+              return;
+            }
             askAssistant(event.currentTarget);
           }}
-          className="relative z-10 inline-flex h-7 touch-manipulation items-center gap-1.5 rounded-md px-1 text-[13px] font-semibold normal-case tracking-normal text-[#1DBFD3] transition hover:bg-[#eafafd] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35"
+          className="relative z-10 inline-flex h-7 touch-manipulation items-center gap-1.5 rounded-md px-1 text-[13px] font-semibold normal-case tracking-normal text-[#1DBFD3] transition hover:bg-[#eafafd] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35 active:scale-[0.98]"
         >
           <Sparkles size={17} strokeWidth={2.25} aria-hidden />
           Ask AI

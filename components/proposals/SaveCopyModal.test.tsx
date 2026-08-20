@@ -20,6 +20,7 @@ describe('SaveCopyModal', () => {
 
     it('renders the modal when isOpen is true', () => {
       render(<SaveCopyModal {...baseProps} />)
+      expect(screen.getByRole('dialog', { name: /save a copy/i })).toBeInTheDocument()
       expect(screen.getByText('Save a Copy')).toBeInTheDocument()
       expect(screen.getByText('Customize the copy. It will be saved as a draft.')).toBeInTheDocument()
     })
@@ -39,9 +40,15 @@ describe('SaveCopyModal', () => {
   })
 
   describe('closing the modal', () => {
-    it('calls onClose when the ✕ button is clicked', () => {
+    it('calls onClose when the close button is clicked', () => {
       render(<SaveCopyModal {...baseProps} />)
-      fireEvent.click(screen.getByText('✕'))
+      fireEvent.click(screen.getByRole('button', { name: /close save a copy dialog/i }))
+      expect(baseProps.onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onClose when Escape is pressed', () => {
+      render(<SaveCopyModal {...baseProps} />)
+      fireEvent.keyDown(window, { key: 'Escape' })
       expect(baseProps.onClose).toHaveBeenCalledTimes(1)
     })
 
