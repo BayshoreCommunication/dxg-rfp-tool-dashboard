@@ -40,7 +40,7 @@ const summary = (overrides: Partial<ResponseCardSummary> = {}): ResponseCardSumm
   ...overrides,
 });
 
-it("renders response cards in the required information order with auditable values and every attachment", () => {
+it("renders compact response cards with auditable commercial totals, attachments, and attention flags", () => {
   const item = response("response-1", "Northstar AV");
   render(
     <ProposalResponseCards
@@ -52,15 +52,31 @@ it("renders response cards in the required information order with auditable valu
   );
 
   const card = screen.getByRole("article");
-  const text = card.textContent ?? "";
-  expect(text.indexOf("Northstar AV")).toBeLessThan(text.indexOf("USD 125000"));
-  expect(text.indexOf("USD 125000")).toBeLessThan(text.indexOf("Required-field completeness"));
-  expect(text.indexOf("Required-field completeness")).toBeLessThan(text.indexOf("Source attachments"));
-  expect(within(card).getByText("pricing.pdf")).toBeInTheDocument();
-  expect(within(card).getByText("page 2")).toBeInTheDocument();
-  expect(within(card).getByText("response-1-technical.pdf")).toBeInTheDocument();
+  expect(within(card).getByText("Commercial total")).toBeInTheDocument();
+  expect(within(card).getByText("$125,000")).toBeInTheDocument();
+  expect(within(card).getByText("Attachments")).toBeInTheDocument();
+  expect(within(card).getByRole("link", { name: "response-1-technical.pdf" })).toHaveAttribute(
+    "title",
+    "response-1-technical.pdf",
+  );
+  expect(within(card).getByText("+1 more file")).toBeInTheDocument();
+  expect(within(card).queryByText(/View total source/i)).not.toBeInTheDocument();
+  expect(within(card).getByText("Not stated: Insurance")).toBeInTheDocument();
+  expect(within(card).getByText("View all 2 attachments")).toBeInTheDocument();
   expect(within(card).getByText("response-1-pricing.xlsx")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Proposal Intelligence" })).toBeDisabled();
+  expect(within(card).getByRole("link", { name: "View full response" })).toHaveAttribute(
+    "href",
+    "/vendor-responses/response-1",
+  );
+  expect(screen.getByRole("link", { name: "Back to responses" })).toHaveAttribute(
+    "href",
+    "/vendor-responses",
+  );
+  expect(
+    within(screen.getByLabelText("Proposal response overview")).getByRole("button", {
+      name: "Proposal Intelligence",
+    }),
+  ).toBeDisabled();
   expect(screen.getByText(/1 currently qualifies/)).toBeInTheDocument();
 });
 
@@ -80,8 +96,15 @@ it("enables Proposal Intelligence when two responses are comparable", () => {
     "href",
     "/proposals/proposal-1/intelligence",
   );
-  expect(screen.getByText("2 responses")).toBeInTheDocument();
-  expect(screen.getByText("1 requiring attention")).toBeInTheDocument();
+  const overview = screen.getByLabelText("Proposal response overview");
+  expect(within(overview).getByRole("link", { name: /Proposal Intelligence/ })).toBeInTheDocument();
+  expect(screen.queryByText("Compare these responses")).not.toBeInTheDocument();
+  expect(screen.queryByText("2 responses")).not.toBeInTheDocument();
+  expect(screen.queryByText("1 requiring attention")).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "Annual Summit" })).toHaveClass(
+    "text-2xl",
+    "!font-semibold",
+  );
 });
 
 it("offers the invitation action in the real empty state", () => {
@@ -101,4 +124,3 @@ it("offers the invitation action in the real empty state", () => {
   );
   expect(screen.queryByText("Compare these responses")).not.toBeInTheDocument();
 });
-
