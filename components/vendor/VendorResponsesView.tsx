@@ -26,6 +26,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VendorAnalysisSection from "./VendorAnalysisSection";
 import VendorComparisonPanel from "./VendorComparisonPanel";
+import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 import VendorExtractionSection from "./VendorExtractionSection";
 import VendorFactsSection from "./VendorFactsSection";
 import VendorEvaluationSection from "./VendorEvaluationSection";
@@ -387,6 +388,7 @@ export default function VendorResponsesView({
                 <VendorComparisonPanel
                   responses={responses}
                   proposalId={selected.proposalId}
+                  returnTo="/vendor-responses"
                 />
                 <div className="flex items-start gap-4">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#008ad2] text-base font-extrabold text-white shadow-[0_12px_28px_-16px_rgba(0,138,210,0.9)]">
@@ -408,7 +410,7 @@ export default function VendorResponsesView({
                       </span>
                     </p>
                     <Link
-                      href={`/proposals/${selected.proposalId}/intelligence/requirements`}
+                      href={requirementRegistryHref(selected.proposalId, "/vendor-responses")}
                       className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#008ad2]/25 bg-[#eaf7fd] px-3 text-xs font-extrabold text-[#0076b4] transition hover:border-[#008ad2]/40 hover:bg-[#dff3fc]"
                     >
                       <ClipboardList size={14} /> Review RFP requirements

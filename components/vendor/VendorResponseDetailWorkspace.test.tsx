@@ -116,7 +116,7 @@ it("renders a keyboard-operable immutable timeline and current receipt lineage",
   expect(screen.getByText("Security scan passed")).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Review proposal requirements" }),
-  ).toHaveAttribute("href", "/proposals/proposal-1/intelligence/requirements");
+  ).toHaveAttribute("href", "/proposals/proposal-1/intelligence/requirements?returnTo=%2Fvendor-responses%2Fresponse-1");
   expect(screen.getByTestId("extraction")).toHaveTextContent("version-2");
 });
 

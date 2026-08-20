@@ -9,6 +9,7 @@ import ProposalComparisonMatrix from "@/components/proposalIntelligence/Proposal
 import ProposalReweighting from "@/components/proposalIntelligence/ProposalReweighting";
 import ProposalVerdict from "@/components/proposalIntelligence/ProposalVerdict";
 import VendorComparisonPanel from "@/components/vendor/VendorComparisonPanel";
+import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, FileStack, History, Scale, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -64,6 +65,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
     }))] : []));
   const [workspaceResult, analysisParticipants] = await Promise.all([workspacePromise, analysisPromise]);
   const currentWorkspace = workspaceResult?.success ? workspaceResult.data : null;
+  const intelligencePath = `/proposals/${id}/intelligence`;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
@@ -103,7 +105,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
         <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
           <article className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-start gap-3"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${approvedSet ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{approvedSet ? <CheckCircle2 size={19} /> : <AlertTriangle size={19} />}</span><div><h2 className="font-extrabold text-slate-950">Requirement readiness</h2><p className="mt-1 text-sm leading-6 text-slate-600">{approvedSet ? `Approved version ${approvedSet.version} contains ${approvedSet.requirement_count} frozen requirements.` : "Review and approve the proposal requirement registry before comparing vendors."}</p></div></div>
-            <Link href={`/proposals/${id}/intelligence/requirements`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><FileStack size={15} />Open requirement registry</Link>
+            <Link href={requirementRegistryHref(id, intelligencePath)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><FileStack size={15} />Open requirement registry</Link>
           </article>
           <article className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="font-extrabold text-slate-950">Historical runs</h2>
@@ -114,7 +116,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
         </section>
 
         <section className="mt-5" aria-label="Comparison setup and recovery">
-          <VendorComparisonPanel responses={responses} proposalId={id} requirementsApproved={Boolean(approvedSet)} />
+          <VendorComparisonPanel responses={responses} proposalId={id} requirementsApproved={Boolean(approvedSet)} returnTo={intelligencePath} />
         </section>
       </div>
     </main>

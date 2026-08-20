@@ -14,12 +14,14 @@ import {
 } from "@/app/actions/requirementRegistry";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, FileSearch, LockKeyhole, RefreshCw, Save, Search, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 
 type Props = {
   proposalId: string;
   initialRegistry: RequirementRegistryView | null;
   initialSets: RequirementSetSummary[];
+  returnTo?: string;
 };
 const groupNames: Record<string, string> = {
   event: "Event & audience",
@@ -190,7 +192,8 @@ function RequirementEditor({
   );
 }
 
-export default function RequirementRegistryWorkspace({ proposalId, initialRegistry, initialSets }: Props) {
+export default function RequirementRegistryWorkspace({ proposalId, initialRegistry, initialSets, returnTo = `/proposals/${proposalId}/intelligence` }: Props) {
+  const router = useRouter();
   const [registry, setRegistry] = useState(initialRegistry);
   const [sets, setSets] = useState(initialSets);
   const [search, setSearch] = useState("");
@@ -246,7 +249,10 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
     setWorking(true); setMessage(null); setSuccessMessage(null);
     const result = await approveRequirementSetAction(proposalId, registry.set.id, registry.set.lock_version);
     setWorking(false);
-    if (result.success) applyRegistry(result.data); else setMessage(result.message);
+    if (result.success) {
+      applyRegistry(result.data);
+      router.replace(returnTo);
+    } else setMessage(result.message);
   };
   const prepare = async () => {
     if (!registry) return;
@@ -274,7 +280,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <Link href="/vendor-responses" className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-500 hover:text-[#008ad2]"><ArrowLeft size={14} /> Back to vendor responses</Link>
+        <Link href={returnTo} className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-500 hover:text-[#008ad2]"><ArrowLeft size={14} /> Back to vendor evaluation</Link>
         <header className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>

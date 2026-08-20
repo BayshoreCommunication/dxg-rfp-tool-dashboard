@@ -7,6 +7,10 @@ const generate = jest.fn();
 const prepare = jest.fn();
 const approve = jest.fn();
 const update = jest.fn();
+const replace = jest.fn();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ replace }),
+}));
 jest.mock("@/app/actions/requirementRegistry", () => ({
   generateRequirementSetAction: (...args: unknown[]) => generate(...args),
   prepareRequirementSetAction: (...args: unknown[]) => prepare(...args),
@@ -123,12 +127,14 @@ test("keeps the registry version selector in sync after approval", async () => {
     proposalId="abc123abc123abc123abc123"
     initialRegistry={ready}
     initialSets={[{ ...ready.set, requirement_count: ready.requirements.length, freshness: ready.freshness }]}
+    returnTo="/vendor-responses/response-1"
   />);
 
   await userEvent.click(screen.getByRole("button", { name: /approve and freeze/i }));
 
   expect(approve).toHaveBeenCalledWith("abc123abc123abc123abc123", ready.set.id, 3);
   expect(await screen.findByRole("option", { name: "Version 1 · Approved" })).toBeInTheDocument();
+  expect(replace).toHaveBeenCalledWith("/vendor-responses/response-1");
 });
 
 test("a saved row explicitly confirms mandatory and criterion review", async () => {
