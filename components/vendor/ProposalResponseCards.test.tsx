@@ -72,12 +72,31 @@ it("renders compact response cards with auditable commercial totals, attachments
     "href",
     "/vendor-responses",
   );
-  expect(
-    within(screen.getByLabelText("Proposal response overview")).getByRole("button", {
-      name: "Proposal Intelligence",
-    }),
-  ).toBeDisabled();
-  expect(screen.getByText(/1 currently qualifies/)).toBeInTheDocument();
+  const overview = screen.getByLabelText("Proposal response overview");
+  expect(within(overview).getByText("1 more readable response needed")).toBeInTheDocument();
+  expect(within(overview).getByRole("link", { name: "Invite another vendor" })).toHaveAttribute(
+    "href",
+    "/email/send-email?proposalId=proposal-1",
+  );
+});
+
+it("directs a single unreadable response to its issues", () => {
+  const item = response("response-1", "Northstar AV");
+  render(
+    <ProposalResponseCards
+      proposalId="proposal-1"
+      proposalTitle="Annual Summit"
+      responses={[item]}
+      summaries={{ [item._id]: summary({ isComparable: false }) }}
+    />,
+  );
+
+  const overview = screen.getByLabelText("Proposal response overview");
+  expect(within(overview).getByText("Resolve response issues to unlock comparison")).toBeInTheDocument();
+  expect(within(overview).getByRole("link", { name: /Review response issues/ })).toHaveAttribute(
+    "href",
+    "/vendor-responses/response-1",
+  );
 });
 
 it("enables Proposal Intelligence when two responses are comparable", () => {

@@ -290,6 +290,7 @@ export default function ProposalResponseCards({
   summaries: Record<string, ResponseCardSummary>;
 }) {
   const comparableCount = responses.filter((response) => summaries[response._id]?.isComparable).length;
+  const responseNeedingReview = responses.find((response) => !summaries[response._id]?.isComparable);
 
   return (
     <main className="min-h-screen bg-gray-panel px-4 py-6 sm:px-6 lg:px-8">
@@ -323,18 +324,41 @@ export default function ProposalResponseCards({
                   >
                     Proposal Intelligence <ArrowRight size={16} aria-hidden="true" />
                   </Link>
+                ) : responses.length === 1 && comparableCount === 1 ? (
+                  <>
+                    <p className="text-xs font-semibold leading-4 text-gray sm:text-right">
+                      1 more readable response needed
+                    </p>
+                    <Link
+                      href={`/email/send-email?proposalId=${encodeURIComponent(proposalId)}`}
+                      className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-extrabold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
+                    >
+                      <MailPlus size={16} aria-hidden="true" /> Invite another vendor
+                    </Link>
+                  </>
+                ) : responseNeedingReview ? (
+                  <>
+                    <p className="text-xs font-semibold leading-4 text-gray sm:text-right">
+                      Resolve response issues to unlock comparison
+                    </p>
+                    <Link
+                      href={`/vendor-responses/${encodeURIComponent(responseNeedingReview._id)}`}
+                      className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-brand px-4 text-sm font-extrabold text-brand-dark hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
+                    >
+                      Review response issues <ArrowRight size={16} aria-hidden="true" />
+                    </Link>
+                  </>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      disabled
-                      className="inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-xl bg-gray-border px-4 text-sm font-extrabold text-gray sm:w-auto"
-                    >
-                      Proposal Intelligence
-                    </button>
-                    <p className="mt-1.5 max-w-56 text-xs leading-4 text-gray sm:text-right">
-                      Add at least two readable responses. {comparableCount} currently {comparableCount === 1 ? "qualifies" : "qualify"}.
+                    <p className="text-xs font-semibold leading-4 text-gray sm:text-right">
+                      Add readable responses to unlock comparison
                     </p>
+                    <Link
+                      href={`/email/send-email?proposalId=${encodeURIComponent(proposalId)}`}
+                      className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-extrabold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
+                    >
+                      <MailPlus size={16} aria-hidden="true" /> Invite another vendor
+                    </Link>
                   </>
                 )}
               </div>

@@ -949,3 +949,59 @@ At the mobile breakpoint, the action becomes a full-width button beneath the des
 - No actionable P0, P1, or P2 findings remain.
 
 final result: passed
+
+---
+
+# Single Response Next-Step Follow-up
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_pmN855/Screenshot 2026-08-20 at 5.39.36 PM.png`
+- Implementation route: `http://localhost:3000/vendor-responses/proposals/6a71b6e26b4873eff69fcf49`
+- Desktop implementation capture: `/tmp/rfp-single-response-improved-desktop.png`
+- Mobile implementation capture: `/tmp/rfp-single-response-improved-mobile.png`
+- Focused implementation capture: `/tmp/rfp-single-response-improved-focused.png`
+- Combined comparison input: `/tmp/rfp-single-response-improved-comparison.png`
+- State: source shows one readable response; current live data provides one issue-blocked response. The shared one-response header structure is compared visually, while both actionable branches are verified in component tests.
+
+## Capture normalization
+
+- Source: 1288 × 140 pixels at 1× density, normalized proportionally to 1067 px wide for comparison.
+- Desktop implementation: 1269 × 714 pixels from a 1280 × 720 CSS viewport at 1× density; focused header region is 1080 × 134 pixels and normalized proportionally to 1067 px wide.
+- Mobile implementation: 379 × 820 pixels from a 390 × 844 CSS viewport at 1× density after browser chrome.
+- Combined comparison: 2146 × 134 pixels, with both normalized header regions centered vertically.
+
+## Full-view and focused comparison evidence
+
+The source presents a disabled Proposal Intelligence control and a small, awkwardly wrapped qualification sentence. The implemented one-response state replaces the dead end with the next valid action. A readable single response shows `1 more readable response needed` and an active `Invite another vendor` link. An issue-blocked single response shows `Resolve response issues to unlock comparison` and links directly to that response's issue review.
+
+The live issue-blocked branch remains compact at desktop width and stacks into a full-width, above-fold action on mobile. The single response card remains aligned below the overview header with no page-level horizontal overflow.
+
+## Fidelity surfaces
+
+- Fonts and typography: the existing proposal title and descriptive hierarchy are preserved. The new guidance uses 12 px semibold text; action labels retain 14 px extra-bold treatment.
+- Spacing and layout rhythm: the right-side action block remains within the compact header. Guidance and action use an 8 px gap; mobile stacks the action at full available width.
+- Colors and visual tokens: the invitation action uses the existing filled brand treatment. Issue review uses the existing brand border, brand text, muted hover, and focus-ring tokens.
+- Image quality and asset fidelity: existing library icons are used for invitation and navigation. No raster or custom-drawn asset was introduced.
+- Copy and content: the grammatical `1 currently qualifies` message and disabled action are removed. Each branch now explains the requirement and offers the next valid task.
+
+## Interaction and browser verification
+
+- A readable single response links `Invite another vendor` to `/email/send-email?proposalId=proposal-1` in component coverage.
+- An issue-blocked single response links `Review response issues` to the exact response detail route in both component coverage and live browser verification.
+- The enabled two-response Proposal Intelligence path and zero-response invitation state remain covered.
+- Desktop and 390 px mobile checks confirm the action is above the fold with no horizontal overflow.
+- A clean authenticated navigation produced no console warnings or errors.
+
+## Findings and comparison history
+
+### Pass 1
+
+- [P1] The one-response state exposed a disabled major action without a useful next step.
+- [P2] The qualification copy was grammatically awkward and wrapped into a narrow right column.
+
+### Pass 2
+
+- Fix: replaced the disabled state with two explicit, data-aware actions—invite another vendor when the existing response is readable, or review the current response when it is not.
+- Post-fix evidence: combined desktop comparison, mobile capture, clean live issue-review navigation target, and four passing component tests covering readable, unreadable, comparable, and empty states.
+- No actionable P0, P1, or P2 findings remain.
+
+final result: passed
