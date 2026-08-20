@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, visibleRunMessages } from "./AssistantWorkspacePage";
+import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, isSkipQuestionInstruction, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
@@ -583,6 +583,44 @@ describe("AssistantWorkspacePage", () => {
       .toBeNull();
   });
 
+  test("recognizes natural spoken ways to skip the active question", () => {
+    const instructions = [
+      "Skip",
+      "skip it",
+      "skip now",
+      "please skip this question",
+      "I want to skib",
+      "I want to skip it",
+      "I'd like to skip this one",
+      "let's skip",
+      "can you please skip it now",
+      "okay, just pass this for now",
+      "go to the next question",
+      "move on",
+      "next please",
+    ];
+
+    for (const instruction of instructions) {
+      expect(isSkipQuestionInstruction(instruction)).toBe(true);
+    }
+  });
+
+  test("does not skip when skip is negated or only mentioned in an answer", () => {
+    const instructions = [
+      "don't skip this",
+      "I do not want to skip",
+      "can you not skip it",
+      "never skip this question",
+      "the venue has a skip loading dock",
+      "what does skip mean?",
+      "I skipped this last year",
+    ];
+
+    for (const instruction of instructions) {
+      expect(isSkipQuestionInstruction(instruction)).toBe(false);
+    }
+  });
+
   test("shows final action hints without posting an assistant chat message", async () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     const composer = await screen.findByLabelText("Message the proposal assistant");
@@ -732,7 +770,7 @@ describe("AssistantWorkspacePage", () => {
     expect(fieldAnswerFromInstruction(accessQuestion, "not sure")).toBe("Not Sure");
   });
 
-  test("treats typed skip as the guided action instead of an assistant chat message", async () => {
+  test("treats a voice-style skip phrase as the guided action instead of an assistant chat message", async () => {
     const accessQuestion = guidedQuestion(
       "q-access",
       "Are there loading dock, freight elevator, security, parking, or access restrictions?",
@@ -748,7 +786,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     const composer = await screen.findByLabelText("Message the proposal assistant");
-    fireEvent.change(composer, { target: { value: "Skip" } });
+    fireEvent.change(composer, { target: { value: "I want to skib" } });
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(

@@ -118,7 +118,6 @@ const getSpeechRecognition = (): SpeechRecognitionConstructor | null => {
 };
 
 const FIELD_COMMAND = /\b(fill|set|apply|enter|put|answer|update)\b/i;
-const SKIP_QUESTION_COMMAND = /^(?:please\s+)?(?:skip|pass)(?:\s+(?:this|it|question))?$|^(?:go\s+to\s+)?next\s+question$/i;
 const FIELD_HELP_COMMAND = /^(?:please\s+)?(?:help|hint|show\s+(?:me\s+)?(?:a\s+)?hint|how\s+(?:do|should|can)\s+i\s+(?:answer|say|fill)(?:\s+this)?|what\s+should\s+i\s+say|(?:eta|eita|এটা|এটি)\s+(?:kivabe|কীভাবে|কিভাবে)\s+(?:bolbo|বলব|fill\s+korbo|ফিল\s+করব))\??$/i;
 
 export type ProposalWorkspaceAction =
@@ -281,6 +280,38 @@ const looksLikeDateInstruction = (input: string) =>
 
 const comparableWords = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const SKIP_VERB = '(?:skip|skib|pass)';
+const SKIP_TARGET =
+  '(?:it|this|that|this one|that one|the question|this question|that question|the current question|current question)';
+const SKIP_FILLER_PREFIX = '(?:(?:ok|okay|well|uh|um|hey) )?';
+const DIRECT_SKIP_INSTRUCTION = new RegExp(
+  `^${SKIP_FILLER_PREFIX}(?:please )?(?:just )?${SKIP_VERB}(?: ${SKIP_TARGET})?(?: (?:now|for now))?(?: please)?$`,
+);
+const REQUESTED_SKIP_INSTRUCTION = new RegExp(
+  `^${SKIP_FILLER_PREFIX}(?:please )?(?:(?:i|we) (?:want|need) to|i would like to|id like to|i wanna|lets|let us|(?:can|could|would|will) (?:you|we)(?: please)?) ${SKIP_VERB}(?: ${SKIP_TARGET})?(?: (?:now|for now))?(?: please)?$`,
+);
+const NEXT_QUESTION_INSTRUCTION = new RegExp(
+  `^${SKIP_FILLER_PREFIX}(?:please )?(?:(?:go|move)(?: on)? to (?:the )?next(?: question)?|move on|continue(?: to (?:the )?next question)?|(?:the )?next(?: question)?)(?: now)?(?: please)?$`,
+);
+const NEGATED_SKIP_INSTRUCTION = new RegExp(
+  `\\b(?:do not|dont|never)(?: (?:want|need|mean|plan|intend|like|think|i|we|you|to|should|could|would)){0,6} ${SKIP_VERB}\\b|\\bnot (?:to )?${SKIP_VERB}\\b`,
+);
+
+/**
+ * Treats a concise natural instruction as the active question's Skip action.
+ * Keep this intentionally narrower than fuzzy chat matching so an answer that
+ * merely mentions "skip" is never discarded by accident.
+ */
+export const isSkipQuestionInstruction = (input: string) => {
+  const normalized = comparableWords(input.replace(/[’']/g, ''));
+  if (!normalized || NEGATED_SKIP_INSTRUCTION.test(normalized)) return false;
+  return (
+    DIRECT_SKIP_INSTRUCTION.test(normalized) ||
+    REQUESTED_SKIP_INSTRUCTION.test(normalized) ||
+    NEXT_QUESTION_INSTRUCTION.test(normalized)
+  );
+};
 
 const cleanSpeechCandidate = (value: string) => {
   const words = value.trim().split(/\s+/);
@@ -3205,7 +3236,7 @@ export default function AssistantWorkspacePage({
         setInputClarification(questionAnswerHint(currentQuestion));
         return;
       }
-      if (SKIP_QUESTION_COMMAND.test(value)) {
+      if (isSkipQuestionInstruction(value)) {
         setText('');
         const skipped = await resolveQuestion(currentQuestion.id, {
           status: 'dismissed',
