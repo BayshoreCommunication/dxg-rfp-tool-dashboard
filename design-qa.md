@@ -38,8 +38,6 @@ final result: blocked
 
 final result: passed
 
----
-
 # Proposal Voice Composer — Design QA
 
 ## Evidence and target
@@ -680,5 +678,274 @@ The comparison shows unchanged trigger typography, icon, count, border radius, l
 - [x] Support toggle, issue selection, outside-click, and Escape dismissal.
 - [x] Restore trigger focus after keyboard dismissal.
 - [x] Verify browser rendering and the full automated suite.
+
+final result: passed
+
+---
+
+# Vendor Response Card Design QA
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_OIfq0K/Screenshot 2026-08-20 at 4.17.39 PM.png`
+- Implementation route: `http://localhost:3000/vendor-responses/proposals/6a7d6aa0556f07bff684ad67`
+- Desktop implementation capture: `/tmp/rfp-response-cards-implementation-focused.png`
+- Mobile implementation capture: `/tmp/rfp-response-cards-implementation-mobile-pass2.png`
+- Combined comparison input: `/tmp/rfp-response-cards-comparison.png`
+- State: authenticated proposal-scoped response list, collapsed disclosures, two live responses.
+
+## Capture normalization
+
+- Source: 1162 × 428 pixels, treated as a 1× desktop component capture.
+- Implementation desktop: 1223 × 507 pixels at a 1440 × 1000 browser viewport and 1× density. The focused card region was resized proportionally to 1162 × 482 for the combined comparison.
+- Implementation mobile: 375 × 812 pixels at a 375 × 812 effective CSS viewport and 1× density.
+- The source contains three sample cards while the live route contains two responses. Card structure, track width, and spacing were compared rather than treating the missing third live record as visual drift.
+
+## Full-view comparison evidence
+
+The combined image places the source on the left and the implementation on the right. The implementation preserves the source hierarchy: vendor identity, version/date metadata, readability badge, two primary metric tiles, short summary, divider, and attention flags. It uses the existing dashboard type, color, border, radius, shadow, and icon tokens.
+
+The implementation is taller because it retains two required product behaviors that are absent from the static reference: direct evidence/attachment disclosures and navigation to the complete response. These are intentional constraints rather than fidelity defects.
+
+## Focused region comparison evidence
+
+The metric and attention areas were readable in the combined comparison, so no additional desktop crop was required. The commercial total is currency-formatted, the attachment count uses the existing paperclip icon, and both tiles maintain the source's equal visual weight. Disclosure controls remain visually secondary.
+
+## Fidelity surfaces
+
+- Fonts and typography: existing dashboard font families and optical weights match the surrounding product; heading, metadata, label, amount, body, and flag hierarchy follow the reference. Long vendor names wrap on narrow screens instead of hiding identity.
+- Spacing and layout rhythm: three desktop tracks begin at the existing `lg` breakpoint with 16 px gaps; cards use the product's 24 px desktop padding, rounded corners, border, and shadow. Metric tiles stack below 400 px to protect value readability.
+- Colors and visual tokens: all colors come from existing semantic dashboard tokens. Readable, partial, and attention states retain the shared intelligence vocabulary.
+- Image quality and asset fidelity: the reference contains no raster imagery. Interface icons use the project's existing icon library; no placeholder, handcrafted SVG, or CSS-drawn asset was introduced.
+- Copy and content: setup schedule and staffing were removed from the summary card. Commercial total, attachment count, grounded completeness, and attention flags use live authoritative data. The reference's narrative bid synopsis is not reproduced because the current response-card contract has no authoritative synopsis field.
+
+## Interaction and browser verification
+
+- Total-source disclosure opens and exposes the cited file, locator, and excerpt.
+- Attachment disclosure opens and exposes the real document link.
+- Additional attention flags expand without hiding the first two flags.
+- Full-response navigation retains the existing response route.
+- Desktop and mobile layouts have no page-level horizontal overflow.
+- A clean authenticated navigation produced no browser console warnings or errors. A transient Turbopack stylesheet hot-reload error observed during editing cleared after reload and did not reproduce on a fresh navigation.
+
+## Comparison history
+
+### Pass 1
+
+- [P2] The commercial total truncated at a 375 px effective mobile viewport because the two metric tiles remained side by side.
+- Fix: changed the metric grid to one column below 400 px while preserving two columns at the reference width.
+
+### Pass 2
+
+- Post-fix evidence: `/tmp/rfp-response-cards-implementation-mobile-pass2.png` shows the complete `$208,601.50` value, full attachment count, and no horizontal overflow.
+- No actionable P0, P1, or P2 findings remain.
+
+## Follow-up polish
+
+- [P3] Add an authoritative short bid synopsis only if the backend later exposes one; do not generate or infer it in the card.
+- [P3] Add receipt time and zone when the response contract defines the intended display zone.
+
+final result: passed
+
+---
+
+# Vendor Response Card Responsive Attachment Follow-up
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_5WMmx7/Screenshot 2026-08-20 at 4.29.00 PM.png`
+- Implementation route: `http://localhost:3000/vendor-responses/proposals/6a7d6aa0556f07bff684ad67`
+- Implementation capture: `/tmp/rfp-response-attachment-fix-focused.png`
+- Combined comparison input: `/tmp/rfp-response-attachment-fix-comparison.png`
+- State: authenticated proposal-scoped response list, two live responses, collapsed attention disclosures.
+
+## Capture normalization
+
+- Source: 881 × 626 pixels at 1× density.
+- Implementation: 833 × 611 focused pixels captured from a 1050 × 700 browser viewport with a 1035 px effective CSS width at 1× density, then resized proportionally to 882 × 647 for comparison.
+- Both views exercise the narrow three-track desktop state where each live card is approximately 267–280 px wide.
+
+## Full-view and focused comparison evidence
+
+The combined image places the reported state on the left and the corrected implementation on the right. The user-reported state clips the commercial total while still reserving space for a count-only attachment tile and two disclosure links. The corrected state makes each card its own responsive container: at this narrow track width, commercial total and attachment blocks stack, the entire `$208,601.50` value remains visible, and the attachment block shows the actual filename.
+
+The filename is deliberately ellipsized within the card, while the full value remains available through the link's accessible text and `title`. The total-source disclosure is absent. The rest of the card hierarchy, attention behavior, and full-response navigation remain unchanged.
+
+## Fidelity surfaces
+
+- Fonts and typography: existing type family, weights, line heights, and hierarchy are unchanged. Commercial values remain unbroken; long filenames use a single-line ellipsis.
+- Spacing and layout rhythm: metric blocks switch from two tracks to one based on the card container's 300 px threshold, not the viewport. Card padding, gaps, radii, and equal heights remain consistent.
+- Colors and visual tokens: existing dashboard and intelligence-status tokens are unchanged.
+- Image quality and asset fidelity: no raster assets are present. The existing paperclip icon identifies the attachment link.
+- Copy and content: count-only text and `View total source` were removed. The first authoritative attachment filename is shown directly; multiple attachments retain a `+N more` label and a view-all disclosure.
+
+## Interaction and browser verification
+
+- Both visible filenames are real links with non-empty destinations.
+- Both truncated filenames expose their complete values through `title` attributes and accessible link names.
+- `View total source` has zero matches in the rendered page.
+- At 267 px card width, commercial totals are not clipped, metric blocks use a single track, and there is no page-level horizontal overflow.
+- A fresh authenticated navigation produced no browser warnings or errors.
+
+## Comparison history
+
+### Pass 1
+
+- [P2] Viewport-based metric responsiveness left the two tiles side by side inside narrow three-column cards, clipping the commercial total.
+- [P2] The attachment tile showed only `1 file`, while the real filename was hidden behind a second disclosure.
+- [P2] `View total source` added an unwanted secondary control.
+
+### Pass 2
+
+- Fixes: made the article a CSS container, stacked metric blocks below 300 px card width, removed the total-source disclosure, and moved the first real attachment link into the attachment block with ellipsis and full-name fallback.
+- Evidence: `/tmp/rfp-response-attachment-fix-comparison.png` and live browser measurements confirm full commercial values, real attachment names, no total-source control, and no horizontal overflow.
+- No actionable P0, P1, or P2 findings remain.
+
+final result: passed
+
+---
+
+# Vendor Response Metric Typography Follow-up
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_68WxDx/Screenshot 2026-08-20 at 4.40.17 PM.png`
+- Implementation route: `http://localhost:3000/vendor-responses/proposals/6a7d6aa0556f07bff684ad67`
+- Browser-rendered implementation: `/tmp/rfp-response-card-small-metrics-full.png`
+- Focused implementation capture: `/tmp/rfp-response-card-small-metrics-focused.png`
+- Combined comparison input: `/tmp/rfp-response-card-small-metrics-comparison.png`
+- State: authenticated proposal response list with the first two response cards visible; attachment and attention disclosures collapsed.
+
+## Capture normalization
+
+- Source: 382 × 95 pixels at 1× density.
+- Implementation: 885 × 688 pixels from a 900 × 700 CSS viewport at 1× density; focused metric region is 356 × 86 pixels.
+- For the combined 787 × 95 comparison, the focused implementation region was proportionally resized to 393 × 95 and placed beside the unscaled source with a 12 px separator.
+
+## Full-view and focused comparison evidence
+
+The full browser capture confirms that the revised metric typography remains legible within the complete proposal-response hierarchy and preserves the existing two-column card layout. The focused side-by-side comparison confirms that both values are now visually quieter than the supplied state while the uppercase labels, tile dimensions, icon, borders, and spacing remain unchanged.
+
+Live computed styles report 14 px for both the commercial-total value and the first attachment filename. The total has no text overflow, the attachment retains single-line ellipsis behavior when its container becomes narrower, and the page has no horizontal overflow.
+
+## Fidelity surfaces
+
+- Fonts and typography: both requested values use the existing dashboard font at 14 px; the commercial total keeps its extra-bold weight and the attachment keeps its semibold weight. Labels, line height, tracking, and truncation behavior are unchanged.
+- Spacing and layout rhythm: tile padding, grid gap, borders, radii, and responsive container thresholds are unchanged.
+- Colors and visual tokens: the existing navy text, gray panel, border, and focus tokens are unchanged.
+- Image quality and asset fidelity: no raster imagery is present; the existing library paperclip icon is preserved.
+- Copy and content: the formatted commercial total and authoritative attachment filename are unchanged.
+
+## Interaction and browser verification
+
+- The attachment filename remains a direct link with its full accessible name and `title` fallback.
+- The live page reports 14 px computed font sizes for both requested values.
+- Commercial total is not clipped, filename truncation remains bounded to its tile, and there is no page-level horizontal overflow.
+- Browser logs contain only normal development/HMR and analytics debug messages; no warnings or errors were produced by the change.
+
+## Findings and comparison history
+
+### Pass 1
+
+- No actionable P0, P1, or P2 findings remain.
+- The smaller value typography is an intentional user-requested change from the supplied current-state screenshot; all surrounding card styling is preserved.
+
+final result: passed
+
+---
+
+# Vendor Response Header Compactness Follow-up
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_Kww2S8/Screenshot 2026-08-20 at 4.50.16 PM.png`
+- Implementation route: `http://localhost:3000/vendor-responses/proposals/6a7d6aa0556f07bff684ad67`
+- Browser-rendered implementation: `/tmp/rfp-response-header-compact-1280-full.png`
+- Focused implementation capture: `/tmp/rfp-response-header-compact-focused.png`
+- Combined comparison input: `/tmp/rfp-response-header-compact-comparison.png`
+- State: authenticated proposal response list with the compact page header and first two response cards visible.
+
+## Capture normalization
+
+- Source: 1081 × 209 pixels at 1× density.
+- Implementation: 1265 × 712 pixels from a 1280 × 720 CSS viewport at 1× density; focused header region is 1080 × 134 pixels.
+- Combined comparison: 2173 × 209 pixels. The source remains unscaled on the left; the 1080 × 134 implementation crop is unscaled and vertically centered on the right to preserve the intentional height reduction.
+
+## Full-view and focused comparison evidence
+
+The full browser capture confirms that the compact header remains aligned with the response grid and preserves the page's existing navigation and card hierarchy. The focused comparison shows the reported header on the left and the optimized result on the right: the response-count and requiring-attention pills are removed, the proposal title fits on one line at the matched desktop width, and the live header measures 114 px tall.
+
+## Fidelity surfaces
+
+- Fonts and typography: the title is 24 px with a 28 px line height and a confirmed 600 weight, down from the reported 30 px/800 presentation. The eyebrow and explanatory copy retain the existing Proxima Nova family and hierarchy.
+- Spacing and layout rhythm: header padding is 20 px with 4 px vertical gaps. The same radius, border, shadow, and content alignment are preserved while the component height is materially reduced.
+- Colors and visual tokens: existing navy, gray, brand, surface, border, and shadow tokens are unchanged.
+- Image quality and asset fidelity: the target contains no raster imagery; no new image or icon asset was introduced.
+- Copy and content: response-count and requiring-attention copy are intentionally removed. The proposal title, section eyebrow, and explanatory sentence remain unchanged.
+
+## Interaction and browser verification
+
+- The existing `Back to responses` link remains above the header with its destination unchanged.
+- Response cards and their controls remain immediately below the header; no header interaction was introduced or removed beyond the requested status pills.
+- Live DOM checks confirm no response-count or requiring-attention text inside the header and no page-level horizontal overflow.
+- A clean authenticated navigation produced no console warnings or errors. A transient Turbopack stylesheet hot-reload error in the editing tab cleared on fresh navigation and did not reproduce.
+
+## Findings and comparison history
+
+### Pass 1
+
+- [P2] The first compact implementation still computed the title at 800 weight because the global `h1` rule overrode the non-important utility class.
+
+### Pass 2
+
+- Fix: applied the existing 600-weight font utility with the required important modifier so the component-level title style overrides the global heading rule.
+- Post-fix evidence: live computed style reports 24 px/600 with a 28 px line height; the combined comparison shows the lighter title, removed pills, and shorter header.
+- No actionable P0, P1, or P2 findings remain.
+
+final result: passed
+
+---
+
+# Proposal Intelligence Primary Action Placement Follow-up
+
+- Source visual truth: `/var/folders/_3/q4mggdm115df_j6qdtmbzwjr0000gn/T/TemporaryItems/NSIRD_screencaptureui_WLuAxw/Screenshot 2026-08-20 at 5.20.36 PM.png`
+- Implementation route: `http://localhost:3000/vendor-responses/proposals/6a7d6aa0556f07bff684ad67`
+- Desktop implementation capture: `/tmp/rfp-proposal-intelligence-header-desktop.png`
+- Mobile implementation capture: `/tmp/rfp-proposal-intelligence-header-mobile.png`
+- Focused implementation capture: `/tmp/rfp-proposal-intelligence-header-focused.png`
+- Combined comparison input: `/tmp/rfp-proposal-intelligence-header-comparison.png`
+- State: authenticated proposal response list with two responses and an enabled Proposal Intelligence action.
+
+## Capture normalization
+
+- Source: 1065 × 275 pixels at 1× density.
+- Desktop implementation: 1265 × 712 pixels from a 1280 × 720 CSS viewport at 1× density; focused header region is 1080 × 134 pixels and was resized proportionally to 1065 px wide for comparison.
+- Mobile implementation: 375 × 812 pixels from a 390 × 844 CSS viewport at 1× density after browser chrome.
+- Combined comparison: 2142 × 275 pixels, with the source on the left and the width-normalized implementation centered vertically on the right.
+
+## Full-view and focused comparison evidence
+
+The source shows the major Proposal Intelligence action in a large panel below all response cards, outside the initial viewport. The implementation moves the same action into the compact proposal header, where browser measurements place its bottom edge at 129 px in a 720 px desktop viewport. The former bottom panel is absent, avoiding duplicate actions and reducing page length.
+
+At the mobile breakpoint, the action becomes a full-width button beneath the description and remains visible above the first response card. The 390 px layout has no horizontal overflow.
+
+## Fidelity surfaces
+
+- Fonts and typography: existing title, eyebrow, descriptive copy, and button typography are preserved; the CTA remains a high-contrast 14 px extra-bold label.
+- Spacing and layout rhythm: desktop uses a left/right header layout with a 16 px gap. Mobile stacks the CTA below the description at full available width. Existing header padding, radius, border, and shadow remain unchanged.
+- Colors and visual tokens: the CTA continues using the existing brand background, brand-dark hover, white foreground, and brand focus-ring tokens.
+- Image quality and asset fidelity: the removed bottom panel's scale icon was no longer needed. The CTA retains the existing library arrow icon; no raster or custom-drawn assets were introduced.
+- Copy and content: the primary label and destination are unchanged. The long bottom-panel explanation is removed; the disabled state retains a concise qualification explanation beside the action.
+
+## Interaction and browser verification
+
+- Enabled CTA destination remains `/proposals/6a7d6aa0556f07bff684ad67/intelligence`.
+- Component tests cover both the enabled link and disabled button states inside the proposal overview header.
+- Desktop and mobile DOM checks confirm the CTA is above the fold, the old `Compare these responses` panel is absent, and there is no page-level horizontal overflow.
+- A clean authenticated navigation produced no console warnings or errors.
+
+## Findings and comparison history
+
+### Pass 1
+
+- [P1] The primary comparison action appeared only after the full response-card list, making it undiscoverable without scrolling.
+
+### Pass 2
+
+- Fix: moved the enabled/disabled Proposal Intelligence action and its gating explanation into the proposal overview header, made it full-width on mobile, and removed the large bottom panel.
+- Post-fix evidence: the focused comparison shows the action in the compact header; live browser measurements confirm it is above the fold at desktop and mobile widths.
+- No actionable P0, P1, or P2 findings remain.
 
 final result: passed
