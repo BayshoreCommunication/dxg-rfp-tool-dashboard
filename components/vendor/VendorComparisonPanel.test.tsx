@@ -32,7 +32,7 @@ beforeEach(() => {
 });
 
 test("starts one frozen comparison with current vendor versions", async () => {
-  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} />);
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
   const button = await screen.findByRole("button", { name: "Start comparison (2)" });
   await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
@@ -44,7 +44,7 @@ test("starts one frozen comparison with current vendor versions", async () => {
 
 test("restores persisted progress without showing an AI readiness score", async () => {
   list.mockResolvedValue({ success: true, data: [view] });
-  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} />);
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
   expect(await screen.findByText("1 of 2 vendor snapshots complete")).toBeInTheDocument();
   expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "45");
   expect(screen.queryByText(/readiness/i)).not.toBeInTheDocument();
@@ -53,7 +53,21 @@ test("restores persisted progress without showing an AI readiness score", async 
 
 test("labels stale runs as readable historical comparisons", async () => {
   list.mockResolvedValue({ success: true, data: [{ ...view, run: { ...view.run, status: "succeeded", progress: 100, completedParticipantCount: 2 }, freshness: { state: "stale", reasons: ["submission_version_available"] } }] });
-  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} />);
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
   expect(await screen.findByText(/Historical comparison/)).toBeInTheDocument();
   expect(screen.getByText(/Persisted result restored without rerunning analysis/)).toBeInTheDocument();
+});
+
+test("blocks comparison until the requirement registry is approved", async () => {
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved={false} />);
+
+  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  await waitFor(() => expect(button).toBeDisabled());
+  expect(screen.getByText("Approve the proposal requirement registry before starting a comparison.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Open requirement registry" })).toHaveAttribute(
+    "href",
+    "/proposals/proposal-1/intelligence/requirements",
+  );
+  fireEvent.click(button);
+  expect(start).not.toHaveBeenCalled();
 });

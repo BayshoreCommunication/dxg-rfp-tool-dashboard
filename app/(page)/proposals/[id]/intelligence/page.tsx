@@ -114,7 +114,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
         </section>
 
         <section className="mt-5" aria-label="Comparison setup and recovery">
-          <VendorComparisonPanel responses={responses} proposalId={id} />
+          <VendorComparisonPanel responses={responses} proposalId={id} requirementsApproved={Boolean(approvedSet)} />
         </section>
       </div>
     </main>
