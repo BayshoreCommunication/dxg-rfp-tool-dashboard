@@ -2606,11 +2606,17 @@ function NextStepBanner({
 export default function AssistantWorkspacePage({
   initialProposalId,
   autoTask,
+  voiceInputEnabled = false,
 }: {
   initialProposalId?: string;
   /** Task to start on arrival, e.g. from the workflow shell's
       "Create my first draft" deep link (?task=generate_draft). */
   autoTask?: 'generate_draft';
+  /**
+   * Future Pro feature switch. Voice transcription stays implemented and
+   * tested, but its composer trigger remains hidden in the current product.
+   */
+  voiceInputEnabled?: boolean;
 }) {
   const [proposalId, setProposalId] = useState<string | null>(
     initialProposalId ?? null,
@@ -4317,16 +4323,20 @@ export default function AssistantWorkspacePage({
           >
             <Paperclip size={17} aria-hidden />
           </button>
-          <button
-            type="button"
-            aria-label="Start voice input"
-            onClick={() => startVoiceInput()}
-            disabled={sendBusy}
-            title="Describe your event by voice"
-            className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Mic size={17} aria-hidden />
-          </button>
+          {/* Future Pro feature: set voiceInputEnabled to true to restore the
+              existing voice trigger without changing its implementation. */}
+          {voiceInputEnabled ? (
+            <button
+              type="button"
+              aria-label="Start voice input"
+              onClick={() => startVoiceInput()}
+              disabled={sendBusy}
+              title="Describe your event by voice"
+              className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Mic size={17} aria-hidden />
+            </button>
+          ) : null}
           <textarea
             ref={composerRef}
             value={text}

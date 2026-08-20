@@ -258,6 +258,7 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByText("Tell me about your event?")).toBeInTheDocument();
     expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Describe your event or ask for help…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start voice input" })).not.toBeInTheDocument();
     // No proposal exists yet, so nothing was created or loaded.
     expect(mockedCreateProposal).not.toHaveBeenCalled();
     expect(mockedGetConversation).not.toHaveBeenCalled();
@@ -291,7 +292,7 @@ describe("AssistantWorkspacePage", () => {
       value: MockSpeechRecognition,
     });
 
-    render(<AssistantWorkspacePage />);
+    render(<AssistantWorkspacePage voiceInputEnabled />);
     fireEvent.click(await screen.findByRole("button", { name: "Start voice input" }));
     const recognition = MockSpeechRecognition.latest;
     expect(screen.getByRole("status", { name: "Voice input is listening" })).toBeInTheDocument();
@@ -350,7 +351,7 @@ describe("AssistantWorkspacePage", () => {
       value: MockSpeechRecognition,
     });
 
-    render(<AssistantWorkspacePage />);
+    render(<AssistantWorkspacePage voiceInputEnabled />);
     fireEvent.click(await screen.findByRole("button", { name: "Start voice input" }));
     act(() => {
       MockSpeechRecognition.latest.onresult?.({
@@ -417,7 +418,7 @@ describe("AssistantWorkspacePage", () => {
       value: MockSpeechRecognition,
     });
 
-    render(<AssistantWorkspacePage />);
+    render(<AssistantWorkspacePage voiceInputEnabled />);
     const composer = await screen.findByLabelText("Message the proposal assistant");
     fireEvent.change(composer, { target: { value: "Existing details" } });
     fireEvent.click(screen.getByRole("button", { name: "Start voice input" }));
@@ -454,7 +455,7 @@ describe("AssistantWorkspacePage", () => {
     }
     Object.defineProperty(window, "webkitSpeechRecognition", { configurable: true, value: MockSpeechRecognition });
 
-    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} voiceInputEnabled />);
     fireEvent.click(await screen.findByRole("button", { name: "Start voice input" }));
     act(() => MockSpeechRecognition.instances[0].onresult?.({
       results: [{ 0: { transcript: "Event date is 21 August 202" } }],
