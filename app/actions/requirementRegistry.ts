@@ -123,6 +123,12 @@ export const updateRegistryRequirementAction = async (
   headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID(), "If-Match": `"${expectedVersion}"` },
   body: JSON.stringify(update),
 });
+export const prepareRequirementSetAction = async (proposalId: string, setId: string, expectedVersion: number) =>
+  call<RequirementRegistryView>(`${base(proposalId)}/${encodeURIComponent(setId)}/prepare`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID(), "If-Match": `"${expectedVersion}"` },
+    body: JSON.stringify({ expectedVersion }),
+  });
 export const approveRequirementSetAction = async (proposalId: string, setId: string, expectedVersion: number) =>
   call<RequirementRegistryView>(`${base(proposalId)}/${encodeURIComponent(setId)}/approve`, {
     method: "POST",
