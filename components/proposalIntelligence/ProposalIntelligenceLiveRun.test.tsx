@@ -1,7 +1,7 @@
 import type { ComparisonView } from "@/app/actions/comparisonOrchestration";
 import type { VendorIntelligenceResult } from "@/app/actions/vendorIntelligence";
 import { createEvidenceExtractionAction, getEvidenceExtractionsAction } from "@/app/actions/evidenceExtraction";
-import { getLatestVendorIntelligenceAction } from "@/app/actions/vendorIntelligence";
+import { createVendorIntelligenceAction, getLatestVendorIntelligenceAction } from "@/app/actions/vendorIntelligence";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import ProposalIntelligenceLiveRun, { type ProposalAnalysisParticipant } from "./ProposalIntelligenceLiveRun";
 
@@ -138,6 +138,43 @@ it("retries only the failed vendor extraction and keeps the document named", asy
   fireEvent.click(screen.getByRole("button", { name: "Retry extraction" }));
   await waitFor(() => expect(createEvidenceExtractionAction).toHaveBeenCalledWith("proposal-1", "submission-vendor-2", "version-vendor-2", expect.any(String)));
   expect(createEvidenceExtractionAction).toHaveBeenCalledTimes(1);
+});
+
+it("retries all cached mapping failures and explains safe recovery", async () => {
+  const failedIntelligence = (id: string): VendorIntelligenceResult => ({
+    ...intelligence(),
+    run: {
+      ...intelligence().run,
+      runId: `run-${id}`,
+      jobId: `job-${id}`,
+      status: "failed",
+      safeErrorCode: "SCHEMA_VALIDATION_FAILED",
+      completedAt: "2026-08-16T10:01:00.000Z",
+    },
+  });
+  jest.mocked(createVendorIntelligenceAction).mockImplementation(async (_proposalId, _submissionId, versionId) => ({
+    success: true,
+    data: {
+      ...failedIntelligence(versionId).run,
+      status: "queued",
+      safeErrorCode: null,
+      completedAt: null,
+    },
+  }));
+  render(<ProposalIntelligenceLiveRun
+    proposalId="proposal-1"
+    initialParticipants={[
+      participant("vendor-1", failedIntelligence("vendor-1")),
+      participant("vendor-2", failedIntelligence("vendor-2")),
+    ]}
+    autoStart={false}
+  />);
+
+  expect(screen.getAllByText(/generated mapping was incomplete/i)).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: "Retry all failed steps" }));
+  await waitFor(() => expect(createVendorIntelligenceAction).toHaveBeenCalledTimes(2));
+  expect(createVendorIntelligenceAction).toHaveBeenCalledWith("proposal-1", "submission-vendor-1", "version-vendor-1", expect.any(String));
+  expect(createVendorIntelligenceAction).toHaveBeenCalledWith("proposal-1", "submission-vendor-2", "version-vendor-2", expect.any(String));
 });
 
 it("marks a completed stale comparison as historical attention", () => {

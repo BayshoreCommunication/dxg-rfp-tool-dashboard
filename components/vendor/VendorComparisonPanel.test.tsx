@@ -71,3 +71,18 @@ test("blocks comparison until the requirement registry is approved", async () =>
   fireEvent.click(button);
   expect(start).not.toHaveBeenCalled();
 });
+
+test("blocks comparison while a selected vendor mapping is incomplete and unlocks on persisted readiness", async () => {
+  render(<VendorComparisonPanel
+    proposalId="proposal-1"
+    responses={[response("1", "Vendor One"), response("2", "Vendor Two")]}
+    requirementsApproved
+    preparedResponseIds={["1"]}
+  />);
+
+  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  await waitFor(() => expect(button).toBeDisabled());
+  expect(screen.getByText("1 selected vendor response needs requirement mapping before comparison.")).toBeInTheDocument();
+  fireEvent(window, new CustomEvent("proposal-intelligence:readiness", { detail: { responseId: "2", ready: true } }));
+  await waitFor(() => expect(button).toBeEnabled());
+});

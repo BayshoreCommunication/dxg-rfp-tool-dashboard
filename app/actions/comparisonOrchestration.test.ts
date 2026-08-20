@@ -51,3 +51,24 @@ test("explains that incomplete evaluator scorecards block a comparison decision"
     message: "Complete every eligible evaluator scorecard before comparing or selecting vendors.",
   });
 });
+
+test("preserves the validated vendor name for a comparison readiness blocker", async () => {
+  jest.mocked(authenticatedBackendFetch).mockResolvedValue({
+    ok: false,
+    status: 409,
+    json: async () => ({ code: "COMPARISON_NOT_READY", title: "Complete proposal intelligence and evaluation for Acme before comparison." }),
+  } as Response);
+
+  const result = await recordComparisonDecisionAction("f".repeat(24), runId, {
+    decisionType: "selection",
+    selectedParticipantIds: ["participant-1"],
+    rationale: "This rationale is deliberately long enough.",
+    acknowledgeStale: false,
+  });
+
+  expect(result).toEqual({
+    success: false,
+    code: "COMPARISON_NOT_READY",
+    message: "Complete proposal intelligence and evaluation for Acme before comparison.",
+  });
+});

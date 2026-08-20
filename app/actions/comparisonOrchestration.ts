@@ -133,11 +133,18 @@ const safe: Record<string, string> = {
   DECISION_RUN_NOT_COMPLETE: "Wait for the comparison to finish before recording a decision.",
   STALE_ACKNOWLEDGEMENT_REQUIRED: "Acknowledge the stale historical run before recording a decision.",
 };
+const contextualComparisonMessage = (code: string, title: unknown) => {
+  if (code !== "COMPARISON_NOT_READY" || typeof title !== "string") return null;
+  const trimmed = title.trim();
+  return /^Complete proposal intelligence and evaluation for [^\r\n]{1,200} before comparison\.$/.test(trimmed)
+    ? trimmed
+    : null;
+};
 const call = async <T,>(path: string, init: RequestInit | undefined, parse: (value: unknown) => T | null): Promise<Result<T>> => {
   try {
     const response = await authenticatedBackendFetch(`${BACKEND_URL}${path}`, { ...init, cache: "no-store", headers: { "X-Correlation-ID": crypto.randomUUID(), ...(init?.headers ?? {}) } });
     const body = await response.json().catch(() => ({})) as Record<string, unknown>;
-    if (!response.ok) { const code = String(body.code ?? `HTTP_${response.status}`); return { success: false, code, message: safe[code] ?? String(body.title ?? "Comparison operation failed.") }; }
+    if (!response.ok) { const code = String(body.code ?? `HTTP_${response.status}`); return { success: false, code, message: contextualComparisonMessage(code, body.title) ?? safe[code] ?? String(body.title ?? "Comparison operation failed.") }; }
     const parsed = parse(body.data); return parsed ? { success: true, data: parsed } : { success: false, code: "INVALID_RESPONSE", message: "The comparison service returned an unexpected response." };
   } catch { return { success: false, code: "NETWORK_ERROR", message: "The comparison service could not be reached." }; }
 };

@@ -68,6 +68,25 @@ const elapsedLabel = (milliseconds: number) => {
 const intelligenceComplete = (participant: ProposalAnalysisParticipant) =>
   participant.intelligence?.run.status === "succeeded";
 
+const intelligenceFailureMessages: Record<string, string> = {
+  CITATION_GROUNDING_FAILED: "One or more extracted claims could not be verified against the cited vendor text. Retry will safely omit unsupported claims.",
+  CITATION_VALIDATION_FAILED: "Some generated citations did not point to this vendor’s current evidence. Retry will rebuild the mapping from the approved sources.",
+  SCHEMA_VALIDATION_FAILED: "The generated mapping was incomplete. Retry will fill unsupported requirements as not evidenced instead of blocking the full response.",
+  LIVE_AI_PROVIDER_TEMPORARY: "The mapping service was temporarily unavailable.",
+  AI_PROVIDER_TIMEOUT: "The mapping service timed out before the response could be completed.",
+};
+
+const intelligenceFailureMessage = (participant: ProposalAnalysisParticipant) => {
+  const code = participant.intelligence?.run.safeErrorCode;
+  return participant.error
+    || (code ? intelligenceFailureMessages[code] : undefined)
+    || (participant.extraction.status === "unreadable"
+      ? "No readable text could be recovered from this response."
+      : participant.extraction.status === "failed"
+        ? "Document extraction failed."
+        : "Requirement mapping failed before a complete vendor evaluation could be prepared.");
+};
+
 const phaseStatus = ({
   active,
   complete,
@@ -104,6 +123,7 @@ export default function ProposalIntelligenceLiveRun({
   autoStart?: boolean;
 }) {
   const [participants, setParticipants] = useState(initialParticipants);
+  const [retryingParticipants, setRetryingParticipants] = useState<Set<string>>(() => new Set());
   const [jobs, setJobs] = useState<Record<string, TrackedJob>>(() =>
     Object.fromEntries(initialParticipants.flatMap((participant) => [
       ...participant.extraction.runs.flatMap((run) => run.jobId && ["queued", "running", "retry_scheduled"].includes(run.status)
@@ -149,6 +169,14 @@ export default function ProposalIntelligenceLiveRun({
           ? { intelligence: null }
           : { error: intelligence.message }),
     });
+    if (intelligence.success) {
+      window.dispatchEvent(new CustomEvent("proposal-intelligence:readiness", {
+        detail: {
+          responseId: participant.responseId,
+          ready: intelligence.data.run.status === "succeeded",
+        },
+      }));
+    }
   }, [proposalId, updateParticipant]);
 
   const startExtraction = useCallback(async (participant: ProposalAnalysisParticipant) => {
@@ -212,12 +240,21 @@ export default function ProposalIntelligenceLiveRun({
 
   const retryParticipant = useCallback(async (participant: ProposalAnalysisParticipant) => {
     const retryExtraction = !readableExtraction.has(participant.extraction.status);
+    setRetryingParticipants((current) => new Set(current).add(participant.responseId));
     started.current.delete(`${retryExtraction ? "extraction" : "intelligence"}:${participant.responseId}`);
     setJobs((current) => Object.fromEntries(Object.entries(current).filter(([, job]) => job.participantId !== participant.responseId)));
     updateParticipant(participant.responseId, { error: undefined });
     setRunActive(true);
-    if (retryExtraction) await startExtraction(participant);
-    else await startIntelligence(participant);
+    try {
+      if (retryExtraction) await startExtraction(participant);
+      else await startIntelligence(participant);
+    } finally {
+      setRetryingParticipants((current) => {
+        const next = new Set(current);
+        next.delete(participant.responseId);
+        return next;
+      });
+    }
   }, [startExtraction, startIntelligence, updateParticipant]);
 
   useEffect(() => {
@@ -457,9 +494,24 @@ export default function ProposalIntelligenceLiveRun({
 
       {problemParticipants.length > 0 && (
         <div className={cn(intelligenceSurfaceClasses.block, "mt-5 bg-gray-panel")} role="alert">
-          <h3 className="text-sm font-extrabold text-navy">Items requiring action</h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-extrabold text-navy">Items requiring action</h3>
+              <p className="mt-1 text-xs leading-5 text-gray">Document reading is complete. Retry only the failed preparation step; files do not need to be uploaded again.</p>
+            </div>
+            {problemParticipants.length > 1 && (
+              <button
+                type="button"
+                disabled={problemParticipants.some((participant) => retryingParticipants.has(participant.responseId))}
+                onClick={() => void Promise.all(problemParticipants.map((participant) => retryParticipant(participant)))}
+                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-xs font-extrabold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                <RotateCcw size={14} aria-hidden="true" />Retry all failed steps
+              </button>
+            )}
+          </div>
           <ul className="mt-3 space-y-3">
-            {problemParticipants.map((participant) => <li key={participant.responseId} className={cn(intelligenceSurfaceClasses.block, "bg-white")}><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-sm font-extrabold text-navy">{participant.vendorLabel}</p><p className="mt-1 text-sm leading-6 text-gray">{participant.error || (participant.extraction.status === "unreadable" ? "No readable text could be recovered from this response." : participant.extraction.status === "failed" ? "Document extraction failed." : "Requirement mapping failed.")}</p><ul className="mt-2 space-y-1 font-mono text-xs text-gray">{participant.extraction.runs.flatMap((run) => [<li key={`${run.runId}-status`}>{run.sourceLabel} · {label(run.status)}</li>, ...run.warnings.map((warning, index) => <li key={`${run.runId}-warning-${index}`}>{run.sourceLabel} · {label(warning.code)} · {warning.message}</li>)])}{participant.extraction.runs.length === 0 && participant.documentNames.map((name) => <li key={name}>{name} · no extraction result</li>)}</ul></div><button type="button" onClick={() => void retryParticipant(participant)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-border px-4 text-xs font-extrabold text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><RotateCcw size={14} aria-hidden="true" />Retry {readableExtraction.has(participant.extraction.status) ? "requirement mapping" : "extraction"}</button></div></li>)}
+            {problemParticipants.map((participant) => <li key={participant.responseId} className={cn(intelligenceSurfaceClasses.block, "bg-white")}><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-sm font-extrabold text-navy">{participant.vendorLabel}</p><p className="mt-1 text-sm leading-6 text-gray">{intelligenceFailureMessage(participant)}</p><ul className="mt-2 space-y-1 font-mono text-xs text-gray">{participant.extraction.runs.flatMap((run) => [<li key={`${run.runId}-status`}>{run.sourceLabel} · {label(run.status)}</li>, ...run.warnings.map((warning, index) => <li key={`${run.runId}-warning-${index}`}>{run.sourceLabel} · {label(warning.code)} · {warning.message}</li>)])}{participant.extraction.runs.length === 0 && participant.documentNames.map((name) => <li key={name}>{name} · no extraction result</li>)}</ul></div><button type="button" disabled={retryingParticipants.has(participant.responseId)} onClick={() => void retryParticipant(participant)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-border px-4 text-xs font-extrabold text-navy disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><RotateCcw size={14} className={retryingParticipants.has(participant.responseId) ? "animate-spin" : undefined} aria-hidden="true" />{retryingParticipants.has(participant.responseId) ? "Retrying…" : `Retry ${readableExtraction.has(participant.extraction.status) ? "requirement mapping" : "extraction"}`}</button></div></li>)}
           </ul>
         </div>
       )}
