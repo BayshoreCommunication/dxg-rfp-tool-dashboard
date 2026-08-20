@@ -90,9 +90,15 @@ import { takeProposalHandoffDraft } from '@/lib/aiAssistant/handoff';
 
 type SpeechRecognitionResultLike = {
   0: { transcript: string };
+  isFinal?: boolean;
 };
 type SpeechRecognitionEventLike = {
+  resultIndex?: number;
   results: ArrayLike<SpeechRecognitionResultLike>;
+};
+export type SpeechTranscriptSegment = {
+  transcript: string;
+  isFinal: boolean;
 };
 type SpeechRecognitionLike = {
   continuous: boolean;
@@ -280,6 +286,59 @@ const looksLikeDateInstruction = (input: string) =>
 
 const comparableWords = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const normalizedSpeechSegment = (value: string) =>
+  value.replace(/\s+/g, ' ').trim();
+
+const appendSpeechSegment = (current: string, next: string) => {
+  if (!current) return next;
+  if (!next) return current;
+
+  const currentWords = current.split(' ');
+  const nextWords = next.split(' ');
+  const largestPossibleOverlap = Math.min(
+    currentWords.length,
+    nextWords.length,
+  );
+  let overlap = 0;
+  for (let size = largestPossibleOverlap; size > 0; size -= 1) {
+    const currentSuffix = currentWords.slice(-size).join(' ').toLowerCase();
+    const nextPrefix = nextWords.slice(0, size).join(' ').toLowerCase();
+    if (currentSuffix === nextPrefix) {
+      overlap = size;
+      break;
+    }
+  }
+  return [...currentWords, ...nextWords.slice(overlap)].join(' ');
+};
+
+/**
+ * Android Chrome may retain several superseded interim hypotheses in one
+ * SpeechRecognition result list. Keep every final segment, only the newest
+ * interim segment, and merge any overlapping boundary instead of rendering
+ * each hypothesis as new dictated text.
+ */
+export const speechTranscriptFromSegments = (
+  segments: ReadonlyArray<SpeechTranscriptSegment | undefined>,
+) => {
+  const finalSegments: string[] = [];
+  let latestInterim = '';
+
+  for (const segment of segments) {
+    const transcript = normalizedSpeechSegment(segment?.transcript ?? '');
+    if (!transcript) continue;
+    if (segment?.isFinal) {
+      finalSegments.push(transcript);
+      // Some Android implementations leave superseded interim entries before
+      // the newly finalized result. That final result replaces those drafts.
+      latestInterim = '';
+    } else latestInterim = transcript;
+  }
+
+  return [...finalSegments, latestInterim]
+    .filter(Boolean)
+    .reduce(appendSpeechSegment, '');
+};
 
 const SKIP_VERB = '(?:skip|skib|pass)';
 const SKIP_TARGET =
@@ -2640,6 +2699,9 @@ export default function AssistantWorkspacePage({
   const sendLockRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceDraftRef = useRef('');
+  const voiceResultSegmentsRef = useRef<
+    Array<SpeechTranscriptSegment | undefined>
+  >([]);
   // SpeechRecognition can emit its final result immediately before `onend`.
   // React may not have committed that last setText yet, so auto-submit reads
   // this synchronous ref instead of a stale render closure.
@@ -2718,18 +2780,32 @@ export default function AssistantWorkspacePage({
     voiceFinishingRef.current = false;
     voiceDraftRef.current = draftOverride ?? text.trimEnd();
     voiceLatestTextRef.current = voiceDraftRef.current;
+    voiceResultSegmentsRef.current = [];
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = navigator.language || 'en-US';
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event) => {
-      let transcript = '';
-      for (let index = 0; index < event.results.length; index += 1) {
-        transcript += event.results[index][0].transcript;
+      const startIndex = Math.max(
+        0,
+        Math.min(event.resultIndex ?? 0, event.results.length),
+      );
+      const segments = voiceResultSegmentsRef.current.slice(
+        0,
+        event.results.length,
+      );
+      for (let index = startIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        segments[index] = {
+          transcript: result[0]?.transcript ?? '',
+          isFinal: result.isFinal === true,
+        };
       }
+      voiceResultSegmentsRef.current = segments;
+      const transcript = speechTranscriptFromSegments(segments);
       const prefix = voiceDraftRef.current;
-      const latest = `${prefix}${prefix && transcript ? ' ' : ''}${transcript}`;
+      const latest = [prefix, transcript].filter(Boolean).join(' ');
       voiceLatestTextRef.current = latest;
       setText(latest);
     };
@@ -2783,6 +2859,7 @@ export default function AssistantWorkspacePage({
     recognitionRef.current?.abort();
     recognitionRef.current = null;
     setIsListening(false);
+    voiceResultSegmentsRef.current = [];
     voiceLatestTextRef.current = original;
     setText(original);
     focusComposerAtEnd();

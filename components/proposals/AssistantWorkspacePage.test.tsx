@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, isSkipQuestionInstruction, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, visibleRunMessages } from "./AssistantWorkspacePage";
+import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, isSkipQuestionInstruction, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, speechTranscriptFromSegments, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
@@ -319,6 +319,80 @@ describe("AssistantWorkspacePage", () => {
     });
     expect(mockedCreateProposal).not.toHaveBeenCalled();
     expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("replaces Android cumulative interim hypotheses instead of duplicating them", async () => {
+    type AndroidSpeechResult = {
+      0: { transcript: string };
+      isFinal?: boolean;
+    };
+    class MockSpeechRecognition {
+      static latest: MockSpeechRecognition;
+      onstart: (() => void) | null = null;
+      onresult: ((event: {
+        resultIndex?: number;
+        results: ArrayLike<AndroidSpeechResult>;
+      }) => void) | null = null;
+      onerror: ((event: { error: string }) => void) | null = null;
+      onend: (() => void) | null = null;
+      continuous = false;
+      interimResults = false;
+      lang = '';
+      start = jest.fn(() => this.onstart?.());
+      stop = jest.fn(() => this.onend?.());
+      abort = jest.fn();
+      constructor() {
+        MockSpeechRecognition.latest = this;
+      }
+    }
+    Object.defineProperty(window, "webkitSpeechRecognition", {
+      configurable: true,
+      value: MockSpeechRecognition,
+    });
+
+    render(<AssistantWorkspacePage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Start voice input" }));
+    act(() => {
+      MockSpeechRecognition.latest.onresult?.({
+        resultIndex: 0,
+        results: [
+          { 0: { transcript: "hello" }, isFinal: false },
+          { 0: { transcript: "hello I" }, isFinal: false },
+          { 0: { transcript: "hello I want" }, isFinal: false },
+        ],
+      });
+      MockSpeechRecognition.latest.onresult?.({
+        resultIndex: 2,
+        results: [
+          { 0: { transcript: "hello" }, isFinal: false },
+          { 0: { transcript: "hello I" }, isFinal: false },
+          {
+            0: { transcript: "hello I want to create a proposal" },
+            isFinal: false,
+          },
+        ],
+      });
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Finish voice input" }));
+
+    await waitFor(() => expect(
+      screen.getByLabelText("Message the proposal assistant"),
+    ).toHaveValue("hello I want to create a proposal"));
+    expect(mockedCreateProposal).not.toHaveBeenCalled();
+    expect(mockedPostMessage).not.toHaveBeenCalled();
+  });
+
+  test("joins finalized and updated interim speech without repeating overlap", () => {
+    expect(speechTranscriptFromSegments([
+      { transcript: "hello", isFinal: true },
+      { transcript: "hello I want to create", isFinal: false },
+      { transcript: "hello I want to create a proposal", isFinal: false },
+    ])).toBe("hello I want to create a proposal");
+    expect(speechTranscriptFromSegments([
+      { transcript: "hello", isFinal: false },
+      { transcript: "hello I want", isFinal: false },
+      { transcript: "hello I want to create a proposal", isFinal: true },
+    ])).toBe("hello I want to create a proposal");
   });
 
   test("cancels voice capture and restores the previous composer draft", async () => {
