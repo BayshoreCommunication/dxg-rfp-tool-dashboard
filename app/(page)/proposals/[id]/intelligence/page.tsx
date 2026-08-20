@@ -116,7 +116,13 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
         </section>
 
         <section className="mt-5" aria-label="Comparison setup and recovery">
-          <VendorComparisonPanel responses={responses} proposalId={id} requirementsApproved={Boolean(approvedSet)} returnTo={intelligencePath} />
+          <VendorComparisonPanel
+            responses={responses}
+            proposalId={id}
+            requirementsApproved={Boolean(approvedSet)}
+            preparedResponseIds={analysisParticipants.filter((participant) => participant.intelligence?.run.status === "succeeded").map((participant) => participant.responseId)}
+            returnTo={intelligencePath}
+          />
         </section>
       </div>
     </main>
