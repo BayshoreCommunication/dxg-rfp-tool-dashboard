@@ -66,7 +66,7 @@ test("blocks comparison until the requirement registry is approved", async () =>
   expect(screen.getByText("Approve the proposal requirement registry before starting a comparison.")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Open requirement registry" })).toHaveAttribute(
     "href",
-    "/proposals/proposal-1/intelligence/requirements",
+    "/proposals/proposal-1/intelligence/requirements?returnTo=%2Fvendor-responses",
   );
   fireEvent.click(button);
   expect(start).not.toHaveBeenCalled();
