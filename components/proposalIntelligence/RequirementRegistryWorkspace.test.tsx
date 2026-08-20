@@ -4,12 +4,15 @@ import RequirementRegistryWorkspace from "./RequirementRegistryWorkspace";
 import type { RequirementRegistryView } from "@/app/actions/requirementRegistry";
 
 const generate = jest.fn();
+const prepare = jest.fn();
+const approve = jest.fn();
 const update = jest.fn();
 jest.mock("@/app/actions/requirementRegistry", () => ({
   generateRequirementSetAction: (...args: unknown[]) => generate(...args),
+  prepareRequirementSetAction: (...args: unknown[]) => prepare(...args),
   updateRegistryRequirementAction: (...args: unknown[]) => update(...args),
   getRequirementSetAction: jest.fn(),
-  approveRequirementSetAction: jest.fn(),
+  approveRequirementSetAction: (...args: unknown[]) => approve(...args),
   supersedeRequirementSetAction: jest.fn(),
 }));
 
@@ -73,18 +76,65 @@ test("explains when a historical registry is stale because the generation policy
   expect(screen.getByText(/may include descriptive metadata or lack current scoring anchors/i)).toBeInTheDocument();
 });
 
-test("renders traceable requirements, confirmed weights, and blocks premature approval", () => {
+test("renders traceable requirements, balanced weights, and blocks premature approval", async () => {
   render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
   expect(screen.getByText("Technical Approach")).toBeInTheDocument();
-  expect(screen.getByText("Weights confirmed")).toBeInTheDocument();
+  expect(screen.getByText("Balanced to 100%")).toBeInTheDocument();
+  await userEvent.click(screen.getByText("Review individual requirements"));
   expect(screen.getByText("Audio system required")).toBeInTheDocument();
   expect(screen.getByText(/Proposal · roomByRoom › 0 › audioSystemRequired/)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /approve and freeze/i })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: /approve and freeze/i })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /prepare automatically/i })).toBeEnabled();
+});
+
+test("never calls an invalid confirmed matrix balanced", () => {
+  const invalid = { ...registry, matrix: { ...registry.matrix!, totalWeight: 120, weightsConfirmed: true } };
+  render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={invalid} initialSets={[]} />);
+  expect(screen.getByText("Needs balancing")).toBeInTheDocument();
+  expect(screen.queryByText("Balanced to 100%")).not.toBeInTheDocument();
+});
+
+test("prepares the registry with one explicit action", async () => {
+  const prepared: RequirementRegistryView = {
+    ...registry,
+    set: { ...registry.set, lock_version: 4, validation: { blocking: [], warnings: [] } },
+    requirements: registry.requirements.map((item) => ({ ...item, inclusion_reviewed: true, mandatory_status: "not_mandatory", mandatory_reviewed: true, criterion_reviewed: true, verification_method: "document" })),
+  };
+  prepare.mockResolvedValue({ success: true, data: prepared });
+  render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
+  await userEvent.click(screen.getByRole("button", { name: /prepare automatically/i }));
+  expect(prepare).toHaveBeenCalledWith("abc123abc123abc123abc123", registry.set.id, 3);
+  expect(await screen.findByText(/ready for approval/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /approve and freeze/i })).toBeEnabled();
+});
+
+test("keeps the registry version selector in sync after approval", async () => {
+  const ready: RequirementRegistryView = {
+    ...registry,
+    set: { ...registry.set, validation: { blocking: [], warnings: [] } },
+    requirements: registry.requirements.map((item) => ({ ...item, inclusion_reviewed: true, mandatory_status: "not_mandatory", mandatory_reviewed: true, criterion_reviewed: true, verification_method: "document" })),
+  };
+  const approved: RequirementRegistryView = {
+    ...ready,
+    set: { ...ready.set, status: "approved", lock_version: 4, approved_at: "2026-08-20T12:00:00.000Z" },
+  };
+  approve.mockResolvedValue({ success: true, data: approved });
+  render(<RequirementRegistryWorkspace
+    proposalId="abc123abc123abc123abc123"
+    initialRegistry={ready}
+    initialSets={[{ ...ready.set, requirement_count: ready.requirements.length, freshness: ready.freshness }]}
+  />);
+
+  await userEvent.click(screen.getByRole("button", { name: /approve and freeze/i }));
+
+  expect(approve).toHaveBeenCalledWith("abc123abc123abc123abc123", ready.set.id, 3);
+  expect(await screen.findByRole("option", { name: "Version 1 · Approved" })).toBeInTheDocument();
 });
 
 test("a saved row explicitly confirms mandatory and criterion review", async () => {
   update.mockResolvedValue({ success: true, data: registry });
   render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
+  await userEvent.click(screen.getByText("Review individual requirements"));
   await userEvent.click(screen.getByText("Audio system required"));
   await userEvent.selectOptions(screen.getByLabelText("Mandatory status"), "mandatory");
   await userEvent.selectOptions(screen.getByLabelText("Verification method"), "document");
@@ -101,6 +151,7 @@ test("a saved row explicitly confirms mandatory and criterion review", async () 
 test("a planner can exclude metadata or duplicate narrative from evaluation", async () => {
   update.mockResolvedValue({ success: true, data: registry });
   render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
+  await userEvent.click(screen.getByText("Review individual requirements"));
   await userEvent.click(screen.getByText("Audio system required"));
   await userEvent.click(screen.getByRole("checkbox", { name: /include in vendor evaluation/i }));
   await userEvent.click(screen.getByRole("button", { name: /save review/i }));
