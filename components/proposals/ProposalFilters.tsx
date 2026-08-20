@@ -72,7 +72,7 @@ export default function ProposalFilters({
 }: ProposalFiltersProps) {
 
   return (
-    <div className="w-full space-y-5 py-4 px-6">
+    <div className="w-full space-y-5 px-1 py-2 sm:px-2 sm:py-4 lg:px-6">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">

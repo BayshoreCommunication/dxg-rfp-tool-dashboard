@@ -53,6 +53,7 @@ import TypingIndicator from '@/components/ai/shared/TypingIndicator';
 import type { ProposalData } from '@/components/proposals/AddNewProposal';
 import { presentJob } from '@/lib/asyncOperations';
 import {
+  ArrowLeft,
   ArrowUp,
   Check,
   ChevronDown,
@@ -1111,7 +1112,7 @@ function CardFooter({
 // two primary buttons that do the same thing, so the caller decides which card
 // owns the row.
 const ACTION_BASE =
-  'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:min-h-0 sm:w-auto sm:shrink-0';
 const ACTION_PRIMARY = `${ACTION_BASE} bg-[#087f69] text-white hover:bg-[#0a9a81]`;
 const ACTION_SECONDARY = `${ACTION_BASE} border border-[#087f69] bg-white text-[#087f69] hover:bg-emerald-50`;
 const ACTION_TERTIARY = `${ACTION_BASE} px-1 text-slate-500 underline underline-offset-2 hover:text-slate-800`;
@@ -1134,7 +1135,7 @@ function CardActionRow({
   readinessBusy?: boolean;
 }) {
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
+    <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
       <button
         type="button"
         onClick={onGenerateDraft}
@@ -1179,7 +1180,7 @@ function SkeletonCard({ label }: { label: string }) {
   return (
     <div
       role="status"
-      className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
     >
       <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
         <span
@@ -1208,7 +1209,7 @@ function DraftProgressCard({ updating }: { updating: boolean }) {
           : 'Creating your proposal draft'
       }
       data-testid="draft-progress-card"
-      className="max-w-3xl overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]"
+      className="w-full max-w-3xl overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]"
     >
       <div className="flex items-start gap-3 bg-gradient-to-r from-emerald-50 via-white to-cyan-50/70 px-4 py-4 sm:px-5">
         <span className="relative mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#087f69] text-white shadow-sm">
@@ -1250,7 +1251,7 @@ function DraftSendFailureCard({
   onRetry: () => void;
 }) {
   return (
-    <div className="max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 shadow-sm">
+    <div className="w-full max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 shadow-sm">
       <p role="alert" className="font-semibold">
         The draft update could not be started.
       </p>
@@ -1275,11 +1276,11 @@ function DraftSendFailureCard({
 // An invalid answer (backend 422) keeps the question and shows the validation
 // message so the user can re-answer.
 const ANSWER_FIELD_CLASS =
-  'min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 disabled:cursor-not-allowed disabled:bg-slate-50';
+  'min-h-10 min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 disabled:cursor-not-allowed disabled:bg-slate-50 sm:flex-1';
 const PRIMARY_BUTTON_CLASS =
-  'shrink-0 rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50';
+  'min-h-10 w-full rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:shrink-0';
 const SKIP_BUTTON_CLASS =
-  'shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50';
+  'min-h-10 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50';
 
 export function isBeforeLocalToday(
   candidate: Date,
@@ -1503,14 +1504,14 @@ function GuidedQuestionCard({
         if (!busy) onSkip();
       }}
       disabled={busy}
-      className={SKIP_BUTTON_CLASS}
+      className={`${SKIP_BUTTON_CLASS} ${answerType === 'choice' ? 'w-auto shrink-0' : 'w-full sm:w-auto sm:shrink-0'}`}
     >
       Skip
     </button>
   );
 
   return (
-    <div className="max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+    <div className="my-2 w-full max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
           Guided question {current}
@@ -1580,14 +1581,14 @@ function GuidedQuestionCard({
         </div>
       ) : (
         <form
-          className="mt-3 flex flex-wrap items-center gap-2"
+          className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"
           onSubmit={(event) => {
             event.preventDefault();
             if (answer !== null && !busy) onAnswer(answer);
           }}
         >
           {answerType === 'date' || answerType === 'date_time' ? (
-            <div className="flex min-w-[11rem] flex-1 basis-48 items-center">
+            <div className="col-span-2 flex w-full items-center sm:min-w-[11rem] sm:flex-1 sm:basis-48">
               <label htmlFor={inputId} className="sr-only">
                 Answer this question
               </label>
@@ -1675,7 +1676,7 @@ function GuidedQuestionCard({
               }
               aria-invalid={displayError ? true : undefined}
               aria-describedby={displayError ? errorId : undefined}
-              className={`${ANSWER_FIELD_CLASS} basis-48`}
+              className={`${ANSWER_FIELD_CLASS} col-span-2 sm:basis-48`}
             />
           )}
           <button
@@ -1767,7 +1768,7 @@ function ContextRunCard({
 
   const reviewHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   return (
-    <div className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <SourceChips chips={chips} />
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
         Extracted from your sources
@@ -1778,7 +1779,7 @@ function ContextRunCard({
       {fieldCount !== null && (
         <Link
           href={reviewHref}
-          className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50"
+          className="mt-2 inline-flex min-h-10 w-full flex-wrap items-center justify-center gap-2 rounded-lg border border-[#087f69] px-3 py-1.5 text-center text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 sm:w-auto"
         >
           <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
             Suggestions
@@ -1807,7 +1808,7 @@ const draftRunVersion = (run: unknown): number | null => {
 
 function PreviousDraftCard({ message }: { message: ConversationMessage }) {
   return (
-    <details className="group max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 shadow-sm">
+    <details className="group w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 shadow-sm">
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-left marker:content-none sm:px-5">
         <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-600">
           <FileText size={15} aria-hidden />
@@ -1888,7 +1889,7 @@ function DraftRunCard({
 
   const detailsHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   return (
-    <div className="max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]">
+    <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]">
       <header className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-cyan-50/60 px-4 py-4 sm:px-5">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#087f69] text-white shadow-sm">
@@ -1927,7 +1928,7 @@ function DraftRunCard({
             onClick={onRegenerate}
             disabled={draftBusy}
             aria-busy={draftBusy}
-            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:min-h-0 sm:w-auto sm:shrink-0"
           >
             {draftBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
             {draftBusy ? 'Generating…' : 'Regenerate draft'}
@@ -1958,7 +1959,7 @@ function DraftRunCard({
                     {section.heading}
                   </h4>
                 </div>
-                <div className="mt-3 space-y-3 pl-8">
+                <div className="mt-3 space-y-3 pl-0 sm:pl-8">
                 {section.paragraphs.length > 0 ? (
                   section.paragraphs.map((paragraph, index) => (
                     <div key={index}>
@@ -2051,7 +2052,7 @@ function OverviewCard({
       ? eventName
       : 'your proposal';
   return (
-    <div className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm font-semibold text-slate-900">
           Here&rsquo;s what I have for {title}
@@ -2065,13 +2066,13 @@ function OverviewCard({
           {rows.map((row) => (
             <div
               key={row.label}
-              className="flex items-baseline justify-between gap-3 border-b border-slate-100 pb-1"
+              className="flex flex-col items-start gap-0.5 border-b border-slate-100 pb-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3"
             >
               <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {row.label}
               </dt>
               <dd
-                className="min-w-0 truncate text-right text-sm text-slate-800"
+                className="min-w-0 max-w-full whitespace-normal break-words text-left text-sm text-slate-800 sm:truncate sm:text-right"
                 title={row.value}
               >
                 {row.value}
@@ -2178,7 +2179,7 @@ function CompletionCard({
     : null;
   const weakest = report ? weakestSections(report) : [];
   return (
-    <div className="max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+    <div className="w-full max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
       <p className="text-sm font-semibold text-emerald-900">
         {/* Not "X% complete": the stepper uses "complete" for how far
             through the workflow a proposal is, and this measures how much of
@@ -2264,7 +2265,7 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
     (f) => f.severity === 'warning',
   ).length;
   return (
-    <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:max-w-[85%]">
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
         Results — Readiness check
       </p>
@@ -2319,7 +2320,7 @@ function InvestmentCard({
       ? `Estimated investment ${roundedMoney(report.totalLowMinor, report.currency)} – ${roundedMoney(report.totalHighMinor, report.currency)} (mid ${roundedMoney(report.totalMidMinor, report.currency)}).`
       : 'Investment guidance generated — some categories need more information before an estimate is possible.';
   return (
-    <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:max-w-[85%]">
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
         Results — Investment guidance
       </p>
@@ -2336,10 +2337,10 @@ function InvestmentCard({
           {report.lineItems.slice(0, 5).map((item) => (
             <li
               key={item.label}
-              className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700"
+              className="flex flex-col items-start gap-1 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
               <span className="truncate">{item.label}</span>
-              <span className="shrink-0 font-semibold">
+              <span className="font-semibold sm:shrink-0">
                 {money(
                   item.midMinor,
                   item.currency || report.currency,
@@ -2559,6 +2560,7 @@ export default function AssistantWorkspacePage({
   // a retry does not upload them a second time.
   const uploadedRef = useRef(new Map<File, string>());
   const [notesOpen, setNotesOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [notesText, setNotesText] = useState('');
   // Rail source removal: which row is asking for confirmation, which one has a
   // delete in flight, and per-row failure messages.
@@ -3842,7 +3844,7 @@ export default function AssistantWorkspacePage({
         <li key={message.id} className="flex flex-col gap-1.5">
           {asked && (
             <div className="flex justify-start">
-              <div className="max-w-[75%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600">
+              <div className="max-w-[90%] py-1 text-sm text-slate-600 md:max-w-[75%] md:rounded-2xl md:rounded-bl-md md:border md:border-slate-200 md:bg-white md:px-4 md:py-2.5">
                 <p className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                   Asked
                   {askedImpact && (
@@ -3856,7 +3858,7 @@ export default function AssistantWorkspacePage({
             </div>
           )}
           <div className="flex justify-end">
-            <div className="max-w-[75%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900">
+              <div className="max-w-[88%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 sm:max-w-[75%]">
               {message.kind === 'question_answer' && (
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#087f69]">
                   Answer
@@ -3899,7 +3901,7 @@ export default function AssistantWorkspacePage({
       return wrapAssistantTurn(
         <p
           role="alert"
-          className="max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          className="w-full max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
         >
           {message.content ||
             'The assistant could not complete this response. Please try again.'}
@@ -3921,7 +3923,7 @@ export default function AssistantWorkspacePage({
           : [];
       return wrapAssistantTurn(
         <div
-          className="max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          className="w-full max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
         >
           <p role="alert">{labels.failed}</p>
           {message.runType === 'proposal_context' && (
@@ -4003,7 +4005,7 @@ export default function AssistantWorkspacePage({
       );
     }
     return wrapAssistantTurn(
-      <div className="max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800 shadow-sm">
+      <div className="w-full max-w-3xl py-1 text-sm leading-6 text-slate-800 md:rounded-2xl md:border md:border-slate-200 md:bg-white md:p-4 md:leading-normal md:shadow-sm">
         <p className="whitespace-pre-wrap">{message.content}</p>
         {(message.actions?.length ?? 0) > 0 && (
           <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
@@ -4013,7 +4015,7 @@ export default function AssistantWorkspacePage({
               <a
                 href="/files/RFPilot%20schedule-example-sheet.xlsx"
                 download
-                className="inline-flex items-center gap-2 rounded-lg bg-[#008ad2] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#006fa8]"
+                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#008ad2] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#006fa8] sm:w-auto"
               >
                 <Download size={14} aria-hidden />
                 Download Sample Sheet
@@ -4023,7 +4025,7 @@ export default function AssistantWorkspacePage({
               proposalId && (
                 <Link
                   href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposalId)}&step=3`}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#008ad2] bg-white px-3 py-2 text-xs font-semibold text-[#008ad2] transition-colors hover:bg-[#008ad2]/5"
+                  className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#008ad2] bg-white px-3 py-2 text-center text-xs font-semibold text-[#008ad2] transition-colors hover:bg-[#008ad2]/5 sm:w-auto"
                 >
                   <Upload size={14} aria-hidden />
                   Open Room Specifications &amp; Upload
@@ -4149,7 +4151,7 @@ export default function AssistantWorkspacePage({
           </div>
         </div>
       ) : (
-      <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-[#00c2c9] focus-within:shadow-[0_0_0_3px_rgba(0,194,201,0.12)]">
+      <div className="rounded-[1.75rem] border border-slate-200 bg-white p-1.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.55)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#00c2c9] focus-within:shadow-[0_0_0_3px_rgba(0,194,201,0.12)] md:rounded-2xl md:p-2 md:shadow-sm">
         {staged.length > 0 && (
           <ul className="mb-1.5 flex flex-wrap gap-1.5 px-1 pt-1">
             {staged.map((file, index) => (
@@ -4225,7 +4227,7 @@ export default function AssistantWorkspacePage({
             rows={1}
             placeholder="Describe your event or ask for help…"
             aria-label="Message the proposal assistant"
-            className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-slate-900 outline-none placeholder:text-slate-400"
+            className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-slate-900 outline-none placeholder:text-slate-400 max-sm:!h-9 max-sm:!max-h-9 max-sm:overflow-x-auto max-sm:overflow-y-hidden max-sm:whitespace-nowrap max-sm:text-[11px] max-sm:leading-5"
           />
           <button
             type="button"
@@ -4313,7 +4315,7 @@ export default function AssistantWorkspacePage({
               };
 
   return (
-    <div className="min-h-[calc(100dvh-3rem)] bg-slate-100/70 px-4 py-4 sm:px-6 lg:flex lg:h-[calc(100dvh-3rem)] lg:min-h-0 lg:flex-col lg:overflow-hidden">
+    <div className="h-[calc(100dvh-8.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 overflow-hidden bg-white md:h-auto md:min-h-[calc(100svh-9rem)] md:overflow-visible md:bg-white md:py-2 lg:bg-slate-100/70 xl:flex xl:h-[calc(100dvh-3rem)] xl:min-h-0 xl:flex-col xl:overflow-hidden">
       {/* Shared keyframes for continuous status indicators. */}
       <style>{`
         @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-0.25rem); opacity: 1; } }
@@ -4321,27 +4323,25 @@ export default function AssistantWorkspacePage({
         @keyframes ai-orbit { to { transform: rotate(360deg); } }
       `}</style>
       {/* Top bar */}
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 pb-4">
+      <div className="mx-auto hidden w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-1 pb-4 md:flex">
         <nav
           aria-label="Breadcrumb"
           className="flex items-center gap-1.5 text-sm"
         >
           <Link
             href="/proposals"
-            className="font-medium text-slate-500 hover:text-slate-800"
+            aria-label="Back to all proposals"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-semibold text-slate-600 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
           >
-            Proposals
+            <ArrowLeft size={14} aria-hidden />
+            All proposals
           </Link>
-          {proposalId && (
-            <>
-              <span aria-hidden className="text-slate-300">
-                /
-              </span>
-              <span className="font-semibold text-slate-900">
-                {eventName || 'Untitled proposal'}
-              </span>
-            </>
-          )}
+          <span aria-hidden className="text-slate-300">
+            /
+          </span>
+          <span className="font-semibold text-slate-900">
+            {proposalId ? eventName || 'Untitled proposal' : 'New proposal'}
+          </span>
         </nav>
         {/* No proposal exists until the conversation starts, so the edit
             escape hatch only appears once there is something to edit. */}
@@ -4356,36 +4356,40 @@ export default function AssistantWorkspacePage({
         )}
       </div>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:min-h-0 lg:flex-1 lg:flex-row">
+      <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-0 md:h-auto md:gap-5 xl:min-h-0 xl:flex-1 xl:flex-row">
         {/* Workspace card */}
         {/* The card is height-bounded so the thread scrolls inside it and the
             composer stays put, instead of the whole page growing. */}
         <section
           aria-label="Proposal assistant workspace"
-          className="flex max-h-[calc(100dvh-8rem)] min-h-[70vh] flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:h-full lg:min-h-0 lg:max-h-none"
+          className="order-2 flex h-full min-h-0 max-h-none flex-1 flex-col overflow-hidden border-0 bg-white p-0 shadow-none md:h-[calc(100svh-18rem)] md:min-h-[30rem] md:max-h-[calc(100svh-18rem)] md:rounded-3xl md:border md:border-slate-200 md:p-6 md:shadow-sm lg:h-[calc(100svh-10rem)] lg:min-h-[36rem] lg:max-h-[calc(100svh-10rem)] lg:p-7 xl:order-1 xl:h-full xl:min-h-0 xl:max-h-none"
         >
           {!started ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-              <AssistantOrb />
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                  Good {dayPart()}
-                  {firstName ? `, ${firstName}` : ''}
-                </h1>
-                <p
-                  className="mt-2 text-xl font-semibold"
-                  style={{ color: ACCENT }}
-                >
-                  Tell me about your event?
-                </p>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 pb-10 text-center md:gap-6 md:p-0">
+                <AssistantOrb />
+                <div>
+                  <h1 className="text-balance text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+                    Good {dayPart()}
+                    {firstName ? `, ${firstName}` : ''}
+                  </h1>
+                  <p
+                    className="mt-2 text-base font-semibold md:text-xl"
+                    style={{ color: ACCENT }}
+                  >
+                    Tell me about your event?
+                  </p>
+                </div>
               </div>
-              <div className="w-full max-w-xl">{composer}</div>
+              <div className="w-full shrink-0 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 md:mx-auto md:max-w-xl md:bg-transparent md:p-0">
+                {composer}
+              </div>
             </div>
           ) : (
             <>
               <div
                 data-testid="proposal-conversation-scroll"
-                className="-mr-3 min-h-0 flex-1 overflow-y-auto pr-4"
+                className="min-h-0 flex-1 scroll-py-4 overflow-y-auto px-4 pb-4 pt-4 md:-mr-3 md:px-0 md:pb-0 md:pr-4 md:pt-0"
                 aria-live="polite"
               >
                 {loadError && (
@@ -4444,7 +4448,7 @@ export default function AssistantWorkspacePage({
                         // a source and applied fields would simply appear.
                         <p
                           role="status"
-                          className="max-w-[85%] rounded-2xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900"
+                          className="w-full rounded-2xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900 sm:max-w-[85%]"
                         >
                           {card.created
                             ? "I saved what you've told me as a source and I'm pulling requirements from it. Anything I'm unsure about will come back as a question."
@@ -4457,7 +4461,7 @@ export default function AssistantWorkspacePage({
                       {card.kind === 'skipped' && (
                         <p
                           role="status"
-                          className="max-w-[85%] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700"
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 sm:max-w-[85%]"
                         >
                           Skipped <strong>{card.label}</strong> — you
                           can add it later.
@@ -4477,7 +4481,7 @@ export default function AssistantWorkspacePage({
                       {card.kind === 'error' && (
                         <p
                           role="alert"
-                          className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                          className="w-full rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 sm:max-w-[85%]"
                         >
                           {card.message}
                         </p>
@@ -4489,7 +4493,7 @@ export default function AssistantWorkspacePage({
                       key={entry.localId}
                       className="flex justify-end"
                     >
-                      <div className="max-w-[75%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 opacity-90">
+                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 opacity-90 sm:max-w-[75%]">
                         <p className="whitespace-pre-wrap">
                           {entry.content}
                         </p>
@@ -4529,7 +4533,7 @@ export default function AssistantWorkspacePage({
                     >
                       <p
                         role="alert"
-                        className="max-w-[85%] rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                        className="w-full rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 sm:max-w-[85%]"
                       >
                         {`${notice.filename} couldn’t be processed — try re-uploading.`}
                       </p>
@@ -4580,7 +4584,7 @@ export default function AssistantWorkspacePage({
                     <li className="flex justify-start">
                       <p
                         role="status"
-                        className="inline-flex items-center gap-2 rounded-full border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-3.5 py-2 text-xs font-semibold text-[#087f69]"
+                        className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-3.5 py-2 text-xs font-semibold text-[#087f69]"
                       >
                         <Loader2 size={13} className="animate-spin" aria-hidden />
                         Saving {bulkAnswerProgress.current} of {bulkAnswerProgress.total} details…
@@ -4591,7 +4595,7 @@ export default function AssistantWorkspacePage({
                     <li className="flex justify-start">
                       <p
                         role="status"
-                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-800"
+                        className="inline-flex max-w-full items-center gap-1.5 whitespace-normal break-words rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-800"
                       >
                         {lastConfirmed.label}: {lastConfirmed.value} ✓
                       </p>
@@ -4606,7 +4610,7 @@ export default function AssistantWorkspacePage({
                     !loading &&
                     !bulkAnswerProgress &&
                     extractionPending && (
-                      <li className="flex justify-start">
+                      <li className="flex scroll-mt-4 justify-start py-1">
                         <SkeletonCard label="Reading your sources before asking the next question…" />
                       </li>
                     )}
@@ -4616,7 +4620,7 @@ export default function AssistantWorkspacePage({
                     !bulkAnswerProgress &&
                     !extractionPending &&
                     !extractionFailureBlocksQuestions && (
-                      <li className="flex justify-start">
+                      <li className="flex scroll-mt-4 justify-start py-1">
                         <GuidedQuestionCard
                           key={currentQuestion.id}
                           question={currentQuestion}
@@ -4709,23 +4713,51 @@ export default function AssistantWorkspacePage({
                       `current-draft-${latestCompleteDraft.id}`,
                     )}
                 </ol>
-                <div ref={threadEndRef} />
+                <div ref={threadEndRef} className="h-2 scroll-mb-4" />
               </div>
-              <div className="mt-4">{composer}</div>
+              <div className="w-full shrink-0 border-t border-slate-100 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 md:mt-4 md:border-0 md:bg-transparent md:p-0">
+                {composer}
+              </div>
             </>
           )}
         </section>
 
-        {/* Right rail — hidden until the conversation begins, then softly
-            fades in without translating the panel or its child cards. */}
+        {/* The same AI Workspace content becomes a compact disclosure above
+            the conversation on narrow screens. At desktop widths the details
+            wrapper becomes layout-transparent and restores the right rail. */}
         {railVisible && (
-          <aside
-            aria-label="Proposal assistant tools"
-            className="w-full shrink-0 rounded-3xl border border-slate-200/80 bg-white/45 p-2 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 lg:flex lg:h-full lg:min-h-0 lg:w-80 lg:flex-col lg:overflow-hidden"
-          >
+          <div className="order-1 shrink-0 border-b border-slate-200 bg-white xl:order-2 xl:block xl:h-full xl:w-80 xl:border-0 xl:bg-transparent">
+            <button
+              type="button"
+              aria-label="Toggle AI workspace tools"
+              aria-expanded={toolsOpen}
+              onClick={() => setToolsOpen((open) => !open)}
+              className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9] xl:hidden"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#087f69]/15 bg-[#087f69]/10 text-[#087f69]">
+                <Sparkles size={15} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#087f69]">
+                  AI workspace
+                </span>
+                <span className="block truncate text-xs font-semibold text-slate-700">
+                  {aiStatus.title}
+                </span>
+              </span>
+              <ChevronDown
+                size={17}
+                className={`shrink-0 text-slate-400 transition-transform ${toolsOpen ? 'rotate-180' : ''}`}
+                aria-hidden
+              />
+            </button>
+            <aside
+              aria-label="Proposal assistant tools"
+              className={`${toolsOpen ? 'flex' : 'hidden'} max-h-[min(56dvh,34rem)] w-full shrink-0 flex-col overflow-hidden border-t border-slate-200 bg-slate-50/80 p-2 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 xl:flex xl:h-full xl:max-h-none xl:min-h-0 xl:w-full xl:rounded-3xl xl:border xl:border-slate-200/80 xl:bg-white/45 xl:shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] xl:backdrop-blur-sm`}
+            >
             <div
               data-testid="proposal-assistant-tools-scroll"
-              className="space-y-4 lg:-mr-1 lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]"
+              className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable] xl:-mr-1 xl:pr-2"
             >
             <section
               aria-labelledby="rail-ai-title"
@@ -4893,9 +4925,9 @@ export default function AssistantWorkspacePage({
                         key={source.id}
                         className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs"
                       >
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span
-                            className="min-w-0 flex-1 truncate text-slate-700"
+                            className="min-w-0 basis-full truncate text-slate-700 sm:flex-1 sm:basis-auto"
                             title={source.originalFilename}
                           >
                             {source.originalFilename}
@@ -5111,7 +5143,8 @@ export default function AssistantWorkspacePage({
               )}
             </section>
             </div>
-          </aside>
+            </aside>
+          </div>
         )}
       </div>
     </div>

@@ -16,6 +16,7 @@ import {
   type AssistantFieldHelpInput,
   type AssistantFieldHelpRequest,
 } from "@/lib/aiAssistant/fieldHelp";
+import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 
 export default function LayoutWrapper({
@@ -31,6 +32,9 @@ export default function LayoutWrapper({
     useState<AssistantFieldHelpRequest | null>(null);
   const fieldHelpSequence = useRef(0);
   const pathname = usePathname();
+  const proposalAssistantRoute =
+    pathname === "/proposals/add-new-proposal" ||
+    /^\/proposals\/[^/]+\/assistant(?:\/|$)/.test(pathname);
 
   useEffect(() => {
     if (!assistantEnabled) return;
@@ -87,15 +91,33 @@ export default function LayoutWrapper({
 
   return (
     <AssistantLauncherProvider value={launcherValue}>
-      <div className="min-h-screen bg-[#F4F7FA]">
+      <div
+        className={cn(
+          "min-h-svh overflow-x-hidden",
+          proposalAssistantRoute ? "bg-white lg:bg-[#F4F7FA]" : "bg-[#F4F7FA]",
+        )}
+      >
         <Sidebar
           assistantOpen={assistantOpen}
           onOpenAssistant={
             assistantEnabled ? toggleAssistant : undefined
           }
         />
-        <main className="ml-[90px] min-h-screen">
-          <div className="p-6">{children}</div>
+        <main
+          className={cn(
+            "min-h-svh min-w-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-[calc(4rem+env(safe-area-inset-top))] lg:ml-[90px] lg:pb-0 lg:pt-0",
+          )}
+        >
+          <div
+            className={cn(
+              "min-w-0",
+              proposalAssistantRoute
+                ? "p-0 md:px-5 md:py-4 lg:p-6"
+                : "px-3 py-4 sm:px-5 lg:p-6",
+            )}
+          >
+            {children}
+          </div>
         </main>
         {assistantEnabled && (
           <AssistantPopup

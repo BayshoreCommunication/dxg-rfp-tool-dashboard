@@ -297,11 +297,11 @@ export default function DashboardTableList({
   );
 
   return (
-    <div className="space-y-6 px-5">
+    <div className="space-y-6 px-1 sm:px-2 lg:px-5">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-100 flex-wrap gap-y-3">
-          <div className="flex items-center gap-2">
-            <h3 className="text-[14px] font-black text-slate-900 tracking-tight">
+        <div className="flex flex-col gap-4 border-b border-slate-100 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+            <h3 className="whitespace-nowrap text-[14px] font-black tracking-tight text-slate-900">
               Latest Proposals
             </h3>
             <span className="bg-slate-100 text-slate-500 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
@@ -309,8 +309,8 @@ export default function DashboardTableList({
             </span>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
+            <div className="relative w-full sm:w-auto">
               <Search
                 size={13}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -320,11 +320,11 @@ export default function DashboardTableList({
                 placeholder="Search proposals..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 pr-3 py-2 text-[12px] bg-slate-50 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:border-[#008ad2] focus:ring-1 focus:ring-[#008ad2]/20 transition-all duration-150 w-72"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-8 pr-3 text-[12px] text-slate-700 placeholder-slate-400 transition-all duration-150 focus:border-[#008ad2] focus:outline-none focus:ring-1 focus:ring-[#008ad2]/20 sm:w-64 xl:w-72"
               />
             </div>
 
-            <div className="-mb-1 flex items-center gap-2 overflow-x-auto pb-1">
+            <div className="-mb-1 flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto">
               {FILTER_TABS.map((tab) => {
                 const isActive = filter === tab.key;
                 return (
@@ -355,8 +355,8 @@ export default function DashboardTableList({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[760px] text-left">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
                 {[
@@ -393,7 +393,7 @@ export default function DashboardTableList({
           </table>
         </div>
 
-        <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 bg-slate-50/50">
+        <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <p className="text-[12px] text-slate-400 font-medium">
             Showing{" "}
             <span className="text-slate-700 font-bold">{filtered.length}</span>{" "}

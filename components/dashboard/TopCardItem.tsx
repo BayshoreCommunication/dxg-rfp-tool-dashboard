@@ -1,4 +1,5 @@
 import {
+  ArrowUpRight,
   Eye,
   FileText,
   MessageSquareText,
@@ -6,6 +7,7 @@ import {
   Send,
   TrendingUp,
 } from "lucide-react";
+import Link from "next/link";
 import React from "react";
 
 interface StatMetric {
@@ -15,6 +17,8 @@ interface StatMetric {
   icon: React.ReactElement<{ className?: string }>;
   gradient: string;
   trendValue: string;
+  href: string;
+  actionLabel: string;
 }
 
 interface TopCardItemProps {
@@ -29,14 +33,24 @@ interface TopCardItemProps {
   };
 }
 
-const StatCard = ({ title, value, icon, gradient, trendValue }: StatMetric) => {
+const StatCard = ({
+  title,
+  value,
+  icon,
+  gradient,
+  trendValue,
+  href,
+  actionLabel,
+}: StatMetric) => {
   return (
-    <div
-      className="relative overflow-hidden rounded-xl p-6 text-white shadow-lg transition-transform duration-300 hover:-translate-y-1 hover:shadow-xl"
+    <Link
+      href={href}
+      aria-label={`${title}: ${value}. ${actionLabel}`}
+      className="group relative min-h-40 overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-[transform,box-shadow,filter] duration-300 hover:-translate-y-1 hover:brightness-[1.03] hover:shadow-xl active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-200 sm:p-6"
       style={{ background: gradient }}
     >
       {/* Large watermark background icon */}
-      <div className="absolute right-0 -top-0 opacity-15 pointer-events-none w-36 h-36">
+      <div className="pointer-events-none absolute -top-1 right-0 h-32 w-32 opacity-15 sm:h-36 sm:w-36">
         {React.cloneElement(icon, { className: "w-full h-full text-white" })}
       </div>
 
@@ -55,18 +69,25 @@ const StatCard = ({ title, value, icon, gradient, trendValue }: StatMetric) => {
         <div>
           <h3 className="text-white/80 text-sm font-semibold mb-1">{title}</h3>
           <div className="text-4xl font-extrabold tracking-tight">{value}</div>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-white/90">
+            {actionLabel}
+            <ArrowUpRight
+              className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              aria-hidden
+            />
+          </span>
         </div>
       </div>
 
       {/* Top gloss */}
       <div className="absolute inset-0 bg-linear-to-b from-white/10 to-transparent opacity-50 pointer-events-none" />
-    </div>
+    </Link>
   );
 };
 
 export const TopCardItemSkeleton = () => {
   return (
-    <div className="grid grid-cols-1 gap-6 px-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 px-1 sm:grid-cols-2 sm:gap-5 sm:px-2 lg:px-5 xl:grid-cols-5">
       {[1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
@@ -99,6 +120,8 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       gradient: "linear-gradient(135deg, #6366f1, #4338ca)",
       trendValue: "+18%",
       icon: <FileText strokeWidth={2} />,
+      href: "/proposals",
+      actionLabel: "Open proposals",
     },
     {
       id: "sent",
@@ -107,6 +130,8 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       gradient: "linear-gradient(135deg, #34d399, #059669)",
       trendValue: "+5%",
       icon: <Send strokeWidth={2} />,
+      href: "/email",
+      actionLabel: "Open email activity",
     },
     {
       id: "clicked",
@@ -115,6 +140,8 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       gradient: "linear-gradient(135deg, #22d3ee, #0891b2)",
       trendValue: "+24%",
       icon: <MousePointerClick strokeWidth={2} />,
+      href: "/email",
+      actionLabel: "Open email activity",
     },
     {
       id: "views",
@@ -123,6 +150,8 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       gradient: "linear-gradient(135deg, #fb923c, #ea580c)",
       trendValue: "+12%",
       icon: <Eye strokeWidth={2} />,
+      href: "/proposals",
+      actionLabel: "Review proposals",
     },
     {
       id: "vendor-responses",
@@ -131,11 +160,13 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       gradient: "linear-gradient(135deg, #a855f7, #7e22ce)",
       trendValue: `${totals?.unreadVendorResponses ?? 0} unread`,
       icon: <MessageSquareText strokeWidth={2} />,
+      href: "/vendor-responses",
+      actionLabel: "Open responses",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-6 px-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 px-1 sm:grid-cols-2 sm:gap-5 sm:px-2 lg:px-5 xl:grid-cols-5">
       {statsData.map((stat) => (
         <StatCard key={stat.id} {...stat} />
       ))}

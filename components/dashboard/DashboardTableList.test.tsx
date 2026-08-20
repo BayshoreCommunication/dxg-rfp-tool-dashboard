@@ -31,5 +31,11 @@ describe("DashboardTableList", () => {
     );
 
     expect(screen.getByText("27/07/2026")).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { name: "Latest Proposals" });
+    expect(heading).toHaveClass("whitespace-nowrap");
+    expect(heading.parentElement).toHaveClass(
+      "shrink-0",
+      "whitespace-nowrap",
+    );
   });
 });

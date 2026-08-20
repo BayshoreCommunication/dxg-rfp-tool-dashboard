@@ -47,4 +47,34 @@ describe('TopCardItem', () => {
     expect(screen.getByText('+24%')).toBeInTheDocument()
     expect(screen.getByText('+12%')).toBeInTheDocument()
   })
+
+  it('makes every metric card a meaningful navigation link', () => {
+    render(<TopCardItem totals={mockTotals} />)
+
+    expect(
+      screen.getByRole('link', {
+        name: 'Total Proposals: 42. Open proposals',
+      }),
+    ).toHaveAttribute('href', '/proposals')
+    expect(
+      screen.getByRole('link', {
+        name: 'Total Email Sent: 15. Open email activity',
+      }),
+    ).toHaveAttribute('href', '/email')
+    expect(
+      screen.getByRole('link', {
+        name: 'Total Email Clicked: 7. Open email activity',
+      }),
+    ).toHaveAttribute('href', '/email')
+    expect(
+      screen.getByRole('link', {
+        name: 'Total Proposal Views: 100. Review proposals',
+      }),
+    ).toHaveAttribute('href', '/proposals')
+    expect(
+      screen.getByRole('link', {
+        name: 'Vendor Responses: 9. Open responses',
+      }),
+    ).toHaveAttribute('href', '/vendor-responses')
+  })
 })

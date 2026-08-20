@@ -37,7 +37,7 @@ const TopHeader = () => {
       {/* Ambient glow behind header */}
       <div className="absolute -inset-4 bg-gradient-to-r from-[#008ad2]/5 via-[#0ea5e9]/3 to-[#2563eb]/5 rounded-3xl blur-2xl pointer-events-none" />
 
-      <div className="relative flex items-center justify-between px-5">
+      <div className="relative flex flex-col gap-4 px-1 sm:flex-row sm:items-center sm:justify-between sm:px-2 lg:px-5">
         {/* Left: Title block */}
         <div className="flex flex-col gap-1">
           {/* Pill badge */}
@@ -46,13 +46,13 @@ const TopHeader = () => {
             Overview
           </span>
 
-          <h1 className="text-[30px] font-black tracking-tight leading-none">
+          <h1 className="text-[28px] font-black leading-none tracking-tight sm:text-[30px]">
             <span className="bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-transparent">
               Dashboard
             </span>
           </h1>
 
-          <p className="mt-1 text-[13px] text-slate-400 font-medium flex items-center gap-2 min-h-[20px]">
+          <p className="mt-1 flex min-h-5 items-center gap-2 text-xs font-medium text-slate-400 sm:text-[13px]">
             {mounted && (
               <>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -65,7 +65,7 @@ const TopHeader = () => {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 sm:justify-end">
           {/* Notification bell */}
           {/* <Link
             href={"/settings"}
@@ -81,7 +81,7 @@ const TopHeader = () => {
           {/* CTA Button */}
           <Link
             href="/proposals/add-new-proposal"
-            className="group relative flex items-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0 cursor-pointer"
+            className="group relative flex min-h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[12px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.5)] active:translate-y-0 sm:w-auto sm:text-[13px]"
             style={{
               background:
                 "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)",

@@ -1025,11 +1025,30 @@ describe("AssistantWorkspacePage", () => {
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([startDateQuestion, roomsQuestion]));
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
+    const guidedLabel = await screen.findByText("Guided question 1");
+    expect(guidedLabel).toBeInTheDocument();
+    const guidedCard = guidedLabel.parentElement?.parentElement;
+    expect(guidedCard).toHaveClass(
+      "my-2",
+      "rounded-2xl",
+      "border",
+      "p-4",
+    );
     expect(screen.getByText("When does the event start? (YYYY-MM-DD)")).toBeInTheDocument();
     expect(screen.getByText("affects schedule")).toBeInTheDocument();
-    expect(screen.getByLabelText("Answer this question")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Skip" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Answer this question")).toHaveClass(
+      "col-span-2",
+      "w-full",
+      "sm:basis-48",
+    );
+    expect(screen.getByRole("button", { name: "Answer" })).toHaveClass(
+      "w-full",
+      "sm:w-auto",
+    );
+    expect(screen.getByRole("button", { name: "Skip" })).toHaveClass(
+      "w-full",
+      "sm:w-auto",
+    );
     // Only ONE question card — the second question is not rendered yet.
     expect(screen.queryByText("How many event rooms are required?")).not.toBeInTheDocument();
     // The rail no longer lists prompts; it shows the remaining count.
@@ -1745,7 +1764,10 @@ describe("AssistantWorkspacePage", () => {
     // The consistent action row: one primary, a tertiary link, and no second
     // readiness button because a report is already on screen — only the rail's
     // own chip remains.
-    expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate proposal draft" })).toHaveClass(
+      "w-full",
+      "sm:w-auto",
+    );
     expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "Edit all details" })).toHaveLength(2);
     // The old vague copy is gone for good.
@@ -2027,21 +2049,26 @@ describe("AssistantWorkspacePage", () => {
 
     // Once the send lands the rail slides in and stays.
     expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
-    expect(screen.getByText("AI workspace")).toBeInTheDocument();
-    expect(screen.getByLabelText("Proposal assistant tools")).toHaveClass(
-      "lg:overflow-hidden",
-    );
+    expect(screen.getAllByText("AI workspace")).toHaveLength(2);
+    const toolsToggle = screen.getByLabelText("Toggle AI workspace tools");
+    expect(toolsToggle).toHaveAttribute("aria-expanded", "false");
+    const toolsPanel = screen.getByLabelText("Proposal assistant tools");
+    expect(toolsPanel).toHaveClass("hidden", "xl:flex", "overflow-hidden");
+    fireEvent.click(toolsToggle);
+    expect(toolsToggle).toHaveAttribute("aria-expanded", "true");
+    expect(toolsPanel).toHaveClass("flex");
     expect(
       screen.getByTestId("proposal-conversation-scroll"),
-    ).toHaveClass("-mr-3", "pr-4");
+    ).toHaveClass("px-4", "md:-mr-3", "md:px-0", "md:pr-4");
     expect(
       screen.getByTestId("proposal-assistant-tools-scroll"),
     ).toHaveClass(
-      "lg:-mr-1",
-      "lg:overflow-x-hidden",
-      "lg:overflow-y-auto",
-      "lg:pr-2",
-      "lg:[scrollbar-gutter:stable]",
+      "overflow-x-hidden",
+      "overflow-y-auto",
+      "pr-1",
+      "xl:-mr-1",
+      "xl:pr-2",
+      "[scrollbar-gutter:stable]",
     );
     expect(screen.getByText("Suggested tasks")).toBeInTheDocument();
     expect(screen.getByText("Suggested questions")).toBeInTheDocument();
@@ -2252,6 +2279,49 @@ describe("AssistantWorkspacePage", () => {
     });
     await waitFor(() => expect(screen.queryByLabelText("The assistant is responding")).not.toBeInTheDocument());
     expect(await screen.findByText("What is the event date?")).toBeInTheDocument();
+  });
+
+  test("keeps the mobile composer on one compact line without shrinking its controls", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithQuestion);
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const composer = await screen.findByLabelText(
+      "Message the proposal assistant",
+    );
+    expect(composer).toHaveClass(
+      "max-h-40",
+      "max-sm:!h-9",
+      "max-sm:!max-h-9",
+      "max-sm:overflow-y-hidden",
+      "max-sm:whitespace-nowrap",
+      "max-sm:text-[11px]",
+    );
+    expect(screen.getByRole("button", { name: "Send message" })).toHaveClass(
+      "h-10",
+      "w-10",
+      "shrink-0",
+    );
+    expect(
+      screen.getByRole("region", { name: "Proposal assistant workspace" }),
+    ).toHaveClass(
+      "md:h-[calc(100svh-18rem)]",
+      "md:max-h-[calc(100svh-18rem)]",
+      "lg:h-[calc(100svh-10rem)]",
+    );
+  });
+
+  test("shows a meaningful desktop breadcrumb before the proposal is created", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithQuestion);
+
+    render(<AssistantWorkspacePage />);
+
+    expect(
+      screen.getByRole("link", { name: "Back to all proposals" }),
+    ).toHaveAttribute("href", "/proposals");
+    expect(
+      screen.getByRole("navigation", { name: "Breadcrumb" }),
+    ).toHaveTextContent(/All proposals\s*\/\s*New proposal/);
   });
 
   test("a persisted pending chat job remains visible after reload and blocks duplicate sends", async () => {
@@ -2623,9 +2693,11 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByRole("heading", { name: "Proposal draft ready" })).toBeInTheDocument();
     expect(screen.getByLabelText("Proposal draft preview")).toBeInTheDocument();
     expect(screen.getByText("1 section")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review & edit draft" })).toHaveAttribute(
-      "href",
-      `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`,
+    expect(screen.getByRole("link", { name: "Review & edit draft" }))
+      .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+    expect(screen.getByRole("link", { name: "Review & edit draft" })).toHaveClass(
+      "w-full",
+      "sm:w-auto",
     );
     const citationSources = draftParagraph.parentElement?.querySelector(
       '[aria-label="Sources"]',
@@ -2746,7 +2818,10 @@ describe("AssistantWorkspacePage", () => {
     await answerLastQuestion();
 
     expect(await screen.findByText("Your proposal details are 68% filled in")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate draft" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate draft" })).toHaveClass(
+      "w-full",
+      "sm:w-auto",
+    );
     expect(screen.queryByRole("button", { name: "Generate proposal draft" })).not.toBeInTheDocument();
     // Draft and proposal are on the same version, so nothing is stale.
     expect(screen.queryByText(STALE_HINT)).not.toBeInTheDocument();

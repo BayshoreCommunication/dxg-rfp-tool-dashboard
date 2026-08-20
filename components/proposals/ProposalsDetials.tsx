@@ -36,7 +36,7 @@ const ProposalsDetials = () => {
   }, [searchValue, countsTick]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 pb-4 sm:space-y-8 sm:pb-6">
       <TopHeader />
 
       <ProposalFilters

@@ -84,4 +84,37 @@ describe("Sidebar AI Assistant launcher", () => {
       expect(signOutButton).toHaveTextContent("Signing out");
     });
   });
+
+  test("provides compact navigation controls for small screens", () => {
+    render(<Sidebar onOpenAssistant={jest.fn()} />);
+
+    expect(
+      screen.getByRole("navigation", { name: "Mobile primary navigation" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Open AI Assistant from mobile navigation",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Sign out from mobile navigation" }),
+    ).toBeInTheDocument();
+  });
+
+  test("keeps the existing mobile header and bottom navigation", () => {
+    render(<Sidebar onOpenAssistant={jest.fn()} />);
+
+    expect(
+      screen.getByRole("navigation", { name: "Mobile primary navigation" }),
+    ).not.toHaveClass("hidden");
+    expect(
+      screen.getAllByRole("link", { name: "Go to dashboard" }),
+    ).toHaveLength(2);
+    expect(
+      screen.queryByRole("button", { name: "Open navigation menu" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Start a new proposal conversation" }),
+    ).not.toBeInTheDocument();
+  });
 });

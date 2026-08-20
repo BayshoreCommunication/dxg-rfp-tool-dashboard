@@ -168,7 +168,7 @@ export default function EmailDashboard() {
   }
 
   return (
-    <div className="space-y-6 px-6">
+    <div className="space-y-5 sm:space-y-6">
       {campaigns.map((campaign) => {
         const title = campaign.subject?.trim() || FALLBACK_TITLE;
         const body = campaign.message?.trim() || FALLBACK_BODY;
@@ -177,7 +177,7 @@ export default function EmailDashboard() {
         return (
           <div
             key={campaign._id}
-            className="relative overflow-hidden rounded-2xl bg-white p-6 border border-slate-200 shadow-sm transition-shadow hover:shadow-md"
+            className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6"
           >
             <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#008ad2]/5 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-14 -left-14 h-40 w-40 rounded-full bg-[#2563eb]/5 blur-3xl" />
@@ -197,9 +197,9 @@ export default function EmailDashboard() {
                   </span> */}
                 </div>
 
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight truncate">
+                <h2 className="truncate text-lg font-black tracking-tight text-slate-900 sm:text-2xl">
                   {title}
-                </h1>
+                </h2>
 
                 <p className="mt-1 text-[15px] leading-6 text-slate-500 line-clamp-2">
                   {body}

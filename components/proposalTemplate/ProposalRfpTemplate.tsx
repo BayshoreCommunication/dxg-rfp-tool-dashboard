@@ -113,6 +113,39 @@ const TEMPLATE_CSS = `
   .rfp-root .disclaimer-box p { font-size: 11px; color: #64748b; line-height: 1.6; text-align: center; }
   .rfp-root .matrix-bar { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 3px; }
   .rfp-root .matrix-fill { height: 6px; background: #008ad2; border-radius: 3px; }
+  @media screen and (max-width: 840px) {
+    body, .rfp-root { max-width: 100%; overflow-x: hidden; }
+    .rfp-root { padding: 8px 0 96px; font-size: 11px; background: #f1f5f9; }
+    .rfp-root .page { width: calc(100% - 16px); min-height: 0; margin: 0 8px 10px; padding: 16px; overflow: hidden; border-radius: 10px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+    .rfp-root .rooms-page { padding-bottom: 16px; }
+    .rfp-root .cover-header { margin: -16px -16px 14px; padding: 18px 16px; flex-direction: column; align-items: flex-start; gap: 14px; }
+    .rfp-root .cover-document-meta { max-width: 100%; align-items: flex-start; text-align: left; }
+    .rfp-root .cover-document-row { justify-content: flex-start; flex-wrap: wrap; }
+    .rfp-root .cover-document-event { font-size: 14px; overflow-wrap: anywhere; }
+    .rfp-root .event-name { font-size: 22px; overflow-wrap: anywhere; }
+    .rfp-root .event-client, .rfp-root .info-value, .rfp-root td { overflow-wrap: anywhere; }
+    .rfp-root .date-bar { grid-template-columns: 1fr; }
+    .rfp-root .date-cell { border-right: 0; border-bottom: 1px solid #e2e8f0; }
+    .rfp-root .date-cell:last-child { border-bottom: 0; }
+    .rfp-root .stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rfp-root .two-col { grid-template-columns: 1fr; }
+    .rfp-root .contact-bar { grid-template-columns: 1fr; }
+    .rfp-root .contact-label-cell { justify-content: flex-start; text-align: left; }
+    .rfp-root .contact-data-cell { border-left: 0; border-top: 1px solid #e2e8f0; }
+    .rfp-root .int-header { align-items: flex-start; gap: 12px; }
+    .rfp-root .int-header-right { text-align: right; }
+    .rfp-root .section-title { padding: 7px 9px; font-size: 11px; }
+    .rfp-root .info-row { flex-direction: column; gap: 2px; }
+    .rfp-root .info-label { white-space: normal; }
+    .rfp-root .info-value { width: 100%; text-align: left; }
+    .rfp-root table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .rfp-root th, .rfp-root td { min-width: 112px; padding: 6px 7px; }
+    .rfp-root .cta-box { flex-direction: column; }
+    .rfp-root .cta-side { min-width: 0; padding: 8px 10px; writing-mode: horizontal-tb; transform: none; }
+    .rfp-root .cta-body { padding: 10px 12px; }
+    .rfp-root .footer { position: static; margin-top: 16px; gap: 12px; }
+    .rfp-root img { max-width: 100%; height: auto; }
+  }
 `;
 
 /* ─── Data types ─── */

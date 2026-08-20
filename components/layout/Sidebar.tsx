@@ -8,7 +8,12 @@ import {
 import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-import { BellDot, Bot, LoaderCircle, LogOut } from "lucide-react";
+import {
+  BellDot,
+  Bot,
+  LoaderCircle,
+  LogOut,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,7 +42,9 @@ const Sidebar = ({
   const [socketUrl, setSocketUrl] = useState("");
   const [signingOut, setSigningOut] = useState(false);
 
-  const isItemActive = (item: NavItem) => pathname === item.href;
+  const isItemActive = (item: NavItem) =>
+    pathname === item.href ||
+    (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
 
   const signOutHandler = async () => {
     if (signingOut) return;
@@ -156,9 +163,12 @@ const Sidebar = ({
   }, [pathname, socketUrl]);
 
   const avatarUrl = "/assets/logo/rfpilot-primary-logo.png"; // Replace with your actual logo URL or logic to fetch it
+  const activePageTitle =
+    navigationConfig.find((item) => isItemActive(item))?.title ?? "RFPilot";
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 flex h-dvh min-h-0 w-[90px] flex-col overflow-hidden border-r border-gray-200 bg-white">
+    <>
+      <aside className="fixed inset-y-0 left-0 z-50 hidden h-dvh min-h-0 w-[90px] flex-col overflow-hidden border-r border-gray-200 bg-white lg:flex">
       <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200">
         <Link
           href="/dashboard"
@@ -319,7 +329,135 @@ const Sidebar = ({
           </span>
         </button>
       </div>
-    </aside>
+      </aside>
+
+    <header
+      className="fixed inset-x-0 top-0 z-50 flex h-[calc(4rem+env(safe-area-inset-top))] items-end border-b border-slate-200 bg-white/95 px-3 pb-2 pt-[env(safe-area-inset-top)] shadow-[0_8px_30px_-24px_rgba(15,23,42,0.45)] backdrop-blur lg:hidden"
+    >
+      <div className="flex h-12 w-full min-w-0 items-center justify-between gap-2">
+        <Link
+          href="/dashboard"
+          aria-label="Go to dashboard"
+          className="flex min-w-0 items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <Image
+            src={avatarUrl}
+            alt="RFPilot"
+            width={44}
+            height={44}
+            className="h-11 w-11 shrink-0 object-contain p-1"
+            priority
+          />
+          <span className="truncate text-sm font-extrabold text-slate-800">
+            {activePageTitle}
+          </span>
+        </Link>
+
+        <div className="flex shrink-0 items-center gap-1">
+          {onOpenAssistant && (
+            <button
+              type="button"
+              aria-label={
+                assistantOpen
+                  ? "Hide AI Assistant popup from mobile navigation"
+                  : "Open AI Assistant from mobile navigation"
+              }
+              aria-haspopup="dialog"
+              aria-expanded={assistantOpen}
+              onClick={onOpenAssistant}
+              className={cn(
+                "grid h-10 w-10 place-items-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                assistantOpen
+                  ? "border-slate-900 bg-slate-900 text-white"
+                  : "border-primary/20 bg-primary/10 text-[#009da4]",
+              )}
+            >
+              <Bot size={19} strokeWidth={2.2} aria-hidden />
+            </button>
+          )}
+          <Link
+            href="/notification"
+            aria-label="Notifications"
+            className={cn(
+              "relative grid h-10 w-10 place-items-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              pathname.startsWith("/notification")
+                ? "border-primary/20 bg-primary/10 text-primary"
+                : "border-slate-200 bg-white text-slate-500",
+            )}
+          >
+            <BellDot size={18} strokeWidth={2.1} aria-hidden />
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white ring-2 ring-white">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Link>
+          <button
+            type="button"
+            onClick={() => void signOutHandler()}
+            disabled={signingOut}
+            aria-label="Sign out from mobile navigation"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:cursor-wait disabled:opacity-60"
+          >
+            {signingOut ? (
+              <LoaderCircle className="h-[18px] w-[18px] animate-spin" aria-hidden />
+            ) : (
+              <LogOut className="h-[18px] w-[18px]" aria-hidden />
+            )}
+          </button>
+        </div>
+      </div>
+      </header>
+
+      <nav
+        aria-label="Mobile primary navigation"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_30px_-24px_rgba(15,23,42,0.45)] backdrop-blur lg:hidden"
+      >
+        <div className="grid h-[4.5rem] grid-cols-5 px-1">
+        {navigationConfig.map((item) => {
+          const isActive = isItemActive(item);
+          const badge =
+            item.id === "vendor-responses" && vendorUnreadCount > 0
+              ? vendorUnreadCount
+              : null;
+          const mobileTitle =
+            item.id === "vendor-responses" ? "Vendor" : item.title;
+
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
+                isActive ? "text-primary" : "text-slate-400",
+              )}
+            >
+              {isActive && (
+                <span className="absolute inset-x-3 top-0 h-0.5 rounded-b-full bg-primary" />
+              )}
+              <span
+                className={cn(
+                  "relative grid h-8 w-8 place-items-center rounded-xl",
+                  isActive && "bg-primary/10",
+                )}
+              >
+                {item.icon}
+                {badge !== null && (
+                  <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#008ad2] px-1 text-[9px] font-black text-white ring-2 ring-white">
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
+              </span>
+              <span className="w-full truncate text-center leading-none">
+                {mobileTitle}
+              </span>
+            </Link>
+          );
+        })}
+        </div>
+      </nav>
+    </>
   );
 };
 
