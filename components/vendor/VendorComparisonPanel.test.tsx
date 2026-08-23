@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import VendorComparisonPanel from "./VendorComparisonPanel";
-import { cancelComparisonAction, getComparisonStatusAction, listComparisonsAction, retryComparisonAction, startComparisonAction, type ComparisonView } from "@/app/actions/comparisonOrchestration";
+import { cancelComparisonAction, getComparisonStatusAction, listComparisonsAction, prepareComparisonPrerequisitesAction, retryComparisonAction, startComparisonAction, type ComparisonView } from "@/app/actions/comparisonOrchestration";
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
 
 jest.mock("@/app/actions/comparisonOrchestration", () => ({
-  cancelComparisonAction: jest.fn(), getComparisonStatusAction: jest.fn(), listComparisonsAction: jest.fn(), retryComparisonAction: jest.fn(), startComparisonAction: jest.fn(),
+  cancelComparisonAction: jest.fn(), getComparisonStatusAction: jest.fn(), listComparisonsAction: jest.fn(), prepareComparisonPrerequisitesAction: jest.fn(), retryComparisonAction: jest.fn(), startComparisonAction: jest.fn(),
 }));
+jest.mock("@/app/actions/durableJobs", () => ({ getDurableJob: jest.fn() }));
 const list = listComparisonsAction as jest.MockedFunction<typeof listComparisonsAction>;
+const prepare = prepareComparisonPrerequisitesAction as jest.MockedFunction<typeof prepareComparisonPrerequisitesAction>;
 const start = startComparisonAction as jest.MockedFunction<typeof startComparisonAction>;
 const status = getComparisonStatusAction as jest.MockedFunction<typeof getComparisonStatusAction>;
 
@@ -25,6 +27,7 @@ const view: ComparisonView = {
 beforeEach(() => {
   jest.clearAllMocks();
   list.mockResolvedValue({ success: true, data: [] });
+  prepare.mockResolvedValue({ success: true, data: { requirementSetId: "set-1", jobs: [] } });
   start.mockResolvedValue({ success: true, data: view });
   status.mockResolvedValue({ success: true, data: view });
   (cancelComparisonAction as jest.Mock).mockResolvedValue({ success: true, data: { runId: "run-1" } });
@@ -58,21 +61,18 @@ test("labels stale runs as readable historical comparisons", async () => {
   expect(screen.getByText(/Persisted result restored without rerunning analysis/)).toBeInTheDocument();
 });
 
-test("blocks comparison until the requirement registry is approved", async () => {
+test("automatically prepares and approves requirements before comparison", async () => {
   render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved={false} />);
 
   const button = await screen.findByRole("button", { name: "Start comparison (2)" });
-  await waitFor(() => expect(button).toBeDisabled());
-  expect(screen.getByText("Approve the proposal requirement registry before starting a comparison.")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Open requirement registry" })).toHaveAttribute(
-    "href",
-    "/proposals/proposal-1/intelligence/requirements?returnTo=%2Fvendor-responses",
-  );
+  await waitFor(() => expect(button).toBeEnabled());
+  expect(screen.getByText(/Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically/i)).toBeInTheDocument();
   fireEvent.click(button);
-  expect(start).not.toHaveBeenCalled();
+  await waitFor(() => expect(prepare).toHaveBeenCalled());
+  await waitFor(() => expect(start).toHaveBeenCalled());
 });
 
-test("blocks comparison while a selected vendor mapping is incomplete and unlocks on persisted readiness", async () => {
+test("automatically prepares incomplete vendor mapping", async () => {
   render(<VendorComparisonPanel
     proposalId="proposal-1"
     responses={[response("1", "Vendor One"), response("2", "Vendor Two")]}
@@ -81,10 +81,11 @@ test("blocks comparison while a selected vendor mapping is incomplete and unlock
   />);
 
   const button = await screen.findByRole("button", { name: "Start comparison (2)" });
-  await waitFor(() => expect(button).toBeDisabled());
-  expect(screen.getByText("1 selected vendor response needs requirement mapping before comparison.")).toBeInTheDocument();
-  fireEvent(window, new CustomEvent("proposal-intelligence:readiness", { detail: { responseId: "2", ready: true } }));
   await waitFor(() => expect(button).toBeEnabled());
+  expect(screen.getByText(/Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically/i)).toBeInTheDocument();
+  fireEvent.click(button);
+  await waitFor(() => expect(prepare).toHaveBeenCalled());
+  await waitFor(() => expect(start).toHaveBeenCalled());
 });
 
 test("excludes an empty response instead of blocking prepared vendors", async () => {
@@ -117,7 +118,7 @@ test("prepares missing vendor evaluations automatically when comparison starts",
 
   const button = await screen.findByRole("button", { name: "Start comparison (2)" });
   await waitFor(() => expect(button).toBeEnabled());
-  expect(screen.getByText("Evidence review and scorecards for 1 vendor will be prepared automatically when you start the comparison.")).toBeInTheDocument();
+  expect(screen.getByText(/Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically/i)).toBeInTheDocument();
   fireEvent.click(button);
   await waitFor(() => expect(start).toHaveBeenCalled());
 });

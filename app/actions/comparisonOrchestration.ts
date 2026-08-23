@@ -3,7 +3,16 @@
 import { BACKEND_URL } from "@/lib/config";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 import { prepareAutomaticEvaluationAction } from "./evaluationEngine";
-import { getRequirementSetAction, listRequirementSetsAction } from "./requirementRegistry";
+import {
+  approveRequirementSetAction,
+  generateRequirementSetAction,
+  getRequirementSetAction,
+  listRequirementSetsAction,
+  prepareRequirementSetAction,
+  supersedeRequirementSetAction,
+  type RequirementRegistryView,
+} from "./requirementRegistry";
+import { createVendorIntelligenceAction } from "./vendorIntelligence";
 
 type Result<T> = { success: true; data: T } | { success: false; code: string; message: string };
 export type ComparisonView = {
@@ -151,19 +160,113 @@ const call = async <T,>(path: string, init: RequestInit | undefined, parse: (val
 };
 const base = (proposalId: string) => `/api/v1/proposals/${encodeURIComponent(proposalId)}/intelligence/comparisons`;
 
+const confirmedRegistry = (registry: RequirementRegistryView) =>
+  registry.set.status === "approved"
+  && !registry.freshness.stale
+  && registry.matrix?.status === "approved"
+  && registry.matrix.weightsConfirmed
+  && Math.abs(registry.matrix.totalWeight - 100) <= 0.001;
+
+const ensureApprovedRequirementRegistry = async (proposalId: string): Promise<Result<RequirementRegistryView>> => {
+  const sets = await listRequirementSetsAction(proposalId);
+  if (!sets.success) return sets as Result<RequirementRegistryView>;
+
+  const approved = sets.data.find((item) => item.status === "approved" && !item.freshness.stale);
+  if (approved) {
+    const registry = await getRequirementSetAction(proposalId, approved.id);
+    if (!registry.success) return registry;
+    if (!confirmedRegistry(registry.data)) return {
+      success: false,
+      code: "EVALUATION_MATRIX_NOT_CONFIRMED",
+      message: safe.EVALUATION_MATRIX_NOT_CONFIRMED,
+    };
+    return registry;
+  }
+
+  const editable = sets.data.find((item) =>
+    !item.freshness.stale && (item.status === "draft" || item.status === "in_review"));
+  let registry: Result<RequirementRegistryView>;
+  if (editable) registry = await getRequirementSetAction(proposalId, editable.id);
+  else {
+    const staleApproved = sets.data.find((item) => item.status === "approved");
+    registry = staleApproved
+      ? await supersedeRequirementSetAction(proposalId, staleApproved.id)
+      : await generateRequirementSetAction(proposalId);
+  }
+  if (!registry.success) return registry;
+
+  const prepared = await prepareRequirementSetAction(
+    proposalId,
+    registry.data.set.id,
+    registry.data.set.lock_version,
+  );
+  if (!prepared.success) return prepared;
+  if (prepared.data.set.validation.blocking.length > 0) return {
+    success: false,
+    code: "REQUIREMENT_SET_NOT_READY",
+    message: "Automatic requirement preparation found an item that still needs your decision.",
+  };
+  const approvedRegistry = await approveRequirementSetAction(
+    proposalId,
+    prepared.data.set.id,
+    prepared.data.set.lock_version,
+  );
+  if (!approvedRegistry.success) return approvedRegistry;
+  if (!confirmedRegistry(approvedRegistry.data)) return {
+    success: false,
+    code: "EVALUATION_MATRIX_NOT_CONFIRMED",
+    message: safe.EVALUATION_MATRIX_NOT_CONFIRMED,
+  };
+  return approvedRegistry;
+};
+
+export type ComparisonPreparation = {
+  requirementSetId: string;
+  jobs: Array<{ submissionId: string; versionId: string; jobId: string }>;
+};
+
+export const prepareComparisonPrerequisitesAction = async (
+  proposalId: string,
+  participants: Array<{ submissionId: string; versionId: string }>,
+): Promise<Result<ComparisonPreparation>> => {
+  const registry = await ensureApprovedRequirementRegistry(proposalId);
+  if (!registry.success) return registry as Result<ComparisonPreparation>;
+
+  const intelligence = await Promise.all(participants.map(async (participant) => ({
+    participant,
+    result: await createVendorIntelligenceAction(
+      proposalId,
+      participant.submissionId,
+      participant.versionId,
+      crypto.randomUUID(),
+    ),
+  })));
+  const failed = intelligence.find((item) => !item.result.success);
+  if (failed && !failed.result.success) return {
+    success: false,
+    code: failed.result.code,
+    message: `Automatic vendor preparation could not start: ${failed.result.message}`,
+  };
+  return {
+    success: true,
+    data: {
+      requirementSetId: registry.data.set.id,
+      jobs: intelligence.flatMap(({ participant, result }) => result.success
+        && result.data.status !== "succeeded"
+        && result.data.jobId
+        ? [{ ...participant, jobId: result.data.jobId }]
+        : []),
+    },
+  };
+};
+
 export const listComparisonsAction = async (proposalId: string) => call(base(proposalId), undefined, (value) => Array.isArray(value) ? value.flatMap((item) => parseView(item) ?? []) : null);
 export const getComparisonStatusAction = async (proposalId: string, runId: string) => call(`${base(proposalId)}/${encodeURIComponent(runId)}/status`, undefined, parseView);
 export const getComparisonWorkspaceAction = async (proposalId: string, runId: string) => call(`${base(proposalId)}/${encodeURIComponent(runId)}`, undefined, parseWorkspace);
 
 export const startComparisonAction = async (proposalId: string, participants: Array<{ submissionId: string; versionId: string }>) => {
-  const sets = await listRequirementSetsAction(proposalId);
-  if (!sets.success) return sets as Result<ComparisonView>;
-  const approved = sets.data.find((item) => item.status === "approved" && !item.freshness.stale);
-  if (!approved) return { success: false, code: "REQUIREMENT_SET_NOT_APPROVED", message: safe.REQUIREMENT_SET_NOT_APPROVED } as Result<ComparisonView>;
-  const registry = await getRequirementSetAction(proposalId, approved.id);
+  const registry = await ensureApprovedRequirementRegistry(proposalId);
   if (!registry.success) return registry as Result<ComparisonView>;
-  if (!registry.data.matrix || registry.data.matrix.status !== "approved" || !registry.data.matrix.weightsConfirmed || registry.data.matrix.totalWeight !== 100)
-    return { success: false, code: "EVALUATION_MATRIX_NOT_CONFIRMED", message: safe.EVALUATION_MATRIX_NOT_CONFIRMED };
   const automaticEvaluations = await Promise.all(participants.map((participant) =>
     prepareAutomaticEvaluationAction(proposalId, participant.submissionId, participant.versionId)));
   const failedEvaluation = automaticEvaluations.find((result) => !result.success);
@@ -172,7 +275,7 @@ export const startComparisonAction = async (proposalId: string, participants: Ar
     code: failedEvaluation.code,
     message: `Automatic vendor evaluation could not finish: ${failedEvaluation.message}`,
   } as Result<ComparisonView>;
-  const created = await call(`${base(proposalId)}`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ requirementSetId: approved.id, evaluationMatrixVersionId: registry.data.matrix.id, participants, priceVisibility: "reviewers" }) }, (value) => isRecord(value) && typeof value.runId === "string" ? { runId: value.runId } : null);
+  const created = await call(`${base(proposalId)}`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ requirementSetId: registry.data.set.id, evaluationMatrixVersionId: registry.data.matrix!.id, participants, priceVisibility: "reviewers" }) }, (value) => isRecord(value) && typeof value.runId === "string" ? { runId: value.runId } : null);
   if (!created.success) return created as Result<ComparisonView>;
   return getComparisonStatusAction(proposalId, created.data.runId);
 };
