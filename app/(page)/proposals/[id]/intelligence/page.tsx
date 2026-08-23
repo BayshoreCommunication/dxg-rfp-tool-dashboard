@@ -1,5 +1,6 @@
 import { getComparisonWorkspaceAction, listComparisonsAction } from "@/app/actions/comparisonOrchestration";
 import { getEvidenceExtractionsAction } from "@/app/actions/evidenceExtraction";
+import { getLatestEvaluationAction } from "@/app/actions/evaluationEngine";
 import { getProposalByIdAction } from "@/app/actions/proposals";
 import { listRequirementSetsAction } from "@/app/actions/requirementRegistry";
 import { getLatestVendorIntelligenceAction } from "@/app/actions/vendorIntelligence";
@@ -53,21 +54,32 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
     response.submissionId && response.currentVersionId ? [Promise.all([
       getEvidenceExtractionsAction(id, response.submissionId, response.currentVersionId),
       getLatestVendorIntelligenceAction(id, response.submissionId, response.currentVersionId),
-    ]).then(([extraction, intelligence]): ProposalAnalysisParticipant => ({
-      responseId: response._id,
-      vendorLabel: response.vendorName || response.submittedBy || "Unnamed respondent",
-      submissionId: response.submissionId!,
-      versionId: response.currentVersionId!,
-      documentNames: response.documents.map((document) => document.name),
-      extraction: extraction.success ? extraction.data : { status: "not_started", runs: [] },
-      intelligence: intelligence.success ? intelligence.data : null,
-      error: !extraction.success
-        ? extraction.message
-        : !intelligence.success && intelligence.code !== "INTELLIGENCE_RUN_NOT_FOUND"
-          ? intelligence.message
-          : undefined,
+      getLatestEvaluationAction(id, response.submissionId, response.currentVersionId),
+    ]).then(([extraction, intelligence, evaluation]) => ({
+      participant: {
+        responseId: response._id,
+        vendorLabel: response.vendorName || response.submittedBy || "Unnamed respondent",
+        submissionId: response.submissionId!,
+        versionId: response.currentVersionId!,
+        documentNames: response.documents.map((document) => document.name),
+        extraction: extraction.success ? extraction.data : { status: "not_started", runs: [] },
+        intelligence: intelligence.success ? intelligence.data : null,
+        error: !extraction.success
+          ? extraction.message
+          : !intelligence.success && intelligence.code !== "INTELLIGENCE_RUN_NOT_FOUND"
+            ? intelligence.message
+            : undefined,
+      } satisfies ProposalAnalysisParticipant,
+      evaluationReady: evaluation.success
+        && evaluation.data.run.status === "ready"
+        && evaluation.data.assignments.some((assignment) => assignment.role !== "observer")
+        && evaluation.data.assignments.filter((assignment) => assignment.role !== "observer")
+          .every((assignment) => assignment.complete && assignment.conflictStatus === "clear"),
     }))] : []));
-  const [workspaceResult, analysisParticipants] = await Promise.all([workspacePromise, analysisPromise]);
+  const [workspaceResult, analysisResults] = await Promise.all([workspacePromise, analysisPromise]);
+  const analysisParticipants = analysisResults.map((result) => result.participant);
+  const comparisonReadyResponseIds = analysisResults.filter((result) => result.evaluationReady)
+    .map((result) => result.participant.responseId);
   const currentWorkspace = workspaceResult?.success ? workspaceResult.data : null;
   const intelligencePath = `/proposals/${id}/intelligence`;
 
@@ -125,6 +137,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
             proposalId={id}
             requirementsApproved={Boolean(approvedSet)}
             preparedResponseIds={analysisParticipants.filter((participant) => participant.intelligence?.run.status === "succeeded").map((participant) => participant.responseId)}
+            comparisonReadyResponseIds={comparisonReadyResponseIds}
             returnTo={intelligencePath}
           />
         </section>
