@@ -29,6 +29,8 @@ it("names the leader and links every decisive factor and gap to comparison evide
   expect(screen.getByRole("link", { name: "Insurance certificate" })).toHaveAttribute("href", "#matrix-cell-req-2-vendor-1");
   expect(screen.getByText("Travel is billed separately")).toBeInTheDocument();
   expect(screen.getByText("Close score margin")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Items to review before final decision" })).toBeInTheDocument();
+  expect(screen.queryByText(/confidence/i)).not.toBeInTheDocument();
   expect(screen.getByText(/3.00 points behind the leader/)).toBeInTheDocument();
 });
 

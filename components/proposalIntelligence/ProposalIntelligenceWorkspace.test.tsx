@@ -68,7 +68,7 @@ test("shows the comparison snapshot directly as a readable executive report with
   expect(screen.getByRole("heading", { name: "Your vendor comparison at a glance" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Vendor comparison" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Northstar AV is the strongest fit" })).toBeInTheDocument();
-  expect(screen.getByText(/high confidence/i)).toBeInTheDocument();
+  expect(screen.queryByText(/high confidence/i)).not.toBeInTheDocument();
   expect(screen.getByText("Human rubric contribution 72.00 / 100")).toBeInTheDocument();
   expect(screen.getByText("1 mandatory gap")).toBeInTheDocument();
   expect(screen.getByText(/RFPilot organizes the evidence for your team/)).toBeInTheDocument();
