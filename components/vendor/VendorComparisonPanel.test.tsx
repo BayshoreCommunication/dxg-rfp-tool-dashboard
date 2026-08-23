@@ -105,3 +105,20 @@ test("excludes an empty response instead of blocking prepared vendors", async ()
     { submissionId: "submission-2", versionId: "version-2" },
   ]));
 });
+
+test("keeps comparison disabled until every selected vendor evaluation is complete", async () => {
+  render(<VendorComparisonPanel
+    proposalId="proposal-1"
+    responses={[response("1", "Vendor One"), response("2", "Vendor Two")]}
+    requirementsApproved
+    preparedResponseIds={["1", "2"]}
+    comparisonReadyResponseIds={["1"]}
+  />);
+
+  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  await waitFor(() => expect(button).toBeDisabled());
+  expect(screen.getByText("1 selected vendor evaluation needs evidence review and completed scorecards before comparison.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Evaluate Vendor Two" })).toHaveAttribute("href", "/vendor-responses/2");
+  fireEvent.click(button);
+  expect(start).not.toHaveBeenCalled();
+});
