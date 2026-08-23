@@ -49,7 +49,6 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
     ? getComparisonWorkspaceAction(id, currentRun.run.runId)
     : Promise.resolve(null);
   const readyResponses = analysisResponses.length;
-  const readiness = approvedSet && readyResponses >= 2 ? "Ready to compare" : approvedSet ? "More responses needed" : "Requirements need approval";
   const analysisPromise = Promise.all(analysisResponses.flatMap((response) =>
     response.submissionId && response.currentVersionId ? [Promise.all([
       getEvidenceExtractionsAction(id, response.submissionId, response.currentVersionId),
@@ -80,6 +79,14 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
   const analysisParticipants = analysisResults.map((result) => result.participant);
   const comparisonReadyResponseIds = analysisResults.filter((result) => result.evaluationReady)
     .map((result) => result.participant.responseId);
+  const evaluationsComplete = readyResponses >= 2 && comparisonReadyResponseIds.length === readyResponses;
+  const readiness = !approvedSet
+    ? "Requirements need approval"
+    : readyResponses < 2
+      ? "More responses needed"
+      : evaluationsComplete
+        ? "Ready to compare"
+        : "Evaluation needed";
   const currentWorkspace = workspaceResult?.success ? workspaceResult.data : null;
   const intelligencePath = `/proposals/${id}/intelligence`;
 
@@ -97,7 +104,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
               </div>
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-700">{label(status)}</span>
-                <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${approvedSet && readyResponses >= 2 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{readiness}</span>
+                <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${approvedSet && evaluationsComplete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{readiness}</span>
               </div>
             </div>
           </div>
