@@ -79,6 +79,7 @@ const intelligenceFailureMessages: Record<string, string> = {
   CITATION_GROUNDING_FAILED: "One or more extracted claims could not be verified against the cited vendor text. Retry will safely omit unsupported claims.",
   CITATION_VALIDATION_FAILED: "Some generated citations did not point to this vendor’s current evidence. Retry will rebuild the mapping from the approved sources.",
   SCHEMA_VALIDATION_FAILED: "The generated mapping was incomplete. Retry will fill unsupported requirements as not evidenced instead of blocking the full response.",
+  LIVE_AI_CLASSIFICATION_DENIED: "Vendor-response AI processing is not enabled in this environment. An administrator must enable the approved confidential-data policy before retrying.",
   LIVE_AI_PROVIDER_TEMPORARY: "The mapping service was temporarily unavailable.",
   AI_PROVIDER_TIMEOUT: "The mapping service timed out before the response could be completed.",
 };
