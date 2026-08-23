@@ -20,6 +20,8 @@ export const metadata: Metadata = { title: "Proposal Intelligence | RFPilot" };
 
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
+const hasComparableEvidence = (response: VendorResponseItem) =>
+  response.documents.length > 0 || response.message.trim().length > 0;
 
 export default async function ProposalIntelligencePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,6 +38,8 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
   const title = typeof event.eventName === "string" ? event.eventName : "Untitled proposal";
   const status = typeof proposal.status === "string" ? proposal.status : "unsubmitted";
   const responses = Array.isArray(responsesResult?.data) ? responsesResult.data as VendorResponseItem[] : [];
+  const analysisResponses = responses.filter((response) =>
+    response.submissionId && response.currentVersionId && hasComparableEvidence(response));
   const sets = setsResult.success ? setsResult.data : [];
   const approvedSet = sets.find((item) => item.status === "approved" && !item.freshness.stale);
   const comparisons = comparisonsResult.success ? comparisonsResult.data : [];
@@ -43,9 +47,9 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
   const workspacePromise = currentRun?.run.status.startsWith("succeeded")
     ? getComparisonWorkspaceAction(id, currentRun.run.runId)
     : Promise.resolve(null);
-  const readyResponses = responses.filter((item) => item.submissionId && item.currentVersionId).length;
+  const readyResponses = analysisResponses.length;
   const readiness = approvedSet && readyResponses >= 2 ? "Ready to compare" : approvedSet ? "More responses needed" : "Requirements need approval";
-  const analysisPromise = Promise.all(responses.flatMap((response) =>
+  const analysisPromise = Promise.all(analysisResponses.flatMap((response) =>
     response.submissionId && response.currentVersionId ? [Promise.all([
       getEvidenceExtractionsAction(id, response.submissionId, response.currentVersionId),
       getLatestVendorIntelligenceAction(id, response.submissionId, response.currentVersionId),
