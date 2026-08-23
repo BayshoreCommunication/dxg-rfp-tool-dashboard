@@ -178,6 +178,23 @@ it("retries all cached mapping failures and explains safe recovery", async () =>
   expect(createVendorIntelligenceAction).toHaveBeenCalledWith("proposal-1", "submission-vendor-2", "version-vendor-2", expect.any(String));
 });
 
+it("explains when production policy blocks confidential vendor mapping", () => {
+  const blocked = intelligence();
+  blocked.run = {
+    ...blocked.run,
+    status: "failed",
+    safeErrorCode: "LIVE_AI_CLASSIFICATION_DENIED",
+  };
+
+  render(<ProposalIntelligenceLiveRun
+    proposalId="proposal-1"
+    initialParticipants={[participant("vendor-1", blocked), participant("vendor-2")]}
+    autoStart={false}
+  />);
+
+  expect(screen.getByText(/vendor-response ai processing is not enabled/i)).toBeInTheDocument();
+});
+
 it("stops an unreachable background job from polling and appearing in progress forever", async () => {
   jest.useFakeTimers();
   const queued = {

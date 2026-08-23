@@ -86,3 +86,22 @@ test("blocks comparison while a selected vendor mapping is incomplete and unlock
   fireEvent(window, new CustomEvent("proposal-intelligence:readiness", { detail: { responseId: "2", ready: true } }));
   await waitFor(() => expect(button).toBeEnabled());
 });
+
+test("excludes an empty response instead of blocking prepared vendors", async () => {
+  const empty = { ...response("3", "Empty Vendor"), message: "", documents: [] };
+  render(<VendorComparisonPanel
+    proposalId="proposal-1"
+    responses={[response("1", "Vendor One"), response("2", "Vendor Two"), empty]}
+    requirementsApproved
+    preparedResponseIds={["1", "2"]}
+  />);
+
+  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  await waitFor(() => expect(button).toBeEnabled());
+  expect(screen.getByText(/1 empty vendor response was excluded/i)).toBeInTheDocument();
+  fireEvent.click(button);
+  await waitFor(() => expect(start).toHaveBeenCalledWith("proposal-1", [
+    { submissionId: "submission-1", versionId: "version-1" },
+    { submissionId: "submission-2", versionId: "version-2" },
+  ]));
+});

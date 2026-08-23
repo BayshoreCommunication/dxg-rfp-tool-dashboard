@@ -59,6 +59,7 @@ const messages: Record<string, string> = {
   CITATION_VALIDATION_FAILED: "The generated claims could not be tied safely to this vendor’s evidence.",
   CITATION_GROUNDING_FAILED: "A generated numeric claim did not appear in its cited vendor text, so the run was rejected.",
   SCHEMA_VALIDATION_FAILED: "The generated intelligence did not meet the required data contract.",
+  LIVE_AI_CLASSIFICATION_DENIED: "Vendor-response AI processing is not enabled in this environment.",
   AUTHORIZATION_DENIED: "You do not have permission to review this response.",
 };
 const call = async <T,>(path: string, init: RequestInit | undefined, parse: (value: unknown) => T | null): Promise<Result<T>> => {
