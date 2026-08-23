@@ -49,9 +49,11 @@ type TrackedJob = {
   participantId: string;
   kind: "extraction" | "intelligence";
   job?: DurableJob;
+  pollFailures?: number;
 };
 
 const terminalJobs = new Set(["succeeded", "failed", "cancelled", "dead_letter"]);
+const MAX_JOB_POLL_FAILURES = 5;
 const terminalExtraction = new Set(["ready", "partial", "unreadable", "failed"]);
 const readableExtraction = new Set(["ready", "partial"]);
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
@@ -60,9 +62,14 @@ const locatorLabel = (locator: Record<string, string | number>) =>
 
 const elapsedLabel = (milliseconds: number) => {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const days = Math.floor(totalSeconds / 86_400);
+  if (days > 0) return `${days}d ${Math.floor(totalSeconds % 86_400 / 3_600)}h`;
+  const hours = Math.floor(totalSeconds / 3_600);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return hours > 0
+    ? `${String(hours).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 };
 
 const intelligenceComplete = (participant: ProposalAnalysisParticipant) =>
@@ -139,7 +146,7 @@ export default function ProposalIntelligenceLiveRun({
   const [runActive, setRunActive] = useState(
     autoStart && initialParticipants.length >= 2 && !comparisonFinished,
   );
-  const [startedAt] = useState(() => {
+  const [startedAt, setStartedAt] = useState(() => {
     const dates = initialParticipants.flatMap((participant) => [
       ...participant.extraction.runs.map((run) => Date.parse(run.createdAt)),
       ...(participant.intelligence ? [Date.parse(participant.intelligence.run.createdAt)] : []),
@@ -168,6 +175,9 @@ export default function ProposalIntelligenceLiveRun({
         : intelligence.code === "INTELLIGENCE_RUN_NOT_FOUND"
           ? { intelligence: null }
           : { error: intelligence.message }),
+      ...(extraction.success && (intelligence.success || intelligence.code === "INTELLIGENCE_RUN_NOT_FOUND")
+        ? { error: undefined }
+        : {}),
     });
     if (intelligence.success) {
       window.dispatchEvent(new CustomEvent("proposal-intelligence:readiness", {
@@ -200,7 +210,7 @@ export default function ProposalIntelligenceLiveRun({
     });
     setJobs((current) => ({
       ...current,
-      ...Object.fromEntries(result.data.runs.flatMap((run) => run.jobId
+      ...Object.fromEntries(result.data.runs.flatMap((run) => run.jobId && !terminalJobs.has(run.status)
         ? [[run.jobId, { jobId: run.jobId, participantId: participant.responseId, kind: "extraction" as const }]]
         : [])),
     }));
@@ -244,6 +254,7 @@ export default function ProposalIntelligenceLiveRun({
     started.current.delete(`${retryExtraction ? "extraction" : "intelligence"}:${participant.responseId}`);
     setJobs((current) => Object.fromEntries(Object.entries(current).filter(([, job]) => job.participantId !== participant.responseId)));
     updateParticipant(participant.responseId, { error: undefined });
+    setStartedAt(Date.now());
     setRunActive(true);
     try {
       if (retryExtraction) await startExtraction(participant);
@@ -280,20 +291,29 @@ export default function ProposalIntelligenceLiveRun({
         result: await getDurableJob(tracked.jobId),
       })));
       if (cancelled.current) return;
-      const completedParticipants = new Set<string>();
+      const completedParticipants = new Set(results.flatMap(({ tracked, result }) =>
+        result.success && terminalJobs.has(result.data.status) ? [tracked.participantId] : []));
+      const exhaustedLookups = new Map(results.flatMap(({ tracked, result }) =>
+        !result.success && (tracked.pollFailures ?? 0) + 1 >= MAX_JOB_POLL_FAILURES
+          ? [[tracked.participantId, result.message] as const]
+          : []));
       setJobs((current) => {
         const next = { ...current };
         results.forEach(({ tracked, result }) => {
           if (result.success) {
-            next[tracked.jobId] = { ...tracked, job: result.data };
-            if (terminalJobs.has(result.data.status)) completedParticipants.add(tracked.participantId);
+            next[tracked.jobId] = { ...tracked, job: result.data, pollFailures: 0 };
           } else {
-            const participant = participants.find((item) => item.responseId === tracked.participantId);
-            if (participant) updateParticipant(participant.responseId, { error: result.message });
+            const pollFailures = (tracked.pollFailures ?? 0) + 1;
+            if (pollFailures >= MAX_JOB_POLL_FAILURES) {
+              delete next[tracked.jobId];
+            } else next[tracked.jobId] = { ...tracked, pollFailures };
           }
         });
         return next;
       });
+      exhaustedLookups.forEach((message, responseId) => updateParticipant(responseId, {
+        error: `The background job stopped reporting status. ${message}`,
+      }));
       await Promise.all([...completedParticipants].flatMap((responseId) => {
         const participant = participants.find((item) => item.responseId === responseId);
         return participant ? [refreshParticipant(participant)] : [];
@@ -303,10 +323,13 @@ export default function ProposalIntelligenceLiveRun({
   }, [jobs, participants, refreshParticipant, updateParticipant]);
 
   const activeJobs = Object.values(jobs).filter((item) => !item.job || !terminalJobs.has(item.job.status));
-  const extractionDone = participants.every((participant) => terminalExtraction.has(participant.extraction.status));
+  const extractionDone = participants.every((participant) =>
+    Boolean(participant.error) || terminalExtraction.has(participant.extraction.status));
   const usableParticipants = participants.filter((participant) => readableExtraction.has(participant.extraction.status));
-  const intelligenceDone = usableParticipants.length > 0 && usableParticipants.every((participant) =>
-    participant.intelligence && ["succeeded", "failed"].includes(participant.intelligence.run.status));
+  const intelligenceDone = usableParticipants.length > 0
+    ? usableParticipants.every((participant) =>
+      participant.error || (participant.intelligence && ["succeeded", "failed"].includes(participant.intelligence.run.status)))
+    : participants.length > 0 && participants.every((participant) => Boolean(participant.error));
   const live = runActive && (!extractionDone || !intelligenceDone || activeJobs.length > 0);
 
   useEffect(() => {
@@ -333,7 +356,7 @@ export default function ProposalIntelligenceLiveRun({
   }, [participants]);
 
   const extractionActive = participants.some((participant) => participant.extraction.status === "processing") || Object.values(jobs).some((item) => item.kind === "extraction" && (!item.job || !terminalJobs.has(item.job.status)));
-  const intelligenceActive = participants.some((participant) => participant.intelligence && ["queued", "running"].includes(participant.intelligence.run.status)) || Object.values(jobs).some((item) => item.kind === "intelligence" && (!item.job || !terminalJobs.has(item.job.status)));
+  const intelligenceActive = participants.some((participant) => !participant.error && participant.intelligence && ["queued", "running"].includes(participant.intelligence.run.status)) || Object.values(jobs).some((item) => item.kind === "intelligence" && (!item.job || !terminalJobs.has(item.job.status)));
   const comparisonReadyCount = participants.filter((participant) =>
     readableExtraction.has(participant.extraction.status) && intelligenceComplete(participant)).length;
   const phases = [
@@ -355,14 +378,14 @@ export default function ProposalIntelligenceLiveRun({
       key: "normalizing",
       icon: ListChecks,
       title: "Normalizing values",
-      status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone, queued: !extractionDone && runActive }),
+      status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone && counts.failed === 0, partial: intelligenceDone && counts.failed > 0, queued: !extractionDone && runActive }),
       summary: `${counts.facts} typed values normalized from vendor evidence`,
     },
     {
       key: "cross_checking",
       icon: ShieldAlert,
       title: "Cross-checking conflicts and gaps",
-      status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone && counts.contradictions + counts.missing === 0, attention: intelligenceDone && counts.contradictions + counts.missing > 0, queued: !extractionDone && runActive }),
+      status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone && counts.failed === 0 && counts.contradictions + counts.missing === 0, partial: intelligenceDone && counts.failed > 0, attention: intelligenceDone && counts.failed === 0 && counts.contradictions + counts.missing > 0, queued: !extractionDone && runActive }),
       summary: `${counts.contradictions} contradictions · ${counts.missing} requirements not stated`,
     },
     {
@@ -497,7 +520,11 @@ export default function ProposalIntelligenceLiveRun({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-extrabold text-navy">Items requiring action</h3>
-              <p className="mt-1 text-xs leading-5 text-gray">Document reading is complete. Retry only the failed preparation step; files do not need to be uploaded again.</p>
+              <p className="mt-1 text-xs leading-5 text-gray">
+                {problemParticipants.some((participant) => !readableExtraction.has(participant.extraction.status))
+                  ? "Some responses could not be prepared. Retry the failed extraction; already uploaded files will be reused when available."
+                  : "Document reading is complete. Retry only the failed requirement-mapping step; files do not need to be uploaded again."}
+              </p>
             </div>
             {problemParticipants.length > 1 && (
               <button

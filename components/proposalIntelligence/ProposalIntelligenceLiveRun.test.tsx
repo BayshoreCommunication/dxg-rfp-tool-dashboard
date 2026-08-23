@@ -1,8 +1,9 @@
 import type { ComparisonView } from "@/app/actions/comparisonOrchestration";
+import { getDurableJob } from "@/app/actions/durableJobs";
 import type { VendorIntelligenceResult } from "@/app/actions/vendorIntelligence";
 import { createEvidenceExtractionAction, getEvidenceExtractionsAction } from "@/app/actions/evidenceExtraction";
 import { createVendorIntelligenceAction, getLatestVendorIntelligenceAction } from "@/app/actions/vendorIntelligence";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import ProposalIntelligenceLiveRun, { type ProposalAnalysisParticipant } from "./ProposalIntelligenceLiveRun";
 
 jest.mock("@/app/actions/durableJobs", () => ({ getDurableJob: jest.fn() }));
@@ -175,6 +176,67 @@ it("retries all cached mapping failures and explains safe recovery", async () =>
   await waitFor(() => expect(createVendorIntelligenceAction).toHaveBeenCalledTimes(2));
   expect(createVendorIntelligenceAction).toHaveBeenCalledWith("proposal-1", "submission-vendor-1", "version-vendor-1", expect.any(String));
   expect(createVendorIntelligenceAction).toHaveBeenCalledWith("proposal-1", "submission-vendor-2", "version-vendor-2", expect.any(String));
+});
+
+it("stops an unreachable background job from polling and appearing in progress forever", async () => {
+  jest.useFakeTimers();
+  const queued = {
+    ...intelligence(),
+    run: {
+      ...intelligence().run,
+      status: "running" as const,
+      completedAt: null,
+    },
+  };
+  jest.mocked(getDurableJob).mockResolvedValue({
+    success: false,
+    code: "JOB_NOT_FOUND",
+    message: "The job is no longer available.",
+    correlationId: "test-correlation-id",
+  });
+  render(<ProposalIntelligenceLiveRun
+    proposalId="proposal-1"
+    initialParticipants={[participant("vendor-1", queued), participant("vendor-2")]}
+    autoStart={false}
+  />);
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await act(async () => {
+      jest.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+  }
+  expect(getDurableJob).toHaveBeenCalledTimes(5);
+  expect(screen.getByText(/background job stopped reporting status/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Retry requirement mapping" })).toBeInTheDocument();
+  expect(screen.queryByText("In progress")).not.toBeInTheDocument();
+  jest.useRealTimers();
+});
+
+it("settles the run when preparation fails before a background job is created", async () => {
+  const waiting = (id: string): ProposalAnalysisParticipant => ({
+    ...participant(id),
+    extraction: { status: "not_started", runs: [] },
+    intelligence: null,
+  });
+  jest.mocked(createEvidenceExtractionAction).mockClear();
+  jest.mocked(createEvidenceExtractionAction).mockResolvedValue({
+    success: false,
+    code: "PROPOSAL_NOT_FOUND",
+    message: "Proposal was not found.",
+  });
+
+  render(<ProposalIntelligenceLiveRun
+    proposalId="proposal-1"
+    initialParticipants={[waiting("vendor-1"), waiting("vendor-2")]}
+  />);
+
+  await waitFor(() => expect(createEvidenceExtractionAction).toHaveBeenCalledTimes(2));
+  await waitFor(() => {
+    expect(screen.getAllByText("Proposal was not found.")).toHaveLength(2);
+    expect(screen.getByText("2 failed items")).toBeInTheDocument();
+    expect(screen.queryByText("In progress")).not.toBeInTheDocument();
+  });
 });
 
 it("marks a completed stale comparison as historical attention", () => {
