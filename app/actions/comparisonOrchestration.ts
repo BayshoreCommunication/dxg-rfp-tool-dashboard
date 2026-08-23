@@ -2,6 +2,7 @@
 
 import { BACKEND_URL } from "@/lib/config";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
+import { prepareAutomaticEvaluationAction } from "./evaluationEngine";
 import { getRequirementSetAction, listRequirementSetsAction } from "./requirementRegistry";
 
 type Result<T> = { success: true; data: T } | { success: false; code: string; message: string };
@@ -163,6 +164,14 @@ export const startComparisonAction = async (proposalId: string, participants: Ar
   if (!registry.success) return registry as Result<ComparisonView>;
   if (!registry.data.matrix || registry.data.matrix.status !== "approved" || !registry.data.matrix.weightsConfirmed || registry.data.matrix.totalWeight !== 100)
     return { success: false, code: "EVALUATION_MATRIX_NOT_CONFIRMED", message: safe.EVALUATION_MATRIX_NOT_CONFIRMED };
+  const automaticEvaluations = await Promise.all(participants.map((participant) =>
+    prepareAutomaticEvaluationAction(proposalId, participant.submissionId, participant.versionId)));
+  const failedEvaluation = automaticEvaluations.find((result) => !result.success);
+  if (failedEvaluation && !failedEvaluation.success) return {
+    success: false,
+    code: failedEvaluation.code,
+    message: `Automatic vendor evaluation could not finish: ${failedEvaluation.message}`,
+  } as Result<ComparisonView>;
   const created = await call(`${base(proposalId)}`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ requirementSetId: approved.id, evaluationMatrixVersionId: registry.data.matrix.id, participants, priceVisibility: "reviewers" }) }, (value) => isRecord(value) && typeof value.runId === "string" ? { runId: value.runId } : null);
   if (!created.success) return created as Result<ComparisonView>;
   return getComparisonStatusAction(proposalId, created.data.runId);

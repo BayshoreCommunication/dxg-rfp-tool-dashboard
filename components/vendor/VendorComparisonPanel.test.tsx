@@ -48,7 +48,7 @@ test("restores persisted progress without showing an AI readiness score", async 
   expect(await screen.findByText("1 of 2 vendor snapshots complete")).toBeInTheDocument();
   expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "45");
   expect(screen.queryByText(/readiness/i)).not.toBeInTheDocument();
-  expect(screen.getByText(/produces an advisory ranking; it never records the final selection/i)).toBeInTheDocument();
+  expect(screen.getByText(/eligibility gates produce an advisory ranking; the final vendor decision remains yours/i)).toBeInTheDocument();
 });
 
 test("labels stale runs as readable historical comparisons", async () => {
@@ -106,7 +106,7 @@ test("excludes an empty response instead of blocking prepared vendors", async ()
   ]));
 });
 
-test("keeps comparison disabled until every selected vendor evaluation is complete", async () => {
+test("prepares missing vendor evaluations automatically when comparison starts", async () => {
   render(<VendorComparisonPanel
     proposalId="proposal-1"
     responses={[response("1", "Vendor One"), response("2", "Vendor Two")]}
@@ -116,9 +116,8 @@ test("keeps comparison disabled until every selected vendor evaluation is comple
   />);
 
   const button = await screen.findByRole("button", { name: "Start comparison (2)" });
-  await waitFor(() => expect(button).toBeDisabled());
-  expect(screen.getByText("1 selected vendor evaluation needs evidence review and completed scorecards before comparison.")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Evaluate Vendor Two" })).toHaveAttribute("href", "/vendor-responses/2");
+  await waitFor(() => expect(button).toBeEnabled());
+  expect(screen.getByText("Evidence review and scorecards for 1 vendor will be prepared automatically when you start the comparison.")).toBeInTheDocument();
   fireEvent.click(button);
-  expect(start).not.toHaveBeenCalled();
+  await waitFor(() => expect(start).toHaveBeenCalled());
 });

@@ -73,20 +73,22 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
         && evaluation.data.run.status === "ready"
         && evaluation.data.assignments.some((assignment) => assignment.role !== "observer")
         && evaluation.data.assignments.filter((assignment) => assignment.role !== "observer")
-          .every((assignment) => assignment.complete && assignment.conflictStatus === "clear"),
+          .every((assignment) => assignment.complete && ["clear", "not_applicable"].includes(assignment.conflictStatus)),
     }))] : []));
   const [workspaceResult, analysisResults] = await Promise.all([workspacePromise, analysisPromise]);
   const analysisParticipants = analysisResults.map((result) => result.participant);
   const comparisonReadyResponseIds = analysisResults.filter((result) => result.evaluationReady)
     .map((result) => result.participant.responseId);
-  const evaluationsComplete = readyResponses >= 2 && comparisonReadyResponseIds.length === readyResponses;
+  const preparedResponseIds = analysisParticipants.filter((participant) => participant.intelligence?.run.status === "succeeded")
+    .map((participant) => participant.responseId);
+  const preparationComplete = readyResponses >= 2 && preparedResponseIds.length === readyResponses;
   const readiness = !approvedSet
     ? "Requirements need approval"
     : readyResponses < 2
       ? "More responses needed"
-      : evaluationsComplete
+      : preparationComplete
         ? "Ready to compare"
-        : "Evaluation needed";
+        : "Preparing vendors";
   const currentWorkspace = workspaceResult?.success ? workspaceResult.data : null;
   const intelligencePath = `/proposals/${id}/intelligence`;
 
@@ -100,11 +102,11 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
               <div>
                 <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Proposal intelligence</p>
                 <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{title}</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Review frozen vendor versions against approved requirements, inspect cited evidence, and use an eligibility-gated advisory ranking after completed human scoring. Reviewers retain the final vendor decision.</p>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Review frozen vendor versions against approved requirements, inspect cited evidence, and use an eligibility-gated advisory ranking after transparent evidence-derived scoring. Reviewers retain the final vendor decision.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-700">{label(status)}</span>
-                <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${approvedSet && evaluationsComplete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{readiness}</span>
+                <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${approvedSet && preparationComplete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{readiness}</span>
               </div>
             </div>
           </div>
@@ -143,7 +145,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
             responses={responses}
             proposalId={id}
             requirementsApproved={Boolean(approvedSet)}
-            preparedResponseIds={analysisParticipants.filter((participant) => participant.intelligence?.run.status === "succeeded").map((participant) => participant.responseId)}
+            preparedResponseIds={preparedResponseIds}
             comparisonReadyResponseIds={comparisonReadyResponseIds}
             returnTo={intelligencePath}
           />
