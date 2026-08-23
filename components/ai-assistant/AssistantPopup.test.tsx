@@ -158,6 +158,33 @@ describe("AssistantPopup", () => {
     ).toBeInTheDocument();
   });
 
+  test("does not reactivate a retired recording section from stale field help", async () => {
+    render(
+      <AssistantPopup
+        open
+        onOpenChange={jest.fn()}
+        fieldHelpRequest={{
+          id: "stale-recording-help",
+          prompt: "Explain this old field.",
+          context: {
+            sectionId: "video_recording",
+            fieldKey: "/content/videoRecordingStep/deliveryMethod",
+            roomIdentifier: "stale-recording-room",
+            fieldControl: {
+              label: "Delivery method",
+              helperText: "Retired standalone recording field.",
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Workspace section: none"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Workspace field: none")).toBeInTheDocument();
+  });
+
   test("starts a clean workspace whenever a new popup session begins", async () => {
     const { rerender } = render(
       <AssistantPopup

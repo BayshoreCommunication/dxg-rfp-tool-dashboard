@@ -38,9 +38,13 @@ import {
   type LedWallSpecification,
 } from "./ledWallPlan";
 import {
+  activeExtractedProposalData,
   buildVendorReadyStatementOfWork,
+  omitStandaloneVideoRecording,
   procurementTimelineIssues,
   proposalStepOrder,
+  resolveProposalStep,
+  STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
   type AnswerProvenance,
   type AnswerSource,
   type ProposalChecklistIssue,
@@ -385,6 +389,11 @@ export interface ProposalData {
   budget: BudgetData;
   contact: ContactData;
 }
+
+export type ProposalWriteData = Omit<ProposalData, "videoRecordingStep"> & {
+  /** Compatibility-only while the standalone section is retired. */
+  videoRecordingStep?: VideoRecordingData;
+};
 
 type AddNewProposalProps = {
   mode?: "create" | "edit";
@@ -1002,7 +1011,8 @@ const normalizeExtracted = (
         } as ContentCreativeData;
       })()
     : undefined,
-  videoRecordingStep: raw.videoRecordingStep
+  videoRecordingStep:
+    STANDALONE_VIDEO_RECORDING_STEP_ENABLED && raw.videoRecordingStep
     ? (() => {
         const rvr = raw.videoRecordingStep as Record<string, unknown>;
         const strArr = (v: unknown): string[] =>
@@ -1035,6 +1045,15 @@ const normalizeExtracted = (
       }
     : undefined,
   };
+};
+
+const normalizeActiveExtraction = (
+  raw: Parameters<typeof normalizeExtracted>[0],
+): Partial<ProposalData> => {
+  const activeRaw = STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+    ? raw
+    : omitStandaloneVideoRecording(raw);
+  return activeExtractedProposalData(normalizeExtracted(activeRaw));
 };
 
 type EditableProposalApiResponse = {
@@ -1198,18 +1217,15 @@ const mapApiProposalToFormData = (
       const rawCameras = r.cameras && typeof r.cameras === "object"
         ? r.cameras as Partial<RoomByRoomData["cameras"]>
         : {};
-      const standaloneLegacyCount = idx === 0 && raw.videoRecordingStep
-        ? String((raw.videoRecordingStep as Record<string, unknown>).numberOfCameras ?? "")
-        : "";
-      const legacyCameraCount = rawCameras.camerasQty || standaloneLegacyCount;
+      const cameraCount = rawCameras.camerasQty || "";
       const normalizedLedWalls = normalizeLedWalls(r);
       const normalizedLedWallCount = ledWallCount(r);
       const normalizedCameras: RoomByRoomData["cameras"] = {
         ...defaultRoom().cameras,
         ...rawCameras,
-        cameras: rawCameras.cameras || (legacyCameraCount ? "Yes" : ""),
-        camerasQty: legacyCameraCount,
-        cameraPlanMode: rawCameras.cameraPlanMode || (legacyCameraCount ? CAMERA_PLAN_SPECIFIC : ""),
+        cameras: rawCameras.cameras || (cameraCount ? "Yes" : ""),
+        camerasQty: cameraCount,
+        cameraPlanMode: rawCameras.cameraPlanMode || (cameraCount ? CAMERA_PLAN_SPECIFIC : ""),
       };
       // Merge legacy production fields only on the first room
       const isFirst = idx === 0;
@@ -1247,14 +1263,19 @@ const mapApiProposalToFormData = (
     ...defaultProposalData.contentCreative,
     ...(raw.contentCreative || {}),
   },
-  videoRecordingStep: {
-    ...defaultProposalData.videoRecordingStep,
-    ...(raw.videoRecordingStep || {}),
-    recordIn4k: raw.videoRecordingStep?.recordIn4k || (
-      /4k/i.test(raw.videoRecordingStep?.recordingResolution ?? "") ? "YES"
-        : /1080/i.test(raw.videoRecordingStep?.recordingResolution ?? "") ? "NO" : ""
-    ),
-  },
+  videoRecordingStep: STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+    ? {
+        ...defaultProposalData.videoRecordingStep,
+        ...(raw.videoRecordingStep || {}),
+        recordIn4k:
+          raw.videoRecordingStep?.recordIn4k ||
+          (/4k/i.test(raw.videoRecordingStep?.recordingResolution ?? "")
+            ? "YES"
+            : /1080/i.test(raw.videoRecordingStep?.recordingResolution ?? "")
+              ? "NO"
+              : ""),
+      }
+    : defaultVideoRecording(),
   venue: (() => {
     const rv = (raw.venue ?? {}) as Record<string, unknown>;
     const yn = (v: unknown): "YES" | "NO" | "" =>
@@ -1343,10 +1364,15 @@ const AddNewProposal = ({
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedStep = Number(searchParams.get("step"));
-  const initialEditStep =
+  const requestedEditStep =
     Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 10
       ? requestedStep
       : 1;
+  const initialEditStep = resolveProposalStep(
+    requestedEditStep,
+    "advanced",
+    defaultProposalData.event.eventFormat,
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [proposalProcessStep, setProposalProcessStep] = useState(
     isEditMode ? initialEditStep : 0,
@@ -1539,7 +1565,9 @@ const AddNewProposal = ({
           dateFormat: mapped.proposalSettings.dateFormat,
         },
       }));
-      setProposalProcessStep(initialEditStep);
+      setProposalProcessStep(
+        resolveProposalStep(requestedEditStep, "advanced", mapped.event.eventFormat),
+      );
       setLoadingExisting(false);
     };
 
@@ -1548,7 +1576,7 @@ const AddNewProposal = ({
     return () => {
       mounted = false;
     };
-  }, [initialEditStep, isEditMode, proposalId, router]);
+  }, [isEditMode, proposalId, requestedEditStep, router]);
 
   /* ??? Single source of truth for all steps ??? */
   const [proposalData, setProposalData] =
@@ -1912,6 +1940,7 @@ const AddNewProposal = ({
         !proposalData.contentCreative.contentServicesNeeded
           ? "Creative/content ownership remains outside the essential intake and should be clarified if needed."
           : "",
+        STANDALONE_VIDEO_RECORDING_STEP_ENABLED &&
         !proposalData.videoRecordingStep.videoRecordingRequired
           ? "Recording and post-production requirements remain unspecified."
           : "",
@@ -2107,7 +2136,7 @@ const AddNewProposal = ({
 
   /** The full editable proposal as the API expects it. Shared by explicit
    *  saves and the background autosave so the two can never drift. */
-  const buildProposalPayload = (): ProposalData & { production: ProductionSupportData } => {
+  const buildProposalPayload = (): ProposalWriteData & { production: ProductionSupportData } => {
     const normalizedRooms = rooms.map((r) => normalizeRoomByRoomForSubmit(r));
     const firstRoom = normalizedRooms[0] ?? normalizeRoomByRoomForSubmit(defaultRoom());
     const normalizedContentCreative = { ...proposalData.contentCreative };
@@ -2116,8 +2145,22 @@ const AddNewProposal = ({
     } else if (!normalizedContentCreative.motionGraphicsOpenerVideo) {
       delete normalizedContentCreative.motionGraphicsOpenerVideo;
     }
+    const activeProposalData: ProposalWriteData =
+      STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+        ? {
+            ...proposalData,
+            videoRecordingStep:
+              proposalData.videoRecordingStep.videoRecordingRequired === "YES"
+                ? proposalData.videoRecordingStep
+                : {
+                    ...proposalData.videoRecordingStep,
+                    recordingCodec: "",
+                    recordIn4k: "",
+                  },
+          }
+        : omitStandaloneVideoRecording(proposalData);
     return {
-      ...proposalData,
+      ...activeProposalData,
       proposalSettings: {
         linkPrefix: proposalSettings.branding.linkPrefix,
         defaultFont: proposalSettings.branding.defaultFont,
@@ -2129,9 +2172,6 @@ const AddNewProposal = ({
       },
       roomByRoom: normalizedRooms,
       contentCreative: normalizedContentCreative,
-      videoRecordingStep: proposalData.videoRecordingStep.videoRecordingRequired === "YES"
-        ? proposalData.videoRecordingStep
-        : { ...proposalData.videoRecordingStep, recordingCodec: "", recordIn4k: "" },
       production: {
         scenicStageDesign: firstRoom.scenicStageDesign,
         showCrewNeeded: firstRoom.showCrewNeeded,
@@ -2349,13 +2389,12 @@ const AddNewProposal = ({
       setIsExtracting(true);
       try {
         const result = await extractProposalFromFile(selectedFile);
-        if (
-          result.success &&
-          result.data &&
-          Object.keys(result.data).length > 0
-        ) {
+        const normalized =
+          result.success && result.data
+            ? normalizeActiveExtraction(result.data)
+            : {};
+        if (Object.keys(normalized).length > 0) {
           // Normalize enum/dropdown fields so they exactly match option strings
-          const normalized = normalizeExtracted(result.data);
           markExtractedSections(normalized);
           setProposalData((prev) => ({
             ...prev,
@@ -2364,7 +2403,15 @@ const AddNewProposal = ({
             roomByRoom: normalized.roomByRoom ?? prev.roomByRoom,
             hybridVirtual: { ...prev.hybridVirtual, ...(normalized.hybridVirtual ?? {}) },
             contentCreative: { ...prev.contentCreative, ...(normalized.contentCreative ?? {}) },
-            videoRecordingStep: { ...prev.videoRecordingStep, ...(normalized.videoRecordingStep ?? {}) },
+            ...(STANDALONE_VIDEO_RECORDING_STEP_ENABLED &&
+            normalized.videoRecordingStep
+              ? {
+                  videoRecordingStep: {
+                    ...prev.videoRecordingStep,
+                    ...normalized.videoRecordingStep,
+                  },
+                }
+              : {}),
             venue: { ...prev.venue, ...(normalized.venue ?? {}) },
             uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
             budget: { ...prev.budget, ...(normalized.budget ?? {}) },
@@ -2442,12 +2489,11 @@ const AddNewProposal = ({
     setIsExtracting(true);
     try {
       const result = await extractProposalFromFile(selectedFile);
-      if (
-        result.success &&
-        result.data &&
-        Object.keys(result.data).length > 0
-      ) {
-        const normalized = normalizeExtracted(result.data);
+      const normalized =
+        result.success && result.data
+          ? normalizeActiveExtraction(result.data)
+          : {};
+      if (Object.keys(normalized).length > 0) {
         markExtractedSections(normalized);
         setProposalData((prev) => ({
           ...prev,
@@ -2456,7 +2502,15 @@ const AddNewProposal = ({
           roomByRoom: normalized.roomByRoom ?? prev.roomByRoom,
           hybridVirtual: { ...prev.hybridVirtual, ...(normalized.hybridVirtual ?? {}) },
           contentCreative: { ...prev.contentCreative, ...(normalized.contentCreative ?? {}) },
-          videoRecordingStep: { ...prev.videoRecordingStep, ...(normalized.videoRecordingStep ?? {}) },
+          ...(STANDALONE_VIDEO_RECORDING_STEP_ENABLED &&
+          normalized.videoRecordingStep
+            ? {
+                videoRecordingStep: {
+                  ...prev.videoRecordingStep,
+                  ...normalized.videoRecordingStep,
+                },
+              }
+            : {}),
           venue: { ...prev.venue, ...(normalized.venue ?? {}) },
           uploads: { ...prev.uploads, ...(normalized.uploads ?? {}) },
           budget: { ...prev.budget, ...(normalized.budget ?? {}) },
@@ -2789,20 +2843,23 @@ const AddNewProposal = ({
                 sponsorOverlays={proposalData.hybridVirtual.sponsorOverlays}
               />
             )}
-            {proposalProcessStep === 6 && (
-              <VideoRecordingStep
-                data={proposalData.videoRecordingStep ?? defaultVideoRecording()}
-                onChange={(updates) =>
-                  updateProposalSection("videoRecordingStep", updates)
-                }
-                onContinue={continueHandler}
-                onBack={backHandler}
-                showErrors={showErrors}
-                proposalSettings={proposalSettings}
-                onDemandRecording={proposalData.hybridVirtual.onDemandRecording}
-                sizzleRecapOwner={proposalData.contentCreative?.sizzleRecapVideo}
-              />
-            )}
+            {STANDALONE_VIDEO_RECORDING_STEP_ENABLED &&
+              proposalProcessStep === 6 && (
+                <VideoRecordingStep
+                  data={
+                    proposalData.videoRecordingStep ?? defaultVideoRecording()
+                  }
+                  onChange={(updates) =>
+                    updateProposalSection("videoRecordingStep", updates)
+                  }
+                  onContinue={continueHandler}
+                  onBack={backHandler}
+                  showErrors={showErrors}
+                  proposalSettings={proposalSettings}
+                  onDemandRecording={proposalData.hybridVirtual.onDemandRecording}
+                  sizzleRecapOwner={proposalData.contentCreative?.sizzleRecapVideo}
+                />
+              )}
             {proposalProcessStep === 7 && (
               <VenueTechnicalRequirements
                 data={proposalData.venue}

@@ -2552,8 +2552,8 @@ describe("AssistantWorkspacePage", () => {
 
   const OVERVIEW_HEADING = "Here’s what I have for Annual Leadership Summit";
 
-  // Ten populated rows: the union-venue row is intentionally "NO" so it stays
-  // hidden and the proposal due date is not pushed past the ten-row cap.
+  // Legacy standalone recording data is intentionally present to prove the
+  // retired section cannot leak into the active captured-details overview.
   const capturedProposal = {
     success: true as const,
     message: "ok",
@@ -2589,11 +2589,12 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByText("Riverfront Convention Center")).toBeInTheDocument();
     expect(screen.getByText("Detroit")).toBeInTheDocument();
     expect(screen.getByText("Zoom Events")).toBeInTheDocument();
-    expect(screen.getByText("Yes — 4 cameras")).toBeInTheDocument();
+    expect(screen.queryByText("Yes — 4 cameras")).not.toBeInTheDocument();
+    expect(screen.queryByText("Video recording")).not.toBeInTheDocument();
     expect(screen.getByText("15 Aug 2026")).toBeInTheDocument();
     // isUnionVenue is "NO", so no union row.
     expect(screen.queryByText("Union venue")).not.toBeInTheDocument();
-    expect(screen.getByText("10 details captured from your sources.")).toBeInTheDocument();
+    expect(screen.getByText("9 details captured from your sources.")).toBeInTheDocument();
     // Extraction output stays read-only and links to the explicit review.
     expect(screen.getByText(/need your explicit review/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review suggestions" })).toBeInTheDocument();
@@ -2916,6 +2917,62 @@ describe("AssistantWorkspacePage", () => {
 
     expect(await screen.findByText("Results — Readiness check")).toBeInTheDocument();
     expect(screen.getByText("The venue is missing.")).toBeInTheDocument();
+  });
+
+  test("a readiness card hides every finding that touches standalone recording data", async () => {
+    const reportWithRetiredRecording = {
+      ...guidanceReport,
+      findings: [
+        {
+          code: "RETIRED_ONLY",
+          severity: "blocking" as const,
+          category: "production" as const,
+          message: "RETIRED_ONLY_MESSAGE",
+          paths: ["/content/videoRecordingStep/deliveryMethod"],
+        },
+        {
+          code: "RETIRED_MIXED",
+          severity: "warning" as const,
+          category: "production" as const,
+          message: "RETIRED_MIXED_MESSAGE",
+          paths: [
+            "/content/videoRecording/required",
+            "/content/roomByRoom/rooms/0/videoRecording/required",
+          ],
+        },
+        {
+          code: "ROOM_ONLY",
+          severity: "warning" as const,
+          category: "production" as const,
+          message: "ROOM_ONLY_RECORDING_MESSAGE",
+          paths: [
+            "/content/roomByRoom/rooms/0/videoRecording/required",
+          ],
+        },
+      ],
+      findingCount: 3,
+      blockingCount: 1,
+    };
+    (
+      getLatestGuidanceAction as jest.MockedFunction<
+        typeof getLatestGuidanceAction
+      >
+    ).mockResolvedValueOnce({
+      success: true,
+      data: reportWithRetiredRecording,
+    });
+    mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(
+      await screen.findByText("ROOM_ONLY_RECORDING_MESSAGE"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("RETIRED_ONLY_MESSAGE")).not.toBeInTheDocument();
+    expect(screen.queryByText("RETIRED_MIXED_MESSAGE")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("1 finding — 0 blocking, 1 worth reviewing."),
+    ).toBeInTheDocument();
   });
 
   test("the primary action reads Regenerate draft once a draft exists", async () => {

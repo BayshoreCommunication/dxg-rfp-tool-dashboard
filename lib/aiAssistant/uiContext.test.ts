@@ -90,6 +90,43 @@ describe("Assistant UI context", () => {
     ).toBeNull();
   });
 
+  test("keeps stale recording context compatible without activating its retired section", () => {
+    expect(
+      normalizeAssistantUiContext({
+        schemaVersion: "assistant-ui-context.v1",
+        routeCategory: "proposal_creation",
+        workflow: "proposal_intake",
+        sectionId: "video_recording",
+        fieldKey: "/content/videoRecordingStep/deliveryMethod",
+        roomIdentifier: "stale-recording-room",
+        eventFormat: "hybrid",
+        fieldControl: {
+          label: "Delivery method",
+          helperText: "Retired standalone recording field.",
+        },
+      }),
+    ).toEqual({
+      schemaVersion: "assistant-ui-context.v1",
+      routeCategory: "proposal_creation",
+      workflow: "proposal_intake",
+      eventFormat: "hybrid",
+    });
+
+    expect(
+      normalizeAssistantUiContext({
+        schemaVersion: "assistant-ui-context.v1",
+        routeCategory: "proposal_creation",
+        workflow: "proposal_intake",
+        sectionId: "event_overview",
+        fieldKey: "/content/videoRecording/deliveryMethod",
+      }),
+    ).toEqual({
+      schemaVersion: "assistant-ui-context.v1",
+      routeCategory: "proposal_creation",
+      workflow: "proposal_intake",
+    });
+  });
+
   test("offers a small route- or field-aware starter set", () => {
     const proposals = assistantStarterPromptsForContext(
       assistantUiContextForPathname("/proposals"),

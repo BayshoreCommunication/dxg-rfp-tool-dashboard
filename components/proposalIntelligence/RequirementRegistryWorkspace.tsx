@@ -16,6 +16,10 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, FileSearch, Loc
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
+import {
+  isStandaloneVideoRecordingPath,
+  STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
+} from "@/lib/proposals/proposalExperience";
 
 type Props = {
   proposalId: string;
@@ -54,6 +58,20 @@ const sourceLabel = (requirement: RegistryRequirement) => {
 };
 const needsReview = (requirement: RegistryRequirement) =>
   !requirement.inclusion_reviewed || (requirement.included && (!requirement.mandatory_reviewed || !requirement.criterion_reviewed || requirement.verification_method === "pending"));
+const isRetiredStandaloneRecordingRequirement = (
+  requirement: RegistryRequirement,
+) => {
+  if (STANDALONE_VIDEO_RECORDING_STEP_ENABLED) return false;
+  const sourcePath = requirement.source_locator.path;
+  const sourceSection = requirement.source_locator.sectionKey;
+  return (
+    requirement.group_key === "videoRecordingStep" ||
+    (typeof sourcePath === "string" &&
+      isStandaloneVideoRecordingPath(sourcePath)) ||
+    sourceSection === "videoRecordingStep" ||
+    sourceSection === "video_recording"
+  );
+};
 const blockerLabel = (code: string) => ({
   WEIGHTS_NOT_CONFIRMED: "Confirm the scoring balance",
   WEIGHTS_MUST_TOTAL_100: "Balance scoring weights to 100%",
@@ -204,19 +222,29 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
   const [message, setMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const criteria = registry?.matrix?.criteria ?? [];
-  const groups = useMemo(() => Array.from(new Set(registry?.requirements.map((item) => item.group_key) ?? [])), [registry]);
+  const activeRequirements = useMemo(
+    () =>
+      (registry?.requirements ?? []).filter(
+        (item) => !isRetiredStandaloneRecordingRequirement(item),
+      ),
+    [registry],
+  );
+  const groups = useMemo(
+    () => Array.from(new Set(activeRequirements.map((item) => item.group_key))),
+    [activeRequirements],
+  );
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return (registry?.requirements ?? []).filter((item) => {
+    return activeRequirements.filter((item) => {
       const unresolved = needsReview(item);
       return (group === "all" || item.group_key === group) && (!unresolvedOnly || unresolved) && (!query || `${item.title} ${item.normalized_text} ${item.criterion_name ?? ""}`.toLowerCase().includes(query));
     });
-  }, [group, registry, search, unresolvedOnly]);
+  }, [activeRequirements, group, search, unresolvedOnly]);
   const blocking = registry?.set.validation?.blocking ?? [];
-  const requirementCount = registry?.requirements.length ?? 0;
-  const includedCount = registry?.requirements.filter((item) => item.included).length ?? 0;
+  const requirementCount = activeRequirements.length;
+  const includedCount = activeRequirements.filter((item) => item.included).length;
   const excludedCount = requirementCount - includedCount;
-  const unresolvedCount = registry?.requirements.filter(needsReview).length ?? 0;
+  const unresolvedCount = activeRequirements.filter(needsReview).length;
   const matrixReady = Boolean(registry?.matrix?.weightsConfirmed) && Math.abs((registry?.matrix?.totalWeight ?? 0) - 100) <= 0.001;
   const readyForApproval = Boolean(registry) && blocking.length === 0 && matrixReady && !registry?.freshness.stale;
   const editable = registry?.set.status === "draft" || registry?.set.status === "in_review";

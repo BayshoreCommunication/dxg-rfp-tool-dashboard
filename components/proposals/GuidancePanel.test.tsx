@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import GuidancePanel from "./GuidancePanel";
+import GuidancePanel, { stepForPath } from "./GuidancePanel";
 import {
   generateGuidanceAction,
   getLatestGuidanceAction,
+  type GuidanceFinding,
   type GuidanceReport,
 } from "@/app/actions/guidance";
 
@@ -163,6 +164,89 @@ describe("GuidancePanel", () => {
     expect(
       screen.getByText("How many power drops can the venue support?"),
     ).toBeInTheDocument();
+  });
+
+  test("suppresses standalone recording findings and excludes them from displayed counts", async () => {
+    const recordingFinding: GuidanceFinding = {
+      code: "RECORDING_DELIVERY_METHOD_MISSING",
+      severity: "blocking",
+      category: "production",
+      message: "The video recording delivery method is not specified.",
+      paths: ["/content/videoRecordingStep/deliveryMethod"],
+    };
+    mockedLatest.mockResolvedValue({
+      success: true,
+      data: {
+        ...report,
+        findings: [recordingFinding],
+        findingCount: 1,
+        blockingCount: 0,
+      },
+    });
+
+    render(
+      <GuidancePanel proposalId={proposalId} onNavigateToStep={jest.fn()} />,
+    );
+
+    expect(
+      await screen.findByText("No urgent changes"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(recordingFinding.message)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Update Video Recording" }),
+    ).not.toBeInTheDocument();
+    expect(stepForPath(recordingFinding.paths[0])).toBeUndefined();
+    expect(screen.getByText("0")).toBeInTheDocument();
+  });
+
+  test("suppresses mixed retired findings while keeping room-level recording findings", async () => {
+    const recordingFindings: GuidanceFinding[] = [
+      {
+        code: "MIXED_RECORDING_DETAILS_MISSING",
+        severity: "warning",
+        category: "production",
+        message: "Recording requirements need confirmation.",
+        paths: [
+          "/content/videoRecordingStep/deliveryMethod",
+          "/content/roomByRoom/rooms/0/videoRecording/required",
+        ],
+      },
+      {
+        code: "ROOM_RECORDING_DETAILS_MISSING",
+        severity: "info",
+        category: "production",
+        message: "Room recording requirements need confirmation.",
+        paths: ["/content/roomByRoom/rooms/1/videoRecording/required"],
+      },
+    ];
+    mockedLatest.mockResolvedValue({
+      success: true,
+      data: {
+        ...report,
+        findings: recordingFindings,
+        findingCount: recordingFindings.length,
+        blockingCount: 0,
+      },
+    });
+
+    const onNavigateToStep = jest.fn();
+    render(
+      <GuidancePanel
+        proposalId={proposalId}
+        onNavigateToStep={onNavigateToStep}
+      />,
+    );
+
+    expect(
+      await screen.findByText(recordingFindings[1].message),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(recordingFindings[0].message)).not.toBeInTheDocument();
+    const roomButtons = screen.getAllByRole("button", {
+      name: "Update Room Specifications",
+    });
+    expect(roomButtons).toHaveLength(1);
+    fireEvent.click(roomButtons[0]);
+    expect(onNavigateToStep).toHaveBeenCalledWith(3);
   });
 
   test("shows the bounded proposal summary, next action, and stale warning", async () => {

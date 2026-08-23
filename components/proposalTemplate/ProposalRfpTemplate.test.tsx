@@ -52,3 +52,50 @@ test("renders every room on its own page so detailed specifications cannot colli
   expect((html.match(/data-room-page=/g) || [])).toHaveLength(5);
   expect(html).toContain("Room 5 of 5");
 });
+
+test("does not render retired standalone recording data in the vendor RFP", () => {
+  const html = renderToStaticMarkup(
+    <ProposalRfpTemplate
+      proposal={{
+        event: { eventName: "Legacy Recording Test" },
+        roomByRoom: [],
+        videoRecordingStep: {
+          videoRecordingRequired: "YES",
+          isoRecordings: "RETIRED_ISO_VALUE",
+          recordingCodec: "RETIRED_CODEC_VALUE",
+          deliveryMethod: ["RETIRED_DELIVERY_VALUE"],
+        },
+      }}
+    />,
+  );
+
+  expect(html).not.toContain("Video Recording &amp; Broadcast");
+  expect(html).not.toContain("RETIRED_ISO_VALUE");
+  expect(html).not.toContain("RETIRED_CODEC_VALUE");
+  expect(html).not.toContain("RETIRED_DELIVERY_VALUE");
+});
+
+test("keeps independent room-level recording details unchanged", () => {
+  const html = renderToStaticMarkup(
+    <ProposalRfpTemplate
+      proposal={{
+        event: { eventName: "Room Recording Test" },
+        roomByRoom: [
+          {
+            roomLocation: "Main Hall",
+            videoRecording: {
+              videoRecording: "Yes",
+              videoRecordingType: "Camera Feed Only",
+              recordingCodec: "H.264",
+              recordIn4k: "Yes",
+            },
+          },
+        ],
+      }}
+    />,
+  );
+
+  expect(html).toContain("Video Recording");
+  expect(html).toContain("Camera Feed Only");
+  expect(html).toContain("H.264");
+});

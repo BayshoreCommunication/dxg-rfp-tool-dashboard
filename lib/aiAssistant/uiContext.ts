@@ -1,3 +1,8 @@
+import {
+  isStandaloneVideoRecordingPath,
+  STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
+} from "@/lib/proposals/proposalExperience";
+
 export const ASSISTANT_ROUTE_CATEGORIES = [
   "dashboard",
   "proposals",
@@ -85,6 +90,31 @@ export type AssistantUiContext = {
   eventFormat?: AssistantEventFormat;
   roomIdentifier?: string;
   fieldControl?: AssistantFieldControlContext;
+};
+
+/**
+ * Retired sections stay in the protocol allowlist for compatibility, but stale
+ * clients and DOM nodes cannot make those sections active again.
+ */
+export const sanitizeAssistantUiContextForActiveSections = (
+  context: AssistantUiContext,
+): AssistantUiContext => {
+  const hasRetiredField = Boolean(
+    context.fieldKey && isStandaloneVideoRecordingPath(context.fieldKey),
+  );
+  if (
+    STANDALONE_VIDEO_RECORDING_STEP_ENABLED ||
+    (context.sectionId !== "video_recording" && !hasRetiredField)
+  ) {
+    return context;
+  }
+
+  const sanitized = { ...context };
+  delete sanitized.sectionId;
+  delete sanitized.fieldKey;
+  delete sanitized.fieldControl;
+  delete sanitized.roomIdentifier;
+  return sanitized;
 };
 
 const includes = <T extends string>(
@@ -299,7 +329,7 @@ export const normalizeAssistantUiContext = (
       ? undefined
       : normalizedFieldControl(input.fieldControl);
   if (input.fieldControl !== undefined && !fieldControl) return null;
-  return {
+  return sanitizeAssistantUiContextForActiveSections({
     schemaVersion: "assistant-ui-context.v1",
     routeCategory: input.routeCategory,
     ...(input.workflow ? { workflow: input.workflow as AssistantWorkflow } : {}),
@@ -314,7 +344,7 @@ export const normalizeAssistantUiContext = (
       ? { roomIdentifier: input.roomIdentifier as string }
       : {}),
     ...(fieldControl ? { fieldControl } : {}),
-  };
+  });
 };
 
 export type AssistantStarterPrompt = {

@@ -91,6 +91,42 @@ test("renders traceable requirements, balanced weights, and blocks premature app
   expect(screen.getByRole("button", { name: /prepare automatically/i })).toBeEnabled();
 });
 
+test("does not display old persisted standalone recording requirements", async () => {
+  const withRetiredRecording: RequirementRegistryView = {
+    ...registry,
+    requirements: [
+      ...registry.requirements,
+      {
+        ...registry.requirements[0],
+        id: "018f47b0-5555-7555-8555-555555555555",
+        requirement_key: "req_retired_recording",
+        title: "RETIRED_RECORDING_REQUIREMENT",
+        normalized_text: "RETIRED_RECORDING_VALUE",
+        source_locator: {
+          kind: "canonical_proposal",
+          path: "/content/videoRecording/required",
+        },
+        group_key: "production",
+        ordinal: 1,
+      },
+    ],
+  };
+
+  render(
+    <RequirementRegistryWorkspace
+      proposalId="abc123abc123abc123abc123"
+      initialRegistry={withRetiredRecording}
+      initialSets={[]}
+    />,
+  );
+
+  expect(screen.getByText("1 requirements found")).toBeInTheDocument();
+  await userEvent.click(screen.getByText("Review individual requirements"));
+  expect(screen.queryByText("RETIRED_RECORDING_REQUIREMENT")).not.toBeInTheDocument();
+  expect(screen.queryByText("RETIRED_RECORDING_VALUE")).not.toBeInTheDocument();
+  expect(screen.queryByRole("option", { name: "Recording" })).not.toBeInTheDocument();
+});
+
 test("never calls an invalid confirmed matrix balanced", () => {
   const invalid = { ...registry, matrix: { ...registry.matrix!, totalWeight: 120, weightsConfirmed: true } };
   render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={invalid} initialSets={[]} />);

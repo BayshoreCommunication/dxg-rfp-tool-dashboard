@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import ProcessList from "./ProcessList";
@@ -84,5 +84,28 @@ describe("ProcessList", () => {
     expect(screen.queryByText("2B")).not.toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.getByText("Workflow sections")).toBeInTheDocument();
+  });
+
+  it("hides the retired recording step while retaining later internal ids", async () => {
+    const user = userEvent.setup();
+    const onStepChange = jest.fn();
+    render(
+      <ProcessList
+        activeStep={5}
+        hideStepIds={[4, 6]}
+        onStepChange={onStepChange}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Go to Video Recording" }),
+    ).not.toBeInTheDocument();
+    const venueTechnical = screen.getByRole("button", {
+      name: "Go to Venue & Technical",
+    });
+    expect(within(venueTechnical).getByText("5")).toBeInTheDocument();
+
+    await user.click(venueTechnical);
+    expect(onStepChange).toHaveBeenCalledWith(7);
   });
 });

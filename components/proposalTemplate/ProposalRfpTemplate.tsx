@@ -3,6 +3,7 @@
 import { resolveMonitorSize, resolveScreenSize } from "@/components/proposals/screenSize";
 import { cameraPlanSummary, type CameraPlan } from "@/components/proposals/cameraPlan";
 import { ensureLedWallSlots, ledWallCount, normalizeLedWalls, type LedWallPlan } from "@/components/proposals/ledWallPlan";
+import { STANDALONE_VIDEO_RECORDING_STEP_ENABLED } from "@/lib/proposals/proposalExperience";
 
 /* ─── CSS matching ProposalTemplate.html design ─── */
 const TEMPLATE_CSS = `
@@ -292,7 +293,6 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
     : [];
   const hv = (proposal.hybridVirtual || {}) as RD;
   const cc = (proposal.contentCreative || {}) as RD;
-  const vr = (proposal.videoRecordingStep || {}) as RD;
   const ven = (proposal.venue || {}) as RD;
   const up = (proposal.uploads || {}) as RD;
   const bud = (proposal.budget || {}) as RD;
@@ -947,45 +947,50 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         </div>
       )}
 
-      {/* ══════════════ VIDEO RECORDING ══════════════ */}
-      {p(vr.videoRecordingRequired) === "YES" && (
-        <div className="page">
-          <IntHeader title={headerTitle} />
-          <SectionTitle num={nextSec()}>Video Recording &amp; Broadcast</SectionTitle>
+      {/* Retained dormant for a one-policy restore; the proposal branch is not
+          evaluated while the standalone workflow section is unavailable. */}
+      {STANDALONE_VIDEO_RECORDING_STEP_ENABLED && (() => {
+        const vr = (proposal.videoRecordingStep || {}) as RD;
+        if (p(vr.videoRecordingRequired) !== "YES") return null;
+        return (
+          <div className="page">
+            <IntHeader title={headerTitle} />
+            <SectionTitle num={nextSec()}>Video Recording &amp; Broadcast</SectionTitle>
 
-          <div className="section-subtitle">Recording Strategy</div>
-          <table>
-            <tbody>
-              <InfoTd label="ISO Recordings" value={p(vr.isoRecordings)} />
-            </tbody>
-          </table>
+            <div className="section-subtitle">Recording Strategy</div>
+            <table>
+              <tbody>
+                <InfoTd label="ISO Recordings" value={p(vr.isoRecordings)} />
+              </tbody>
+            </table>
 
-          <div className="section-subtitle">Recording &amp; Deliverables</div>
-          <table>
-            <tbody>
-              <InfoTd label="Recording Codec" value={p(vr.recordingCodec)} />
-              <InfoTd label="Record in 4K" value={p(vr.recordIn4k) ? yn(vr.recordIn4k) : p(vr.recordingResolution)} />
-              <InfoTd label="Recording Media" value={p(vr.recordingMedia)} />
-              <InfoTd label="Raw Footage Turnover" value={yn(vr.rawFootageTurnover)} />
-              <InfoTd label="Deliverable Format" value={arr(vr.deliverableFormat).join(", ")} />
-              <InfoTd label="Delivery Method" value={arr(vr.deliveryMethod).join(", ")} />
-              {(() => {
-                const ed = vr.editedDeliverable as RD | undefined;
-                if (!ed || p(ed.needed) !== "YES") return null;
-                return (
-                  <>
-                    <InfoTd label="Edited Deliverable" value={`Yes — ${arr(ed.deliverableType).join(", ") || ""}`} />
-                    <InfoTd label="Turnaround Time" value={p(ed.turnaroundTime)} />
-                    <InfoTd label="Reel Length" value={p(ed.reelLengthPreference)} />
-                  </>
-                );
-              })()}
-            </tbody>
-          </table>
+            <div className="section-subtitle">Recording &amp; Deliverables</div>
+            <table>
+              <tbody>
+                <InfoTd label="Recording Codec" value={p(vr.recordingCodec)} />
+                <InfoTd label="Record in 4K" value={p(vr.recordIn4k) ? yn(vr.recordIn4k) : p(vr.recordingResolution)} />
+                <InfoTd label="Recording Media" value={p(vr.recordingMedia)} />
+                <InfoTd label="Raw Footage Turnover" value={yn(vr.rawFootageTurnover)} />
+                <InfoTd label="Deliverable Format" value={arr(vr.deliverableFormat).join(", ")} />
+                <InfoTd label="Delivery Method" value={arr(vr.deliveryMethod).join(", ")} />
+                {(() => {
+                  const ed = vr.editedDeliverable as RD | undefined;
+                  if (!ed || p(ed.needed) !== "YES") return null;
+                  return (
+                    <>
+                      <InfoTd label="Edited Deliverable" value={`Yes — ${arr(ed.deliverableType).join(", ") || ""}`} />
+                      <InfoTd label="Turnaround Time" value={p(ed.turnaroundTime)} />
+                      <InfoTd label="Reel Length" value={p(ed.reelLengthPreference)} />
+                    </>
+                  );
+                })()}
+              </tbody>
+            </table>
 
-          <Footer left={footerLeft} page={nextPage()} />
-        </div>
-      )}
+            <Footer left={footerLeft} page={nextPage()} />
+          </div>
+        );
+      })()}
 
       {/* ══════════════ VENUE & INFRASTRUCTURE ══════════════ */}
       <div className="page">

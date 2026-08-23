@@ -4,6 +4,7 @@ import {
   ASSISTANT_EVENT_FORMATS,
   ASSISTANT_FORM_SECTION_IDS,
   assistantUiContextForPathname,
+  sanitizeAssistantUiContextForActiveSections,
   type AssistantEventFormat,
   type AssistantUiContext,
 } from "@/lib/aiAssistant/uiContext";
@@ -41,13 +42,13 @@ const readDocumentContext = (
   const eventFormat = normalizeEventFormat(
     currentSection?.dataset.assistantEventFormat,
   );
-  return {
+  return sanitizeAssistantUiContextForActiveSections({
     ...base,
     ...(sectionId ? { sectionId } : {}),
     ...(fieldKey ? { fieldKey } : {}),
     ...(eventFormat ? { eventFormat } : {}),
     ...(roomIdentifier ? { roomIdentifier } : {}),
-  };
+  });
 };
 
 const sameContext = (

@@ -18,6 +18,11 @@ import {
   type GuidanceSeverity,
 } from "@/app/actions/guidance";
 import { proposalFieldLabel } from "@/lib/proposals/proposalFieldLabel";
+import {
+  isStandaloneVideoRecordingPath,
+  STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
+  STANDALONE_VIDEO_RECORDING_STEP_ID,
+} from "@/lib/proposals/proposalExperience";
 
 const severityOrder: GuidanceSeverity[] = ["blocking", "warning", "info"];
 const severityPresentation: Record<
@@ -50,6 +55,10 @@ const severityPresentation: Record<
 };
 
 export const stepForPath = (path: string) => {
+  const isStandaloneRecordingPath = isStandaloneVideoRecordingPath(path);
+  if (isStandaloneRecordingPath && !STANDALONE_VIDEO_RECORDING_STEP_ENABLED) {
+    return undefined;
+  }
   if (path.includes("/event/")) return { step: 1, label: "Event Overview" };
   if (path.includes("/venueSchedule/"))
     return { step: 2, label: "Venue & Schedule" };
@@ -59,8 +68,11 @@ export const stepForPath = (path: string) => {
     return { step: 4, label: "Hybrid & Virtual" };
   if (path.includes("/contentCreative/"))
     return { step: 5, label: "Content & Creative" };
-  if (path.includes("/videoRecordingStep/"))
-    return { step: 6, label: "Video Recording" };
+  if (isStandaloneRecordingPath)
+    return {
+      step: STANDALONE_VIDEO_RECORDING_STEP_ID,
+      label: "Video Recording",
+    };
   if (path.includes("/venue/")) return { step: 7, label: "Venue & Technical" };
   if (path.includes("/budget/"))
     return { step: 8, label: "Investment & Evaluation" };
@@ -69,6 +81,18 @@ export const stepForPath = (path: string) => {
   if (path.includes("/contact/"))
     return { step: 10, label: "Contact & Submit" };
   return undefined;
+};
+
+export const isRetiredStandaloneRecordingFinding = (
+  finding: GuidanceFinding,
+) => {
+  if (STANDALONE_VIDEO_RECORDING_STEP_ENABLED) return false;
+
+  const nonemptyPaths = finding.paths.filter((path) => path.trim().length > 0);
+  return (
+    nonemptyPaths.length > 0 &&
+    nonemptyPaths.some(isStandaloneVideoRecordingPath)
+  );
 };
 
 const stepForFinding = (finding: GuidanceFinding) => {
@@ -80,7 +104,12 @@ const stepForFinding = (finding: GuidanceFinding) => {
   if (message.includes("content") || message.includes("creative"))
     return { step: 5, label: "Content & Creative" };
   if (message.includes("video") || message.includes("recording"))
-    return { step: 6, label: "Video Recording" };
+    return STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+      ? {
+          step: STANDALONE_VIDEO_RECORDING_STEP_ID,
+          label: "Video Recording",
+        }
+      : undefined;
   if (message.includes("venue technical"))
     return { step: 7, label: "Venue & Technical" };
   if (message.includes("budget") || message.includes("timeline"))
@@ -238,10 +267,13 @@ export default function GuidancePanel({
     setReport(result.data);
   };
 
+  const visibleFindings = (report?.findings ?? []).filter(
+    (finding) => !isRetiredStandaloneRecordingFinding(finding),
+  );
   const grouped = severityOrder
     .map((severity) => ({
       severity,
-      findings: (report?.findings ?? []).filter(
+      findings: visibleFindings.filter(
         (finding) => finding.severity === severity,
       ),
     }))
@@ -250,12 +282,12 @@ export default function GuidancePanel({
   const helpfulFindings = grouped.find(
     (group) => group.severity === "info",
   )?.findings;
-  const blockingCount =
-    report?.findings.filter((finding) => finding.severity === "blocking")
-      .length ?? 0;
-  const warningCount =
-    report?.findings.filter((finding) => finding.severity === "warning")
-      .length ?? 0;
+  const blockingCount = visibleFindings.filter(
+    (finding) => finding.severity === "blocking",
+  ).length;
+  const warningCount = visibleFindings.filter(
+    (finding) => finding.severity === "warning",
+  ).length;
   const priorityCount = blockingCount + warningCount;
   const readinessState = !report
     ? undefined
