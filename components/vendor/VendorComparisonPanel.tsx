@@ -4,19 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, BarChart3, CheckCircle2, CircleStop, RefreshCw, RotateCcw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
-import { cancelComparisonAction, getComparisonStatusAction, listComparisonsAction, retryComparisonAction, startComparisonAction, type ComparisonView } from "@/app/actions/comparisonOrchestration";
-import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
+import { cancelComparisonAction, getComparisonStatusAction, listComparisonsAction, prepareComparisonPrerequisitesAction, retryComparisonAction, startComparisonAction, type ComparisonView } from "@/app/actions/comparisonOrchestration";
+import { getDurableJob } from "@/app/actions/durableJobs";
 
 const terminal = new Set(["succeeded", "succeeded_with_warnings", "failed", "cancelled"]);
+const terminalPreparation = new Set(["succeeded", "failed", "cancelled", "dead_letter"]);
 const label = (value: string) => value.replaceAll("_", " ");
 
-export default function VendorComparisonPanel({ responses, proposalId, requirementsApproved = false, preparedResponseIds, comparisonReadyResponseIds, returnTo = "/vendor-responses" }: { responses: VendorResponseItem[]; proposalId: string; requirementsApproved?: boolean; preparedResponseIds?: string[]; comparisonReadyResponseIds?: string[]; returnTo?: string }) {
+export default function VendorComparisonPanel({ responses, proposalId, requirementsApproved = false, preparedResponseIds, comparisonReadyResponseIds }: { responses: VendorResponseItem[]; proposalId: string; requirementsApproved?: boolean; preparedResponseIds?: string[]; comparisonReadyResponseIds?: string[]; returnTo?: string }) {
   const versionedResponses = useMemo(() => responses.filter((response) => response.proposalId === proposalId && response.submissionId && response.currentVersionId), [proposalId, responses]);
   const candidates = useMemo(() => versionedResponses.filter((response) => response.documents.length > 0 || response.message.trim().length > 0), [versionedResponses]);
   const excludedEmptyCount = versionedResponses.length - candidates.length;
   const [prepared, setPrepared] = useState<Set<string>>(() => new Set(preparedResponseIds ?? candidates.map((candidate) => candidate._id)));
   const comparisonReady = useMemo(() => new Set(comparisonReadyResponseIds ?? candidates.map((candidate) => candidate._id)), [candidates, comparisonReadyResponseIds]);
-  const [view, setView] = useState<ComparisonView>(); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState<string>(); const [visible, setVisible] = useState(true); const pollAttempt = useRef(0); const cancelled = useRef(false);
+  const [view, setView] = useState<ComparisonView>(); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [busyLabel, setBusyLabel] = useState("Preparing vendors…"); const [error, setError] = useState<string>(); const [visible, setVisible] = useState(true); const pollAttempt = useRef(0); const cancelled = useRef(false);
   const missingPreparationCount = candidates.reduce((count, candidate) => count + (prepared.has(candidate._id) ? 0 : 1), 0);
   const preparationComplete = candidates.length >= 2 && missingPreparationCount === 0;
   const missingEvaluationCount = candidates.reduce((count, candidate) => count + (comparisonReady.has(candidate._id) ? 0 : 1), 0);
@@ -46,17 +47,55 @@ export default function VendorComparisonPanel({ responses, proposalId, requireme
     return () => window.clearTimeout(timer);
   }, [refresh, view, visible]);
   const mutate = async (operation: () => Promise<{ success: boolean; data?: unknown; message?: string }>) => { setBusy(true); setError(undefined); const result = await operation(); if (cancelled.current) return; setBusy(false); if (!result.success) { setError(result.message ?? "Comparison operation failed."); return; } pollAttempt.current = 0; await loadLatest(); };
-  const start = () => mutate(() => startComparisonAction(proposalId, candidates.map((item) => ({ submissionId: item.submissionId!, versionId: item.currentVersionId! }))));
+  const start = async () => {
+    const participants = candidates.map((item) => ({ submissionId: item.submissionId!, versionId: item.currentVersionId! }));
+    setBusy(true); setError(undefined); setBusyLabel("Preparing requirements…");
+    const preparation = await prepareComparisonPrerequisitesAction(proposalId, participants);
+    if (cancelled.current) return;
+    if (!preparation.success) {
+      setBusy(false); setError(preparation.message); return;
+    }
+
+    let pending = preparation.data.jobs;
+    if (pending.length > 0) setBusyLabel("Mapping vendor responses…");
+    for (let attempt = 0; pending.length > 0 && attempt < 120; attempt += 1) {
+      const statuses = await Promise.all(pending.map(async (item) => ({ item, result: await getDurableJob(item.jobId) })));
+      if (cancelled.current) return;
+      const lookupFailure = statuses.find(({ result }) => !result.success);
+      if (lookupFailure && !lookupFailure.result.success) {
+        setBusy(false); setError(lookupFailure.result.message); return;
+      }
+      const failed = statuses.find(({ result }) => result.success && ["failed", "cancelled", "dead_letter"].includes(result.data.status));
+      if (failed && failed.result.success) {
+        setBusy(false);
+        setError(`Automatic vendor mapping could not finish${failed.result.data.errorCode ? ` (${failed.result.data.errorCode})` : ""}.`);
+        return;
+      }
+      pending = statuses.flatMap(({ item, result }) => result.success && !terminalPreparation.has(result.data.status) ? [item] : []);
+      if (pending.length > 0) await new Promise((resolve) => window.setTimeout(resolve, 2000));
+    }
+    if (pending.length > 0) {
+      setBusy(false); setError("Vendor preparation is still running. Try Start comparison again shortly."); return;
+    }
+
+    setBusyLabel("Reviewing evidence and scoring…");
+    const result = await startComparisonAction(proposalId, participants);
+    if (cancelled.current) return;
+    setBusy(false); setBusyLabel("Preparing vendors…");
+    if (!result.success) { setError(result.message); return; }
+    pollAttempt.current = 0;
+    setView(result.data);
+  };
   const cancel = () => view ? mutate(() => cancelComparisonAction(proposalId, view.run.runId)) : Promise.resolve();
   const retry = () => view ? mutate(() => retryComparisonAction(proposalId, view.run.runId)) : Promise.resolve();
   return <section className="mb-5 rounded-2xl border border-violet-200 bg-violet-50/70 p-4" aria-labelledby="comparison-progress-title">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 id="comparison-progress-title" className="flex items-center gap-2 text-sm font-extrabold text-violet-950"><BarChart3 size={17}/>Comparison orchestration</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-violet-800">Freeze selected vendor versions into one durable run. Evidence review and rubric scorecards are prepared automatically before eligibility gates produce an advisory ranking; the final vendor decision remains yours.</p></div>
-      {!view && <button type="button" disabled={busy || loading || candidates.length < 2 || !requirementsApproved || !preparationComplete} onClick={() => void start()} title={!requirementsApproved ? "Approve the requirement registry before starting a comparison" : !preparationComplete ? "Complete requirement mapping for every selected vendor" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-45"><RefreshCw size={14} className={busy ? "animate-spin" : ""}/>{busy ? "Preparing vendors…" : `Start comparison (${candidates.length})`}</button>}
+      {!view && <button type="button" disabled={busy || loading || candidates.length < 2} onClick={() => void start()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-45"><RefreshCw size={14} className={busy ? "animate-spin" : ""}/>{busy ? busyLabel : `Start comparison (${candidates.length})`}</button>}
     </div>
     {loading && <p role="status" className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-violet-800"><RefreshCw size={14} className="animate-spin"/>Restoring comparison status…</p>}
     {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p>}
     {!view && !loading && excludedEmptyCount > 0 && <p className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700">{excludedEmptyCount} empty vendor {excludedEmptyCount === 1 ? "response was" : "responses were"} excluded because it contains no message or document to evaluate.</p>}
-    {!view && !loading && !requirementsApproved ? <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950"><span>Approve the proposal requirement registry before starting a comparison.</span><Link href={requirementRegistryHref(proposalId, returnTo)} className="font-extrabold text-amber-900 underline underline-offset-2 hover:text-amber-700">Open requirement registry</Link></div> : !view && !loading && candidates.length < 2 ? <p className="mt-4 rounded-xl bg-white p-3 text-xs text-violet-900">At least two versioned responses to this proposal are required.</p> : !view && !loading && !preparationComplete ? <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950"><span>{missingPreparationCount} selected vendor {missingPreparationCount === 1 ? "response needs" : "responses need"} requirement mapping before comparison.</span><a href="#live-analysis-title" className="font-extrabold text-amber-900 underline underline-offset-2 hover:text-amber-700">Review vendor preparation</a></div> : !view && !loading && missingEvaluationCount > 0 ? <p role="status" className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">Evidence review and scorecards for {missingEvaluationCount} {missingEvaluationCount === 1 ? "vendor will" : "vendors will"} be prepared automatically when you start the comparison.</p> : null}
+    {!view && !loading && candidates.length < 2 ? <p className="mt-4 rounded-xl bg-white p-3 text-xs text-violet-900">At least two versioned responses to this proposal are required.</p> : !view && !loading && (!requirementsApproved || !preparationComplete || missingEvaluationCount > 0) ? <p role="status" className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically when you start the comparison.</p> : null}
     {error?.includes("proposal intelligence and evaluation for") && <div className="mt-3 flex flex-wrap items-center gap-2">{candidates.map((candidate) => <Link key={candidate._id} href={`/vendor-responses/${candidate._id}`} className="inline-flex min-h-9 items-center rounded-lg border border-violet-200 bg-white px-3 text-xs font-extrabold text-violet-900 hover:border-violet-500">Open {candidate.vendorName || candidate.submittedBy || "vendor"} evaluation</Link>)}</div>}
     {view && <div className="mt-4 rounded-xl border border-violet-200 bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-extrabold uppercase tracking-wide text-violet-700">{label(view.run.progressStage)}</p><p className="mt-1 text-sm font-bold text-slate-800">{view.run.completedParticipantCount} of {view.run.participantCount} vendor snapshots complete</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${view.run.status.startsWith("succeeded") ? "bg-emerald-100 text-emerald-800" : view.run.status === "failed" ? "bg-red-100 text-red-800" : "bg-violet-100 text-violet-800"}`}>{label(view.run.status)}</span></div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-violet-100" role="progressbar" aria-label="Comparison progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(view.run.progress)}><div className="h-full rounded-full bg-violet-600 transition-[width]" style={{ width: `${view.run.progress}%` }}/></div><p className="mt-1 text-right text-[10px] font-bold text-violet-700">{Math.round(view.run.progress)}%</p>
