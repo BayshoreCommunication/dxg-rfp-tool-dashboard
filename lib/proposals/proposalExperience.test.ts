@@ -1,16 +1,87 @@
 import {
+  activeExtractedProposalData,
   buildPersonalizedInvitation,
   buildVendorReadyStatementOfWork,
   estimateInitialBudget,
   procurementTimelineDateBounds,
   procurementTimelineIssues,
+  isStandaloneVideoRecordingPath,
+  omitStandaloneVideoRecording,
   proposalStepOrder,
+  resolveProposalStep,
 } from "./proposalExperience";
 
 describe("proposal experience helpers", () => {
   test("basic mode keeps only the essential proposal steps", () => {
     expect(proposalStepOrder("basic", "In-Person")).toEqual([1, 2, 3, 8, 10]);
-    expect(proposalStepOrder("advanced", "Hybrid")).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(proposalStepOrder("advanced", "Hybrid")).toEqual([1, 2, 3, 4, 5, 7, 8, 9, 10]);
+    expect(proposalStepOrder("advanced", "In-Person")).toEqual([1, 2, 3, 5, 7, 8, 9, 10]);
+  });
+
+  test("skips retired recording links without remapping their fields", () => {
+    expect(resolveProposalStep(6, "advanced", "Hybrid")).toBe(7);
+    expect(resolveProposalStep(7, "advanced", "Hybrid")).toBe(7);
+  });
+
+  test("omits standalone recording data without moving or mutating it", () => {
+    const proposal = {
+      event: { eventName: "Annual Summit" },
+      roomByRoom: [{ cameras: { camerasQty: "" } }],
+      videoRecordingStep: { numberOfCameras: "4" },
+      "videoRecordingStep.deliveryMethod": ["RETIRED_SECRET"],
+    };
+
+    expect(omitStandaloneVideoRecording(proposal)).toEqual({
+      event: proposal.event,
+      roomByRoom: proposal.roomByRoom,
+    });
+    expect(proposal.videoRecordingStep).toEqual({ numberOfCameras: "4" });
+    expect(proposal["videoRecordingStep.deliveryMethod"]).toEqual([
+      "RETIRED_SECRET",
+    ]);
+    expect(proposal.roomByRoom[0].cameras.camerasQty).toBe("");
+    expect(
+      Object.keys(
+        omitStandaloneVideoRecording({
+          videoRecordingStep: { numberOfCameras: "4" },
+        }),
+      ),
+    ).toHaveLength(0);
+  });
+
+  test("does not treat a retired-only extraction as an active prefill", () => {
+    const normalizedRetiredOnly = {
+      event: undefined,
+      venueSchedule: undefined,
+      roomByRoom: undefined,
+      videoRecordingStep: { numberOfCameras: "4" },
+    };
+
+    expect(activeExtractedProposalData(normalizedRetiredOnly)).toEqual({});
+    expect(
+      activeExtractedProposalData({
+        ...normalizedRetiredOnly,
+        roomByRoom: [{ videoRecording: { videoRecording: "Yes" } }],
+      }),
+    ).toEqual({
+      roomByRoom: [{ videoRecording: { videoRecording: "Yes" } }],
+    });
+  });
+
+  test("distinguishes standalone recording paths from room-level recording", () => {
+    expect(
+      isStandaloneVideoRecordingPath(
+        "/content/videoRecordingStep/deliveryMethod",
+      ),
+    ).toBe(true);
+    expect(
+      isStandaloneVideoRecordingPath("/content/videoRecording/required"),
+    ).toBe(true);
+    expect(
+      isStandaloneVideoRecordingPath(
+        "/content/roomByRoom/rooms/0/videoRecording/required",
+      ),
+    ).toBe(false);
   });
 
   test("detects contradictory procurement dates and late vendor selection", () => {

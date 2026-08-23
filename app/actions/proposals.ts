@@ -1,8 +1,15 @@
 "use server";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import type { ProposalData } from "@/components/proposals/AddNewProposal";
+import type {
+  ProposalData,
+  ProposalWriteData,
+} from "@/components/proposals/AddNewProposal";
 import { BACKEND_URL as API_URL, FRONTEND_URL } from "@/lib/config";
+import {
+  omitStandaloneVideoRecording,
+  STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
+} from "@/lib/proposals/proposalExperience";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 import { revalidatePath } from "next/cache";
 
@@ -142,17 +149,20 @@ export async function incrementProposalViewsPublicAction(
 
 /** Create a new proposal (draft or submitted). */
 export async function createProposalAction(
-  payload: ProposalData & {
+  payload: ProposalWriteData & {
     status?: "unsubmitted" | "submitted" | "reviewed" | "approved" | "rejected";
   },
 ): Promise<ApiResponse> {
   try {
+    const activePayload = STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+      ? payload
+      : omitStandaloneVideoRecording(payload);
     const res = await authenticatedBackendFetch(`${API_URL}/api/proposals`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(activePayload),
       cache: "no-store",
     });
     const data = await res.json();
@@ -342,12 +352,15 @@ export async function updateProposalAction(
   },
 ): Promise<ApiResponse> {
   try {
+    const activeUpdates = STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+      ? updates
+      : omitStandaloneVideoRecording(updates);
     const res = await authenticatedBackendFetch(`${API_URL}/api/proposals/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(updates),
+      body: JSON.stringify(activeUpdates),
       cache: "no-store",
     });
     const data = await res.json();

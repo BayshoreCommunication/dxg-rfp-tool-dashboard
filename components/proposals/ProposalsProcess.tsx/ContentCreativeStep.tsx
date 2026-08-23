@@ -2,6 +2,7 @@
 
 import { InfoTooltip } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { STANDALONE_VIDEO_RECORDING_STEP_ENABLED } from "@/lib/proposals/proposalExperience";
 
 type ProposalSettings = {
   branding: { linkPrefix: string; defaultFont: "Inter" | "Poppins" | "Roboto" };
@@ -477,7 +478,9 @@ const ContentCreativeStep = ({
           style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #1DBFD3 100%)" }}
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-          Video Recording
+          {STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+            ? "Video Recording"
+            : "Venue & Technical"}
           <ArrowRight size={15} className="shrink-0" />
         </button>
       </div>

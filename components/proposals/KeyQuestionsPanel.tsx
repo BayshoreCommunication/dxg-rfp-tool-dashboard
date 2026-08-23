@@ -4,6 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 
 import type { ConversationQuestion } from "@/app/actions/conversation";
+import {
+  isStandaloneVideoRecordingPath,
+  STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
+} from "@/lib/proposals/proposalExperience";
 import { useConversation } from "./useConversation";
 
 const impactLabels = {
@@ -122,7 +126,11 @@ export default function KeyQuestionsPanel({
     questionBusyId,
     questionError,
   } = useConversation(proposalId);
-  const questions = data?.questions ?? [];
+  const questions = (data?.questions ?? []).filter(
+    (question) =>
+      STANDALONE_VIDEO_RECORDING_STEP_ENABLED ||
+      !question.paths.some(isStandaloneVideoRecordingPath),
+  );
   const openQuestions = questions.filter((question) => question.status === "open");
   const answeredCount = questions.filter((question) => question.status === "answered").length;
   const currentQuestion = openQuestions[0];

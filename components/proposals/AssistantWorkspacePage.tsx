@@ -70,7 +70,10 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { stepForPath } from './GuidancePanel';
+import {
+  isRetiredStandaloneRecordingFinding,
+  stepForPath,
+} from './GuidancePanel';
 import {
   useCallback,
   useEffect,
@@ -87,6 +90,10 @@ import {
   useSourceUpload,
 } from './useConversation';
 import { takeProposalHandoffDraft } from '@/lib/aiAssistant/handoff';
+import {
+  isStandaloneVideoRecordingPath,
+  STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
+} from '@/lib/proposals/proposalExperience';
 
 type SpeechRecognitionResultLike = {
   0: { transcript: string };
@@ -1033,9 +1040,6 @@ export const buildOverviewRows = (
   const hybridVirtual = isRecord(proposal.hybridVirtual)
     ? proposal.hybridVirtual
     : {};
-  const videoRecording = isRecord(proposal.videoRecordingStep)
-    ? proposal.videoRecordingStep
-    : {};
   const budget = isRecord(proposal.budget) ? proposal.budget : {};
 
   const rows: OverviewRow[] = [];
@@ -1060,14 +1064,19 @@ export const buildOverviewRows = (
     'Streaming platform',
     textValue(hybridVirtual.streamingPlatform),
   );
-  if (isYes(videoRecording.videoRecordingRequired)) {
-    const cameras = textValue(videoRecording.numberOfCameras);
-    rows.push({
-      label: 'Video recording',
-      value: cameras
-        ? `Yes — ${cameras} camera${cameras === '1' ? '' : 's'}`
-        : 'Yes',
-    });
+  if (STANDALONE_VIDEO_RECORDING_STEP_ENABLED) {
+    const videoRecording = isRecord(proposal.videoRecordingStep)
+      ? proposal.videoRecordingStep
+      : {};
+    if (isYes(videoRecording.videoRecordingRequired)) {
+      const cameras = textValue(videoRecording.numberOfCameras);
+      rows.push({
+        label: 'Video recording',
+        value: cameras
+          ? `Yes — ${cameras} camera${cameras === '1' ? '' : 's'}`
+          : 'Yes',
+      });
+    }
   }
   const due = parseDay(budget.proposalSubmissionDueDate);
   if (due)
@@ -2348,10 +2357,13 @@ function CompletionCard({
 }
 
 function GuidanceCard({ report }: { report: GuidanceReport }) {
-  const blocking = report.findings.filter(
+  const visibleFindings = report.findings.filter(
+    (finding) => !isRetiredStandaloneRecordingFinding(finding),
+  );
+  const blocking = visibleFindings.filter(
     (f) => f.severity === 'blocking',
   ).length;
-  const warnings = report.findings.filter(
+  const warnings = visibleFindings.filter(
     (f) => f.severity === 'warning',
   ).length;
   return (
@@ -2379,11 +2391,11 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
         />
       </div>
       <p className="mt-2 text-sm text-slate-700">
-        {report.findings.length === 0
+        {visibleFindings.length === 0
           ? 'No issues found. Your proposal fields look consistent.'
-          : `${report.findings.length} finding${report.findings.length === 1 ? '' : 's'} — ${blocking} blocking, ${warnings} worth reviewing.`}
+          : `${visibleFindings.length} finding${visibleFindings.length === 1 ? '' : 's'} — ${blocking} blocking, ${warnings} worth reviewing.`}
       </p>
-      {report.findings.slice(0, 3).map((finding) => (
+      {visibleFindings.slice(0, 3).map((finding) => (
         <p
           key={`${finding.code}-${finding.paths.join(',')}`}
           className="mt-1.5 rounded-lg border border-slate-100 bg-slate-50 p-2 text-xs text-slate-700"
@@ -2994,7 +3006,16 @@ export default function AssistantWorkspacePage({
     !continuedAfterExtractionFailure.includes(latestContextRun.id);
   const chatExtractionEnabled =
     data?.capabilities?.conversationExtraction === true;
-  const openQuestions = (data?.questions ?? []).filter(
+  const activeQuestions = useMemo(
+    () =>
+      (data?.questions ?? []).filter(
+        (question) =>
+          STANDALONE_VIDEO_RECORDING_STEP_ENABLED ||
+          !question.paths.some(isStandaloneVideoRecordingPath),
+      ),
+    [data?.questions],
+  );
+  const openQuestions = activeQuestions.filter(
     (item) => item.status === 'open',
   );
   const currentQuestion = openQuestions[0] ?? null;
@@ -3015,13 +3036,13 @@ export default function AssistantWorkspacePage({
   const askedByAnswerMessageId = useMemo(
     () =>
       new Map(
-        (data?.questions ?? []).flatMap((item) =>
+        activeQuestions.flatMap((item) =>
           item.answeredMessageId
             ? [[item.answeredMessageId, item] as const]
             : [],
         ),
       ),
-    [data],
+    [activeQuestions],
   );
   const readySources = sources.filter(
     (item) =>
@@ -3087,7 +3108,7 @@ export default function AssistantWorkspacePage({
   // A proposal built by conversation alone never has an extraction run, so the
   // hand-off also opens once questions have been answered or the proposal has
   // real content — otherwise that path dead-ends with no way to reach a draft.
-  const answeredQuestions = (data?.questions ?? []).filter(
+  const answeredQuestions = activeQuestions.filter(
     (question) => question.status === 'answered',
   ).length;
   const hasCapturedContent =
@@ -3807,7 +3828,7 @@ export default function AssistantWorkspacePage({
   // Answers persist, so the resolved count must come from the conversation and
   // not only from this session — otherwise a refresh hides the progress card on
   // a proposal whose questions were all answered earlier.
-  const resolvedQuestions = (data?.questions ?? []).filter(
+  const resolvedQuestions = activeQuestions.filter(
     (question) => question.status !== 'open',
   ).length;
   const answeredTotal = Math.max(

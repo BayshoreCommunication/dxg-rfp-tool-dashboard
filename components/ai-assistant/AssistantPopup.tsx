@@ -25,6 +25,7 @@ import AiAssistantWorkspace from "./AiAssistantWorkspace";
 import useDraggablePopup from "./useDraggablePopup";
 import useAssistantUiContext from "./useAssistantUiContext";
 import { trackAssistantProductEvent } from "@/lib/aiAssistant/analytics";
+import { sanitizeAssistantUiContextForActiveSections } from "@/lib/aiAssistant/uiContext";
 
 type BootstrapState =
   | { status: "idle" }
@@ -65,10 +66,11 @@ export default function AssistantPopup({
   const openedTrackedRef = useRef(false);
   const detectedUiContext = useAssistantUiContext();
   const uiContext = useMemo(
-    () => ({
-      ...detectedUiContext,
-      ...(fieldHelpRequest?.context ?? {}),
-    }),
+    () =>
+      sanitizeAssistantUiContextForActiveSections({
+        ...detectedUiContext,
+        ...(fieldHelpRequest?.context ?? {}),
+      }),
     [detectedUiContext, fieldHelpRequest],
   );
   const [bootstrap, setBootstrap] = useState<BootstrapState>({

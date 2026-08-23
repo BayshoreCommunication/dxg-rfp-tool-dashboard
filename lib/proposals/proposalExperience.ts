@@ -1,5 +1,52 @@
 export type ProposalExperienceMode = "basic" | "advanced";
 
+/**
+ * The standalone recording page is softly retired. Keep its stable internal ID,
+ * component, and persisted data contract so existing values remain stored
+ * without loss and the page can be restored by changing one policy value.
+ */
+export const STANDALONE_VIDEO_RECORDING_STEP_ID = 6 as const;
+export const STANDALONE_VIDEO_RECORDING_STEP_ENABLED = false;
+
+export const isStandaloneVideoRecordingPath = (path: string): boolean =>
+  /^\/content\/videoRecordingStep(?:\/|$)/.test(path) ||
+  /^\/content\/videoRecording(?:\/|$)/.test(path);
+
+/**
+ * Removes the retired section from an active write/extraction object without
+ * mutating the caller's copy. Stored proposal data remains untouched on the
+ * server; it must not enter active UI state, leak into another section, or be
+ * written back while the section is unavailable.
+ */
+export const omitStandaloneVideoRecording = <
+  T extends { videoRecordingStep?: unknown },
+>(value: T): Omit<T, "videoRecordingStep"> => {
+  const copy = { ...value } as Record<string, unknown>;
+  for (const key of Object.keys(copy)) {
+    if (key === "videoRecordingStep" || key.startsWith("videoRecordingStep.")) {
+      delete copy[key];
+    }
+  }
+  return copy as Omit<T, "videoRecordingStep">;
+};
+
+/**
+ * Removes absent normalized sections before provenance/success checks, then
+ * strips the retired standalone section from the active extraction result.
+ */
+export const activeExtractedProposalData = <
+  T extends { videoRecordingStep?: unknown },
+>(value: T): Partial<T> => {
+  const definedSections = Object.fromEntries(
+    Object.entries(value).filter(([, section]) => section !== undefined),
+  ) as Partial<T>;
+  return (
+    STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+      ? definedSections
+      : omitStandaloneVideoRecording(definedSections)
+  ) as Partial<T>;
+};
+
 export type AnswerSource = "user" | "ai" | "assumed";
 
 export type AnswerProvenance = {
@@ -108,7 +155,38 @@ export const proposalStepOrder = (
   eventFormat: string,
 ): number[] => {
   const source = mode === "basic" ? BASIC_STEP_IDS : ADVANCED_STEP_IDS;
-  return source.filter((step) => !(step === 4 && eventFormat === "In-Person"));
+  return source.filter(
+    (step) =>
+      !(step === 4 && eventFormat === "In-Person") &&
+      !(
+        step === STANDALONE_VIDEO_RECORDING_STEP_ID &&
+        !STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+      ),
+  );
+};
+
+/**
+ * Resolves old editor deep links against the currently visible workflow. A
+ * retired-section link advances to the next visible section rather than
+ * leaving the editor on a hidden page.
+ */
+export const resolveProposalStep = (
+  requestedStep: number,
+  mode: ProposalExperienceMode,
+  eventFormat: string,
+): number => {
+  const visibleSteps = proposalStepOrder(mode, eventFormat);
+  if (
+    requestedStep === STANDALONE_VIDEO_RECORDING_STEP_ID &&
+    !STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+  ) {
+    return (
+      visibleSteps.find((step) => step > requestedStep) ??
+      visibleSteps[0] ??
+      1
+    );
+  }
+  return visibleSteps.includes(requestedStep) ? requestedStep : (visibleSteps[0] ?? 1);
 };
 
 const parseDate = (raw: string | undefined): number | null => {

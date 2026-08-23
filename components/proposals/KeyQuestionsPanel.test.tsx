@@ -87,3 +87,37 @@ test("shows a completion state when no open questions remain", () => {
   );
   expect(screen.getByText("All key questions answered")).toBeInTheDocument();
 });
+
+test("ignores old standalone recording questions", () => {
+  const current = mockedUseConversation("proposal-1");
+  mockedUseConversation.mockReturnValue({
+    ...current,
+    data: {
+      conversation: null,
+      messages: [],
+      questions: [
+        {
+          id: "retired-recording-question",
+          code: "RETIRED_RECORDING",
+          severity: "blocking",
+          paths: ["/content/videoRecordingStep/deliveryMethod"],
+          prompt: "RETIRED_RECORDING_PROMPT",
+          status: "open",
+          impact: "production",
+          answerType: "text",
+          options: [],
+          answeredMessageId: null,
+          contextRunId: "run-1",
+          createdAt: "2026-07-23T00:00:00.000Z",
+        },
+        ...(current.data?.questions ?? []),
+      ],
+    },
+  });
+
+  render(<KeyQuestionsPanel proposalId="proposal-1" />);
+
+  expect(screen.queryByText("RETIRED_RECORDING_PROMPT")).not.toBeInTheDocument();
+  expect(screen.getByText("How many event rooms are required?")).toBeInTheDocument();
+  expect(screen.getByText("Question 1 of 1")).toBeInTheDocument();
+});

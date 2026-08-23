@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createProposalAction } from "@/app/actions/proposals";
 import type { ProposalData } from "@/components/proposals/AddNewProposal";
+import { STANDALONE_VIDEO_RECORDING_STEP_ENABLED } from "@/lib/proposals/proposalExperience";
 
 type AddProposalUploadProps = {
   selectedFile: File | null;
@@ -20,7 +21,7 @@ const EXTRACTION_STEPS = [
   { label: "Processing venue & schedule", detail: "Mapping venue, load-in, rehearsal & strike times..." },
   { label: "Reading AV & production", detail: "Extracting audio, video, lighting & crew specs..." },
   { label: "Scanning remaining sections", detail: "Budget, contact, hybrid/virtual & content..." },
-  { label: "Mapping to form", detail: "Pre-filling all 9 proposal steps..." },
+  { label: "Mapping to form", detail: "Pre-filling proposal sections..." },
 ];
 
 const ACCEPTED_TYPES = [
@@ -30,7 +31,14 @@ const ACCEPTED_TYPES = [
   { ext: "CSV", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
 ];
 
-const FIELD_GROUPS = [
+type FieldGroup = {
+  label: string;
+  color: string;
+  fields: string[];
+  standaloneVideoRecording?: boolean;
+};
+
+const FIELD_GROUPS: FieldGroup[] = [
   {
     label: "1 · Event Overview",
     color: "border-[#008ad2] bg-[#008ad2]/5 text-[#0069a0]",
@@ -90,6 +98,7 @@ const FIELD_GROUPS = [
   {
     label: "6 · Video Recording",
     color: "border-orange-400 bg-orange-50 text-orange-700",
+    standaloneVideoRecording: true,
     fields: [
       "Video recording required (Yes / No)",
       "Number of cameras, positions & IMAG",
@@ -132,6 +141,15 @@ const FIELD_GROUPS = [
     ],
   },
 ];
+
+const VISIBLE_FIELD_GROUPS = FIELD_GROUPS.filter(
+  (group) =>
+    STANDALONE_VIDEO_RECORDING_STEP_ENABLED ||
+    !group.standaloneVideoRecording,
+);
+
+const visibleFieldGroupLabel = (label: string, index: number) =>
+  `${index + 1} · ${label.replace(/^\d+\s*·\s*/, "")}`;
 
 async function downloadSamplePdf() {
   const { jsPDF } = await import("jspdf");
@@ -228,8 +246,19 @@ async function downloadSamplePdf() {
     y += 6;
   };
 
-  renderSection(
-    "1 — EVENT OVERVIEW",
+  let visibleSectionNumber = 0;
+  const renderNumberedSection = (
+    title: string,
+    bg: [number, number, number],
+    fg: [number, number, number],
+    fields: Field[],
+  ) => {
+    visibleSectionNumber += 1;
+    renderSection(`${visibleSectionNumber} — ${title}`, bg, fg, fields);
+  };
+
+  renderNumberedSection(
+    "EVENT OVERVIEW",
     [238, 242, 255],
     [67, 56, 202],
     [
@@ -244,8 +273,8 @@ async function downloadSamplePdf() {
     ],
   );
 
-  renderSection(
-    "2 — VENUE SCHEDULE",
+  renderNumberedSection(
+    "VENUE SCHEDULE",
     [236, 253, 245],
     [4, 120, 87],
     [
@@ -260,8 +289,8 @@ async function downloadSamplePdf() {
     ],
   );
 
-  renderSection(
-    "3 — AV REQUIREMENTS & PRODUCTION CREW",
+  renderNumberedSection(
+    "AV REQUIREMENTS & PRODUCTION CREW",
     [224, 242, 254],
     [3, 105, 161],
     [
@@ -281,8 +310,8 @@ async function downloadSamplePdf() {
     ],
   );
 
-  renderSection(
-    "4 — HYBRID & VIRTUAL  (Hybrid / Virtual events only)",
+  renderNumberedSection(
+    "HYBRID & VIRTUAL  (Hybrid / Virtual events only)",
     [245, 243, 255],
     [91, 33, 182],
     [
@@ -300,8 +329,8 @@ async function downloadSamplePdf() {
     ],
   );
 
-  renderSection(
-    "5 — CONTENT & CREATIVE",
+  renderNumberedSection(
+    "CONTENT & CREATIVE",
     [255, 241, 242],
     [159, 18, 57],
     [
@@ -318,26 +347,28 @@ async function downloadSamplePdf() {
     ],
   );
 
-  renderSection(
-    "6 — VIDEO RECORDING",
-    [255, 247, 237],
-    [154, 52, 18],
-    [
-      { label: "Video Recording Required", hint: "Yes / No" },
-      { label: "Number of Cameras", hint: "e.g. 4" },
-      { label: "Camera Positions", hint: "Stage Wide / Speaker Close-Up / Audience Reaction / Roaming / etc." },
-      { label: "IMAG Required", hint: "Yes / No" },
-      { label: "Camera Operators & ISO Recordings", hint: "e.g. 4 operators — All cameras ISO" },
-      { label: "Recording Resolution & Media", hint: "e.g. 4K — SSD / NVMe" },
-      { label: "Edited Deliverable", hint: "Yes / No — Type: Highlight Reel / Full Edit / Speaker Cuts" },
-      { label: "Turnaround Time & Reel Length", hint: "e.g. 5 Business Days — 2-3 min highlight" },
-      { label: "Raw Footage Turnover", hint: "Yes / No" },
-      { label: "Deliverable Format & Delivery Method", hint: "e.g. H.264 MP4 — WeTransfer / Hard Drive" },
-    ],
-  );
+  if (STANDALONE_VIDEO_RECORDING_STEP_ENABLED) {
+    renderNumberedSection(
+      "VIDEO RECORDING",
+      [255, 247, 237],
+      [154, 52, 18],
+      [
+        { label: "Video Recording Required", hint: "Yes / No" },
+        { label: "Number of Cameras", hint: "e.g. 4" },
+        { label: "Camera Positions", hint: "Stage Wide / Speaker Close-Up / Audience Reaction / Roaming / etc." },
+        { label: "IMAG Required", hint: "Yes / No" },
+        { label: "Camera Operators & ISO Recordings", hint: "e.g. 4 operators — All cameras ISO" },
+        { label: "Recording Resolution & Media", hint: "e.g. 4K — SSD / NVMe" },
+        { label: "Edited Deliverable", hint: "Yes / No — Type: Highlight Reel / Full Edit / Speaker Cuts" },
+        { label: "Turnaround Time & Reel Length", hint: "e.g. 5 Business Days — 2-3 min highlight" },
+        { label: "Raw Footage Turnover", hint: "Yes / No" },
+        { label: "Deliverable Format & Delivery Method", hint: "e.g. H.264 MP4 — WeTransfer / Hard Drive" },
+      ],
+    );
+  }
 
-  renderSection(
-    "7 — VENUE TECHNICAL",
+  renderNumberedSection(
+    "VENUE TECHNICAL",
     [255, 251, 235],
     [194, 65, 12],
     [
@@ -351,8 +382,8 @@ async function downloadSamplePdf() {
     ],
   );
 
-  renderSection(
-    "8 — BUDGET & PREFERENCES",
+  renderNumberedSection(
+    "BUDGET & PREFERENCES",
     [254, 252, 232],
     [161, 98, 7],
     [
@@ -367,8 +398,8 @@ async function downloadSamplePdf() {
     ],
   );
 
-  renderSection(
-    "9 — CONTACT INFORMATION",
+  renderNumberedSection(
+    "CONTACT INFORMATION",
     [253, 242, 248],
     [157, 23, 77],
     [
@@ -447,7 +478,7 @@ function GuideModal({ onClose }: { onClose: () => void }) {
                 </h2>
               </div>
               <p className="text-sm text-white/70">
-                Our AI reads your file and pre-fills all 9 form steps — the more detail you include, the more fields get filled.
+                Our AI reads your file and pre-fills proposal sections — the more detail you include, the more fields get filled.
               </p>
             </div>
             <button
@@ -486,13 +517,13 @@ function GuideModal({ onClose }: { onClose: () => void }) {
               Include these fields for best results
             </p>
             <div className="space-y-2">
-              {FIELD_GROUPS.map(({ label, color, fields }) => (
+              {VISIBLE_FIELD_GROUPS.map(({ label, color, fields }, index) => (
                 <div
                   key={label}
                   className={`rounded-xl border-l-4 px-4 py-3 ${color}`}
                 >
                   <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70">
-                    {label}
+                    {visibleFieldGroupLabel(label, index)}
                   </p>
                   <ul className="space-y-1">
                     {fields.map((f) => (

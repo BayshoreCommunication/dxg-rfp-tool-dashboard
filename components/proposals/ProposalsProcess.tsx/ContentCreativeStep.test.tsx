@@ -39,3 +39,14 @@ test("shows one legacy combined fallback without duplicating it into new rows", 
   renderStep({ motionGraphicsOpenerVideo: "AV Vendor" });
   expect(screen.getByText(/Legacy Motion Graphics \/ Opener Video owner:/)).toHaveTextContent("AV Vendor");
 });
+
+test("continues directly to venue technical while standalone recording is retired", () => {
+  renderStep();
+
+  expect(
+    screen.getByRole("button", { name: "Venue & Technical" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Video Recording" }),
+  ).not.toBeInTheDocument();
+});

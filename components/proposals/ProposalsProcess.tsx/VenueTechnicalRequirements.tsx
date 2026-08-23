@@ -3,6 +3,7 @@
 import type { ProposalSettings, VenueTechnicalData } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, toggleItem } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { STANDALONE_VIDEO_RECORDING_STEP_ENABLED } from "@/lib/proposals/proposalExperience";
 
 /* ─── Style constants ─── */
 const labelClass =
@@ -532,7 +533,9 @@ const VenueTechnicalRequirements = ({
           className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
-          Video Recording
+          {STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+            ? "Video Recording"
+            : "Content & Creative"}
         </button>
         <button
           type="button"
