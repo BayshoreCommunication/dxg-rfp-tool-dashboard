@@ -19,7 +19,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  // /api/proposals and /api/vendor-responses are fully public middleware
+  // /api/proposals and /api/vendor-responses are fully public proxy
   // prefixes (the public proposal view and the vendor submission form live
   // under them), so this route enforces its own session check rather than
   // relying on one that was never applied to it.

@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 /* This endpoint server-side fetches a caller-supplied URL, which makes it an
    SSRF primitive unless it is constrained. It is session-gated (also enforced
-   in middleware.ts, which no longer lists it as a public prefix), restricted to
+   in proxy.ts, which no longer lists it as a public prefix), restricted to
    https, and refused for any hostname that resolves to a private, loopback, or
    link-local address — checked after resolution and again on every redirect
    hop, since a public hostname can redirect or re-resolve to an internal one. */
