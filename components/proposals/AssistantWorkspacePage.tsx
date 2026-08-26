@@ -2618,16 +2618,13 @@ function NextStepBanner({
 export default function AssistantWorkspacePage({
   initialProposalId,
   autoTask,
-  voiceInputEnabled = false,
+  voiceInputEnabled = true,
 }: {
   initialProposalId?: string;
   /** Task to start on arrival, e.g. from the workflow shell's
       "Create my first draft" deep link (?task=generate_draft). */
   autoTask?: 'generate_draft';
-  /**
-   * Future Pro feature switch. Voice transcription stays implemented and
-   * tested, but its composer trigger remains hidden in the current product.
-   */
+  /** Allows a parent surface to hide voice input when needed. */
   voiceInputEnabled?: boolean;
 }) {
   const [proposalId, setProposalId] = useState<string | null>(
@@ -4344,8 +4341,6 @@ export default function AssistantWorkspacePage({
           >
             <Paperclip size={17} aria-hidden />
           </button>
-          {/* Future Pro feature: set voiceInputEnabled to true to restore the
-              existing voice trigger without changing its implementation. */}
           {voiceInputEnabled ? (
             <button
               type="button"
