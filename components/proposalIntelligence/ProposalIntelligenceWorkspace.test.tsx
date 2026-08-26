@@ -62,8 +62,9 @@ test("keeps every tab bound to the same run and opens exact cited evidence", asy
   expect(screen.getByRole("combobox", { name: "Comparison run" })).toHaveTextContent("Aug 12, 2026, 12:00 AM UTC");
 });
 
-test("shows the comparison snapshot directly as a readable executive report without requiring an export", () => {
+test("prints the readable executive report without requiring an export", async () => {
   const value = workspace();
+  const print = jest.spyOn(window, "print").mockImplementation(() => undefined);
   render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="reports" initialWorkspace={value} runs={runs(value)} />);
   expect(screen.getByRole("heading", { name: "Your vendor comparison at a glance" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Vendor comparison" })).toBeInTheDocument();
@@ -84,6 +85,11 @@ test("shows the comparison snapshot directly as a readable executive report with
   expect(screen.queryByRole("heading", { name: "Priority review signals" })).not.toBeInTheDocument();
   expect(screen.queryByText(/This report summarizes persisted evidence/i)).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: /Export options/i })).not.toBeInTheDocument();
+  expect(document.querySelector("[data-executive-report]")).toBeInTheDocument();
+  expect(document.querySelector(".executive-report-print-only")).toHaveTextContent("GIH Annual Conference");
+  await userEvent.click(screen.getByRole("button", { name: "Print report" }));
+  expect(print).toHaveBeenCalledTimes(1);
+  print.mockRestore();
 });
 
 test("shows a sealed state without rendering pricing when the API denies commercial access", () => {

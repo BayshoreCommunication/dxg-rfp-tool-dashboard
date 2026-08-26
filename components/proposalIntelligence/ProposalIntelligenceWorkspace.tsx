@@ -2,7 +2,7 @@
 
 import { getComparisonWorkspaceAction, recordComparisonDecisionAction, type ComparisonEvidence, type ComparisonRequirement, type ComparisonView, type ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, FileSearch, LockKeyhole, Scale, ShieldAlert, Users, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, FileSearch, LockKeyhole, Printer, Scale, ShieldAlert, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
@@ -288,7 +288,7 @@ function RecommendationPanel({ workspace }: { workspace: ComparisonWorkspace }) 
   </section>;
 }
 
-function ExecutiveReport({ proposalId, workspace }: { proposalId: string; workspace: ComparisonWorkspace }) {
+function ExecutiveReport({ proposalId, proposalTitle, workspace }: { proposalId: string; proposalTitle: string; workspace: ComparisonWorkspace }) {
   const overview = workspace.intelligence.overview;
   const reportBase = `/proposals/${proposalId}/intelligence/comparisons/${workspace.run.runId}`;
   const summary = [
@@ -315,23 +315,81 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
         }).format(amount);
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" aria-labelledby="executive-report-title">
-      <header className="border-b border-slate-200 bg-slate-950 px-5 py-7 text-white sm:px-7">
+    <article data-executive-report className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" aria-labelledby="executive-report-title">
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 12mm;
+          }
+
+          body {
+            background: #fff !important;
+          }
+
+          body * {
+            visibility: hidden !important;
+          }
+
+          [data-executive-report],
+          [data-executive-report] * {
+            visibility: visible !important;
+          }
+
+          [data-executive-report] {
+            position: absolute !important;
+            inset: 0 auto auto 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            overflow: visible !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          [data-executive-report] .executive-report-no-print {
+            display: none !important;
+          }
+
+          [data-executive-report] .executive-report-print-only {
+            display: block !important;
+          }
+
+          [data-executive-report] .executive-report-print-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
+      <header className="executive-report-print-avoid border-b border-slate-200 bg-slate-950 px-5 py-7 text-white sm:px-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-4xl">
             <p className="inline-flex rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-sky-200">Comparison snapshot · Executive report</p>
+            <p className="executive-report-print-only mt-4 hidden text-sm font-extrabold text-white">{proposalTitle}</p>
             <h2 id="executive-report-title" className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">Your vendor comparison at a glance</h2>
             <p className="mt-3 text-sm leading-6 text-slate-200 sm:text-base sm:leading-7">Review the key findings from the selected vendor responses and evaluation criteria. RFPilot organizes the evidence for your team; the final vendor decision always remains with your reviewers.</p>
           </div>
-          <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-emerald-400/15 px-3 py-2 text-xs font-extrabold text-emerald-200">
-            <CheckCircle2 size={14} />
-            {workspace.freshness.state === "stale" ? "Historical comparison" : workspace.recommendation ? "Comparison ready to review" : "Recommendation unavailable"}
-          </span>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-400/15 px-3 py-2 text-xs font-extrabold text-emerald-200">
+              <CheckCircle2 size={14} />
+              {workspace.freshness.state === "stale" ? "Historical comparison" : workspace.recommendation ? "Comparison ready to review" : "Recommendation unavailable"}
+            </span>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="executive-report-no-print inline-flex min-h-9 items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+            >
+              <Printer size={14} />
+              Print report
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="p-5 sm:p-7">
-        <section aria-labelledby="report-snapshot-title">
+        <section className="executive-report-print-avoid" aria-labelledby="report-snapshot-title">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 id="report-snapshot-title" className="font-extrabold text-slate-950">Procurement snapshot</h3>
@@ -349,7 +407,7 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
           </dl>
         </section>
 
-        <div className="mt-8"><RecommendationPanel workspace={workspace} /></div>
+        <div className="executive-report-print-avoid mt-8"><RecommendationPanel workspace={workspace} /></div>
 
         <section className="mt-8" aria-labelledby="vendor-report-title">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -357,11 +415,11 @@ function ExecutiveReport({ proposalId, workspace }: { proposalId: string; worksp
               <h3 id="vendor-report-title" className="font-extrabold text-slate-950">Vendor comparison</h3>
               <p className="mt-1 text-xs leading-5 text-slate-500">{workspace.recommendation ? "Order follows the persisted eligibility-gated human rubric ranking shown above." : "Vendor cards follow the frozen comparison manifest order because this historical snapshot has no recommendation."}</p>
             </div>
-            <Link href={`${reportBase}/requirements`} className="inline-flex min-h-9 items-center gap-1 text-xs font-extrabold text-[#0077b6] hover:underline">Open requirement matrix <ChevronRight size={13} /></Link>
+            <Link href={`${reportBase}/requirements`} className="executive-report-no-print inline-flex min-h-9 items-center gap-1 text-xs font-extrabold text-[#0077b6] hover:underline">Open requirement matrix <ChevronRight size={13} /></Link>
           </div>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             {vendorSnapshots.map(({ participant, commercial, evaluation, risks }) => (
-              <article key={participant.participantId} className="rounded-2xl border border-slate-200 p-5">
+              <article key={participant.participantId} className="executive-report-print-avoid rounded-2xl border border-slate-200 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h4 className="font-extrabold text-slate-950">{participant.vendorLabel}</h4>
@@ -824,7 +882,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
               <DecisionWorkspace proposalId={proposalId} workspace={workspace} onChanged={setWorkspace} />
             </>
           )}
-          {tab === "reports" && <ExecutiveReport proposalId={proposalId} workspace={workspace} />}
+          {tab === "reports" && <ExecutiveReport proposalId={proposalId} proposalTitle={proposalTitle} workspace={workspace} />}
         </section>
         {selection && <EvidenceDrawer selection={selection} onClose={() => setSelection(undefined)} />}
       </div>
