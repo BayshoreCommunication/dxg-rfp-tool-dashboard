@@ -38,6 +38,8 @@ final result: blocked
 
 final result: passed
 
+---
+
 # Proposal Voice Composer — Design QA
 
 ## Evidence and target
@@ -1003,5 +1005,39 @@ The live issue-blocked branch remains compact at desktop width and stacks into a
 - Fix: replaced the disabled state with two explicit, data-aware actions—invite another vendor when the existing response is readable, or review the current response when it is not.
 - Post-fix evidence: combined desktop comparison, mobile capture, clean live issue-review navigation target, and four passing component tests covering readable, unreadable, comparable, and empty states.
 - No actionable P0, P1, or P2 findings remain.
+
+final result: passed
+
+---
+
+# Executive Report Print and Email Header Cleanup — Design QA
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-81e4463d-47b3-4427-aef0-891cbac17615.png`.
+- Live Executive Report capture: `/tmp/executive-report-print-live.png`.
+- Live Email page capture: `/tmp/email-header-live.png`.
+- Executive Report route: `https://av-rfpilot.com/proposals/6a7aa6f2c7e1575700216e0a/intelligence/comparisons/01a02df5-0112-7168-b3ba-b0f92596ffc4/reports`.
+- Email route: `https://av-rfpilot.com/email/send-email`.
+- Browser viewport: 1002 × 877 CSS pixels at device pixel ratio 1.
+- Combined comparison evidence: the supplied Executive Report reference and the authenticated live implementation were placed together in one comparison input after deployment.
+
+## Fidelity and print behavior
+
+- The existing Executive Report layout, typography, colors, recommendation content, metrics, and vendor cards remain unchanged.
+- The new `Print report` action sits beside the existing report-status pill and uses the product's current compact pill treatment and Lucide icon system.
+- Print-only CSS isolates the Executive Report from application navigation, removes card chrome, preserves exact colors, uses A4 portrait margins, and prevents key summary and vendor cards from splitting across pages.
+- The report title is added as print-only context; interactive controls and the requirement-matrix link are excluded from printed output.
+- The Email page keeps its functional `Send Campaign` control and removes only the duplicate top-level `Email Send` link.
+
+## Interaction and browser verification
+
+- The deployed `Print report` button is visible and enabled, and the live document contains the scoped `@media print` rules.
+- Component coverage verifies that activating the button calls `window.print()` exactly once. The in-app browser test runtime does not expose the native print-preview API, so the OS print dialog itself was not captured.
+- Live Email verification found zero `Email Send` links and exactly one `Send Campaign` button.
+- The authenticated live Executive Report and Email page produced no console warnings or errors.
+- Automated verification passed: 133 Jest suites, 860 tests, TypeScript, ESLint with zero errors, production build, `git diff --check`, and GitHub Frontend CI run `32969928811`.
+
+## Findings
+
+No actionable P0, P1, or P2 issue remains.
 
 final result: passed
