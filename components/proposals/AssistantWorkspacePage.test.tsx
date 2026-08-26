@@ -258,7 +258,7 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByText("Tell me about your event?")).toBeInTheDocument();
     expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Describe your event or ask for help…")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Start voice input" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start voice input" })).toBeInTheDocument();
     // No proposal exists yet, so nothing was created or loaded.
     expect(mockedCreateProposal).not.toHaveBeenCalled();
     expect(mockedGetConversation).not.toHaveBeenCalled();
