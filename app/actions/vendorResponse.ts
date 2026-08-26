@@ -1,7 +1,15 @@
 "use server";
 
+import { createEvidenceExtractionAction } from "@/app/actions/evidenceExtraction";
 import { BACKEND_URL } from "@/lib/config";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
+import {
+  isManualResponseReason,
+  MANUAL_RESPONSE_EMAIL_PATTERN,
+  MANUAL_RESPONSE_MAX_FILE_BYTES,
+  MANUAL_RESPONSE_MAX_FILES,
+} from "@/lib/vendorResponses/manualResponse";
+import { revalidatePath } from "next/cache";
 
 export type VendorDocument = {
   name: string;
@@ -525,5 +533,157 @@ export const markVendorResponseReadAction = async (id: string) => {
     return await res.json();
   } catch {
     return { success: false, message: "Error marking response as read" };
+  }
+};
+
+export type ManualVendorResponseResult =
+  | {
+      success: true;
+      message: string;
+      responseId: string | null;
+      versionNumber: number;
+      isUpdate: boolean;
+      /* Whether reading the attached documents was queued. False when the
+         response carries no attachments, or when its sources have not finished
+         secure registration yet — the planner can still start it by hand from
+         the response page. */
+      extractionStarted: boolean;
+    }
+  | { success: false; message: string };
+
+const trimmedField = (formData: FormData, field: string) => {
+  const value = formData.get(field);
+  return typeof value === "string" ? value.trim() : "";
+};
+
+/* Records a response a vendor delivered outside the portal. The payload is
+   rebuilt from validated fields rather than forwarded as-is, so nothing the
+   browser adds to the form reaches the backend. */
+export const createManualVendorResponseAction = async (
+  formData: FormData,
+): Promise<ManualVendorResponseResult> => {
+  const proposalId = trimmedField(formData, "proposalId");
+  const vendorName = trimmedField(formData, "vendorName");
+  const submittedBy = trimmedField(formData, "submittedBy");
+  const email = trimmedField(formData, "email").toLowerCase();
+  const message = trimmedField(formData, "message");
+  const idempotencyKey = trimmedField(formData, "submissionIdempotencyKey");
+  const reason = trimmedField(formData, "submissionReason");
+
+  if (!proposalId) {
+    return { success: false, message: "This proposal could not be identified." };
+  }
+  if (!vendorName) {
+    return { success: false, message: "Enter the vendor or company name." };
+  }
+  if (!submittedBy) {
+    return { success: false, message: "Enter who sent the response." };
+  }
+  if (!MANUAL_RESPONSE_EMAIL_PATTERN.test(email)) {
+    return {
+      success: false,
+      message: "Enter a valid vendor email, such as name@company.com.",
+    };
+  }
+
+  const documents = formData
+    .getAll("documents")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+  if (documents.length > MANUAL_RESPONSE_MAX_FILES) {
+    return {
+      success: false,
+      message: `Attach at most ${MANUAL_RESPONSE_MAX_FILES} files per response.`,
+    };
+  }
+  const oversized = documents.find(
+    (file) => file.size > MANUAL_RESPONSE_MAX_FILE_BYTES,
+  );
+  if (oversized) {
+    return {
+      success: false,
+      message: `${oversized.name} exceeds the 10 MB file limit.`,
+    };
+  }
+
+  const payload = new FormData();
+  payload.set("proposalId", proposalId);
+  payload.set("vendorName", vendorName);
+  payload.set("submittedBy", submittedBy);
+  payload.set("email", email);
+  payload.set("message", message);
+  if (idempotencyKey) {
+    payload.set("submissionIdempotencyKey", idempotencyKey);
+  }
+  if (isManualResponseReason(reason)) {
+    payload.set("submissionReason", reason);
+  }
+  documents.forEach((file) => payload.append("documents", file));
+
+  try {
+    const res = await authenticatedBackendFetch(
+      `${BACKEND_URL}/api/vendor-responses/manual`,
+      { method: "POST", body: payload, cache: "no-store" },
+    );
+    const json: unknown = await res.json().catch(() => ({}));
+    if (!res.ok || !isRecord(json) || json.success !== true) {
+      return {
+        success: false,
+        message:
+          isRecord(json) && isString(json.message)
+            ? json.message
+            : "The response could not be recorded. Please try again.",
+      };
+    }
+
+    const response = isRecord(json.data) ? json.data : null;
+    const submission = isRecord(json.submission) ? json.submission : null;
+    const submissionId =
+      submission && isString(submission.submissionId)
+        ? submission.submissionId
+        : "";
+    const versionId =
+      submission && isString(submission.versionId) ? submission.versionId : "";
+
+    /* A response the planner typed in is no different to the intelligence
+       pipeline than one the vendor uploaded, so start reading its sources
+       straight away instead of leaving the card at "Extraction not started".
+       The cover note is an extractable source too, so this runs even when no
+       files were attached. The key is derived from the version, so a retry
+       re-uses the run rather than queueing a second one. */
+    let extractionStarted = false;
+    if (submissionId && versionId) {
+      const extraction = await createEvidenceExtractionAction(
+        proposalId,
+        submissionId,
+        versionId,
+        `manual-response:${versionId}`,
+      );
+      extractionStarted = extraction.success && extraction.data.runs.length > 0;
+    }
+
+    // Revalidated after extraction is queued so the refreshed card shows the
+    // run in progress rather than a status that is already stale.
+    revalidatePath(`/vendor-responses/proposals/${proposalId}`);
+    revalidatePath("/vendor-responses");
+
+    return {
+      success: true,
+      message: isString(json.message)
+        ? json.message
+        : "The vendor response was recorded.",
+      responseId:
+        response && isString(response._id) ? (response._id as string) : null,
+      versionNumber:
+        submission && typeof submission.versionNumber === "number"
+          ? submission.versionNumber
+          : 1,
+      isUpdate: json.isUpdate === true,
+      extractionStarted,
+    };
+  } catch {
+    return {
+      success: false,
+      message: "The vendor response service could not be reached.",
+    };
   }
 };

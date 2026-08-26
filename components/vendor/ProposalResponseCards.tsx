@@ -1,8 +1,10 @@
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
 import IntelligenceStatusChip from "@/components/proposalIntelligence/IntelligenceStatusChip";
+import ManualVendorResponseDialog from "@/components/vendor/ManualVendorResponseDialog";
 import { intelligenceSurfaceClasses } from "@/lib/proposalIntelligence/surfaces";
 import { extractionStatusToIntelligenceStatus } from "@/lib/proposalIntelligence/statusVocabulary";
 import { cn } from "@/lib/utils";
+import { existingVendorSummaries } from "@/lib/vendorResponses/manualResponse";
 import type { ResponseCardSummary } from "@/lib/vendorResponses/responseCardSummary";
 import {
   AlertTriangle,
@@ -156,7 +158,7 @@ function ResponseCard({
 
       <div className="mt-4 grid grid-cols-1 gap-2.5 @min-[300px]:grid-cols-2" aria-label="Response highlights">
         <div className="min-w-0 rounded-2xl border border-gray-border bg-gray-panel p-3">
-          <p className="text-xs font-extrabold uppercase tracking-wide text-gray">Commercial total</p>
+          <p className="text-xs font-extrabold uppercase tracking-wide text-gray">Total cost</p>
           <p className="mt-1 whitespace-nowrap text-sm font-extrabold text-navy">
             {commercialTotal ? formatCommercialTotal(commercialTotal.value) : "Not stated"}
           </p>
@@ -290,6 +292,7 @@ export default function ProposalResponseCards({
   summaries: Record<string, ResponseCardSummary>;
 }) {
   const comparableCount = responses.filter((response) => summaries[response._id]?.isComparable).length;
+  const responseNeedingReview = responses.find((response) => !summaries[response._id]?.isComparable);
 
   return (
     <main className="min-h-screen bg-gray-panel px-4 py-6 sm:px-6 lg:px-8">
@@ -323,18 +326,41 @@ export default function ProposalResponseCards({
                   >
                     Proposal Intelligence <ArrowRight size={16} aria-hidden="true" />
                   </Link>
+                ) : responses.length === 1 && comparableCount === 1 ? (
+                  <>
+                    <p className="text-xs font-semibold leading-4 text-gray sm:text-right">
+                      1 more readable response needed
+                    </p>
+                    <Link
+                      href={`/email/send-email?proposalId=${encodeURIComponent(proposalId)}`}
+                      className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-extrabold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
+                    >
+                      <MailPlus size={16} aria-hidden="true" /> Invite another vendor
+                    </Link>
+                  </>
+                ) : responseNeedingReview ? (
+                  <>
+                    <p className="text-xs font-semibold leading-4 text-gray sm:text-right">
+                      Resolve response issues to unlock comparison
+                    </p>
+                    <Link
+                      href={`/vendor-responses/${encodeURIComponent(responseNeedingReview._id)}`}
+                      className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-brand px-4 text-sm font-extrabold text-brand-dark hover:bg-brand-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
+                    >
+                      Review response issues <ArrowRight size={16} aria-hidden="true" />
+                    </Link>
+                  </>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      disabled
-                      className="inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-xl bg-gray-border px-4 text-sm font-extrabold text-gray sm:w-auto"
-                    >
-                      Proposal Intelligence
-                    </button>
-                    <p className="mt-1.5 max-w-56 text-xs leading-4 text-gray sm:text-right">
-                      Add at least two readable responses. {comparableCount} currently {comparableCount === 1 ? "qualifies" : "qualify"}.
+                    <p className="text-xs font-semibold leading-4 text-gray sm:text-right">
+                      Add readable responses to unlock comparison
                     </p>
+                    <Link
+                      href={`/email/send-email?proposalId=${encodeURIComponent(proposalId)}`}
+                      className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-extrabold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
+                    >
+                      <MailPlus size={16} aria-hidden="true" /> Invite another vendor
+                    </Link>
                   </>
                 )}
               </div>
@@ -349,18 +375,44 @@ export default function ProposalResponseCards({
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray">
               Invite vendors to this proposal. Each submitted response will appear as a card with its attachments and evidence-backed completeness status.
             </p>
-            <Link
-              href={`/email/send-email?proposalId=${encodeURIComponent(proposalId)}`}
-              className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-extrabold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              <MailPlus size={16} aria-hidden="true" /> Invite vendors
-            </Link>
+            <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
+              <Link
+                href={`/email/send-email?proposalId=${encodeURIComponent(proposalId)}`}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-extrabold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                <MailPlus size={16} aria-hidden="true" /> Invite vendors
+              </Link>
+              <ManualVendorResponseDialog
+                proposalId={proposalId}
+                existingVendors={[]}
+              />
+            </div>
           </section>
         ) : (
-          <section className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3" aria-label="Submitted vendor responses">
-            {responses.map((response) => (
-              <ResponseCard key={response._id} response={response} summary={summaries[response._id]} />
-            ))}
+          <section className="mt-5" aria-label="Submitted vendor responses">
+            {/* One or two cards leave room beside them, so the action sits above
+                the row. A full row of three has no such gap — it goes below. */}
+            {responses.length < 3 && (
+              <div className="mb-3 flex justify-end">
+                <ManualVendorResponseDialog
+                  proposalId={proposalId}
+                  existingVendors={existingVendorSummaries(responses)}
+                />
+              </div>
+            )}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {responses.map((response) => (
+                <ResponseCard key={response._id} response={response} summary={summaries[response._id]} />
+              ))}
+            </div>
+            {responses.length >= 3 && (
+              <div className="mt-4 flex justify-end">
+                <ManualVendorResponseDialog
+                  proposalId={proposalId}
+                  existingVendors={existingVendorSummaries(responses)}
+                />
+              </div>
+            )}
           </section>
         )}
       </div>

@@ -3,6 +3,16 @@ import type { ResponseCardSummary } from "@/lib/vendorResponses/responseCardSumm
 import { render, screen, within } from "@testing-library/react";
 import ProposalResponseCards from "./ProposalResponseCards";
 
+// The manual-entry dialog pulls in the server action module; the action itself
+// is covered by its own suite.
+jest.mock("@/app/actions/vendorResponse", () => ({
+  createManualVendorResponseAction: jest.fn(),
+}));
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: jest.fn() }),
+}));
+
 const response = (id: string, vendorName: string): VendorResponseItem => ({
   _id: id,
   proposalId: "proposal-1",
@@ -52,7 +62,7 @@ it("renders compact response cards with auditable commercial totals, attachments
   );
 
   const card = screen.getByRole("article");
-  expect(within(card).getByText("Commercial total")).toBeInTheDocument();
+  expect(within(card).getByText("Total cost")).toBeInTheDocument();
   expect(within(card).getByText("$125,000")).toBeInTheDocument();
   expect(within(card).getByText("Attachments")).toBeInTheDocument();
   expect(within(card).getByRole("link", { name: "response-1-technical.pdf" })).toHaveAttribute(
@@ -72,12 +82,31 @@ it("renders compact response cards with auditable commercial totals, attachments
     "href",
     "/vendor-responses",
   );
-  expect(
-    within(screen.getByLabelText("Proposal response overview")).getByRole("button", {
-      name: "Proposal Intelligence",
-    }),
-  ).toBeDisabled();
-  expect(screen.getByText(/1 currently qualifies/)).toBeInTheDocument();
+  const overview = screen.getByLabelText("Proposal response overview");
+  expect(within(overview).getByText("1 more readable response needed")).toBeInTheDocument();
+  expect(within(overview).getByRole("link", { name: "Invite another vendor" })).toHaveAttribute(
+    "href",
+    "/email/send-email?proposalId=proposal-1",
+  );
+});
+
+it("directs a single unreadable response to its issues", () => {
+  const item = response("response-1", "Northstar AV");
+  render(
+    <ProposalResponseCards
+      proposalId="proposal-1"
+      proposalTitle="Annual Summit"
+      responses={[item]}
+      summaries={{ [item._id]: summary({ isComparable: false }) }}
+    />,
+  );
+
+  const overview = screen.getByLabelText("Proposal response overview");
+  expect(within(overview).getByText("Resolve response issues to unlock comparison")).toBeInTheDocument();
+  expect(within(overview).getByRole("link", { name: /Review response issues/ })).toHaveAttribute(
+    "href",
+    "/vendor-responses/response-1",
+  );
 });
 
 it("enables Proposal Intelligence when two responses are comparable", () => {
@@ -123,4 +152,70 @@ it("offers the invitation action in the real empty state", () => {
     "/email/send-email?proposalId=proposal-1",
   );
   expect(screen.queryByText("Compare these responses")).not.toBeInTheDocument();
+});
+
+it("offers manual entry alongside the invitation in the empty state", () => {
+  render(
+    <ProposalResponseCards
+      proposalId="proposal-1"
+      proposalTitle="Annual Summit"
+      responses={[]}
+      summaries={{}}
+    />,
+  );
+
+  expect(
+    screen.getByRole("button", { name: /Add response manually/ }),
+  ).toBeInTheDocument();
+});
+
+const manualEntryButton = () =>
+  screen.getByRole("button", { name: /Add response manually/ });
+
+const manualEntryPrecedesCards = () =>
+  Boolean(
+    manualEntryButton().compareDocumentPosition(screen.getAllByRole("article")[0]) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+
+const renderWithResponses = (count: number) => {
+  const items = Array.from({ length: count }, (_, index) =>
+    response(`response-${index + 1}`, `Vendor ${index + 1}`),
+  );
+  render(
+    <ProposalResponseCards
+      proposalId="proposal-1"
+      proposalTitle="Annual Summit"
+      responses={items}
+      summaries={Object.fromEntries(items.map((item) => [item._id, summary()]))}
+    />,
+  );
+};
+
+it.each([1, 2])(
+  "puts manual entry above the row while %i card(s) leave room beside them",
+  (count) => {
+    renderWithResponses(count);
+
+    const section = screen.getByLabelText("Submitted vendor responses");
+    expect(within(section).getByRole("button", { name: /Add response manually/ })).toBeInTheDocument();
+    expect(manualEntryPrecedesCards()).toBe(true);
+  },
+);
+
+it("drops manual entry below a full row of three cards", () => {
+  renderWithResponses(3);
+
+  const section = screen.getByLabelText("Submitted vendor responses");
+  expect(within(section).getByRole("button", { name: /Add response manually/ })).toBeInTheDocument();
+  expect(manualEntryPrecedesCards()).toBe(false);
+});
+
+it("keeps manual entry out of the proposal header", () => {
+  renderWithResponses(2);
+
+  const overview = screen.getByLabelText("Proposal response overview");
+  expect(
+    within(overview).queryByRole("button", { name: /Add response manually/ }),
+  ).not.toBeInTheDocument();
 });
