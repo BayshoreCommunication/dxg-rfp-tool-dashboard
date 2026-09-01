@@ -126,7 +126,7 @@ const EventForm = ({
   const rfpTimelineLen = (data.rfpTimeline ?? "").length;
 
   return (
-    <section className="flex min-h-screen flex-col bg-white">
+    <section id="event-overview-section" tabIndex={-1} className="flex min-h-screen scroll-mt-6 flex-col bg-white focus:outline-none">
       {/* Header */}
       <div className="border-t border-[#edf0f2] bg-[#fbfcfd] px-8 pb-6 pt-7">
         <h2 className="text-[30px] font-extrabold tracking-tight text-[#172b3a]">

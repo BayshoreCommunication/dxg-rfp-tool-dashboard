@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, PlusCircle, X } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import type { AdditionalContact, ContactData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip } from "./shared";
@@ -215,6 +215,7 @@ interface ContactInfoProps {
   publishDisabled?: boolean;
   publishBlockReason?: string;
   mode?: ProposalExperienceMode;
+  finalReview?: ReactNode;
 }
 
 /* ─── Main component ─── */
@@ -232,6 +233,7 @@ const ContactInfo = ({
   publishDisabled = false,
   publishBlockReason,
   mode = "advanced",
+  finalReview,
 }: ContactInfoProps) => {
   /* ─── Safe data ─── */
   const safeData: ContactData = {
@@ -305,6 +307,7 @@ const ContactInfo = ({
         {/* ══════════════════════════════════════════
             BLOCK A — Primary Contact
         ══════════════════════════════════════════ */}
+        <div id="primary-contact-section" tabIndex={-1} className="scroll-mt-6 focus:outline-none" />
         <Group label="Primary Contact" />
 
         {/* Field 1 — First + Last Name */}
@@ -499,6 +502,7 @@ const ContactInfo = ({
         {/* ══════════════════════════════════════════
             BLOCK C — Additional Contacts
         ══════════════════════════════════════════ */}
+        <div id="invitation-recipients-section" tabIndex={-1} className="scroll-mt-6 focus:outline-none" />
         <Group label="Additional Contacts" />
 
         <p className="mb-5 text-xs text-slate-500">
@@ -606,6 +610,12 @@ const ContactInfo = ({
           />
         </div>
         </>}
+
+        {finalReview && (
+          <div className="mb-6" data-testid="contact-publish-final-review">
+            {finalReview}
+          </div>
+        )}
 
         {/* ── Cover page contact box preview ── */}
         {coverPreviewVisible && (

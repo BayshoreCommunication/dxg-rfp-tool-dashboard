@@ -444,7 +444,7 @@ const BudgetProposalPreferences = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
+      className="flex min-h-screen flex-col rounded-md border border-[#e4e4e4] bg-white"
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
@@ -842,6 +842,7 @@ const BudgetProposalPreferences = ({
         {/* ════════════════════════════════════════
             BLOCK D — Procurement Timeline
         ════════════════════════════════════════ */}
+        <div id="procurement-timeline-section" tabIndex={-1} className="scroll-mt-6 focus:outline-none" />
         <Group label="Procurement Timeline" />
 
         {/* Vendor Questions Due + Response to Vendor Questions */}
