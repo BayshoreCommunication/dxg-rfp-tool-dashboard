@@ -13,8 +13,6 @@ import {
   FileCheck2,
   FileQuestion,
   FileText,
-  Fingerprint,
-  Link2,
   Mail,
   ShieldAlert,
   UserRound,
@@ -35,12 +33,6 @@ const reasonLabels: Record<VendorSubmissionVersion["reason"], string> = {
   legacy_backfill: "Imported legacy response",
 };
 
-const sourceLabels: Record<VendorSubmissionVersion["sourceSystem"], string> = {
-  public_portal: "Vendor portal",
-  planner_upload: "Planner upload",
-  legacy_migration: "Legacy migration",
-  api: "API intake",
-};
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -257,7 +249,6 @@ export default function VendorResponseDetailWorkspace({
                 </p>
               </section>
 
-              <ReceiptLineage version={selectedVersion} />
               <SourceReadiness
                 documents={selectedVersion.documents}
                 versionNumber={selectedVersion.versionNumber}
@@ -343,77 +334,6 @@ function Fact({
         {value}
       </dd>
     </div>
-  );
-}
-
-function ReceiptLineage({ version }: { version: VendorSubmissionVersion }) {
-  return (
-    <section
-      className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-5"
-      aria-labelledby="receipt-heading"
-    >
-      <h3
-        id="receipt-heading"
-        className="flex items-center gap-2 text-sm font-extrabold text-slate-900"
-      >
-        <Fingerprint size={16} className="text-[#008ad2]" aria-hidden="true" />{" "}
-        How this version arrived
-      </h3>
-      <dl className="mt-4 grid gap-4 text-xs sm:grid-cols-2">
-        <div>
-          <dt className="font-bold uppercase tracking-wide text-slate-500">
-            Type
-          </dt>
-          <dd className="mt-1 font-semibold text-slate-800">
-            {reasonLabels[version.reason]}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-bold uppercase tracking-wide text-slate-500">
-            Received through
-          </dt>
-          <dd className="mt-1 font-semibold text-slate-800">
-            {sourceLabels[version.sourceSystem]}
-          </dd>
-        </div>
-      </dl>
-      <details className="mt-4">
-        <summary className="cursor-pointer text-xs font-bold text-slate-400 hover:text-slate-600">
-          Verification details
-        </summary>
-        <dl className="mt-2 grid gap-4 text-xs sm:grid-cols-2">
-          <div>
-            <dt className="font-bold uppercase tracking-wide text-slate-500">
-              Parent version
-            </dt>
-            <dd className="mt-1 font-mono text-slate-700">
-              {version.parentVersionId
-                ? version.parentVersionId.slice(-8)
-                : "None — first version"}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-bold uppercase tracking-wide text-slate-500">
-              Manifest checksum
-            </dt>
-            <dd className="mt-1 break-all font-mono text-slate-700">
-              {version.manifestChecksum}
-            </dd>
-          </div>
-        </dl>
-      </details>
-      {(version.reason === "clarification_response" ||
-        version.reason === "bafo") && (
-        <p className="mt-4 flex items-start gap-2 rounded-xl bg-blue-50 p-3 text-xs leading-5 text-blue-900">
-          <Link2 size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-          This version records a{" "}
-          {version.reason === "bafo"
-            ? "best-and-final-offer"
-            : "clarification"}{" "}
-          response linked to its parent submission version.
-        </p>
-      )}
-    </section>
   );
 }
 

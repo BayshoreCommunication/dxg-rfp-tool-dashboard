@@ -101,7 +101,7 @@ const detail: VendorSubmissionDetail = {
   ],
 };
 
-it("renders a keyboard-operable immutable timeline and current receipt lineage", () => {
+it("renders a keyboard-operable version timeline", () => {
   render(<VendorResponseDetailWorkspace detail={detail} />);
   const timeline = screen.getByRole("navigation", {
     name: "Immutable response versions",
@@ -109,10 +109,7 @@ it("renders a keyboard-operable immutable timeline and current receipt lineage",
   expect(
     within(timeline).getByRole("button", { name: /Version 2/ }),
   ).toHaveAttribute("aria-current", "true");
-  expect(screen.getAllByText("Clarification response")).toHaveLength(2);
-  expect(
-    screen.getByText(/records a clarification response linked/),
-  ).toBeInTheDocument();
+  expect(screen.getAllByText("Clarification response")).toHaveLength(1);
   expect(screen.getByText("Security scan passed")).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Review proposal requirements" }),
