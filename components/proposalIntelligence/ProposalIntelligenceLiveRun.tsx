@@ -371,40 +371,43 @@ export default function ProposalIntelligenceLiveRun({
     {
       key: "locating",
       icon: ScanSearch,
-      title: "Locating required fields",
+      title: "Finding answers to your requirements",
       status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone && counts.failed === 0, partial: intelligenceDone && counts.failed > 0, queued: !extractionDone && runActive }),
-      summary: `${counts.located} of ${counts.requirements || "unavailable"} requirement mappings have cited evidence`,
+      summary: `${counts.located} of ${counts.requirements || "unavailable"} requirements answered with quoted evidence`,
     },
     {
       key: "normalizing",
       icon: ListChecks,
-      title: "Normalizing values",
+      title: "Standardizing answers",
       status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone && counts.failed === 0, partial: intelligenceDone && counts.failed > 0, queued: !extractionDone && runActive }),
-      summary: `${counts.facts} typed values normalized from vendor evidence`,
+      summary: `${counts.facts} facts pulled from vendor responses`,
     },
     {
       key: "cross_checking",
       icon: ShieldAlert,
-      title: "Cross-checking conflicts and gaps",
+      title: "Flagging conflicts and missing answers",
       status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone && counts.failed === 0 && counts.contradictions + counts.missing === 0, partial: intelligenceDone && counts.failed > 0, attention: intelligenceDone && counts.failed === 0 && counts.contradictions + counts.missing > 0, queued: !extractionDone && runActive }),
-      summary: `${counts.contradictions} contradictions · ${counts.missing} requirements not stated`,
+      summary: `${counts.contradictions} conflicting answers · ${counts.missing} requirements not answered`,
     },
     {
       key: "scoring",
       icon: Scale,
-      title: "Scoring against criteria",
+      title: "Team scoring and ranking",
       status: comparison
         ? comparisonFinished && !comparisonCurrent ? "attention" : jobStatusToIntelligenceStatus(comparison.run.status)
         : intelligenceDone
           ? comparisonReadyCount >= 2 ? "attention" as const : "unavailable" as const
           : "not_started" as const,
       summary: comparison
-        ? `${comparison.run.completedParticipantCount} of ${comparison.run.participantCount} persisted vendor snapshots complete${comparisonFinished && !comparisonCurrent ? " · historical inputs" : ""}`
+        ? `${comparison.run.completedParticipantCount} of ${comparison.run.participantCount} vendors analyzed${comparisonFinished && !comparisonCurrent ? " · inputs have changed since this run" : ""}`
         : intelligenceDone
           ? comparisonReadyCount >= 2
-            ? "Reviewer scorecards and critical evidence dispositions are required before ranking"
-            : "Fewer than two responses survived extraction; scoring and ranking are unavailable"
-          : "Starts only after evidence extraction and requirement mapping",
+            ? "Your turn: have your team review flagged evidence and score the vendors, then start the comparison"
+            : "Fewer than two responses could be read, so scoring and ranking are not available"
+          : "Starts after the responses have been read and matched to requirements",
+      chipLabel: comparison
+        ? undefined
+        : intelligenceDone && comparisonReadyCount >= 2 ? "Your turn" : undefined,
     },
   ];
   const overallStatus: IntelligenceStatus = comparisonFinished
@@ -438,18 +441,20 @@ export default function ProposalIntelligenceLiveRun({
     <section className={cn(intelligenceSurfaceClasses.card, "mt-5")} aria-labelledby="live-analysis-title">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-wide text-brand-dark">State A · Extraction</p>
-          <h2 id="live-analysis-title" className="mt-2 text-2xl font-extrabold text-navy">Proposal analysis run</h2>
+          <p className="text-xs font-extrabold uppercase tracking-wide text-brand-dark">Step 2 · Analyze responses</p>
+          <h2 id="live-analysis-title" className="mt-2 text-2xl font-extrabold text-navy">Analyzing vendor responses</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-gray">
-            Progress below comes from persisted extraction, fact-mapping, and comparison jobs. The page never advances a phase on a decorative timer.
+            RFPilot reads each response and matches what it finds to your requirements. Progress updates live as each vendor&rsquo;s response is processed.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <IntelligenceStatusChip status={overallStatus} />
-          <span className={cn(intelligenceSurfaceClasses.chip, "gap-1.5 border-gray-border bg-gray-panel font-mono text-navy")}>
-            <Clock3 size={14} aria-hidden="true" /> {elapsedLabel((live ? clock : persistedEnd) - startedAt)}
-          </span>
-          <span className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-white font-mono text-navy")}>{counts.failed} failed items</span>
+          {(live || completedTimes.length > 0 || comparison?.run.completedAt) && <span className={cn(intelligenceSurfaceClasses.chip, "gap-1.5 border-gray-border bg-gray-panel font-mono text-navy")}>
+            <Clock3 size={14} aria-hidden="true" /> {live
+              ? elapsedLabel(clock - startedAt)
+              : `Finished ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(persistedEnd))}`}
+          </span>}
+          {counts.failed > 0 && <span className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-white font-mono text-navy")}>{counts.failed} failed {counts.failed === 1 ? "item" : "items"}</span>}
         </div>
       </header>
 
@@ -465,6 +470,9 @@ export default function ProposalIntelligenceLiveRun({
         </div>
       )}
 
+      {(() => {
+        const analysisSettled = !live && intelligenceDone && counts.failed === 0;
+        const phaseList = (
       <ol className="mt-5 space-y-3">
         {phases.map((phase, index) => (
           <li key={phase.key} className={intelligenceSurfaceClasses.block}>
@@ -475,7 +483,7 @@ export default function ProposalIntelligenceLiveRun({
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gray-panel text-brand-dark"><phase.icon size={17} aria-hidden="true" /></span>
                     <span><span className="block text-sm font-extrabold text-navy">{index + 1}. {phase.title}</span><span className="mt-1 block font-mono text-xs text-gray">{phase.summary}</span></span>
                   </span>
-                  <IntelligenceStatusChip status={phase.status} />
+                  <IntelligenceStatusChip status={phase.status} label={"chipLabel" in phase ? phase.chipLabel : undefined} />
                 </span>
               </summary>
               <div className="mt-4 border-t border-gray-border pt-4">
@@ -507,7 +515,7 @@ export default function ProposalIntelligenceLiveRun({
                     ))}
                     {phase.key === "scoring" && comparison?.jobs.map((job) => <span key={job.key} className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-gray-panel font-mono text-gray")}>{label(job.type)} · {label(job.status)}</span>)}
                     {phase.key === "scoring" && !comparison?.jobs.length && <span className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-gray-panel text-gray")}>Human scorecards · {comparison ? label(comparison.run.status) : "Not started"}</span>}
-                    {phase.key !== "scoring" && participants.every((participant) => !participant.intelligence) && Object.values(jobs).filter((item) => item.kind === "intelligence").length === 0 && <span className="text-xs text-gray">No persisted operation has started for this phase.</span>}
+                    {phase.key !== "scoring" && participants.every((participant) => !participant.intelligence) && Object.values(jobs).filter((item) => item.kind === "intelligence").length === 0 && <span className="text-xs text-gray">This step has not started yet.</span>}
                   </div>
                 )}
               </div>
@@ -515,6 +523,19 @@ export default function ProposalIntelligenceLiveRun({
           </li>
         ))}
       </ol>
+        );
+        return analysisSettled ? (
+          <details className={cn(intelligenceSurfaceClasses.block, "mt-5")}>
+            <summary className="cursor-pointer list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+              <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-extrabold text-navy">Analysis complete — {counts.located} of {counts.requirements} requirements answered with quoted evidence · {counts.facts} facts</span>
+                <span className="text-xs font-bold text-brand-dark">View analysis details</span>
+              </span>
+            </summary>
+            {phaseList}
+          </details>
+        ) : phaseList;
+      })()}
 
       {problemParticipants.length > 0 && (
         <div className={cn(intelligenceSurfaceClasses.block, "mt-5 bg-gray-panel")} role="alert">
@@ -547,7 +568,7 @@ export default function ProposalIntelligenceLiveRun({
       {facts.length > 0 && (
         <details className={cn(intelligenceSurfaceClasses.block, "mt-6")}>
           <summary className="cursor-pointer list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-            <span className="flex items-end justify-between gap-3"><span><span id="grounded-values-title" className="block text-lg font-extrabold text-navy">Grounded extracted values</span><span className="mt-1 block text-xs text-gray">Every value keeps the exact vendor source and locator returned by the backend.</span></span><span className="font-mono text-xs text-gray">{facts.length} values</span></span>
+            <span className="flex items-end justify-between gap-3"><span><span id="grounded-values-title" className="block text-lg font-extrabold text-navy">Key facts, with sources</span><span className="mt-1 block text-xs text-gray">Every value links to the exact place in the vendor&rsquo;s response it came from.</span></span><span className="font-mono text-xs text-gray">{facts.length} values</span></span>
           </summary>
           <div className="mt-4 grid gap-3 border-t border-gray-border pt-4 sm:grid-cols-2 xl:grid-cols-3">
             {facts.map(({ participant, fact, citation }) => (
@@ -563,7 +584,7 @@ export default function ProposalIntelligenceLiveRun({
 
       {!comparisonFinished && !live && initialParticipants.length >= 2 && !intelligenceDone && (
         <button type="button" onClick={() => setRunActive(true)} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-extrabold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-          <CheckSquare size={16} aria-hidden="true" /> Run extraction and mapping
+          <CheckSquare size={16} aria-hidden="true" /> Analyze vendor responses
         </button>
       )}
     </section>

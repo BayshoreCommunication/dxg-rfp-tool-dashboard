@@ -22,6 +22,6 @@ it("reranks immediately when a bounded criterion weight changes", () => {
 it("explains why historical aggregate-only runs cannot be reweighted", () => {
   const historical = { ...workspace, intelligence: { ...workspace.intelligence, evaluation: workspace.intelligence.evaluation.map((item) => ({ ...item, criteria: [] })) } } as ComparisonWorkspace;
   render(<ProposalReweighting workspace={historical} />);
-  expect(screen.getByText("This run cannot be reweighted accurately")).toBeInTheDocument();
+  expect(screen.getByText("Not available for this comparison")).toBeInTheDocument();
   expect(screen.queryByRole("slider")).not.toBeInTheDocument();
 });

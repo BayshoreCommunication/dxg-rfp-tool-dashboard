@@ -24,7 +24,7 @@ const workspace = {
 
 it("names the leader and links every decisive factor and gap to comparison evidence", () => {
   render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
-  expect(screen.getByRole("heading", { name: "Alpha is the strongest fit in this completed comparison." })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Alpha is the strongest fit in this comparison." })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Named technical producer/ })).toHaveAttribute("href", "#matrix-cell-req-1-vendor-1");
   expect(screen.getByRole("link", { name: "Insurance certificate" })).toHaveAttribute("href", "#matrix-cell-req-2-vendor-1");
   expect(screen.getByText("Travel is billed separately")).toBeInTheDocument();
@@ -36,14 +36,14 @@ it("names the leader and links every decisive factor and gap to comparison evide
 
 it("abstains when no recommendation is stored", () => {
   render(<ProposalVerdict workspace={{ ...workspace, recommendation: null } as ComparisonWorkspace} proposalId="proposal-1" />);
-  expect(screen.getByRole("heading", { name: "Recommendation unavailable" })).toBeInTheDocument();
-  expect(screen.getByText(/No vendor is named/)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "No recommendation yet" })).toBeInTheDocument();
+  expect(screen.getByText(/only names a leading vendor/)).toBeInTheDocument();
 });
 
 it("labels a stale close call as historical instead of naming a decisive winner", () => {
   const closeCall = { ...workspace, freshness: { state: "stale", reasons: ["requirement_set_changed"] }, recommendation: { ...workspace.recommendation!, status: "close_call", bestParticipantId: null, strongestParticipantIds: ["vendor-1", "vendor-2"] } } as ComparisonWorkspace;
   render(<ProposalVerdict workspace={closeCall} proposalId="proposal-1" />);
-  expect(screen.getByRole("heading", { name: /Alpha and Beta form a close call/ })).toBeInTheDocument();
-  expect(screen.getByText("Historical result")).toBeInTheDocument();
-  expect(screen.getByText("Requirement set changed")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /Alpha and Beta are a close call/ })).toBeInTheDocument();
+  expect(screen.getByText("Out of date")).toBeInTheDocument();
+  expect(screen.getByText(/Requirement set changed/)).toBeInTheDocument();
 });

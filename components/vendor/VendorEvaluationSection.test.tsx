@@ -36,7 +36,7 @@ test("shows cited assessment confidence as review metadata, not a score", async 
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
   expect(await screen.findByText("Provide redundant streaming")).toBeInTheDocument();
   expect(screen.getByText(/42% extraction confidence/)).toBeInTheDocument();
-  expect(screen.getByText(/Only human-submitted rubric scores contribute/)).toBeInTheDocument();
+  expect(screen.getByText(/Only scores submitted by people count/)).toBeInTheDocument();
 });
 
 test("keeps submitted price visible while refusing an unsafe normalized value", async () => {

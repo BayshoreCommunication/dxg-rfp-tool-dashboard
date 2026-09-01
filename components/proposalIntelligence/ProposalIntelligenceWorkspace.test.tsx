@@ -58,7 +58,7 @@ test("keeps every tab bound to the same run and opens exact cited evidence", asy
   expect(screen.getByText("Technical response.pdf")).toBeInTheDocument();
   expect(screen.getByText(/redundant digital audio system/)).toBeInTheDocument();
   expect(screen.getAllByText("Eligibility gate")).toHaveLength(2);
-  expect(screen.getAllByText("AI assessment confidence 90%")).toHaveLength(2);
+  expect(screen.queryByText(/AI confidence/)).not.toBeInTheDocument();
   expect(screen.getByRole("combobox", { name: "Comparison run" })).toHaveTextContent("Aug 12, 2026, 12:00 AM UTC");
 });
 
@@ -70,8 +70,8 @@ test("prints the readable executive report without requiring an export", async (
   expect(screen.getByRole("heading", { name: "Vendor comparison" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Northstar AV is the strongest fit" })).toBeInTheDocument();
   expect(screen.queryByText(/high confidence/i)).not.toBeInTheDocument();
-  expect(screen.getByText("Human rubric contribution 72.00 / 100")).toBeInTheDocument();
-  expect(screen.getByText("1 mandatory gap")).toBeInTheDocument();
+  expect(screen.getByText("Team score 72.00 / 100")).toBeInTheDocument();
+  expect(screen.getByText(/1 mandatory gap/)).toBeInTheDocument();
   expect(screen.getByText(/RFPilot organizes the evidence for your team/)).toBeInTheDocument();
   expect(screen.getByText("Comparison ready to review")).toBeInTheDocument();
   expect(screen.queryByText("View comparison details")).not.toBeInTheDocument();
@@ -95,7 +95,7 @@ test("prints the readable executive report without requiring an export", async (
 test("shows a sealed state without rendering pricing when the API denies commercial access", () => {
   const value = workspace(false);
   render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="commercial" initialWorkspace={value} runs={runs(value)} />);
-  expect(screen.getByRole("heading", { name: "Commercial values are sealed" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Pricing is hidden" })).toBeInTheDocument();
   expect(screen.queryByText("$100,000.00")).not.toBeInTheDocument();
 });
 

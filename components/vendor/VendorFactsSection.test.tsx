@@ -45,7 +45,7 @@ test("renders requirement relationships with inspectable source locations", asyn
 test("preserves contradictory facts and supports append-only correction review", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide a complete staffing plan");
-  fireEvent.click(screen.getByRole("button", { name: "Typed facts" }));
+  fireEvent.click(screen.getByRole("button", { name: "Key facts" }));
   expect(screen.getAllByText("Contradiction")).toHaveLength(2);
   fireEvent.click(screen.getAllByRole("button", { name: "Correct" })[0]);
   fireEvent.change(screen.getByLabelText("Corrected value"), { target: { value: "USD 125000" } });
@@ -60,7 +60,7 @@ test("preserves contradictory facts and supports append-only correction review",
 test("rejects a correction that does not match the extracted fact type", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide a complete staffing plan");
-  fireEvent.click(screen.getByRole("button", { name: "Typed facts" }));
+  fireEvent.click(screen.getByRole("button", { name: "Key facts" }));
   fireEvent.click(screen.getAllByRole("button", { name: "Correct" })[0]);
   fireEvent.change(screen.getByLabelText("Corrected value"), { target: { value: "not a price" } });
   fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
@@ -71,7 +71,7 @@ test("rejects a correction that does not match the extracted fact type", async (
 
 test("explains that intelligence cannot make an award decision", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  expect(await screen.findByText(/It does not rank, shortlist, or select the vendor/)).toBeInTheDocument();
+  expect(await screen.findByText(/It does not rank or select the vendor/)).toBeInTheDocument();
 });
 
 test("makes incomplete source coverage visible and explains the evaluation block", async () => {

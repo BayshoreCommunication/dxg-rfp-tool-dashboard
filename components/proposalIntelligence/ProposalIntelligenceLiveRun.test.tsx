@@ -79,18 +79,18 @@ it("renders the five persisted phases, real counts, and grounded values without 
   );
 
   expect(screen.getByText("1. Reading documents")).toBeInTheDocument();
-  expect(screen.getByText("2. Locating required fields")).toBeInTheDocument();
-  expect(screen.getByText("3. Normalizing values")).toBeInTheDocument();
-  expect(screen.getByText("4. Cross-checking conflicts and gaps")).toBeInTheDocument();
-  expect(screen.getByText("5. Scoring against criteria")).toBeInTheDocument();
-  expect(screen.getByText("1 contradictions · 2 requirements not stated")).toBeInTheDocument();
+  expect(screen.getByText("2. Finding answers to your requirements")).toBeInTheDocument();
+  expect(screen.getByText("3. Standardizing answers")).toBeInTheDocument();
+  expect(screen.getByText("4. Flagging conflicts and missing answers")).toBeInTheDocument();
+  expect(screen.getByText("5. Team scoring and ranking")).toBeInTheDocument();
+  expect(screen.getByText("1 conflicting answers · 2 requirements not answered")).toBeInTheDocument();
   expect(screen.getAllByText("USD 125000")).toHaveLength(2);
   const firstValue = screen.getAllByText("USD 125000")[0].closest("div");
   expect(firstValue).not.toBeNull();
   expect(within(firstValue!).getByText("pricing.pdf")).toBeInTheDocument();
   expect(within(firstValue!).getByText("page 4")).toBeInTheDocument();
   expect(container.querySelector(".animate-spin")).toBeNull();
-  expect(screen.getByText(/Reviewer scorecards and critical evidence dispositions/)).toBeInTheDocument();
+  expect(screen.getByText(/Your turn: have your team review flagged evidence/)).toBeInTheDocument();
 });
 
 it("restores a completed comparison as complete without starting another run", () => {
@@ -103,8 +103,8 @@ it("restores a completed comparison as complete without starting another run", (
   );
 
   expect(screen.getAllByText("Complete").length).toBeGreaterThanOrEqual(5);
-  expect(screen.getByText("2 of 2 persisted vendor snapshots complete")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Run extraction and mapping" })).not.toBeInTheDocument();
+  expect(screen.getByText("2 of 2 vendors analyzed")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Analyze vendor responses" })).not.toBeInTheDocument();
 });
 
 it("keeps unreadable responses explicit and does not manufacture requirement or score counts", () => {
@@ -121,10 +121,10 @@ it("keeps unreadable responses explicit and does not manufacture requirement or 
     />,
   );
 
-  expect(screen.getAllByText("Partial").length).toBeGreaterThan(0);
-  expect(screen.getByText(/1 failed items/)).toBeInTheDocument();
-  expect(screen.getByText("Unavailable")).toBeInTheDocument();
-  expect(screen.getByText(/Fewer than two responses survived extraction/)).toBeInTheDocument();
+  expect(screen.getAllByText("Partly done").length).toBeGreaterThan(0);
+  expect(screen.getByText(/1 failed item/)).toBeInTheDocument();
+  expect(screen.getByText("Not available")).toBeInTheDocument();
+  expect(screen.getByText(/Fewer than two responses could be read/)).toBeInTheDocument();
   expect(screen.queryByText("0 of 0 persisted vendor snapshots complete")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Retry extraction" })).toBeInTheDocument();
 });
@@ -258,7 +258,7 @@ it("settles the run when preparation fails before a background job is created", 
 
 it("marks a completed stale comparison as historical attention", () => {
   render(<ProposalIntelligenceLiveRun proposalId="proposal-1" initialParticipants={[participant("vendor-1"), participant("vendor-2")]} comparison={{ ...comparison, freshness: { state: "stale", reasons: ["requirement_set_changed"] } }} />);
-  expect(screen.getAllByText("Needs attention").length).toBeGreaterThan(0);
-  expect(screen.getByText(/persisted vendor snapshots complete · historical inputs/)).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Run extraction and mapping" })).not.toBeInTheDocument();
+  expect(screen.getAllByText("Needs review").length).toBeGreaterThan(0);
+  expect(screen.getByText(/vendors analyzed · inputs have changed since this run/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Analyze vendor responses" })).not.toBeInTheDocument();
 });

@@ -76,7 +76,7 @@ function EvidenceDialog({ selection, onClose }: { selection: CellSelection; onCl
         <div className="space-y-4 p-5">
           <section className={intelligenceSurfaceClasses.block}><h4 className="text-xs font-extrabold uppercase tracking-wide text-gray">Assessment</h4><div className="mt-2"><IntelligenceStatusChip status={verdictStatus(selection.vendor.verdict)} label={verdictLabel(selection.vendor.verdict)} /></div><p className="mt-3 text-sm leading-6 text-gray">{selection.vendor.rationale || "No assessment rationale was stored."}</p></section>
           {selection.vendor.evidence.length > 0 ? selection.vendor.evidence.map((evidence) => <SourceEvidence key={`${evidence.evidenceId}-${evidence.supportRole ?? "evidence"}`} evidence={evidence} />) : (
-            <section className={cn(intelligenceSurfaceClasses.block, "bg-gray-panel")}><h4 className="text-sm font-extrabold text-navy">No source passage stored</h4><p className="mt-2 text-sm leading-6 text-gray">Treat this requirement as not stated. The system does not infer compliance from missing evidence.</p></section>
+            <section className={cn(intelligenceSurfaceClasses.block, "bg-gray-panel")}><h4 className="text-sm font-extrabold text-navy">No supporting text found</h4><p className="mt-2 text-sm leading-6 text-gray">This vendor&rsquo;s response doesn&rsquo;t address this requirement, so treat it as not stated. RFPilot never assumes a requirement is met without evidence.</p></section>
           )}
         </div>
       </aside>
@@ -99,7 +99,7 @@ export default function ProposalComparisonMatrix({ workspace }: { workspace: Com
   return (
     <section className={cn(intelligenceSurfaceClasses.card, "mt-5")} aria-labelledby="comparison-matrix-title">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div><p className="text-xs font-extrabold uppercase tracking-wide text-brand-dark">State B · Comparison</p><h2 id="comparison-matrix-title" className="mt-2 text-2xl font-extrabold text-navy">Vendor requirement matrix</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-gray">Respondents are rows and approved RFP requirements are columns. Open any cell to inspect its persisted source context; missing evidence always reads “not stated.”</p></div>
+        <div><p className="text-xs font-extrabold uppercase tracking-wide text-brand-dark">Step 3 · Side-by-side comparison</p><h2 id="comparison-matrix-title" className="mt-2 text-2xl font-extrabold text-navy">Who covers what</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-gray">Each row is a vendor and each column is one of your approved requirements. Open any cell to read the vendor&rsquo;s own words; if a vendor didn&rsquo;t address a requirement, the cell reads &ldquo;not stated.&rdquo;</p></div>
         <span className="font-mono text-xs text-gray">{vendors.length} vendors · {requirements.length} requirements</span>
       </header>
 
@@ -120,11 +120,11 @@ export default function ProposalComparisonMatrix({ workspace }: { workspace: Com
                 return <td key={requirement.requirementId} className="border-b border-gray-border p-2 align-top">{vendor ? <button id={comparisonCellId(requirement.requirementId, participant.participantId)} type="button" onClick={() => setSelection({ requirement, vendor })} className="min-h-24 w-full scroll-mt-24 rounded-xl p-2 text-left hover:bg-gray-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><IntelligenceStatusChip status={verdictStatus(vendor.verdict)} label={verdictLabel(vendor.verdict)} /><p className="mt-2 line-clamp-3 text-xs leading-5 text-gray">{vendor.rationale || (vendor.evidence.length ? "Source evidence stored." : "No source evidence stored.")}</p><p className="mt-2 font-mono text-xs font-bold text-brand-dark">{vendor.evidence.length} {vendor.evidence.length === 1 ? "source" : "sources"}</p></button> : <button id={comparisonCellId(requirement.requirementId, participant.participantId)} type="button" onClick={() => setSelection({ requirement, vendor: { participantId: participant.participantId, vendorLabel: participant.vendorLabel, assessmentId: null, verdict: "not_assessable", rationale: "No assessment exists for this frozen vendor version.", confidence: null, needsHumanReview: true, reviewReasons: ["assessment_missing"], evidence: [], reviewHistory: [] } })} className="min-h-24 w-full scroll-mt-24 rounded-xl p-2 text-left hover:bg-gray-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><IntelligenceStatusChip status="unavailable" label="Not stated" /><p className="mt-2 text-xs text-gray">No assessment exists.</p></button>}</td>;
               })}</tr>)}
             </tbody>
-            <tfoot><tr><th className="sticky left-0 z-10 border-r border-gray-border bg-gray-panel p-3 text-xs font-extrabold text-navy">Field coverage</th>{visible.map((requirement) => { const count = requirement.vendors.filter((vendor) => vendor.evidence.length > 0).length; return <td key={requirement.requirementId} className="bg-gray-panel p-3 font-mono text-xs font-bold text-gray">{count}/{vendors.length} with source evidence</td>; })}</tr></tfoot>
+            <tfoot><tr><th className="sticky left-0 z-10 border-r border-gray-border bg-gray-panel p-3 text-xs font-extrabold text-navy">Evidence coverage</th>{visible.map((requirement) => { const count = requirement.vendors.filter((vendor) => vendor.evidence.length > 0).length; return <td key={requirement.requirementId} className="bg-gray-panel p-3 font-mono text-xs font-bold text-gray">{count}/{vendors.length} with source evidence</td>; })}</tr></tfoot>
           </table>
         </div>
       )}
-      <p className="mt-3 text-xs leading-5 text-gray">Numeric field averages, spreads, relative positions, and inferred-vs-stated markers are unavailable because the persisted comparison contract does not expose per-vendor criterion values or fact explicitness. No values are estimated in this matrix.</p>
+      <p className="mt-3 text-xs leading-5 text-gray">Only what vendors actually stated is shown here &mdash; nothing is estimated or filled in.</p>
       {selection && <EvidenceDialog selection={selection} onClose={() => setSelection(undefined)} />}
     </section>
   );

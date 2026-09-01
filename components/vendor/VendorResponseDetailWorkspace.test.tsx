@@ -126,10 +126,10 @@ it("switches to historical content without representing an unverified file as an
   expect(screen.getByText("Historical, superseded")).toBeInTheDocument();
   expect(screen.getByText("Initial response.")).toBeInTheDocument();
   expect(
-    screen.getByText("Analysis readiness not confirmed"),
+    screen.getByText("Security scan pending"),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/must not be treated as extracted or analyzed evidence/),
+    screen.getByText(/isn’t included in the analysis/),
   ).toBeInTheDocument();
   expect(screen.getByTestId("evaluation")).toHaveTextContent("version-1");
 });
@@ -140,8 +140,8 @@ it("does not invent version history for an unversioned legacy response", () => {
       detail={{ ...detail, submission: null, versions: [] }}
     />,
   );
-  expect(screen.getByText("Immutable history unavailable")).toBeInTheDocument();
-  expect(screen.getByText(/has not been reconstructed/)).toBeInTheDocument();
+  expect(screen.getByText("Version history unavailable")).toBeInTheDocument();
+  expect(screen.getByText(/predates version tracking/)).toBeInTheDocument();
   expect(
     screen.queryByRole("navigation", { name: "Immutable response versions" }),
   ).not.toBeInTheDocument();
