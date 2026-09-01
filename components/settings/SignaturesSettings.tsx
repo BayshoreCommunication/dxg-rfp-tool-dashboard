@@ -114,7 +114,6 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
   // Keep font index in sync if style changes externally
   useEffect(() => {
     setChosenFontIdx(resolveFont(value.signatureStyle));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value.signatureStyle]);
 
   /* ── Render ───────────────────────────────────────────────── */

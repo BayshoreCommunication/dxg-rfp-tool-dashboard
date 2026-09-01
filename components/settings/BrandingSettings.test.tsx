@@ -4,14 +4,13 @@ import type { BrandingSettingsForm } from './SettingsDetials'
 
 jest.mock('next/image', () => ({
   __esModule: true,
+  // eslint-disable-next-line @next/next/no-img-element
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }))
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const mockOnChange = jest.fn()
-const mockOnLogoFileSelected = jest.fn()
-
 const defaultValue: BrandingSettingsForm = {
   brandName: 'Acme Corp',
   linkPrefix: 'acme',

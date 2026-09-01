@@ -107,9 +107,9 @@ describe('SaveCopyModal', () => {
 
     it('includes start and end dates in the confirm payload', () => {
       render(<SaveCopyModal {...baseProps} />)
-      const [startInput, endInput] = screen.getAllByRole('textbox', { hidden: true }).filter(
+      screen.getAllByRole('textbox', { hidden: true }).filter(
         (el) => (el as HTMLInputElement).type === 'date'
-      ) as HTMLInputElement[]
+      )
       fireEvent.change(screen.getAllByDisplayValue('')[0], { target: { value: '2026-07-01' } })
       fireEvent.click(screen.getByText('Save Copy'))
       expect(baseProps.onConfirm).toHaveBeenCalledWith(

@@ -68,14 +68,6 @@ const POWER_AMPERAGE_OPTIONS = [
   "Vendor Recommendation",
 ];
 
-const amperagePillCls = (opt: string, selected: string): string => {
-  const base =
-    "rounded-full border px-4 py-1.5 text-xs font-semibold transition-all";
-  if (selected === opt)
-    return `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]`;
-  return `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
-};
-
 const INTERNET_USE_CASES = [
   "Attendee WiFi (General)",
   "Live Streaming / Encoding",

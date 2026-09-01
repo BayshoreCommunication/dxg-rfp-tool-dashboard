@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { ProposalSettings } from "../AddNewProposal";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 type TemplateSelectionProps = {
   templateId: string;

@@ -584,7 +584,6 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
   return (
     <div className="rfp-root proposal-print-root">
-      {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: TEMPLATE_CSS }} />
 
       {/* ══════════════ PAGE 1: COVER ══════════════ */}
@@ -592,6 +591,7 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
         <div className="cover-header">
           <div className="cover-header-left">
             <div className="dxg-brand">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 className="dxg-brand-logo"
                 src="/assets/logo/rfpilot-primary-logo.png"
