@@ -102,7 +102,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
               <div>
                 <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Proposal intelligence</p>
                 <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{title}</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Review frozen vendor versions against approved requirements, inspect cited evidence, and use an eligibility-gated advisory ranking after transparent evidence-derived scoring. Reviewers retain the final vendor decision.</p>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">RFPilot reads each vendor&rsquo;s response, checks it against your approved requirements, and shows you a side-by-side comparison with every claim linked back to the vendor&rsquo;s own words. Your team scores the vendors and makes the final decision &mdash; RFPilot organizes the evidence.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-700">{label(status)}</span>
@@ -112,9 +112,9 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
           </div>
           <div className="grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: Users, value: readyResponses, label: "Versioned responses" },
-              { icon: ClipboardList, value: approvedSet ? `v${approvedSet.version}` : "Not approved", label: "Requirement registry" },
-              { icon: History, value: comparisons.length, label: "Comparison runs" },
+              { icon: Users, value: readyResponses, label: "Vendor responses" },
+              { icon: ClipboardList, value: approvedSet ? `v${approvedSet.version}` : "Not approved", label: "Requirement checklist" },
+              { icon: History, value: comparisons.length, label: "Comparisons run" },
               { icon: Scale, value: currentRun ? label(currentRun.run.status) : "Not started", label: "Current comparison" },
             ].map((item) => <div key={item.label} className="bg-white p-4 sm:p-5"><item.icon size={17} className="text-[#008ad2]" /><p className="mt-3 text-xl font-extrabold text-slate-950">{item.value}</p><p className="mt-1 text-xs font-semibold text-slate-500">{item.label}</p></div>)}
           </div>
@@ -129,14 +129,14 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
 
         <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
           <article className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="flex items-start gap-3"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${approvedSet ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{approvedSet ? <CheckCircle2 size={19} /> : <AlertTriangle size={19} />}</span><div><h2 className="font-extrabold text-slate-950">Requirement readiness</h2><p className="mt-1 text-sm leading-6 text-slate-600">{approvedSet ? `Approved version ${approvedSet.version} contains ${approvedSet.requirement_count} frozen requirements.` : "Review and approve the proposal requirement registry before comparing vendors."}</p></div></div>
+            <div className="flex items-start gap-3"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${approvedSet ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{approvedSet ? <CheckCircle2 size={19} /> : <AlertTriangle size={19} />}</span><div><h2 className="font-extrabold text-slate-950">Your requirement checklist</h2><p className="mt-1 text-sm leading-6 text-slate-600">{approvedSet ? `Approved version ${approvedSet.version} contains ${approvedSet.requirement_count} requirements. It is locked so every vendor is judged against the same list.` : "Review and approve your requirement checklist to begin. Every vendor will be compared against the same approved list."}</p></div></div>
             <Link href={requirementRegistryHref(id, intelligencePath)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><FileStack size={15} />Open requirement registry</Link>
           </article>
           <article className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="font-extrabold text-slate-950">Historical runs</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">Every run remains tied to its manifest and vendor versions. Stale results stay readable as historical evidence.</p>
-            {comparisons.length ? <ul className="mt-3 space-y-2">{comparisons.slice(0, 3).map((item) => <li key={item.run.runId}><Link href={`/proposals/${id}/intelligence/comparisons/${item.run.runId}/overview`} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"><span>{new Date(item.run.createdAt).toLocaleString()} · {item.run.participantCount} vendors</span><span className={item.freshness.state === "stale" ? "text-amber-700" : "text-emerald-700"}>{item.freshness.state}</span></Link></li>)}</ul> : <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">No comparison has been created yet.</p>}
-            <Link href={`/proposals/${id}/intelligence/submissions`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><Users size={15} />Browse submission versions</Link>
+            <h2 className="font-extrabold text-slate-950">Past comparisons</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600">Every comparison is saved exactly as it was run. Older results stay readable even after requirements or responses change.</p>
+            {comparisons.length ? <ul className="mt-3 space-y-2">{comparisons.slice(0, 3).map((item) => <li key={item.run.runId}><Link href={`/proposals/${id}/intelligence/comparisons/${item.run.runId}/overview`} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"><span>{new Date(item.run.createdAt).toLocaleString()} · {item.run.participantCount} vendors</span><span className={item.freshness.state === "stale" ? "text-amber-700" : "text-emerald-700"}>{item.freshness.state === "stale" ? "Out of date" : "Up to date"}</span></Link></li>)}</ul> : <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">No comparison has been created yet.</p>}
+            <Link href={`/proposals/${id}/intelligence/submissions`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><Users size={15} />Browse vendor submissions</Link>
           </article>
         </section>
 

@@ -48,17 +48,17 @@ test("starts one frozen comparison with current vendor versions", async () => {
 test("restores persisted progress without showing an AI readiness score", async () => {
   list.mockResolvedValue({ success: true, data: [view] });
   render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
-  expect(await screen.findByText("1 of 2 vendor snapshots complete")).toBeInTheDocument();
+  expect(await screen.findByText("1 of 2 vendors analyzed")).toBeInTheDocument();
   expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "45");
   expect(screen.queryByText(/readiness/i)).not.toBeInTheDocument();
-  expect(screen.getByText(/eligibility gates produce an advisory ranking; the final vendor decision remains yours/i)).toBeInTheDocument();
+  expect(screen.getByText(/the final decision remains yours/i)).toBeInTheDocument();
 });
 
 test("labels stale runs as readable historical comparisons", async () => {
   list.mockResolvedValue({ success: true, data: [{ ...view, run: { ...view.run, status: "succeeded", progress: 100, completedParticipantCount: 2 }, freshness: { state: "stale", reasons: ["submission_version_available"] } }] });
   render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
-  expect(await screen.findByText(/Historical comparison/)).toBeInTheDocument();
-  expect(screen.getByText(/Persisted result restored without rerunning analysis/)).toBeInTheDocument();
+  expect(await screen.findByText(/Out of date/)).toBeInTheDocument();
+  expect(screen.getByText(/Saved results loaded/)).toBeInTheDocument();
 });
 
 test("automatically prepares and approves requirements before comparison", async () => {

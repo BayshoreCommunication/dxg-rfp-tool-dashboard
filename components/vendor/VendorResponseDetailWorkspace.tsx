@@ -130,17 +130,17 @@ export default function VendorResponseDetailWorkspace({
                 Version history
               </h2>
               <span className="rounded-full bg-white px-2 py-1 text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">
-                {detail.versions.length} retained
+                {detail.versions.length} version{detail.versions.length === 1 ? "" : "s"}
               </span>
             </div>
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              Each entry is immutable. Selecting history never replaces or
-              reruns the current response.
+              Every version is kept exactly as received. Viewing an older
+              version never changes the current response.
             </p>
             {detail.historyTruncated && (
               <p className="mt-3 rounded-xl bg-amber-100 p-3 text-xs leading-5 text-amber-950">
-                Showing the 100 most recent retained versions. Older records
-                remain stored but are not included in this view.
+                Showing the 100 most recent versions. Older ones are still
+                stored, just not listed here.
               </p>
             )}
             <ol className="mt-4 flex gap-2 overflow-x-auto pb-2 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
@@ -203,8 +203,8 @@ export default function VendorResponseDetailWorkspace({
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">
-                  <ClipboardCheck size={14} aria-hidden="true" /> Immutable
-                  record
+                  <ClipboardCheck size={14} aria-hidden="true" /> Saved as
+                  received
                 </span>
               </div>
 
@@ -216,9 +216,9 @@ export default function VendorResponseDetailWorkspace({
                     aria-hidden="true"
                   />
                   <p>
-                    <strong>Historical version.</strong> Evidence and
-                    intelligence below are bound to this exact version. The
-                    current response remains unchanged.
+                    <strong>Older version.</strong> Everything below shows this
+                    version exactly as it was. The current response is not
+                    affected.
                   </p>
                 </div>
               )}
@@ -269,12 +269,11 @@ export default function VendorResponseDetailWorkspace({
                     id="intelligence-heading"
                     className="text-base font-extrabold text-slate-900"
                   >
-                    Proposal intelligence for this version
+                    AI analysis of this version
                   </h3>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    These resources remain bound to Version{" "}
-                    {selectedVersion.versionNumber}; opening them does not rerun
-                    completed work.
+                    Saved with Version {selectedVersion.versionNumber} &mdash;
+                    opening anything here won&rsquo;t rerun the analysis.
                   </p>
                 </div>
                 {detail.submission && (
@@ -358,12 +357,12 @@ function ReceiptLineage({ version }: { version: VendorSubmissionVersion }) {
         className="flex items-center gap-2 text-sm font-extrabold text-slate-900"
       >
         <Fingerprint size={16} className="text-[#008ad2]" aria-hidden="true" />{" "}
-        Receipt and lineage
+        How this version arrived
       </h3>
       <dl className="mt-4 grid gap-4 text-xs sm:grid-cols-2">
         <div>
           <dt className="font-bold uppercase tracking-wide text-slate-500">
-            Receipt type
+            Type
           </dt>
           <dd className="mt-1 font-semibold text-slate-800">
             {reasonLabels[version.reason]}
@@ -377,25 +376,32 @@ function ReceiptLineage({ version }: { version: VendorSubmissionVersion }) {
             {sourceLabels[version.sourceSystem]}
           </dd>
         </div>
-        <div>
-          <dt className="font-bold uppercase tracking-wide text-slate-500">
-            Parent version
-          </dt>
-          <dd className="mt-1 font-mono text-slate-700">
-            {version.parentVersionId
-              ? version.parentVersionId.slice(-8)
-              : "None, first retained version"}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-bold uppercase tracking-wide text-slate-500">
-            Manifest checksum
-          </dt>
-          <dd className="mt-1 break-all font-mono text-slate-700">
-            {version.manifestChecksum}
-          </dd>
-        </div>
       </dl>
+      <details className="mt-4">
+        <summary className="cursor-pointer text-xs font-bold text-slate-400 hover:text-slate-600">
+          Verification details
+        </summary>
+        <dl className="mt-2 grid gap-4 text-xs sm:grid-cols-2">
+          <div>
+            <dt className="font-bold uppercase tracking-wide text-slate-500">
+              Parent version
+            </dt>
+            <dd className="mt-1 font-mono text-slate-700">
+              {version.parentVersionId
+                ? version.parentVersionId.slice(-8)
+                : "None — first version"}
+            </dd>
+          </div>
+          <div>
+            <dt className="font-bold uppercase tracking-wide text-slate-500">
+              Manifest checksum
+            </dt>
+            <dd className="mt-1 break-all font-mono text-slate-700">
+              {version.manifestChecksum}
+            </dd>
+          </div>
+        </dl>
+      </details>
       {(version.reason === "clarification_response" ||
         version.reason === "bafo") && (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-blue-50 p-3 text-xs leading-5 text-blue-900">
@@ -426,11 +432,10 @@ function SourceReadiness({
             id="sources-heading"
             className="text-base font-extrabold text-slate-900"
           >
-            Source readiness
+            Attached files
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            Files retained in Version {versionNumber}. Security and extraction
-            readiness are shown separately.
+            Files included with Version {versionNumber}.
           </p>
         </div>
         <span className="text-xs font-bold text-slate-500">
@@ -444,8 +449,8 @@ function SourceReadiness({
             className="mb-2 text-slate-400"
             aria-hidden="true"
           />
-          No source files were retained with this version. The message alone
-          must not be presented as analyzed file evidence.
+          No files came with this version &mdash; only the vendor&rsquo;s
+          message above.
         </div>
       ) : (
         <ul className="mt-3 grid gap-3 xl:grid-cols-2">
@@ -475,7 +480,7 @@ function SourceReadiness({
                     >
                       {ready
                         ? "Security scan passed"
-                        : "Analysis readiness not confirmed"}
+                        : "Security scan pending"}
                     </p>
                   </div>
                 </div>
@@ -495,13 +500,13 @@ function SourceReadiness({
                 </dl>
                 {document.inheritedFromVersionId && (
                   <p className="mt-2 text-[10px] font-semibold text-slate-500">
-                    Carried forward from an earlier immutable version
+                    Carried over from an earlier version
                   </p>
                 )}
                 {!ready && (
                   <p className="mt-3 rounded-lg bg-amber-50 p-2 text-[11px] leading-4 text-amber-900">
-                    This file does not have a confirmed clean scan. It must not
-                    be treated as extracted or analyzed evidence.
+                    This file hasn&rsquo;t passed its security scan yet, so it
+                    isn&rsquo;t included in the analysis.
                   </p>
                 )}
                 {document.url && (
@@ -511,8 +516,7 @@ function SourceReadiness({
                     rel="noopener noreferrer"
                     className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 hover:border-[#008ad2]/30 hover:text-[#0076b4]"
                   >
-                    <FileText size={14} aria-hidden="true" /> Open authorized
-                    file
+                    <FileText size={14} aria-hidden="true" /> Open file
                   </a>
                 )}
               </li>
@@ -536,12 +540,11 @@ function LegacyResponse({ detail }: { detail: VendorSubmissionDetail }) {
           />
           <div>
             <h2 className="font-extrabold text-amber-950">
-              Immutable history unavailable
+              Version history unavailable
             </h2>
             <p className="mt-1 text-sm leading-6 text-amber-900">
-              This legacy response has not been reconstructed into a version
-              timeline. Only the latest compatibility record is shown, and it is
-              not presented as historical evidence.
+              This response predates version tracking, so only its latest
+              recorded state is shown.
             </p>
           </div>
         </div>

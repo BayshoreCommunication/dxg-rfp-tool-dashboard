@@ -56,8 +56,8 @@ it("opens source context from an addressed cell and treats missing evidence as n
   const civicRow = screen.getByRole("rowheader", { name: /Civic Events/ }).closest("tr");
   expect(civicRow).not.toBeNull();
   fireEvent.click(within(civicRow!).getAllByRole("button", { name: /Not stated/ })[0]);
-  expect(screen.getByRole("dialog")).toHaveTextContent("No source passage stored");
-  expect(screen.getByRole("dialog")).toHaveTextContent("does not infer compliance");
+  expect(screen.getByRole("dialog")).toHaveTextContent("No supporting text found");
+  expect(screen.getByRole("dialog")).toHaveTextContent("never assumes a requirement is met");
 });
 
 it("filters the matrix by requirement category with visible counts", () => {

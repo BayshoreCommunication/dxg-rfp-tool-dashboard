@@ -34,15 +34,15 @@ export const intelligenceStatusPresentation: Record<
     className: "border-brand bg-white text-brand-dark",
   },
   partial: {
-    label: "Partial",
+    label: "Partly done",
     className: "border-gray bg-gray-panel text-navy",
   },
   attention: {
-    label: "Needs attention",
+    label: "Needs review",
     className: "border-navy bg-white text-navy",
   },
   unavailable: {
-    label: "Unavailable",
+    label: "Not available",
     className: "border-gray bg-gray-panel text-gray",
   },
   failed: {

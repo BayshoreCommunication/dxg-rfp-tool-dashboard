@@ -81,7 +81,7 @@ export default function VendorExtractionSection({
             <FileSearch size={17} className="text-[#008ad2]" /> Proposal evidence
           </h3>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-            Extracts reviewable text and tables from this immutable response version. Scanned PDF pages use OCR, and every preview keeps its page, sheet, or row location.
+            The readable text pulled from this version&rsquo;s files. Every excerpt keeps its page or row location so you can check the original.
           </p>
         </div>
         <button
