@@ -120,7 +120,6 @@ const HybridVirtualStep = ({
   onChange,
   onContinue,
   onBack,
-  showErrors = false,
   proposalSettings,
   eventFormat = "",
 }: HybridVirtualStepProps) => {

@@ -2466,67 +2466,6 @@ function InvestmentCard({
   );
 }
 
-// ── Workspace chrome ─────────────────────────────────────────────────────────
-// A single journey strip and next-step banner keep one primary CTA visible while
-// the chat column stays visually dominant.
-
-type WorkspacePhase =
-  'share' | 'extract' | 'clarify' | 'draft' | 'review';
-
-const JOURNEY_STEPS: Array<{ id: WorkspacePhase; label: string }> = [
-  { id: 'share', label: 'Share details' },
-  { id: 'extract', label: 'Extract' },
-  { id: 'clarify', label: 'Clarify' },
-  { id: 'draft', label: 'Draft' },
-  { id: 'review', label: 'Review' },
-];
-
-const phaseIndex = (phase: WorkspacePhase) =>
-  JOURNEY_STEPS.findIndex((step) => step.id === phase);
-
-function WorkspaceJourneyBar({ phase }: { phase: WorkspacePhase }) {
-  const activeIndex = phaseIndex(phase);
-  return (
-    <ol
-      aria-label="Proposal building progress"
-      className="hidden min-w-0 flex-1 items-center justify-center gap-1 sm:flex lg:gap-2"
-    >
-      {JOURNEY_STEPS.map((step, index) => {
-        const complete = index < activeIndex;
-        const active = index === activeIndex;
-        return (
-          <li
-            key={step.id}
-            className="flex min-w-0 items-center gap-1 lg:gap-2"
-          >
-            <span
-              className={`inline-flex max-w-[5.5rem] items-center gap-1.5 truncate rounded-full px-2 py-1 text-[11px] font-semibold lg:max-w-none lg:px-2.5 lg:text-xs ${
-                active
-                  ? 'bg-[#087f69] text-white shadow-sm'
-                  : complete
-                    ? 'bg-emerald-50 text-emerald-800'
-                    : 'bg-slate-100 text-slate-500'
-              }`}
-              aria-current={active ? 'step' : undefined}
-            >
-              {complete ? (
-                <Check size={12} className="shrink-0" aria-hidden />
-              ) : null}
-              {step.label}
-            </span>
-            {index < JOURNEY_STEPS.length - 1 && (
-              <span
-                aria-hidden
-                className={`h-px w-3 shrink-0 lg:w-5 ${complete ? 'bg-emerald-300' : 'bg-slate-200'}`}
-              />
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
 function AssistantTurnAvatar({ busy }: { busy?: boolean }) {
   return (
     <div
@@ -2548,68 +2487,6 @@ function wrapAssistantTurn(
       <AssistantTurnAvatar busy={busy} />
       <div className="min-w-0 flex-1">{content}</div>
     </li>
-  );
-}
-
-function NextStepBanner({
-  title,
-  detail,
-  proposalId,
-  primaryHref,
-  primaryLabel,
-  onPrimaryClick,
-  primaryBusy,
-}: {
-  title: string;
-  detail: string;
-  proposalId: string | null;
-  primaryHref?: string;
-  primaryLabel?: string;
-  onPrimaryClick?: () => void;
-  primaryBusy?: boolean;
-}) {
-  return (
-    <div className="shrink-0 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-white px-4 py-3 sm:px-5">
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#087f69]">
-            Recommended next step
-          </p>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900">
-            {title}
-          </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
-            {detail}
-          </p>
-        </div>
-        {primaryHref && proposalId && (
-          <Link
-            href={primaryHref}
-            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-[#087f69] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#0a9a81] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087f69]"
-          >
-            {primaryLabel}
-          </Link>
-        )}
-        {onPrimaryClick && !primaryHref && (
-          <button
-            type="button"
-            onClick={onPrimaryClick}
-            disabled={primaryBusy}
-            aria-busy={primaryBusy}
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#087f69] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#0a9a81] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087f69] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {primaryBusy && (
-              <Loader2
-                size={12}
-                className="animate-spin"
-                aria-hidden
-              />
-            )}
-            {primaryLabel}
-          </button>
-        )}
-      </div>
-    </div>
   );
 }
 

@@ -26,7 +26,6 @@ const BrandingSettings = ({
 }: BrandingSettingsProps) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signaturePickerRef = useRef<HTMLInputElement>(null);
-  const textPickerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {

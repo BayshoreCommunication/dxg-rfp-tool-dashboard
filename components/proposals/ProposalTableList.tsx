@@ -346,10 +346,6 @@ export default function ProposalTableList({
   };
 
   const totalPages = Math.max(1, pagination.totalPages || 1);
-  const totalItems = pagination.total || 0;
-  const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * PER_PAGE + 1;
-  const toItem = Math.min(currentPage * PER_PAGE, totalItems);
-
   const handleCopyProposalUrl = async (proposalSlug: string) => {
     if (!proposalSlug) return;
 
