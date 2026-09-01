@@ -462,7 +462,7 @@ const VenueScheduleStep = ({
     : [];
 
   return (
-    <section className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white">
+    <section id="venue-schedule-section" tabIndex={-1} className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-[#e4e4e4] bg-white focus:outline-none">
       {/* ── Header ── */}
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <h2 className="text-[22px] font-bold text-[#222628]">

@@ -2545,6 +2545,18 @@ const AddNewProposal = ({
     setShowErrors(false);
   };
 
+  const navigateToReviewTarget = (step: number, targetId?: string) => {
+    if (!visibleStepOrder.includes(step)) return;
+    navigateToStep(step);
+    window.setTimeout(() => {
+      const target = targetId ? document.getElementById(targetId) : null;
+      const fallback = document.getElementById("manual-proposal-details");
+      const destination = target ?? fallback;
+      destination?.scrollIntoView({ behavior: "smooth", block: "start" });
+      destination?.focus({ preventScroll: true });
+    }, 0);
+  };
+
   const handleModeChange = (mode: ProposalExperienceMode) => {
     if (mode === experienceMode) return;
     setExperienceMode(mode);
@@ -2746,6 +2758,7 @@ const AddNewProposal = ({
               <ProposalWorkflowShell
                 proposalId={proposalId}
                 proposalName={proposalData.event.eventName}
+                proposalIsPublished={proposalData.proposalStatus === "submitted"}
                 onNavigateToFormStep={navigateToStep}
                 onQuestionResolved={refreshProposalAfterQuestion}
               />
@@ -2935,25 +2948,6 @@ const AddNewProposal = ({
               />
             )}
             {proposalProcessStep === 10 && (
-              <>
-              <ProposalFinalReview
-                event={proposalData.event}
-                venue={proposalData.venueSchedule}
-                rooms={rooms}
-                budget={proposalData.budget}
-                contact={proposalData.contact}
-                issues={checklistIssues}
-                provenance={fieldProvenance}
-                auditTrail={auditTrail}
-                assumptions={basicAssumptions}
-                assumptionsApproved={assumptionsApproved}
-                onAssumptionsApprovedChange={(approved) => {
-                  setAssumptionsApproved(approved);
-                  if (approved) addAuditEntry("Approved Basic mode assumptions for publishing", "user");
-                }}
-                onEditStep={navigateToStep}
-                onGenerateStatementOfWork={handleGenerateStatementOfWork}
-              />
               <ContactInfo
                 data={proposalData.contact}
                 onChange={(updates) =>
@@ -2979,8 +2973,27 @@ const AddNewProposal = ({
                       : undefined
                 }
                 mode={experienceMode}
+                finalReview={
+                  <ProposalFinalReview
+                    event={proposalData.event}
+                    venue={proposalData.venueSchedule}
+                    rooms={rooms}
+                    budget={proposalData.budget}
+                    contact={proposalData.contact}
+                    issues={checklistIssues}
+                    provenance={fieldProvenance}
+                    auditTrail={auditTrail}
+                    assumptions={basicAssumptions}
+                    assumptionsApproved={assumptionsApproved}
+                    onAssumptionsApprovedChange={(approved) => {
+                      setAssumptionsApproved(approved);
+                      if (approved) addAuditEntry("Approved Basic mode assumptions for publishing", "user");
+                    }}
+                    onEditStep={navigateToReviewTarget}
+                    onGenerateStatementOfWork={handleGenerateStatementOfWork}
+                  />
+                }
               />
-              </>
             )}
           </div>
           {/* Proposal progress sidebar */}

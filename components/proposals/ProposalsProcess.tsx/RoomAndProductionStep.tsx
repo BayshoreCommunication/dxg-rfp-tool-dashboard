@@ -2646,7 +2646,9 @@ const RoomAndProductionStep = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
+      id="room-specifications-section"
+      tabIndex={-1}
+      className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-[#e4e4e4] bg-white focus:outline-none"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* Header */}

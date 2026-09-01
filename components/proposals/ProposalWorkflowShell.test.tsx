@@ -15,7 +15,6 @@ function panel(testId: string) {
 jest.mock("./ProposalContextPanel", () => panel("proposal-context"));
 jest.mock("./ProposalDraftPanel", () => panel("proposal-draft"));
 jest.mock("./GuidancePanel", () => panel("guidance"));
-jest.mock("./HistoricalInsightsPanel", () => panel("historical-insights"));
 jest.mock("./KeyQuestionsPanel", () => panel("key-questions"));
 
 jest.mock("@/app/actions/proposalWorkflow", () => ({
@@ -205,7 +204,7 @@ describe("ProposalWorkflowShell", () => {
     expect(document.querySelector("details")).toHaveAttribute("open");
   });
 
-  test("shows readiness guidance without investment guidance", async () => {
+  test("shows readiness guidance without the removed historical comparison panel", async () => {
     mockedGetWorkflow.mockResolvedValue({
       success: true,
       data: {
@@ -220,9 +219,29 @@ describe("ProposalWorkflowShell", () => {
     render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
 
     expect(await screen.findByTestId("guidance")).toBeInTheDocument();
-    expect(screen.getByTestId("historical-insights")).toBeInTheDocument();
+    expect(screen.queryByText("Learn from selected proposals")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Historical proposal insights/)).not.toBeInTheDocument();
     expect(screen.queryByText("Investment guidance")).not.toBeInTheDocument();
     expect(screen.queryByTestId("investment-guidance")).not.toBeInTheDocument();
+  });
+
+  test("hides pre-publish readiness guidance once the proposal is live, even with stale workflow state", async () => {
+    mockedGetWorkflow.mockResolvedValue({
+      success: true,
+      data: {
+        ...workflow.data,
+        workflow: { currentStep: 4 },
+        steps: workflow.data.steps.map((item) => item.id === 4
+          ? { ...item, status: "complete" as const, summary: "Ready" }
+          : item),
+      },
+    } as never);
+
+    render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} proposalIsPublished />);
+
+    expect(await screen.findByText("Your proposal is live and accepting responses.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "See Guidance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check readiness" })).not.toBeInTheDocument();
   });
 
   test("continues to Contact & Publish with a smooth, focused transition", async () => {

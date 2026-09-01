@@ -32,4 +32,12 @@ test("summarizes vendor-visible scope without exposing planning estimates", () =
   expect(screen.getByText("Assumed · 86%")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("checkbox"));
   expect(noop).toHaveBeenCalledWith(true);
+
+  noop.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Edit Primary contact" }));
+  expect(noop).toHaveBeenCalledWith(10, "primary-contact-section");
+
+  noop.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Edit Invitation recipients" }));
+  expect(noop).toHaveBeenCalledWith(10, "invitation-recipients-section");
 });
