@@ -44,7 +44,7 @@ type Props = {
   assumptions: string[];
   assumptionsApproved: boolean;
   onAssumptionsApprovedChange: (approved: boolean) => void;
-  onEditStep: (step: number) => void;
+  onEditStep: (step: number, targetId?: string) => void;
   onGenerateStatementOfWork: () => void;
 };
 
@@ -72,6 +72,7 @@ const ReviewCard = ({
   title,
   icon,
   step,
+  targetId,
   onEdit,
   provenance,
   children,
@@ -79,7 +80,8 @@ const ReviewCard = ({
   title: string;
   icon: React.ReactNode;
   step: number;
-  onEdit: (step: number) => void;
+  targetId?: string;
+  onEdit: (step: number, targetId?: string) => void;
   provenance?: AnswerProvenance;
   children: React.ReactNode;
 }) => (
@@ -93,7 +95,7 @@ const ReviewCard = ({
       </div>
       <button
         type="button"
-        onClick={() => onEdit(step)}
+        onClick={() => onEdit(step, targetId)}
         className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold text-[#0786cf] hover:bg-[#eef8fd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]"
         aria-label={`Edit ${title}`}
       >
@@ -129,7 +131,7 @@ export default function ProposalFinalReview({
     <section
       id="proposal-final-review"
       aria-labelledby="proposal-final-review-title"
-      className="border-b border-slate-200 bg-slate-50 px-4 py-6 sm:px-6 lg:px-8"
+      className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 sm:px-5 lg:px-6"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -152,36 +154,36 @@ export default function ProposalFinalReview({
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <ReviewCard title="Scope" step={1} onEdit={onEditStep} provenance={provenance.event} icon={<ClipboardCheck size={17} aria-hidden="true" />}>
+        <ReviewCard title="Scope" step={1} targetId="event-overview-section" onEdit={onEditStep} provenance={provenance.event} icon={<ClipboardCheck size={17} aria-hidden="true" />}>
           <p className="font-bold text-slate-900">{event.eventName || "Event name not provided"}</p>
           <p>{event.eventFormat} · {event.eventType.eventType || "Event type not provided"}</p>
           <p>{event.attendees || "—"} anticipated attendees · {rooms.length} room{rooms.length === 1 ? "" : "s"}</p>
         </ReviewCard>
 
-        <ReviewCard title="Venue and dates" step={2} onEdit={onEditStep} provenance={provenance.venueSchedule} icon={<MapPin size={17} aria-hidden="true" />}>
+        <ReviewCard title="Venue and dates" step={2} targetId="venue-schedule-section" onEdit={onEditStep} provenance={provenance.venueSchedule} icon={<MapPin size={17} aria-hidden="true" />}>
           <p className="font-bold text-slate-900">{venue.venueName || "Venue not provided"}</p>
           <p>{[venue.venueCity, venue.venueState].filter(Boolean).join(", ") || "Location not provided"}</p>
           <p className="inline-flex items-center gap-1.5"><CalendarDays size={14} aria-hidden="true" />{event.startDate || "Start date"} – {event.endDate || "End date"}</p>
         </ReviewCard>
 
-        <ReviewCard title="Rooms and AV approach" step={3} onEdit={onEditStep} provenance={provenance.roomByRoom} icon={<Sparkles size={17} aria-hidden="true" />}>
+        <ReviewCard title="Rooms and AV approach" step={3} targetId="room-specifications-section" onEdit={onEditStep} provenance={provenance.roomByRoom} icon={<Sparkles size={17} aria-hidden="true" />}>
           <p className="font-bold text-slate-900">{rooms.length} production room{rooms.length === 1 ? "" : "s"}</p>
           <p>{rooms.map((room, index) => room.roomLocation || room.roomFunction || `Room ${index + 1}`).join(", ")}</p>
           <p>Vendor recommendations remain editable in Advanced production.</p>
         </ReviewCard>
 
-        <ReviewCard title="Procurement timeline" step={8} onEdit={onEditStep} provenance={provenance.budget} icon={<DollarSign size={17} aria-hidden="true" />}>
+        <ReviewCard title="Procurement timeline" step={8} targetId="procurement-timeline-section" onEdit={onEditStep} provenance={provenance.budget} icon={<DollarSign size={17} aria-hidden="true" />}>
           <p>Proposals due: {budget.proposalSubmissionDueDate || "Not provided"}</p>
           <p>Vendor selection: {budget.vendorSelectionDate || "Not provided"}</p>
         </ReviewCard>
 
-        <ReviewCard title="Primary contact" step={10} onEdit={onEditStep} provenance={provenance.contact} icon={<Users size={17} aria-hidden="true" />}>
+        <ReviewCard title="Primary contact" step={10} targetId="primary-contact-section" onEdit={onEditStep} provenance={provenance.contact} icon={<Users size={17} aria-hidden="true" />}>
           <p className="font-bold text-slate-900">{[contact.contactFirstName, contact.contactLastName].filter(Boolean).join(" ") || "Contact not provided"}</p>
           <p>{contact.contactOrganization || contact.organizationLegalName || "Organization not provided"}</p>
           <p>{contact.contactEmail || "Email not provided"}</p>
         </ReviewCard>
 
-        <ReviewCard title="Invitation recipients" step={10} onEdit={onEditStep} provenance={provenance.contact} icon={<Mail size={17} aria-hidden="true" />}>
+        <ReviewCard title="Invitation recipients" step={10} targetId="invitation-recipients-section" onEdit={onEditStep} provenance={provenance.contact} icon={<Mail size={17} aria-hidden="true" />}>
           {recipients.length > 0 ? recipients.map((recipient) => <p key={recipient}>{recipient}</p>) : <p>No notification contacts added.</p>}
           <p className="mt-1 text-xs text-slate-500">Vendor invitation recipients are selected after publishing.</p>
         </ReviewCard>
