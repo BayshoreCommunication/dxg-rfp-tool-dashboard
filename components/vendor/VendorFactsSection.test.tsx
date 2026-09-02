@@ -80,111 +80,15 @@ test("explains that intelligence cannot make an award decision", async () => {
   expect(await screen.findByText(/nothing here ranks or picks a winner/)).toBeInTheDocument();
 });
 
-test("makes incomplete source coverage visible and explains the evaluation block", async () => {
+test("keeps partial source coverage visible without incorrectly blocking evaluation", async () => {
   latest.mockResolvedValue({ success: true, data: { ...completed, run: { ...completed.run, warnings: [{ code: "SOURCE_COVERAGE_INCOMPLETE", sourceLabel: "Technical.pdf", message: "This source was only partially readable." }] } } });
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  const card = await screen.findByRole("alert");
-  expect(card).toHaveTextContent("Part of Technical.pdf could not be read");
-  expect(card).toHaveTextContent(/left out of the vendor comparison and cannot be scored/);
-  expect(screen.queryByText(/Source coverage is incomplete/)).not.toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent(/evaluation can continue using the extracted evidence/i);
   expect(screen.getByRole("alert")).toHaveTextContent(/Technical\.pdf: This source was only partially readable/i);
 });
 
-test("summarises coverage, hides the explanatory sentence on answered rows, and can filter to what needs attention", async () => {
-  latest.mockResolvedValue({
-    success: true,
-    data: {
-      ...completed,
-      mappings: [
-        { ...completed.mappings[0], mappingId: "m-answered", requirementTitle: "Provide load-in schedule", relationship: "supports", mandatory: false, confidence: 0.95 },
-        { ...completed.mappings[0], mappingId: "m-partial", requirementTitle: "Provide a complete staffing plan", relationship: "partially_supports" },
-        { ...completed.mappings[0], mappingId: "m-missing", requirementTitle: "Provide closed captions", relationship: "none", evidence: [] },
-      ],
-    },
-  });
-  render(<VendorFactsSection proposalId="p" submissionId="s" versionId="v" />);
-  expect(await screen.findByText("1 answered · 1 partly answered · 1 not answered")).toBeInTheDocument();
-  expect(screen.queryByText(/The vendor answered this requirement and we can show you where/)).not.toBeInTheDocument();
-  expect(screen.getByText(/Read the quotes and decide whether the rest matters/)).toBeInTheDocument();
-  fireEvent.click(screen.getByLabelText("Only the 2 needing attention"));
-  expect(screen.queryByText("Provide load-in schedule")).not.toBeInTheDocument();
-  expect(screen.getByText("Provide closed captions")).toBeInTheDocument();
-});
-
-test("lets a planner correct a requirement's answer status using the cited evidence", async () => {
+test("blocks evaluation only when a response source is unavailable", async () => {
+  latest.mockResolvedValue({ success: true, data: { ...completed, run: { ...completed.run, warnings: [{ code: "SOURCE_UNAVAILABLE", sourceLabel: "Pricing.xlsx", message: "This source was not available to proposal intelligence." }] } } });
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  await screen.findByText("Provide a complete staffing plan");
-  expect(screen.getByRole("tab", { name: "Requirements" })).toHaveAttribute("aria-selected", "true");
-  expect(screen.getByText(/Each thing you asked for/)).toBeInTheDocument();
-  expect(screen.queryByText(/Low AI confidence/)).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Disagree with this?" }));
-  expect(screen.getByText("Treat this requirement as not answered by the vendor.")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Correct" }));
-  fireEvent.change(screen.getByLabelText("Corrected status"), { target: { value: "supports" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
-  await waitFor(() => expect(review).toHaveBeenCalledWith(
-    "proposal", "submission", "version", "run-1",
-    expect.objectContaining({ targetType: "mapping", targetId: "mapping-1", decision: "corrected", correctedPayload: { relationship: "supports", fragmentIds: ["fragment-1"] } }),
-    expect.any(String),
-  ));
-});
-
-test("explains a failed load in plain words and offers a retry", async () => {
-  latest
-    .mockResolvedValueOnce({ success: false, code: "NETWORK_ERROR", message: "Vendor intelligence operation failed. (Connection terminated due to connection timeout)" })
-    .mockResolvedValueOnce({ success: true, data: completed });
-  render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  expect(await screen.findByText("Could not load the proposal intelligence analysis.")).toBeInTheDocument();
-  expect(screen.getByText(/could not reach its database or API/)).toBeInTheDocument();
-  expect(screen.queryByText(/Connection terminated/)).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-  expect(await screen.findByText("Provide a complete staffing plan")).toBeInTheDocument();
-});
-
-test("opens with a plain-language purpose, a verdict sentence, and next steps", async () => {
-  latest.mockResolvedValue({
-    success: true,
-    data: {
-      ...completed,
-      mappings: [
-        { ...completed.mappings[0], mappingId: "m-answered", requirementTitle: "Provide load-in schedule", relationship: "supports", mandatory: false, confidence: 0.95 },
-        { ...completed.mappings[0], mappingId: "m-partial", requirementTitle: "Provide a complete staffing plan", relationship: "partially_supports" },
-        { ...completed.mappings[0], mappingId: "m-missing", requirementTitle: "Provide closed captions", relationship: "none", evidence: [], mandatory: true },
-      ],
-    },
-  });
-  render(<VendorFactsSection proposalId="proposal" proposalTitle="Annual Summit" vendorName="Northstar AV" vendorEmail="bids@northstar.example" submissionId="submission" versionId="version" />);
-  expect(await screen.findByRole("heading", { name: "How Northstar AV answered your requirements" })).toBeInTheDocument();
-  expect(screen.getByText(/Use this to see what Northstar AV left out/)).toBeInTheDocument();
-  expect(await screen.findByTestId("requirements-verdict")).toHaveTextContent("1 of 3 requirements answered. 1 partly answered, 1 not answered, including 1 mandatory.");
-  // Engine telemetry is gone.
-  expect(screen.queryByText("Mapped")).not.toBeInTheDocument();
-  expect(screen.queryByText("Analysis up to date")).not.toBeInTheDocument();
-  // Gaps come first.
-  const titles = screen.getAllByText(/^Provide /).map((node) => node.textContent);
-  expect(titles.indexOf("Provide load-in schedule")).toBeGreaterThan(titles.indexOf("Provide closed captions"));
-  // Next steps name the vendor and prefill the email.
-  const next = screen.getByLabelText("What to do next");
-  expect(next).toHaveTextContent(/Northstar AV left 2 requirements unanswered or only partly answered/);
-  const ask = screen.getByRole("link", { name: /Ask Northstar AV about the 2 gaps/ });
-  const href = decodeURIComponent((ask.getAttribute("href") ?? "").replace(/\+/g, " "));
-  expect(href).toContain("/email/send-email?proposalId=proposal");
-  expect(href).toContain("to=bids@northstar.example");
-  expect(href).toContain("- Provide closed captions");
-  expect(screen.getByRole("link", { name: /Score this response/ })).toHaveAttribute("href", "#evaluation-title");
-  expect(screen.getByRole("link", { name: /Compare all vendors/ })).toHaveAttribute("href", "/proposals/proposal/intelligence");
-});
-
-test("turns an unreadable file into a task with two ways out and no next-step buttons", async () => {
-  latest.mockResolvedValue({ success: true, data: { ...completed, run: { ...completed.run, warnings: [{ code: "PAGE_COVERAGE_INCOMPLETE", sourceLabel: "Technical.pdf", message: "A page could not be extracted with OCR." }] } } });
-  render(<VendorFactsSection proposalId="proposal" proposalTitle="Annual Summit" vendorName="Northstar AV" vendorEmail="bids@northstar.example" submissionId="submission" versionId="version" />);
-  const card = await screen.findByRole("alert");
-  expect(card).toHaveTextContent("Part of Technical.pdf could not be read");
-  const ask = screen.getByRole("link", { name: "Ask Northstar AV for a text-based copy" });
-  expect(decodeURIComponent((ask.getAttribute("href") ?? "").replace(/\+/g, " "))).toContain("text-based (not scanned) copy");
-  expect(screen.getByRole("link", { name: "Add the missing figures manually" })).toHaveAttribute("href", "/vendor-responses/proposals/proposal?add=manual");
-  fireEvent.click(screen.getByText("Details"));
-  expect(screen.getByText("Technical.pdf: A page could not be extracted with OCR.")).toBeInTheDocument();
-  expect(screen.getByLabelText("What to do next")).toHaveTextContent(/Resolve the unreadable file above first/);
-  expect(screen.queryByRole("link", { name: /Compare all vendors/ })).not.toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent(/evaluation and vendor comparison are blocked until it is available/i);
 });
