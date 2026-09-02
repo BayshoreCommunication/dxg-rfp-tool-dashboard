@@ -2,7 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import Image from "next/image";
-import { ChangeEvent, useEffect, useRef } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import type { BrandingSettingsForm } from "./SettingsDetials";
 
 const isHexColor = (value: string) => /^#([0-9A-Fa-f]{6})$/.test(value);
@@ -26,6 +26,7 @@ const BrandingSettings = ({
 }: BrandingSettingsProps) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signaturePickerRef = useRef<HTMLInputElement>(null);
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -76,14 +77,16 @@ const BrandingSettings = ({
             className="flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-md border border-[#e4e4e4] bg-[#e8ebf0] text-[#c7ccd6] hover:border-primary/50"
             aria-label="Upload company logo"
           >
-            {value.logoFile ? (
+            {value.logoFile && value.logoFile !== failedLogoUrl ? (
               <Image
                 src={value.logoFile}
                 alt="Company logo preview"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain p-2"
                 width={104}
                 height={104}
                 priority
+                unoptimized
+                onError={() => setFailedLogoUrl(value.logoFile)}
               />
             ) : (
               <svg
