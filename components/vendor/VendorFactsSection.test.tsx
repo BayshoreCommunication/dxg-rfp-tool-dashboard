@@ -36,7 +36,7 @@ beforeEach(() => {
 test("renders requirement relationships with inspectable source locations", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   expect(await screen.findByText("Provide a complete staffing plan")).toBeInTheDocument();
-  expect(screen.getByText("Partially Supports")).toBeInTheDocument();
+  expect(screen.getByText("Partly answered")).toBeInTheDocument();
   fireEvent.click(screen.getByText("Show cited evidence (1)"));
   expect(screen.getByText("Northstar.pdf · page 7")).toBeInTheDocument();
   expect(screen.getByText("Six technicians are included.")).toBeInTheDocument();

@@ -82,7 +82,7 @@ it("renders the five persisted phases, real counts, and grounded values without 
   expect(screen.getByText("2. Finding answers to your requirements")).toBeInTheDocument();
   expect(screen.getByText("3. Standardizing answers")).toBeInTheDocument();
   expect(screen.getByText("4. Flagging conflicts and missing answers")).toBeInTheDocument();
-  expect(screen.getByText("5. Team scoring and ranking")).toBeInTheDocument();
+  expect(screen.getByText("5. Scoring and ranking")).toBeInTheDocument();
   expect(screen.getByText("1 conflicting answers · 2 requirements not answered")).toBeInTheDocument();
   expect(screen.getAllByText("USD 125000")).toHaveLength(2);
   const firstValue = screen.getAllByText("USD 125000")[0].closest("div");
@@ -90,7 +90,7 @@ it("renders the five persisted phases, real counts, and grounded values without 
   expect(within(firstValue!).getByText("pricing.pdf")).toBeInTheDocument();
   expect(within(firstValue!).getByText("page 4")).toBeInTheDocument();
   expect(container.querySelector(".animate-spin")).toBeNull();
-  expect(screen.getByText(/Your turn: have your team review flagged evidence/)).toBeInTheDocument();
+  expect(screen.getByText(/Your turn: review the flagged evidence, score the vendors/)).toBeInTheDocument();
 });
 
 it("restores a completed comparison as complete without starting another run", () => {
@@ -261,4 +261,39 @@ it("marks a completed stale comparison as historical attention", () => {
   expect(screen.getAllByText("Needs review").length).toBeGreaterThan(0);
   expect(screen.getByText(/vendors analyzed · inputs have changed since this run/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Analyze vendor responses" })).not.toBeInTheDocument();
+});
+
+describe("before any response has arrived", () => {
+  const renderEmpty = () =>
+    render(<ProposalIntelligenceLiveRun proposalId={"a".repeat(24)} initialParticipants={[]} />);
+
+  it("explains what will happen instead of reporting a pipeline that has not run", () => {
+    renderEmpty();
+    expect(
+      screen.getByRole("heading", { name: "Nothing to analyze yet" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Go to vendor responses" }),
+    ).toHaveAttribute("href", "/vendor-responses");
+  });
+
+  it("shows no progress bar, because nothing is in progress", () => {
+    renderEmpty();
+    // `[].every()` is vacuously true, which used to mark "Reading documents"
+    // complete over 0 pages and leave the bar sitting at 20%.
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByText("20%")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reading documents")).not.toBeInTheDocument();
+  });
+
+  it("never renders an untemplated count", () => {
+    renderEmpty();
+    expect(screen.queryByText(/of unavailable requirements/)).not.toBeInTheDocument();
+  });
+
+  it("does not nag about a second response before the first one exists", () => {
+    renderEmpty();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/versioned responses/)).not.toBeInTheDocument();
+  });
 });

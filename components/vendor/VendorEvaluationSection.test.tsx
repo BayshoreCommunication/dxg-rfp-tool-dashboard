@@ -32,11 +32,13 @@ beforeEach(() => {
   (setCommercialAccessAction as jest.Mock).mockResolvedValue({ success: true, data: { eventId: "access-1" } });
 });
 
-test("shows cited assessment confidence as review metadata, not a score", async () => {
+test("shows how sure the extraction was as review metadata, not a score", async () => {
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
   expect(await screen.findByText("Provide redundant streaming")).toBeInTheDocument();
-  expect(screen.getByText(/42% extraction confidence/)).toBeInTheDocument();
-  expect(screen.getByText(/Only scores submitted by people count/)).toBeInTheDocument();
+  expect(screen.getByText(/42% sure we read this correctly/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/RFPilot supplies a starting score from the cited evidence/),
+  ).toBeInTheDocument();
 });
 
 test("keeps submitted price visible while refusing an unsafe normalized value", async () => {
@@ -83,4 +85,62 @@ test("observer assignments can inspect the evaluation but cannot enter scores", 
   expect(screen.getByText(/observer assignment is read-only/i)).toBeInTheDocument();
   expect(screen.queryByLabelText("Technical Approach score")).not.toBeInTheDocument();
   expect(record).not.toHaveBeenCalled();
+});
+
+/** An automated baseline used to be presented as "Completed human evaluator score". */
+const automatedScored: EvaluationView = {
+  ...view,
+  assignment: { ...view.assignment!, complete: true, overallScore: 56.44 },
+  scores: [{
+    eventId: "event-auto", assignmentId: "assignment-1", criterionId: "criterion-1",
+    eventType: "submitted", score: 4.25, rubricMaximum: 5, criterionWeight: 25,
+    weightedContribution: 21.25,
+    rationale: "Automated evidence-derived score for Technical Approach: 1 partially addressed. This is a transparent system baseline, not a human reviewer opinion.",
+    evidenceFragmentIds: ["fragment-1"], scoringPolicyVersion: "evidence-derived-rubric-score.v1",
+    createdAt: "2026-08-12",
+  }],
+  aggregates: [{ criterionId: "criterion-1", submittedCount: 1, assignedCount: 1, mean: 4.25, minimum: 4.25, maximum: 4.25, spread: 0, meanWeightedContribution: 21.25 }],
+};
+
+test("never presents an automated baseline as a score the user gave", async () => {
+  latest.mockResolvedValue({ success: true, data: automatedScored });
+  render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Scorecard" }));
+
+  expect(screen.queryByText(/Completed human evaluator score/i)).not.toBeInTheDocument();
+  expect(
+    screen.getByText("RFPilot starting score — you have not scored this vendor yet"),
+  ).toBeInTheDocument();
+  expect(screen.getByText("56.44 / 100")).toBeInTheDocument();
+  expect(screen.getByText(/You have not scored this vendor yet/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Score this yourself" })).toBeInTheDocument();
+});
+
+test("reports the score plainly instead of a mean and a spread of zero", async () => {
+  latest.mockResolvedValue({ success: true, data: automatedScored });
+  render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Scorecard" }));
+
+  expect(screen.queryByText(/spread/i)).not.toBeInTheDocument();
+  expect(
+    screen.getByText("RFPilot starting score 4.25 · you have not scored it"),
+  ).toBeInTheDocument();
+});
+
+test("explains a criterion no requirement feeds instead of showing it as zero out of five", async () => {
+  latest.mockResolvedValue({
+    success: true,
+    data: {
+      ...automatedScored,
+      criteria: [{ ...view.criteria[0], name: "Sustainability & DEI Practices", weight: 5, requirementIds: ["requirement-none"] }],
+      scores: [{ ...automatedScored.scores[0], score: 0, weightedContribution: 0, rationale: "Automated evidence-derived score for Sustainability & DEI Practices: no mapped requirements. This is a transparent system baseline, not a human reviewer opinion." }],
+    },
+  });
+  render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Scorecard" }));
+
+  expect(screen.getByText("Not scored — nothing to score it against")).toBeInTheDocument();
+  expect(screen.getByText(/no requirement feeding/)).toBeInTheDocument();
+  expect(screen.getByText(/set its weight to 0%/)).toBeInTheDocument();
+  expect(screen.queryByText(/0 \/ 5/)).not.toBeInTheDocument();
 });

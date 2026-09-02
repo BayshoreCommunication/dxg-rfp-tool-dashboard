@@ -31,12 +31,12 @@ const workspace = (viewCommercial = true): ComparisonWorkspace => ({
     margin: 8,
     rationale: "Northstar AV has the highest completed human rubric score among vendors that pass all planner-designated eligibility requirements.",
     ranking: [
-      { participantId, vendorLabel: "Northstar AV", score: 72, evaluatorCount: 3, maxCriterionSpread: 0.5, eligible: true, eligibilityFailures: 0, mandatoryGaps: 0, unresolvedReviews: 0, highRisks: 0, rank: 1 },
-      { participantId: `${participantId.slice(0, -1)}c`, vendorLabel: "Civic Events", score: 64, evaluatorCount: 3, maxCriterionSpread: 1, eligible: true, eligibilityFailures: 0, mandatoryGaps: 1, unresolvedReviews: 0, highRisks: 1, rank: 2 },
+      { participantId, vendorLabel: "Northstar AV", score: 72, evaluatorCount: 3, maxCriterionSpread: 0.5, eligible: true, eligibilityFailures: 0, mandatoryGaps: 0, mandatoryPartials: 0, unresolvedReviews: 0, highRisks: 0, rank: 1 },
+      { participantId: `${participantId.slice(0, -1)}c`, vendorLabel: "Civic Events", score: 64, evaluatorCount: 3, maxCriterionSpread: 1, eligible: true, eligibilityFailures: 0, mandatoryGaps: 1, mandatoryPartials: 0, unresolvedReviews: 0, highRisks: 1, rank: 2 },
     ],
   },
   intelligence: {
-    overview: { responseCount: 2, versionCount: 2, approvedRequirementCount: 1, mandatoryGapCount: 0, unresolvedReviewCount: 0, evaluatorCompletedCount: 1, evaluatorAssignedCount: 2 },
+    overview: { responseCount: 2, versionCount: 2, approvedRequirementCount: 1, mandatoryGapCount: 0, mandatoryPartialCount: 0, unresolvedReviewCount: 0, evaluatorCompletedCount: 1, evaluatorAssignedCount: 2 },
     requirements: [{ requirementId: "requirement", key: "technical_audio", kind: "technical", title: "Provide plenary audio", text: "Supply a complete plenary audio system.", mandatoryStatus: "mandatory", eligibility: true, importance: "high", verificationMethod: "document", groupKey: "production", ordinal: 0, vendors: [{ participantId, vendorLabel: "Northstar AV", assessmentId: "assessment", verdict: "addressed", rationale: "The response specifies the proposed system.", confidence: 0.9, needsHumanReview: false, reviewReasons: [], evidence: [{ evidenceId: "evidence", supportRole: "supports", sourceLabel: "Technical response.pdf", sourceChecksum: "b".repeat(64), locator: { page: 12 }, excerpt: "A redundant digital audio system will serve the plenary.", contentChecksum: "c".repeat(64), trustClass: "untrusted_vendor_content", facts: [] }], reviewHistory: [] }] }],
     technical: [], permissions: { viewCommercial },
     commercial: viewCommercial ? [{ participantId, vendorLabel: "Northstar AV", submittedTotal: 100000, submittedCurrency: "USD", basis: "vendor_stated", comparable: true, normalizedTotal: 100000, normalizedCurrency: "USD", arithmeticStatus: "verified_identity", assumptions: [], refusalCodes: [], policyVersion: "v1", lineItems: [] }] : [],
@@ -56,7 +56,9 @@ test("keeps every tab bound to the same run and opens exact cited evidence", asy
   await userEvent.click(screen.getAllByRole("button", { name: /Inspect 1 citation/ })[0]);
   expect(screen.getByRole("dialog", { name: "Provide plenary audio" })).toBeInTheDocument();
   expect(screen.getByText("Technical response.pdf")).toBeInTheDocument();
-  expect(screen.getByText(/redundant digital audio system/)).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Provide plenary audio" })).toHaveTextContent(
+    /redundant digital audio system/,
+  );
   expect(screen.getAllByText("Eligibility gate")).toHaveLength(2);
   expect(screen.queryByText(/AI confidence/)).not.toBeInTheDocument();
   expect(screen.getByRole("combobox", { name: "Comparison run" })).toHaveTextContent("Aug 12, 2026, 12:00 AM UTC");
@@ -70,9 +72,31 @@ test("prints the readable executive report without requiring an export", async (
   expect(screen.getByRole("heading", { name: "Vendor comparison" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Northstar AV is the strongest fit" })).toBeInTheDocument();
   expect(screen.queryByText(/high confidence/i)).not.toBeInTheDocument();
-  expect(screen.getByText("Team score 72.00 / 100")).toBeInTheDocument();
-  expect(screen.getByText(/1 mandatory gap/)).toBeInTheDocument();
-  expect(screen.getByText(/RFPilot organizes the evidence for your team/)).toBeInTheDocument();
+  // The panel explains the choice by comparison; it no longer quotes a score.
+  const panel = screen.getByRole("region", { name: /is the strongest fit/ });
+  expect(panel).not.toHaveTextContent(/\/ 100/);
+  expect(panel).not.toHaveTextContent(/Weighted-score margin/);
+  expect(panel).not.toHaveTextContent(/evaluator/i);
+  expect(
+    screen.getByRole("heading", { name: "Why Northstar AV comes out ahead" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/RFPilot compared 2 vendors against all 1 of your approved requirements/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText("Answered every must-have requirement, which not every vendor did."),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText("Raised no high-severity concerns, unlike other responses here."),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "How the other vendor compares" }),
+  ).toBeInTheDocument();
+  expect(panel).toHaveTextContent("Civic Events");
+  expect(panel).toHaveTextContent("1 must-have requirement unanswered.");
+  expect(
+    screen.getByText(/RFPilot organizes the evidence; the vendor decision is yours/),
+  ).toBeInTheDocument();
   expect(screen.getByText("Comparison ready to review")).toBeInTheDocument();
   expect(screen.queryByText("View comparison details")).not.toBeInTheDocument();
   expect(screen.queryByText("Comparison ID")).not.toBeInTheDocument();
@@ -80,7 +104,9 @@ test("prints the readable executive report without requiring an export", async (
   expect(screen.queryByText(/Frozen comparison/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/Viewing comparison snapshot/i)).not.toBeInTheDocument();
   expect(screen.getByText("$100,000.00")).toBeInTheDocument();
-  expect(screen.getByText("1/2 evaluators complete")).toBeInTheDocument();
+  // RFPilot has one user per proposal, so a "1/2 evaluators" ratio was fiction.
+  expect(screen.getByText("Scored")).toBeInTheDocument();
+  expect(screen.queryByText(/evaluator/i)).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Human decision" })).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Priority review signals" })).not.toBeInTheDocument();
   expect(screen.queryByText(/This report summarizes persisted evidence/i)).not.toBeInTheDocument();
@@ -128,6 +154,12 @@ test("labels closely matched eligible vendors as a close call instead of choosin
   };
   render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="overview" initialWorkspace={value} runs={runs(value)} />);
   expect(screen.getByRole("heading", { name: "The leading vendors are a close call" })).toBeInTheDocument();
-  expect(screen.getByText(/below the 2-point sole-leader threshold/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/too close to separate on the evidence alone/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "How the vendors compare" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Answered 1 of 1 requirements.")).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: /is the strongest fit/ })).not.toBeInTheDocument();
 });
