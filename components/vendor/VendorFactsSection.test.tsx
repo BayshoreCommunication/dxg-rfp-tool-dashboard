@@ -74,9 +74,15 @@ test("explains that intelligence cannot make an award decision", async () => {
   expect(await screen.findByText(/It does not rank or select the vendor/)).toBeInTheDocument();
 });
 
-test("makes incomplete source coverage visible and explains the evaluation block", async () => {
+test("keeps partial source coverage visible without incorrectly blocking evaluation", async () => {
   latest.mockResolvedValue({ success: true, data: { ...completed, run: { ...completed.run, warnings: [{ code: "SOURCE_COVERAGE_INCOMPLETE", sourceLabel: "Technical.pdf", message: "This source was only partially readable." }] } } });
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  expect(await screen.findByRole("alert")).toHaveTextContent(/evaluation and vendor comparison are blocked/i);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/evaluation can continue using the extracted evidence/i);
   expect(screen.getByRole("alert")).toHaveTextContent(/Technical\.pdf: This source was only partially readable/i);
+});
+
+test("blocks evaluation only when a response source is unavailable", async () => {
+  latest.mockResolvedValue({ success: true, data: { ...completed, run: { ...completed.run, warnings: [{ code: "SOURCE_UNAVAILABLE", sourceLabel: "Pricing.xlsx", message: "This source was not available to proposal intelligence." }] } } });
+  render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/evaluation and vendor comparison are blocked until it is available/i);
 });
