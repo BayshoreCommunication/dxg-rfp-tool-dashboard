@@ -4,8 +4,25 @@ import type { BrandingSettingsForm } from './SettingsDetials'
 
 jest.mock('next/image', () => ({
   __esModule: true,
-  // eslint-disable-next-line @next/next/no-img-element
-  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+  default: ({
+    src,
+    alt,
+    unoptimized,
+    onError,
+  }: {
+    src: string
+    alt: string
+    unoptimized?: boolean
+    onError?: () => void
+  }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      data-unoptimized={String(Boolean(unoptimized))}
+      onError={onError}
+    />
+  ),
 }))
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -88,6 +105,34 @@ describe('BrandingSettings — logo button text', () => {
       />,
     )
     expect(screen.getByAltText('Company logo preview')).toBeInTheDocument()
+  })
+
+  it('loads persisted logos directly without the Next.js image optimizer', () => {
+    render(
+      <BrandingSettings
+        value={{ ...defaultValue, logoFile: 'https://assets.example.com/logo.svg' }}
+        onChange={mockOnChange}
+      />,
+    )
+
+    expect(screen.getByAltText('Company logo preview')).toHaveAttribute(
+      'data-unoptimized',
+      'true',
+    )
+  })
+
+  it('replaces a failed logo preview with the upload placeholder', () => {
+    render(
+      <BrandingSettings
+        value={{ ...defaultValue, logoFile: 'https://assets.example.com/missing.png' }}
+        onChange={mockOnChange}
+      />,
+    )
+
+    fireEvent.error(screen.getByAltText('Company logo preview'))
+
+    expect(screen.queryByAltText('Company logo preview')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Upload company logo')).toBeInTheDocument()
   })
 })
 
