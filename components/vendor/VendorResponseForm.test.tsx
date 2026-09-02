@@ -11,6 +11,7 @@ const mockFetch = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockFetch.mockReset();
   global.fetch = mockFetch as typeof fetch;
 });
 
@@ -91,7 +92,7 @@ describe("VendorResponseForm", () => {
 
     fireEvent.change(screen.getByLabelText(/company \/ vendor name/i), { target: { value: "Acme AV" } });
     fireEvent.change(screen.getByLabelText(/submitted by/i), { target: { value: "Jordan Lee" } });
-    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "jordan@acme.test" } });
+    fireEvent.change(screen.getByLabelText(/response contact email/i), { target: { value: "jordan@acme.test" } });
     fireEvent.change(screen.getByLabelText(/message or executive summary/i), { target: { value: "Complete AV proposal attached." } });
     fireEvent.submit(screen.getByRole("form", { name: "Submit vendor response" }));
 
@@ -106,8 +107,25 @@ describe("VendorResponseForm", () => {
     expect(screen.getByText("version-1")).toBeInTheDocument();
   });
 
+  it("allows an invited vendor to use a different response contact email", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ alreadySubmitted: false, existingResponse: null }),
+    });
+    render(<VendorResponseForm {...defaultProps} initialEmail="invited@acme.test" />);
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    const contactEmail = screen.getByLabelText(/response contact email/i);
+    expect(contactEmail).toHaveValue("invited@acme.test");
+    expect(screen.getByText(/can be different from the email address that received the invitation/i)).toBeInTheDocument();
+
+    fireEvent.change(contactEmail, { target: { value: "proposals@acme.test" } });
+    expect(contactEmail).toHaveValue("proposals@acme.test");
+  });
+
   it("loads an existing response into update mode", async () => {
     mockFetch.mockResolvedValue({
+      ok: true,
       json: async () => ({
         alreadySubmitted: true,
         existingResponse: {
@@ -134,6 +152,20 @@ describe("VendorResponseForm", () => {
     expect(screen.getByRole("link", { name: "Open quote.pdf" })).toHaveAttribute("href", "https://files.test/quote.pdf");
   });
 
+  it("surfaces an invalid invitation before the vendor tries to upload", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        success: false,
+        message: "This invitation link is no longer valid.",
+      }),
+    });
+
+    render(<VendorResponseForm {...defaultProps} initialEmail="invited@acme.test" accessGrant="expired-grant" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This invitation link is no longer valid.");
+  });
+
   it("reuses one idempotency key when an uncertain submission is retried", async () => {
     mockFetch
       .mockRejectedValueOnce(new Error("connection lost"))
@@ -155,7 +187,7 @@ describe("VendorResponseForm", () => {
 
     fireEvent.change(screen.getByLabelText(/company \/ vendor name/i), { target: { value: "Acme AV" } });
     fireEvent.change(screen.getByLabelText(/submitted by/i), { target: { value: "Jordan Lee" } });
-    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "jordan@acme.test" } });
+    fireEvent.change(screen.getByLabelText(/response contact email/i), { target: { value: "jordan@acme.test" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit response" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("could not reach the server");
 
