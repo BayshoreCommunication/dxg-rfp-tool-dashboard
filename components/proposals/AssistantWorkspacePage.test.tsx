@@ -85,6 +85,7 @@ const mockedGenerateGuidance = generateGuidanceAction as jest.MockedFunction<typ
 const mockedGetDraft = getProposalDraftAction as jest.MockedFunction<typeof getProposalDraftAction>;
 
 const PROPOSAL_ID = "abc123abc123abc123abc123";
+const FUTURE_DATE = "2099-09-01";
 
 const scanJob = (status: "queued" | "succeeded") => ({
   id: "11111111-1111-4111-8111-111111111111",
@@ -1229,9 +1230,9 @@ describe("AssistantWorkspacePage", () => {
         id: "q-load-in-combined",
         status: "answered",
         answeredMessageId: null,
-        appliedField: { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: "2026-09-01" },
+        appliedField: { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: FUTURE_DATE },
         appliedFields: [
-          { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: "2026-09-01" },
+          { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: FUTURE_DATE },
           { path: "/content/venueSchedule/loadInTime", mongoPath: "venueSchedule.loadInTime", value: "07:30" },
         ],
       },
@@ -1245,16 +1246,16 @@ describe("AssistantWorkspacePage", () => {
     expect(timeInput).toHaveAttribute("type", "time");
     expect(screen.getByRole("button", { name: "Answer" })).toBeDisabled();
 
-    fireEvent.change(dateInput, { target: { value: "2026-09-01" } });
+    fireEvent.change(dateInput, { target: { value: FUTURE_DATE } });
     fireEvent.input(timeInput, { target: { value: "07:30" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
       "q-load-in-combined",
-      { status: "answered", answer: { date: "2026-09-01", time: "07:30" } },
+      { status: "answered", answer: { date: FUTURE_DATE, time: "07:30" } },
     ));
-    expect(await screen.findByText("Production load-in: 2026-09-01 at 07:30 ✓")).toBeInTheDocument();
+    expect(await screen.findByText(`Production load-in: ${FUTURE_DATE} at 07:30 ✓`)).toBeInTheDocument();
   });
 
   test("venue-name guidance points undecided users to Skip, not a missing option", () => {
@@ -1379,7 +1380,7 @@ describe("AssistantWorkspacePage", () => {
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
-      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: "2026-09-01" } },
+      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: FUTURE_DATE } },
     });
 
     const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
@@ -1389,15 +1390,15 @@ describe("AssistantWorkspacePage", () => {
     const input = screen.getByLabelText("Answer this question");
     expect(input).toHaveAttribute("placeholder", "YYYY-MM-DD");
 
-    fireEvent.change(input, { target: { value: "2026-09-01" } });
+    fireEvent.change(input, { target: { value: FUTURE_DATE } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
       "q-start",
-      { status: "answered", answer: "2026-09-01" },
+      { status: "answered", answer: FUTURE_DATE },
     ));
-    expect(await screen.findByText("Start date: 2026-09-01 ✓")).toBeInTheDocument();
+    expect(await screen.findByText(`Start date: ${FUTURE_DATE} ✓`)).toBeInTheDocument();
   });
 
   test("an extraction-suggested date pre-fills the picker and one click confirms it", async () => {
