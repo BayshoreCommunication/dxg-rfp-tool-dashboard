@@ -114,28 +114,42 @@ it("separates required fields with support, missing evidence, and contradictions
     mandatoryNotAnswered: 1,
   });
   expect(summary.comparisonBlocked).toBeNull();
+  expect(summary.partialSources).toBe(false);
   expect(summary.isComparable).toBe(true);
 });
 
-it("marks a partially readable response as excluded from comparison, matching the backend coverage rule", () => {
+it("flags partially readable sources without excluding the response, matching the backend coverage rule", () => {
   const byExtraction = deriveResponseCardSummary({
     response,
     extraction: { success: true, data: { status: "partial", runs: [] } },
     intelligence: { success: true, data: intelligence() },
   });
-  expect(byExtraction.comparisonBlocked).toBe("partial_sources");
-  expect(byExtraction.isComparable).toBe(false);
+  expect(byExtraction.comparisonBlocked).toBeNull();
+  expect(byExtraction.partialSources).toBe(true);
+  expect(byExtraction.isComparable).toBe(true);
 
-  const byWarning = deriveResponseCardSummary({
+  const byPageWarning = deriveResponseCardSummary({
     response,
     extraction: { success: true, data: { status: "ready", runs: [] } },
     intelligence: {
       success: true,
-      data: intelligence({ run: { ...intelligence().run, warnings: [{ code: "ocr_page_failed", message: "A page could not be extracted with OCR." }] } }),
+      data: intelligence({ run: { ...intelligence().run, warnings: [{ code: "PAGE_COVERAGE_INCOMPLETE", message: "Some PDF pages produced no readable text." }] } }),
     },
   });
-  expect(byWarning.comparisonBlocked).toBe("partial_sources");
-  expect(byWarning.isComparable).toBe(false);
+  expect(byPageWarning.comparisonBlocked).toBeNull();
+  expect(byPageWarning.partialSources).toBe(true);
+
+  const byUnavailable = deriveResponseCardSummary({
+    response,
+    extraction: { success: true, data: { status: "ready", runs: [] } },
+    intelligence: {
+      success: true,
+      data: intelligence({ run: { ...intelligence().run, warnings: [{ code: "SOURCE_UNAVAILABLE", message: "This source was not available to proposal intelligence." }] } }),
+    },
+  });
+  expect(byUnavailable.comparisonBlocked).toBe("source_unavailable");
+  expect(byUnavailable.partialSources).toBe(false);
+  expect(byUnavailable.isComparable).toBe(false);
 });
 
 it("does not treat absent analysis as compliance and excludes known unreadable responses", () => {

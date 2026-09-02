@@ -15,12 +15,22 @@ it("only allows starting an evaluation the backend would accept", () => {
   expect(evaluationGateFromIntelligence({ loaded: true })).toEqual({ state: "analysis_missing" });
   expect(evaluationGateFromIntelligence({ loaded: true, result: result({ status: "running" }) })).toEqual({ state: "analysis_running" });
   expect(evaluationGateFromIntelligence({ loaded: true, result: result({ status: "failed" }) })).toEqual({ state: "analysis_failed" });
+  // Partially readable pages do not block (backend rule); an unavailable source does.
   expect(
     evaluationGateFromIntelligence({
       loaded: true,
-      result: result({ warnings: [{ code: "ocr_page_failed", sourceLabel: "Response.pdf", message: "A page could not be extracted with OCR." }] }),
+      result: result({ warnings: [{ code: "PAGE_COVERAGE_INCOMPLETE", sourceLabel: "Response.pdf", message: "Some PDF pages produced no readable text." }] }),
     }),
-  ).toEqual({ state: "coverage_blocked", details: ["Response.pdf: A page could not be extracted with OCR."] });
+  ).toEqual({ state: "ready" });
+  expect(
+    evaluationGateFromIntelligence({
+      loaded: true,
+      result: result({ warnings: [
+        { code: "PAGE_COVERAGE_INCOMPLETE", sourceLabel: "Response.pdf", message: "Some PDF pages produced no readable text." },
+        { code: "SOURCE_UNAVAILABLE", sourceLabel: "Pricing.xlsx", message: "This source was not available to proposal intelligence." },
+      ] }),
+    }),
+  ).toEqual({ state: "coverage_blocked", details: ["Pricing.xlsx: This source was not available to proposal intelligence."] });
   expect(evaluationGateFromIntelligence({ loaded: true, result: result() })).toEqual({ state: "ready" });
 
   expect(evaluationCanStart({ state: "ready" })).toBe(true);
@@ -31,6 +41,6 @@ it("only allows starting an evaluation the backend would accept", () => {
 
 it("tells the planner what to do rather than restating the rule", () => {
   expect(evaluationGateMessage({ state: "analysis_missing" })).toMatch(/Analyze this response above/);
-  expect(evaluationGateMessage({ state: "coverage_blocked", details: [] })).toMatch(/every page of this response's files/);
+  expect(evaluationGateMessage({ state: "coverage_blocked", details: [] })).toMatch(/could not be made available to the analysis/);
   expect(evaluationGateMessage({ state: "ready" })).toMatch(/Start one to score it/);
 });

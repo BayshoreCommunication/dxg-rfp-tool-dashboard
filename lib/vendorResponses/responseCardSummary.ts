@@ -8,6 +8,7 @@ import type {
 } from "@/app/actions/vendorIntelligence";
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
 import { coverageFromRelationship } from "@/lib/proposalIntelligence/coverageVocabulary";
+import { isBlockingWarning } from "@/lib/proposalIntelligence/evaluationGate";
 
 type LoadResult<T> =
   | { success: true; data: T }
@@ -41,12 +42,13 @@ export type RequirementCoverage = {
 
 /**
  * Why the backend will refuse to evaluate or compare this response. Mirrors
- * the server rule: any extraction warning on the intelligence run, or a
- * partial/unreadable/failed extraction, blocks evaluation and comparison.
+ * the server rule: an unreadable or failed extraction, or a source the
+ * intelligence run could not use (`SOURCE_UNAVAILABLE`), blocks. Partially
+ * readable pages do not block; they are surfaced as `partialSources`.
  */
 export type ComparisonBlockReason =
   | "no_version"
-  | "partial_sources"
+  | "source_unavailable"
   | "unreadable"
   | "failed";
 
@@ -56,6 +58,8 @@ export type ResponseCardSummary = {
   headlineFacts: HeadlineFact[];
   requirementCoverage: RequirementCoverage | null;
   comparisonBlocked: ComparisonBlockReason | null;
+  /** Some pages could not be read; findings may be incomplete but nothing is blocked. */
+  partialSources: boolean;
   requiredFields: {
     total: number;
     present: number;
@@ -212,10 +216,12 @@ export const deriveResponseCardSummary = ({
       ? "unreadable"
       : extractionStatus === "failed"
         ? "failed"
-        : extractionStatus === "partial" ||
-            (intelligenceResult?.run.warnings.length ?? 0) > 0
-          ? "partial_sources"
+        : intelligenceResult?.run.warnings.some(isBlockingWarning)
+          ? "source_unavailable"
           : null;
+  const partialSources =
+    comparisonBlocked === null &&
+    (extractionStatus === "partial" || (intelligenceResult?.run.warnings.length ?? 0) > 0);
   const needsAttention =
     !hasVersion ||
     extractionStatus !== "ready" ||
@@ -231,6 +237,7 @@ export const deriveResponseCardSummary = ({
       : [],
     requirementCoverage,
     comparisonBlocked,
+    partialSources,
     requiredFields,
     contradictionCount: intelligenceResult?.run.contradictionCount ?? 0,
     isComparable: comparisonBlocked === null,

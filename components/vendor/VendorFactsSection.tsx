@@ -6,6 +6,7 @@ import Link from "next/link";
 import EvidenceExcerpt from "@/components/proposalIntelligence/EvidenceExcerpt";
 import SectionLoadError from "@/components/vendor/SectionLoadError";
 import { coverageFromRelationship, coveragePresentation } from "@/lib/proposalIntelligence/coverageVocabulary";
+import { isBlockingWarning } from "@/lib/proposalIntelligence/evaluationGate";
 import {
   createVendorIntelligenceAction,
   getLatestVendorIntelligenceAction,
@@ -288,16 +289,19 @@ const warningSources = (warnings: VendorIntelligenceResult["run"]["warnings"]) =
   [...new Set(warnings.map((warning) => (typeof warning.sourceLabel === "string" ? warning.sourceLabel : "")).filter(Boolean))];
 
 /**
- * The most important thing on the page when it applies: a file could not be
- * fully read, which silently drops the vendor from the comparison. Written as
- * a task with two ways out, not as a warning.
+ * The most important thing on the page when it applies. Two flavours, matching
+ * the backend rule: a source that was unavailable to the analysis blocks
+ * scoring and comparison; partially readable pages do not block but may hide
+ * answers. Both are written as a task with two ways out, not as a warning.
  */
-function UnreadableFileCard({ warnings, vendorName, vendorEmail, proposalId, proposalTitle }: {
-  warnings: VendorIntelligenceResult["run"]["warnings"]; vendorName?: string; vendorEmail?: string; proposalId: string; proposalTitle?: string;
+function UnreadableFileCard({ warnings, blocked, vendorName, vendorEmail, proposalId, proposalTitle }: {
+  warnings: VendorIntelligenceResult["run"]["warnings"]; blocked: boolean; vendorName?: string; vendorEmail?: string; proposalId: string; proposalTitle?: string;
 }) {
-  const sources = warningSources(warnings);
+  const sources = warningSources(blocked ? warnings.filter(isBlockingWarning) : warnings);
   const name = vendorLabel(vendorName);
-  const heading = sources.length === 1 ? `Part of ${sources[0]} could not be read` : sources.length > 1 ? `Parts of ${sources.length} files could not be read` : "Part of this response could not be read";
+  const heading = blocked
+    ? (sources.length === 1 ? `${sources[0]} could not be used by the analysis` : sources.length > 1 ? `${sources.length} files could not be used by the analysis` : "A file could not be used by the analysis")
+    : (sources.length === 1 ? `Some pages of ${sources[0]} could not be read` : sources.length > 1 ? `Some pages of ${sources.length} files could not be read` : "Some pages of this response could not be read");
   const fileList = sources.length ? sources.map((source) => `"${source}"`).join(", ") : "your response";
   const askHref = emailHref({
     proposalId, to: vendorEmail,
@@ -307,7 +311,9 @@ function UnreadableFileCard({ warnings, vendorName, vendorEmail, proposalId, pro
   const details = warnings.map((warning) => `${typeof warning.sourceLabel === "string" ? `${warning.sourceLabel}: ` : ""}${String(warning.message ?? "Some response evidence was unavailable.")}`);
   return <div role="alert" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
     <p className="flex items-center gap-2 text-sm font-bold"><FileWarning size={16} aria-hidden="true"/>{heading}</p>
-    <p className="mt-1 text-xs leading-5">Until it can, {name} is left out of the vendor comparison and cannot be scored. The requirements below are still worth reading, but the missing pages may hold answers we have not seen.</p>
+    <p className="mt-1 text-xs leading-5">{blocked
+      ? `Until it can be, ${name} is left out of the vendor comparison and cannot be scored. Retry the check above, or get a fresh copy of the file.`
+      : `Scoring and comparison can go ahead with what was read, but the unread pages may hold answers we have not seen. Check the gaps below before deciding, or get a readable copy.`}</p>
     <div className="mt-3 flex flex-wrap gap-2">
       <Link href={askHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#008ad2] px-3.5 text-xs font-bold text-white hover:bg-[#0076b4]"><MailPlus size={13} aria-hidden="true"/>Ask {name} for a text-based copy</Link>
       <Link href={`/vendor-responses/proposals/${encodeURIComponent(proposalId)}?add=manual`} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-amber-400 bg-white px-3.5 text-xs font-bold text-amber-900 hover:bg-amber-100"><ClipboardList size={13} aria-hidden="true"/>Add the missing figures manually</Link>
@@ -331,7 +337,7 @@ function WhatNext({ blocked, mappings, vendorName, vendorEmail, proposalId, prop
   return <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label="What to do next">
     <p className="text-xs font-bold uppercase tracking-wide text-slate-500">What to do next</p>
     {blocked
-      ? <p className="mt-1 text-sm text-slate-700">Resolve the unreadable file above first. Once every page can be read, you can score {name} and include them in the vendor comparison.</p>
+      ? <p className="mt-1 text-sm text-slate-700">Resolve the unavailable file above first. Once the analysis can use it, you can score {name} and include them in the vendor comparison.</p>
       : <>
         <p className="mt-1 text-sm text-slate-700">{gaps.length > 0
           ? `${name} left ${gaps.length} ${gaps.length === 1 ? "requirement" : "requirements"} unanswered or only partly answered. You can ask them about it, score the response as it stands, or compare all vendors.`
@@ -412,13 +418,14 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
   };
 
   const processing = starting || result?.run.status === "queued" || result?.run.status === "running";
-  const coverageBlocked = result?.run.warnings.some((warning) => warning.code === "SOURCE_UNAVAILABLE") ?? false;
   // A succeeded run is never redone for the same inputs (the backend returns
   // the saved result), so present the button as an up-to-date state instead
   // of implying a rerun.
   const upToDate = !processing && result?.run.status === "succeeded";
   const name = vendorLabel(vendorName);
-  const blocked = (result?.run.warnings.length ?? 0) > 0;
+  // Mirrors the backend: only an unavailable source blocks; partial pages warn.
+  const blocked = result?.run.warnings.some(isBlockingWarning) ?? false;
+  const hasSourceWarnings = (result?.run.warnings.length ?? 0) > 0;
   return <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm" aria-labelledby="vendor-intelligence-title">
     <div className="flex flex-wrap items-start justify-between gap-3"><div className="max-w-2xl">
       <h3 id="vendor-intelligence-title" className="text-base font-extrabold text-slate-900">How {name} answered your requirements</h3>
@@ -431,12 +438,19 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
     {result?.run.status === "failed" && <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">The run failed safely{result.run.safeErrorCode ? ` (${result.run.safeErrorCode})` : ""}. No unsupported findings were saved.</p>}
     {result && ["queued", "running"].includes(result.run.status) && <p className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-xs text-sky-800">Checking the response against your requirements. This page will update on its own.</p>}
     {result?.run.status === "succeeded" && <>
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{[["Requirements", result.run.requirementCount], ["Mapped", result.run.mappedRequirementCount], ["Facts", result.run.factCount], ["Contradictions", result.run.contradictionCount]].map(([name, count]) => <div key={String(name)} className="rounded-xl bg-slate-50 px-3 py-2"><p className="text-[10px] font-bold uppercase text-slate-400">{name}</p><p className="text-lg font-extrabold text-slate-800">{count}</p></div>)}</div>
-      {result.run.warnings.length > 0 && <div role="alert" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-xs text-amber-900"><p className="font-bold">{coverageBlocked ? "A response source is unavailable. Evaluation and vendor comparison are blocked until it is available." : "Some source content could not be read. Evaluation can continue using the extracted evidence; review these warnings before the final decision."}</p><ul className="mt-2 list-disc space-y-1 pl-5">{result.run.warnings.map((warning, index) => <li key={`${String(warning.code ?? "warning")}-${index}`}>{typeof warning.sourceLabel === "string" ? `${warning.sourceLabel}: ` : ""}{String(warning.message ?? "Some response evidence was unavailable.")}</li>)}</ul></div>}
-      {result.run.contradictionCount > 0 && <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800"><CircleAlert size={14}/>Conflicting values are preserved and marked for human review.</p>}
-      <div className="mt-4 flex gap-2 border-b border-slate-200"><button type="button" onClick={() => setTab("mappings")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "mappings" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Requirement mappings</button><button type="button" onClick={() => setTab("facts")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "facts" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Key facts</button></div>
-      {tab === "mappings" ? <ul className="mt-3 space-y-3">{result.mappings.map((mapping) => { const key = `mapping:${mapping.mappingId}`; return <li key={mapping.mappingId} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-bold text-slate-800">{mapping.requirementTitle}</p><p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{[mapping.mandatory ? "Mandatory" : null, mapping.confidence < 0.7 ? `Low AI confidence (${Math.round(mapping.confidence * 100)}%) — verify the source` : null].filter(Boolean).join(" · ")}</p></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${coverage(mapping.relationship).className}`} title={coverage(mapping.relationship).description}>{coverage(mapping.relationship).label}</span></div><p className="mt-1 text-xs leading-5 text-slate-600">{coverage(mapping.relationship).description}</p><EvidenceList evidence={mapping.evidence} context={[mapping.requirementTitle]}/><ReviewControls targetType="mapping" review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision) => review("mapping", mapping.mappingId, decision, null)}/></li>; })}</ul>
-      : <ul className="mt-3 space-y-3">{result.facts.map((fact) => { const key = `fact:${fact.factId}`; return <li key={fact.factId} className={`rounded-xl border p-4 ${fact.contradictionGroup ? "border-amber-300 bg-amber-50/30" : "border-slate-200"}`}><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-bold text-slate-800">{fact.statement}</p><p className="mt-1 text-xs font-semibold text-[#0076b4]">{fact.normalizedValue || "Unspecified value"}</p><p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">{[label(fact.family), fact.confidence < 0.7 ? `Low AI confidence (${Math.round(fact.confidence * 100)}%) — verify the source` : null].filter(Boolean).join(" · ")}</p></div>{fact.contradictionGroup && <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase text-amber-800">Contradiction</span>}</div><EvidenceList evidence={fact.citations} context={[fact.statement, fact.normalizedValue]}/><ReviewControls targetType="fact" review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, value) => review("fact", fact.factId, decision, value === undefined ? null : factCorrectionPayload(fact, value))}/></li>; })}</ul>}
+      {hasSourceWarnings && <UnreadableFileCard warnings={result.run.warnings} blocked={blocked} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle}/>}
+      {result.run.contradictionCount > 0 && <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800"><CircleAlert size={14}/>{name} gave conflicting answers in places. They are kept side by side under Stated values so you can decide which is right.</p>}
+      <div className="mt-4 flex gap-2 border-b border-slate-200" role="tablist" aria-label="Analysis views">
+        <button type="button" role="tab" aria-selected={tab === "mappings"} onClick={() => setTab("mappings")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "mappings" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Requirements</button>
+        <button type="button" role="tab" aria-selected={tab === "facts"} onClick={() => setTab("facts")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "facts" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Stated values</button>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-slate-500">{tab === "mappings"
+        ? `Each thing you asked for, and whether ${name} covered it. Anything not fully answered is listed first.`
+        : `The numbers and dates ${name} gave, such as the total cost, staffing, and schedule. These are what gets compared across vendors.`}</p>
+      {tab === "mappings"
+        ? <MappingList mappings={result.mappings} attentionOnly={attentionOnly} onAttentionOnlyChange={setAttentionOnly} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(mappingId, decision, payload) => review("mapping", mappingId, decision, payload)}/>
+        : <FactList facts={result.facts} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(factId, decision, payload) => review("fact", factId, decision, payload)}/>}
+      <WhatNext blocked={blocked} mappings={result.mappings} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle}/>
     </>}
   </section>;
 }

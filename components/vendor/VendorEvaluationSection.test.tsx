@@ -147,10 +147,10 @@ test("explains a criterion no requirement feeds instead of showing it as zero ou
 
 test("does not offer an evaluation the server would refuse, and explains why", async () => {
   latest.mockResolvedValue({ success: false, code: "EVALUATION_RUN_NOT_FOUND", message: "No evaluation snapshot exists for this response version." });
-  render(<VendorEvaluationSection proposalId="p" submissionId="s" versionId="v" gate={{ state: "coverage_blocked", details: ["Response.pdf: A page could not be extracted with OCR."] }} />);
-  expect(await screen.findByText(/Scoring is blocked until every page/)).toBeInTheDocument();
+  render(<VendorEvaluationSection proposalId="p" submissionId="s" versionId="v" gate={{ state: "coverage_blocked", details: ["Pricing.xlsx: This source was not available to proposal intelligence."] }} />);
+  expect(await screen.findByText(/Scoring is blocked because a file in this response could not be made available/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Start evaluation" })).toBeDisabled();
-  expect(screen.getByText("Response.pdf: A page could not be extracted with OCR.")).toBeInTheDocument();
+  expect(screen.getByText("Pricing.xlsx: This source was not available to proposal intelligence.")).toBeInTheDocument();
   expect(screen.queryByText(/Hide pricing from evaluators/)).not.toBeInTheDocument();
   expect(screen.queryByText(/approve your requirement checklist first/)).not.toBeInTheDocument();
 });

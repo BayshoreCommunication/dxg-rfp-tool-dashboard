@@ -113,7 +113,7 @@ const extractionLabels: Record<ResponseCardSummary["extractionStatus"], string> 
 };
 
 const exclusionNotes: Record<NonNullable<ResponseCardSummary["comparisonBlocked"]>, string> = {
-  partial_sources: "Left out of the vendor comparison until every page of its files can be read.",
+  source_unavailable: "Left out of the vendor comparison because a file could not be made available to the analysis.",
   unreadable: "Left out of the vendor comparison because its files could not be read.",
   failed: "Left out of the vendor comparison because reading its files failed.",
   no_version: "Left out of the vendor comparison because it has no versioned submission.",
@@ -150,8 +150,12 @@ const coverageSentence = (summary: ResponseCardSummary) => {
 };
 
 const responseOverview = (summary: ResponseCardSummary) => {
-  const exclusion = summary.comparisonBlocked ? ` ${exclusionNotes[summary.comparisonBlocked]}` : "";
-  return `${coverageSentence(summary)}${exclusion}`;
+  const note = summary.comparisonBlocked
+    ? ` ${exclusionNotes[summary.comparisonBlocked]}`
+    : summary.partialSources
+      ? " Some pages could not be read, so its findings may be incomplete."
+      : "";
+  return `${coverageSentence(summary)}${note}`;
 };
 
 function ResponseCard({

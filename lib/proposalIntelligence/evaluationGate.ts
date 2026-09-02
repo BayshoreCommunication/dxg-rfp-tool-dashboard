@@ -2,8 +2,9 @@
  * What the scoring section may say before an evaluation exists.
  *
  * The backend refuses to create an evaluation until the response's proposal
- * intelligence run has succeeded with no source warnings (and the scoring
- * matrix is approved, which only the server can check). The detail page
+ * intelligence run has succeeded and no source was unavailable to it
+ * (`SOURCE_UNAVAILABLE`; partially readable pages do not block). The scoring
+ * matrix must also be approved, which only the server can check. The detail page
  * already loads that intelligence run for the section above, so the scoring
  * section derives its own readiness from it instead of offering a button the
  * server is certain to reject.
@@ -17,6 +18,11 @@ export type EvaluationGate =
   | { state: "analysis_failed" }
   | { state: "coverage_blocked"; details: string[] }
   | { state: "ready" };
+
+/** Mirrors `blockingCoverageWarnings` in the backend evaluation engine. */
+const blockingCodes = new Set(["SOURCE_UNAVAILABLE"]);
+export const isBlockingWarning = (warning: Record<string, unknown>) =>
+  blockingCodes.has(String(warning.code ?? ""));
 
 const warningText = (warnings: Array<Record<string, unknown>>) =>
   warnings
@@ -36,8 +42,9 @@ export const evaluationGateFromIntelligence = (input: {
   if (!run) return { state: "analysis_missing" };
   if (run.status === "queued" || run.status === "running") return { state: "analysis_running" };
   if (run.status === "failed") return { state: "analysis_failed" };
-  if (run.warnings.length > 0) {
-    return { state: "coverage_blocked", details: warningText(run.warnings) };
+  const blocking = run.warnings.filter(isBlockingWarning);
+  if (blocking.length > 0) {
+    return { state: "coverage_blocked", details: warningText(blocking) };
   }
   return { state: "ready" };
 };
@@ -54,7 +61,7 @@ export const evaluationGateMessage = (gate: EvaluationGate): string => {
     case "analysis_failed":
       return "The analysis above failed, so there is nothing to score yet. Retry it, then start the evaluation.";
     case "coverage_blocked":
-      return "Scoring is blocked until every page of this response's files can be read. Ask the vendor for a text-based copy, or add the missing figures manually.";
+      return "Scoring is blocked because a file in this response could not be made available to the analysis. Retry the analysis above, or ask the vendor to resend the file.";
     case "ready":
       return "No evaluation has been started for this version. Start one to score it against your approved criteria.";
   }
