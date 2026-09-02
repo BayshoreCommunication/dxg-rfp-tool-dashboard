@@ -14,7 +14,7 @@ test("maps incomplete source coverage to a safe actionable evaluation message", 
   await expect(createEvaluationAction("proposal", "submission", "version", false)).resolves.toEqual({
     success: false,
     code: "INTELLIGENCE_COVERAGE_INCOMPLETE",
-    message: "Resolve every partial, unreadable, unavailable, or truncated response source before scoring this vendor.",
+    message: "Resolve each unavailable response source before scoring this vendor.",
   });
 });
 
