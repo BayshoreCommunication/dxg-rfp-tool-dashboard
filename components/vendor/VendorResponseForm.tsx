@@ -141,6 +141,11 @@ export default function VendorResponseForm({
       if (accessGrant) params.set("accessGrant", accessGrant);
       const res = await fetch(`/api/vendor-responses/check?${params.toString()}`);
       const json = await res.json();
+      if (!res.ok) {
+        setError(json.message || "This secure invitation link could not be verified. Ask the planner for a new link.");
+        return;
+      }
+      setError("");
       if (json.alreadySubmitted && json.existingResponse) {
         applyExistingResponse(json.existingResponse as ExistingResponse);
       } else {
@@ -460,7 +465,7 @@ export default function VendorResponseForm({
 
               <div className="sm:col-span-2">
                 <label htmlFor="response-email" className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
-                  <Mail size={15} className="text-slate-400" aria-hidden="true" /> Email address <span className="text-rose-500">*</span>
+                  <Mail size={15} className="text-slate-400" aria-hidden="true" /> Response contact email <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -470,6 +475,7 @@ export default function VendorResponseForm({
                     value={email}
                     onChange={(event) => {
                       setEmail(event.target.value);
+                      setError("");
                       if (fieldErrors.email) setFieldErrors((current) => ({ ...current, email: undefined }));
                       if (isUpdateMode) {
                         setIsUpdateMode(false);
@@ -491,7 +497,9 @@ export default function VendorResponseForm({
                     <Loader2 size={17} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-[#008ad2]" aria-label="Checking for an existing response" />
                   ) : null}
                 </div>
-                <p id="email-help" className="mt-2 text-xs text-slate-500">We’ll send the submission confirmation to this address.</p>
+                <p id="email-help" className="mt-2 text-xs text-slate-500">
+                  We’ll send the submission confirmation here. This can be different from the email address that received the invitation.
+                </p>
                 {fieldErrors.email ? <p id="response-email-error" role="alert" className="mt-2 text-sm font-semibold text-rose-600">{fieldErrors.email}</p> : null}
               </div>
             </div>
