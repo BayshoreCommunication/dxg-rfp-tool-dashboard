@@ -19,6 +19,7 @@ import {
   type IntelligenceStatus,
 } from "@/lib/proposalIntelligence/statusVocabulary";
 import type { DurableJob } from "@/lib/asyncOperations";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -324,7 +325,8 @@ export default function ProposalIntelligenceLiveRun({
   }, [jobs, participants, refreshParticipant, updateParticipant]);
 
   const activeJobs = Object.values(jobs).filter((item) => !item.job || !terminalJobs.has(item.job.status));
-  const extractionDone = participants.every((participant) =>
+  const hasParticipants = participants.length > 0;
+  const extractionDone = hasParticipants && participants.every((participant) =>
     Boolean(participant.error) || terminalExtraction.has(participant.extraction.status));
   const usableParticipants = participants.filter((participant) => readableExtraction.has(participant.extraction.status));
   const intelligenceDone = usableParticipants.length > 0
@@ -373,7 +375,9 @@ export default function ProposalIntelligenceLiveRun({
       icon: ScanSearch,
       title: "Finding answers to your requirements",
       status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone && counts.failed === 0, partial: intelligenceDone && counts.failed > 0, queued: !extractionDone && runActive }),
-      summary: `${counts.located} of ${counts.requirements || "unavailable"} requirements answered with quoted evidence`,
+      summary: counts.requirements
+        ? `${counts.located} of ${counts.requirements} requirements answered with quoted evidence`
+        : "Starts once a response has been read",
     },
     {
       key: "normalizing",
@@ -392,7 +396,7 @@ export default function ProposalIntelligenceLiveRun({
     {
       key: "scoring",
       icon: Scale,
-      title: "Team scoring and ranking",
+      title: "Scoring and ranking",
       status: comparison
         ? comparisonFinished && !comparisonCurrent ? "attention" : jobStatusToIntelligenceStatus(comparison.run.status)
         : intelligenceDone
@@ -402,7 +406,7 @@ export default function ProposalIntelligenceLiveRun({
         ? `${comparison.run.completedParticipantCount} of ${comparison.run.participantCount} vendors analyzed${comparisonFinished && !comparisonCurrent ? " · inputs have changed since this run" : ""}`
         : intelligenceDone
           ? comparisonReadyCount >= 2
-            ? "Your turn: have your team review flagged evidence and score the vendors, then start the comparison"
+            ? "Your turn: review the flagged evidence, score the vendors, then start the comparison"
             : "Fewer than two responses could be read, so scoring and ranking are not available"
           : "Starts after the responses have been read and matched to requirements",
       chipLabel: comparison
@@ -458,19 +462,34 @@ export default function ProposalIntelligenceLiveRun({
         </div>
       </header>
 
-      <div className="mt-5" role="progressbar" aria-label="Proposal analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(overallProgress)}>
-        <div className="h-2 overflow-hidden rounded-full bg-gray-border"><div className="h-full bg-brand" style={{ width: `${Math.max(0, Math.min(100, overallProgress))}%` }} /></div>
-        <p className="mt-1 text-right font-mono text-xs font-bold text-gray">{Math.round(overallProgress)}%</p>
-      </div>
-
-      {initialParticipants.length < 2 && (
-        <div className={cn(intelligenceSurfaceClasses.block, "mt-5 flex items-start gap-3 bg-gray-panel")} role="alert">
-          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-navy" aria-hidden="true" />
-          <p className="text-sm text-gray">At least two versioned responses are required. Return to responses and invite another vendor.</p>
+      {!hasParticipants && (
+        <div className={cn(intelligenceSurfaceClasses.block, "mt-5 bg-gray-panel")}>
+          <h3 className="text-sm font-extrabold text-navy">Nothing to analyze yet</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-gray">
+            When vendors send their responses, RFPilot reads every document, finds where each one answers your requirements, and quotes the vendor&rsquo;s own words back to you. Two responses are needed before they can be compared.
+          </p>
+          <Link href="/vendor-responses" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-border bg-white px-4 text-xs font-extrabold text-navy hover:border-brand hover:text-brand-dark">
+            Go to vendor responses
+          </Link>
         </div>
       )}
 
-      {(() => {
+      {hasParticipants && <div className="mt-5" role="progressbar" aria-label="Proposal analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(overallProgress)}>
+        <div className="h-2 overflow-hidden rounded-full bg-gray-border"><div className="h-full bg-brand" style={{ width: `${Math.max(0, Math.min(100, overallProgress))}%` }} /></div>
+        <p className="mt-1 text-right font-mono text-xs font-bold text-gray">{Math.round(overallProgress)}%</p>
+      </div>}
+
+      {hasParticipants && initialParticipants.length < 2 && (
+        <div className={cn(intelligenceSurfaceClasses.block, "mt-5 flex items-start gap-3 bg-gray-panel")} role="alert">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-navy" aria-hidden="true" />
+          <p className="text-sm text-gray">
+            Only one response so far. RFPilot needs at least two before it can compare vendors.{" "}
+            <Link href="/vendor-responses" className="font-bold text-brand-dark underline">Go to vendor responses</Link>
+          </p>
+        </div>
+      )}
+
+      {hasParticipants && (() => {
         const analysisSettled = !live && intelligenceDone && counts.failed === 0;
         const phaseList = (
       <ol className="mt-5 space-y-3">

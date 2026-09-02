@@ -7,11 +7,15 @@ import { getLatestVendorIntelligenceAction } from "@/app/actions/vendorIntellige
 import { getVendorResponsesAction, type VendorResponseItem } from "@/app/actions/vendorResponse";
 import ProposalIntelligenceLiveRun, { type ProposalAnalysisParticipant } from "@/components/proposalIntelligence/ProposalIntelligenceLiveRun";
 import ProposalComparisonMatrix from "@/components/proposalIntelligence/ProposalComparisonMatrix";
+import ExcludedVendorsNotice from "@/components/proposalIntelligence/ExcludedVendorsNotice";
+import GlossaryDialog from "@/components/proposalIntelligence/GlossaryDialog";
 import ProposalReweighting from "@/components/proposalIntelligence/ProposalReweighting";
 import ProposalVerdict from "@/components/proposalIntelligence/ProposalVerdict";
 import VendorComparisonPanel from "@/components/vendor/VendorComparisonPanel";
 import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, FileStack, History, Scale, Users } from "lucide-react";
+import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
+import { findExcludedVendors } from "@/lib/proposalIntelligence/excludedVendors";
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileStack, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -19,7 +23,6 @@ import type { Metadata } from "next";
 export const maxDuration = 60;
 export const metadata: Metadata = { title: "Proposal Intelligence | RFPilot" };
 
-const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 const hasComparableEvidence = (response: VendorResponseItem) =>
   response.documents.length > 0 || response.message.trim().length > 0;
@@ -37,7 +40,6 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
   const proposal = proposalResult.data;
   const event = record(proposal.event) ? proposal.event : {};
   const title = typeof event.eventName === "string" ? event.eventName : "Untitled proposal";
-  const status = typeof proposal.status === "string" ? proposal.status : "unsubmitted";
   const responses = Array.isArray(responsesResult?.data) ? responsesResult.data as VendorResponseItem[] : [];
   const analysisResponses = responses.filter((response) =>
     response.submissionId && response.currentVersionId && hasComparableEvidence(response));
@@ -48,7 +50,6 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
   const workspacePromise = currentRun?.run.status.startsWith("succeeded")
     ? getComparisonWorkspaceAction(id, currentRun.run.runId)
     : Promise.resolve(null);
-  const readyResponses = analysisResponses.length;
   const analysisPromise = Promise.all(analysisResponses.flatMap((response) =>
     response.submissionId && response.currentVersionId ? [Promise.all([
       getEvidenceExtractionsAction(id, response.submissionId, response.currentVersionId),
@@ -81,15 +82,23 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
     .map((result) => result.participant.responseId);
   const preparedResponseIds = analysisParticipants.filter((participant) => participant.intelligence?.run.status === "succeeded")
     .map((participant) => participant.responseId);
-  const preparationComplete = readyResponses >= 2 && preparedResponseIds.length === readyResponses;
-  const readiness = !approvedSet
-    ? "Requirements need approval"
-    : readyResponses < 2
-      ? "More responses needed"
-      : preparationComplete
-        ? "Ready to compare"
-        : "Preparing vendors";
   const currentWorkspace = workspaceResult?.success ? workspaceResult.data : null;
+  const comparisonReady = new Set(comparisonReadyResponseIds);
+  const excludedVendors = currentWorkspace
+    ? findExcludedVendors({
+      candidates: analysisParticipants.map((participant) => ({
+        responseId: participant.responseId,
+        vendorLabel: participant.vendorLabel,
+        submissionId: participant.submissionId,
+        versionId: participant.versionId,
+        intelligenceStatus: participant.intelligence?.run.status,
+        warnings: participant.intelligence?.run.warnings,
+        comparisonReady: comparisonReady.has(participant.responseId),
+        error: participant.error,
+      })),
+      comparedKeys: currentWorkspace.participants,
+    })
+    : [];
   const intelligencePath = `/proposals/${id}/intelligence`;
 
   return (
@@ -102,36 +111,33 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
               <div>
                 <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Proposal intelligence</p>
                 <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{title}</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">RFPilot reads each vendor&rsquo;s response, checks it against your approved requirements, and shows you a side-by-side comparison with every claim linked back to the vendor&rsquo;s own words. Your team scores the vendors and makes the final decision &mdash; RFPilot organizes the evidence.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-700">{label(status)}</span>
-                <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${approvedSet && preparationComplete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{readiness}</span>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">RFPilot reads every response you receive, checks it against the requirements you approved, and lines the vendors up side by side with each claim linked back to the vendor&rsquo;s own words. It suggests a starting score from that evidence. You confirm or change it, and you choose the vendor.</p>
+                <div className="mt-4"><GlossaryDialog /></div>
               </div>
             </div>
           </div>
-          <div className="grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Users, value: readyResponses, label: "Vendor responses" },
-              { icon: ClipboardList, value: approvedSet ? `v${approvedSet.version}` : "Not approved", label: "Requirement checklist" },
-              { icon: History, value: comparisons.length, label: "Comparisons run" },
-              { icon: Scale, value: currentRun ? label(currentRun.run.status) : "Not started", label: "Current comparison" },
-            ].map((item) => <div key={item.label} className="bg-white p-4 sm:p-5"><item.icon size={17} className="text-[#008ad2]" /><p className="mt-3 text-xl font-extrabold text-slate-950">{item.value}</p><p className="mt-1 text-xs font-semibold text-slate-500">{item.label}</p></div>)}
-          </div>
         </header>
+
+        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="step-one-title">
+          <p className="text-xs font-extrabold uppercase tracking-wide text-[#008ad2]">Step 1 · Approve your requirements</p>
+          <div className="mt-2 flex items-start gap-3">
+            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${approvedSet ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{approvedSet ? <CheckCircle2 size={19} /> : <AlertTriangle size={19} />}</span>
+            <div>
+              <h2 id="step-one-title" className="font-extrabold text-slate-950">Your requirement checklist</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{approvedSet ? `Version ${approvedSet.version} contains ${approvedSet.requirement_count} requirements, approved${approvedSet.approved_at ? ` on ${formatIntelligenceTimestamp(approvedSet.approved_at)}` : ""} in the requirement checklist. It is locked so every vendor is judged against the same list.` : "Review and approve your requirement checklist to begin. Every vendor will be compared against the same approved list."}</p>
+            </div>
+          </div>
+          <Link href={requirementRegistryHref(id, intelligencePath)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><FileStack size={15} />{approvedSet ? "Open requirement checklist" : "Approve your requirements"}</Link>
+        </section>
 
         <ProposalIntelligenceLiveRun
           proposalId={id}
           initialParticipants={analysisParticipants}
           comparison={currentRun}
         />
-        {currentWorkspace && <><ProposalComparisonMatrix workspace={currentWorkspace} /><ProposalReweighting workspace={currentWorkspace} /><ProposalVerdict workspace={currentWorkspace} proposalId={id} /></>}
+        {currentWorkspace && <><ExcludedVendorsNotice excluded={excludedVendors} comparedCount={currentWorkspace.participants.length} /><ProposalComparisonMatrix workspace={currentWorkspace} /><ProposalReweighting workspace={currentWorkspace} /><ProposalVerdict workspace={currentWorkspace} proposalId={id} /></>}
 
-        <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="flex items-start gap-3"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${approvedSet ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{approvedSet ? <CheckCircle2 size={19} /> : <AlertTriangle size={19} />}</span><div><h2 className="font-extrabold text-slate-950">Your requirement checklist</h2><p className="mt-1 text-sm leading-6 text-slate-600">{approvedSet ? `Approved version ${approvedSet.version} contains ${approvedSet.requirement_count} requirements. It is locked so every vendor is judged against the same list.` : "Review and approve your requirement checklist to begin. Every vendor will be compared against the same approved list."}</p></div></div>
-            <Link href={requirementRegistryHref(id, intelligencePath)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><FileStack size={15} />Open requirement registry</Link>
-          </article>
+        <section className="mt-5">
           <article className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="font-extrabold text-slate-950">Past comparisons</h2>
             <p className="mt-1 text-sm leading-6 text-slate-600">Every comparison is saved exactly as it was run. Older results stay readable even after requirements or responses change.</p>

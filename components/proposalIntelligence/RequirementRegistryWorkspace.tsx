@@ -1,5 +1,6 @@
 "use client";
 
+import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
 import {
   approveRequirementSetAction,
   generateRequirementSetAction,
@@ -312,7 +313,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
         <header className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]"><Sparkles size={14} /> Proposal intelligence</p>
+              <p className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]"><Sparkles size={14} /> Step 1 of 4 · Approve your requirements</p>
               <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Prepare vendor evaluation</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Turn the proposal into one clear, approved checklist so every vendor is compared against the same requirements.</p>
             </div>
@@ -337,15 +338,15 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
           <>
             {registry.freshness.stale && <section className="mt-5 flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-extrabold text-rose-900">This registry is historical</p><p className="mt-1 text-sm text-rose-700">{freshnessDetail(registry.freshness.reasons)} The existing record stays unchanged; create a new version before evaluation.</p></div>{registry.set.status === "approved" ? <button disabled={working} onClick={() => void supersede()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Supersede with current proposal</button> : <button disabled={working} onClick={() => void generate()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Create current version</button>}</section>}
 
-            <section aria-label="Approval steps" className="mt-5 grid gap-3 md:grid-cols-3">
+            <section aria-label="Checklist progress" className="mt-5 grid gap-3 md:grid-cols-3">
               <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-700 text-sm font-extrabold text-white">1</span><div><p className="text-xs font-extrabold uppercase tracking-wide text-emerald-700">Proposal analyzed</p><p className="mt-0.5 text-sm font-bold text-slate-900">{requirementCount} requirements found</p></div></div>
+                <div className="flex items-center gap-3"><CheckCircle2 size={20} className="shrink-0 text-emerald-700" aria-hidden="true" /><div><p className="text-xs font-extrabold uppercase tracking-wide text-emerald-700">Proposal analyzed</p><p className="mt-0.5 text-sm font-bold text-slate-900">{requirementCount} requirements found</p></div></div>
               </article>
               <article className={`rounded-2xl border p-4 ${readyForApproval || registry.set.status === "approved" ? "border-emerald-200 bg-emerald-50" : "border-cyan-200 bg-cyan-50"}`}>
-                <div className="flex items-center gap-3"><span className={`grid h-8 w-8 place-items-center rounded-full text-sm font-extrabold text-white ${readyForApproval || registry.set.status === "approved" ? "bg-emerald-700" : "bg-[#008ad2]"}`}>2</span><div><p className={`text-xs font-extrabold uppercase tracking-wide ${readyForApproval || registry.set.status === "approved" ? "text-emerald-700" : "text-[#0073ad]"}`}>Evaluation prepared</p><p className="mt-0.5 text-sm font-bold text-slate-900">{readyForApproval || registry.set.status === "approved" ? "Ready" : "One guided step"}</p></div></div>
+                <div className="flex items-center gap-3"><CheckCircle2 size={20} className={`shrink-0 ${readyForApproval || registry.set.status === "approved" ? "text-emerald-700" : "text-[#008ad2]"}`} aria-hidden="true" /><div><p className={`text-xs font-extrabold uppercase tracking-wide ${readyForApproval || registry.set.status === "approved" ? "text-emerald-700" : "text-[#0073ad]"}`}>Evaluation prepared</p><p className="mt-0.5 text-sm font-bold text-slate-900">{readyForApproval || registry.set.status === "approved" ? "Ready" : "One guided step"}</p></div></div>
               </article>
               <article className={`rounded-2xl border p-4 ${registry.set.status === "approved" ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"}`}>
-                <div className="flex items-center gap-3"><span className={`grid h-8 w-8 place-items-center rounded-full text-sm font-extrabold ${registry.set.status === "approved" ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-500"}`}>3</span><div><p className={`text-xs font-extrabold uppercase tracking-wide ${registry.set.status === "approved" ? "text-emerald-700" : "text-slate-500"}`}>Approval</p><p className="mt-0.5 text-sm font-bold text-slate-900">{registry.set.status === "approved" ? "Frozen for comparison" : "Final confirmation"}</p></div></div>
+                <div className="flex items-center gap-3"><CheckCircle2 size={20} className={`shrink-0 ${registry.set.status === "approved" ? "text-emerald-700" : "text-slate-300"}`} aria-hidden="true" /><div><p className={`text-xs font-extrabold uppercase tracking-wide ${registry.set.status === "approved" ? "text-emerald-700" : "text-slate-500"}`}>Approval</p><p className="mt-0.5 text-sm font-bold text-slate-900">{registry.set.status === "approved" ? "Frozen for comparison" : "Final confirmation"}</p></div></div>
               </article>
             </section>
 
@@ -354,7 +355,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
                 <div>
                   <div className="flex items-center gap-2"><Sparkles size={18} className={readyForApproval || registry.set.status === "approved" ? "text-emerald-700" : "text-[#008ad2]"} /><h2 className="text-xl font-extrabold text-slate-900">{registry.set.status === "approved" ? "Evaluation checklist approved" : readyForApproval ? "Ready for your approval" : "Prepare this registry automatically"}</h2></div>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{registry.set.status === "approved"
-                    ? "This exact checklist is locked and will be used for consistent vendor comparison."
+                    ? `Approved${registry.set.approved_at ? ` on ${formatIntelligenceTimestamp(registry.set.approved_at)}` : ""} from this page. This exact checklist is locked and will be used for consistent vendor comparison.`
                     : readyForApproval
                       ? "The scoring balance and requirement checks are complete. Approve the checklist to start vendor comparison."
                       : "RFPilot will balance scoring to 100%, map requirements to criteria, choose verification methods, and exclude repeated narrative. You can still review every decision before approval."}</p>

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, Check, CircleAlert, Pencil, RefreshCw, ShieldAlert, X } from "lucide-react";
+import EvidenceExcerpt from "@/components/proposalIntelligence/EvidenceExcerpt";
+import { coverageFromRelationship, coveragePresentation } from "@/lib/proposalIntelligence/coverageVocabulary";
 import {
   createVendorIntelligenceAction,
   getLatestVendorIntelligenceAction,
@@ -12,10 +14,7 @@ import {
   type VendorIntelligenceResult,
 } from "@/app/actions/vendorIntelligence";
 
-const relationshipStyle: Record<string, string> = {
-  supports: "bg-emerald-100 text-emerald-800", partially_supports: "bg-amber-100 text-amber-800",
-  contradicts: "bg-red-100 text-red-800", context_only: "bg-sky-100 text-sky-800", none: "bg-slate-100 text-slate-700",
-};
+const coverage = (relationship: string) => coveragePresentation[coverageFromRelationship(relationship)];
 const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 const locatorLabel = (locator: Record<string, string | number>) => Object.entries(locator)
   .filter(([key]) => ["page", "sheet", "row", "column", "characterStart", "characterEnd"].includes(key))
@@ -54,13 +53,13 @@ export const factCorrectionPayload = (fact: ExtractedFact, value: string): Recor
   };
 };
 
-function EvidenceList({ evidence }: { evidence: IntelligenceEvidence[] }) {
+function EvidenceList({ evidence, context }: { evidence: IntelligenceEvidence[]; context: string[] }) {
   if (!evidence.length) return <p className="mt-2 text-xs italic text-slate-500">No supporting passage was identified.</p>;
   return <details className="mt-3">
     <summary className="cursor-pointer text-xs font-bold text-[#0076b4]">Show cited evidence ({evidence.length})</summary>
     <ul className="mt-2 space-y-2">{evidence.map((item) => <li key={item.fragmentId} className="rounded-lg border-l-2 border-sky-200 bg-sky-50/50 px-3 py-2">
       <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.sourceLabel}{locatorLabel(item.locator) ? ` · ${locatorLabel(item.locator)}` : ""}</p>
-      <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-700">{item.content}</p>
+      <EvidenceExcerpt content={item.content} context={context}/>
     </li>)}</ul>
   </details>;
 }
@@ -133,7 +132,7 @@ export default function VendorFactsSection({ proposalId, submissionId, versionId
     setSavingTarget(`${targetType}:${targetId}`); setError(undefined);
     const response = await reviewVendorIntelligenceAction(proposalId, submissionId, versionId, result.run.runId, {
       targetType, targetId, decision, reasonCode: decision === "corrected" ? "human_verified_correction" : "human_review",
-      note: decision === "corrected" ? "Value corrected by a proposal reviewer." : "", correctedPayload: correctedPayload ?? null,
+      note: decision === "corrected" ? "Value corrected by the proposal owner." : "", correctedPayload: correctedPayload ?? null,
     }, crypto.randomUUID());
     if (cancelled.current) return;
     setSavingTarget(undefined);
@@ -163,8 +162,8 @@ export default function VendorFactsSection({ proposalId, submissionId, versionId
       {result.run.warnings.length > 0 && <div role="alert" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-xs text-amber-900"><p className="font-bold">Source coverage is incomplete. Evaluation and vendor comparison are blocked.</p><ul className="mt-2 list-disc space-y-1 pl-5">{result.run.warnings.map((warning, index) => <li key={`${String(warning.code ?? "warning")}-${index}`}>{typeof warning.sourceLabel === "string" ? `${warning.sourceLabel}: ` : ""}{String(warning.message ?? "Some response evidence was unavailable.")}</li>)}</ul></div>}
       {result.run.contradictionCount > 0 && <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800"><CircleAlert size={14}/>Conflicting values are preserved and marked for human review.</p>}
       <div className="mt-4 flex gap-2 border-b border-slate-200"><button type="button" onClick={() => setTab("mappings")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "mappings" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Requirement mappings</button><button type="button" onClick={() => setTab("facts")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "facts" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Key facts</button></div>
-      {tab === "mappings" ? <ul className="mt-3 space-y-3">{result.mappings.map((mapping) => { const key = `mapping:${mapping.mappingId}`; return <li key={mapping.mappingId} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-bold text-slate-800">{mapping.requirementTitle}</p><p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{[mapping.mandatory ? "Mandatory" : null, mapping.confidence < 0.7 ? `Low AI confidence (${Math.round(mapping.confidence * 100)}%) — verify the source` : null].filter(Boolean).join(" · ")}</p></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${relationshipStyle[mapping.relationship] ?? relationshipStyle.none}`}>{label(mapping.relationship)}</span></div><EvidenceList evidence={mapping.evidence}/><ReviewControls targetType="mapping" review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision) => review("mapping", mapping.mappingId, decision, null)}/></li>; })}</ul>
-      : <ul className="mt-3 space-y-3">{result.facts.map((fact) => { const key = `fact:${fact.factId}`; return <li key={fact.factId} className={`rounded-xl border p-4 ${fact.contradictionGroup ? "border-amber-300 bg-amber-50/30" : "border-slate-200"}`}><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-bold text-slate-800">{fact.statement}</p><p className="mt-1 text-xs font-semibold text-[#0076b4]">{fact.normalizedValue || "Unspecified value"}</p><p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">{[label(fact.family), fact.confidence < 0.7 ? `Low AI confidence (${Math.round(fact.confidence * 100)}%) — verify the source` : null].filter(Boolean).join(" · ")}</p></div>{fact.contradictionGroup && <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase text-amber-800">Contradiction</span>}</div><EvidenceList evidence={fact.citations}/><ReviewControls targetType="fact" review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, value) => review("fact", fact.factId, decision, value === undefined ? null : factCorrectionPayload(fact, value))}/></li>; })}</ul>}
+      {tab === "mappings" ? <ul className="mt-3 space-y-3">{result.mappings.map((mapping) => { const key = `mapping:${mapping.mappingId}`; return <li key={mapping.mappingId} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-bold text-slate-800">{mapping.requirementTitle}</p><p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{[mapping.mandatory ? "Mandatory" : null, mapping.confidence < 0.7 ? `Low AI confidence (${Math.round(mapping.confidence * 100)}%) — verify the source` : null].filter(Boolean).join(" · ")}</p></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${coverage(mapping.relationship).className}`} title={coverage(mapping.relationship).description}>{coverage(mapping.relationship).label}</span></div><p className="mt-1 text-xs leading-5 text-slate-600">{coverage(mapping.relationship).description}</p><EvidenceList evidence={mapping.evidence} context={[mapping.requirementTitle]}/><ReviewControls targetType="mapping" review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision) => review("mapping", mapping.mappingId, decision, null)}/></li>; })}</ul>
+      : <ul className="mt-3 space-y-3">{result.facts.map((fact) => { const key = `fact:${fact.factId}`; return <li key={fact.factId} className={`rounded-xl border p-4 ${fact.contradictionGroup ? "border-amber-300 bg-amber-50/30" : "border-slate-200"}`}><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-bold text-slate-800">{fact.statement}</p><p className="mt-1 text-xs font-semibold text-[#0076b4]">{fact.normalizedValue || "Unspecified value"}</p><p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">{[label(fact.family), fact.confidence < 0.7 ? `Low AI confidence (${Math.round(fact.confidence * 100)}%) — verify the source` : null].filter(Boolean).join(" · ")}</p></div>{fact.contradictionGroup && <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase text-amber-800">Contradiction</span>}</div><EvidenceList evidence={fact.citations} context={[fact.statement, fact.normalizedValue]}/><ReviewControls targetType="fact" review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, value) => review("fact", fact.factId, decision, value === undefined ? null : factCorrectionPayload(fact, value))}/></li>; })}</ul>}
     </>}
   </section>;
 }

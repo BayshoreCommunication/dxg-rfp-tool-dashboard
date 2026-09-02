@@ -9,6 +9,8 @@ import IntelligenceStatusChip from "@/components/proposalIntelligence/Intelligen
 import { intelligenceSurfaceClasses } from "@/lib/proposalIntelligence/surfaces";
 import { comparisonCellId } from "@/lib/proposalIntelligence/anchors";
 import type { IntelligenceStatus } from "@/lib/proposalIntelligence/statusVocabulary";
+import { coverageFromVerdict, coveragePresentation } from "@/lib/proposalIntelligence/coverageVocabulary";
+import EvidenceExcerpt from "@/components/proposalIntelligence/EvidenceExcerpt";
 import { cn } from "@/lib/utils";
 import { FileSearch, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -22,18 +24,13 @@ const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (lette
 const locatorLabel = (locator: Record<string, unknown>) =>
   Object.entries(locator).map(([key, value]) => `${key.replaceAll("_", " ")} ${typeof value === "object" ? JSON.stringify(value) : String(value)}`).join(" · ") || "Location recorded";
 
-const verdictStatus = (verdict: string): IntelligenceStatus => {
-  if (verdict === "addressed") return "complete";
-  if (verdict === "partially_addressed") return "partial";
-  if (verdict === "contradictory") return "attention";
-  if (verdict === "missing" || verdict === "not_assessable") return "unavailable";
-  return "not_started";
-};
+const verdictStatus = (verdict: string): IntelligenceStatus =>
+  coveragePresentation[coverageFromVerdict(verdict)].status;
 
 const verdictLabel = (verdict: string) =>
-  verdict === "missing" || verdict === "not_assessable" ? "Not stated" : label(verdict);
+  coveragePresentation[coverageFromVerdict(verdict)].label;
 
-function SourceEvidence({ evidence }: { evidence: ComparisonEvidence }) {
+function SourceEvidence({ evidence, context }: { evidence: ComparisonEvidence; context: string[] }) {
   return (
     <article className={intelligenceSurfaceClasses.block}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -41,7 +38,7 @@ function SourceEvidence({ evidence }: { evidence: ComparisonEvidence }) {
         {evidence.supportRole && <IntelligenceStatusChip status={evidence.supportRole === "contradicts" ? "attention" : "complete"} label={label(evidence.supportRole)} />}
       </div>
       <p className="mt-2 font-mono text-xs text-gray">{locatorLabel(evidence.locator)}</p>
-      <blockquote className="mt-3 border-l-2 border-brand pl-3 text-sm leading-6 text-gray">{evidence.excerpt}</blockquote>
+      <blockquote className="mt-3 border-l-2 border-brand pl-3 text-sm leading-6 text-gray"><EvidenceExcerpt content={evidence.excerpt} context={context}/></blockquote>
       {evidence.facts?.length ? (
         <details className="mt-3 border-t border-gray-border pt-3">
           <summary className="cursor-pointer text-xs font-extrabold text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">{evidence.facts.length} extracted {evidence.facts.length === 1 ? "fact" : "facts"}</summary>
@@ -75,7 +72,7 @@ function EvidenceDialog({ selection, onClose }: { selection: CellSelection; onCl
         </header>
         <div className="space-y-4 p-5">
           <section className={intelligenceSurfaceClasses.block}><h4 className="text-xs font-extrabold uppercase tracking-wide text-gray">Assessment</h4><div className="mt-2"><IntelligenceStatusChip status={verdictStatus(selection.vendor.verdict)} label={verdictLabel(selection.vendor.verdict)} /></div><p className="mt-3 text-sm leading-6 text-gray">{selection.vendor.rationale || "No assessment rationale was stored."}</p></section>
-          {selection.vendor.evidence.length > 0 ? selection.vendor.evidence.map((evidence) => <SourceEvidence key={`${evidence.evidenceId}-${evidence.supportRole ?? "evidence"}`} evidence={evidence} />) : (
+          {selection.vendor.evidence.length > 0 ? selection.vendor.evidence.map((evidence) => <SourceEvidence key={`${evidence.evidenceId}-${evidence.supportRole ?? "evidence"}`} evidence={evidence} context={[selection.requirement.title]} />) : (
             <section className={cn(intelligenceSurfaceClasses.block, "bg-gray-panel")}><h4 className="text-sm font-extrabold text-navy">No supporting text found</h4><p className="mt-2 text-sm leading-6 text-gray">This vendor&rsquo;s response doesn&rsquo;t address this requirement, so treat it as not stated. RFPilot never assumes a requirement is met without evidence.</p></section>
           )}
         </div>
@@ -117,7 +114,7 @@ export default function ProposalComparisonMatrix({ workspace }: { workspace: Com
             <tbody>
               {vendors.map((participant) => <tr key={participant.participantId}><th scope="row" className="sticky left-0 z-10 border-b border-r border-gray-border bg-white p-3 align-top"><p className="text-sm font-extrabold text-navy">{participant.vendorLabel}</p><p className="mt-1 font-mono text-xs text-gray">Version {participant.versionId.slice(0, 8)}</p></th>{visible.map((requirement) => {
                 const vendor = requirement.vendors.find((item) => item.participantId === participant.participantId);
-                return <td key={requirement.requirementId} className="border-b border-gray-border p-2 align-top">{vendor ? <button id={comparisonCellId(requirement.requirementId, participant.participantId)} type="button" onClick={() => setSelection({ requirement, vendor })} className="min-h-24 w-full scroll-mt-24 rounded-xl p-2 text-left hover:bg-gray-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><IntelligenceStatusChip status={verdictStatus(vendor.verdict)} label={verdictLabel(vendor.verdict)} /><p className="mt-2 line-clamp-3 text-xs leading-5 text-gray">{vendor.rationale || (vendor.evidence.length ? "Source evidence stored." : "No source evidence stored.")}</p><p className="mt-2 font-mono text-xs font-bold text-brand-dark">{vendor.evidence.length} {vendor.evidence.length === 1 ? "source" : "sources"}</p></button> : <button id={comparisonCellId(requirement.requirementId, participant.participantId)} type="button" onClick={() => setSelection({ requirement, vendor: { participantId: participant.participantId, vendorLabel: participant.vendorLabel, assessmentId: null, verdict: "not_assessable", rationale: "No assessment exists for this frozen vendor version.", confidence: null, needsHumanReview: true, reviewReasons: ["assessment_missing"], evidence: [], reviewHistory: [] } })} className="min-h-24 w-full scroll-mt-24 rounded-xl p-2 text-left hover:bg-gray-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><IntelligenceStatusChip status="unavailable" label="Not stated" /><p className="mt-2 text-xs text-gray">No assessment exists.</p></button>}</td>;
+                return <td key={requirement.requirementId} className="border-b border-gray-border p-2 align-top">{vendor ? <button id={comparisonCellId(requirement.requirementId, participant.participantId)} type="button" onClick={() => setSelection({ requirement, vendor })} className="min-h-24 w-full scroll-mt-24 rounded-xl p-2 text-left hover:bg-gray-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><IntelligenceStatusChip status={verdictStatus(vendor.verdict)} label={verdictLabel(vendor.verdict)} /><p className="mt-2 line-clamp-3 text-xs leading-5 text-gray">{vendor.rationale || (vendor.evidence.length ? "Source evidence stored." : "No source evidence stored.")}</p><p className="mt-2 font-mono text-xs font-bold text-brand-dark">{vendor.evidence.length} {vendor.evidence.length === 1 ? "source" : "sources"}</p></button> : <button id={comparisonCellId(requirement.requirementId, participant.participantId)} type="button" onClick={() => setSelection({ requirement, vendor: { participantId: participant.participantId, vendorLabel: participant.vendorLabel, assessmentId: null, verdict: "not_assessable", rationale: "No assessment exists for this frozen vendor version.", confidence: null, needsHumanReview: true, reviewReasons: ["assessment_missing"], evidence: [], reviewHistory: [] } })} className="min-h-24 w-full scroll-mt-24 rounded-xl p-2 text-left hover:bg-gray-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><IntelligenceStatusChip status="unavailable" label={verdictLabel("missing")} /><p className="mt-2 text-xs text-gray">No assessment exists.</p></button>}</td>;
               })}</tr>)}
             </tbody>
             <tfoot><tr><th className="sticky left-0 z-10 border-r border-gray-border bg-gray-panel p-3 text-xs font-extrabold text-navy">Evidence coverage</th>{visible.map((requirement) => { const count = requirement.vendors.filter((vendor) => vendor.evidence.length > 0).length; return <td key={requirement.requirementId} className="bg-gray-panel p-3 font-mono text-xs font-bold text-gray">{count}/{vendors.length} with source evidence</td>; })}</tr></tfoot>

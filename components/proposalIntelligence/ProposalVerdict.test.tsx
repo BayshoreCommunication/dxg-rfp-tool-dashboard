@@ -47,3 +47,25 @@ it("labels a stale close call as historical instead of naming a decisive winner"
   expect(screen.getByText("Out of date")).toBeInTheDocument();
   expect(screen.getByText(/Requirement set changed/)).toBeInTheDocument();
 });
+
+it("sends 'Record your decision' to the tab that actually has the decision form", () => {
+  render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
+  // The decision form renders only under tab === "evaluation"; this used to
+  // point at the executive report, so the anchor never resolved and the button
+  // landed on a page with no form on it.
+  const link = screen.getByRole("link", { name: /Record your decision/ });
+  expect(link).toHaveAttribute(
+    "href",
+    `/proposals/proposal-1/intelligence/comparisons/${workspace.run.runId}/evaluation#decision-record-title`,
+  );
+  expect(link.getAttribute("href")).not.toContain("/reports");
+});
+
+it("offers the decision as a primary action beside the recommendation, not buried below it", () => {
+  render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
+  const link = screen.getByRole("link", { name: /Record your decision/ });
+  // One obvious place to act, in the section header rather than the footer row.
+  expect(screen.getAllByRole("link", { name: /Record your decision/ })).toHaveLength(1);
+  expect(link.closest("header")).not.toBeNull();
+  expect(screen.getByText("Nothing is decided until you record it.")).toBeInTheDocument();
+});

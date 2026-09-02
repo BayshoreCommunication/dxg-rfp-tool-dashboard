@@ -47,13 +47,13 @@ export type ComparisonRecommendation = {
   confidenceReasons: string[];
   margin: number | null;
   rationale: string;
-  ranking: Array<{ participantId: string; vendorLabel: string; score: number; evaluatorCount: number; maxCriterionSpread: number; eligible: boolean; eligibilityFailures: number; mandatoryGaps: number; unresolvedReviews: number; highRisks: number; rank: number | null }>;
+  ranking: Array<{ participantId: string; vendorLabel: string; score: number; evaluatorCount: number; maxCriterionSpread: number; eligible: boolean; eligibilityFailures: number; mandatoryGaps: number; mandatoryPartials: number; unresolvedReviews: number; highRisks: number; rank: number | null }>;
 };
 export type ComparisonWorkspace = ComparisonView & {
   manifest: { manifestId: string; checksum: string; proposalVersion: string; requirementSetVersion: number; evaluationMatrixVersion: number; priceVisibility: "reviewers" | "committee" | "hidden"; policies: { extraction: string; assessment: string; commercial: string; scoring: string; comparison: string; recommendation: string } };
   recommendation: ComparisonRecommendation | null;
   intelligence: {
-    overview: { responseCount: number; versionCount: number; approvedRequirementCount: number; mandatoryGapCount: number; unresolvedReviewCount: number; evaluatorCompletedCount: number; evaluatorAssignedCount: number };
+    overview: { responseCount: number; versionCount: number; approvedRequirementCount: number; mandatoryGapCount: number; mandatoryPartialCount: number; unresolvedReviewCount: number; evaluatorCompletedCount: number; evaluatorAssignedCount: number };
     requirements: ComparisonRequirement[];
     technical: ComparisonRequirement[];
     permissions: { viewCommercial: boolean };
@@ -100,7 +100,7 @@ const parseRecommendation = (value: unknown): ComparisonRecommendation | null =>
   if (!isRecord(value) || !["recommended", "close_call", "no_eligible_vendor"].includes(String(value.status)) || !["high", "medium", "low"].includes(String(value.confidence)) || !Array.isArray(value.ranking)) return null;
   const ranking = value.ranking.flatMap((item) => isRecord(item) && typeof item.participantId === "string" ? [{
     participantId: item.participantId, vendorLabel: String(item.vendorLabel ?? "Vendor"), score: num(item.score), eligible: item.eligible === true,
-    evaluatorCount: num(item.evaluatorCount), maxCriterionSpread: num(item.maxCriterionSpread), eligibilityFailures: num(item.eligibilityFailures), mandatoryGaps: num(item.mandatoryGaps), unresolvedReviews: num(item.unresolvedReviews), highRisks: num(item.highRisks), rank: item.rank === null ? null : num(item.rank),
+    evaluatorCount: num(item.evaluatorCount), maxCriterionSpread: num(item.maxCriterionSpread), eligibilityFailures: num(item.eligibilityFailures), mandatoryGaps: num(item.mandatoryGaps), mandatoryPartials: num(item.mandatoryPartials), unresolvedReviews: num(item.unresolvedReviews), highRisks: num(item.highRisks), rank: item.rank === null ? null : num(item.rank),
   }] : []);
   if (ranking.length !== value.ranking.length) return null;
   return {
@@ -126,14 +126,14 @@ const parseWorkspace = (value: unknown): ComparisonWorkspace | null => {
   const decisions = (Array.isArray(intelligence.decisions) ? intelligence.decisions : []).flatMap((item) => isRecord(item) && typeof item.decisionId === "string" && ["shortlist", "selection", "no_award"].includes(String(item.decisionType)) ? [{ decisionId: item.decisionId, decisionType: item.decisionType as "shortlist" | "selection" | "no_award", selectedParticipantIds: strings(item.selectedParticipantIds), rationale: String(item.rationale ?? ""), staleAcknowledged: item.staleAcknowledged === true, manifestChecksum: String(item.manifestChecksum ?? ""), supersedesDecisionId: nullableString(item.supersedesDecisionId), createdAt: String(item.createdAt ?? "") }] : []);
   const policies = isRecord(manifest.policies) ? manifest.policies : {};
   const snapshot = isRecord(value.snapshot) ? value.snapshot : null;
-  return { ...view, manifest: { manifestId: manifest.manifestId, checksum: manifest.checksum, proposalVersion: String(manifest.proposalVersion ?? ""), requirementSetVersion: num(manifest.requirementSetVersion), evaluationMatrixVersion: num(manifest.evaluationMatrixVersion), priceVisibility, policies: { extraction: String(policies.extraction ?? ""), assessment: String(policies.assessment ?? ""), commercial: String(policies.commercial ?? ""), scoring: String(policies.scoring ?? ""), comparison: String(policies.comparison ?? ""), recommendation: String(policies.recommendation ?? "") } }, recommendation: parseRecommendation(snapshot?.recommendation), intelligence: { overview: { responseCount: num(overview.responseCount), versionCount: num(overview.versionCount), approvedRequirementCount: num(overview.approvedRequirementCount), mandatoryGapCount: num(overview.mandatoryGapCount), unresolvedReviewCount: num(overview.unresolvedReviewCount), evaluatorCompletedCount: num(overview.evaluatorCompletedCount), evaluatorAssignedCount: num(overview.evaluatorAssignedCount) }, requirements, technical, permissions: { viewCommercial: intelligence.permissions.viewCommercial === true }, commercial, risks, evaluation, decisions } };
+  return { ...view, manifest: { manifestId: manifest.manifestId, checksum: manifest.checksum, proposalVersion: String(manifest.proposalVersion ?? ""), requirementSetVersion: num(manifest.requirementSetVersion), evaluationMatrixVersion: num(manifest.evaluationMatrixVersion), priceVisibility, policies: { extraction: String(policies.extraction ?? ""), assessment: String(policies.assessment ?? ""), commercial: String(policies.commercial ?? ""), scoring: String(policies.scoring ?? ""), comparison: String(policies.comparison ?? ""), recommendation: String(policies.recommendation ?? "") } }, recommendation: parseRecommendation(snapshot?.recommendation), intelligence: { overview: { responseCount: num(overview.responseCount), versionCount: num(overview.versionCount), approvedRequirementCount: num(overview.approvedRequirementCount), mandatoryGapCount: num(overview.mandatoryGapCount), mandatoryPartialCount: num(overview.mandatoryPartialCount), unresolvedReviewCount: num(overview.unresolvedReviewCount), evaluatorCompletedCount: num(overview.evaluatorCompletedCount), evaluatorAssignedCount: num(overview.evaluatorAssignedCount) }, requirements, technical, permissions: { viewCommercial: intelligence.permissions.viewCommercial === true }, commercial, risks, evaluation, decisions } };
 };
 const safe: Record<string, string> = {
   COMPARISON_NOT_FOUND: "This comparison could not be found.",
   COMPARISON_NOT_READY: "Every selected vendor needs completed proposal intelligence and evaluation before comparison.",
   COMPARISON_EVALUATION_INCOMPLETE: "Complete every eligible evaluator scorecard before comparing or selecting vendors.",
   COMPARISON_CRITICAL_REVIEW_INCOMPLETE: "Review every mandatory or eligibility mapping and every contradictory fact for each vendor before comparison.",
-  COMPARISON_EVALUATOR_PANEL_MISMATCH: "Assign the same reviewers, roles, conflict dispositions, and criteria to every vendor before comparison.",
+  COMPARISON_EVALUATOR_PANEL_MISMATCH: "Every vendor must be scored against the same criteria before they can be compared.",
   REQUIREMENT_SET_NOT_APPROVED: "Approve the proposal requirements before starting a comparison.",
   EVALUATION_MATRIX_NOT_CONFIRMED: "Confirm an evaluation matrix totaling 100% before starting a comparison.",
   SUBMISSION_VERSION_NOT_FOUND: "A selected vendor version is no longer available.",
@@ -260,7 +260,14 @@ export const prepareComparisonPrerequisitesAction = async (
   };
 };
 
-export const listComparisonsAction = async (proposalId: string) => call(base(proposalId), undefined, (value) => Array.isArray(value) ? value.flatMap((item) => parseView(item) ?? []) : null);
+export const listComparisonsAction = async (proposalId: string) => {
+  const result = await call(base(proposalId), undefined, (value) => Array.isArray(value) ? value.flatMap((item) => parseView(item) ?? []) : null);
+  // A proposal nothing has run against yet has no record to look up. That is an
+  // empty list, not a failure — surfacing the 404 put a red "Proposal was not
+  // found" banner on a page that was displaying the proposal.
+  if (!result.success && result.code === "PROPOSAL_NOT_FOUND") return { success: true as const, data: [] };
+  return result;
+};
 export const getComparisonStatusAction = async (proposalId: string, runId: string) => call(`${base(proposalId)}/${encodeURIComponent(runId)}/status`, undefined, parseView);
 export const getComparisonWorkspaceAction = async (proposalId: string, runId: string) => call(`${base(proposalId)}/${encodeURIComponent(runId)}`, undefined, parseWorkspace);
 

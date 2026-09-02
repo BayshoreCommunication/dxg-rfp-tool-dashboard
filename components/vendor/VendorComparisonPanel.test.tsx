@@ -36,7 +36,7 @@ beforeEach(() => {
 
 test("starts one frozen comparison with current vendor versions", async () => {
   render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
-  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  const button = await screen.findByRole("button", { name: "Compare 2 vendors" });
   await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
   await waitFor(() => expect(start).toHaveBeenCalledWith("proposal-1", [
@@ -64,7 +64,7 @@ test("labels stale runs as readable historical comparisons", async () => {
 test("automatically prepares and approves requirements before comparison", async () => {
   render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved={false} />);
 
-  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  const button = await screen.findByRole("button", { name: "Compare 2 vendors" });
   await waitFor(() => expect(button).toBeEnabled());
   expect(screen.getByText(/Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically/i)).toBeInTheDocument();
   fireEvent.click(button);
@@ -80,7 +80,7 @@ test("automatically prepares incomplete vendor mapping", async () => {
     preparedResponseIds={["1"]}
   />);
 
-  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  const button = await screen.findByRole("button", { name: "Compare 2 vendors" });
   await waitFor(() => expect(button).toBeEnabled());
   expect(screen.getByText(/Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically/i)).toBeInTheDocument();
   fireEvent.click(button);
@@ -97,9 +97,9 @@ test("excludes an empty response instead of blocking prepared vendors", async ()
     preparedResponseIds={["1", "2"]}
   />);
 
-  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  const button = await screen.findByRole("button", { name: "Compare 2 vendors" });
   await waitFor(() => expect(button).toBeEnabled());
-  expect(screen.getByText(/1 empty vendor response was excluded/i)).toBeInTheDocument();
+  expect(screen.getByText(/1 vendor response was left out because it has no message or attached document/i)).toBeInTheDocument();
   fireEvent.click(button);
   await waitFor(() => expect(start).toHaveBeenCalledWith("proposal-1", [
     { submissionId: "submission-1", versionId: "version-1" },
@@ -116,7 +116,7 @@ test("prepares missing vendor evaluations automatically when comparison starts",
     comparisonReadyResponseIds={["1"]}
   />);
 
-  const button = await screen.findByRole("button", { name: "Start comparison (2)" });
+  const button = await screen.findByRole("button", { name: "Compare 2 vendors" });
   await waitFor(() => expect(button).toBeEnabled());
   expect(screen.getByText(/Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically/i)).toBeInTheDocument();
   fireEvent.click(button);
