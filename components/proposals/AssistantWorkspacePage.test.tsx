@@ -86,6 +86,21 @@ const mockedGetDraft = getProposalDraftAction as jest.MockedFunction<typeof getP
 
 const PROPOSAL_ID = "abc123abc123abc123abc123";
 
+/**
+ * A date the picker will still accept.
+ *
+ * `minimumDateForQuestion` refuses anything before today, so a literal like
+ * "2026-09-01" silently stopped being answerable the morning after it was
+ * written — the picker rejected it, the Answer button never submitted, and the
+ * assertion failed with "Number of calls: 0". Anchor these on today instead.
+ */
+const futureIsoDate = (daysAhead = 30): string => {
+  const day = new Date();
+  day.setHours(0, 0, 0, 0);
+  day.setDate(day.getDate() + daysAhead);
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+};
+
 const scanJob = (status: "queued" | "succeeded") => ({
   id: "11111111-1111-4111-8111-111111111111",
   type: "source_scan",
@@ -1221,6 +1236,7 @@ describe("AssistantWorkspacePage", () => {
   });
 
   test("production load-in uses one card with coordinated date and time controls", async () => {
+    const loadInDate = futureIsoDate();
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([combinedLoadInQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
@@ -1229,9 +1245,9 @@ describe("AssistantWorkspacePage", () => {
         id: "q-load-in-combined",
         status: "answered",
         answeredMessageId: null,
-        appliedField: { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: "2026-09-01" },
+        appliedField: { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: loadInDate },
         appliedFields: [
-          { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: "2026-09-01" },
+          { path: "/content/venueSchedule/loadInDate", mongoPath: "venueSchedule.loadInDate", value: loadInDate },
           { path: "/content/venueSchedule/loadInTime", mongoPath: "venueSchedule.loadInTime", value: "07:30" },
         ],
       },
@@ -1245,16 +1261,16 @@ describe("AssistantWorkspacePage", () => {
     expect(timeInput).toHaveAttribute("type", "time");
     expect(screen.getByRole("button", { name: "Answer" })).toBeDisabled();
 
-    fireEvent.change(dateInput, { target: { value: "2026-09-01" } });
+    fireEvent.change(dateInput, { target: { value: loadInDate } });
     fireEvent.input(timeInput, { target: { value: "07:30" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
       "q-load-in-combined",
-      { status: "answered", answer: { date: "2026-09-01", time: "07:30" } },
+      { status: "answered", answer: { date: loadInDate, time: "07:30" } },
     ));
-    expect(await screen.findByText("Production load-in: 2026-09-01 at 07:30 ✓")).toBeInTheDocument();
+    expect(await screen.findByText(`Production load-in: ${loadInDate} at 07:30 ✓`)).toBeInTheDocument();
   });
 
   test("venue-name guidance points undecided users to Skip, not a missing option", () => {
@@ -1270,13 +1286,14 @@ describe("AssistantWorkspacePage", () => {
   });
 
   test("answering a question confirms the value and advances to the next one", async () => {
+    const startDate = futureIsoDate();
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([startDateQuestion, roomsQuestion]))
       .mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
-      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: "2026-09-01" } },
+      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: startDate } },
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
@@ -1287,19 +1304,19 @@ describe("AssistantWorkspacePage", () => {
     // stays disabled until something has actually been typed.
     const answerButton = screen.getByRole("button", { name: "Answer" });
     expect(answerButton).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "2026-09-01" } });
+    fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: startDate } });
     expect(answerButton).toBeEnabled();
     fireEvent.click(answerButton);
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
       "q-start",
-      { status: "answered", answer: "2026-09-01" },
+      { status: "answered", answer: startDate },
     ));
     // …and resolving a question refetches the conversation (useConversation).
     await waitFor(() => expect(mockedGetConversation.mock.calls.length).toBeGreaterThan(initialLoads));
     // The confirmed value shows and the flow advances to the next question.
-    expect(await screen.findByText("Start date: 2026-09-01 ✓")).toBeInTheDocument();
+    expect(await screen.findByText(`Start date: ${startDate} ✓`)).toBeInTheDocument();
     expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
     expect(screen.getByText("How many event rooms are required?")).toBeInTheDocument();
     expect(screen.getByText("affects cost")).toBeInTheDocument();
@@ -1373,13 +1390,14 @@ describe("AssistantWorkspacePage", () => {
   });
 
   test("a date question renders the date picker and submits a YYYY-MM-DD value", async () => {
+    const startDate = futureIsoDate();
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([datePickerQuestion, roomsQuestion]))
       .mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
-      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: "2026-09-01" } },
+      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: startDate } },
     });
 
     const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
@@ -1389,38 +1407,41 @@ describe("AssistantWorkspacePage", () => {
     const input = screen.getByLabelText("Answer this question");
     expect(input).toHaveAttribute("placeholder", "YYYY-MM-DD");
 
-    fireEvent.change(input, { target: { value: "2026-09-01" } });
+    fireEvent.change(input, { target: { value: startDate } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
       "q-start",
-      { status: "answered", answer: "2026-09-01" },
+      { status: "answered", answer: startDate },
     ));
-    expect(await screen.findByText("Start date: 2026-09-01 ✓")).toBeInTheDocument();
+    expect(await screen.findByText(`Start date: ${startDate} ✓`)).toBeInTheDocument();
   });
 
   test("an extraction-suggested date pre-fills the picker and one click confirms it", async () => {
+    // A suggestion outside the picker's bounds is deliberately not seeded, so a
+    // literal here stops pre-filling once it falls into the past.
+    const suggested = futureIsoDate(45);
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([
-      guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date", suggestedAnswer: "2026-10-15" }),
+      guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date", suggestedAnswer: suggested }),
     ]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
-      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: "2026-10-15" } },
+      data: { id: "q-start", status: "answered", answeredMessageId: null, appliedField: { path: "/content/event/startDate", mongoPath: "event.startDate", value: suggested } },
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("Guided question 1");
     // The picker is seeded, the provenance note is visible, and Answer is
     // enabled without any typing.
-    expect(screen.getByLabelText("Answer this question")).toHaveValue("2026-10-15");
+    expect(screen.getByLabelText("Answer this question")).toHaveValue(suggested);
     expect(screen.getByText("Pre-filled from your message — confirm or edit.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
       "q-start",
-      { status: "answered", answer: "2026-10-15" },
+      { status: "answered", answer: suggested },
     ));
   });
 
