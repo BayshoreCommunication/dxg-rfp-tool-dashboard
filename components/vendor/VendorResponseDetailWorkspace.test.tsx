@@ -112,9 +112,40 @@ it("renders a keyboard-operable version timeline", () => {
   expect(screen.getAllByText("Clarification response")).toHaveLength(1);
   expect(screen.getByText("Security scan passed")).toBeInTheDocument();
   expect(
-    screen.getByRole("link", { name: "Review proposal requirements" }),
+    screen.getByRole("link", { name: "Open requirements checklist" }),
   ).toHaveAttribute("href", "/proposals/proposal-1/intelligence/requirements?returnTo=%2Fvendor-responses%2Fresponse-1");
   expect(screen.getByTestId("extraction")).toHaveTextContent("version-2");
+  expect(screen.getByRole("link", { name: "Back to proposal responses" })).toHaveAttribute(
+    "href",
+    "/vendor-responses/proposals/proposal-1",
+  );
+});
+
+it("drops the version sidebar when only one version exists", () => {
+  const current = detail.versions.find((version) => version.versionId === detail.submission?.currentVersionId)!;
+  render(
+    <VendorResponseDetailWorkspace
+      detail={{ ...detail, versions: [current] }}
+    />,
+  );
+  expect(
+    screen.queryByRole("navigation", { name: "Immutable response versions" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText(/The only version received so far/)).toBeInTheDocument();
+  expect(screen.getByTestId("evaluation")).toHaveTextContent(current.versionId);
+  // Numbering only earns its place once there is something to number.
+  expect(screen.getByRole("heading", { name: "Response as received" })).toBeInTheDocument();
+  expect(screen.getByText("Files included with this response.")).toBeInTheDocument();
+  expect(screen.getByText(/RFPilot read this response's files once/)).toBeInTheDocument();
+  expect(screen.queryByText(/Version 1/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Version 2/)).not.toBeInTheDocument();
+});
+
+it("keeps numbered labels once a second version exists", () => {
+  render(<VendorResponseDetailWorkspace detail={detail} />);
+  expect(screen.getByRole("heading", { name: "Version 2" })).toBeInTheDocument();
+  expect(screen.getByText("Files included with Version 2.")).toBeInTheDocument();
+  expect(screen.getByText(/RFPilot read Version 2's files once/)).toBeInTheDocument();
 });
 
 it("switches to historical content without representing an unverified file as analyzed", () => {

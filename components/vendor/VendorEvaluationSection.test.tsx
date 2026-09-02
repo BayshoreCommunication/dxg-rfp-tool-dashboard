@@ -144,3 +144,23 @@ test("explains a criterion no requirement feeds instead of showing it as zero ou
   expect(screen.getByText(/set its weight to 0%/)).toBeInTheDocument();
   expect(screen.queryByText(/0 \/ 5/)).not.toBeInTheDocument();
 });
+
+test("does not offer an evaluation the server would refuse, and explains why", async () => {
+  latest.mockResolvedValue({ success: false, code: "EVALUATION_RUN_NOT_FOUND", message: "No evaluation snapshot exists for this response version." });
+  render(<VendorEvaluationSection proposalId="p" submissionId="s" versionId="v" gate={{ state: "coverage_blocked", details: ["Pricing.xlsx: This source was not available to proposal intelligence."] }} />);
+  expect(await screen.findByText(/Scoring is blocked because a file in this response could not be made available/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Start evaluation" })).toBeDisabled();
+  expect(screen.getByText("Pricing.xlsx: This source was not available to proposal intelligence.")).toBeInTheDocument();
+  expect(screen.queryByText(/Hide pricing from evaluators/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/approve your requirement checklist first/)).not.toBeInTheDocument();
+});
+
+test("offers to start an evaluation with plain-language price sealing when the analysis is ready", async () => {
+  latest.mockResolvedValue({ success: false, code: "EVALUATION_RUN_NOT_FOUND", message: "No evaluation snapshot exists for this response version." });
+  render(<VendorEvaluationSection proposalId="p" submissionId="s" versionId="v" gate={{ state: "ready" }} />);
+  const button = await screen.findByRole("button", { name: "Start evaluation" });
+  await waitFor(() => expect(button).toBeEnabled());
+  expect(screen.getByText(/Start one to score it against your approved criteria/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Hide pricing from evaluators until you release it")).toBeInTheDocument();
+  expect(screen.getByText(/see the price only after you grant access/)).toBeInTheDocument();
+});

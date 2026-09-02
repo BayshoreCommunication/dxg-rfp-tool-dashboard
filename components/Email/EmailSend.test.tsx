@@ -113,11 +113,30 @@ describe('EmailSend — rendering', () => {
   })
 
   it('auto-fills subject and pre-selects proposal when proposalId is in the URL', async () => {
-    mockSearchParamsGet.mockReturnValue('prop-001')
+    mockSearchParamsGet.mockImplementation((key: string) => (key === 'proposalId' ? 'prop-001' : null))
     render(<EmailSend />)
     await waitFor(() => {
       expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('prop-001')
       expect(screen.getByDisplayValue(/Proposal for Bayshore Summit/)).toBeInTheDocument()
+    }, LOAD_TIMEOUT)
+  })
+})
+
+describe('EmailSend — deep-link prefill', () => {
+  it('prefills recipient, subject and message from the URL and ignores invalid addresses', async () => {
+    const params: Record<string, string> = {
+      proposalId: 'prop-001',
+      to: 'bids@northstar.example, not-an-email',
+      subject: 'Text-based copy of your response',
+      message: 'Hello,\n\nCould you send a text-based copy?',
+    }
+    mockSearchParamsGet.mockImplementation((key: string) => params[key] ?? null)
+    render(<EmailSend />)
+    await waitFor(() => {
+      expect(screen.getByText('bids@northstar.example')).toBeInTheDocument()
+      expect(screen.queryByText('not-an-email')).not.toBeInTheDocument()
+      expect(screen.getByDisplayValue('Text-based copy of your response')).toBeInTheDocument()
+      expect(screen.getByDisplayValue(/Could you send a text-based copy/)).toBeInTheDocument()
     }, LOAD_TIMEOUT)
   })
 })
@@ -267,7 +286,7 @@ describe('EmailSend — personalized invitation', () => {
 
 describe('EmailSend — successful send', () => {
   // Use URL preselection so subject is auto-filled
-  beforeEach(() => mockSearchParamsGet.mockReturnValue('prop-001'))
+  beforeEach(() => mockSearchParamsGet.mockImplementation((key: string) => (key === 'proposalId' ? 'prop-001' : null)))
 
   it('calls sendProposalEmailAction with correct payload', async () => {
     mockSendEmail.mockResolvedValue({ success: true, message: 'Sent!' })
@@ -338,7 +357,7 @@ describe('EmailSend — proposal selection', () => {
   })
 
   it('pre-selects proposal from URL query param', async () => {
-    mockSearchParamsGet.mockReturnValue('prop-001')
+    mockSearchParamsGet.mockImplementation((key: string) => (key === 'proposalId' ? 'prop-001' : null))
     render(<EmailSend />)
     await waitFor(() => {
       const select = screen.getByRole('combobox') as HTMLSelectElement

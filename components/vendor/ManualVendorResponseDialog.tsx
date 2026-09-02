@@ -52,14 +52,17 @@ export default function ManualVendorResponseDialog({
   proposalId,
   existingVendors,
   emphasis = "secondary",
+  defaultOpen = false,
 }: {
   proposalId: string;
   existingVendors: ExistingVendorSummary[];
   emphasis?: "primary" | "secondary";
+  /** Open immediately, for deep links such as "add the missing figures manually". */
+  defaultOpen?: boolean;
 }) {
   const router = useRouter();
   const titleId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [vendorName, setVendorName] = useState("");
   const [submittedBy, setSubmittedBy] = useState("");
   const [email, setEmail] = useState("");

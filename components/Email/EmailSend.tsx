@@ -67,11 +67,21 @@ export default function EmailSend() {
 
   const [proposals, setProposals] = useState<ProposalOption[]>([]);
 
+  // Deep links from a vendor response can prefill the recipient, subject and
+  // body (for example "ask this vendor for a text-based copy"). Only valid
+  // addresses are accepted; everything else falls back to the defaults.
+  const prefilledRecipients = (searchParams.get("to") || "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value && validateEmail(value));
+  const prefilledSubject = searchParams.get("subject")?.trim() || "";
+  const prefilledMessage = searchParams.get("message")?.trim() || "";
+
   const [proposalId, setProposalId] = useState("");
   const [recipientInput, setRecipientInput] = useState("");
-  const [recipientEmails, setRecipientEmails] = useState<string[]>([]);
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState(DEFAULT_MESSAGE);
+  const [recipientEmails, setRecipientEmails] = useState<string[]>(prefilledRecipients);
+  const [subject, setSubject] = useState(prefilledSubject);
+  const [message, setMessage] = useState(prefilledMessage || DEFAULT_MESSAGE);
   const [draftSource, setDraftSource] = useState<"user" | "ai">("user");
   const [sendApproved, setSendApproved] = useState(false);
 

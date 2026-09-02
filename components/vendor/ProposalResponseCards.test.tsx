@@ -44,13 +44,16 @@ const summary = (overrides: Partial<ResponseCardSummary> = {}): ResponseCardSumm
     source: { fragmentId: "fragment-1", content: "Total: USD 125,000", locator: { page: 2 }, sourceLabel: "pricing.pdf" },
   }],
   requiredFields: { total: 3, present: 2, missing: 1, conflicts: 0, missingTitles: ["Insurance"], conflictTitles: [] },
+  requirementCoverage: { total: 3, answered: 2, partlyAnswered: 0, notAnswered: 1, conflicting: 0, mandatoryNotAnswered: 1 },
+  comparisonBlocked: null,
+  partialSources: false,
   contradictionCount: 0,
   isComparable: true,
   needsAttention: true,
   ...overrides,
 });
 
-it("renders compact response cards with auditable commercial totals, attachments, and attention flags", () => {
+it("renders compact response cards with auditable commercial totals, attachments, and a plain overview", () => {
   const item = response("response-1", "Northstar AV");
   render(
     <ProposalResponseCards
@@ -71,7 +74,11 @@ it("renders compact response cards with auditable commercial totals, attachments
   );
   expect(within(card).getByText("+1 more file")).toBeInTheDocument();
   expect(within(card).queryByText(/View total source/i)).not.toBeInTheDocument();
-  expect(within(card).getByText("Not stated: Insurance")).toBeInTheDocument();
+  expect(
+    within(card).getByText("2 of 3 requirements answered. 1 not answered. 1 mandatory requirement is unanswered."),
+  ).toBeInTheDocument();
+  expect(within(card).queryByText("Attention flags")).not.toBeInTheDocument();
+  expect(within(card).queryByText("Not stated: Insurance")).not.toBeInTheDocument();
   expect(within(card).getByText("View all 2 attachments")).toBeInTheDocument();
   expect(within(card).getByText("response-1-pricing.xlsx")).toBeInTheDocument();
   expect(within(card).getByRole("link", { name: "View full response" })).toHaveAttribute(
@@ -218,4 +225,58 @@ it("keeps manual entry out of the proposal header", () => {
   expect(
     within(overview).queryByRole("button", { name: /Add response manually/ }),
   ).not.toBeInTheDocument();
+});
+
+it("tells the planner when a response is left out of the comparison and shows the stated price range", () => {
+  const readable = response("response-1", "Northstar AV");
+  const partial = response("response-2", "Civic Events");
+  const cheapest = response("response-3", "Harbor Productions");
+  render(
+    <ProposalResponseCards
+      proposalId="proposal-1"
+      proposalTitle="Annual Summit"
+      responses={[readable, partial, cheapest]}
+      summaries={{
+        [readable._id]: summary({ requirementCoverage: { total: 20, answered: 20, partlyAnswered: 0, notAnswered: 0, conflicting: 0, mandatoryNotAnswered: 0 } }),
+        [partial._id]: summary({
+          extractionStatus: "partial",
+          partialSources: true,
+          headlineFacts: [{ ...summary().headlineFacts[0], value: "USD 208601.50" }],
+        }),
+        [cheapest._id]: summary({
+          headlineFacts: [{ ...summary().headlineFacts[0], value: "USD 100180" }],
+        }),
+      }}
+    />,
+  );
+
+  const cards = screen.getAllByRole("article");
+  expect(within(cards[0]).getByText("All 20 requirements answered.")).toBeInTheDocument();
+  expect(within(cards[1]).getByText("Some pages unread")).toBeInTheDocument();
+  expect(within(cards[1]).getByText(/Some pages could not be read, so its findings may be incomplete/)).toBeInTheDocument();
+  expect(within(cards[1]).queryByText(/Left out of the vendor comparison/)).not.toBeInTheDocument();
+  expect(within(cards[1]).queryByText("Attention flags")).not.toBeInTheDocument();
+  expect(within(cards[2]).getByText("Lowest stated total")).toBeInTheDocument();
+  expect(within(cards[0]).queryByText("Lowest stated total")).not.toBeInTheDocument();
+  const overview = screen.getByLabelText("Proposal response overview");
+  expect(within(overview).getByText(/Stated totals range from \$100,180 to \$208,601\.50\./)).toBeInTheDocument();
+  // A partially readable response is still comparable; the caveat is on its card.
+  expect(within(overview).getByRole("link", { name: "Proposal Intelligence" })).toHaveAttribute(
+    "href",
+    "/proposals/proposal-1/intelligence",
+  );
+});
+
+it("names a response that is left out of the comparison because a source was unavailable", () => {
+  const item = response("response-1", "Northstar AV");
+  render(
+    <ProposalResponseCards
+      proposalId="proposal-1"
+      proposalTitle="Annual Summit"
+      responses={[item]}
+      summaries={{ [item._id]: summary({ comparisonBlocked: "source_unavailable", isComparable: false }) }}
+    />,
+  );
+  expect(screen.getByText(/Left out of the vendor comparison because a file could not be made available/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Review response issues" })).toHaveAttribute("href", "/vendor-responses/response-1");
 });
