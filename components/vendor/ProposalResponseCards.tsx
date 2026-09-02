@@ -5,7 +5,9 @@ import { intelligenceSurfaceClasses } from "@/lib/proposalIntelligence/surfaces"
 import { extractionStatusToIntelligenceStatus } from "@/lib/proposalIntelligence/statusVocabulary";
 import { cn } from "@/lib/utils";
 import { existingVendorSummaries } from "@/lib/vendorResponses/manualResponse";
-import type { ResponseCardSummary } from "@/lib/vendorResponses/responseCardSummary";
+import type {
+  ResponseCardSummary,
+} from "@/lib/vendorResponses/responseCardSummary";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -24,22 +26,24 @@ const formatDate = (value: string) => {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
 };
 
-const formatCommercialTotal = (value: string) => {
+const symbolCurrencies: Record<string, string> = {
+  "$": "USD",
+  "€": "EUR",
+  "£": "GBP",
+};
+
+const parseCommercialTotal = (value: string) => {
   const match = value
     .trim()
     .replaceAll(",", "")
     .match(/^(?:([A-Z]{3})\s*)?([$€£])?\s*(-?\d+(?:\.\d+)?)$/i);
-  if (!match) return value;
-
-  const symbolCurrencies: Record<string, string> = {
-    "$": "USD",
-    "€": "EUR",
-    "£": "GBP",
-  };
+  if (!match) return null;
   const currency = match[1]?.toUpperCase() ?? (match[2] ? symbolCurrencies[match[2]] : undefined);
   const amount = Number(match[3]);
-  if (!currency || !Number.isFinite(amount)) return value;
+  return currency && Number.isFinite(amount) ? { currency, amount } : null;
+};
 
+const formatMoney = (amount: number, currency: string) => {
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -48,8 +52,49 @@ const formatCommercialTotal = (value: string) => {
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return value;
+    return `${currency} ${amount}`;
   }
+};
+
+const formatCommercialTotal = (value: string) => {
+  const parsed = parseCommercialTotal(value);
+  return parsed ? formatMoney(parsed.amount, parsed.currency) : value;
+};
+
+const commercialTotalFact = (summary: ResponseCardSummary | undefined) =>
+  summary?.headlineFacts.find(
+    (fact) => fact.label === "Total cost" || fact.label === "Commercial total",
+  );
+
+/**
+ * The stated totals side by side, when at least two responses state one in
+ * the same currency. Nothing is inferred: a response without a parseable
+ * total is simply absent from the range.
+ */
+const statedTotalRange = (
+  responses: VendorResponseItem[],
+  summaries: Record<string, ResponseCardSummary>,
+) => {
+  const totals = responses.flatMap((response) => {
+    const fact = commercialTotalFact(summaries[response._id]);
+    const parsed = fact ? parseCommercialTotal(fact.value) : null;
+    return parsed ? [{ responseId: response._id, ...parsed }] : [];
+  });
+  if (totals.length < 2) return null;
+  const currency = totals[0].currency;
+  if (totals.some((total) => total.currency !== currency)) return null;
+  const amounts = totals.map((total) => total.amount);
+  const lowest = Math.min(...amounts);
+  const highest = Math.max(...amounts);
+  const lowestIds = totals.filter((total) => total.amount === lowest).map((total) => total.responseId);
+  return {
+    count: totals.length,
+    currency,
+    lowest,
+    highest,
+    // A tie has no single lowest bid, so no card is singled out.
+    lowestResponseId: lowestIds.length === 1 ? lowestIds[0] : null,
+  };
 };
 
 const fileType = (name: string) => {
@@ -58,76 +103,68 @@ const fileType = (name: string) => {
 };
 
 const extractionLabels: Record<ResponseCardSummary["extractionStatus"], string> = {
-  not_started: "Extraction not started",
-  processing: "Extraction in progress",
-  ready: "Sources readable",
-  partial: "Partially readable",
-  unreadable: "Source unreadable",
-  failed: "Extraction failed",
-  unavailable: "Extraction status unavailable",
+  not_started: "Files not read yet",
+  processing: "Reading files",
+  ready: "All files read",
+  partial: "Some pages unread",
+  unreadable: "Files could not be read",
+  failed: "Reading failed",
+  unavailable: "Read status unavailable",
+};
+
+const exclusionNotes: Record<NonNullable<ResponseCardSummary["comparisonBlocked"]>, string> = {
+  partial_sources: "Left out of the vendor comparison until every page of its files can be read.",
+  unreadable: "Left out of the vendor comparison because its files could not be read.",
+  failed: "Left out of the vendor comparison because reading its files failed.",
+  no_version: "Left out of the vendor comparison because it has no versioned submission.",
+};
+
+const coverageSentence = (summary: ResponseCardSummary) => {
+  const coverage = summary.requirementCoverage;
+  if (!coverage) {
+    return summary.extractionStatus === "ready"
+      ? "Files are read. Analyze the response to see which requirements it answers."
+      : "Files are still being processed. Open the response for the latest details.";
+  }
+  if (coverage.total === 0) {
+    return "No requirements have been mapped to this response yet.";
+  }
+  if (coverage.total === 1) {
+    return coverage.answered === 1
+      ? "The single mapped requirement is answered."
+      : "The single mapped requirement is not answered.";
+  }
+  const lead =
+    coverage.answered === coverage.total
+      ? `All ${coverage.total} requirements answered.`
+      : `${coverage.answered} of ${coverage.total} requirements answered.`;
+  const gaps = [
+    coverage.partlyAnswered ? `${coverage.partlyAnswered} partly answered` : null,
+    coverage.notAnswered ? `${coverage.notAnswered} not answered` : null,
+    coverage.conflicting ? `${coverage.conflicting} conflicting` : null,
+  ].filter(Boolean);
+  const mandatory = coverage.mandatoryNotAnswered
+    ? ` ${coverage.mandatoryNotAnswered} mandatory ${coverage.mandatoryNotAnswered === 1 ? "requirement is" : "requirements are"} unanswered.`
+    : "";
+  return `${lead}${gaps.length ? ` ${gaps.join(", ")}.` : ""}${mandatory}`;
 };
 
 const responseOverview = (summary: ResponseCardSummary) => {
-  const required = summary.requiredFields;
-  if (!required) {
-    return summary.extractionStatus === "ready"
-      ? "Submitted sources are readable and ready for proposal intelligence."
-      : "Source processing is not complete yet. Open the response for the latest details.";
-  }
-
-  const issueCount = required.missing + required.conflicts;
-  if (issueCount === 0) {
-    return `All ${required.total} required fields have supporting evidence.`;
-  }
-  return `${required.present} of ${required.total} required fields have supporting evidence. ${issueCount} ${issueCount === 1 ? "field needs" : "fields need"} review.`;
-};
-
-const attentionFlags = (
-  response: VendorResponseItem,
-  summary: ResponseCardSummary,
-) => {
-  const flags: string[] = [];
-  if (!response.submissionId || !response.currentVersionId) {
-    flags.push("Versioned submission data is unavailable.");
-  }
-  if (summary.extractionStatus !== "ready") {
-    flags.push(`${extractionLabels[summary.extractionStatus]}.`);
-  }
-  if (summary.intelligenceStatus !== "ready") {
-    flags.push(
-      summary.intelligenceStatus === "not_started"
-        ? "Required-field analysis has not started."
-        : "Required-field analysis is unavailable.",
-    );
-  }
-  summary.requiredFields?.missingTitles.forEach((title) => {
-    flags.push(`Not stated: ${title}`);
-  });
-  summary.requiredFields?.conflictTitles.forEach((title) => {
-    flags.push(`Conflicting evidence: ${title}`);
-  });
-  if (summary.contradictionCount > 0) {
-    flags.push(
-      `${summary.contradictionCount} evidence ${summary.contradictionCount === 1 ? "contradiction needs" : "contradictions need"} review.`,
-    );
-  }
-  return flags;
+  const exclusion = summary.comparisonBlocked ? ` ${exclusionNotes[summary.comparisonBlocked]}` : "";
+  return `${coverageSentence(summary)}${exclusion}`;
 };
 
 function ResponseCard({
   response,
   summary,
+  lowestStatedTotal,
 }: {
   response: VendorResponseItem;
   summary: ResponseCardSummary;
+  lowestStatedTotal: boolean;
 }) {
   const receivedAt = response.versionReceivedAt ?? response.createdAt;
-  const commercialTotal = summary.headlineFacts.find(
-    (fact) => fact.label === "Total cost" || fact.label === "Commercial total",
-  );
-  const flags = attentionFlags(response, summary);
-  const visibleFlags = flags.slice(0, 2);
-  const remainingFlags = flags.slice(2);
+  const commercialTotal = commercialTotalFact(summary);
   const extractionStatus = extractionStatusToIntelligenceStatus(summary.extractionStatus);
   return (
     <article className={cn(intelligenceSurfaceClasses.card, "@container flex h-full flex-col")}>
@@ -162,6 +199,9 @@ function ResponseCard({
           <p className="mt-1 whitespace-nowrap text-sm font-extrabold text-navy">
             {commercialTotal ? formatCommercialTotal(commercialTotal.value) : "Not stated"}
           </p>
+          {lowestStatedTotal && (
+            <p className="mt-1 text-xs font-semibold text-brand-dark">Lowest stated total</p>
+          )}
         </div>
         <div className="min-w-0 rounded-2xl border border-gray-border bg-gray-panel p-3">
           <p className="text-xs font-extrabold uppercase tracking-wide text-gray">Attachments</p>
@@ -235,39 +275,6 @@ function ResponseCard({
 
       <p className="mt-4 text-sm leading-6 text-gray">{responseOverview(summary)}</p>
 
-      <section className="mt-5 border-t border-gray-border pt-4" aria-label="Attention flags">
-        <h3 className="text-xs font-extrabold uppercase tracking-wide text-gray">Attention flags</h3>
-        {flags.length === 0 ? (
-          <p className="mt-2 text-sm leading-6 text-gray">
-            {summary.requiredFields
-              ? "None. Every required field was read from cited evidence."
-              : "No attention flags found."}
-          </p>
-        ) : (
-          <>
-            <ul className="mt-2 space-y-2 text-sm leading-5 text-gray">
-              {visibleFlags.map((flag) => (
-                <li key={flag} className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 shrink-0 text-gray" size={14} aria-hidden="true" />
-                  <span>{flag}</span>
-                </li>
-              ))}
-            </ul>
-            {remainingFlags.length > 0 && (
-              <details className="mt-3 text-xs text-gray">
-                <summary className="flex cursor-pointer list-none items-center gap-1 font-semibold text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-                  Review {remainingFlags.length} more {remainingFlags.length === 1 ? "flag" : "flags"}
-                  <ChevronDown size={13} aria-hidden="true" />
-                </summary>
-                <ul className="mt-2 space-y-1.5 pl-5">
-                  {remainingFlags.map((flag) => <li key={flag}>{flag}</li>)}
-                </ul>
-              </details>
-            )}
-          </>
-        )}
-      </section>
-
       <div className="mt-auto pt-5">
         <Link
           href={`/vendor-responses/${encodeURIComponent(response._id)}`}
@@ -285,14 +292,18 @@ export default function ProposalResponseCards({
   proposalTitle,
   responses,
   summaries,
+  openManualResponse = false,
 }: {
   proposalId: string;
   proposalTitle: string;
   responses: VendorResponseItem[];
   summaries: Record<string, ResponseCardSummary>;
+  /** Open the manual-entry dialog on arrival (deep link from a response page). */
+  openManualResponse?: boolean;
 }) {
   const comparableCount = responses.filter((response) => summaries[response._id]?.isComparable).length;
   const responseNeedingReview = responses.find((response) => !summaries[response._id]?.isComparable);
+  const totalRange = statedTotalRange(responses, summaries);
 
   return (
     <main className="min-h-screen bg-gray-panel px-4 py-6 sm:px-6 lg:px-8">
@@ -315,6 +326,15 @@ export default function ProposalResponseCards({
               <p className="mt-1 max-w-3xl text-sm leading-5 text-gray">
                 Review each submission and its source-backed extracted values before comparing vendors.
               </p>
+              {totalRange && (
+                <p className="mt-2 text-sm font-semibold text-navy">
+                  Stated totals range from {formatMoney(totalRange.lowest, totalRange.currency)} to{" "}
+                  {formatMoney(totalRange.highest, totalRange.currency)}
+                  {totalRange.count < responses.length
+                    ? ` across ${totalRange.count} of ${responses.length} responses.`
+                    : "."}
+                </p>
+              )}
             </div>
 
             {responses.length > 0 && (
@@ -385,6 +405,7 @@ export default function ProposalResponseCards({
               <ManualVendorResponseDialog
                 proposalId={proposalId}
                 existingVendors={[]}
+                defaultOpen={openManualResponse}
               />
             </div>
           </section>
@@ -397,12 +418,18 @@ export default function ProposalResponseCards({
                 <ManualVendorResponseDialog
                   proposalId={proposalId}
                   existingVendors={existingVendorSummaries(responses)}
+                  defaultOpen={openManualResponse}
                 />
               </div>
             )}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {responses.map((response) => (
-                <ResponseCard key={response._id} response={response} summary={summaries[response._id]} />
+                <ResponseCard
+                  key={response._id}
+                  response={response}
+                  summary={summaries[response._id]}
+                  lowestStatedTotal={totalRange?.lowestResponseId === response._id}
+                />
               ))}
             </div>
             {responses.length >= 3 && (
@@ -410,6 +437,7 @@ export default function ProposalResponseCards({
                 <ManualVendorResponseDialog
                   proposalId={proposalId}
                   existingVendors={existingVendorSummaries(responses)}
+                  defaultOpen={openManualResponse}
                 />
               </div>
             )}

@@ -7,6 +7,7 @@ import type {
   VendorIntelligenceResult,
 } from "@/app/actions/vendorIntelligence";
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
+import { coverageFromRelationship } from "@/lib/proposalIntelligence/coverageVocabulary";
 
 type LoadResult<T> =
   | { success: true; data: T }
@@ -24,10 +25,37 @@ export type HeadlineFact = {
   source: IntelligenceEvidence;
 };
 
+/**
+ * How the response answers the proposal's requirements, counted over every
+ * mapped requirement (not only mandatory ones) using the shared coverage
+ * vocabulary, so the card says the same thing the detail page does.
+ */
+export type RequirementCoverage = {
+  total: number;
+  answered: number;
+  partlyAnswered: number;
+  notAnswered: number;
+  conflicting: number;
+  mandatoryNotAnswered: number;
+};
+
+/**
+ * Why the backend will refuse to evaluate or compare this response. Mirrors
+ * the server rule: any extraction warning on the intelligence run, or a
+ * partial/unreadable/failed extraction, blocks evaluation and comparison.
+ */
+export type ComparisonBlockReason =
+  | "no_version"
+  | "partial_sources"
+  | "unreadable"
+  | "failed";
+
 export type ResponseCardSummary = {
   extractionStatus: CardExtractionStatus;
   intelligenceStatus: "ready" | "not_started" | "unavailable";
   headlineFacts: HeadlineFact[];
+  requirementCoverage: RequirementCoverage | null;
+  comparisonBlocked: ComparisonBlockReason | null;
   requiredFields: {
     total: number;
     present: number;
@@ -125,6 +153,32 @@ const requiredFieldSummary = (result: VendorIntelligenceResult) => {
   };
 };
 
+const requirementCoverageSummary = (
+  result: VendorIntelligenceResult,
+): RequirementCoverage => {
+  const coverage: RequirementCoverage = {
+    total: 0,
+    answered: 0,
+    partlyAnswered: 0,
+    notAnswered: 0,
+    conflicting: 0,
+    mandatoryNotAnswered: 0,
+  };
+  result.mappings.forEach((mapping) => {
+    const level = coverageFromRelationship(mapping.relationship);
+    if (level === "not_applicable") return;
+    coverage.total += 1;
+    if (level === "answered") coverage.answered += 1;
+    else if (level === "partly_answered") coverage.partlyAnswered += 1;
+    else if (level === "conflicting") coverage.conflicting += 1;
+    else {
+      coverage.notAnswered += 1;
+      if (mapping.mandatory) coverage.mandatoryNotAnswered += 1;
+    }
+  });
+  return coverage;
+};
+
 export const deriveResponseCardSummary = ({
   response,
   extraction,
@@ -148,8 +202,20 @@ export const deriveResponseCardSummary = ({
   const requiredFields = intelligenceResult
     ? requiredFieldSummary(intelligenceResult)
     : null;
+  const requirementCoverage = intelligenceResult
+    ? requirementCoverageSummary(intelligenceResult)
+    : null;
   const hasVersion = Boolean(response.submissionId && response.currentVersionId);
-  const knownUnusable = ["unreadable", "failed"].includes(extractionStatus);
+  const comparisonBlocked: ComparisonBlockReason | null = !hasVersion
+    ? "no_version"
+    : extractionStatus === "unreadable"
+      ? "unreadable"
+      : extractionStatus === "failed"
+        ? "failed"
+        : extractionStatus === "partial" ||
+            (intelligenceResult?.run.warnings.length ?? 0) > 0
+          ? "partial_sources"
+          : null;
   const needsAttention =
     !hasVersion ||
     extractionStatus !== "ready" ||
@@ -163,9 +229,11 @@ export const deriveResponseCardSummary = ({
     headlineFacts: intelligenceResult
       ? selectHeadlineFacts(intelligenceResult.facts)
       : [],
+    requirementCoverage,
+    comparisonBlocked,
     requiredFields,
     contradictionCount: intelligenceResult?.run.contradictionCount ?? 0,
-    isComparable: hasVersion && !knownUnusable,
+    isComparable: comparisonBlocked === null,
     needsAttention,
   };
 };

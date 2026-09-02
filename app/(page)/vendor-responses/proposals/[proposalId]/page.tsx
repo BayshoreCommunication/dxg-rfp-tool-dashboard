@@ -61,10 +61,13 @@ const loadAllProposalResponses = async (proposalId: string) => {
 
 export default async function ProposalVendorResponsesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ proposalId: string }>;
+  searchParams?: Promise<{ add?: string }>;
 }) {
   const { proposalId } = await params;
+  const openManualResponse = (await searchParams)?.add === "manual";
   const [responseResult, proposalResult] = await Promise.all([
     loadAllProposalResponses(proposalId),
     getProposalByIdAction(proposalId),
@@ -130,6 +133,7 @@ export default async function ProposalVendorResponsesPage({
       proposalTitle={title}
       responses={responses}
       summaries={Object.fromEntries(summaryEntries)}
+      openManualResponse={openManualResponse}
     />
   );
 }

@@ -105,6 +105,37 @@ it("separates required fields with support, missing evidence, and contradictions
     conflictTitles: ["Accessibility"],
   });
   expect(summary.needsAttention).toBe(true);
+  expect(summary.requirementCoverage).toEqual({
+    total: 5,
+    answered: 1,
+    partlyAnswered: 1,
+    notAnswered: 2,
+    conflicting: 1,
+    mandatoryNotAnswered: 1,
+  });
+  expect(summary.comparisonBlocked).toBeNull();
+  expect(summary.isComparable).toBe(true);
+});
+
+it("marks a partially readable response as excluded from comparison, matching the backend coverage rule", () => {
+  const byExtraction = deriveResponseCardSummary({
+    response,
+    extraction: { success: true, data: { status: "partial", runs: [] } },
+    intelligence: { success: true, data: intelligence() },
+  });
+  expect(byExtraction.comparisonBlocked).toBe("partial_sources");
+  expect(byExtraction.isComparable).toBe(false);
+
+  const byWarning = deriveResponseCardSummary({
+    response,
+    extraction: { success: true, data: { status: "ready", runs: [] } },
+    intelligence: {
+      success: true,
+      data: intelligence({ run: { ...intelligence().run, warnings: [{ code: "ocr_page_failed", message: "A page could not be extracted with OCR." }] } }),
+    },
+  });
+  expect(byWarning.comparisonBlocked).toBe("partial_sources");
+  expect(byWarning.isComparable).toBe(false);
 });
 
 it("does not treat absent analysis as compliance and excludes known unreadable responses", () => {
@@ -117,6 +148,8 @@ it("does not treat absent analysis as compliance and excludes known unreadable r
   expect(summary.requiredFields).toBeNull();
   expect(summary.headlineFacts).toEqual([]);
   expect(summary.intelligenceStatus).toBe("not_started");
+  expect(summary.requirementCoverage).toBeNull();
+  expect(summary.comparisonBlocked).toBe("unreadable");
   expect(summary.isComparable).toBe(false);
   expect(summary.needsAttention).toBe(true);
 });

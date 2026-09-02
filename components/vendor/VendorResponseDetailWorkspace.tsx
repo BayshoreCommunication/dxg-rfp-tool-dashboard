@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   CalendarDays,
-  ClipboardCheck,
   ClipboardList,
   FileCheck2,
   FileQuestion,
@@ -18,10 +17,14 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import VendorEvaluationSection from "./VendorEvaluationSection";
 import VendorExtractionSection from "./VendorExtractionSection";
 import VendorFactsSection from "./VendorFactsSection";
+import {
+  evaluationGateFromIntelligence,
+  type EvaluationGate,
+} from "@/lib/proposalIntelligence/evaluationGate";
 import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 
 const reasonLabels: Record<VendorSubmissionVersion["reason"], string> = {
@@ -68,6 +71,23 @@ export default function VendorResponseDetailWorkspace({
   );
   const vendorName = selectedVersion?.vendorName ?? detail.response.vendorName;
   const returnTo = `/vendor-responses/${detail.response._id}`;
+  const proposalResponsesHref = `/vendor-responses/proposals/${encodeURIComponent(detail.response.proposalId)}`;
+  // Scoring readiness is derived from the intelligence run the facts section
+  // loads, keyed by version so switching versions never shows a stale gate.
+  const [gates, setGates] = useState<Record<string, EvaluationGate>>({});
+  const gateFor = (versionId: string): EvaluationGate => gates[versionId] ?? { state: "unknown" };
+  const singleVersion = detail.versions.length === 1;
+  const handleIntelligence = useCallback(
+    (versionId: string, state: Parameters<typeof evaluationGateFromIntelligence>[0]) => {
+      const next = evaluationGateFromIntelligence(state);
+      setGates((current) =>
+        JSON.stringify(current[versionId]) === JSON.stringify(next)
+          ? current
+          : { ...current, [versionId]: next },
+      );
+    },
+    [],
+  );
 
   return (
     <section
@@ -76,10 +96,10 @@ export default function VendorResponseDetailWorkspace({
     >
       <header className="border-b border-slate-200 bg-white px-5 py-5 sm:px-7 lg:px-9">
         <Link
-          href="/vendor-responses"
+          href={proposalResponsesHref}
           className="inline-flex min-h-9 items-center gap-2 rounded-lg text-xs font-bold text-slate-600 hover:text-[#0076b4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/20"
         >
-          <ArrowLeft size={15} aria-hidden="true" /> All vendor responses
+          <ArrowLeft size={15} aria-hidden="true" /> Back to proposal responses
         </Link>
         <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -101,10 +121,9 @@ export default function VendorResponseDetailWorkspace({
           </div>
           <Link
             href={requirementRegistryHref(detail.response.proposalId, returnTo)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#008ad2] px-4 text-sm font-extrabold text-white shadow-sm hover:bg-[#0076b4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/25"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#008ad2] px-4 text-sm font-extrabold text-[#0076b4] hover:bg-[#eaf7fd] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/25"
           >
-            <ClipboardList size={16} aria-hidden="true" /> Review proposal
-            requirements
+            <ClipboardList size={16} aria-hidden="true" /> Open requirements checklist
           </Link>
         </div>
       </header>
@@ -112,7 +131,8 @@ export default function VendorResponseDetailWorkspace({
       {detail.versions.length === 0 ? (
         <LegacyResponse detail={detail} />
       ) : (
-        <div className="grid min-h-0 lg:grid-cols-[310px_minmax(0,1fr)]">
+        <div className={`grid min-h-0 ${singleVersion ? "" : "lg:grid-cols-[310px_minmax(0,1fr)]"}`}>
+          {!singleVersion && (
           <nav
             className="border-b border-slate-200 bg-slate-50/80 p-4 lg:border-b-0 lg:border-r lg:p-5"
             aria-label="Immutable response versions"
@@ -174,6 +194,7 @@ export default function VendorResponseDetailWorkspace({
               })}
             </ol>
           </nav>
+          )}
 
           {selectedVersion && (
             <main className="min-w-0 p-5 sm:p-7 lg:p-9" aria-live="polite">
@@ -181,7 +202,7 @@ export default function VendorResponseDetailWorkspace({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-xl font-extrabold text-slate-950">
-                      Version {selectedVersion.versionNumber}
+                      {singleVersion ? "Response as received" : `Version ${selectedVersion.versionNumber}`}
                     </h2>
                     <span
                       className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${current ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}
@@ -192,12 +213,9 @@ export default function VendorResponseDetailWorkspace({
                   <p className="mt-1 text-sm text-slate-600">
                     {reasonLabels[selectedVersion.reason]} received{" "}
                     {formatDate(selectedVersion.receivedAt)}
+                    {singleVersion && ". The only version received so far; revisions will be listed here."}
                   </p>
                 </div>
-                <span className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">
-                  <ClipboardCheck size={14} aria-hidden="true" /> Saved as
-                  received
-                </span>
               </div>
 
               {!current && (
@@ -251,7 +269,7 @@ export default function VendorResponseDetailWorkspace({
 
               <SourceReadiness
                 documents={selectedVersion.documents}
-                versionNumber={selectedVersion.versionNumber}
+                versionLabel={singleVersion ? "this response" : `Version ${selectedVersion.versionNumber}`}
               />
 
               <section className="mt-6" aria-labelledby="intelligence-heading">
@@ -260,11 +278,10 @@ export default function VendorResponseDetailWorkspace({
                     id="intelligence-heading"
                     className="text-base font-extrabold text-slate-900"
                   >
-                    AI analysis of this version
+                    Analysis and scoring
                   </h3>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Saved with Version {selectedVersion.versionNumber} &mdash;
-                    opening anything here won&rsquo;t rerun the analysis.
+                  <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
+                    RFPilot read {singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which files were readable, which requirements the vendor answered, and the values it stated. Your scoring sits at the end. Opening anything here never reruns the analysis or changes what the vendor sent.
                   </p>
                 </div>
                 {detail.submission && (
@@ -275,14 +292,21 @@ export default function VendorResponseDetailWorkspace({
                       versionId={selectedVersion.versionId}
                     />
                     <VendorFactsSection
+                      key={selectedVersion.versionId}
                       proposalId={detail.response.proposalId}
+                      proposalTitle={detail.response.proposalTitle}
+                      vendorName={vendorName}
+                      vendorEmail={selectedVersion.email}
                       submissionId={detail.submission.submissionId}
                       versionId={selectedVersion.versionId}
+                      onIntelligence={(state) => handleIntelligence(selectedVersion.versionId, state)}
                     />
                     <VendorEvaluationSection
+                      key={`evaluation-${selectedVersion.versionId}`}
                       proposalId={detail.response.proposalId}
                       submissionId={detail.submission.submissionId}
                       versionId={selectedVersion.versionId}
+                      gate={gateFor(selectedVersion.versionId)}
                     />
                   </div>
                 )}
@@ -339,10 +363,11 @@ function Fact({
 
 function SourceReadiness({
   documents,
-  versionNumber,
+  versionLabel,
 }: {
   documents: VendorSubmissionVersion["documents"];
-  versionNumber: number;
+  /** "this response" while only one version exists; "Version N" once there are several. */
+  versionLabel: string;
 }) {
   return (
     <section className="mt-5" aria-labelledby="sources-heading">
@@ -355,12 +380,9 @@ function SourceReadiness({
             Attached files
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            Files included with Version {versionNumber}.
+            Files included with {versionLabel}.
           </p>
         </div>
-        <span className="text-xs font-bold text-slate-500">
-          {documents.length} file{documents.length === 1 ? "" : "s"}
-        </span>
       </div>
       {documents.length === 0 ? (
         <div className="mt-3 rounded-2xl border border-dashed border-slate-300 p-5 text-sm text-slate-600">
