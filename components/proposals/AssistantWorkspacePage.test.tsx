@@ -85,6 +85,7 @@ const mockedGenerateGuidance = generateGuidanceAction as jest.MockedFunction<typ
 const mockedGetDraft = getProposalDraftAction as jest.MockedFunction<typeof getProposalDraftAction>;
 
 const PROPOSAL_ID = "abc123abc123abc123abc123";
+const FUTURE_DATE = "2099-09-01";
 
 /**
  * A date the picker will still accept.
