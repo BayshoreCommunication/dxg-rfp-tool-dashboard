@@ -138,7 +138,7 @@ describe('EmailDashboard — campaign cards', () => {
     expect(screen.getByText('second.vendor@example.com')).toBeInTheDocument()
   })
 
-  it('keeps longer recipient lists compact behind a more disclosure', async () => {
+  it('shows every recipient without hiding addresses behind a disclosure', async () => {
     mockGetCampaigns.mockResolvedValue(successPage([makeCampaign({
       recipients: [
         { email: 'one@example.com', status: 'sent' },
@@ -149,7 +149,12 @@ describe('EmailDashboard — campaign cards', () => {
       ],
     })]))
     render(<EmailDashboard />)
-    await waitFor(() => expect(screen.getByText('+2 more')).toBeInTheDocument(), LOAD_TIMEOUT)
+    await waitFor(() => expect(screen.getByText('one@example.com')).toBeInTheDocument(), LOAD_TIMEOUT)
+    expect(screen.getByText('two@example.com')).toBeInTheDocument()
+    expect(screen.getByText('three@example.com')).toBeInTheDocument()
+    expect(screen.getByText('four@example.com')).toBeInTheDocument()
+    expect(screen.getByText('failed@example.com')).toBeInTheDocument()
+    expect(screen.queryByText(/more/i)).not.toBeInTheDocument()
     expect(screen.getByTitle('Delivery failed: failed@example.com')).toBeInTheDocument()
   })
 })
