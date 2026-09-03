@@ -220,8 +220,9 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
   const [sets, setSets] = useState(initialSets);
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("all");
-  const [unresolvedOnly, setUnresolvedOnly] = useState(true);
-  const [showRequirementReview, setShowRequirementReview] = useState(false);
+  const [unresolvedOnly, setUnresolvedOnly] = useState(false);
+  // The checklist is the page; it opens by default and a reader can fold it away.
+  const [showRequirementReview, setShowRequirementReview] = useState(true);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -397,7 +398,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
 
             <details open={showRequirementReview} onToggle={(event) => setShowRequirementReview(event.currentTarget.open)} className="mt-5 rounded-2xl border border-slate-200 bg-white">
               <summary className="cursor-pointer list-none p-5 marker:hidden">
-                <div className="flex items-center justify-between gap-4"><div><h2 className="font-extrabold text-slate-900">Review individual requirements</h2><p className="mt-1 text-sm text-slate-500">Open only when you want to inspect or override an automatic decision.</p></div><span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-600">{unresolvedCount} need attention</span></div>
+                <div className="flex items-center justify-between gap-4"><div><h2 className="font-extrabold text-slate-900">Your requirement checklist</h2><p className="mt-1 text-sm text-slate-500">Everything RFPilot found in the RFP, grouped by type. Open an item to see where it came from or to change whether it counts.</p></div><span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-600">{unresolvedCount} need attention</span></div>
               </summary>
               {showRequirementReview && <div className="border-t border-slate-100 p-4 sm:p-5">
                 <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">

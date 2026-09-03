@@ -84,7 +84,6 @@ test("renders traceable requirements, balanced weights, and blocks premature app
   render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
   expect(screen.getByText("Technical Approach")).toBeInTheDocument();
   expect(screen.getByText("Balanced to 100%")).toBeInTheDocument();
-  await userEvent.click(screen.getByText("Review individual requirements"));
   expect(screen.getByText("Audio system required")).toBeInTheDocument();
   expect(screen.getByText(/Proposal · roomByRoom › 0 › audioSystemRequired/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /approve and freeze/i })).not.toBeInTheDocument();
@@ -121,7 +120,6 @@ test("does not display old persisted standalone recording requirements", async (
   );
 
   expect(screen.getByText("1 requirements found")).toBeInTheDocument();
-  await userEvent.click(screen.getByText("Review individual requirements"));
   expect(screen.queryByText("RETIRED_RECORDING_REQUIREMENT")).not.toBeInTheDocument();
   expect(screen.queryByText("RETIRED_RECORDING_VALUE")).not.toBeInTheDocument();
   expect(screen.queryByRole("option", { name: "Recording" })).not.toBeInTheDocument();
@@ -176,7 +174,6 @@ test("keeps the registry version selector in sync after approval", async () => {
 test("a saved row explicitly confirms mandatory and criterion review", async () => {
   update.mockResolvedValue({ success: true, data: registry });
   render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
-  await userEvent.click(screen.getByText("Review individual requirements"));
   await userEvent.click(screen.getByText("Audio system required"));
   await userEvent.selectOptions(screen.getByLabelText("Mandatory status"), "mandatory");
   await userEvent.selectOptions(screen.getByLabelText("Verification method"), "document");
@@ -193,7 +190,6 @@ test("a saved row explicitly confirms mandatory and criterion review", async () 
 test("a planner can exclude metadata or duplicate narrative from evaluation", async () => {
   update.mockResolvedValue({ success: true, data: registry });
   render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
-  await userEvent.click(screen.getByText("Review individual requirements"));
   await userEvent.click(screen.getByText("Audio system required"));
   await userEvent.click(screen.getByRole("checkbox", { name: /include in vendor evaluation/i }));
   await userEvent.click(screen.getByRole("button", { name: /save review/i }));
