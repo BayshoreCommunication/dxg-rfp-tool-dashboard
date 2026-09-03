@@ -98,7 +98,7 @@ it("renders a keyboard-operable version timeline", () => {
     within(timeline).getByRole("button", { name: /Version 2/ }),
   ).toHaveAttribute("aria-current", "true");
   expect(screen.getAllByText("Clarification response")).toHaveLength(1);
-  expect(screen.getByText("Security scan passed")).toBeInTheDocument();
+  expect(screen.getByText(/Security scan passed/)).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Open requirements checklist" }),
   ).toHaveAttribute("href", "/proposals/proposal-1/intelligence/requirements?returnTo=%2Fvendor-responses%2Fresponse-1");
@@ -144,7 +144,7 @@ it("switches to historical content without representing an unverified file as an
   expect(screen.getByText("Historical, superseded")).toBeInTheDocument();
   expect(screen.getByText("Initial response.")).toBeInTheDocument();
   expect(
-    screen.getByText("Security scan pending"),
+    screen.getByText(/Security scan pending/),
   ).toBeInTheDocument();
   expect(
     screen.getByText(/isn’t included in the analysis/),

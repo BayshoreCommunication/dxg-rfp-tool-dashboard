@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, CircleAlert, ClipboardList, FileWarning, MailPlus, Pencil, RefreshCw, ShieldAlert, X } from "lucide-react";
+import { ArrowRight, Check, CircleAlert, FileWarning, MailPlus, Pencil, RefreshCw, ShieldAlert, X } from "lucide-react";
 import Link from "next/link";
 import { familyLabel, groupFacts } from "@/lib/vendorResponses/factPresentation";
 import SectionLoadError from "@/components/vendor/SectionLoadError";
@@ -312,17 +312,12 @@ function UnreadableFileCard({ warnings, blocked, vendorName, vendorEmail, propos
     subject: `Text-based copy of your response${proposalTitle ? ` to ${proposalTitle}` : ""}`,
     message: `Hello,\n\nOur system could not read part of ${fileList} in your response${proposalTitle ? ` to ${proposalTitle}` : ""}. Could you send a text-based (not scanned) copy of the same document?\n\nThank you.`,
   });
-  const details = warnings.map((warning) => `${typeof warning.sourceLabel === "string" ? `${warning.sourceLabel}: ` : ""}${String(warning.message ?? "Some response evidence was unavailable.")}`);
   return <div role="alert" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
     <p className="flex items-center gap-2 text-sm font-bold"><FileWarning size={16} aria-hidden="true"/>{heading}</p>
-    <p className="mt-1 text-xs leading-5">{blocked
-      ? `Until it can be, ${name} is left out of the vendor comparison and cannot be scored. Retry the check above, or get a fresh copy of the file.`
-      : `Scoring and comparison can go ahead with what was read, but the unread pages may hold answers we have not seen. Check the gaps below before deciding, or get a readable copy.`}</p>
+    {blocked && <p className="mt-1 text-xs leading-5">Until it can be, {name} is left out of the vendor comparison. Get a fresh copy of the file.</p>}
     <div className="mt-3 flex flex-wrap gap-2">
       <Link href={askHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#008ad2] px-3.5 text-xs font-bold text-white hover:bg-[#0076b4]"><MailPlus size={13} aria-hidden="true"/>Ask {name} for a text-based copy</Link>
-      <Link href={`/vendor-responses/proposals/${encodeURIComponent(proposalId)}?add=manual`} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-amber-400 bg-white px-3.5 text-xs font-bold text-amber-900 hover:bg-amber-100"><ClipboardList size={13} aria-hidden="true"/>Add the missing figures manually</Link>
     </div>
-    {details.length > 0 && <details className="mt-3 text-xs"><summary className="cursor-pointer font-semibold">Details</summary><ul className="mt-1 list-disc space-y-1 pl-5">{details.map((detail, index) => <li key={`${detail}-${index}`}>{detail}</li>)}</ul></details>}
   </div>;
 }
 
