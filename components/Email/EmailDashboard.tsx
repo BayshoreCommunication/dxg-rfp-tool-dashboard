@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  Mail,
   MousePointerClick,
   Send,
   Trash2,
@@ -30,6 +31,10 @@ type EmailCampaign = {
   vendorResponseClickCount?: number;
   vendorResponseCount?: number;
   unreadResponseCount?: number;
+  recipients?: Array<{
+    email?: string;
+    status?: "sent" | "failed";
+  }>;
   createdAt: string;
 };
 
@@ -201,6 +206,8 @@ export default function EmailDashboard() {
                   {body}
                 </p>
 
+                <CampaignRecipients recipients={campaign.recipients} />
+
                 <p className="mt-3 text-[14px] font-medium text-slate-400">
                   {campaign?.createdAt
                     ? new Date(campaign.createdAt).toLocaleString()
@@ -307,6 +314,82 @@ export default function EmailDashboard() {
             </ul>
           </nav>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CampaignRecipients({
+  recipients,
+}: {
+  recipients?: EmailCampaign["recipients"];
+}) {
+  const validRecipients = (recipients ?? []).filter(
+    (recipient): recipient is { email: string; status?: "sent" | "failed" } =>
+      typeof recipient.email === "string" && recipient.email.trim().length > 0,
+  );
+
+  if (validRecipients.length === 0) {
+    return (
+      <p className="mt-3 flex items-center gap-2 text-xs font-medium text-slate-400">
+        <Mail size={14} aria-hidden="true" /> Recipient details unavailable
+      </p>
+    );
+  }
+
+  const visibleRecipients = validRecipients.slice(0, 3);
+  const remainingRecipients = validRecipients.slice(3);
+  const recipientChip = (
+    recipient: { email: string; status?: "sent" | "failed" },
+    index: number,
+  ) => {
+    const failed = recipient.status === "failed";
+    return (
+      <span
+        key={`${recipient.email}-${index}`}
+        title={failed ? `Delivery failed: ${recipient.email}` : `Sent to ${recipient.email}`}
+        className={cn(
+          "inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold",
+          failed
+            ? "border-rose-200 bg-rose-50 text-rose-700"
+            : "border-sky-100 bg-sky-50 text-slate-700",
+        )}
+      >
+        <span
+          className={cn(
+            "h-1.5 w-1.5 shrink-0 rounded-full",
+            failed ? "bg-rose-500" : "bg-emerald-500",
+          )}
+          aria-hidden="true"
+        />
+        <span className="truncate">{recipient.email}</span>
+        <span className="sr-only">{failed ? "delivery failed" : "sent"}</span>
+      </span>
+    );
+  };
+
+  return (
+    <div className="mt-3 flex flex-wrap items-start gap-2" aria-label="Campaign recipients">
+      <span className="inline-flex min-h-7 shrink-0 items-center gap-1.5 text-xs font-bold text-slate-500">
+        <Mail size={14} className="text-[#008ad2]" aria-hidden="true" />
+        Recipients
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap gap-1.5">
+          {visibleRecipients.map(recipientChip)}
+        </div>
+        {remainingRecipients.length > 0 && (
+          <details className="mt-1.5">
+            <summary className="w-fit cursor-pointer text-xs font-bold text-[#0076b4] hover:text-[#005f91]">
+              +{remainingRecipients.length} more
+            </summary>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {remainingRecipients.map((recipient, index) =>
+                recipientChip(recipient, index + visibleRecipients.length),
+              )}
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );
