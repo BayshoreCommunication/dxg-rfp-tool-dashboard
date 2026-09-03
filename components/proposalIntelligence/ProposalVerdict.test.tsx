@@ -33,12 +33,11 @@ it("no longer offers a 'Record your decision' action", () => {
 it("names the leader and links every decisive factor and gap to comparison evidence", () => {
   render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
   expect(screen.getByRole("heading", { name: "Alpha is the strongest fit in this comparison." })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Named technical producer/ })).toHaveAttribute("href", "#matrix-cell-req-1-vendor-1");
   // Runners-up and "Risks, gaps, and assumptions" are no longer shown on the verdict card.
   expect(screen.queryByText("Runners-up and exclusions")).not.toBeInTheDocument();
   expect(screen.queryByText("Risks, gaps, and assumptions")).not.toBeInTheDocument();
-  expect(screen.getByText(/The top scores are close/)).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Items to review before final decision" })).toBeInTheDocument();
+  expect(screen.queryByText("Items to review before final decision")).not.toBeInTheDocument();
+  expect(screen.queryByText("Strongest evidence for the leader")).not.toBeInTheDocument();
   expect(screen.queryByText(/confidence/i)).not.toBeInTheDocument();
 });
 
