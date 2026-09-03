@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, CircleAlert, FileWarning, MailPlus, Pencil, RefreshCw, ShieldAlert, X } from "lucide-react";
+import { ArrowRight, Check, CircleAlert, MailPlus, Pencil, RefreshCw, ShieldAlert, X } from "lucide-react";
 import Link from "next/link";
 import { familyLabel, groupFacts } from "@/lib/vendorResponses/factPresentation";
 import SectionLoadError from "@/components/vendor/SectionLoadError";
@@ -289,37 +289,7 @@ const emailHref = (input: { proposalId: string; to?: string; subject: string; me
   return `/email/send-email?${params.toString()}`;
 };
 
-const warningSources = (warnings: VendorIntelligenceResult["run"]["warnings"]) =>
-  [...new Set(warnings.map((warning) => (typeof warning.sourceLabel === "string" ? warning.sourceLabel : "")).filter(Boolean))];
 
-/**
- * The most important thing on the page when it applies. Two flavours, matching
- * the backend rule: a source that was unavailable to the analysis blocks
- * scoring and comparison; partially readable pages do not block but may hide
- * answers. Both are written as a task with two ways out, not as a warning.
- */
-function UnreadableFileCard({ warnings, blocked, vendorName, vendorEmail, proposalId, proposalTitle, returnTo }: {
-  warnings: VendorIntelligenceResult["run"]["warnings"]; blocked: boolean; vendorName?: string; vendorEmail?: string; proposalId: string; proposalTitle?: string; returnTo?: string;
-}) {
-  const sources = warningSources(blocked ? warnings.filter(isBlockingWarning) : warnings);
-  const name = vendorLabel(vendorName);
-  const heading = blocked
-    ? (sources.length === 1 ? `${sources[0]} could not be used by the analysis` : sources.length > 1 ? `${sources.length} files could not be used by the analysis` : "A file could not be used by the analysis")
-    : (sources.length === 1 ? `Some pages of ${sources[0]} could not be read` : sources.length > 1 ? `Some pages of ${sources.length} files could not be read` : "Some pages of this response could not be read");
-  const fileList = sources.length ? sources.map((source) => `"${source}"`).join(", ") : "your response";
-  const askHref = emailHref({
-    proposalId, to: vendorEmail, vendorName, returnTo,
-    subject: `Text-based copy of your response${proposalTitle ? ` to ${proposalTitle}` : ""}`,
-    message: `Hello,\n\nOur system could not read part of ${fileList} in your response${proposalTitle ? ` to ${proposalTitle}` : ""}. Could you send a text-based (not scanned) copy of the same document?\n\nThank you.`,
-  });
-  return <div role="alert" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
-    <p className="flex items-center gap-2 text-sm font-bold"><FileWarning size={16} aria-hidden="true"/>{heading}</p>
-    {blocked && <p className="mt-1 text-xs leading-5">Until it can be, {name} is left out of the vendor comparison. Get a fresh copy of the file.</p>}
-    <div className="mt-3 flex flex-wrap gap-2">
-      <Link href={askHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#008ad2] px-3.5 text-xs font-bold text-white hover:bg-[#0076b4]"><MailPlus size={13} aria-hidden="true"/>Ask {name} for a text-based copy</Link>
-    </div>
-  </div>;
-}
 
 /** Tells the planner what to do now, based on what the analysis found. */
 function WhatNext({ blocked, mappings, vendorName, vendorEmail, proposalId, proposalTitle, returnTo }: {
@@ -425,7 +395,6 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
   const name = vendorLabel(vendorName);
   // Mirrors the backend: only an unavailable source blocks; partial pages warn.
   const blocked = result?.run.warnings.some(isBlockingWarning) ?? false;
-  const hasSourceWarnings = (result?.run.warnings.length ?? 0) > 0;
   return <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm" aria-labelledby="vendor-intelligence-title">
     <div className="flex flex-wrap items-start justify-between gap-3"><div className="max-w-2xl">
       <h3 id="vendor-intelligence-title" className="text-base font-extrabold text-slate-900">How {name} answered your requirements</h3>
@@ -438,7 +407,6 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
     {result?.run.status === "failed" && <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">The run failed safely{result.run.safeErrorCode ? ` (${result.run.safeErrorCode})` : ""}. No unsupported findings were saved.</p>}
     {result && ["queued", "running"].includes(result.run.status) && <p className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-xs text-sky-800">Checking the response against your requirements. This page will update on its own.</p>}
     {result?.run.status === "succeeded" && <>
-      {hasSourceWarnings && <UnreadableFileCard warnings={result.run.warnings} blocked={blocked} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle} returnTo={returnTo}/>}
       {result.run.contradictionCount > 0 && <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800"><CircleAlert size={14}/>{name} gave conflicting answers in places. They are kept side by side under Stated values so you can decide which is right.</p>}
       <div className="mt-4 flex gap-2 border-b border-slate-200" role="tablist" aria-label="Analysis views">
         <button type="button" role="tab" aria-selected={tab === "mappings"} onClick={() => setTab("mappings")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "mappings" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Requirements</button>
