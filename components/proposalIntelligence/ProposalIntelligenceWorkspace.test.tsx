@@ -104,8 +104,9 @@ test("prints the readable executive report without requiring an export", async (
   expect(screen.queryByText(/Frozen comparison/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/Viewing comparison snapshot/i)).not.toBeInTheDocument();
   expect(screen.getByText("$100,000.00")).toBeInTheDocument();
-  // RFPilot has one user per proposal, so a "1/2 evaluators" ratio was fiction.
-  expect(screen.getByText("Scored")).toBeInTheDocument();
+  // The per-vendor "Contribution / Scores / Scored" cards were removed; the
+  // table above already carries the totals.
+  expect(screen.queryByText("Contribution")).not.toBeInTheDocument();
   expect(screen.queryByText(/evaluator/i)).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Human decision" })).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Priority review signals" })).not.toBeInTheDocument();

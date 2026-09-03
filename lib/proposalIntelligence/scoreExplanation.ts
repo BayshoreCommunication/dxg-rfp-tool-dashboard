@@ -57,14 +57,14 @@ export const plainRationale = (rationale: string): string => {
   const colon = body.indexOf(": ");
   const summary = colon === -1 ? "" : body.slice(colon + 2).trim();
   if (!summary || summary === "no mapped requirements")
-    return "None of your requirements feed this criterion, so RFPilot gave it 0. That is not a judgement about the vendor.";
+    return "None of your requirements fall under this area, so RFPilot gave it 0. That is not a judgement about the vendor.";
   const counts = summary.split(",").map((part) => part.trim()).filter(Boolean).map((part) => {
     const match = part.match(/^(\d+)\s+(.+)$/);
     if (!match) return part;
     const word = verdictWords[match[2]] ?? match[2];
     return `${match[1]} ${word}`;
   });
-  return `Based on the requirements that feed this criterion: ${counts.join(", ")}.`;
+  return `Requirements in this area: ${counts.join(", ")}.`;
 };
 
 export type ScoreGapRow = {
@@ -105,7 +105,7 @@ const originsSentence = (rows: ScoreGapRow[]) => {
   if (all.every((origin) => origin === "unknown"))
     return "This comparison did not record who set each score. Run a new comparison to see that.";
   if (all.every((origin) => origin === "automated"))
-    return "Nobody has scored these vendors yet. Every score here is RFPilot's starting score, worked out from the quotes it found for each requirement. Score them yourself to replace it.";
+    return "No one has scored these vendors by hand yet. These are RFPilot's starting scores: they show how much of each area the vendor answered, not how good the answers are.";
   if (all.every((origin) => origin === "human")) return "All of these are your scores.";
   return "Some of these scores are yours; the rest are RFPilot's starting scores where you have not scored a criterion yet.";
 };
@@ -163,10 +163,10 @@ export const explainScoreGap = (
   const against = rows.filter((row) => row.difference < -0.005);
   const gains = favouring.length === 0
     ? ""
-    : `${leader.vendorLabel} gains on ${list(favouring.slice(0, 2).map((row) => `${row.name} (${signed(row.difference)})`))}${favouring.length > 2 ? ` and ${favouring.length - 2} other ${favouring.length - 2 === 1 ? "criterion" : "criteria"}` : ""}`;
+    : `${leader.vendorLabel} gains on ${list(favouring.slice(0, 2).map((row) => `${row.name} (${signed(row.difference)})`))}${favouring.length > 2 ? ` and ${favouring.length - 2} other ${favouring.length - 2 === 1 ? "area" : "areas"}` : ""}`;
   const loses = against.length === 0
     ? ""
-    : `gives up ${Math.abs(against[0].difference).toFixed(2)} on ${against[0].name}${against.length > 1 ? ` and less on ${against.length - 1} other ${against.length - 1 === 1 ? "criterion" : "criteria"}` : ""}`;
+    : `gives up ${Math.abs(against[0].difference).toFixed(2)} on ${against[0].name}${against.length > 1 ? ` and less on ${against.length - 1} other ${against.length - 1 === 1 ? "area" : "areas"}` : ""}`;
   const drivers = gains && loses ? `${gains}, but ${loses}.` : gains ? `${gains}.` : loses ? `${leader.vendorLabel} ${loses}.` : "";
 
   return {

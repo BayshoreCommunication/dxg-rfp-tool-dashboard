@@ -44,9 +44,9 @@ it("tells apart your scores from RFPilot's starting scores, and admits when noth
 
 it("rewrites the engine's audit rationale into the coverage vocabulary and leaves a person's words alone", () => {
   expect(plainRationale("Automated evidence-derived score for Pricing: 2 addressed, 1 partially addressed, 1 missing. This is a transparent system baseline, not a human reviewer opinion."))
-    .toBe("Based on the requirements that feed this criterion: 2 answered, 1 partly answered, 1 not answered.");
+    .toBe("Requirements in this area: 2 answered, 1 partly answered, 1 not answered.");
   expect(plainRationale("Automated evidence-derived score for DEI: no mapped requirements. This is a transparent system baseline, not a human reviewer opinion."))
-    .toMatch(/None of your requirements feed this criterion, so RFPilot gave it 0/);
+    .toMatch(/None of your requirements fall under this area, so RFPilot gave it 0/);
   expect(plainRationale("  Weak run-of-show detail.  ")).toBe("Weak run-of-show detail.");
   expect(plainRationale("")).toBe("");
 });
@@ -58,7 +58,7 @@ it("attributes the gap to the criteria that caused it, largest first, and says w
   expect(explanation!.headline).toBe("Inspire is 48.00 points ahead of Test Manual Vendor.");
   expect(explanation!.rows.map((row) => row.name)).toEqual(["Responsiveness & Communication", "Technical Approach", "Pricing & Value"]);
   expect(explanation!.rows[0].difference).toBeCloseTo(40, 2);
-  expect(explanation!.rows[0].rival.rationale).toMatch(/None of your requirements feed this criterion/);
+  expect(explanation!.rows[0].rival.rationale).toMatch(/None of your requirements fall under this area/);
   expect(explanation!.rows[1].rival.origin).toBe("human");
   expect(explanation!.rows[1].rival.rationale).toBe("Weak run-of-show detail.");
   expect(explanation!.drivers).toBe("Inspire gains on Responsiveness & Communication (+40.00) and Technical Approach (+8.00).");
@@ -77,7 +77,7 @@ it("names the biggest criterion the leader loses on, not only the ones it wins",
   const explanation = explainScoreGap(mixed, "inspire", "manual")!;
   // Weights 30/30/15 normalise to 40/40/20, so Pricing (−14.00) is the largest row even though the leader wins overall on Responsiveness.
   expect(explanation.rows[0].name).toBe("Pricing & Value");
-  expect(explanation.drivers).toBe("Inspire gains on Responsiveness & Communication (+13.36), but gives up 14.00 on Pricing & Value and less on 1 other criterion.");
+  expect(explanation.drivers).toBe("Inspire gains on Responsiveness & Communication (+13.36), but gives up 14.00 on Pricing & Value and less on 1 other area.");
 });
 
 it("says plainly when nobody has scored either vendor", () => {
@@ -89,7 +89,7 @@ it("says plainly when nobody has scored either vendor", () => {
       })),
     },
   } as Pick<ComparisonWorkspace, "intelligence">;
-  expect(explainScoreGap(automatedOnly, "inspire", "manual")!.origins).toMatch(/Nobody has scored these vendors yet/);
+  expect(explainScoreGap(automatedOnly, "inspire", "manual")!.origins).toMatch(/No one has scored these vendors by hand yet/);
 });
 
 it("refuses to explain when either vendor lacks per-criterion detail or the rubrics differ", () => {
