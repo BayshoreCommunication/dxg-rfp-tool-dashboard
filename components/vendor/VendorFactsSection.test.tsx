@@ -1,21 +1,18 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import VendorFactsSection from "./VendorFactsSection";
 import {
   createVendorIntelligenceAction,
   getLatestVendorIntelligenceAction,
-  reviewVendorIntelligenceAction,
   type VendorIntelligenceResult,
 } from "@/app/actions/vendorIntelligence";
 
 jest.mock("@/app/actions/vendorIntelligence", () => ({
   createVendorIntelligenceAction: jest.fn(),
   getLatestVendorIntelligenceAction: jest.fn(),
-  reviewVendorIntelligenceAction: jest.fn(),
 }));
 
 const latest = getLatestVendorIntelligenceAction as jest.MockedFunction<typeof getLatestVendorIntelligenceAction>;
 const create = createVendorIntelligenceAction as jest.MockedFunction<typeof createVendorIntelligenceAction>;
-const review = reviewVendorIntelligenceAction as jest.MockedFunction<typeof reviewVendorIntelligenceAction>;
 const completed: VendorIntelligenceResult = {
   run: { runId: "run-1", jobId: "job-1", requirementSetId: "set-1", status: "succeeded", requirementCount: 1, mappedRequirementCount: 1, factCount: 2, contradictionCount: 1, warnings: [], safeErrorCode: null, createdAt: "2026-08-12T10:00:00Z", completedAt: "2026-08-12T10:01:00Z" },
   mappings: [{ mappingId: "mapping-1", requirementId: "requirement-1", requirementTitle: "Provide a complete staffing plan", requirementKind: "staffing", mandatory: true, relationship: "partially_supports", confidence: 0.78, ambiguityReasons: ["Shift coverage is unclear"], evidence: [{ fragmentId: "fragment-1", content: "Six technicians are included.", locator: { page: 7 }, sourceLabel: "Northstar.pdf" }] }],
@@ -30,7 +27,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   latest.mockResolvedValue({ success: true, data: completed });
   create.mockResolvedValue({ success: true, data: completed.run });
-  review.mockResolvedValue({ success: true, data: { reviewId: "review-1" } });
 });
 
 test("renders requirement relationships with inspectable source locations", async () => {
@@ -42,7 +38,7 @@ test("renders requirement relationships with inspectable source locations", asyn
   expect(screen.queryByText("Six technicians are included.")).not.toBeInTheDocument();
 });
 
-test("preserves contradictory facts and supports append-only correction review", async () => {
+test("lists stated values as rows, keeps conflicting values together, and offers no review controls", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide a complete staffing plan");
   fireEvent.click(screen.getByRole("tab", { name: "Stated values" }));
@@ -50,29 +46,8 @@ test("preserves contradictory facts and supports append-only correction review",
   expect(screen.getByText(/gives 2 different answers for the same item/)).toBeInTheDocument();
   expect(screen.getByText("$120,000")).toBeInTheDocument();
   expect(screen.getByText("$128,000")).toBeInTheDocument();
-  fireEvent.click(screen.getAllByRole("button", { name: "Disagree with this?" })[0]);
-  expect(screen.getByText(/Remove this value. It will not be used in scoring./)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Correct" }));
-  fireEvent.change(screen.getByLabelText("Corrected value"), { target: { value: "USD 125000" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
-  await waitFor(() => expect(review).toHaveBeenCalledWith(
-    "proposal", "submission", "version", "run-1",
-    expect.objectContaining({ targetType: "fact", targetId: "fact-1", decision: "corrected", correctedPayload: { normalizedValue: "USD 125000", typedValue: { kind: "money", number: 125000, currency: "USD" } } }),
-    expect.any(String),
-  ));
-});
-
-test("rejects a correction that does not match the extracted fact type", async () => {
-  render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  await screen.findByText("Provide a complete staffing plan");
-  fireEvent.click(screen.getByRole("tab", { name: "Stated values" }));
-  fireEvent.click(screen.getAllByRole("button", { name: "Disagree with this?" })[0]);
-  fireEvent.click(screen.getByRole("button", { name: "Correct" }));
-  fireEvent.change(screen.getByLabelText("Corrected value"), { target: { value: "not a price" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
-
-  expect(await screen.findByRole("alert")).toHaveTextContent(/does not match this fact’s type/i);
-  expect(review).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "Disagree with this?" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/Accept the right one/)).not.toBeInTheDocument();
 });
 
 test("explains that intelligence cannot make an award decision", async () => {
@@ -118,22 +93,12 @@ test("sorts requirements into answered, partly answered and not answered columns
   expect(within(missing).queryByText(/Nothing in this response answers/)).not.toBeInTheDocument();
 });
 
-test("lets a planner correct a requirement's answer status using the cited evidence", async () => {
+test("opens on the Requirements tab without asking the reader to review anything", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide a complete staffing plan");
   expect(screen.getByRole("tab", { name: "Requirements" })).toHaveAttribute("aria-selected", "true");
   expect(screen.getByText(/Each thing you asked for/)).toBeInTheDocument();
-  expect(screen.queryByText(/Low AI confidence/)).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Disagree with this?" }));
-  expect(screen.getByText("Treat this requirement as not answered by the vendor.")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Correct" }));
-  fireEvent.change(screen.getByLabelText("Corrected status"), { target: { value: "supports" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
-  await waitFor(() => expect(review).toHaveBeenCalledWith(
-    "proposal", "submission", "version", "run-1",
-    expect.objectContaining({ targetType: "mapping", targetId: "mapping-1", decision: "corrected", correctedPayload: { relationship: "supports", fragmentIds: ["fragment-1"] } }),
-    expect.any(String),
-  ));
+  expect(screen.queryByRole("button", { name: "Disagree with this?" })).not.toBeInTheDocument();
 });
 
 test("explains a failed load in plain words and offers a retry", async () => {
