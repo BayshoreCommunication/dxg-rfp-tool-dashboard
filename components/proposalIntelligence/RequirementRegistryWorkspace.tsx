@@ -253,7 +253,6 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
   const matrixReady = Boolean(registry?.matrix?.weightsConfirmed) && Math.abs((registry?.matrix?.totalWeight ?? 0) - 100) <= 0.001;
   const readyForApproval = Boolean(registry) && blocking.length === 0 && matrixReady && !registry?.freshness.stale;
   const editable = registry?.set.status === "draft" || registry?.set.status === "in_review";
-  const reviewedPercent = requirementCount ? Math.round(((requirementCount - unresolvedCount) / requirementCount) * 100) : 0;
   const applyRegistry = (next: RequirementRegistryView) => {
     setRegistry(next);
     setSets((previous) => [{
@@ -381,19 +380,6 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
                 <div className="border-t border-black/5 p-4 sm:border-l sm:border-t-0"><p className="text-2xl font-extrabold text-slate-900">{unresolvedCount}</p><p className="text-xs font-bold text-slate-500">Need attention</p></div>
                 <div className="border-l border-t border-black/5 p-4 sm:border-t-0"><p className={`text-2xl font-extrabold ${matrixReady ? "text-emerald-700" : "text-amber-700"}`}>{registry.matrix?.totalWeight ?? 0}%</p><p className="text-xs font-bold text-slate-500">Scoring balance</p></div>
               </div>
-            </section>
-
-            <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-              <article className="rounded-2xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3"><h2 className="font-extrabold text-slate-900">Scoring categories</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${matrixReady ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{matrixReady ? "Balanced to 100%" : "Needs balancing"}</span></div>
-                <ul className="mt-4 space-y-3">{criteria.map((criterion) => <li key={criterion.id}><div className="flex items-center justify-between gap-3 text-sm"><span className="truncate text-slate-700">{criterion.name}</span><span className="font-extrabold text-slate-900">{Number(criterion.weight)}%</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#18a9c8]" style={{ width: `${Math.min(100, Math.max(0, Number(criterion.weight)))}%` }} /></div></li>)}</ul>
-              </article>
-              <article className="rounded-2xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3"><h2 className="font-extrabold text-slate-900">Review summary</h2><span className="text-xs font-bold text-slate-500">{reviewedPercent}% reviewed</span></div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${reviewedPercent}%` }} /></div>
-                {blocking.length ? <ul className="mt-4 space-y-2">{blocking.map((item) => <li key={item.code} className="flex items-start justify-between gap-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-900"><span className="font-bold">{blockerLabel(item.code)}</span>{item.count && <span className="shrink-0 font-extrabold">{item.count}</span>}</li>)}</ul> : <div className="mt-4 flex items-center gap-3 rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800"><ShieldCheck size={20} /> No blocking items remain.</div>}
-                <p className="mt-4 text-xs text-slate-400" title={`Checksum ${registry.set.content_checksum}`}>Version {registry.set.version}</p>
-              </article>
             </section>
 
             <details open={showRequirementReview} onToggle={(event) => setShowRequirementReview(event.currentTarget.open)} className="mt-5 rounded-2xl border border-slate-200 bg-white">
