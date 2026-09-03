@@ -322,6 +322,12 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
             </div>
             {registry && <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${statusTone[registry.set.status]}`}>Version {registry.set.version} · {label(registry.set.status)}</span>
+              {registry.set.status === "approved" && !registry.freshness.stale && (
+                // An approved list is locked so every vendor is judged alike. To
+                // pick up generator improvements without editing the proposal,
+                // start a new version; the old one stays readable.
+                <button type="button" disabled={working} onClick={() => { if (window.confirm(`Start a new version of the requirements list from the current proposal? Version ${registry.set.version} stays readable, and comparisons keep using it until you approve the new one.`)) void supersede(); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-700 hover:border-[#008ad2] hover:text-[#0076b4] disabled:opacity-50"><RefreshCw size={13} aria-hidden="true" /> Start a new version</button>
+              )}
               {registry.freshness.stale && <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-800"><AlertTriangle size={13} /> {freshnessLabel(registry.freshness.reasons)}</span>}
             </div>}
           </div>
