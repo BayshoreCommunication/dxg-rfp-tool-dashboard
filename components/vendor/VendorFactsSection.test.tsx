@@ -171,7 +171,9 @@ test("opens with a plain-language purpose, a verdict sentence, and next steps", 
   expect(next).toHaveTextContent(/Northstar AV left 2 requirements unanswered or only partly answered/);
   const ask = screen.getByRole("link", { name: /Ask Northstar AV about the 2 gaps/ });
   const href = decodeURIComponent((ask.getAttribute("href") ?? "").replace(/\+/g, " "));
-  expect(href).toContain("/email/send-email?proposalId=proposal");
+  // Opens the composer as a one-to-one question, not a proposal campaign.
+  expect(href).toContain("/email/send-email?mode=question&proposalId=proposal");
+  expect(href).toContain("vendor=Northstar AV");
   expect(href).toContain("to=bids@northstar.example");
   expect(href).toContain("- Provide closed captions");
   expect(screen.getByRole("link", { name: /Score this response/ })).toHaveAttribute("href", "#evaluation-title");

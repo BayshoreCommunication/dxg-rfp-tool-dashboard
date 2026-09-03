@@ -85,3 +85,10 @@ describe("DashboardTableList", () => {
     );
   });
 });
+
+  test("says the table holds only the most recent proposals, with the true total", () => {
+    const proposal = (id: string) => ({ _id: id, status: "unsubmitted", isDraft: true, createdAt: "2026-07-27T00:00:00.000Z", event: { eventName: `Event ${id}` } });
+    render(<DashboardTableList proposals={[proposal("1"), proposal("2")]} totalProposals={86} />);
+    const footer = screen.getByText(/most recent proposals/);
+    expect(footer).toHaveTextContent("Showing 2 of your 2 most recent proposals · 86 in total");
+  });

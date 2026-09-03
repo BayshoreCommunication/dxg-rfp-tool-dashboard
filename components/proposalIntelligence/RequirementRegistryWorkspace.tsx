@@ -57,6 +57,9 @@ const sourceLabel = (requirement: RegistryRequirement) => {
   }
   return String(requirement.source_locator.path ?? "Canonical proposal").replace(/^\/content\//, "Proposal · ").replaceAll("/", " › ");
 };
+/** Generated from a planner instruction (due date, format, budget) rather than an ask; excluded by default. */
+const isPlannerInstruction = (requirement: RegistryRequirement) =>
+  requirement.source_locator?.role === "planner_instruction";
 const needsReview = (requirement: RegistryRequirement) =>
   !requirement.inclusion_reviewed || (requirement.included && (!requirement.mandatory_reviewed || !requirement.criterion_reviewed || requirement.verification_method === "pending"));
 const isRetiredStandaloneRecordingRequirement = (
@@ -153,7 +156,7 @@ function RequirementEditor({
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-extrabold text-slate-900">{requirement.title}</h3>
               {requirement.mandatory_status === "mandatory" && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold uppercase text-rose-700">Mandatory</span>}
-              {!requirement.included && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-600">Excluded</span>}
+              {!requirement.included && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-600">{isPlannerInstruction(requirement) ? "Left out · instruction to vendors" : "Left out"}</span>}
               {unresolved && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold uppercase text-amber-800">Review needed</span>}
             </div>
             <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-600">{requirement.normalized_text}</p>
@@ -165,7 +168,7 @@ function RequirementEditor({
       <form onSubmit={save} className="border-t border-slate-100 p-4 sm:p-5">
         <label className="mb-4 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700">
           <input disabled={!editable} type="checkbox" checked={included} onChange={(event) => setIncluded(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-          <span>Include in vendor evaluation<span className="mt-0.5 block font-normal text-slate-500">Exclude planning metadata, repeated narrative, and items that should not affect vendor scoring.</span></span>
+          <span>Include in vendor evaluation<span className="mt-0.5 block font-normal text-slate-500">{isPlannerInstruction(requirement) ? "This is something you told vendors (a deadline, a format, a budget), not something they answer, so it is left out unless you include it." : "Leave out planning details, repeated narrative, and anything that should not affect vendor scoring."}</span></span>
         </label>
         <div className="grid gap-4 lg:grid-cols-2">
           <label className="text-xs font-extrabold text-slate-700 lg:col-span-2">
@@ -319,6 +322,12 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
             </div>
             {registry && <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${statusTone[registry.set.status]}`}>Version {registry.set.version} · {label(registry.set.status)}</span>
+              {registry.set.status === "approved" && !registry.freshness.stale && (
+                // An approved list is locked so every vendor is judged alike. To
+                // pick up generator improvements without editing the proposal,
+                // start a new version; the old one stays readable.
+                <button type="button" disabled={working} onClick={() => { if (window.confirm(`Start a new version of the requirements list from the current proposal? Version ${registry.set.version} stays readable, and comparisons keep using it until you approve the new one.`)) void supersede(); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-700 hover:border-[#008ad2] hover:text-[#0076b4] disabled:opacity-50"><RefreshCw size={13} aria-hidden="true" /> Start a new version</button>
+              )}
               {registry.freshness.stale && <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-800"><AlertTriangle size={13} /> {freshnessLabel(registry.freshness.reasons)}</span>}
             </div>}
           </div>
@@ -367,7 +376,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
               </div>
               <div className="grid grid-cols-2 border-t border-black/5 bg-white/70 sm:grid-cols-4">
                 <div className="p-4"><p className="text-2xl font-extrabold text-slate-900">{includedCount}</p><p className="text-xs font-bold text-slate-500">Included</p></div>
-                <div className="border-l border-black/5 p-4"><p className="text-2xl font-extrabold text-slate-900">{excludedCount}</p><p className="text-xs font-bold text-slate-500">Duplicates excluded</p></div>
+                <div className="border-l border-black/5 p-4"><p className="text-2xl font-extrabold text-slate-900">{excludedCount}</p><p className="text-xs font-bold text-slate-500">Left out</p><p className="text-[11px] text-slate-400">Instructions to vendors and duplicates</p></div>
                 <div className="border-t border-black/5 p-4 sm:border-l sm:border-t-0"><p className="text-2xl font-extrabold text-slate-900">{unresolvedCount}</p><p className="text-xs font-bold text-slate-500">Need attention</p></div>
                 <div className="border-l border-t border-black/5 p-4 sm:border-t-0"><p className={`text-2xl font-extrabold ${matrixReady ? "text-emerald-700" : "text-amber-700"}`}>{registry.matrix?.totalWeight ?? 0}%</p><p className="text-xs font-bold text-slate-500">Scoring balance</p></div>
               </div>
@@ -382,7 +391,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
                 <div className="flex items-center justify-between gap-3"><h2 className="font-extrabold text-slate-900">Review summary</h2><span className="text-xs font-bold text-slate-500">{reviewedPercent}% reviewed</span></div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${reviewedPercent}%` }} /></div>
                 {blocking.length ? <ul className="mt-4 space-y-2">{blocking.map((item) => <li key={item.code} className="flex items-start justify-between gap-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-900"><span className="font-bold">{blockerLabel(item.code)}</span>{item.count && <span className="shrink-0 font-extrabold">{item.count}</span>}</li>)}</ul> : <div className="mt-4 flex items-center gap-3 rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800"><ShieldCheck size={20} /> No blocking items remain.</div>}
-                <p className="mt-4 text-xs text-slate-400">Version {registry.set.version} · Checksum {registry.set.content_checksum.slice(0, 12)}…</p>
+                <p className="mt-4 text-xs text-slate-400" title={`Checksum ${registry.set.content_checksum}`}>Version {registry.set.version}</p>
               </article>
             </section>
 

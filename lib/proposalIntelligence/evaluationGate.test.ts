@@ -42,5 +42,5 @@ it("only allows starting an evaluation the backend would accept", () => {
 it("tells the planner what to do rather than restating the rule", () => {
   expect(evaluationGateMessage({ state: "analysis_missing" })).toMatch(/Analyze this response above/);
   expect(evaluationGateMessage({ state: "coverage_blocked", details: [] })).toMatch(/could not be made available to the analysis/);
-  expect(evaluationGateMessage({ state: "ready" })).toMatch(/Start one to score it/);
+  expect(evaluationGateMessage({ state: "ready" })).toMatch(/Scoring is optional/);
 });

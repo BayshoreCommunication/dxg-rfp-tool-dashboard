@@ -35,25 +35,25 @@ beforeEach(() => {
 test("shows how sure the extraction was as review metadata, not a score", async () => {
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
   expect(await screen.findByText("Provide redundant streaming")).toBeInTheDocument();
-  expect(screen.getByText(/42% sure we read this correctly/)).toBeInTheDocument();
+  expect(screen.getByText(/Quote matched with 42% confidence/)).toBeInTheDocument();
   expect(
-    screen.getByText(/RFPilot supplies a starting score from the cited evidence/),
+    screen.getByText(/RFPilot shows its own starting score/),
   ).toBeInTheDocument();
 });
 
 test("keeps submitted price visible while refusing an unsafe normalized value", async () => {
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide redundant streaming");
-  fireEvent.click(screen.getByRole("button", { name: "Commercial" }));
+  fireEvent.click(screen.getByRole("button", { name: "Price" }));
   expect(screen.getByText("$120,000.00")).toBeInTheDocument();
-  expect(screen.getByText("Not comparable")).toBeInTheDocument();
-  expect(screen.getByText(/unresolved options or exclusions/i)).toBeInTheDocument();
+  expect(screen.getByText("Can't be compared yet")).toBeInTheDocument();
+  expect(screen.getByText(/Some items are optional or excluded/)).toBeInTheDocument();
 });
 
 test("submits a human rubric score with rationale and cited vendor evidence", async () => {
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide redundant streaming");
-  fireEvent.click(screen.getByRole("button", { name: "Scorecard" }));
+  fireEvent.click(screen.getByRole("button", { name: "Your scores" }));
   fireEvent.change(screen.getByLabelText("Technical Approach score"), { target: { value: "4" } });
   fireEvent.change(screen.getByLabelText("Technical Approach rationale"), { target: { value: "Strong approach with one option dependency." } });
   fireEvent.click(screen.getByRole("checkbox"));
@@ -67,7 +67,7 @@ test("sealed price returns no hidden value and offers explicit owner authorizati
   latest.mockResolvedValue({ success: true, data: { ...view, run: { ...view.run, sealedPrice: true }, permission: { ...view.permission, canViewCommercial: false }, commercial: null } });
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide redundant streaming");
-  fireEvent.click(screen.getByRole("button", { name: "Commercial" }));
+  fireEvent.click(screen.getByRole("button", { name: "Price" }));
   expect(screen.getByText("Commercial values are sealed")).toBeInTheDocument();
   expect(screen.queryByText("$120,000.00")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Grant my assignment access" })).toBeInTheDocument();
@@ -80,7 +80,7 @@ test("observer assignments can inspect the evaluation but cannot enter scores", 
   });
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide redundant streaming");
-  fireEvent.click(screen.getByRole("button", { name: "Scorecard" }));
+  fireEvent.click(screen.getByRole("button", { name: "Your scores" }));
 
   expect(screen.getByText(/observer assignment is read-only/i)).toBeInTheDocument();
   expect(screen.queryByLabelText("Technical Approach score")).not.toBeInTheDocument();
@@ -105,7 +105,7 @@ const automatedScored: EvaluationView = {
 test("never presents an automated baseline as a score the user gave", async () => {
   latest.mockResolvedValue({ success: true, data: automatedScored });
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  fireEvent.click(await screen.findByRole("button", { name: "Scorecard" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Your scores" }));
 
   expect(screen.queryByText(/Completed human evaluator score/i)).not.toBeInTheDocument();
   expect(
@@ -119,7 +119,7 @@ test("never presents an automated baseline as a score the user gave", async () =
 test("reports the score plainly instead of a mean and a spread of zero", async () => {
   latest.mockResolvedValue({ success: true, data: automatedScored });
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  fireEvent.click(await screen.findByRole("button", { name: "Scorecard" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Your scores" }));
 
   expect(screen.queryByText(/spread/i)).not.toBeInTheDocument();
   expect(
@@ -137,7 +137,7 @@ test("explains a criterion no requirement feeds instead of showing it as zero ou
     },
   });
   render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  fireEvent.click(await screen.findByRole("button", { name: "Scorecard" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Your scores" }));
 
   expect(screen.getByText("Not scored — nothing to score it against")).toBeInTheDocument();
   expect(screen.getByText(/no requirement feeding/)).toBeInTheDocument();
@@ -149,18 +149,32 @@ test("does not offer an evaluation the server would refuse, and explains why", a
   latest.mockResolvedValue({ success: false, code: "EVALUATION_RUN_NOT_FOUND", message: "No evaluation snapshot exists for this response version." });
   render(<VendorEvaluationSection proposalId="p" submissionId="s" versionId="v" gate={{ state: "coverage_blocked", details: ["Pricing.xlsx: This source was not available to proposal intelligence."] }} />);
   expect(await screen.findByText(/Scoring is blocked because a file in this response could not be made available/)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Start evaluation" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Score this response" })).toBeDisabled();
   expect(screen.getByText("Pricing.xlsx: This source was not available to proposal intelligence.")).toBeInTheDocument();
-  expect(screen.queryByText(/Hide pricing from evaluators/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Hide the price until the rest is scored/)).not.toBeInTheDocument();
   expect(screen.queryByText(/approve your requirement checklist first/)).not.toBeInTheDocument();
 });
 
 test("offers to start an evaluation with plain-language price sealing when the analysis is ready", async () => {
   latest.mockResolvedValue({ success: false, code: "EVALUATION_RUN_NOT_FOUND", message: "No evaluation snapshot exists for this response version." });
   render(<VendorEvaluationSection proposalId="p" submissionId="s" versionId="v" gate={{ state: "ready" }} />);
-  const button = await screen.findByRole("button", { name: "Start evaluation" });
+  const button = await screen.findByRole("button", { name: "Score this response" });
   await waitFor(() => expect(button).toBeEnabled());
-  expect(screen.getByText(/Start one to score it against your approved criteria/)).toBeInTheDocument();
-  expect(screen.getByLabelText("Hide pricing from evaluators until you release it")).toBeInTheDocument();
-  expect(screen.getByText(/see the price only after you grant access/)).toBeInTheDocument();
+  expect(screen.getByText(/Scoring is optional/)).toBeInTheDocument();
+  expect(screen.getByText(/Opens a scorecard with RFPilot/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Hide the price until the rest is scored")).toBeInTheDocument();
+  expect(screen.getByText(/Scoring alone\? Leave this off/)).toBeInTheDocument();
+});
+
+test("asks the conflict question in plain words and names the tabs for what they hold", async () => {
+  render(<VendorEvaluationSection proposalId="proposal" submissionId="submission" versionId="version" />);
+  await screen.findByText("Provide redundant streaming");
+  expect(screen.getByText("Do you have a conflict of interest with this vendor?")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "No, no conflict" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Yes, I have a conflict" })).toBeInTheDocument();
+  for (const name of ["Requirement coverage", "Concerns", "Price", "Your scores"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
+  expect(screen.getByText(/The same requirement-by-requirement findings as above/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Your scores" }));
+  expect(screen.getByText(/Counts 25% · score 0 to 5/)).toBeInTheDocument();
+  expect(screen.getByText(/A submitted score is final unless you reopen it/)).toBeInTheDocument();
 });

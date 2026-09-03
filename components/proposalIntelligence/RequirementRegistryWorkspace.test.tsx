@@ -205,3 +205,24 @@ test("a planner can exclude metadata or duplicate narrative from evaluation", as
     expect.objectContaining({ included: false, inclusionReviewed: true }),
   );
 });
+
+test("an approved, current registry offers to start a new version after confirmation", async () => {
+  const { supersedeRequirementSetAction } = jest.requireMock("@/app/actions/requirementRegistry") as { supersedeRequirementSetAction: jest.Mock };
+  const approved: RequirementRegistryView = {
+    ...registry,
+    set: { ...registry.set, status: "approved", lock_version: 4, approved_at: "2026-08-20T12:00:00.000Z", validation: { blocking: [], warnings: [] } },
+  };
+  const draft: RequirementRegistryView = { ...registry, set: { ...registry.set, id: "018f47b0-2222-7222-8222-222222222222", version: 2, status: "draft" } };
+  supersedeRequirementSetAction.mockResolvedValue({ success: true, data: draft });
+  const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(true);
+  render(<RequirementRegistryWorkspace
+    proposalId="abc123abc123abc123abc123"
+    initialRegistry={approved}
+    initialSets={[{ ...approved.set, requirement_count: approved.requirements.length, freshness: approved.freshness }]}
+  />);
+  await userEvent.click(screen.getByRole("button", { name: /Start a new version/ }));
+  expect(confirmSpy).toHaveBeenCalled();
+  expect(supersedeRequirementSetAction).toHaveBeenCalledWith("abc123abc123abc123abc123", approved.set.id);
+  expect(await screen.findByRole("option", { name: "Version 2 · Draft" })).toBeInTheDocument();
+  confirmSpy.mockRestore();
+});

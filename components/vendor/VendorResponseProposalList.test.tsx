@@ -30,8 +30,8 @@ it("presents vendor responses under their proposals with accurate status", () =>
 
   expect(screen.getByRole("heading", { name: "Vendor Responses" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Annual Summit" })).toBeInTheDocument();
-  expect(screen.getByText("2 unread")).toBeInTheDocument();
-  expect(screen.getByText("All reviewed")).toBeInTheDocument();
+  expect(screen.getByText("2 new")).toBeInTheDocument();
+  expect(screen.getByText("Nothing new")).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "View 4 responses for Annual Summit" }),
   ).toHaveAttribute("href", "/vendor-responses/proposals/proposal%2Fone");

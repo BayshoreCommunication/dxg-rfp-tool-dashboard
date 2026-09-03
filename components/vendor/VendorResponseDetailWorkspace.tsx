@@ -4,6 +4,7 @@ import type {
   VendorSubmissionDetail,
   VendorSubmissionVersion,
 } from "@/app/actions/vendorResponse";
+import { fileTypeLabel } from "@/lib/proposalIntelligence/plainLanguage";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -299,6 +300,7 @@ export default function VendorResponseDetailWorkspace({
                       vendorEmail={selectedVersion.email}
                       submissionId={detail.submission.submissionId}
                       versionId={selectedVersion.versionId}
+                      returnTo={`/vendor-responses/${encodeURIComponent(detail.response._id)}`}
                       onIntelligence={(state) => handleIntelligence(selectedVersion.versionId, state)}
                     />
                     <VendorEvaluationSection
@@ -430,7 +432,7 @@ function SourceReadiness({
                   <div>
                     <dt className="font-bold uppercase">File type</dt>
                     <dd className="mt-0.5 truncate">
-                      {document.mimeType || "Unknown"}
+                      {fileTypeLabel(document.mimeType, document.name)}
                     </dd>
                   </div>
                   <div>

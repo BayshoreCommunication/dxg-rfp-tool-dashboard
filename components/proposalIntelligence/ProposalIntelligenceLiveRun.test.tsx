@@ -4,7 +4,7 @@ import type { VendorIntelligenceResult } from "@/app/actions/vendorIntelligence"
 import { createEvidenceExtractionAction, getEvidenceExtractionsAction } from "@/app/actions/evidenceExtraction";
 import { createVendorIntelligenceAction, getLatestVendorIntelligenceAction } from "@/app/actions/vendorIntelligence";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import ProposalIntelligenceLiveRun, { type ProposalAnalysisParticipant } from "./ProposalIntelligenceLiveRun";
+import ProposalIntelligenceLiveRun, { answersFoundSummary, type ProposalAnalysisParticipant } from "./ProposalIntelligenceLiveRun";
 
 jest.mock("@/app/actions/durableJobs", () => ({ getDurableJob: jest.fn() }));
 jest.mock("@/app/actions/evidenceExtraction", () => ({
@@ -296,4 +296,10 @@ describe("before any response has arrived", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByText(/versioned responses/)).not.toBeInTheDocument();
   });
+});
+
+it("states what the answer count is made of, including a vendor still on an older requirements list", () => {
+  expect(answersFoundSummary({ located: 50, requirements: 60, analysedVendors: 3, requirementsPerVendor: [20, 20, 20] })).toBe("50 of 60 answers found across 3 vendors (20 requirements each)");
+  expect(answersFoundSummary({ located: 48, requirements: 58, analysedVendors: 3, requirementsPerVendor: [20, 19, 19] })).toBe("48 of 58 answers found across 3 vendors (19 to 20 requirements each, one vendor is on an older list)");
+  expect(answersFoundSummary({ located: 15, requirements: 20, analysedVendors: 1, requirementsPerVendor: [20] })).toBe("15 of 20 requirements answered with quoted evidence");
 });

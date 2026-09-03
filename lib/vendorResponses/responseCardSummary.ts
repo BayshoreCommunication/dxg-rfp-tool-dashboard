@@ -3,12 +3,14 @@ import type {
 } from "@/app/actions/evidenceExtraction";
 import type {
   ExtractedFact,
+  HumanReview,
   IntelligenceEvidence,
   VendorIntelligenceResult,
 } from "@/app/actions/vendorIntelligence";
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
 import { coverageFromRelationship } from "@/lib/proposalIntelligence/coverageVocabulary";
 import { isBlockingWarning } from "@/lib/proposalIntelligence/evaluationGate";
+import { parseMoney } from "@/lib/vendorResponses/money";
 
 type LoadResult<T> =
   | { success: true; data: T }
@@ -52,10 +54,43 @@ export type ComparisonBlockReason =
   | "unreadable"
   | "failed";
 
+export type CommercialTotalCandidate = {
+  factId: string;
+  amount: number;
+  currency: string;
+  /** Short name for what this figure is, from the extracted fact key ("Equipment total"). */
+  label: string;
+  source: IntelligenceEvidence;
+};
+
+/**
+ * The one price a card may show for a response. A response whose files state
+ * several different totals (an equipment subtotal, a labour subtotal and a
+ * grand total, say) is not given a number until someone confirms which one
+ * applies — the old card picked whichever fact came first and badged it as
+ * the lowest bid.
+ */
+export type CommercialTotal =
+  | {
+      status: "stated";
+      factId: string;
+      amount: number;
+      currency: string;
+      source: IntelligenceEvidence;
+      /** The planner accepted or corrected this figure on the response page. */
+      confirmed: boolean;
+      /** Other distinct totals the files state, set aside by the confirmation. */
+      otherTotals: number;
+    }
+  | { status: "needs_confirmation"; candidates: CommercialTotalCandidate[] }
+  | { status: "not_stated" };
+
 export type ResponseCardSummary = {
   extractionStatus: CardExtractionStatus;
   intelligenceStatus: "ready" | "not_started" | "unavailable";
+  /** Headline values other than price; see `commercialTotal` for that. */
   headlineFacts: HeadlineFact[];
+  commercialTotal: CommercialTotal;
   requirementCoverage: RequirementCoverage | null;
   comparisonBlocked: ComparisonBlockReason | null;
   /** Some pages could not be read; findings may be incomplete but nothing is blocked. */
@@ -74,7 +109,6 @@ export type ResponseCardSummary = {
 };
 
 const headlinePriority: Record<string, number> = {
-  commercial_total: 0,
   proposal_validity: 1,
   setup_schedule: 2,
   rehearsal_schedule: 3,
@@ -128,6 +162,77 @@ export const selectHeadlineFacts = (facts: ExtractedFact[]): HeadlineFact[] => {
       source,
     }];
   }).slice(0, 3);
+};
+
+const humanizeKey = (key: string) =>
+  key.replaceAll(/[._]/g, " ").trim().replace(/^./, (letter) => letter.toUpperCase());
+
+/** The newest review per fact; later entries supersede earlier ones. */
+const latestFactReviews = (reviews: HumanReview[]) => {
+  const latest = new Map<string, HumanReview>();
+  reviews.forEach((review) => {
+    if (review.targetType === "fact") latest.set(review.targetId, review);
+  });
+  return latest;
+};
+
+export const deriveCommercialTotal = (
+  facts: ExtractedFact[],
+  reviews: HumanReview[] = [],
+): CommercialTotal => {
+  const latest = latestFactReviews(reviews);
+  const candidates = facts.flatMap((fact) => {
+    if (fact.factType !== "commercial_total") return [];
+    const source = supportingSource(fact);
+    if (!source) return [];
+    const review = latest.get(fact.factId);
+    if (review?.decision === "rejected") return [];
+    const corrected = review?.decision === "corrected" && typeof review.correctedPayload?.normalizedValue === "string"
+      ? parseMoney(review.correctedPayload.normalizedValue)
+      : null;
+    const money = corrected ?? parseMoney(fact.normalizedValue);
+    if (!money) return [];
+    return [{
+      factId: fact.factId,
+      amount: money.amount,
+      currency: money.currency,
+      label: humanizeKey(fact.factKey),
+      source,
+      confirmed: review?.decision === "accepted" || review?.decision === "corrected",
+    }];
+  });
+  if (candidates.length === 0) return { status: "not_stated" };
+
+  const distinct = new Map<string, (typeof candidates)[number][]>();
+  candidates.forEach((candidate) => {
+    const key = `${candidate.currency}:${candidate.amount}`;
+    distinct.set(key, [...(distinct.get(key) ?? []), candidate]);
+  });
+  const groups = [...distinct.values()];
+  const stated = (group: (typeof candidates)[number][], otherTotals: number) => {
+    const chosen = group.find((candidate) => candidate.confirmed) ?? group[0];
+    return {
+      status: "stated" as const,
+      factId: chosen.factId,
+      amount: chosen.amount,
+      currency: chosen.currency,
+      source: chosen.source,
+      confirmed: group.some((candidate) => candidate.confirmed),
+      otherTotals,
+    };
+  };
+  if (groups.length === 1) return stated(groups[0], 0);
+
+  // Several different figures: only a planner's confirmation picks one.
+  const confirmedGroups = groups.filter((group) => group.some((candidate) => candidate.confirmed));
+  if (confirmedGroups.length === 1) return stated(confirmedGroups[0], groups.length - 1);
+  return {
+    status: "needs_confirmation",
+    candidates: groups
+      .map((group) => group[0])
+      .sort((left, right) => right.amount - left.amount)
+      .map(({ factId, amount, currency, label, source }) => ({ factId, amount, currency, label, source })),
+  };
 };
 
 const requiredFieldSummary = (result: VendorIntelligenceResult) => {
@@ -235,6 +340,9 @@ export const deriveResponseCardSummary = ({
     headlineFacts: intelligenceResult
       ? selectHeadlineFacts(intelligenceResult.facts)
       : [],
+    commercialTotal: intelligenceResult
+      ? deriveCommercialTotal(intelligenceResult.facts, intelligenceResult.reviews)
+      : { status: "not_stated" },
     requirementCoverage,
     comparisonBlocked,
     partialSources,

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, CircleAlert, ClipboardList, FileWarning, MailPlus, Pencil, RefreshCw, ShieldAlert, X } from "lucide-react";
 import Link from "next/link";
 import EvidenceExcerpt from "@/components/proposalIntelligence/EvidenceExcerpt";
+import { familyLabel, groupFacts } from "@/lib/vendorResponses/factPresentation";
 import SectionLoadError from "@/components/vendor/SectionLoadError";
 import { coverageFromRelationship, coveragePresentation } from "@/lib/proposalIntelligence/coverageVocabulary";
 import { isBlockingWarning } from "@/lib/proposalIntelligence/evaluationGate";
@@ -19,7 +20,6 @@ import {
 
 const coverage = (relationship: string) => coveragePresentation[coverageFromRelationship(relationship)];
 const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-const sentence = (value: string) => { const words = value.replaceAll("_", " ").trim(); return words.charAt(0).toUpperCase() + words.slice(1); };
 /** A percentage alone begs "compared to what"; say what it means for the reader. */
 const confidenceNote = (confidence: number) =>
   confidence < 0.7 ? `Needs a human check · the AI was ${Math.round(confidence * 100)}% sure` : null;
@@ -170,7 +170,7 @@ function FactCard({ fact, review, saving, onReview }: { fact: ExtractedFact; rev
   return <li className="rounded-xl border border-slate-200 bg-white p-4">
     <p className="text-base font-extrabold text-slate-900">{factValue(fact)}</p>
     <p className="mt-0.5 text-xs leading-5 text-slate-600">{fact.statement}</p>
-    <p className="mt-1 text-[11px] text-slate-500">{[sentence(fact.family), fact.explicitness === "derived" ? "Worked out from the file, not stated directly" : null, note].filter(Boolean).join(" · ")}</p>
+    <p className="mt-1 text-[11px] text-slate-500">{[familyLabel(fact.family), fact.explicitness === "derived" ? "Worked out from the file, not stated directly" : null, note].filter(Boolean).join(" · ")}</p>
     <EvidenceList evidence={fact.citations} context={[fact.statement, fact.normalizedValue]}/>
     <ReviewControls target={{ type: "fact", fact }} review={review} saving={saving} onReview={onReview}/>
   </li>;
@@ -189,7 +189,7 @@ function FactList({ facts, latestReviews, savingTarget, onReview }: {
   const rendered = new Set<string>();
   const card = (fact: ExtractedFact) => <FactCard key={fact.factId} fact={fact} review={latestReviews.get(`fact:${fact.factId}`)} saving={savingTarget === `fact:${fact.factId}`} onReview={(decision, payload) => onReview(fact.factId, decision, payload)}/>;
   if (facts.length === 0) return <p className="mt-3 text-xs text-slate-500">No values were extracted from this response.</p>;
-  return <ul className="mt-3 space-y-3">{facts.flatMap((fact) => {
+  const cards = (items: ExtractedFact[]) => items.flatMap((fact) => {
     const group = fact.contradictionGroup;
     if (!group || (groups.get(group)?.length ?? 0) < 2) return [card(fact)];
     if (rendered.has(group)) return [];
@@ -200,7 +200,25 @@ function FactList({ facts, latestReviews, savingTarget, onReview }: {
       <p className="mt-0.5 text-xs leading-5 text-amber-900">The response gives {members.length} different answers for the same item. Accept the right one and reject the others.</p>
       <ul className="mt-2 space-y-2">{members.map(card)}</ul>
     </li>];
-  })}</ul>;
+  });
+  // Grouped under plain headings, the figures a buyer compares first; form
+  // metadata and identifiers sit in a closed section at the end.
+  const confirmed = new Set([...latestReviews.entries()].filter(([key, review]) => key.startsWith("fact:") && ["accepted", "corrected"].includes(review.decision)).map(([key]) => key.slice("fact:".length)));
+  const { groups: sections, systemEntries } = groupFacts(facts, confirmed);
+  const PREVIEW = 4;
+  return <div className="mt-3 space-y-5">
+    <p className="text-[11px] text-slate-500">{facts.length - systemEntries.length} values in {sections.length} {sections.length === 1 ? "group" : "groups"}{systemEntries.length ? ` · ${systemEntries.length} system ${systemEntries.length === 1 ? "entry" : "entries"} set aside` : ""}</p>
+    {sections.map((section) => {
+      const shown = section.facts.slice(0, PREVIEW);
+      const rest = section.facts.slice(PREVIEW);
+      return <section key={section.family} aria-labelledby={`facts-${section.family}`}>
+        <h4 id={`facts-${section.family}`} className="flex items-baseline gap-2 text-xs font-extrabold uppercase tracking-wide text-slate-600">{section.label}<span className="font-mono text-[10px] font-bold normal-case tracking-normal text-slate-400">{section.facts.length}</span></h4>
+        <ul className="mt-2 space-y-3">{cards(shown)}</ul>
+        {rest.length > 0 && <details className="mt-2"><summary className="cursor-pointer text-[11px] font-bold text-[#0076b4]">Show {rest.length} more in {section.label.toLowerCase()}</summary><ul className="mt-2 space-y-3">{cards(rest)}</ul></details>}
+      </section>;
+    })}
+    {systemEntries.length > 0 && <details className="rounded-xl border border-slate-200 bg-slate-50 p-3"><summary className="cursor-pointer text-xs font-bold text-slate-600">{systemEntries.length} system {systemEntries.length === 1 ? "entry" : "entries"} set aside</summary><p className="mt-1 text-[11px] leading-4 text-slate-500">Form details, contact addresses and reference numbers RFPilot read off the files. They are not compared across vendors.</p><ul className="mt-2 space-y-3">{cards(systemEntries)}</ul></details>}
+  </div>;
 }
 
 const coverageCounts = (mappings: VendorIntelligenceResult["mappings"]) => {
@@ -279,9 +297,12 @@ const verdictSentence = (mappings: VendorIntelligenceResult["mappings"]) => {
 const gapTitles = (mappings: VendorIntelligenceResult["mappings"]) =>
   mappings.filter((mapping) => coverageFromRelationship(mapping.relationship) !== "answered" && coverageFromRelationship(mapping.relationship) !== "not_applicable").map((mapping) => mapping.requirementTitle);
 
-const emailHref = (input: { proposalId: string; to?: string; subject: string; message: string }) => {
-  const params = new URLSearchParams({ proposalId: input.proposalId, subject: input.subject, message: input.message });
+/** Opens the composer as a one-to-one question to this vendor, not as a proposal campaign. */
+const emailHref = (input: { proposalId: string; to?: string; subject: string; message: string; vendorName?: string; returnTo?: string }) => {
+  const params = new URLSearchParams({ mode: "question", proposalId: input.proposalId, subject: input.subject, message: input.message });
   if (input.to) params.set("to", input.to);
+  if (input.vendorName?.trim()) params.set("vendor", input.vendorName.trim());
+  if (input.returnTo) params.set("returnTo", input.returnTo);
   return `/email/send-email?${params.toString()}`;
 };
 
@@ -294,8 +315,8 @@ const warningSources = (warnings: VendorIntelligenceResult["run"]["warnings"]) =
  * scoring and comparison; partially readable pages do not block but may hide
  * answers. Both are written as a task with two ways out, not as a warning.
  */
-function UnreadableFileCard({ warnings, blocked, vendorName, vendorEmail, proposalId, proposalTitle }: {
-  warnings: VendorIntelligenceResult["run"]["warnings"]; blocked: boolean; vendorName?: string; vendorEmail?: string; proposalId: string; proposalTitle?: string;
+function UnreadableFileCard({ warnings, blocked, vendorName, vendorEmail, proposalId, proposalTitle, returnTo }: {
+  warnings: VendorIntelligenceResult["run"]["warnings"]; blocked: boolean; vendorName?: string; vendorEmail?: string; proposalId: string; proposalTitle?: string; returnTo?: string;
 }) {
   const sources = warningSources(blocked ? warnings.filter(isBlockingWarning) : warnings);
   const name = vendorLabel(vendorName);
@@ -304,7 +325,7 @@ function UnreadableFileCard({ warnings, blocked, vendorName, vendorEmail, propos
     : (sources.length === 1 ? `Some pages of ${sources[0]} could not be read` : sources.length > 1 ? `Some pages of ${sources.length} files could not be read` : "Some pages of this response could not be read");
   const fileList = sources.length ? sources.map((source) => `"${source}"`).join(", ") : "your response";
   const askHref = emailHref({
-    proposalId, to: vendorEmail,
+    proposalId, to: vendorEmail, vendorName, returnTo,
     subject: `Text-based copy of your response${proposalTitle ? ` to ${proposalTitle}` : ""}`,
     message: `Hello,\n\nOur system could not read part of ${fileList} in your response${proposalTitle ? ` to ${proposalTitle}` : ""}. Could you send a text-based (not scanned) copy of the same document?\n\nThank you.`,
   });
@@ -323,13 +344,13 @@ function UnreadableFileCard({ warnings, blocked, vendorName, vendorEmail, propos
 }
 
 /** Tells the planner what to do now, based on what the analysis found. */
-function WhatNext({ blocked, mappings, vendorName, vendorEmail, proposalId, proposalTitle }: {
-  blocked: boolean; mappings: VendorIntelligenceResult["mappings"]; vendorName?: string; vendorEmail?: string; proposalId: string; proposalTitle?: string;
+function WhatNext({ blocked, mappings, vendorName, vendorEmail, proposalId, proposalTitle, returnTo }: {
+  blocked: boolean; mappings: VendorIntelligenceResult["mappings"]; vendorName?: string; vendorEmail?: string; proposalId: string; proposalTitle?: string; returnTo?: string;
 }) {
   const name = vendorLabel(vendorName);
   const gaps = gapTitles(mappings);
   const askHref = emailHref({
-    proposalId, to: vendorEmail,
+    proposalId, to: vendorEmail, vendorName, returnTo,
     subject: `Questions about your response${proposalTitle ? ` to ${proposalTitle}` : ""}`,
     message: `Hello,\n\nThank you for your response${proposalTitle ? ` to ${proposalTitle}` : ""}. We could not find answers to the following requirements and would appreciate clarification:\n\n${gaps.map((title) => `- ${title}`).join("\n")}\n\nThank you.`,
   });
@@ -351,8 +372,10 @@ function WhatNext({ blocked, mappings, vendorName, vendorEmail, proposalId, prop
   </div>;
 }
 
-export default function VendorFactsSection({ proposalId, proposalTitle, vendorName, vendorEmail, submissionId, versionId, onIntelligence }: {
+export default function VendorFactsSection({ proposalId, proposalTitle, vendorName, vendorEmail, submissionId, versionId, returnTo, onIntelligence }: {
   proposalId: string; submissionId: string; versionId: string;
+  /** Where "Back to the response" and a sent question return to. */
+  returnTo?: string;
   /** Used in the header, the blocker card, and the prefilled vendor emails. */
   proposalTitle?: string; vendorName?: string; vendorEmail?: string;
   /** Lets the page share the loaded run with sections that depend on it. */
@@ -438,7 +461,7 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
     {result?.run.status === "failed" && <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">The run failed safely{result.run.safeErrorCode ? ` (${result.run.safeErrorCode})` : ""}. No unsupported findings were saved.</p>}
     {result && ["queued", "running"].includes(result.run.status) && <p className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-xs text-sky-800">Checking the response against your requirements. This page will update on its own.</p>}
     {result?.run.status === "succeeded" && <>
-      {hasSourceWarnings && <UnreadableFileCard warnings={result.run.warnings} blocked={blocked} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle}/>}
+      {hasSourceWarnings && <UnreadableFileCard warnings={result.run.warnings} blocked={blocked} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle} returnTo={returnTo}/>}
       {result.run.contradictionCount > 0 && <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800"><CircleAlert size={14}/>{name} gave conflicting answers in places. They are kept side by side under Stated values so you can decide which is right.</p>}
       <div className="mt-4 flex gap-2 border-b border-slate-200" role="tablist" aria-label="Analysis views">
         <button type="button" role="tab" aria-selected={tab === "mappings"} onClick={() => setTab("mappings")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "mappings" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Requirements</button>
@@ -450,7 +473,7 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
       {tab === "mappings"
         ? <MappingList mappings={result.mappings} attentionOnly={attentionOnly} onAttentionOnlyChange={setAttentionOnly} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(mappingId, decision, payload) => review("mapping", mappingId, decision, payload)}/>
         : <FactList facts={result.facts} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(factId, decision, payload) => review("fact", factId, decision, payload)}/>}
-      <WhatNext blocked={blocked} mappings={result.mappings} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle}/>
+      <WhatNext blocked={blocked} mappings={result.mappings} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle} returnTo={returnTo}/>
     </>}
   </section>;
 }

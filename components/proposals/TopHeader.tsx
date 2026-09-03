@@ -51,6 +51,11 @@ const TopHeader = () => {
               Proposals
             </span>
           </h1>
+          {/* In RFPilot a "proposal" is the request you send out, which is the
+              reverse of everyday usage. Say so where a newcomer first lands. */}
+          <p className="mt-1 text-[13px] font-medium text-slate-500">
+            The requests for proposal (RFPs) you write and send to vendors. What vendors send back lives under Vendor Responses.
+          </p>
 
           <p className="mt-1 flex min-h-5 items-center gap-2 text-xs font-medium text-slate-400 sm:text-[13px]">
             {mounted && (

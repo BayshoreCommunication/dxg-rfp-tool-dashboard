@@ -7,7 +7,7 @@ describe("Primary navigation", () => {
       "Dashboard",
       "Proposals",
       "Email",
-      "Vendor Response",
+      "Vendor Responses",
     ]);
     expect(navigationConfig).not.toEqual(
       expect.arrayContaining([

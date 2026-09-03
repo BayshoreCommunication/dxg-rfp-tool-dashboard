@@ -16,6 +16,8 @@ export type SendProposalEmailPayload = {
   recipientEmails: string[];
   subject?: string;
   message?: string;
+  /** "question": a plain one-to-one email to a vendor who already responded (no proposal or submission links). */
+  kind?: "invitation" | "question";
 };
 
 export async function sendProposalEmailAction(

@@ -285,3 +285,24 @@ export const buildVendorComparison = (input: {
       );
     return { participantId: vendor.participantId, vendorLabel: vendor.vendorLabel, points };
   });
+
+/**
+ * The overview tiles used to read counts the backend stored with the run,
+ * while the recommendation text derived its own from the requirement list —
+ * so "Must-haves partly answered: 0" sat next to "1 must-have requirement is
+ * only partly answered". Both now come from here.
+ */
+export const comparisonOverviewCounts = (input: {
+  requirements: SummaryRequirement[];
+  participantIds: string[];
+}) =>
+  input.participantIds.reduce(
+    (totals, participantId) => {
+      const counts = mandatoryCounts(input.requirements, participantId);
+      return {
+        mandatoryUnanswered: totals.mandatoryUnanswered + counts.gaps,
+        mandatoryPartlyAnswered: totals.mandatoryPartlyAnswered + counts.partials,
+      };
+    },
+    { mandatoryUnanswered: 0, mandatoryPartlyAnswered: 0 },
+  );
