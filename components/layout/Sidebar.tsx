@@ -13,11 +13,12 @@ import {
   Bot,
   LoaderCircle,
   LogOut,
+  Settings,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 type NotificationSocketPayload = {
@@ -29,12 +30,147 @@ type NotificationSocketPayload = {
   };
 };
 
+export type SidebarUser = {
+  name?: string | null;
+  email?: string | null;
+};
+
+const getUserInitials = (name?: string | null, email?: string | null) => {
+  const nameParts = name?.trim().split(/\s+/).filter(Boolean) ?? [];
+  if (nameParts.length >= 2) {
+    return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+  }
+
+  const source = nameParts[0] || email?.split("@")[0] || "User";
+  return source.slice(0, 2).toUpperCase();
+};
+
+function AccountMenu({
+  currentUser,
+  signingOut,
+  onSignOut,
+  placement,
+}: {
+  currentUser?: SidebarUser;
+  signingOut: boolean;
+  onSignOut: () => void;
+  placement: "desktop" | "mobile";
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const displayName = currentUser?.name?.trim() ||
+    currentUser?.email?.split("@")[0] ||
+    "Your account";
+  const displayEmail = currentUser?.email?.trim() || "Email unavailable";
+  const initials = getUserInitials(currentUser?.name, currentUser?.email);
+  const menuId = `${placement}-account-menu`;
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative shrink-0">
+      <button
+        type="button"
+        aria-label={`${open ? "Close" : "Open"} ${placement === "mobile" ? "mobile " : ""}account menu for ${displayName}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        title={displayName}
+        onClick={() => setOpen((current) => !current)}
+        className={cn(
+          "group relative grid place-items-center rounded-full border border-primary/30 bg-primary/10 font-extrabold text-primary transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          "h-10 w-10 text-xs",
+          open && "border-primary/50 bg-primary/15 shadow-[0_10px_24px_-16px_rgba(0,138,210,0.9)]",
+        )}
+      >
+        {initials}
+        <span
+          className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500"
+          aria-hidden="true"
+        />
+      </button>
+
+      {open && (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label="Account options"
+          className={cn(
+            "absolute z-[70] w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_20px_50px_-18px_rgba(15,23,42,0.28)]",
+            placement === "desktop"
+              ? "bottom-0 left-[calc(100%+12px)]"
+              : "right-0 top-[calc(100%+10px)]",
+          )}
+        >
+          <div className="px-4 py-3.5">
+            <p className="truncate text-sm font-extrabold text-slate-900">
+              {displayName}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">
+              {displayEmail}
+            </p>
+          </div>
+
+          <div className="border-t border-slate-100 p-1.5">
+            <Link
+              href="/settings"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <Settings size={16} aria-hidden />
+              Settings
+            </Link>
+          </div>
+
+          <div className="border-t border-slate-100 p-1.5">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={onSignOut}
+              disabled={signingOut}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:cursor-wait disabled:opacity-60"
+            >
+              {signingOut ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <LogOut className="h-4 w-4" aria-hidden />
+              )}
+              {signingOut ? "Signing out" : "Sign out"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const Sidebar = ({
   assistantOpen = false,
   onOpenAssistant,
+  currentUser,
 }: {
   assistantOpen?: boolean;
   onOpenAssistant?: () => void;
+  currentUser?: SidebarUser;
 }) => {
   const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -164,11 +300,12 @@ const Sidebar = ({
 
   const avatarUrl = "/assets/logo/rfpilot-primary-logo.png"; // Replace with your actual logo URL or logic to fetch it
   const activePageTitle =
-    navigationConfig.find((item) => isItemActive(item))?.title ?? "RFPilot";
+    navigationConfig.find((item) => isItemActive(item))?.title ??
+    (pathname.startsWith("/settings") ? "Settings" : "RFPilot");
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-50 hidden h-dvh min-h-0 w-[90px] flex-col overflow-hidden border-r border-gray-200 bg-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden h-dvh min-h-0 w-[90px] flex-col overflow-visible border-r border-gray-200 bg-white lg:flex">
       <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200">
         <Link
           href="/dashboard"
@@ -309,25 +446,12 @@ const Sidebar = ({
           )}
         </Link>
 
-        <button
-          type="button"
-          onClick={() => void signOutHandler()}
-          disabled={signingOut}
-          aria-label="Sign out of your account"
-          title="Sign out"
-          className="group flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 disabled:cursor-wait disabled:opacity-60"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white transition group-hover:border-rose-200 group-hover:bg-rose-50">
-            {signingOut ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <LogOut className="h-4 w-4" aria-hidden />
-            )}
-          </span>
-          <span className="text-[9.5px] font-bold leading-none tracking-wide">
-            {signingOut ? "Signing out" : "Sign out"}
-          </span>
-        </button>
+        <AccountMenu
+          currentUser={currentUser}
+          signingOut={signingOut}
+          onSignOut={() => void signOutHandler()}
+          placement="desktop"
+        />
       </div>
       </aside>
 
@@ -393,19 +517,12 @@ const Sidebar = ({
               </span>
             )}
           </Link>
-          <button
-            type="button"
-            onClick={() => void signOutHandler()}
-            disabled={signingOut}
-            aria-label="Sign out from mobile navigation"
-            className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:cursor-wait disabled:opacity-60"
-          >
-            {signingOut ? (
-              <LoaderCircle className="h-[18px] w-[18px] animate-spin" aria-hidden />
-            ) : (
-              <LogOut className="h-[18px] w-[18px]" aria-hidden />
-            )}
-          </button>
+          <AccountMenu
+            currentUser={currentUser}
+            signingOut={signingOut}
+            onSignOut={() => void signOutHandler()}
+            placement="mobile"
+          />
         </div>
       </div>
       </header>
@@ -414,7 +531,7 @@ const Sidebar = ({
         aria-label="Mobile primary navigation"
         className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_30px_-24px_rgba(15,23,42,0.45)] backdrop-blur lg:hidden"
       >
-        <div className="grid h-[4.5rem] grid-cols-5 px-1">
+        <div className="grid h-[4.5rem] grid-cols-4 px-1">
         {navigationConfig.map((item) => {
           const isActive = isItemActive(item);
           const badge =

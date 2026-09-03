@@ -42,6 +42,10 @@ const makeCampaign = (overrides = {}) => ({
   vendorResponseClickCount: 2,
   vendorResponseCount: 1,
   unreadResponseCount: 1,
+  recipients: [
+    { email: 'first.vendor@example.com', status: 'sent' },
+    { email: 'second.vendor@example.com', status: 'sent' },
+  ],
   createdAt: '2026-06-01T12:00:00.000Z',
   ...overrides,
 })
@@ -125,6 +129,34 @@ describe('EmailDashboard — campaign cards', () => {
       expect(screen.getByText('Proposal Email')).toBeInTheDocument(), LOAD_TIMEOUT
     )
   })
+
+  it('shows the recipient email addresses on each campaign card', async () => {
+    render(<EmailDashboard />)
+    await waitFor(() =>
+      expect(screen.getByText('first.vendor@example.com')).toBeInTheDocument(), LOAD_TIMEOUT
+    )
+    expect(screen.getByText('second.vendor@example.com')).toBeInTheDocument()
+  })
+
+  it('shows every recipient without hiding addresses behind a disclosure', async () => {
+    mockGetCampaigns.mockResolvedValue(successPage([makeCampaign({
+      recipients: [
+        { email: 'one@example.com', status: 'sent' },
+        { email: 'two@example.com', status: 'sent' },
+        { email: 'three@example.com', status: 'sent' },
+        { email: 'four@example.com', status: 'sent' },
+        { email: 'failed@example.com', status: 'failed' },
+      ],
+    })]))
+    render(<EmailDashboard />)
+    await waitFor(() => expect(screen.getByText('one@example.com')).toBeInTheDocument(), LOAD_TIMEOUT)
+    expect(screen.getByText('two@example.com')).toBeInTheDocument()
+    expect(screen.getByText('three@example.com')).toBeInTheDocument()
+    expect(screen.getByText('four@example.com')).toBeInTheDocument()
+    expect(screen.getByText('failed@example.com')).toBeInTheDocument()
+    expect(screen.queryByText(/more/i)).not.toBeInTheDocument()
+    expect(screen.getByTitle('Delivery failed: failed@example.com')).toBeInTheDocument()
+  })
 })
 
 describe('EmailDashboard — metrics', () => {
@@ -155,6 +187,12 @@ describe('EmailDashboard — metrics', () => {
 })
 
 describe('EmailDashboard — delete campaign', () => {
+  it('keeps the delete action the same size as the metric cards', async () => {
+    render(<EmailDashboard />)
+    const deleteButton = await screen.findByRole('button', { name: 'Delete' }, LOAD_TIMEOUT)
+    expect(deleteButton).toHaveClass('h-[76px]', 'w-[76px]', 'border-rose-200', 'bg-rose-50')
+  })
+
   it('calls deleteEmailCampaignAction when Delete is clicked', async () => {
     render(<EmailDashboard />)
     await waitFor(() => screen.getByText('Delete'), LOAD_TIMEOUT)

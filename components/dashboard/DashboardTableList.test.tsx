@@ -1,9 +1,31 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DashboardTableList, {
   formatDashboardDate,
 } from "./DashboardTableList";
 
+const mockCreateViewGrant = jest.fn();
+
+jest.mock("@/app/actions/proposals", () => ({
+  createProposalViewAccessGrantAction: (...args: unknown[]) =>
+    mockCreateViewGrant(...args),
+}));
+
+jest.mock("react-toastify", () => ({
+  toast: { success: jest.fn(), error: jest.fn() },
+}));
+
 describe("DashboardTableList", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCreateViewGrant.mockResolvedValue({
+      success: true,
+      token: "dashboard-grant",
+    });
+    Object.assign(navigator, {
+      clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+    });
+  });
+
   test("formats proposal dates identically in every runtime locale", () => {
     expect(formatDashboardDate("2026-07-27T00:00:00.000Z")).toBe(
       "27/07/2026",
@@ -36,6 +58,30 @@ describe("DashboardTableList", () => {
     expect(heading.parentElement).toHaveClass(
       "shrink-0",
       "whitespace-nowrap",
+    );
+  });
+
+  test("copies a secure proposal URL from the dashboard", async () => {
+    render(
+      <DashboardTableList
+        proposals={[
+          {
+            _id: "proposal-1",
+            status: "submitted",
+            isDraft: false,
+            event: { eventName: "Annual Summit" },
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("Copy Link"));
+
+    await waitFor(() =>
+      expect(mockCreateViewGrant).toHaveBeenCalledWith("proposal-1"),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      "http://localhost/proposal-view/annual-summit-proposal-1?source=share&accessGrant=dashboard-grant",
     );
   });
 });

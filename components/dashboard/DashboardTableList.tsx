@@ -1,5 +1,10 @@
 "use client";
 
+import { createProposalViewAccessGrantAction } from "@/app/actions/proposals";
+import {
+  buildProposalViewShareUrl,
+  copyTextToClipboard,
+} from "@/lib/proposals/proposalShareLink";
 import {
   Check,
   ChevronRight,
@@ -122,17 +127,20 @@ function IconButton({
   icon,
   tooltip,
   onClick,
+  disabled = false,
 }: {
   icon: React.ReactNode;
   tooltip?: string;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       title={tooltip}
       onClick={onClick}
-      className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300 transition-all duration-150 hover:scale-105 active:scale-95"
+      disabled={disabled}
+      className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300 transition-all duration-150 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
     >
       {icon}
     </button>
@@ -150,22 +158,31 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
   }`.trim();
   const slug = `${toSlug(title) || "proposal"}-${proposal._id}`;
   const [copied, setCopied] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   const handleCopyProposalUrl = async () => {
-    if (!slug) return;
-    const proposalUrl = `${window.location.origin}/proposal-view/${slug}`;
+    if (!slug || copying) return;
+    setCopying(true);
     try {
-      await navigator.clipboard.writeText(proposalUrl);
+      const grant = await createProposalViewAccessGrantAction(proposal._id);
+      if (!grant.success || !grant.token) {
+        toast.error(grant.message || "Could not create a secure proposal link.");
+        return;
+      }
+      const proposalUrl = buildProposalViewShareUrl(
+        window.location.origin,
+        slug,
+        grant.token,
+      );
+      await copyTextToClipboard(proposalUrl);
     } catch {
-      const input = document.createElement("input");
-      input.value = proposalUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      document.body.removeChild(input);
+      toast.error("Could not copy the proposal link. Please try again.");
+      return;
+    } finally {
+      setCopying(false);
     }
     setCopied(true);
-    toast.success("Proposal link copied to clipboard.");
+    toast.success("Secure proposal link copied. It is valid for 30 days.");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -225,6 +242,7 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
             icon={copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
             tooltip={copied ? "Copied!" : "Copy Link"}
             onClick={handleCopyProposalUrl}
+            disabled={copying}
           />
           <Link href={`/proposal/${slug}`} target="_blank">
             <IconButton icon={<Eye size={14} />} tooltip="Preview" />

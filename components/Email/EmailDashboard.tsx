@@ -6,10 +6,13 @@ import {
 } from "@/app/actions/email";
 import { cn } from "@/lib/utils";
 import {
+  BadgeCheck,
   BarChart3,
+  CircleAlert,
   ChevronLeft,
   ChevronRight,
   Eye,
+  Mail,
   MousePointerClick,
   Send,
   Trash2,
@@ -30,6 +33,10 @@ type EmailCampaign = {
   vendorResponseClickCount?: number;
   vendorResponseCount?: number;
   unreadResponseCount?: number;
+  recipients?: Array<{
+    email?: string;
+    status?: "sent" | "failed";
+  }>;
   createdAt: string;
 };
 
@@ -201,6 +208,8 @@ export default function EmailDashboard() {
                   {body}
                 </p>
 
+                <CampaignRecipients recipients={campaign.recipients} />
+
                 <p className="mt-3 text-[14px] font-medium text-slate-400">
                   {campaign?.createdAt
                     ? new Date(campaign.createdAt).toLocaleString()
@@ -208,7 +217,7 @@ export default function EmailDashboard() {
                 </p>
               </div>
 
-              {/* Center */}
+              {/* Campaign metrics and actions */}
               <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-center lg:gap-4">
                 <MetricCard
                   label="Sent"
@@ -228,19 +237,16 @@ export default function EmailDashboard() {
                   icon={<MousePointerClick size={16} />}
                   tooltip="Number of times recipients clicked the submit button"
                 />
-              </div>
-
-              {/* Right side */}
-              <div className="flex justify-start lg:justify-end">
                 <button
                   type="button"
                   onClick={() => handleDelete(campaign._id)}
                   disabled={isDeleting}
-                  className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-[#0ea5e9]/20 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-                  style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+                  className="flex h-[76px] w-[76px] flex-col items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-center text-rose-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-100 hover:shadow-md hover:shadow-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Trash2 size={15} />
-                  {isDeleting ? "Deleting..." : "Delete"}
+                  <Trash2 size={16} aria-hidden="true" />
+                  <span className="mt-1 text-[8px] font-bold uppercase leading-tight tracking-[0.12em]">
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -307,6 +313,77 @@ export default function EmailDashboard() {
             </ul>
           </nav>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CampaignRecipients({
+  recipients,
+}: {
+  recipients?: EmailCampaign["recipients"];
+}) {
+  const validRecipients = (recipients ?? []).filter(
+    (recipient): recipient is { email: string; status?: "sent" | "failed" } =>
+      typeof recipient.email === "string" && recipient.email.trim().length > 0,
+  );
+
+  if (validRecipients.length === 0) {
+    return (
+      <p className="mt-3 flex items-center gap-2 text-xs font-medium text-slate-400">
+        <Mail size={14} aria-hidden="true" /> Recipient details unavailable
+      </p>
+    );
+  }
+
+  const recipientChip = (
+    recipient: { email: string; status?: "sent" | "failed" },
+    index: number,
+  ) => {
+    const failed = recipient.status === "failed";
+    return (
+      <span
+        key={`${recipient.email}-${index}`}
+        title={failed ? `Delivery failed: ${recipient.email}` : `Sent to ${recipient.email}`}
+        className={cn(
+          "inline-flex min-h-8 max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors",
+          failed
+            ? "border-rose-200 bg-rose-50/80 text-rose-700 hover:border-rose-300 hover:bg-rose-50"
+            : "border-sky-200/80 bg-sky-50/80 text-slate-700 hover:border-sky-300 hover:bg-sky-50",
+        )}
+      >
+        {failed ? (
+          <CircleAlert
+            size={14}
+            className="shrink-0 text-rose-500"
+            aria-hidden="true"
+          />
+        ) : (
+          <BadgeCheck
+            size={14}
+            className="shrink-0 text-emerald-500"
+            aria-hidden="true"
+          />
+        )}
+        <span className="min-w-0 break-all sm:break-normal">
+          {recipient.email}
+        </span>
+        <span className="sr-only">{failed ? "delivery failed" : "sent"}</span>
+      </span>
+    );
+  };
+
+  return (
+    <div
+      className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start"
+      aria-label="Campaign recipients"
+    >
+      <span className="inline-flex min-h-8 shrink-0 items-center gap-1.5 text-xs font-bold text-slate-500">
+        <Mail size={14} className="text-[#008ad2]" aria-hidden="true" />
+        Recipients
+      </span>
+      <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+        {validRecipients.map(recipientChip)}
       </div>
     </div>
   );

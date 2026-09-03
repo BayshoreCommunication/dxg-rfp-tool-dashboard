@@ -1,7 +1,11 @@
 /** @jest-environment node */
 
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
-import { createProposalAction, updateProposalAction } from "./proposals";
+import {
+  createProposalAction,
+  createProposalViewAccessGrantAction,
+  updateProposalAction,
+} from "./proposals";
 
 jest.mock("@/lib/server/backendClient", () => ({
   authenticatedBackendFetch: jest.fn(),
@@ -41,5 +45,39 @@ describe("proposal write actions", () => {
       expect(body.roomByRoom).toEqual(stalePayload.roomByRoom);
       expect(JSON.stringify(body)).not.toContain("RETIRED_SECRET");
     }
+  });
+
+  test("requests a 30-day read-only grant for copied proposal links", async () => {
+    mockedFetch.mockResolvedValueOnce(
+      Response.json(
+        {
+          success: true,
+          grant: {
+            token: "opaque-grant",
+            expiresAt: "2026-10-03T00:00:00.000Z",
+          },
+        },
+        { status: 201 },
+      ),
+    );
+
+    const result = await createProposalViewAccessGrantAction("proposal-1");
+
+    expect(result).toEqual({
+      success: true,
+      token: "opaque-grant",
+      expiresAt: "2026-10-03T00:00:00.000Z",
+    });
+    expect(mockedFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/public-access"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          resourceId: "proposal-1",
+          purpose: "proposal:view",
+          expiresInHours: 720,
+        }),
+      }),
+    );
   });
 });
