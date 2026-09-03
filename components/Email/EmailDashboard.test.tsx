@@ -187,6 +187,12 @@ describe('EmailDashboard — metrics', () => {
 })
 
 describe('EmailDashboard — delete campaign', () => {
+  it('keeps the delete action the same size as the metric cards', async () => {
+    render(<EmailDashboard />)
+    const deleteButton = await screen.findByRole('button', { name: 'Delete' }, LOAD_TIMEOUT)
+    expect(deleteButton).toHaveClass('h-[76px]', 'w-[76px]')
+  })
+
   it('calls deleteEmailCampaignAction when Delete is clicked', async () => {
     render(<EmailDashboard />)
     await waitFor(() => screen.getByText('Delete'), LOAD_TIMEOUT)
