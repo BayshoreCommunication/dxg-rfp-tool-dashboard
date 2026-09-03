@@ -12,7 +12,7 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, FileSearch, Print
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-export const intelligenceTabs = ["overview", "requirements", "technical", "commercial", "evaluation", "reports"] as const;
+export const intelligenceTabs = ["overview", "requirements", "commercial", "evaluation", "reports"] as const;
 export type IntelligenceTab = (typeof intelligenceTabs)[number];
 type EvidenceSelection = {
   title: string;
@@ -593,14 +593,6 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
             </>
           )}
           {tab === "requirements" && <RequirementMatrix requirements={workspace.intelligence.requirements} onEvidence={setSelection} />}
-          {tab === "technical" && (
-            <>
-              <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
-                <strong>Technical view:</strong> technical, staffing, reference, and sustainability requirements from this comparison snapshot. Open a cell to inspect its source evidence.
-              </div>
-              <RequirementMatrix requirements={workspace.intelligence.technical} onEvidence={setSelection} />
-            </>
-          )}
           {tab === "commercial" &&
             (!workspace.intelligence.permissions.viewCommercial ? (
               <EmptyState title="Pricing is hidden" text="Pricing is hidden for this comparison to prevent price bias during evaluation. Totals and line items will appear once commercial access is granted." />
