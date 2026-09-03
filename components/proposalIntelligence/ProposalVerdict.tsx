@@ -2,11 +2,10 @@ import type { ComparisonWorkspace } from "@/app/actions/comparisonOrchestration"
 import IntelligenceStatusChip from "@/components/proposalIntelligence/IntelligenceStatusChip";
 import RerunComparisonButton from "@/components/proposalIntelligence/RerunComparisonButton";
 import ScoreGapExplanation from "@/components/proposalIntelligence/ScoreGapExplanation";
-import { comparisonCellId } from "@/lib/proposalIntelligence/anchors";
 import { intelligenceSurfaceClasses } from "@/lib/proposalIntelligence/surfaces";
-import { describeConfidenceReason, describeFreshnessReasons } from "@/lib/proposalIntelligence/plainLanguage";
+import { describeFreshnessReasons } from "@/lib/proposalIntelligence/plainLanguage";
 import { cn } from "@/lib/utils";
-import { ArrowRight, FileOutput, SlidersHorizontal } from "lucide-react";
+import { FileOutput, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 
 const readable = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
@@ -22,9 +21,6 @@ export default function ProposalVerdict({ workspace, proposalId }: { workspace: 
     : null;
   const strongest = recommendation.strongestParticipantIds.flatMap((id) => recommendation.ranking.find((vendor) => vendor.participantId === id) ?? []);
   const stale = workspace.freshness.state === "stale";
-  const leaderEvidence = leader
-    ? workspace.intelligence.requirements.filter((requirement) => requirement.vendors.some((vendor) => vendor.participantId === leader.participantId && ["addressed", "partially_addressed"].includes(vendor.verdict) && vendor.evidence.length > 0)).slice(0, 3)
-    : [];
 
   // A stale result is history, not advice: say what it found, in the past tense.
   const verdict = recommendation.status === "no_eligible_vendor"
@@ -49,13 +45,6 @@ export default function ProposalVerdict({ workspace, proposalId }: { workspace: 
       {stale && <div className={cn(intelligenceSurfaceClasses.block, "mt-5 bg-brand-muted")}><h3 className="text-sm font-extrabold text-navy">This result is out of date</h3><p className="mt-2 text-sm leading-6 text-gray">{describeFreshnessReasons(workspace.freshness.reasons) || "The proposal inputs changed after this comparison ran."} Run a new comparison before relying on it.</p><div className="mt-3"><RerunComparisonButton proposalId={proposalId} /></div></div>}
       {recommendation.ranking.length > 1 && <ScoreGapExplanation workspace={workspace} className="mt-5" />}
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-2">
-        <article className={intelligenceSurfaceClasses.block}><h3 className="text-sm font-extrabold text-navy">Strongest evidence for the leader</h3>{leaderEvidence.length ? <ul className="mt-3 space-y-3">{leaderEvidence.map((requirement) => { const assessment = requirement.vendors.find((vendor) => vendor.participantId === leader?.participantId)!; return <li key={requirement.requirementId}><a href={`#${comparisonCellId(requirement.requirementId, assessment.participantId)}`} className="group block rounded-xl bg-gray-panel p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><span className="flex items-start justify-between gap-3 text-sm font-extrabold text-navy">{requirement.title}<ArrowRight size={15} className="shrink-0 text-brand" aria-hidden="true" /></span><span className="mt-1 block text-xs leading-5 text-gray">{assessment.rationale} · {assessment.evidence.length} cited {assessment.evidence.length === 1 ? "source" : "sources"}</span></a></li>; })}</ul> : <p className="mt-3 text-sm leading-6 text-gray">No single leader has requirement coverage backed by quoted evidence, so no vendor is endorsed here.</p>}</article>
-
-        <article className={intelligenceSurfaceClasses.block}><h3 className="text-sm font-extrabold text-navy">Items to review before final decision</h3><ul className="mt-3 space-y-2">{recommendation.confidenceReasons.length ? recommendation.confidenceReasons.map((reason) => <li key={reason} className="rounded-xl bg-gray-panel p-3 text-sm leading-6 text-gray">{describeConfidenceReason(reason)}</li>) : <li className="rounded-xl bg-gray-panel p-3 text-sm text-gray">No additional recommendation review items are recorded.</li>}</ul></article>
-
-
-      </div>
 
       <footer className="mt-5 border-t border-gray-border pt-5"><h3 className="text-sm font-extrabold text-navy">Other things you can do</h3><div className="mt-3 flex flex-wrap gap-2"><Link href={`/proposals/${proposalId}/intelligence/comparisons/${workspace.run.runId}/reports`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-border px-4 text-xs font-extrabold text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><FileOutput size={15} aria-hidden="true" />Export comparison</Link><a href="#reweighting-title" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-border px-4 text-xs font-extrabold text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><SlidersHorizontal size={15} aria-hidden="true" />Adjust criteria</a></div><p className="mt-3 text-xs leading-5 text-gray">This recommendation is calculated from the stored scores and evidence above &mdash; nothing here is generated on the fly.</p></footer>
     </section>
