@@ -5,8 +5,6 @@ import ScoreGapExplanation from "@/components/proposalIntelligence/ScoreGapExpla
 import { intelligenceSurfaceClasses } from "@/lib/proposalIntelligence/surfaces";
 import { describeFreshnessReasons } from "@/lib/proposalIntelligence/plainLanguage";
 import { cn } from "@/lib/utils";
-import { FileOutput, SlidersHorizontal } from "lucide-react";
-import Link from "next/link";
 
 const readable = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 
@@ -46,7 +44,6 @@ export default function ProposalVerdict({ workspace, proposalId }: { workspace: 
       {recommendation.ranking.length > 1 && <ScoreGapExplanation workspace={workspace} className="mt-5" />}
 
 
-      <footer className="mt-5 border-t border-gray-border pt-5"><h3 className="text-sm font-extrabold text-navy">Other things you can do</h3><div className="mt-3 flex flex-wrap gap-2"><Link href={`/proposals/${proposalId}/intelligence/comparisons/${workspace.run.runId}/reports`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-border px-4 text-xs font-extrabold text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><FileOutput size={15} aria-hidden="true" />Export comparison</Link><a href="#reweighting-title" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-border px-4 text-xs font-extrabold text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><SlidersHorizontal size={15} aria-hidden="true" />Adjust criteria</a></div><p className="mt-3 text-xs leading-5 text-gray">This recommendation is calculated from the stored scores and evidence above &mdash; nothing here is generated on the fly.</p></footer>
     </section>
   );
 }
