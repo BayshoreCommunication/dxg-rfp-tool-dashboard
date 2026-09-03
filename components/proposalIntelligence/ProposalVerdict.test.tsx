@@ -34,12 +34,12 @@ it("names the leader and links every decisive factor and gap to comparison evide
   render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
   expect(screen.getByRole("heading", { name: "Alpha is the strongest fit in this comparison." })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Named technical producer/ })).toHaveAttribute("href", "#matrix-cell-req-1-vendor-1");
-  expect(screen.getByRole("link", { name: "Insurance certificate" })).toHaveAttribute("href", "#matrix-cell-req-2-vendor-1");
-  expect(screen.getByText("Travel is billed separately")).toBeInTheDocument();
+  // Runners-up and "Risks, gaps, and assumptions" are no longer shown on the verdict card.
+  expect(screen.queryByText("Runners-up and exclusions")).not.toBeInTheDocument();
+  expect(screen.queryByText("Risks, gaps, and assumptions")).not.toBeInTheDocument();
   expect(screen.getByText(/The top scores are close/)).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Items to review before final decision" })).toBeInTheDocument();
   expect(screen.queryByText(/confidence/i)).not.toBeInTheDocument();
-  expect(screen.getByText(/3.00 points behind the leader/)).toBeInTheDocument();
 });
 
 it("abstains when no recommendation is stored", () => {
@@ -54,7 +54,6 @@ it("still explains where the points come from in a close call, without repeating
   render(<ProposalVerdict workspace={closeCall} proposalId="proposal-1" />);
   expect(screen.getByRole("heading", { name: "Why the scores differ" })).toBeInTheDocument();
   expect(screen.getByText(/Alpha is 2.00 points ahead of Beta/)).toBeInTheDocument();
-  expect(screen.getByText(/85.00 points · 1 mandatory gap · 1 high risk/)).toBeInTheDocument();
   expect(screen.queryByText(/mandatory gaps · 1 mandatory gap/)).not.toBeInTheDocument();
 });
 

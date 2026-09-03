@@ -1,4 +1,4 @@
-import type { ComparisonRequirement, ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
+import type { ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
 import IntelligenceStatusChip from "@/components/proposalIntelligence/IntelligenceStatusChip";
 import RerunComparisonButton from "@/components/proposalIntelligence/RerunComparisonButton";
 import ScoreGapExplanation from "@/components/proposalIntelligence/ScoreGapExplanation";
@@ -10,19 +10,6 @@ import { ArrowRight, FileOutput, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 
 const readable = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
-
-const requirementFor = (requirements: ComparisonRequirement[], participantId: string, verdicts: string[]) =>
-  requirements.find((requirement) => requirement.vendors.some((vendor) => vendor.participantId === participantId && verdicts.includes(vendor.verdict)));
-
-const assumptionText = (value: unknown) => {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    return entries.map(([key, item]) => `${readable(key)}: ${typeof item === "object" ? JSON.stringify(item) : String(item)}`).join(" · ");
-  }
-  return "Unspecified commercial assumption";
-};
 
 export default function ProposalVerdict({ workspace, proposalId }: { workspace: ComparisonWorkspace; proposalId: string }) {
   const recommendation = workspace.recommendation;
@@ -38,12 +25,6 @@ export default function ProposalVerdict({ workspace, proposalId }: { workspace: 
   const leaderEvidence = leader
     ? workspace.intelligence.requirements.filter((requirement) => requirement.vendors.some((vendor) => vendor.participantId === leader.participantId && ["addressed", "partially_addressed"].includes(vendor.verdict) && vendor.evidence.length > 0)).slice(0, 3)
     : [];
-  const leaderGaps = leader
-    ? workspace.intelligence.requirements.filter((requirement) => requirement.vendors.some((vendor) => vendor.participantId === leader.participantId && ["missing", "contradictory", "not_assessable"].includes(vendor.verdict))).slice(0, 3)
-    : [];
-  const leaderRisks = leader ? workspace.intelligence.risks.filter((risk) => risk.participantId === leader.participantId).slice(0, 3) : [];
-  const commercial = leader ? workspace.intelligence.commercial.find((item) => item.participantId === leader.participantId) : null;
-  const runners = recommendation.ranking.filter((vendor) => vendor.participantId !== leader?.participantId).slice(0, 3);
 
   // A stale result is history, not advice: say what it found, in the past tense.
   const verdict = recommendation.status === "no_eligible_vendor"
@@ -73,13 +54,7 @@ export default function ProposalVerdict({ workspace, proposalId }: { workspace: 
 
         <article className={intelligenceSurfaceClasses.block}><h3 className="text-sm font-extrabold text-navy">Items to review before final decision</h3><ul className="mt-3 space-y-2">{recommendation.confidenceReasons.length ? recommendation.confidenceReasons.map((reason) => <li key={reason} className="rounded-xl bg-gray-panel p-3 text-sm leading-6 text-gray">{describeConfidenceReason(reason)}</li>) : <li className="rounded-xl bg-gray-panel p-3 text-sm text-gray">No additional recommendation review items are recorded.</li>}</ul></article>
 
-        <article className={intelligenceSurfaceClasses.block}><h3 className="text-sm font-extrabold text-navy">Runners-up and exclusions</h3>{runners.length ? <ol className="mt-3 space-y-3">{runners.map((vendor) => { const gap = requirementFor(workspace.intelligence.requirements, vendor.participantId, ["missing", "contradictory", "not_assessable"]); const reason = !vendor.eligible ? `Missed ${vendor.eligibilityFailures} must-pass ${vendor.eligibilityFailures === 1 ? "requirement" : "requirements"}` : leader ? `${Math.max(0, leader.score - vendor.score).toFixed(2)} points behind the leader` : `${vendor.score.toFixed(2)} points`; return <li key={vendor.participantId} className="rounded-xl bg-gray-panel p-3"><p className="text-sm font-extrabold text-navy">{vendor.rank ? `#${vendor.rank} ` : ""}{vendor.vendorLabel}</p><p className="mt-1 text-xs leading-5 text-gray">{[reason,
-      vendor.mandatoryGaps > 0 ? `${vendor.mandatoryGaps} mandatory gap${vendor.mandatoryGaps === 1 ? "" : "s"}` : null,
-      vendor.highRisks > 0 ? `${vendor.highRisks} high risk${vendor.highRisks === 1 ? "" : "s"}` : null,
-      vendor.unresolvedReviews > 0 ? `${vendor.unresolvedReviews} unresolved review${vendor.unresolvedReviews === 1 ? "" : "s"}` : null,
-    ].filter(Boolean).join(" · ")}</p>{gap && <a href={`#${comparisonCellId(gap.requirementId, vendor.participantId)}`} className="mt-2 inline-flex items-center gap-1 text-xs font-extrabold text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Open a limiting requirement <ArrowRight size={13} aria-hidden="true" /></a>}</li>; })}</ol> : <p className="mt-3 text-sm text-gray">No ranked runner-up is stored.</p>}</article>
 
-        <article className={intelligenceSurfaceClasses.block}><h3 className="text-sm font-extrabold text-navy">Risks, gaps, and assumptions</h3>{leaderGaps.length === 0 && leaderRisks.length === 0 && !commercial?.assumptions.length ? <p className="mt-3 text-sm leading-6 text-gray">No leader-specific gaps, risks, or commercial assumptions were stored. This does not prove that none exist.</p> : <div className="mt-3 space-y-4">{leaderGaps.length > 0 && <div><h4 className="text-xs font-extrabold uppercase tracking-wide text-gray">Requirement gaps</h4><ul className="mt-2 space-y-2">{leaderGaps.map((requirement) => <li key={requirement.requirementId}><a href={`#${comparisonCellId(requirement.requirementId, leader!.participantId)}`} className="text-sm font-bold text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">{requirement.title}</a></li>)}</ul></div>}{leaderRisks.length > 0 && <div><h4 className="text-xs font-extrabold uppercase tracking-wide text-gray">Recorded risks</h4><ul className="mt-2 space-y-2">{leaderRisks.map((risk) => <li key={risk.riskId} className="text-sm text-gray">{risk.requirementId ? <a href={`#${comparisonCellId(risk.requirementId, risk.participantId)}`} className="font-bold text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">{risk.title}</a> : <span className="font-bold text-navy">{risk.title}</span>} · {readable(risk.severity)} · {risk.basis}</li>)}</ul></div>}{commercial?.assumptions.length ? <div><h4 className="text-xs font-extrabold uppercase tracking-wide text-gray">Commercial assumptions</h4><ul className="mt-2 space-y-2">{commercial.assumptions.map((assumption, index) => <li key={`${index}-${assumptionText(assumption)}`} className="text-sm text-gray">{assumptionText(assumption)}</li>)}</ul></div> : null}</div>}</article>
       </div>
 
       <footer className="mt-5 border-t border-gray-border pt-5"><h3 className="text-sm font-extrabold text-navy">Other things you can do</h3><div className="mt-3 flex flex-wrap gap-2"><Link href={`/proposals/${proposalId}/intelligence/comparisons/${workspace.run.runId}/reports`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-border px-4 text-xs font-extrabold text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><FileOutput size={15} aria-hidden="true" />Export comparison</Link><a href="#reweighting-title" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-border px-4 text-xs font-extrabold text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><SlidersHorizontal size={15} aria-hidden="true" />Adjust criteria</a></div><p className="mt-3 text-xs leading-5 text-gray">This recommendation is calculated from the stored scores and evidence above &mdash; nothing here is generated on the fly.</p></footer>
