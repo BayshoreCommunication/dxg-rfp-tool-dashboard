@@ -120,7 +120,7 @@ test("does not display old persisted standalone recording requirements", async (
     />,
   );
 
-  expect(screen.getByText("1 requirements found")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Checklist progress")).not.toBeInTheDocument();
   expect(screen.queryByText("RETIRED_RECORDING_REQUIREMENT")).not.toBeInTheDocument();
   expect(screen.queryByText("RETIRED_RECORDING_VALUE")).not.toBeInTheDocument();
   expect(screen.queryByRole("option", { name: "Recording" })).not.toBeInTheDocument();
