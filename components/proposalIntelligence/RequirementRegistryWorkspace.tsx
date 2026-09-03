@@ -347,18 +347,6 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
           <>
             {registry.freshness.stale && <section className="mt-5 flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-extrabold text-rose-900">This registry is historical</p><p className="mt-1 text-sm text-rose-700">{freshnessDetail(registry.freshness.reasons)} The existing record stays unchanged; create a new version before evaluation.</p></div>{registry.set.status === "approved" ? <button disabled={working} onClick={() => void supersede()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Supersede with current proposal</button> : <button disabled={working} onClick={() => void generate()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Create current version</button>}</section>}
 
-            <section aria-label="Checklist progress" className="mt-5 grid gap-3 md:grid-cols-3">
-              <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex items-center gap-3"><CheckCircle2 size={20} className="shrink-0 text-emerald-700" aria-hidden="true" /><div><p className="text-xs font-extrabold uppercase tracking-wide text-emerald-700">Proposal analyzed</p><p className="mt-0.5 text-sm font-bold text-slate-900">{requirementCount} requirements found</p></div></div>
-              </article>
-              <article className={`rounded-2xl border p-4 ${readyForApproval || registry.set.status === "approved" ? "border-emerald-200 bg-emerald-50" : "border-cyan-200 bg-cyan-50"}`}>
-                <div className="flex items-center gap-3"><CheckCircle2 size={20} className={`shrink-0 ${readyForApproval || registry.set.status === "approved" ? "text-emerald-700" : "text-[#008ad2]"}`} aria-hidden="true" /><div><p className={`text-xs font-extrabold uppercase tracking-wide ${readyForApproval || registry.set.status === "approved" ? "text-emerald-700" : "text-[#0073ad]"}`}>Evaluation prepared</p><p className="mt-0.5 text-sm font-bold text-slate-900">{readyForApproval || registry.set.status === "approved" ? "Ready" : "One guided step"}</p></div></div>
-              </article>
-              <article className={`rounded-2xl border p-4 ${registry.set.status === "approved" ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"}`}>
-                <div className="flex items-center gap-3"><CheckCircle2 size={20} className={`shrink-0 ${registry.set.status === "approved" ? "text-emerald-700" : "text-slate-300"}`} aria-hidden="true" /><div><p className={`text-xs font-extrabold uppercase tracking-wide ${registry.set.status === "approved" ? "text-emerald-700" : "text-slate-500"}`}>Approval</p><p className="mt-0.5 text-sm font-bold text-slate-900">{registry.set.status === "approved" ? "Frozen for comparison" : "Final confirmation"}</p></div></div>
-              </article>
-            </section>
-
             <section className={`mt-5 overflow-hidden rounded-3xl border ${readyForApproval || registry.set.status === "approved" ? "border-emerald-200 bg-emerald-50" : "border-cyan-200 bg-gradient-to-br from-cyan-50 to-white"}`}>
               <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
                 <div>
