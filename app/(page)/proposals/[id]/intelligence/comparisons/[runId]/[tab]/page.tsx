@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 
 export const maxDuration = 60;
 export const metadata: Metadata = { title: "Vendor Comparison | RFPilot" };
-const intelligenceTabs: readonly IntelligenceTab[] = ["overview", "requirements", "technical", "commercial", "evaluation", "reports"];
+const intelligenceTabs: readonly IntelligenceTab[] = ["overview", "requirements", "commercial", "evaluation", "reports"];
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
 export default async function ComparisonViewPage({ params }: { params: Promise<{ id: string; runId: string; tab: string }> }) {
