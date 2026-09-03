@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   CalendarDays,
-  ClipboardList,
   FileCheck2,
   FileQuestion,
   FileText,
@@ -20,7 +19,6 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import VendorFactsSection from "./VendorFactsSection";
-import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 
 const reasonLabels: Record<VendorSubmissionVersion["reason"], string> = {
   initial: "Initial response",
@@ -65,7 +63,6 @@ export default function VendorResponseDetailWorkspace({
     selectedVersion.versionId === detail.submission?.currentVersionId,
   );
   const vendorName = selectedVersion?.vendorName ?? detail.response.vendorName;
-  const returnTo = `/vendor-responses/${detail.response._id}`;
   const proposalResponsesHref = `/vendor-responses/proposals/${encodeURIComponent(detail.response.proposalId)}`;
   const singleVersion = detail.versions.length === 1;
 
@@ -99,12 +96,6 @@ export default function VendorResponseDetailWorkspace({
               </span>
             </p>
           </div>
-          <Link
-            href={requirementRegistryHref(detail.response.proposalId, returnTo)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#008ad2] px-4 text-sm font-extrabold text-[#0076b4] hover:bg-[#eaf7fd] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/25"
-          >
-            <ClipboardList size={16} aria-hidden="true" /> Open requirements checklist
-          </Link>
         </div>
       </header>
 
