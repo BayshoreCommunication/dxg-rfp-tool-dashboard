@@ -34,7 +34,16 @@ it("shows where the leader's margin comes from and who set each score", () => {
   expect(screen.getAllByText("RFPilot's starting score").length).toBeGreaterThan(0);
   expect(screen.getByText("Your score")).toBeInTheDocument();
   expect(screen.getByText("Thin crew plan.")).toBeInTheDocument();
-  expect(screen.getAllByText("Based on the requirements that feed this criterion: 1 answered.").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Requirements in this area: 1 answered.").length).toBeGreaterThan(0);
+});
+
+it("shows no per-cell origin labels when every score has the same origin", () => {
+  const automatedOnly = { ...workspace, intelligence: { evaluation: workspace.intelligence.evaluation.map((item) => ({ ...item, criteria: (item.criteria ?? []).map((c: Record<string, unknown>) => ({ ...c, automatedCount: 1, humanCount: 0 })) })) } } as unknown as ComparisonWorkspace;
+  render(<ScoreGapExplanation workspace={automatedOnly} />);
+  expect(screen.getByText(/No one has scored these vendors by hand yet/)).toBeInTheDocument();
+  expect(screen.queryByText("RFPilot's starting score")).not.toBeInTheDocument();
+  expect(screen.queryByText(/points$/)).not.toBeInTheDocument();
+  expect(screen.getByText("Level")).toBeInTheDocument();
 });
 
 it("lets the reader pick which other vendor to compare against", () => {

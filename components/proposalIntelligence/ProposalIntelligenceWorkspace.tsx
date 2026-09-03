@@ -888,34 +888,6 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
             <>
               <RecommendationPanel workspace={workspace} />
               <ScoreGapExplanation workspace={workspace} />
-              <div className="grid gap-4 lg:grid-cols-2">
-                {workspace.intelligence.evaluation.map((item) => (
-                  <article key={item.participantId} className="rounded-2xl border border-slate-200 bg-white p-5">
-                    <h2 className="font-extrabold text-slate-950">{item.vendorLabel}</h2>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">The scores recorded for this comparison, including RFPilot&rsquo;s starting scores where you have not scored a criterion yourself. The ranking above excludes vendors that miss a must-pass requirement, then orders the rest by these scores.</p>
-                    <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div>
-                        <dt className="text-[10px] font-extrabold uppercase text-slate-500">Contribution</dt>
-                        <dd className="mt-1 text-xl font-extrabold text-slate-950">{item.weightedContributionTotal.toFixed(2)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[10px] font-extrabold uppercase text-slate-500">Scores</dt>
-                        <dd className="mt-1 text-xl font-extrabold text-slate-950">{item.submittedScores}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[10px] font-extrabold uppercase text-slate-500">Scored</dt>
-                        <dd className="mt-1 text-xl font-extrabold text-slate-950">
-                          {item.completedEvaluatorCount > 0 ? "Yes" : "Not yet"}
-                        </dd>
-                      </div>
-                      {item.conflictCount > 0 && <div>
-                        <dt className="text-[10px] font-extrabold uppercase text-slate-500">Conflicts</dt>
-                        <dd className="mt-1 text-xl font-extrabold text-slate-950">{item.conflictCount}</dd>
-                      </div>}
-                    </dl>
-                  </article>
-                ))}
-              </div>
               <DecisionWorkspace proposalId={proposalId} workspace={workspace} onChanged={setWorkspace} />
             </>
           )}
