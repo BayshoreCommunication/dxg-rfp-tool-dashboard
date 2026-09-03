@@ -25,6 +25,11 @@ const workspace = {
   },
 } as unknown as ComparisonWorkspace;
 
+it("no longer offers a 'Record your decision' action", () => {
+  render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
+  expect(screen.queryByRole("link", { name: /Record your decision/ })).not.toBeInTheDocument();
+});
+
 it("names the leader and links every decisive factor and gap to comparison evidence", () => {
   render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
   expect(screen.getByRole("heading", { name: "Alpha is the strongest fit in this comparison." })).toBeInTheDocument();
@@ -58,38 +63,18 @@ it("labels a stale close call as historical instead of naming a decisive winner"
   render(<ProposalVerdict workspace={closeCall} proposalId="proposal-1" />);
   expect(screen.getByRole("heading", { name: "Out-of-date result: Alpha and Beta were a close call." })).toBeInTheDocument();
   expect(screen.getByText("Out of date")).toBeInTheDocument();
-  // The banner and the header both offer the rerun; "Record your decision" steps back.
+  // The banner and the header both offer the rerun; there is no decision link any more.
   expect(screen.getAllByRole("button", { name: "Run a new comparison" })).toHaveLength(2);
   expect(screen.queryByRole("link", { name: "Record your decision" })).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Record a decision on this old result anyway/ })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Record a decision on this old result anyway/ })).not.toBeInTheDocument();
   expect(screen.getByText(/Since this comparison ran, the requirements list was changed or re-approved\./)).toBeInTheDocument();
 });
 
-it("sends 'Record your decision' to the tab that actually has the decision form", () => {
-  render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
-  // The decision form renders only under tab === "evaluation"; this used to
-  // point at the executive report, so the anchor never resolved and the button
-  // landed on a page with no form on it.
-  const link = screen.getByRole("link", { name: /Record your decision/ });
-  expect(link).toHaveAttribute(
-    "href",
-    `/proposals/proposal-1/intelligence/comparisons/${workspace.run.runId}/evaluation#decision-record-title`,
-  );
-  expect(link.getAttribute("href")).not.toContain("/reports");
-});
 
-it("offers the decision as a primary action beside the recommendation, not buried below it", () => {
-  render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
-  const link = screen.getByRole("link", { name: /Record your decision/ });
-  // One obvious place to act, in the section header rather than the footer row.
-  expect(screen.getAllByRole("link", { name: /Record your decision/ })).toHaveLength(1);
-  expect(link.closest("header")).not.toBeNull();
-  expect(screen.getByText("Nothing is decided until you record it.")).toBeInTheDocument();
-});
 
 it("keeps the present-tense verdict and no rerun controls while the result is current", () => {
   render(<ProposalVerdict workspace={workspace} proposalId="proposal-1" />);
   expect(screen.getByRole("heading", { name: "Alpha is the strongest fit in this comparison." })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Run a new comparison" })).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Record your decision/ })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Record your decision/ })).not.toBeInTheDocument();
 });
