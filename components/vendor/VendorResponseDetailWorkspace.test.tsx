@@ -2,12 +2,6 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { VendorSubmissionDetail } from "@/app/actions/vendorResponse";
 import VendorResponseDetailWorkspace from "./VendorResponseDetailWorkspace";
 
-jest.mock("./VendorExtractionSection", () => ({
-  __esModule: true,
-  default: ({ versionId }: { versionId: string }) => (
-    <div data-testid="extraction">Extraction {versionId}</div>
-  ),
-}));
 jest.mock("./VendorFactsSection", () => ({
   __esModule: true,
   default: ({ versionId }: { versionId: string }) => (
@@ -108,7 +102,8 @@ it("renders a keyboard-operable version timeline", () => {
   expect(
     screen.getByRole("link", { name: "Open requirements checklist" }),
   ).toHaveAttribute("href", "/proposals/proposal-1/intelligence/requirements?returnTo=%2Fvendor-responses%2Fresponse-1");
-  expect(screen.getByTestId("extraction")).toHaveTextContent("version-2");
+  // "Files read" is no longer shown on the response page.
+  expect(screen.queryByTestId("extraction")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Back to proposal responses" })).toHaveAttribute(
     "href",
     "/vendor-responses/proposals/proposal-1",

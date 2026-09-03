@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import VendorExtractionSection from "./VendorExtractionSection";
 import VendorFactsSection from "./VendorFactsSection";
 import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 
@@ -262,16 +261,11 @@ export default function VendorResponseDetailWorkspace({
                     Analysis
                   </h3>
                   <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
-                    RFPilot read {singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which files were readable, which requirements the vendor answered, and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.
+                    RFPilot read {singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which requirements the vendor answered and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.
                   </p>
                 </div>
                 {detail.submission && (
                   <div className="space-y-5">
-                    <VendorExtractionSection
-                      proposalId={detail.response.proposalId}
-                      submissionId={detail.submission.submissionId}
-                      versionId={selectedVersion.versionId}
-                    />
                     <VendorFactsSection
                       key={selectedVersion.versionId}
                       proposalId={detail.response.proposalId}
