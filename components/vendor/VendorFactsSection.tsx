@@ -230,7 +230,8 @@ const columns: Array<{ key: CoverageColumn; title: string; headerClassName: stri
  * vendor covered, half-covered and missed. A chip appears on a card only when
  * its exact status differs from the column's plain one (conflicting answers,
  * mentioned only, not applicable); the description sentence appears only
- * where a reader has to decide something.
+ * where a reader has to decide something. A missing answer needs no
+ * explanation beyond its column.
  */
 function MappingList({ mappings, latestReviews, savingTarget, onReview }: {
   mappings: VendorIntelligenceResult["mappings"];
@@ -262,7 +263,7 @@ function MappingList({ mappings, latestReviews, savingTarget, onReview }: {
                 {showChip && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${presentation.className}`} title={presentation.description}>{presentation.label}</span>}
                 {meta && <span className="text-[10px] uppercase tracking-wide text-slate-400">{meta}</span>}
               </div>}
-              {level !== "answered" && level !== "not_applicable" && <p className="mt-1 text-xs leading-5 text-slate-600">{presentation.description}</p>}
+              {!["answered", "not_applicable", "not_answered"].includes(level) && <p className="mt-1 text-xs leading-5 text-slate-600">{presentation.description}</p>}
               <ReviewControls target={{ type: "mapping", mapping }} review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, payload) => onReview(mapping.mappingId, decision, payload)}/>
             </li>;
           })}</ul>}
