@@ -211,53 +211,64 @@ const coverageCounts = (mappings: VendorIntelligenceResult["mappings"]) => {
   return counts;
 };
 
+/** Which of the three columns a requirement lands in. */
+type CoverageColumn = "answered" | "partly_answered" | "not_answered";
+const columnOf = (relationship: string): CoverageColumn => {
+  const level = coverageFromRelationship(relationship);
+  if (level === "answered" || level === "not_applicable") return "answered";
+  if (level === "partly_answered" || level === "conflicting") return "partly_answered";
+  return "not_answered";
+};
+const columns: Array<{ key: CoverageColumn; title: string; headerClassName: string; countClassName: string; empty: string }> = [
+  { key: "answered", title: "Answered", headerClassName: "border-emerald-200 bg-emerald-50 text-emerald-900", countClassName: "bg-emerald-600 text-white", empty: "Nothing fully answered." },
+  { key: "partly_answered", title: "Partly answered", headerClassName: "border-amber-200 bg-amber-50 text-amber-900", countClassName: "bg-amber-500 text-white", empty: "Nothing partly answered." },
+  { key: "not_answered", title: "Not answered", headerClassName: "border-rose-200 bg-rose-50 text-rose-900", countClassName: "bg-rose-600 text-white", empty: "Nothing missing." },
+];
+
 /**
- * One row per requirement. The repeated "what this chip means" sentence is
- * shown only where a reader has to decide something (anything not fully
- * answered); fully answered rows carry the chip, the mandatory tag, and the
- * evidence link, which is all they need.
+ * Three columns, one per outcome, so the reader sees at a glance what the
+ * vendor covered, half-covered and missed. A chip appears on a card only when
+ * its exact status differs from the column's plain one (conflicting answers,
+ * mentioned only, not applicable); the description sentence appears only
+ * where a reader has to decide something.
  */
-function MappingList({ mappings, attentionOnly, onAttentionOnlyChange, latestReviews, savingTarget, onReview }: {
+function MappingList({ mappings, latestReviews, savingTarget, onReview }: {
   mappings: VendorIntelligenceResult["mappings"];
-  attentionOnly: boolean;
-  onAttentionOnlyChange: (value: boolean) => void;
   latestReviews: Map<string, HumanReview>;
   savingTarget?: string;
   onReview: (mappingId: string, decision: ReviewDecision, payload: Record<string, unknown> | null) => Promise<void>;
 }) {
-  const counts = coverageCounts(mappings);
-  const needsAttention = (relationship: string) => coverageFromRelationship(relationship) !== "answered";
-  const attentionCount = mappings.filter((mapping) => needsAttention(mapping.relationship)).length;
-  // Gaps first: the rows a planner must act on should not be buried at row 12.
-  const visible = (attentionOnly ? mappings.filter((mapping) => needsAttention(mapping.relationship)) : mappings)
-    .slice()
-    .sort((left, right) => Number(needsAttention(right.relationship)) - Number(needsAttention(left.relationship)));
-  const summary = [
-    [counts.answered, "answered"], [counts.partly_answered, "partly answered"], [counts.mentioned_only, "mentioned only"],
-    [counts.conflicting, "conflicting"], [counts.not_answered, "not answered"], [counts.not_applicable, "not applicable"],
-  ].filter(([count]) => Number(count) > 0).map(([count, name]) => `${count} ${name}`).join(" · ");
-  return <>
-    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-      <p className="text-xs font-semibold text-slate-600" aria-live="polite">{summary || "No requirements mapped."}</p>
-      {attentionCount > 0 && attentionCount < mappings.length && <label className="flex items-center gap-2 text-xs font-semibold text-slate-600"><input type="checkbox" checked={attentionOnly} onChange={(event) => onAttentionOnlyChange(event.target.checked)}/>Only the {attentionCount} needing attention</label>}
-    </div>
-    <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200">{visible.map((mapping) => {
-      const key = `mapping:${mapping.mappingId}`;
-      const presentation = coverage(mapping.relationship);
-      const meta = [mapping.mandatory ? "Mandatory" : null, confidenceNote(mapping.confidence)].filter(Boolean).join(" · ");
-      return <li key={mapping.mappingId} className="px-4 py-3">
-        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-slate-800">{mapping.requirementTitle}</p>
-            {meta && <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{meta}</p>}
-          </div>
-          <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase ${presentation.className}`} title={presentation.description}>{presentation.label}</span>
-        </div>
-        {needsAttention(mapping.relationship) && <p className="mt-1 text-xs leading-5 text-slate-600">{presentation.description}</p>}
-        <ReviewControls target={{ type: "mapping", mapping }} review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, payload) => onReview(mapping.mappingId, decision, payload)}/>
-      </li>;
-    })}</ul>
-  </>;
+  if (mappings.length === 0) return <p className="mt-3 text-xs text-slate-500">No requirements mapped.</p>;
+  const mandatoryFirst = (left: RequirementMapping, right: RequirementMapping) => Number(right.mandatory) - Number(left.mandatory);
+  return <div className="mt-3 grid gap-3 md:grid-cols-3" data-testid="requirements-table">
+    {columns.map((column) => {
+      const rows = mappings.filter((mapping) => columnOf(mapping.relationship) === column.key).sort(mandatoryFirst);
+      return <section key={column.key} aria-labelledby={`requirements-column-${column.key}`} className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <h4 id={`requirements-column-${column.key}`} className={`flex items-center justify-between gap-2 border-b px-3 py-2 text-xs font-extrabold ${column.headerClassName}`}>
+          {column.title}
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${column.countClassName}`}>{rows.length}</span>
+        </h4>
+        {rows.length === 0
+          ? <p className="px-3 py-4 text-xs text-slate-400">{column.empty}</p>
+          : <ul className="divide-y divide-slate-100">{rows.map((mapping) => {
+            const key = `mapping:${mapping.mappingId}`;
+            const level = coverageFromRelationship(mapping.relationship);
+            const presentation = coverage(mapping.relationship);
+            const showChip = level !== column.key;
+            const meta = [mapping.mandatory ? "Mandatory" : null, confidenceNote(mapping.confidence)].filter(Boolean).join(" · ");
+            return <li key={mapping.mappingId} className="px-3 py-3">
+              <p className="text-sm font-bold leading-5 text-slate-800">{mapping.requirementTitle}</p>
+              {(meta || showChip) && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                {showChip && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${presentation.className}`} title={presentation.description}>{presentation.label}</span>}
+                {meta && <span className="text-[10px] uppercase tracking-wide text-slate-400">{meta}</span>}
+              </div>}
+              {level !== "answered" && level !== "not_applicable" && <p className="mt-1 text-xs leading-5 text-slate-600">{presentation.description}</p>}
+              <ReviewControls target={{ type: "mapping", mapping }} review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, payload) => onReview(mapping.mappingId, decision, payload)}/>
+            </li>;
+          })}</ul>}
+      </section>;
+    })}
+  </div>;
 }
 
 const vendorLabel = (name?: string) => name?.trim() || "this vendor";
@@ -334,7 +345,6 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
   const [savingTarget, setSavingTarget] = useState<string>();
   const [error, setError] = useState<string>();
   const [tab, setTab] = useState<"mappings" | "facts">("mappings");
-  const [attentionOnly, setAttentionOnly] = useState(false);
   const cancelled = useRef(false);
   // Held in a ref so a parent passing an inline callback cannot retrigger the
   // notification effect on every render.
@@ -413,10 +423,10 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
         <button type="button" role="tab" aria-selected={tab === "facts"} onClick={() => setTab("facts")} className={`border-b-2 px-3 py-2 text-xs font-bold ${tab === "facts" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Stated values</button>
       </div>
       <p className="mt-2 text-xs leading-5 text-slate-500">{tab === "mappings"
-        ? `Each thing you asked for, and whether ${name} covered it. Anything not fully answered is listed first.`
+        ? `Each thing you asked for, and whether ${name} covered it. Sorted into what they answered, partly answered, and did not answer.`
         : `The numbers and dates ${name} gave, such as the total cost, staffing, and schedule. These are what gets compared across vendors.`}</p>
       {tab === "mappings"
-        ? <MappingList mappings={result.mappings} attentionOnly={attentionOnly} onAttentionOnlyChange={setAttentionOnly} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(mappingId, decision, payload) => review("mapping", mappingId, decision, payload)}/>
+        ? <MappingList mappings={result.mappings} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(mappingId, decision, payload) => review("mapping", mappingId, decision, payload)}/>
         : <FactList facts={result.facts} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(factId, decision, payload) => review("fact", factId, decision, payload)}/>}
       <WhatNext blocked={blocked} mappings={result.mappings} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle} returnTo={returnTo}/>
     </>}

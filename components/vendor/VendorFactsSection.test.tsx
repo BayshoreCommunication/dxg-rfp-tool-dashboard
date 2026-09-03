@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import VendorFactsSection from "./VendorFactsSection";
 import {
   createVendorIntelligenceAction,
@@ -89,7 +89,7 @@ test("does not show a read-problem banner for partial coverage; next steps stay 
   expect(screen.getByRole("link", { name: /Compare all vendors/ })).toBeInTheDocument();
 });
 
-test("summarises coverage, hides the explanatory sentence on answered rows, and can filter to what needs attention", async () => {
+test("sorts requirements into answered, partly answered and not answered columns", async () => {
   latest.mockResolvedValue({
     success: true,
     data: {
@@ -97,17 +97,24 @@ test("summarises coverage, hides the explanatory sentence on answered rows, and 
       mappings: [
         { ...completed.mappings[0], mappingId: "m-answered", requirementTitle: "Provide load-in schedule", relationship: "supports", mandatory: false, confidence: 0.95 },
         { ...completed.mappings[0], mappingId: "m-partial", requirementTitle: "Provide a complete staffing plan", relationship: "partially_supports" },
+        { ...completed.mappings[0], mappingId: "m-conflict", requirementTitle: "State the total price", relationship: "contradicts" },
         { ...completed.mappings[0], mappingId: "m-missing", requirementTitle: "Provide closed captions", relationship: "none", evidence: [] },
       ],
     },
   });
   render(<VendorFactsSection proposalId="p" submissionId="s" versionId="v" />);
-  expect(await screen.findByText("1 answered · 1 partly answered · 1 not answered")).toBeInTheDocument();
+  const answered = (await screen.findByRole("heading", { name: "Answered 1" })).closest("section")!;
+  const partly = screen.getByRole("heading", { name: "Partly answered 2" }).closest("section")!;
+  const missing = screen.getByRole("heading", { name: "Not answered 1" }).closest("section")!;
+  expect(within(answered).getByText("Provide load-in schedule")).toBeInTheDocument();
+  expect(within(partly).getByText("Provide a complete staffing plan")).toBeInTheDocument();
+  expect(within(partly).getByText("State the total price")).toBeInTheDocument();
+  expect(within(missing).getByText("Provide closed captions")).toBeInTheDocument();
+  // The column already says the status; a chip is shown only where the exact status differs.
+  expect(within(answered).queryByText("Answered", { selector: "span" })).not.toBeInTheDocument();
+  expect(within(partly).getByText("Conflicting answers")).toBeInTheDocument();
   expect(screen.queryByText(/The vendor answered this requirement and we can show you where/)).not.toBeInTheDocument();
   expect(screen.getByText(/Read the quotes and decide whether the rest matters/)).toBeInTheDocument();
-  fireEvent.click(screen.getByLabelText("Only the 2 needing attention"));
-  expect(screen.queryByText("Provide load-in schedule")).not.toBeInTheDocument();
-  expect(screen.getByText("Provide closed captions")).toBeInTheDocument();
 });
 
 test("lets a planner correct a requirement's answer status using the cited evidence", async () => {
@@ -159,9 +166,8 @@ test("opens with a plain-language purpose, a verdict sentence, and next steps", 
   // Engine telemetry is gone.
   expect(screen.queryByText("Mapped")).not.toBeInTheDocument();
   expect(screen.queryByText("Analysis up to date")).not.toBeInTheDocument();
-  // Gaps come first.
-  const titles = screen.getAllByText(/^Provide /).map((node) => node.textContent);
-  expect(titles.indexOf("Provide load-in schedule")).toBeGreaterThan(titles.indexOf("Provide closed captions"));
+  // Each requirement sits in the column for its outcome.
+  expect(within(screen.getByRole("heading", { name: "Not answered 1" }).closest("section")!).getByText("Provide closed captions")).toBeInTheDocument();
   // Next steps name the vendor and prefill the email.
   const next = screen.getByLabelText("What to do next");
   expect(next).toHaveTextContent(/Northstar AV left 2 requirements unanswered or only partly answered/);
