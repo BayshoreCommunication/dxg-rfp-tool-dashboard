@@ -1,6 +1,7 @@
 import type { ExtractedFact, VendorIntelligenceResult } from "@/app/actions/vendorIntelligence";
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
 import {
+  deriveCommercialTotal,
   deriveResponseCardSummary,
   selectHeadlineFacts,
 } from "./responseCardSummary";
@@ -76,8 +77,51 @@ it("selects only source-backed, non-contradictory headline values in business or
     fact({ factId: "conflict", factType: "proposal_validity", contradictionGroup: "conflict-1" }),
   ]);
 
-  expect(values.map((value) => value.label)).toEqual(["Total cost", "Staffing"]);
+  // Price is derived separately (deriveCommercialTotal); it never rides along as a headline fact.
+  expect(values.map((value) => value.label)).toEqual(["Staffing"]);
   expect(values[0].source).toEqual(expect.objectContaining(source));
+});
+
+const dxgTotals = [
+  fact({ factId: "equipment", factKey: "equipment_total", normalizedValue: "USD 100180", statement: "The equipment total is $100,180.00." }),
+  fact({ factId: "labor", factKey: "production_labor_total", normalizedValue: "USD 81275" }),
+  fact({ factId: "travel", factKey: "travel_freight_total", normalizedValue: "USD 25600" }),
+  fact({ factId: "proposal", factKey: "total_pricing", normalizedValue: "USD 207055", statement: "The proposal total is $207,055.00." }),
+];
+
+it("shows one stated total when the files agree, and nothing when none is cited", () => {
+  expect(deriveCommercialTotal([fact()])).toEqual(expect.objectContaining({ status: "stated", amount: 125000, currency: "USD", confirmed: false, otherTotals: 0 }));
+  expect(deriveCommercialTotal([fact(), fact({ factId: "repeat", factKey: "total_amount", normalizedValue: "$125,000" })])).toEqual(expect.objectContaining({ status: "stated", amount: 125000 }));
+  expect(deriveCommercialTotal([fact({ citations: [] })])).toEqual({ status: "not_stated" });
+  expect(deriveCommercialTotal([fact({ normalizedValue: "about a hundred grand" })])).toEqual({ status: "not_stated" });
+});
+
+it("refuses to pick a price when the files state several different totals", () => {
+  const total = deriveCommercialTotal(dxgTotals);
+  expect(total.status).toBe("needs_confirmation");
+  if (total.status !== "needs_confirmation") throw new Error("unreachable");
+  expect(total.candidates.map((candidate) => [candidate.label, candidate.amount])).toEqual([
+    ["Total pricing", 207055],
+    ["Equipment total", 100180],
+    ["Production labor total", 81275],
+    ["Travel freight total", 25600],
+  ]);
+});
+
+it("lets the planner's fact reviews settle which total applies", () => {
+  const review = (targetId: string, decision: string, correctedPayload: Record<string, unknown> | null = null) =>
+    ({ reviewId: `review-${targetId}-${decision}`, targetType: "fact" as const, targetId, decision, reasonCode: "human_review", note: "", correctedPayload, actorUserId: "user", createdAt: "2026-09-03T00:00:00.000Z" });
+  const accepted = deriveCommercialTotal(dxgTotals, [review("proposal", "accepted")]);
+  expect(accepted).toEqual(expect.objectContaining({ status: "stated", amount: 207055, confirmed: true, otherTotals: 3 }));
+  const rejected = deriveCommercialTotal(dxgTotals, [review("equipment", "rejected"), review("labor", "rejected"), review("travel", "rejected")]);
+  expect(rejected).toEqual(expect.objectContaining({ status: "stated", amount: 207055, confirmed: false, otherTotals: 0 }));
+  const corrected = deriveCommercialTotal([fact()], [review("fact-1", "corrected", { normalizedValue: "USD 130000" })]);
+  expect(corrected).toEqual(expect.objectContaining({ status: "stated", amount: 130000, confirmed: true }));
+  // The newest review wins: accepting then rejecting the same fact removes it.
+  const reversed = deriveCommercialTotal([fact()], [review("fact-1", "accepted"), review("fact-1", "rejected")]);
+  expect(reversed).toEqual({ status: "not_stated" });
+  // Two different confirmed totals is still a conflict.
+  expect(deriveCommercialTotal(dxgTotals, [review("proposal", "accepted"), review("equipment", "accepted")]).status).toBe("needs_confirmation");
 });
 
 it("separates required fields with support, missing evidence, and contradictions", () => {

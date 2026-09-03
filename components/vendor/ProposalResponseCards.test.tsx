@@ -33,16 +33,15 @@ const response = (id: string, vendorName: string): VendorResponseItem => ({
   currentVersionId: `version-${id}`,
 });
 
+const pricingSource = { fragmentId: "fragment-1", content: "Total: USD 125,000", locator: { page: 2 }, sourceLabel: "pricing.pdf" };
+const statedTotal = (amount: number): Extract<ResponseCardSummary["commercialTotal"], { status: "stated" }> =>
+  ({ status: "stated", factId: "fact-1", amount, currency: "USD", source: pricingSource, confirmed: false, otherTotals: 0 });
+
 const summary = (overrides: Partial<ResponseCardSummary> = {}): ResponseCardSummary => ({
   extractionStatus: "ready",
   intelligenceStatus: "ready",
-  headlineFacts: [{
-    factId: "fact-1",
-    label: "Total cost",
-    value: "USD 125000",
-    explicitness: "explicit",
-    source: { fragmentId: "fragment-1", content: "Total: USD 125,000", locator: { page: 2 }, sourceLabel: "pricing.pdf" },
-  }],
+  headlineFacts: [],
+  commercialTotal: statedTotal(125000),
   requiredFields: { total: 3, present: 2, missing: 1, conflicts: 0, missingTitles: ["Insurance"], conflictTitles: [] },
   requirementCoverage: { total: 3, answered: 2, partlyAnswered: 0, notAnswered: 1, conflicting: 0, mandatoryNotAnswered: 1 },
   comparisonBlocked: null,
@@ -241,10 +240,10 @@ it("tells the planner when a response is left out of the comparison and shows th
         [partial._id]: summary({
           extractionStatus: "partial",
           partialSources: true,
-          headlineFacts: [{ ...summary().headlineFacts[0], value: "USD 208601.50" }],
+          commercialTotal: statedTotal(208601.5),
         }),
         [cheapest._id]: summary({
-          headlineFacts: [{ ...summary().headlineFacts[0], value: "USD 100180" }],
+          commercialTotal: statedTotal(100180),
         }),
       }}
     />,
@@ -265,6 +264,56 @@ it("tells the planner when a response is left out of the comparison and shows th
     "href",
     "/proposals/proposal-1/intelligence",
   );
+});
+
+it("withholds a price and the lowest badge when a response states several different totals", () => {
+  const clear = response("response-1", "Northstar AV");
+  const other = response("response-2", "Civic Events");
+  const ambiguous = response("response-3", "Digital Experience Group");
+  render(
+    <ProposalResponseCards
+      proposalId="proposal-1"
+      proposalTitle="Annual Summit"
+      responses={[clear, other, ambiguous]}
+      summaries={{
+        [clear._id]: summary({ commercialTotal: statedTotal(208601.5) }),
+        [other._id]: summary({ commercialTotal: statedTotal(208700) }),
+        [ambiguous._id]: summary({
+          commercialTotal: {
+            status: "needs_confirmation",
+            candidates: [
+              { factId: "proposal", amount: 207055, currency: "USD", label: "Total pricing", source: pricingSource },
+              { factId: "equipment", amount: 100180, currency: "USD", label: "Equipment total", source: pricingSource },
+            ],
+          },
+        }),
+      }}
+    />,
+  );
+  const cards = screen.getAllByRole("article");
+  expect(within(cards[2]).getByText("Needs confirmation")).toBeInTheDocument();
+  expect(within(cards[2]).getByText(/The files list 2 different totals, \$100,180 to \$207,055\./)).toBeInTheDocument();
+  expect(within(cards[2]).getByRole("link", { name: "Confirm which applies" })).toHaveAttribute("href", "/vendor-responses/response-3");
+  expect(within(cards[2]).queryByText("Lowest stated total")).not.toBeInTheDocument();
+  expect(within(cards[0]).getByText("Lowest stated total")).toBeInTheDocument();
+  const overview = screen.getByLabelText("Proposal response overview");
+  expect(within(overview).getByText(/Stated totals range from \$208,601\.50 to \$208,700 across 2 of 3 responses\./)).toBeInTheDocument();
+  expect(within(overview).getByText("1 response lists more than one total and needs confirmation.")).toBeInTheDocument();
+});
+
+it("says when a planner confirmed a total over the other figures in the files", () => {
+  const item = response("response-1", "Digital Experience Group");
+  render(
+    <ProposalResponseCards
+      proposalId="proposal-1"
+      proposalTitle="Annual Summit"
+      responses={[item]}
+      summaries={{ [item._id]: summary({ commercialTotal: { ...statedTotal(207055), confirmed: true, otherTotals: 3 } }) }}
+    />,
+  );
+  const card = screen.getByRole("article");
+  expect(within(card).getByText("$207,055")).toBeInTheDocument();
+  expect(within(card).getByText("Confirmed by you over 3 other stated totals")).toBeInTheDocument();
 });
 
 it("names a response that is left out of the comparison because a source was unavailable", () => {

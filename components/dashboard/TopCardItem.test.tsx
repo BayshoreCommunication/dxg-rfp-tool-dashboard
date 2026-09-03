@@ -40,12 +40,11 @@ describe('TopCardItem', () => {
     expect(screen.getAllByText('0')).toHaveLength(5)
   })
 
-  it('renders trend values for each stat card', () => {
+  it('shows no invented trend badges', () => {
+    // The tiles used to carry hard-coded "+18%", "+5%" pills with no period or
+    // basis behind them.
     render(<TopCardItem totals={mockTotals} />)
-    expect(screen.getByText('+18%')).toBeInTheDocument()
-    expect(screen.getByText('+5%')).toBeInTheDocument()
-    expect(screen.getByText('+24%')).toBeInTheDocument()
-    expect(screen.getByText('+12%')).toBeInTheDocument()
+    expect(screen.queryByText(/^\+\d+%$/)).not.toBeInTheDocument()
   })
 
   it('makes every metric card a meaningful navigation link', () => {

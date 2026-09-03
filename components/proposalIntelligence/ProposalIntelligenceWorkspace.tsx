@@ -2,9 +2,12 @@
 
 import { getComparisonWorkspaceAction, recordComparisonDecisionAction, type ComparisonEvidence, type ComparisonRequirement, type ComparisonView, type ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
+import { describeFreshnessReasons, describeRefusalCodes, describeRiskCategory, plainRiskBasis, plainRiskTitle } from "@/lib/proposalIntelligence/plainLanguage";
 import { coverageFromVerdict, coveragePresentation } from "@/lib/proposalIntelligence/coverageVocabulary";
-import { buildRecommendationSummary, buildVendorComparison } from "@/lib/proposalIntelligence/recommendationSummary";
+import { buildRecommendationSummary, buildVendorComparison, comparisonOverviewCounts } from "@/lib/proposalIntelligence/recommendationSummary";
 import EvidenceExcerpt from "@/components/proposalIntelligence/EvidenceExcerpt";
+import RerunComparisonButton from "@/components/proposalIntelligence/RerunComparisonButton";
+import ScoreGapExplanation from "@/components/proposalIntelligence/ScoreGapExplanation";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, FileSearch, LockKeyhole, Printer, Scale, ShieldAlert, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -272,11 +275,15 @@ function EmptyState({ title, text }: { title: string; text: string }) {
 
 function RecommendationPanel({ workspace, decisionHref }: { workspace: ComparisonWorkspace; decisionHref?: string }) {
   const recommendation = workspace.recommendation;
+  const stale = workspace.freshness.state === "stale";
   if (!recommendation) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><strong>This older comparison has no saved recommendation.</strong> Run a new comparison to produce a ranking.</div>;
   const leader = recommendation.bestParticipantId ? recommendation.ranking.find((item) => item.participantId === recommendation.bestParticipantId) : null;
+  // Past tense once the inputs have moved on: this is what an old run found.
   const title = recommendation.status === "recommended" && leader
-    ? `${leader.vendorLabel} is the strongest fit`
-    : recommendation.status === "close_call" ? "The leading vendors are a close call" : "No vendor meets every must-pass requirement";
+    ? (stale ? `Out-of-date result: ${leader.vendorLabel} was the strongest fit` : `${leader.vendorLabel} is the strongest fit`)
+    : recommendation.status === "close_call"
+      ? (stale ? "Out-of-date result: the leading vendors were a close call" : "The leading vendors are a close call")
+      : (stale ? "Out-of-date result: no vendor met every must-pass requirement" : "No vendor meets every must-pass requirement");
   const tone = recommendation.status === "recommended" ? "border-emerald-200 bg-emerald-50/60" : recommendation.status === "close_call" ? "border-amber-200 bg-amber-50/60" : "border-rose-200 bg-rose-50/60";
   const summary = leader
     ? buildRecommendationSummary({
@@ -298,7 +305,7 @@ function RecommendationPanel({ workspace, decisionHref }: { workspace: Compariso
     : `No response answers every must-pass requirement, so none can be recommended. Ask the vendors below for the missing answers, or reconsider which requirements are must-pass.`;
   return <section className={`rounded-2xl border p-5 ${tone}`} aria-labelledby="recommendation-title">
     <div className="max-w-4xl">
-      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-500">Suggested shortlist &middot; you decide</p>
+      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-500">{stale ? "Earlier suggestion \u00b7 inputs have changed since" : "Suggested shortlist \u00b7 you decide"}</p>
       <h2 id="recommendation-title" className="mt-2 text-xl font-extrabold text-slate-950">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-700">{summary ? summary.overview : noLeaderText}</p>
       {decisionHref && <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -334,11 +341,12 @@ function RecommendationPanel({ workspace, decisionHref }: { workspace: Compariso
 function ExecutiveReport({ proposalId, proposalTitle, workspace }: { proposalId: string; proposalTitle: string; workspace: ComparisonWorkspace }) {
   const overview = workspace.intelligence.overview;
   const reportBase = `/proposals/${proposalId}/intelligence/comparisons/${workspace.run.runId}`;
+  const mandatory = comparisonOverviewCounts({ requirements: workspace.intelligence.requirements, participantIds: workspace.participants.map((participant) => participant.participantId) });
   const summary = [
     { label: "Vendor responses", value: overview.responseCount },
     { label: "Approved requirements", value: overview.approvedRequirementCount },
-    { label: "Must-haves unanswered", value: overview.mandatoryGapCount, hint: "counted once per vendor" },
-    { label: "Must-haves partly answered", value: overview.mandatoryPartialCount, hint: "counted once per vendor" },
+    { label: "Must-haves unanswered", value: mandatory.mandatoryUnanswered, hint: "added up across vendors" },
+    { label: "Must-haves partly answered", value: mandatory.mandatoryPartlyAnswered, hint: "added up across vendors" },
     { label: "Unresolved reviews", value: overview.unresolvedReviewCount },
   ];
   const recommendationOrder = new Map(workspace.recommendation?.ranking.map((item, index) => [item.participantId, index]) ?? []);
@@ -467,8 +475,7 @@ function ExecutiveReport({ proposalId, proposalTitle, workspace }: { proposalId:
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h4 className="font-extrabold text-slate-950">{participant.vendorLabel}</h4>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Response version {participant.versionId.slice(0, 8)}</p>
-                  </div>
+                                      </div>
                   <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${participant.warningCount ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-800"}`}>{participant.warningCount ? `${participant.warningCount} source warning${participant.warningCount === 1 ? "" : "s"}` : "Sources ready"}</span>
                 </div>
 
@@ -636,7 +643,7 @@ function DecisionWorkspace({ proposalId, workspace, onChanged }: { proposalId: s
                 <p className="mt-2 text-sm leading-6 text-slate-700">{decision.rationale}</p>
                 {decision.selectedParticipantIds.length ? <p className="mt-2 text-xs font-bold text-slate-600">Vendors: {decision.selectedParticipantIds.map((id) => workspace.participants.find((participant) => participant.participantId === id)?.vendorLabel ?? "Historical participant").join(", ")}</p> : null}
                 <p className="mt-2 text-[10px] text-slate-400">
-                  {formatIntelligenceTimestamp(decision.createdAt)} · Manifest {decision.manifestChecksum.slice(0, 12)}…
+                  {formatIntelligenceTimestamp(decision.createdAt)}
                 </p>
               </li>
             ))}
@@ -678,6 +685,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
           maximumFractionDigits: 2,
         }).format(amount);
   const tabHref = (nextTab: IntelligenceTab, runId = workspace.run.runId) => `/proposals/${proposalId}/intelligence/comparisons/${runId}/${nextTab}`;
+  const mandatory = comparisonOverviewCounts({ requirements: workspace.intelligence.requirements, participantIds: workspace.participants.map((participant) => participant.participantId) });
   const summary = [
     { label: "Responses", value: overview.responseCount, icon: Users },
     {
@@ -687,14 +695,14 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
     },
     {
       label: "Must-haves unanswered",
-      value: overview.mandatoryGapCount,
-      hint: "counted once per vendor",
+      value: mandatory.mandatoryUnanswered,
+      hint: "added up across vendors",
       icon: ShieldAlert,
     },
     {
       label: "Must-haves partly answered",
-      value: overview.mandatoryPartialCount,
-      hint: "counted once per vendor",
+      value: mandatory.mandatoryPartlyAnswered,
+      hint: "added up across vendors",
       icon: ShieldAlert,
     },
     {
@@ -748,11 +756,12 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
             </div>
           )}
           {workspace.freshness.state === "stale" && (
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">
-              <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-              <span>
-                <strong>Out of date:</strong> the proposal inputs changed after this comparison ran ({workspace.freshness.reasons.map(label).join(", ")}). The results stay readable; run a new comparison for an up-to-date view.
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+              <AlertTriangle size={15} className="shrink-0" />
+              <span className="min-w-0 flex-1">
+                <strong>Out of date.</strong> {describeFreshnessReasons(workspace.freshness.reasons) || "The proposal inputs changed after this comparison ran."} The results stay readable; run a new comparison for an up-to-date view.
               </span>
+              <RerunComparisonButton proposalId={proposalId} className="shrink-0 bg-amber-700 hover:bg-amber-800" />
             </div>
           )}
         </header>
@@ -815,7 +824,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
                         <dd className="mt-1 text-lg font-extrabold text-slate-950">{item.comparable ? formatMoney(item.normalizedTotal, item.normalizedCurrency) : "Not directly comparable"}</dd>
                       </div>
                     </dl>
-                    {item.refusalCodes.length ? <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">This quote can&rsquo;t be compared directly: {item.refusalCodes.map(label).join(", ")}. Ask the vendor to clarify rather than guessing.</p> : null}
+                    {item.refusalCodes.length ? <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">This quote can&rsquo;t be compared directly. {describeRefusalCodes(item.refusalCodes)} Ask the vendor to clarify rather than guessing.</p> : null}
                     {item.lineItems.length ? (
                       <details className="mt-3 rounded-xl border border-slate-200 p-3">
                         <summary className="cursor-pointer text-xs font-extrabold text-slate-800">{item.lineItems.length} cited commercial line items</summary>
@@ -843,23 +852,23 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
                   <article key={risk.riskId} className="rounded-2xl border border-slate-200 bg-white p-5">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${riskTone[risk.severity] ?? riskTone.low}`}>{label(risk.severity)}</span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">{label(risk.category)}</span>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">{describeRiskCategory(risk.category)}</span>
                     </div>
-                    <h2 className="mt-3 font-extrabold text-slate-950">{risk.title}</h2>
+                    <h2 className="mt-3 font-extrabold text-slate-950">{plainRiskTitle(risk)}</h2>
                     <p className="mt-1 text-xs font-bold text-slate-500">{risk.vendorLabel}</p>
-                    <p className="mt-3 text-sm leading-6 text-slate-700">{risk.basis}</p>
+                    <p className="mt-3 text-sm leading-6 text-slate-700">{plainRiskBasis(risk.basis)}</p>
                     {risk.question && (
                       <div className="mt-3 rounded-xl bg-sky-50 p-3 text-xs leading-5 text-sky-900">
-                        <strong>Clarification candidate:</strong> {risk.question}
+                        <strong>Suggested question for this vendor:</strong> {risk.question}
                       </div>
                     )}
                     <button
                       type="button"
                       onClick={() =>
                         setSelection({
-                          title: risk.title,
+                          title: plainRiskTitle(risk),
                           vendorLabel: risk.vendorLabel,
-                          rationale: risk.basis,
+                          rationale: plainRiskBasis(risk.basis),
                           evidence: risk.evidence,
                         })
                       }
@@ -878,6 +887,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
           {tab === "evaluation" && (
             <>
               <RecommendationPanel workspace={workspace} />
+              <ScoreGapExplanation workspace={workspace} />
               <div className="grid gap-4 lg:grid-cols-2">
                 {workspace.intelligence.evaluation.map((item) => (
                   <article key={item.participantId} className="rounded-2xl border border-slate-200 bg-white p-5">

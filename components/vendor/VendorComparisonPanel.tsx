@@ -6,10 +6,11 @@ import Link from "next/link";
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
 import { cancelComparisonAction, getComparisonStatusAction, listComparisonsAction, prepareComparisonPrerequisitesAction, retryComparisonAction, startComparisonAction, type ComparisonView } from "@/app/actions/comparisonOrchestration";
 import { getDurableJob } from "@/app/actions/durableJobs";
+import { describeFreshnessReasons, describeJobError, describeRunStatus, describeStage } from "@/lib/proposalIntelligence/plainLanguage";
+import { RERUN_QUERY_FLAG, START_COMPARISON_EVENT } from "@/lib/proposalIntelligence/rerun";
 
 const terminal = new Set(["succeeded", "succeeded_with_warnings", "failed", "cancelled"]);
 const terminalPreparation = new Set(["succeeded", "failed", "cancelled", "dead_letter"]);
-const label = (value: string) => value.replaceAll("_", " ");
 
 export default function VendorComparisonPanel({ responses, proposalId, requirementsApproved = false, preparedResponseIds, comparisonReadyResponseIds }: { responses: VendorResponseItem[]; proposalId: string; requirementsApproved?: boolean; preparedResponseIds?: string[]; comparisonReadyResponseIds?: string[]; returnTo?: string }) {
   const versionedResponses = useMemo(() => responses.filter((response) => response.proposalId === proposalId && response.submissionId && response.currentVersionId), [proposalId, responses]);
@@ -70,7 +71,7 @@ export default function VendorComparisonPanel({ responses, proposalId, requireme
       const failed = statuses.find(({ result }) => result.success && ["failed", "cancelled", "dead_letter"].includes(result.data.status));
       if (failed && failed.result.success) {
         setBusy(false);
-        setError(`Automatic vendor mapping could not finish${failed.result.data.errorCode ? ` (${failed.result.data.errorCode})` : ""}.`);
+        setError(`Automatic vendor mapping could not finish. ${describeJobError(failed.result.data.errorCode)}`.trim());
         return;
       }
       pending = statuses.flatMap(({ item, result }) => result.success && !terminalPreparation.has(result.data.status) ? [item] : []);
@@ -88,13 +89,42 @@ export default function VendorComparisonPanel({ responses, proposalId, requireme
     pollAttempt.current = 0;
     setView(result.data);
   };
+  // Once a comparison exists the saved result stays readable, but the reader
+  // must still be able to start another one — the stale banner told them to
+  // "run a new comparison" while this panel offered no way to do it.
+  const canStartNew = !loading && candidates.length >= 2 && (!view || terminal.has(view.run.status));
+  const startLabel = view ? "Run a new comparison" : `Compare ${includedCandidates.length} vendors`;
+  // Out-of-date banners elsewhere on the page ask for a run through this
+  // event; banners on other pages arrive with ?rerun=1. Both start exactly one
+  // run, and the flag is removed from the address so a refresh does not repeat it.
+  const startRef = useRef(start);
+  const canStartRef = useRef(false);
+  useEffect(() => {
+    startRef.current = start;
+    canStartRef.current = canStartNew && !busy;
+  });
+  useEffect(() => {
+    const onRequest = () => { if (canStartRef.current) void startRef.current(); };
+    window.addEventListener(START_COMPARISON_EVENT, onRequest);
+    return () => window.removeEventListener(START_COMPARISON_EVENT, onRequest);
+  }, []);
+  const rerunHandled = useRef(false);
+  useEffect(() => {
+    if (loading || rerunHandled.current) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(RERUN_QUERY_FLAG) !== "1") return;
+    rerunHandled.current = true;
+    url.searchParams.delete(RERUN_QUERY_FLAG);
+    window.history.replaceState(window.history.state, "", url.toString());
+    if (canStartRef.current) void startRef.current();
+  }, [loading]);
   const cancel = () => view ? mutate(() => cancelComparisonAction(proposalId, view.run.runId)) : Promise.resolve();
   const retry = () => view ? mutate(() => retryComparisonAction(proposalId, view.run.runId)) : Promise.resolve();
   return <section className="mb-5 rounded-2xl border border-violet-200 bg-violet-50/70 p-4" aria-labelledby="comparison-progress-title">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 id="comparison-progress-title" className="flex items-center gap-2 text-sm font-extrabold text-violet-950"><BarChart3 size={17}/>Compare vendors</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-violet-800">Line up the vendor responses side by side. RFPilot prepares evidence review and scorecards automatically, excludes vendors that miss a must-pass requirement, and suggests a ranking &mdash; the final decision remains yours.</p></div>
-      {!view && candidates.length >= 2 && <button type="button" disabled={busy || loading || includedCandidates.length < 2} onClick={() => void start()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-45"><RefreshCw size={14} className={busy ? "animate-spin" : ""}/>{busy ? busyLabel : `Compare ${includedCandidates.length} vendors`}</button>}
+      {canStartNew && <button type="button" disabled={busy || includedCandidates.length < 2} onClick={() => void start()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-45"><RefreshCw size={14} className={busy ? "animate-spin" : ""}/>{busy ? busyLabel : startLabel}</button>}
     </div>
-    {!view && !loading && candidates.length >= 2 && (
+    {canStartNew && (
       <fieldset className="mt-4">
         <legend className="text-xs font-extrabold text-violet-950">Vendors to compare</legend>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -117,10 +147,10 @@ export default function VendorComparisonPanel({ responses, proposalId, requireme
     {!view && !loading && excludedEmptyCount > 0 && <p className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700">{excludedEmptyCount} vendor {excludedEmptyCount === 1 ? "response was" : "responses were"} left out because {excludedEmptyCount === 1 ? "it has" : "they have"} no message or attached document to read.</p>}
     {!view && !loading && candidates.length < 2 ? <p className="mt-4 rounded-xl bg-white p-3 text-xs text-violet-900">{candidates.length === 0 ? "No vendor responses have arrived for this proposal yet." : "Only one vendor response so far. RFPilot needs at least two to compare them."} <Link href="/vendor-responses" className="font-bold underline">Go to vendor responses</Link></p> : !view && !loading && (!requirementsApproved || !preparationComplete || missingEvaluationCount > 0) ? <p role="status" className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically when you start the comparison.</p> : null}
     {error?.includes("proposal intelligence and evaluation for") && <div className="mt-3 flex flex-wrap items-center gap-2">{candidates.map((candidate) => <Link key={candidate._id} href={`/vendor-responses/${candidate._id}`} className="inline-flex min-h-9 items-center rounded-lg border border-violet-200 bg-white px-3 text-xs font-extrabold text-violet-900 hover:border-violet-500">Open {candidate.vendorName || candidate.submittedBy || "vendor"} evaluation</Link>)}</div>}
-    {view && <div className="mt-4 rounded-xl border border-violet-200 bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-extrabold uppercase tracking-wide text-violet-700">{label(view.run.progressStage)}</p><p className="mt-1 text-sm font-bold text-slate-800">{view.run.completedParticipantCount} of {view.run.participantCount} vendors analyzed</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${view.run.status.startsWith("succeeded") ? "bg-emerald-100 text-emerald-800" : view.run.status === "failed" ? "bg-red-100 text-red-800" : "bg-violet-100 text-violet-800"}`}>{label(view.run.status)}</span></div>
+    {view && <div className="mt-4 rounded-xl border border-violet-200 bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-extrabold uppercase tracking-wide text-violet-700">{describeStage(view.run.progressStage)}</p><p className="mt-1 text-sm font-bold text-slate-800">{view.run.completedParticipantCount} of {view.run.participantCount} vendors analyzed</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${view.run.status.startsWith("succeeded") ? "bg-emerald-100 text-emerald-800" : view.run.status === "failed" ? "bg-red-100 text-red-800" : "bg-violet-100 text-violet-800"}`}>{describeRunStatus(view.run.status)}</span></div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-violet-100" role="progressbar" aria-label="Comparison progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(view.run.progress)}><div className="h-full rounded-full bg-violet-600 transition-[width]" style={{ width: `${view.run.progress}%` }}/></div><p className="mt-1 text-right text-[10px] font-bold text-violet-700">{Math.round(view.run.progress)}%</p>
-      {view.freshness.state === "stale" && <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-900"><AlertTriangle size={15} className="mt-0.5 shrink-0"/><span><strong>Out of date:</strong> the proposal inputs changed after this comparison ran ({view.freshness.reasons.map(label).join(", ")}). The results stay readable; run a new comparison for an up-to-date view.</span></div>}
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">{view.participants.map((item) => <li key={item.participantId} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"><div><p className="text-xs font-bold text-slate-800">{item.vendorLabel}</p><p className="text-[10px] uppercase text-slate-500">{label(item.stage)}</p></div>{item.status === "succeeded" ? <CheckCircle2 size={16} className="text-emerald-600"/> : <RefreshCw size={15} className={item.status === "running" ? "animate-spin text-violet-600" : "text-slate-400"}/>}</li>)}</ul>
+      {view.freshness.state === "stale" && <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-900"><AlertTriangle size={15} className="mt-0.5 shrink-0"/><span><strong>Out of date.</strong> {describeFreshnessReasons(view.freshness.reasons) || "The proposal inputs changed after this comparison ran."} The results stay readable; run a new comparison for an up-to-date view.</span>{canStartNew && <button type="button" disabled={busy || includedCandidates.length < 2} onClick={() => void start()} className="ml-auto inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg bg-amber-700 px-3 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-45"><RefreshCw size={12} className={busy ? "animate-spin" : ""}/>{busy ? busyLabel : "Run a new comparison"}</button>}</div>}
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">{view.participants.map((item) => <li key={item.participantId} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"><div><p className="text-xs font-bold text-slate-800">{item.vendorLabel}</p><p className="text-[10px] uppercase text-slate-500">{describeStage(item.stage)}</p></div>{item.status === "succeeded" ? <CheckCircle2 size={16} className="text-emerald-600"/> : <RefreshCw size={15} className={item.status === "running" ? "animate-spin text-violet-600" : "text-slate-400"}/>}</li>)}</ul>
       <div className="mt-3 flex flex-wrap items-center gap-2">{!terminal.has(view.run.status) && <button type="button" disabled={busy} onClick={() => void cancel()} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700"><CircleStop size={13}/>Cancel</button>}{view.run.status === "failed" && <button type="button" disabled={busy} onClick={() => void retry()} className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-violet-700 px-3 text-xs font-bold text-white"><RotateCcw size={13}/>Retry failed steps</button>}{view.run.status.startsWith("succeeded") && <><p className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700"><ShieldCheck size={14}/>Saved results loaded &mdash; nothing was rerun.</p><Link href={`/proposals/${proposalId}/intelligence/comparisons/${view.run.runId}/overview`} className="ml-auto inline-flex min-h-9 items-center rounded-lg bg-violet-700 px-3 text-xs font-extrabold text-white">Open comparison results</Link></>}</div>
     </div>}
   </section>;

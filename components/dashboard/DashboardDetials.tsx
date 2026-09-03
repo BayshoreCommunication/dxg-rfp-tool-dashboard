@@ -65,7 +65,7 @@ const DashboardDetials = async () => {
       <div className="space-y-5 pb-6 sm:space-y-7 sm:pb-10 lg:space-y-8 lg:pb-12">
         <TopHeader />
         <TopCardItem totals={totals} />
-        <DashboardTableList proposals={latestProposals} />
+        <DashboardTableList proposals={latestProposals} totalProposals={totals.totalProposals} />
       </div>
     </div>
   );
