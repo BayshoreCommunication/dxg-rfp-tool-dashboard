@@ -363,70 +363,48 @@ function SourceReadiness({
           message above.
         </div>
       ) : (
-        <ul className="mt-3 grid gap-3 xl:grid-cols-2">
+        <ul className="mt-3 divide-y divide-slate-100 rounded-2xl border border-slate-200">
           {documents.map((document, index) => {
             const ready = document.scanStatus === "clean";
+            const meta = [
+              fileTypeLabel(document.mimeType, document.name),
+              formatBytes(document.sizeBytes),
+              ready ? "Security scan passed" : "Security scan pending",
+              document.inheritedFromVersionId ? "Carried over from an earlier version" : null,
+            ].filter(Boolean).join(" · ");
             return (
               <li
                 key={document.documentId || `${document.name}-${index}`}
-                className="rounded-2xl border border-slate-200 p-4"
+                className="flex flex-wrap items-center gap-3 p-4 sm:flex-nowrap"
               >
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}
-                  >
-                    {ready ? (
-                      <FileCheck2 size={18} aria-hidden="true" />
-                    ) : (
-                      <ShieldAlert size={18} aria-hidden="true" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-extrabold text-slate-900">
-                      {document.name}
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}
+                >
+                  {ready ? (
+                    <FileCheck2 size={18} aria-hidden="true" />
+                  ) : (
+                    <ShieldAlert size={18} aria-hidden="true" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-extrabold text-slate-900" title={document.name}>
+                    {document.name}
+                  </p>
+                  <p className={`mt-0.5 text-xs ${ready ? "text-slate-500" : "text-amber-800"}`}>{meta}</p>
+                  {!ready && (
+                    <p className="mt-1 text-[11px] leading-4 text-amber-900">
+                      This file hasn&rsquo;t passed its security scan yet, so it isn&rsquo;t included in the analysis.
                     </p>
-                    <p
-                      className={`mt-1 text-xs font-bold ${ready ? "text-emerald-700" : "text-amber-800"}`}
-                    >
-                      {ready
-                        ? "Security scan passed"
-                        : "Security scan pending"}
-                    </p>
-                  </div>
+                  )}
                 </div>
-                <dl className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
-                  <div>
-                    <dt className="font-bold uppercase">File type</dt>
-                    <dd className="mt-0.5 truncate">
-                      {fileTypeLabel(document.mimeType, document.name)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-bold uppercase">Size</dt>
-                    <dd className="mt-0.5">
-                      {formatBytes(document.sizeBytes)}
-                    </dd>
-                  </div>
-                </dl>
-                {document.inheritedFromVersionId && (
-                  <p className="mt-2 text-[10px] font-semibold text-slate-500">
-                    Carried over from an earlier version
-                  </p>
-                )}
-                {!ready && (
-                  <p className="mt-3 rounded-lg bg-amber-50 p-2 text-[11px] leading-4 text-amber-900">
-                    This file hasn&rsquo;t passed its security scan yet, so it
-                    isn&rsquo;t included in the analysis.
-                  </p>
-                )}
                 {document.url && (
                   <a
                     href={document.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 hover:border-[#008ad2]/30 hover:text-[#0076b4]"
+                    className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 hover:border-[#008ad2]/30 hover:text-[#0076b4]"
                   >
-                    <FileText size={14} aria-hidden="true" /> Open file
+                    <FileText size={14} aria-hidden="true" /> Open
                   </a>
                 )}
               </li>

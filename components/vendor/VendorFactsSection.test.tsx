@@ -80,17 +80,13 @@ test("explains that intelligence cannot make an award decision", async () => {
   expect(await screen.findByText(/Nothing here ranks or picks a winner/)).toBeInTheDocument();
 });
 
-test("keeps partial source coverage visible without incorrectly blocking evaluation", async () => {
-  latest.mockResolvedValue({ success: true, data: { ...completed, run: { ...completed.run, warnings: [{ code: "PAGE_COVERAGE_INCOMPLETE", sourceLabel: "Technical.pdf", message: "This source was only partially readable." }] } } });
+test("does not show a read-problem banner for partial coverage; next steps stay available", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  const card = await screen.findByRole("alert");
-  expect(card).toHaveTextContent("Some pages of Technical.pdf could not be read");
-  expect(card).toHaveTextContent(/Scoring and comparison can go ahead with what was read/);
-  expect(card).not.toHaveTextContent(/cannot be scored/);
+  await screen.findByText("Provide a complete staffing plan");
+  expect(screen.queryByText(/could not be read/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Source coverage is incomplete/)).not.toBeInTheDocument();
   // Next steps stay available because the backend allows evaluation here.
   expect(screen.getByRole("link", { name: /Compare all vendors/ })).toBeInTheDocument();
-  expect(screen.getByRole("alert")).toHaveTextContent(/Technical\.pdf: This source was only partially readable/i);
 });
 
 test("summarises coverage, hides the explanatory sentence on answered rows, and can filter to what needs attention", async () => {
@@ -180,20 +176,14 @@ test("opens with a plain-language purpose, a verdict sentence, and next steps", 
   expect(screen.getByRole("link", { name: /Compare all vendors/ })).toHaveAttribute("href", "/proposals/proposal/intelligence");
 });
 
-test("blocks evaluation only when a response source is unavailable, as a task with two ways out", async () => {
+test("an unavailable source keeps the vendor out of the comparison, said once in next steps", async () => {
   latest.mockResolvedValue({ success: true, data: { ...completed, run: { ...completed.run, warnings: [
     { code: "PAGE_COVERAGE_INCOMPLETE", sourceLabel: "Technical.pdf", message: "A page could not be extracted with OCR." },
     { code: "SOURCE_UNAVAILABLE", sourceLabel: "Technical.pdf", message: "This source was not available to proposal intelligence." },
   ] } } });
   render(<VendorFactsSection proposalId="proposal" proposalTitle="Annual Summit" vendorName="Northstar AV" vendorEmail="bids@northstar.example" submissionId="submission" versionId="version" />);
-  const card = await screen.findByRole("alert");
-  expect(card).toHaveTextContent("Technical.pdf could not be used by the analysis");
-  expect(card).toHaveTextContent(/left out of the vendor comparison and cannot be scored/);
-  const ask = screen.getByRole("link", { name: "Ask Northstar AV for a text-based copy" });
-  expect(decodeURIComponent((ask.getAttribute("href") ?? "").replace(/\+/g, " "))).toContain("text-based (not scanned) copy");
-  expect(screen.getByRole("link", { name: "Add the missing figures manually" })).toHaveAttribute("href", "/vendor-responses/proposals/proposal?add=manual");
-  fireEvent.click(screen.getByText("Details"));
-  expect(screen.getByText("Technical.pdf: This source was not available to proposal intelligence.")).toBeInTheDocument();
+  await screen.findByText("Provide a complete staffing plan");
+  expect(screen.queryByText(/could not be used by the analysis/)).not.toBeInTheDocument();
   expect(screen.getByLabelText("What to do next")).toHaveTextContent(/Resolve the unavailable file above first/);
   expect(screen.queryByRole("link", { name: /Compare all vendors/ })).not.toBeInTheDocument();
 });
