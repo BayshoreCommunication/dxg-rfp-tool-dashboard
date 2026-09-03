@@ -246,9 +246,6 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
     });
   }, [activeRequirements, group, search, unresolvedOnly]);
   const blocking = registry?.set.validation?.blocking ?? [];
-  const requirementCount = activeRequirements.length;
-  const includedCount = activeRequirements.filter((item) => item.included).length;
-  const excludedCount = requirementCount - includedCount;
   const unresolvedCount = activeRequirements.filter(needsReview).length;
   const matrixReady = Boolean(registry?.matrix?.weightsConfirmed) && Math.abs((registry?.matrix?.totalWeight ?? 0) - 100) <= 0.001;
   const readyForApproval = Boolean(registry) && blocking.length === 0 && matrixReady && !registry?.freshness.stale;
@@ -361,12 +358,6 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
                 {editable && !readyForApproval && <button disabled={working || registry.freshness.stale} onClick={() => void prepare()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#008ad2] px-5 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#0073ad] disabled:cursor-not-allowed disabled:opacity-40"><Sparkles size={16} />{working ? "Preparing…" : "Prepare automatically"}</button>}
                 {editable && readyForApproval && <button disabled={working} onClick={() => void approve()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-extrabold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"><LockKeyhole size={16} />{working ? "Approving…" : "Approve and freeze"}</button>}
                 {registry.set.status === "approved" && <span className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-extrabold text-white"><ShieldCheck size={18} /> Approved</span>}
-              </div>
-              <div className="grid grid-cols-2 border-t border-black/5 bg-white/70 sm:grid-cols-4">
-                <div className="p-4"><p className="text-2xl font-extrabold text-slate-900">{includedCount}</p><p className="text-xs font-bold text-slate-500">Included</p></div>
-                <div className="border-l border-black/5 p-4"><p className="text-2xl font-extrabold text-slate-900">{excludedCount}</p><p className="text-xs font-bold text-slate-500">Left out</p><p className="text-[11px] text-slate-400">Instructions to vendors and duplicates</p></div>
-                <div className="border-t border-black/5 p-4 sm:border-l sm:border-t-0"><p className="text-2xl font-extrabold text-slate-900">{unresolvedCount}</p><p className="text-xs font-bold text-slate-500">Need attention</p></div>
-                <div className="border-l border-t border-black/5 p-4 sm:border-t-0"><p className={`text-2xl font-extrabold ${matrixReady ? "text-emerald-700" : "text-amber-700"}`}>{registry.matrix?.totalWeight ?? 0}%</p><p className="text-xs font-bold text-slate-500">Scoring balance</p></div>
               </div>
             </section>
 
