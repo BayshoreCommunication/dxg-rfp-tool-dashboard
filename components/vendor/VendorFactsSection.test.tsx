@@ -37,9 +37,9 @@ test("renders requirement relationships with inspectable source locations", asyn
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   expect(await screen.findByText("Provide a complete staffing plan")).toBeInTheDocument();
   expect(screen.getByText("Partly answered")).toBeInTheDocument();
-  fireEvent.click(screen.getByText("See where (1 quote)"));
-  expect(screen.getByText("Northstar.pdf · page 7")).toBeInTheDocument();
-  expect(screen.getByText("Six technicians are included.")).toBeInTheDocument();
+  // Quotes are no longer shown on the response page; they live in the comparison grid.
+  expect(screen.queryByText(/See where/)).not.toBeInTheDocument();
+  expect(screen.queryByText("Six technicians are included.")).not.toBeInTheDocument();
 });
 
 test("preserves contradictory facts and supports append-only correction review", async () => {
@@ -77,7 +77,7 @@ test("rejects a correction that does not match the extracted fact type", async (
 
 test("explains that intelligence cannot make an award decision", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  expect(await screen.findByText(/nothing here ranks or picks a winner/)).toBeInTheDocument();
+  expect(await screen.findByText(/Nothing here ranks or picks a winner/)).toBeInTheDocument();
 });
 
 test("keeps partial source coverage visible without incorrectly blocking evaluation", async () => {
@@ -176,7 +176,7 @@ test("opens with a plain-language purpose, a verdict sentence, and next steps", 
   expect(href).toContain("vendor=Northstar AV");
   expect(href).toContain("to=bids@northstar.example");
   expect(href).toContain("- Provide closed captions");
-  expect(screen.getByRole("link", { name: /Score this response/ })).toHaveAttribute("href", "#evaluation-title");
+  expect(screen.queryByRole("link", { name: /Score this response/ })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Compare all vendors/ })).toHaveAttribute("href", "/proposals/proposal/intelligence");
 });
 
