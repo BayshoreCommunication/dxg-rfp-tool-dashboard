@@ -6,7 +6,8 @@ import {
   getProposalsAction,
 } from "@/app/actions/proposals";
 import { buildPersonalizedInvitation } from "@/lib/proposals/proposalExperience";
-import { Mail, Send, ShieldCheck, Sparkles, Users, X } from "lucide-react";
+import { ArrowLeft, Mail, MessageCircleQuestion, Send, ShieldCheck, Sparkles, Users, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { KeyboardEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -76,6 +77,13 @@ export default function EmailSend() {
     .filter((value) => value && validateEmail(value));
   const prefilledSubject = searchParams.get("subject")?.trim() || "";
   const prefilledMessage = searchParams.get("message")?.trim() || "";
+  // "Ask this vendor about the gaps" and "ask for a text-based copy" open the
+  // composer as a one-to-one question: the proposal is fixed, the vendor is
+  // named, and the email goes out plain (no invitation wrapper or links).
+  const questionMode = searchParams.get("mode") === "question";
+  const questionVendor = searchParams.get("vendor")?.trim() || "the vendor";
+  const rawReturnTo = searchParams.get("returnTo") || "";
+  const returnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "";
 
   const [proposalId, setProposalId] = useState("");
   const [recipientInput, setRecipientInput] = useState("");
@@ -96,7 +104,7 @@ export default function EmailSend() {
   const previewProposalLink = selectedProposal?.proposalSlug
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/proposal/${selectedProposal.proposalSlug}`
     : selectedProposalLink;
-  const autoTeammateEmail = getTeammateEmail(selectedProposal);
+  const autoTeammateEmail = questionMode ? "" : getTeammateEmail(selectedProposal);
   const preselectedProposalId = searchParams.get("proposalId")?.trim() || "";
 
   useEffect(() => {
@@ -107,6 +115,21 @@ export default function EmailSend() {
       setLoadError(undefined);
 
       try {
+        if (questionMode && preselectedProposalId) {
+          // The proposal is known; it need not be "submitted" to ask a vendor
+          // who has already responded a question about it.
+          const proposalRes = await getProposalByIdAction(preselectedProposalId);
+          if (cancelled) return;
+          if (proposalRes.success && proposalRes.data && typeof proposalRes.data === "object") {
+            setProposals([proposalRes.data as ProposalOption]);
+            setProposalId(preselectedProposalId);
+          } else {
+            setProposals([]);
+            setProposalId("");
+            setLoadError(proposalRes.message || "The proposal could not be loaded.");
+          }
+          return;
+        }
         const proposalsRes = await getProposalsAction({
           page: 1,
           limit: 100,
@@ -156,7 +179,7 @@ export default function EmailSend() {
 
     void run();
     return () => { cancelled = true; };
-  }, [preselectedProposalId]);
+  }, [preselectedProposalId, questionMode]);
 
   // Gmail-style input handler
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -286,7 +309,7 @@ export default function EmailSend() {
       return;
     }
     if (!sendApproved) {
-      toast.error("Review the recipients and invitation, then approve sending.");
+      toast.error(questionMode ? "Review the message, then approve sending." : "Review the recipients and invitation, then approve sending.");
       return;
     }
 
@@ -296,21 +319,23 @@ export default function EmailSend() {
       recipientEmails: finalRecipients,
       subject: subject.trim(),
       message: message.trim(),
+      kind: questionMode ? "question" : "invitation",
     });
     setSending(false);
 
     if (!res.success) {
-      toast.error(res.message || "Failed to send email campaign.");
+      toast.error(res.message || (questionMode ? "The question could not be sent." : "Failed to send email campaign."));
       return;
     }
 
-    toast.success(res.message || "Email campaign sent.");
+    toast.success(questionMode ? `Question sent to ${questionVendor}.` : res.message || "Email campaign sent.");
     setRecipientInput("");
     setRecipientEmails([]);
-    router.push("/email");
+    const destination = questionMode && returnTo ? returnTo : "/email";
+    router.push(destination);
     setTimeout(() => {
-      if (window.location.pathname !== "/email") {
-        window.location.href = "/email";
+      if (window.location.pathname !== destination.split("?")[0]) {
+        window.location.href = destination;
       }
     }, 250);
   };
@@ -328,16 +353,36 @@ export default function EmailSend() {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-2 text-slate-800">
-          <Mail size={16} className="text-[#008ad2]" />
-          <h3 className="text-[14px] font-black tracking-wide uppercase">
-            Compose & Send
-          </h3>
-        </div>
+        {questionMode ? (
+          <div className="mb-5">
+            {returnTo && (
+              <Link href={returnTo} className="inline-flex min-h-9 items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#0076b4]">
+                <ArrowLeft size={14} aria-hidden="true" /> Back to the response
+              </Link>
+            )}
+            <h1 className="mt-1 flex items-center gap-2 text-xl font-extrabold text-slate-900">
+              <MessageCircleQuestion size={20} className="text-[#008ad2]" aria-hidden="true" />
+              Ask {questionVendor} a question
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+              {selectedProposal?.event?.eventName ? `About their response to ${selectedProposal.event.eventName}. ` : ""}
+              This is a plain email from you to the addresses below. They reply to you directly; it does not resend the proposal.
+            </p>
+            {loading && <p role="status" className="mt-2 text-[12px] text-slate-500">Loading the proposal…</p>}
+            {!loading && loadError && <p role="alert" className="mt-2 text-[12px] text-red-600">{loadError}</p>}
+          </div>
+        ) : (
+          <div className="mb-4 flex items-center gap-2 text-slate-800">
+            <Mail size={16} className="text-[#008ad2]" />
+            <h3 className="text-[14px] font-black tracking-wide uppercase">
+              Compose & Send
+            </h3>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className={questionMode ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 lg:grid-cols-2"}>
           {/* Select Proposal Section */}
-          <div className="space-y-2">
+          {!questionMode && <div className="space-y-2">
             <label className="text-[12px] font-semibold text-slate-600">
               Select Proposal
             </label>
@@ -390,12 +435,12 @@ export default function EmailSend() {
                 </p>
               </div>
             ) : null}
-          </div>
+          </div>}
 
           {/* New Gmail-Style Recipient Section */}
           <div className="space-y-2">
             <label className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-600">
-              Recipients
+              {questionMode ? "To" : "Recipients"}
               <span className="text-[10px] font-normal text-slate-400">
                 (Press Enter, Space, or Comma)
               </span>
@@ -445,7 +490,7 @@ export default function EmailSend() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
+        {!questionMode && <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="flex items-center gap-2 text-sm font-extrabold text-violet-950">
@@ -469,7 +514,7 @@ export default function EmailSend() {
               AI-generated · 86% confidence · Based on proposal details
             </p>
           )}
-        </div>
+        </div>}
 
         <div className="mt-4 space-y-2">
           <label htmlFor="invitation-subject" className="text-[12px] font-semibold text-slate-600">
@@ -514,7 +559,7 @@ export default function EmailSend() {
             />
             <span className="inline-flex items-center gap-2">
               <ShieldCheck size={16} className="text-[#008ad2]" aria-hidden="true" />
-              I reviewed the recipients and invitation text.
+              {questionMode ? "I reviewed this message." : "I reviewed the recipients and invitation text."}
             </span>
           </label>
           <button
@@ -525,7 +570,7 @@ export default function EmailSend() {
             style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
           >
             <Send size={14} />
-            {sending ? "Sending..." : "Send Campaign"}
+            {sending ? "Sending..." : questionMode ? "Send question" : "Send Campaign"}
           </button>
         </div>
       </section>
