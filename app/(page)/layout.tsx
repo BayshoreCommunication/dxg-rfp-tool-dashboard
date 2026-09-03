@@ -1,4 +1,5 @@
 import { getAssistantAccessAction } from "@/app/actions/aiAssistant";
+import { auth } from "@/auth";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { Analytics } from "@vercel/analytics/next";
@@ -17,10 +18,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const access =
+  const [access, session] = await Promise.all([
     process.env.NEXT_PUBLIC_AI_ASSISTANT_ENABLED === "true"
-      ? await getAssistantAccessAction()
-      : null;
+      ? getAssistantAccessAction()
+      : null,
+    auth(),
+  ]);
   const assistantEnabled = access?.success === true && access.data.enabled;
 
   return (
@@ -35,7 +38,17 @@ export default async function RootLayout({
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <ToastProvider>
-          <LayoutWrapper assistantEnabled={assistantEnabled}>
+          <LayoutWrapper
+            assistantEnabled={assistantEnabled}
+            currentUser={
+              session?.user
+                ? {
+                    name: session.user.name,
+                    email: session.user.email,
+                  }
+                : undefined
+            }
+          >
             {children}
           </LayoutWrapper>
         </ToastProvider>

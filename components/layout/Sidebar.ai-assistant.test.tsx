@@ -62,18 +62,39 @@ describe("Sidebar AI Assistant launcher", () => {
     ).toBeTruthy();
   });
 
-  test("shows a direct, meaningful sign-out control and its progress state", async () => {
+  test("shows the signed-in user and account actions in the profile menu", async () => {
     const mockedSignOutAction = jest.mocked(signOutAction);
     mockedSignOutAction.mockResolvedValue({
       success: true,
       message: "Signed out successfully",
     });
 
-    render(<Sidebar />);
+    render(
+      <Sidebar
+        currentUser={{
+          name: "Akib Rahman",
+          email: "akib.swop@gmail.com",
+        }}
+      />,
+    );
 
-    const signOutButton = screen.getByRole("button", {
-      name: "Sign out of your account",
+    const accountButton = screen.getByRole("button", {
+      name: "Open account menu for Akib Rahman",
     });
+    expect(accountButton).toHaveTextContent("AR");
+    expect(screen.queryByText("akib.swop@gmail.com")).not.toBeInTheDocument();
+
+    fireEvent.click(accountButton);
+
+    expect(screen.getByText("Akib Rahman")).toBeInTheDocument();
+    expect(screen.getByText("akib.swop@gmail.com")).toBeInTheDocument();
+    expect(screen.queryByText("Administrator")).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Settings" })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
+
+    const signOutButton = screen.getByRole("menuitem", { name: "Sign out" });
     expect(signOutButton).toHaveTextContent("Sign out");
 
     fireEvent.click(signOutButton);
@@ -97,7 +118,9 @@ describe("Sidebar AI Assistant launcher", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Sign out from mobile navigation" }),
+      screen.getByRole("button", {
+        name: "Open mobile account menu for Your account",
+      }),
     ).toBeInTheDocument();
   });
 

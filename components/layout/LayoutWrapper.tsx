@@ -9,7 +9,7 @@ import {
 } from "react";
 import AssistantPopup from "@/components/ai-assistant/AssistantPopup";
 import { AssistantLauncherProvider } from "@/components/ai-assistant/AssistantLauncherContext";
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar, { type SidebarUser } from "@/components/layout/Sidebar";
 import { completePendingAssistantHandoff } from "@/lib/aiAssistant/analytics";
 import {
   buildAssistantFieldHelpPrompt,
@@ -22,9 +22,11 @@ import { usePathname } from "next/navigation";
 export default function LayoutWrapper({
   children,
   assistantEnabled = false,
+  currentUser,
 }: {
   children: React.ReactNode;
   assistantEnabled?: boolean;
+  currentUser?: SidebarUser;
 }) {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantSessionId, setAssistantSessionId] = useState(0);
@@ -98,6 +100,7 @@ export default function LayoutWrapper({
         )}
       >
         <Sidebar
+          currentUser={currentUser}
           assistantOpen={assistantOpen}
           onOpenAssistant={
             assistantEnabled ? toggleAssistant : undefined
