@@ -53,7 +53,7 @@ export default function ScoreGapExplanation({ workspace, className }: { workspac
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 id="score-gap-title" className="text-sm font-extrabold text-navy">Why the scores differ</h3>
-          <p className="mt-1 text-sm leading-6 text-gray">Each area you chose to score, how much it counts towards the total, and how each vendor did in it. The areas that separate the two vendors most are listed first.</p>
+          <p className="mt-1 text-sm leading-6 text-gray">Each area you chose to score and how each vendor did in it. The areas that separate the two vendors most are listed first.</p>
         </div>
         {others.length > 1 && (
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Compare the leader with">
@@ -77,13 +77,11 @@ export default function ScoreGapExplanation({ workspace, className }: { workspac
       ) : (
         <>
           <p className="mt-3 text-sm font-bold leading-6 text-navy">{explanation.headline}{explanation.drivers ? ` ${explanation.drivers}` : ""}</p>
-          {explanation.origins && <p className="mt-1 text-sm leading-6 text-gray">{explanation.origins}</p>}
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[40rem] border-collapse text-sm">
+            <table className="w-full min-w-[32rem] border-collapse text-sm">
               <thead>
                 <tr className="text-left text-[11px] font-extrabold uppercase tracking-wide text-gray">
                   <th scope="col" className="pb-2 pr-4 font-extrabold">Area</th>
-                  <th scope="col" className="pb-2 pr-4 font-extrabold">Counts for</th>
                   <th scope="col" className="pb-2 pr-4 font-extrabold">{explanation.leader.vendorLabel}</th>
                   <th scope="col" className="pb-2 pr-4 font-extrabold">{explanation.rival.vendorLabel}</th>
                   <th scope="col" className="pb-2 text-right font-extrabold">Gap</th>
@@ -96,17 +94,7 @@ export default function ScoreGapExplanation({ workspace, className }: { workspac
                     <tr key={row.criterionId} className="border-t border-gray-border">
                       <th scope="row" className="py-3 pr-4 text-left align-top font-bold text-navy">
                         {row.name}
-                        {(row.leader.rationale || row.rival.rationale) && (
-                          <details className="mt-1 font-normal">
-                            <summary className="cursor-pointer text-xs font-bold text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">What is behind this</summary>
-                            <dl className="mt-1 space-y-1 text-xs leading-5 text-gray">
-                              {row.leader.rationale && <div><dt className="inline font-bold text-navy">{explanation.leader.vendorLabel}: </dt><dd className="inline">{row.leader.rationale}</dd></div>}
-                              {row.rival.rationale && <div><dt className="inline font-bold text-navy">{explanation.rival.vendorLabel}: </dt><dd className="inline">{row.rival.rationale}</dd></div>}
-                            </dl>
-                          </details>
-                        )}
                       </th>
-                      <td className="py-3 pr-4 align-top tabular-nums text-gray">{row.weight.toFixed(0)}% of total</td>
                       <ScoreCell value={row.leader.score} max={row.rubricMaximum} origin={row.leader.origin} showOrigin={showOrigins} leading={row.difference > 0.005} />
                       <ScoreCell value={row.rival.score} max={row.rubricMaximum} origin={row.rival.origin} showOrigin={showOrigins} leading={row.difference < -0.005} />
                       <td className={cn("py-3 text-right align-top tabular-nums", level ? "text-gray" : cn("font-extrabold", gapTone(row.difference)))}>
@@ -117,7 +105,6 @@ export default function ScoreGapExplanation({ workspace, className }: { workspac
                 })}
                 <tr className="border-t-2 border-gray-border font-extrabold text-navy">
                   <th scope="row" className="py-3 pr-4 text-left">Total</th>
-                  <td className="py-3 pr-4 tabular-nums text-gray">100%</td>
                   <td className="py-3 pr-4 tabular-nums">{explanation.leader.total.toFixed(2)} <span className="text-xs font-normal text-gray">out of 100</span></td>
                   <td className="py-3 pr-4 tabular-nums">{explanation.rival.total.toFixed(2)} <span className="text-xs font-normal text-gray">out of 100</span></td>
                   <td className={cn("py-3 text-right tabular-nums", gapTone(explanation.gap))}>{formatSigned(explanation.gap)}</td>
@@ -125,7 +112,7 @@ export default function ScoreGapExplanation({ workspace, className }: { workspac
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs leading-5 text-gray">Gap is the leader&rsquo;s points minus the other vendor&rsquo;s, after each area&rsquo;s share of the total is applied. A positive number favours the leader.</p>
+          <p className="mt-3 text-xs leading-5 text-gray">Gap is the leader&rsquo;s points minus the other vendor&rsquo;s, after each area&rsquo;s weight is applied. A positive number favours the leader.</p>
         </>
       )}
     </section>
