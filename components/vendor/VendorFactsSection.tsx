@@ -1,38 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, CircleAlert, MailPlus, Pencil, RefreshCw, ShieldAlert, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRight, CircleAlert, MailPlus, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { familyLabel, groupFacts } from "@/lib/vendorResponses/factPresentation";
+import { groupFacts } from "@/lib/vendorResponses/factPresentation";
 import SectionLoadError from "@/components/vendor/SectionLoadError";
 import { coverageFromRelationship, coveragePresentation } from "@/lib/proposalIntelligence/coverageVocabulary";
 import { isBlockingWarning } from "@/lib/proposalIntelligence/evaluationGate";
 import {
   createVendorIntelligenceAction,
   getLatestVendorIntelligenceAction,
-  reviewVendorIntelligenceAction,
   type ExtractedFact,
-  type HumanReview,
   type VendorIntelligenceResult,
 } from "@/app/actions/vendorIntelligence";
 
 const coverage = (relationship: string) => coveragePresentation[coverageFromRelationship(relationship)];
-const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 /** A percentage alone begs "compared to what"; say what it means for the reader. */
 const confidenceNote = (confidence: number) =>
   confidence < 0.7 ? `Needs a human check · the AI was ${Math.round(confidence * 100)}% sure` : null;
 type RequirementMapping = VendorIntelligenceResult["mappings"][number];
-type ReviewDecision = "accepted" | "rejected" | "corrected" | "escalated";
-type ReviewTarget = { type: "fact"; fact: ExtractedFact } | { type: "mapping"; mapping: RequirementMapping };
-/** Statuses a planner may set on a requirement; the backend's relationship enum. */
-const correctableRelationships: Array<{ value: string; needsEvidence: boolean }> = [
-  { value: "supports", needsEvidence: true },
-  { value: "partially_supports", needsEvidence: true },
-  { value: "context_only", needsEvidence: true },
-  { value: "contradicts", needsEvidence: true },
-  { value: "none", needsEvidence: false },
-];
-
 /** The value is the headline; money is shown as money. */
 const factValue = (fact: ExtractedFact) => {
   if (fact.valueKind === "money") {
@@ -53,110 +39,15 @@ const factValue = (fact: ExtractedFact) => {
   return fact.normalizedValue || "Unspecified value";
 };
 
-export const factCorrectionPayload = (fact: ExtractedFact, value: string): Record<string, unknown> | null => {
-  const corrected = value.trim();
-  if (!corrected) return null;
-  if (fact.valueKind === "money") {
-    const match = /^(?:([a-z]{3})\s+)?(-?\d+(?:\.\d+)?)$/i.exec(corrected.replaceAll(",", ""));
-    const currency = (match?.[1] ?? fact.currency ?? "").toUpperCase();
-    const amount = Number(match?.[2]);
-    return match && /^[A-Z]{3}$/.test(currency) && Number.isFinite(amount)
-      ? { normalizedValue: `${currency} ${amount}`, typedValue: { kind: "money", number: amount, currency } }
-      : null;
-  }
-  if (["number", "quantity"].includes(fact.valueKind)) {
-    const number = Number(corrected.replaceAll(",", ""));
-    return Number.isFinite(number)
-      ? { normalizedValue: String(number), typedValue: { kind: fact.valueKind, number } }
-      : null;
-  }
-  if (fact.valueKind === "boolean") {
-    const normalized = corrected.toLowerCase();
-    if (!["true", "false", "yes", "no"].includes(normalized)) return null;
-    const boolean = normalized === "true" || normalized === "yes";
-    return { normalizedValue: String(boolean), typedValue: { kind: "boolean", boolean } };
-  }
-  if (fact.valueKind === "list") {
-    const list = corrected.split(/[\n,]/).map((item) => item.trim()).filter(Boolean).slice(0, 30);
-    return list.length ? { normalizedValue: list.join(" | "), typedValue: { kind: "list", list } } : null;
-  }
-  return {
-    normalizedValue: corrected,
-    typedValue: { kind: fact.valueKind, text: corrected },
-  };
-};
-
-
-/**
- * Review is opt-in. Most findings need no action, so the four decisions sit
- * behind one link, and each one says what it does to scoring before it is
- * clicked. Corrections work for both facts (a new value) and requirements (a
- * new answer status backed by the already-cited evidence).
- */
-function ReviewControls({ target, review, saving, onReview }: {
-  target: ReviewTarget; review?: HumanReview; saving: boolean;
-  onReview: (decision: ReviewDecision, correctedPayload: Record<string, unknown> | null) => Promise<void>;
-}) {
-  const [open, setOpen] = useState(false);
-  const [correcting, setCorrecting] = useState(false);
-  const [value, setValue] = useState("");
-  const [relationship, setRelationship] = useState(target.type === "mapping" ? target.mapping.relationship : "none");
-  if (review) {
-    if (review.decision === "accepted" && review.note?.startsWith("Automatically acknowledged")) return null;
-    return <p className="mt-3 text-[11px] font-semibold text-slate-500">Your review: <span className="text-slate-800">{label(review.decision)}</span>{review.note ? ` · ${review.note}` : ""}</p>;
-  }
-  if (!open) {
-    return <button type="button" onClick={() => setOpen(true)} className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#0076b4] hover:underline"><Pencil size={11} aria-hidden="true"/>Disagree with this?</button>;
-  }
-  const isFact = target.type === "fact";
-  const evidenceIds = target.type === "mapping" ? target.mapping.evidence.map((item) => item.fragmentId) : [];
-  const chosen = correctableRelationships.find((item) => item.value === relationship);
-  const canSaveMapping = Boolean(chosen) && (!chosen?.needsEvidence || evidenceIds.length > 0);
-  const saveCorrection = () => {
-    if (isFact) return onReview("corrected", factCorrectionPayload(target.fact, value));
-    return onReview("corrected", canSaveMapping ? { relationship, fragmentIds: chosen?.needsEvidence ? evidenceIds : [] } : null);
-  };
-  const choices: Array<{ decision: ReviewDecision; name: string; explain: string; icon: React.ReactNode; className: string }> = [
-    { decision: "accepted", name: "Accept", icon: <Check size={12}/>, className: "border-emerald-200 text-emerald-700",
-      explain: isFact ? "Keep this value and mark it as checked by you." : "Keep this answer status and mark it as checked by you." },
-    { decision: "rejected", name: "Reject", icon: <X size={12}/>, className: "border-red-200 text-red-700",
-      explain: isFact ? "Remove this value. It will not be used in scoring." : "Treat this requirement as not answered by the vendor." },
-    { decision: "corrected", name: "Correct", icon: <Pencil size={12}/>, className: "border-slate-200 text-slate-700",
-      explain: isFact ? "Replace the value with the one you verified in the file." : "Change the answer status to the one you verified in the file." },
-    { decision: "escalated", name: "Escalate", icon: <ShieldAlert size={12}/>, className: "border-amber-200 text-amber-700",
-      explain: "Park it for someone else to decide. It stays out of scoring until resolved." },
-  ];
-  return <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-    <div className="flex items-start justify-between gap-2">
-      <p className="text-[11px] leading-4 text-slate-600">Your decision replaces the AI&rsquo;s finding when this response is scored.</p>
-      <button type="button" onClick={() => { setOpen(false); setCorrecting(false); }} className="text-[11px] font-bold text-slate-500 hover:text-slate-800">Close</button>
+function FactRow({ fact }: { fact: ExtractedFact }) {
+  // Rows sit under their group heading, so the family is not repeated here.
+  const note = [fact.explicitness === "derived" ? "Worked out from the file, not stated directly" : null, confidenceNote(fact.confidence)].filter(Boolean).join(" · ");
+  return <li className="flex flex-col gap-x-4 gap-y-0.5 px-4 py-3 sm:flex-row sm:items-baseline">
+    <p className="shrink-0 text-sm font-extrabold text-slate-900 sm:w-44">{factValue(fact)}</p>
+    <div className="min-w-0 flex-1">
+      <p className="text-xs leading-5 text-slate-700">{fact.statement}</p>
+      {note && <p className="text-[11px] text-slate-500">{note}</p>}
     </div>
-    <ul className="mt-2 space-y-1.5">{choices.map((choice) => <li key={choice.decision} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <button type="button" disabled={saving} onClick={() => { if (choice.decision === "corrected") setCorrecting((current) => !current); else void onReview(choice.decision, null); }} className={`inline-flex min-w-24 items-center gap-1 rounded-lg border bg-white px-2.5 py-1.5 text-[11px] font-bold disabled:opacity-50 ${choice.className}`}>{choice.icon}{choice.name}</button>
-      <span className="text-[11px] text-slate-600">{choice.explain}</span>
-    </li>)}</ul>
-    {correcting && (isFact
-      ? <div className="mt-3 flex gap-2">
-          <input aria-label="Corrected value" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Enter the verified corrected value" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs outline-none focus:border-[#008ad2]" />
-          <button type="button" disabled={saving || !value.trim()} onClick={() => void saveCorrection()} className="rounded-lg bg-[#087f69] px-3 text-xs font-bold text-white disabled:opacity-50">Save correction</button>
-        </div>
-      : <div className="mt-3 flex flex-wrap items-center gap-2">
-          <select aria-label="Corrected status" value={relationship} onChange={(event) => setRelationship(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs outline-none focus:border-[#008ad2]">
-            {correctableRelationships.map((item) => <option key={item.value} value={item.value} disabled={item.needsEvidence && evidenceIds.length === 0}>{coverage(item.value).label}{item.needsEvidence && evidenceIds.length === 0 ? " (needs cited evidence)" : ""}</option>)}
-          </select>
-          <button type="button" disabled={saving || !canSaveMapping} onClick={() => void saveCorrection()} className="rounded-lg bg-[#087f69] px-3 text-xs font-bold text-white disabled:opacity-50">Save correction</button>
-          <span className="text-[11px] text-slate-500">Uses the evidence already cited for this requirement.</span>
-        </div>)}
-  </div>;
-}
-
-function FactCard({ fact, review, saving, onReview }: { fact: ExtractedFact; review?: HumanReview; saving: boolean; onReview: (decision: ReviewDecision, payload: Record<string, unknown> | null) => Promise<void> }) {
-  const note = confidenceNote(fact.confidence);
-  return <li className="rounded-xl border border-slate-200 bg-white p-4">
-    <p className="text-base font-extrabold text-slate-900">{factValue(fact)}</p>
-    <p className="mt-0.5 text-xs leading-5 text-slate-600">{fact.statement}</p>
-    <p className="mt-1 text-[11px] text-slate-500">{[familyLabel(fact.family), fact.explicitness === "derived" ? "Worked out from the file, not stated directly" : null, note].filter(Boolean).join(" · ")}</p>
-    <ReviewControls target={{ type: "fact", fact }} review={review} saving={saving} onReview={onReview}/>
   </li>;
 }
 
@@ -164,14 +55,11 @@ function FactCard({ fact, review, saving, onReview }: { fact: ExtractedFact; rev
  * Facts that disagree with each other are shown together, once, instead of as
  * unrelated amber cards, so the reader sees that they are the same item.
  */
-function FactList({ facts, latestReviews, savingTarget, onReview }: {
-  facts: ExtractedFact[]; latestReviews: Map<string, HumanReview>; savingTarget?: string;
-  onReview: (factId: string, decision: ReviewDecision, payload: Record<string, unknown> | null) => Promise<void>;
-}) {
+function FactList({ facts }: { facts: ExtractedFact[] }) {
   const groups = new Map<string, ExtractedFact[]>();
   facts.forEach((fact) => { if (fact.contradictionGroup) groups.set(fact.contradictionGroup, [...(groups.get(fact.contradictionGroup) ?? []), fact]); });
   const rendered = new Set<string>();
-  const card = (fact: ExtractedFact) => <FactCard key={fact.factId} fact={fact} review={latestReviews.get(`fact:${fact.factId}`)} saving={savingTarget === `fact:${fact.factId}`} onReview={(decision, payload) => onReview(fact.factId, decision, payload)}/>;
+  const card = (fact: ExtractedFact) => <FactRow key={fact.factId} fact={fact}/>;
   if (facts.length === 0) return <p className="mt-3 text-xs text-slate-500">No values were extracted from this response.</p>;
   const cards = (items: ExtractedFact[]) => items.flatMap((fact) => {
     const group = fact.contradictionGroup;
@@ -179,16 +67,15 @@ function FactList({ facts, latestReviews, savingTarget, onReview }: {
     if (rendered.has(group)) return [];
     rendered.add(group);
     const members = groups.get(group)!;
-    return [<li key={`group-${group}`} className="rounded-xl border border-amber-300 bg-amber-50/40 p-3">
+    return [<li key={`group-${group}`} className="bg-amber-50/40 px-4 py-3">
       <p className="flex items-center gap-2 text-xs font-bold text-amber-900"><CircleAlert size={14} aria-hidden="true"/>Conflicting values</p>
-      <p className="mt-0.5 text-xs leading-5 text-amber-900">The response gives {members.length} different answers for the same item. Accept the right one and reject the others.</p>
-      <ul className="mt-2 space-y-2">{members.map(card)}</ul>
+      <p className="mt-0.5 text-xs leading-5 text-amber-900">The response gives {members.length} different answers for the same item.</p>
+      <ul className="mt-2 divide-y divide-amber-100 rounded-lg border border-amber-200 bg-white">{members.map(card)}</ul>
     </li>];
   });
   // Grouped under plain headings, the figures a buyer compares first; form
   // metadata and identifiers sit in a closed section at the end.
-  const confirmed = new Set([...latestReviews.entries()].filter(([key, review]) => key.startsWith("fact:") && ["accepted", "corrected"].includes(review.decision)).map(([key]) => key.slice("fact:".length)));
-  const { groups: sections, systemEntries } = groupFacts(facts, confirmed);
+  const { groups: sections, systemEntries } = groupFacts(facts);
   const PREVIEW = 4;
   return <div className="mt-3 space-y-5">
     <p className="text-[11px] text-slate-500">{facts.length - systemEntries.length} values in {sections.length} {sections.length === 1 ? "group" : "groups"}{systemEntries.length ? ` · ${systemEntries.length} system ${systemEntries.length === 1 ? "entry" : "entries"} set aside` : ""}</p>
@@ -197,11 +84,11 @@ function FactList({ facts, latestReviews, savingTarget, onReview }: {
       const rest = section.facts.slice(PREVIEW);
       return <section key={section.family} aria-labelledby={`facts-${section.family}`}>
         <h4 id={`facts-${section.family}`} className="flex items-baseline gap-2 text-xs font-extrabold uppercase tracking-wide text-slate-600">{section.label}<span className="font-mono text-[10px] font-bold normal-case tracking-normal text-slate-400">{section.facts.length}</span></h4>
-        <ul className="mt-2 space-y-3">{cards(shown)}</ul>
-        {rest.length > 0 && <details className="mt-2"><summary className="cursor-pointer text-[11px] font-bold text-[#0076b4]">Show {rest.length} more in {section.label.toLowerCase()}</summary><ul className="mt-2 space-y-3">{cards(rest)}</ul></details>}
+        <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{cards(shown)}</ul>
+        {rest.length > 0 && <details className="mt-2"><summary className="cursor-pointer text-[11px] font-bold text-[#0076b4]">Show {rest.length} more in {section.label.toLowerCase()}</summary><ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{cards(rest)}</ul></details>}
       </section>;
     })}
-    {systemEntries.length > 0 && <details className="rounded-xl border border-slate-200 bg-slate-50 p-3"><summary className="cursor-pointer text-xs font-bold text-slate-600">{systemEntries.length} system {systemEntries.length === 1 ? "entry" : "entries"} set aside</summary><p className="mt-1 text-[11px] leading-4 text-slate-500">Form details, contact addresses and reference numbers RFPilot read off the files. They are not compared across vendors.</p><ul className="mt-2 space-y-3">{cards(systemEntries)}</ul></details>}
+    {systemEntries.length > 0 && <details className="rounded-xl border border-slate-200 bg-slate-50 p-3"><summary className="cursor-pointer text-xs font-bold text-slate-600">{systemEntries.length} system {systemEntries.length === 1 ? "entry" : "entries"} set aside</summary><p className="mt-1 text-[11px] leading-4 text-slate-500">Form details, contact addresses and reference numbers RFPilot read off the files. They are not compared across vendors.</p><ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{cards(systemEntries)}</ul></details>}
   </div>;
 }
 
@@ -233,12 +120,7 @@ const columns: Array<{ key: CoverageColumn; title: string; headerClassName: stri
  * where a reader has to decide something. A missing answer needs no
  * explanation beyond its column.
  */
-function MappingList({ mappings, latestReviews, savingTarget, onReview }: {
-  mappings: VendorIntelligenceResult["mappings"];
-  latestReviews: Map<string, HumanReview>;
-  savingTarget?: string;
-  onReview: (mappingId: string, decision: ReviewDecision, payload: Record<string, unknown> | null) => Promise<void>;
-}) {
+function MappingList({ mappings }: { mappings: VendorIntelligenceResult["mappings"] }) {
   if (mappings.length === 0) return <p className="mt-3 text-xs text-slate-500">No requirements mapped.</p>;
   const mandatoryFirst = (left: RequirementMapping, right: RequirementMapping) => Number(right.mandatory) - Number(left.mandatory);
   return <div className="mt-3 grid gap-3 md:grid-cols-3" data-testid="requirements-table">
@@ -252,7 +134,6 @@ function MappingList({ mappings, latestReviews, savingTarget, onReview }: {
         {rows.length === 0
           ? <p className="px-3 py-4 text-xs text-slate-400">{column.empty}</p>
           : <ul className="divide-y divide-slate-100">{rows.map((mapping) => {
-            const key = `mapping:${mapping.mappingId}`;
             const level = coverageFromRelationship(mapping.relationship);
             const presentation = coverage(mapping.relationship);
             const showChip = level !== column.key;
@@ -264,7 +145,6 @@ function MappingList({ mappings, latestReviews, savingTarget, onReview }: {
                 {meta && <span className="text-[10px] uppercase tracking-wide text-slate-400">{meta}</span>}
               </div>}
               {!["answered", "not_applicable", "not_answered"].includes(level) && <p className="mt-1 text-xs leading-5 text-slate-600">{presentation.description}</p>}
-              <ReviewControls target={{ type: "mapping", mapping }} review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, payload) => onReview(mapping.mappingId, decision, payload)}/>
             </li>;
           })}</ul>}
       </section>;
@@ -343,7 +223,6 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
   const [result, setResult] = useState<VendorIntelligenceResult>();
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
-  const [savingTarget, setSavingTarget] = useState<string>();
   const [error, setError] = useState<string>();
   const [tab, setTab] = useState<"mappings" | "facts">("mappings");
   const cancelled = useRef(false);
@@ -365,35 +244,11 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
   useEffect(() => { if (!result || !["queued", "running"].includes(result.run.status)) return; const timer = window.setTimeout(() => void load(), 2000); return () => window.clearTimeout(timer); }, [result, load]);
   useEffect(() => { onIntelligenceRef.current?.({ loaded: !loading, result }); }, [loading, result]);
 
-  const latestReviews = useMemo(() => {
-    const reviews = new Map<string, HumanReview>();
-    result?.reviews.forEach((review) => reviews.set(`${review.targetType}:${review.targetId}`, review));
-    return reviews;
-  }, [result?.reviews]);
-
   const start = async () => {
     setStarting(true); setError(undefined);
     const response = await createVendorIntelligenceAction(proposalId, submissionId, versionId, crypto.randomUUID());
     if (cancelled.current) return;
     setStarting(false);
-    if (!response.success) { setError(response.message); return; }
-    await load();
-  };
-  const review = async (targetType: "fact" | "mapping", targetId: string, decision: ReviewDecision, correctedPayload?: Record<string, unknown> | null) => {
-    if (!result) return;
-    if (decision === "corrected" && !correctedPayload) {
-      setError(targetType === "fact"
-        ? "The corrected value does not match this fact’s type. Use a valid number, currency amount, boolean, or text value."
-        : "Choose an answer status that the cited evidence can support.");
-      return;
-    }
-    setSavingTarget(`${targetType}:${targetId}`); setError(undefined);
-    const response = await reviewVendorIntelligenceAction(proposalId, submissionId, versionId, result.run.runId, {
-      targetType, targetId, decision, reasonCode: decision === "corrected" ? "human_verified_correction" : "human_review",
-      note: decision === "corrected" ? "Value corrected by the proposal owner." : "", correctedPayload: correctedPayload ?? null,
-    }, crypto.randomUUID());
-    if (cancelled.current) return;
-    setSavingTarget(undefined);
     if (!response.success) { setError(response.message); return; }
     await load();
   };
@@ -427,8 +282,8 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
         ? `Each thing you asked for, and whether ${name} covered it. Sorted into what they answered, partly answered, and did not answer.`
         : `The numbers and dates ${name} gave, such as the total cost, staffing, and schedule. These are what gets compared across vendors.`}</p>
       {tab === "mappings"
-        ? <MappingList mappings={result.mappings} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(mappingId, decision, payload) => review("mapping", mappingId, decision, payload)}/>
-        : <FactList facts={result.facts} latestReviews={latestReviews} savingTarget={savingTarget} onReview={(factId, decision, payload) => review("fact", factId, decision, payload)}/>}
+        ? <MappingList mappings={result.mappings}/>
+        : <FactList facts={result.facts}/>}
       <WhatNext blocked={blocked} mappings={result.mappings} vendorName={vendorName} vendorEmail={vendorEmail} proposalId={proposalId} proposalTitle={proposalTitle} returnTo={returnTo}/>
     </>}
   </section>;
