@@ -241,8 +241,7 @@ export default function EmailDashboard() {
                   type="button"
                   onClick={() => handleDelete(campaign._id)}
                   disabled={isDeleting}
-                  className="flex h-[76px] w-[76px] flex-col items-center justify-center rounded-xl border border-[#008ad2]/30 text-center text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#0ea5e9]/20 disabled:cursor-not-allowed disabled:opacity-60"
-                  style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+                  className="flex h-[76px] w-[76px] flex-col items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-center text-rose-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-100 hover:shadow-md hover:shadow-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Trash2 size={16} aria-hidden="true" />
                   <span className="mt-1 text-[8px] font-bold uppercase leading-tight tracking-[0.12em]">
