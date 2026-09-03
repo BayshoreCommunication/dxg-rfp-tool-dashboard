@@ -82,8 +82,9 @@ test("explains when a historical registry is stale because the generation policy
 
 test("renders traceable requirements, balanced weights, and blocks premature approval", async () => {
   render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={registry} initialSets={[]} />);
-  expect(screen.getByText("Technical Approach")).toBeInTheDocument();
-  expect(screen.getByText("Balanced to 100%")).toBeInTheDocument();
+  // The "Scoring categories" and "Review summary" cards are no longer shown.
+  expect(screen.queryByText("Scoring categories")).not.toBeInTheDocument();
+  expect(screen.queryByText("Review summary")).not.toBeInTheDocument();
   expect(screen.getByText("Audio system required")).toBeInTheDocument();
   expect(screen.getByText(/Proposal · roomByRoom › 0 › audioSystemRequired/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /approve and freeze/i })).not.toBeInTheDocument();
@@ -123,13 +124,6 @@ test("does not display old persisted standalone recording requirements", async (
   expect(screen.queryByText("RETIRED_RECORDING_REQUIREMENT")).not.toBeInTheDocument();
   expect(screen.queryByText("RETIRED_RECORDING_VALUE")).not.toBeInTheDocument();
   expect(screen.queryByRole("option", { name: "Recording" })).not.toBeInTheDocument();
-});
-
-test("never calls an invalid confirmed matrix balanced", () => {
-  const invalid = { ...registry, matrix: { ...registry.matrix!, totalWeight: 120, weightsConfirmed: true } };
-  render(<RequirementRegistryWorkspace proposalId="abc123abc123abc123abc123" initialRegistry={invalid} initialSets={[]} />);
-  expect(screen.getByText("Needs balancing")).toBeInTheDocument();
-  expect(screen.queryByText("Balanced to 100%")).not.toBeInTheDocument();
 });
 
 test("prepares the registry with one explicit action", async () => {
