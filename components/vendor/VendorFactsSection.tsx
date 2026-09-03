@@ -139,7 +139,7 @@ function MappingList({ mappings }: { mappings: VendorIntelligenceResult["mapping
             const showChip = level !== column.key;
             const meta = [mapping.mandatory ? "Mandatory" : null, confidenceNote(mapping.confidence)].filter(Boolean).join(" · ");
             return <li key={mapping.mappingId} className="px-3 py-3">
-              <p className="text-base font-bold leading-6 text-slate-800">{mapping.requirementTitle}</p>
+              <p className="text-sm font-bold leading-5 text-slate-800">{mapping.requirementTitle}</p>
               {(meta || showChip) && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                 {showChip && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${presentation.className}`} title={presentation.description}>{presentation.label}</span>}
                 {meta && <span className="text-[10px] uppercase tracking-wide text-slate-400">{meta}</span>}
