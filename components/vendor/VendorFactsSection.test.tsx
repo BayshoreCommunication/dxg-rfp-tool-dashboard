@@ -115,6 +115,7 @@ test("sorts requirements into answered, partly answered and not answered columns
   expect(within(partly).getByText("Conflicting answers")).toBeInTheDocument();
   expect(screen.queryByText(/The vendor answered this requirement and we can show you where/)).not.toBeInTheDocument();
   expect(screen.getByText(/Read the quotes and decide whether the rest matters/)).toBeInTheDocument();
+  expect(within(missing).queryByText(/Nothing in this response answers/)).not.toBeInTheDocument();
 });
 
 test("lets a planner correct a requirement's answer status using the cited evidence", async () => {
