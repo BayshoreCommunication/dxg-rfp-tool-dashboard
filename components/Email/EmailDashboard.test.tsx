@@ -42,6 +42,10 @@ const makeCampaign = (overrides = {}) => ({
   vendorResponseClickCount: 2,
   vendorResponseCount: 1,
   unreadResponseCount: 1,
+  recipients: [
+    { email: 'first.vendor@example.com', status: 'sent' },
+    { email: 'second.vendor@example.com', status: 'sent' },
+  ],
   createdAt: '2026-06-01T12:00:00.000Z',
   ...overrides,
 })
@@ -124,6 +128,29 @@ describe('EmailDashboard — campaign cards', () => {
     await waitFor(() =>
       expect(screen.getByText('Proposal Email')).toBeInTheDocument(), LOAD_TIMEOUT
     )
+  })
+
+  it('shows the recipient email addresses on each campaign card', async () => {
+    render(<EmailDashboard />)
+    await waitFor(() =>
+      expect(screen.getByText('first.vendor@example.com')).toBeInTheDocument(), LOAD_TIMEOUT
+    )
+    expect(screen.getByText('second.vendor@example.com')).toBeInTheDocument()
+  })
+
+  it('keeps longer recipient lists compact behind a more disclosure', async () => {
+    mockGetCampaigns.mockResolvedValue(successPage([makeCampaign({
+      recipients: [
+        { email: 'one@example.com', status: 'sent' },
+        { email: 'two@example.com', status: 'sent' },
+        { email: 'three@example.com', status: 'sent' },
+        { email: 'four@example.com', status: 'sent' },
+        { email: 'failed@example.com', status: 'failed' },
+      ],
+    })]))
+    render(<EmailDashboard />)
+    await waitFor(() => expect(screen.getByText('+2 more')).toBeInTheDocument(), LOAD_TIMEOUT)
+    expect(screen.getByTitle('Delivery failed: failed@example.com')).toBeInTheDocument()
   })
 })
 
