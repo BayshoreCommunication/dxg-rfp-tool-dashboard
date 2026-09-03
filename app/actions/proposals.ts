@@ -305,6 +305,54 @@ export async function getProposalByIdAction(id: string): Promise<ApiResponse> {
   }
 }
 
+export type ProposalViewAccessGrantResult = {
+  success: boolean;
+  message?: string;
+  token?: string;
+  expiresAt?: string;
+};
+
+/** Creates a fresh, read-only grant for a copied public proposal link. */
+export async function createProposalViewAccessGrantAction(
+  proposalId: string,
+): Promise<ProposalViewAccessGrantResult> {
+  try {
+    const res = await authenticatedBackendFetch(`${API_URL}/api/public-access`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        resourceId: proposalId,
+        purpose: "proposal:view",
+        expiresInHours: 720,
+      }),
+      cache: "no-store",
+    });
+    const data = await res.json();
+    const token = data?.grant?.token;
+    const expiresAt = data?.grant?.expiresAt;
+
+    if (!res.ok || typeof token !== "string" || !token) {
+      return {
+        success: false,
+        message: data?.message || "Could not create a secure proposal link",
+      };
+    }
+
+    return {
+      success: true,
+      token,
+      ...(typeof expiresAt === "string" ? { expiresAt } : {}),
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Could not create a secure proposal link",
+    };
+  }
+}
+
 /** Create a copy of an existing proposal with optional field overrides. */
 export async function copyProposalAction(
   sourceId: string,
