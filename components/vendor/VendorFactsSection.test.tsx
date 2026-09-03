@@ -41,7 +41,7 @@ test("renders requirement relationships with inspectable source locations", asyn
 test("lists stated values as rows, keeps conflicting values together, and offers no review controls", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide a complete staffing plan");
-  fireEvent.click(screen.getByRole("tab", { name: "Stated values" }));
+  fireEvent.click(screen.getByRole("tab", { name: "Numbers and dates they gave" }));
   expect(screen.getByText("Conflicting values")).toBeInTheDocument();
   expect(screen.getByText(/gives 2 different answers for the same item/)).toBeInTheDocument();
   expect(screen.getByText("$120,000")).toBeInTheDocument();
@@ -96,7 +96,7 @@ test("sorts requirements into answered, partly answered and not answered columns
 test("opens on the Requirements tab without asking the reader to review anything", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   await screen.findByText("Provide a complete staffing plan");
-  expect(screen.getByRole("tab", { name: "Requirements" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByRole("tab", { name: "What they answered" })).toHaveAttribute("aria-selected", "true");
   expect(screen.getByText(/Each thing you asked for/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Disagree with this?" })).not.toBeInTheDocument();
 });
