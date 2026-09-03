@@ -131,7 +131,6 @@ function ClarificationCenter({ proposalId, runId, clarifications, onChanged }: {
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-sky-100 px-2.5 py-1 text-[10px] font-extrabold text-sky-800">Set {current.setVersion}</span>
             <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${current.status === "draft" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-800"}`}>{label(current.status)}</span>
-            <span className="font-mono text-[10px] text-slate-400">{current.contentChecksum.slice(0, 12)}…</span>
           </div>
           <ul className="mt-3 grid gap-3 lg:grid-cols-2">
             {current.questions.map((question) =>

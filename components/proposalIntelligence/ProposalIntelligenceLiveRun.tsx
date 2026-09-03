@@ -1,6 +1,8 @@
 "use client";
 
 import type { ComparisonView } from "@/app/actions/comparisonOrchestration";
+import { describeRunStatus, describeStage } from "@/lib/proposalIntelligence/plainLanguage";
+import { describeFactType, isSystemEntry } from "@/lib/vendorResponses/factPresentation";
 import { getDurableJob } from "@/app/actions/durableJobs";
 import {
   createEvidenceExtractionAction,
@@ -57,6 +59,15 @@ const terminalJobs = new Set(["succeeded", "failed", "cancelled", "dead_letter"]
 const MAX_JOB_POLL_FAILURES = 5;
 const terminalExtraction = new Set(["ready", "partial", "unreadable", "failed"]);
 const readableExtraction = new Set(["ready", "partial"]);
+/**
+ * "50 of 60 requirements answered" read like one vendor failing a fifth of the
+ * list; it was three vendors' answers to twenty requirements added together.
+ * Say what the numbers are made of.
+ */
+export const answersFoundSummary = (counts: { located: number; requirements: number; analysedVendors: number; requirementsPerVendor: number }) =>
+  counts.analysedVendors > 1
+    ? `${counts.located} of ${counts.requirements} answers found across ${counts.analysedVendors} vendors (${counts.requirementsPerVendor} requirements each)`
+    : `${counts.located} of ${counts.requirements} requirements answered with quoted evidence`;
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const locatorLabel = (locator: Record<string, string | number>) =>
   Object.entries(locator).map(([key, value]) => `${key.replaceAll("_", " ")} ${value}`).join(" · ") || "Location recorded";
@@ -350,6 +361,8 @@ export default function ProposalIntelligenceLiveRun({
       readableSources: runs.filter((run) => run.status === "succeeded" || run.status === "partial").length,
       pages: runs.reduce((total, run) => total + run.pageCount, 0),
       requirements: results.reduce((total, result) => total + result.run.requirementCount, 0),
+      analysedVendors: results.length,
+      requirementsPerVendor: results[0]?.run.requirementCount ?? 0,
       located: mappings.filter((mapping) => mapping.relationship !== "none" && mapping.evidence.length > 0).length,
       facts: results.reduce((total, result) => total + result.run.factCount, 0),
       contradictions: results.reduce((total, result) => total + result.run.contradictionCount, 0),
@@ -376,7 +389,7 @@ export default function ProposalIntelligenceLiveRun({
       title: "Finding answers to your requirements",
       status: phaseStatus({ active: intelligenceActive, complete: intelligenceDone && counts.failed === 0, partial: intelligenceDone && counts.failed > 0, queued: !extractionDone && runActive }),
       summary: counts.requirements
-        ? `${counts.located} of ${counts.requirements} requirements answered with quoted evidence`
+        ? answersFoundSummary(counts)
         : "Starts once a response has been read",
     },
     {
@@ -428,7 +441,8 @@ export default function ProposalIntelligenceLiveRun({
     : phases.filter((phase) => ["complete", "partial", "attention"].includes(phase.status)).length / phases.length * 100;
   const facts = participants.flatMap((participant) => (participant.intelligence?.facts ?? []).flatMap((fact) => {
     const citation = fact.citations.find((item) => item.role === "supports");
-    return citation && fact.normalizedValue ? [{ participant, fact, citation }] : [];
+    // Form metadata (IP addresses, order numbers, timestamps) is not a key fact.
+    return citation && fact.normalizedValue && !isSystemEntry(fact) ? [{ participant, fact, citation }] : [];
   }));
   const completedTimes = participants.flatMap((participant) => [
     ...participant.extraction.runs.flatMap((run) => run.completedAt ? [Date.parse(run.completedAt)] : []),
@@ -452,7 +466,7 @@ export default function ProposalIntelligenceLiveRun({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <IntelligenceStatusChip status={overallStatus} />
+          <IntelligenceStatusChip status={overallStatus} label={overallStatus === "attention" && !live ? (comparisonFinished ? "Done · out of date" : "Done · check the flags") : undefined} />
           {(live || completedTimes.length > 0 || comparison?.run.completedAt) && <span className={cn(intelligenceSurfaceClasses.chip, "gap-1.5 border-gray-border bg-gray-panel font-mono text-navy")}>
             <Clock3 size={14} aria-hidden="true" /> {live
               ? elapsedLabel(clock - startedAt)
@@ -529,11 +543,11 @@ export default function ProposalIntelligenceLiveRun({
                     ))}
                     {Object.values(jobs).filter((item) => phase.key !== "scoring" && item.kind === "intelligence").map((item) => (
                       <span key={item.jobId} className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-gray-panel font-mono text-gray")}>
-                        {item.job ? label(item.job.progressStage ?? item.job.type) : "Loading job"} · {item.job?.progress ?? 0}% · {item.job ? label(item.job.status) : "Queued"}
+                        {item.job ? describeStage(item.job.progressStage ?? item.job.type) : "Loading job"} · {item.job?.progress ?? 0}% · {item.job ? describeRunStatus(item.job.status) : "Queued"}
                       </span>
                     ))}
-                    {phase.key === "scoring" && comparison?.jobs.map((job) => <span key={job.key} className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-gray-panel font-mono text-gray")}>{label(job.type)} · {label(job.status)}</span>)}
-                    {phase.key === "scoring" && !comparison?.jobs.length && <span className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-gray-panel text-gray")}>Human scorecards · {comparison ? label(comparison.run.status) : "Not started"}</span>}
+                    {phase.key === "scoring" && comparison?.jobs.map((job) => <span key={job.key} className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-gray-panel font-mono text-gray")}>{describeStage(job.type)} · {describeRunStatus(job.status)}</span>)}
+                    {phase.key === "scoring" && !comparison?.jobs.length && <span className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-gray-panel text-gray")}>Human scorecards · {comparison ? describeRunStatus(comparison.run.status) : "Not started"}</span>}
                     {phase.key !== "scoring" && participants.every((participant) => !participant.intelligence) && Object.values(jobs).filter((item) => item.kind === "intelligence").length === 0 && <span className="text-xs text-gray">This step has not started yet.</span>}
                   </div>
                 )}
@@ -547,7 +561,7 @@ export default function ProposalIntelligenceLiveRun({
           <details className={cn(intelligenceSurfaceClasses.block, "mt-5")}>
             <summary className="cursor-pointer list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
               <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-sm font-extrabold text-navy">Analysis complete — {counts.located} of {counts.requirements} requirements answered with quoted evidence · {counts.facts} facts</span>
+                <span className="text-sm font-extrabold text-navy">Analysis complete — {answersFoundSummary(counts)} · {counts.facts} facts</span>
                 <span className="text-xs font-bold text-brand-dark">View analysis details</span>
               </span>
             </summary>
@@ -592,7 +606,7 @@ export default function ProposalIntelligenceLiveRun({
           <div className="mt-4 grid gap-3 border-t border-gray-border pt-4 sm:grid-cols-2 xl:grid-cols-3">
             {facts.map(({ participant, fact, citation }) => (
               <div key={`${participant.responseId}-${fact.factId}`} className={cn(intelligenceSurfaceClasses.block, "bg-gray-panel")}>
-                <p className="text-xs font-bold text-gray">{participant.vendorLabel} · {label(fact.factType)}</p>
+                <p className="text-xs font-bold text-gray">{participant.vendorLabel} · {describeFactType(fact.factType)}</p>
                 <p className="mt-2 break-words font-mono text-sm font-extrabold text-navy">{fact.normalizedValue}</p>
                 <details className="mt-3 text-xs text-gray"><summary className="cursor-pointer font-bold text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">View source</summary><div className="mt-2 border-l-2 border-brand pl-3"><p className="font-mono font-semibold text-navy">{citation.sourceLabel}</p><p className="mt-1 font-mono">{locatorLabel(citation.locator)}</p><p className="mt-2 line-clamp-5 leading-5">{citation.content}</p></div></details>
               </div>

@@ -63,7 +63,7 @@ export const evaluationGateMessage = (gate: EvaluationGate): string => {
     case "coverage_blocked":
       return "Scoring is blocked because a file in this response could not be made available to the analysis. Retry the analysis above, or ask the vendor to resend the file.";
     case "ready":
-      return "No evaluation has been started for this version. Start one to score it against your approved criteria.";
+      return "Nothing is scored yet. Scoring is optional: RFPilot's starting scores stand in until you score this response yourself.";
   }
 };
 
