@@ -64,10 +64,15 @@ const readableExtraction = new Set(["ready", "partial"]);
  * list; it was three vendors' answers to twenty requirements added together.
  * Say what the numbers are made of.
  */
-export const answersFoundSummary = (counts: { located: number; requirements: number; analysedVendors: number; requirementsPerVendor: number }) =>
-  counts.analysedVendors > 1
-    ? `${counts.located} of ${counts.requirements} answers found across ${counts.analysedVendors} vendors (${counts.requirementsPerVendor} requirements each)`
-    : `${counts.located} of ${counts.requirements} requirements answered with quoted evidence`;
+export const answersFoundSummary = (counts: { located: number; requirements: number; analysedVendors: number; requirementsPerVendor: number[] }) => {
+  if (counts.analysedVendors <= 1) return `${counts.located} of ${counts.requirements} requirements answered with quoted evidence`;
+  const distinct = [...new Set(counts.requirementsPerVendor)];
+  // A vendor still mapped to an older requirements list has a different count; say so rather than claim "each".
+  const each = distinct.length === 1
+    ? `${distinct[0]} requirements each`
+    : `${Math.min(...distinct)} to ${Math.max(...distinct)} requirements each, one vendor is on an older list`;
+  return `${counts.located} of ${counts.requirements} answers found across ${counts.analysedVendors} vendors (${each})`;
+};
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const locatorLabel = (locator: Record<string, string | number>) =>
   Object.entries(locator).map(([key, value]) => `${key.replaceAll("_", " ")} ${value}`).join(" · ") || "Location recorded";
@@ -362,7 +367,7 @@ export default function ProposalIntelligenceLiveRun({
       pages: runs.reduce((total, run) => total + run.pageCount, 0),
       requirements: results.reduce((total, result) => total + result.run.requirementCount, 0),
       analysedVendors: results.length,
-      requirementsPerVendor: results[0]?.run.requirementCount ?? 0,
+      requirementsPerVendor: results.map((result) => result.run.requirementCount),
       located: mappings.filter((mapping) => mapping.relationship !== "none" && mapping.evidence.length > 0).length,
       facts: results.reduce((total, result) => total + result.run.factCount, 0),
       contradictions: results.reduce((total, result) => total + result.run.contradictionCount, 0),
