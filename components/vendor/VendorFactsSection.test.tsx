@@ -176,7 +176,7 @@ test("opens with a plain-language purpose, a verdict sentence, and next steps", 
   expect(href).toContain("vendor=Northstar AV");
   expect(href).toContain("to=bids@northstar.example");
   expect(href).toContain("- Provide closed captions");
-  expect(screen.getByRole("link", { name: /Score this response/ })).toHaveAttribute("href", "#evaluation-title");
+  expect(screen.queryByRole("link", { name: /Score this response/ })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Compare all vendors/ })).toHaveAttribute("href", "/proposals/proposal/intelligence");
 });
 

@@ -18,14 +18,9 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
-import VendorEvaluationSection from "./VendorEvaluationSection";
+import { useMemo, useState } from "react";
 import VendorExtractionSection from "./VendorExtractionSection";
 import VendorFactsSection from "./VendorFactsSection";
-import {
-  evaluationGateFromIntelligence,
-  type EvaluationGate,
-} from "@/lib/proposalIntelligence/evaluationGate";
 import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 
 const reasonLabels: Record<VendorSubmissionVersion["reason"], string> = {
@@ -73,22 +68,7 @@ export default function VendorResponseDetailWorkspace({
   const vendorName = selectedVersion?.vendorName ?? detail.response.vendorName;
   const returnTo = `/vendor-responses/${detail.response._id}`;
   const proposalResponsesHref = `/vendor-responses/proposals/${encodeURIComponent(detail.response.proposalId)}`;
-  // Scoring readiness is derived from the intelligence run the facts section
-  // loads, keyed by version so switching versions never shows a stale gate.
-  const [gates, setGates] = useState<Record<string, EvaluationGate>>({});
-  const gateFor = (versionId: string): EvaluationGate => gates[versionId] ?? { state: "unknown" };
   const singleVersion = detail.versions.length === 1;
-  const handleIntelligence = useCallback(
-    (versionId: string, state: Parameters<typeof evaluationGateFromIntelligence>[0]) => {
-      const next = evaluationGateFromIntelligence(state);
-      setGates((current) =>
-        JSON.stringify(current[versionId]) === JSON.stringify(next)
-          ? current
-          : { ...current, [versionId]: next },
-      );
-    },
-    [],
-  );
 
   return (
     <section
@@ -279,10 +259,10 @@ export default function VendorResponseDetailWorkspace({
                     id="intelligence-heading"
                     className="text-base font-extrabold text-slate-900"
                   >
-                    Analysis and scoring
+                    Analysis
                   </h3>
                   <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
-                    RFPilot read {singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which files were readable, which requirements the vendor answered, and the values it stated. Your scoring sits at the end. Opening anything here never reruns the analysis or changes what the vendor sent.
+                    RFPilot read {singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which files were readable, which requirements the vendor answered, and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.
                   </p>
                 </div>
                 {detail.submission && (
@@ -301,14 +281,6 @@ export default function VendorResponseDetailWorkspace({
                       submissionId={detail.submission.submissionId}
                       versionId={selectedVersion.versionId}
                       returnTo={`/vendor-responses/${encodeURIComponent(detail.response._id)}`}
-                      onIntelligence={(state) => handleIntelligence(selectedVersion.versionId, state)}
-                    />
-                    <VendorEvaluationSection
-                      key={`evaluation-${selectedVersion.versionId}`}
-                      proposalId={detail.response.proposalId}
-                      submissionId={detail.submission.submissionId}
-                      versionId={selectedVersion.versionId}
-                      gate={gateFor(selectedVersion.versionId)}
                     />
                   </div>
                 )}

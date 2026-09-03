@@ -358,14 +358,13 @@ function WhatNext({ blocked, mappings, vendorName, vendorEmail, proposalId, prop
   return <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label="What to do next">
     <p className="text-xs font-bold uppercase tracking-wide text-slate-500">What to do next</p>
     {blocked
-      ? <p className="mt-1 text-sm text-slate-700">Resolve the unavailable file above first. Once the analysis can use it, you can score {name} and include them in the vendor comparison.</p>
+      ? <p className="mt-1 text-sm text-slate-700">Resolve the unavailable file above first. Once the analysis can use it, {name} can be included in the vendor comparison.</p>
       : <>
         <p className="mt-1 text-sm text-slate-700">{gaps.length > 0
-          ? `${name} left ${gaps.length} ${gaps.length === 1 ? "requirement" : "requirements"} unanswered or only partly answered. You can ask them about it, score the response as it stands, or compare all vendors.`
-          : `${name} covered every requirement. Score the response, or compare all vendors.`}</p>
+          ? `${name} left ${gaps.length} ${gaps.length === 1 ? "requirement" : "requirements"} unanswered or only partly answered. You can ask them about it, or compare all vendors as things stand.`
+          : `${name} covered every requirement. Compare all vendors when you are ready.`}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {gaps.length > 0 && <Link href={askHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#008ad2] px-3.5 text-xs font-bold text-white hover:bg-[#0076b4]"><MailPlus size={13} aria-hidden="true"/>Ask {name} about the {gaps.length === 1 ? "gap" : `${gaps.length} gaps`}</Link>}
-          <a href="#evaluation-title" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-bold text-slate-800 hover:border-[#008ad2]">Score this response <ArrowRight size={13} aria-hidden="true"/></a>
           <Link href={compareHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-bold text-slate-800 hover:border-[#008ad2]">Compare all vendors <ArrowRight size={13} aria-hidden="true"/></Link>
         </div>
       </>}
