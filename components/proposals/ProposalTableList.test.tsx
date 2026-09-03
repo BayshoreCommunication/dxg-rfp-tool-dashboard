@@ -20,6 +20,7 @@ const mockRestoreProposal = jest.fn()
 const mockPermanentDelete = jest.fn()
 const mockCopyProposal = jest.fn()
 const mockUpdateMeta = jest.fn()
+const mockCreateViewGrant = jest.fn()
 
 jest.mock('@/app/actions/proposals', () => ({
   getProposalsAction: (...a: unknown[]) => mockGetProposals(...a),
@@ -28,6 +29,7 @@ jest.mock('@/app/actions/proposals', () => ({
   permanentlyDeleteProposalAction: (...a: unknown[]) => mockPermanentDelete(...a),
   copyProposalAction: (...a: unknown[]) => mockCopyProposal(...a),
   updateProposalMetaAction: (...a: unknown[]) => mockUpdateMeta(...a),
+  createProposalViewAccessGrantAction: (...a: unknown[]) => mockCreateViewGrant(...a),
 }))
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -61,6 +63,7 @@ const LOAD_TIMEOUT = { timeout: 2000 }
 beforeEach(() => {
   jest.clearAllMocks()
   mockGetProposals.mockResolvedValue(successPage())
+  mockCreateViewGrant.mockResolvedValue({ success: true, token: 'secure-grant' })
   window.confirm = jest.fn(() => true)
   Object.assign(navigator, { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } })
 })
@@ -286,11 +289,23 @@ describe('ProposalTableList — favorite toggle', () => {
 })
 
 describe('ProposalTableList — copy URL', () => {
-  it('calls clipboard.writeText when Copy URL is clicked', async () => {
+  it('creates a read-only grant and copies a usable secure URL', async () => {
     render(<ProposalTableList searchValue="" activeFilter="all" />)
     await waitFor(() => screen.getByTitle('Copy URL'), LOAD_TIMEOUT)
     fireEvent.click(screen.getByTitle('Copy URL'))
-    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalled())
+    await waitFor(() => expect(mockCreateViewGrant).toHaveBeenCalledWith('prop-001'))
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      'http://localhost/proposal-view/bayshore-summit-2026-prop-001?source=share&accessGrant=secure-grant'
+    ))
+  })
+
+  it('does not copy an unusable bare URL when grant creation fails', async () => {
+    mockCreateViewGrant.mockResolvedValue({ success: false, message: 'Grant failed' })
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await waitFor(() => screen.getByTitle('Copy URL'), LOAD_TIMEOUT)
+    fireEvent.click(screen.getByTitle('Copy URL'))
+    await waitFor(() => expect(mockCreateViewGrant).toHaveBeenCalledWith('prop-001'))
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled()
   })
 })
 

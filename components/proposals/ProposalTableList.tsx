@@ -2,6 +2,7 @@
 
 import {
   copyProposalAction,
+  createProposalViewAccessGrantAction,
   deleteProposalAction,
   getProposalsAction,
   permanentlyDeleteProposalAction,
@@ -31,6 +32,10 @@ import SaveCopyModal from "./SaveCopyModal";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import {
+  buildProposalViewShareUrl,
+  copyTextToClipboard,
+} from "@/lib/proposals/proposalShareLink";
 import type { ProposalFilterType } from "./ProposalFilters";
 
 type ProposalListItem = {
@@ -119,6 +124,7 @@ export default function ProposalTableList({
   const [favoritingId, setFavoritingId] = useState<string | null>(null);
   const [copyModalProposal, setCopyModalProposal] = useState<ProposalListItem | null>(null);
   const [copyingSaving, setCopyingSaving] = useState(false);
+  const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState<ProposalPagination>({
@@ -346,22 +352,31 @@ export default function ProposalTableList({
   };
 
   const totalPages = Math.max(1, pagination.totalPages || 1);
-  const handleCopyProposalUrl = async (proposalSlug: string) => {
-    if (!proposalSlug) return;
+  const handleCopyProposalUrl = async (
+    proposalId: string,
+    proposalSlug: string,
+  ) => {
+    if (!proposalId || !proposalSlug || copyingLinkId) return;
 
-    const proposalUrl = `${window.location.origin}/proposal-view/${proposalSlug}`;
-
+    setCopyingLinkId(proposalId);
     try {
-      await navigator.clipboard.writeText(proposalUrl);
-      toast.success("Proposal URL copied to clipboard.");
+      const grant = await createProposalViewAccessGrantAction(proposalId);
+      if (!grant.success || !grant.token) {
+        toast.error(grant.message || "Could not create a secure proposal link.");
+        return;
+      }
+
+      const proposalUrl = buildProposalViewShareUrl(
+        window.location.origin,
+        proposalSlug,
+        grant.token,
+      );
+      await copyTextToClipboard(proposalUrl);
+      toast.success("Secure proposal link copied. It is valid for 30 days.");
     } catch {
-      const input = document.createElement("input");
-      input.value = proposalUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      document.body.removeChild(input);
-      toast.success("Proposal URL copied to clipboard.");
+      toast.error("Could not copy the proposal link. Please try again.");
+    } finally {
+      setCopyingLinkId(null);
     }
   };
 
@@ -709,8 +724,9 @@ export default function ProposalTableList({
                         <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:items-center">
                           <ActionButton
                             icon={<Copy size={16} />}
-                            label="Copy URL"
-                            onClick={() => void handleCopyProposalUrl(proposalSlug)}
+                            label={copyingLinkId === proposal._id ? "Creating link..." : "Copy URL"}
+                            onClick={() => void handleCopyProposalUrl(proposal._id, proposalSlug)}
+                            disabled={copyingLinkId !== null}
                           />
                           <ActionLink
                             href={`/proposal/${proposalSlug}`}
