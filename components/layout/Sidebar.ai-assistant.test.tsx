@@ -82,6 +82,7 @@ describe("Sidebar AI Assistant launcher", () => {
       name: "Open account menu for Akib Rahman",
     });
     expect(accountButton).toHaveTextContent("AR");
+    expect(accountButton).toHaveClass("h-10", "w-10", "text-xs");
     expect(screen.queryByText("akib.swop@gmail.com")).not.toBeInTheDocument();
 
     fireEvent.click(accountButton);

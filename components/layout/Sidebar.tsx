@@ -97,13 +97,13 @@ function AccountMenu({
         onClick={() => setOpen((current) => !current)}
         className={cn(
           "group relative grid place-items-center rounded-full border border-primary/30 bg-primary/10 font-extrabold text-primary transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-          placement === "desktop" ? "h-12 w-12 text-sm" : "h-10 w-10 text-xs",
+          "h-10 w-10 text-xs",
           open && "border-primary/50 bg-primary/15 shadow-[0_10px_24px_-16px_rgba(0,138,210,0.9)]",
         )}
       >
         {initials}
         <span
-          className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500"
+          className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500"
           aria-hidden="true"
         />
       </button>
