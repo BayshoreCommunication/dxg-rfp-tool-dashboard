@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, CircleAlert, ClipboardList, FileWarning, MailPlus, Pencil, RefreshCw, ShieldAlert, X } from "lucide-react";
 import Link from "next/link";
-import EvidenceExcerpt from "@/components/proposalIntelligence/EvidenceExcerpt";
 import { familyLabel, groupFacts } from "@/lib/vendorResponses/factPresentation";
 import SectionLoadError from "@/components/vendor/SectionLoadError";
 import { coverageFromRelationship, coveragePresentation } from "@/lib/proposalIntelligence/coverageVocabulary";
@@ -54,9 +53,6 @@ const factValue = (fact: ExtractedFact) => {
   }
   return fact.normalizedValue || "Unspecified value";
 };
-const locatorLabel = (locator: Record<string, string | number>) => Object.entries(locator)
-  .filter(([key]) => ["page", "sheet", "row", "column", "characterStart", "characterEnd"].includes(key))
-  .map(([key, value]) => `${key.replace(/([A-Z])/g, " $1").toLowerCase()} ${value}`).join(" · ");
 
 export const factCorrectionPayload = (fact: ExtractedFact, value: string): Record<string, unknown> | null => {
   const corrected = value.trim();
@@ -91,15 +87,14 @@ export const factCorrectionPayload = (fact: ExtractedFact, value: string): Recor
   };
 };
 
-function EvidenceList({ evidence, context }: { evidence: IntelligenceEvidence[]; context: string[] }) {
+/**
+ * The response page no longer quotes the vendor's text under each finding
+ * ("See where"); quotes are read from the comparison grid. Only the absence
+ * of any supporting passage is still called out, since that is a gap.
+ */
+function EvidenceList({ evidence }: { evidence: IntelligenceEvidence[] }) {
   if (!evidence.length) return <p className="mt-2 text-xs italic text-slate-500">No supporting passage was identified.</p>;
-  return <details className="mt-3">
-    <summary className="cursor-pointer text-xs font-bold text-[#0076b4]">See where ({evidence.length} {evidence.length === 1 ? "quote" : "quotes"})</summary>
-    <ul className="mt-2 space-y-2">{evidence.map((item) => <li key={item.fragmentId} className="rounded-lg border-l-2 border-sky-200 bg-sky-50/50 px-3 py-2">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.sourceLabel}{locatorLabel(item.locator) ? ` · ${locatorLabel(item.locator)}` : ""}</p>
-      <EvidenceExcerpt content={item.content} context={context}/>
-    </li>)}</ul>
-  </details>;
+  return null;
 }
 
 /**
@@ -171,7 +166,7 @@ function FactCard({ fact, review, saving, onReview }: { fact: ExtractedFact; rev
     <p className="text-base font-extrabold text-slate-900">{factValue(fact)}</p>
     <p className="mt-0.5 text-xs leading-5 text-slate-600">{fact.statement}</p>
     <p className="mt-1 text-[11px] text-slate-500">{[familyLabel(fact.family), fact.explicitness === "derived" ? "Worked out from the file, not stated directly" : null, note].filter(Boolean).join(" · ")}</p>
-    <EvidenceList evidence={fact.citations} context={[fact.statement, fact.normalizedValue]}/>
+    <EvidenceList evidence={fact.citations}/>
     <ReviewControls target={{ type: "fact", fact }} review={review} saving={saving} onReview={onReview}/>
   </li>;
 }
@@ -270,7 +265,7 @@ function MappingList({ mappings, attentionOnly, onAttentionOnlyChange, latestRev
           <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase ${presentation.className}`} title={presentation.description}>{presentation.label}</span>
         </div>
         {needsAttention(mapping.relationship) && <p className="mt-1 text-xs leading-5 text-slate-600">{presentation.description}</p>}
-        <EvidenceList evidence={mapping.evidence} context={[mapping.requirementTitle]}/>
+        <EvidenceList evidence={mapping.evidence}/>
         <ReviewControls target={{ type: "mapping", mapping }} review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, payload) => onReview(mapping.mappingId, decision, payload)}/>
       </li>;
     })}</ul>
@@ -451,7 +446,7 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
   return <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm" aria-labelledby="vendor-intelligence-title">
     <div className="flex flex-wrap items-start justify-between gap-3"><div className="max-w-2xl">
       <h3 id="vendor-intelligence-title" className="text-base font-extrabold text-slate-900">How {name} answered your requirements</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-500">Use this to see what {name} left out or only partly covered before you compare vendors. Every finding links to the vendor&rsquo;s own words, and nothing here ranks or picks a winner.</p>
+      <p className="mt-1 text-xs leading-5 text-slate-500">Use this to see what {name} left out or only partly covered before you compare vendors. Nothing here ranks or picks a winner.</p>
       {upToDate && result && <p className="mt-2 text-sm font-bold text-slate-800" data-testid="requirements-verdict">{verdictSentence(result.mappings)}</p>}
     </div>{!upToDate && <button type="button" onClick={() => void start()} disabled={processing || loading} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#087f69] px-3.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><RefreshCw size={13} className={processing ? "animate-spin" : ""}/>{processing ? "Checking…" : result ? "Retry the check" : "Check this response"}</button>}</div>
     {error && (result ? <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p> : <SectionLoadError what="the proposal intelligence analysis" message={error} onRetry={() => { setLoading(true); setError(undefined); void load(); }} retrying={loading}/>)}

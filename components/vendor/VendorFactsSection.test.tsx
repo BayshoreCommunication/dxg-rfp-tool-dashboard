@@ -37,9 +37,9 @@ test("renders requirement relationships with inspectable source locations", asyn
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
   expect(await screen.findByText("Provide a complete staffing plan")).toBeInTheDocument();
   expect(screen.getByText("Partly answered")).toBeInTheDocument();
-  fireEvent.click(screen.getByText("See where (1 quote)"));
-  expect(screen.getByText("Northstar.pdf · page 7")).toBeInTheDocument();
-  expect(screen.getByText("Six technicians are included.")).toBeInTheDocument();
+  // Quotes are no longer shown on the response page; they live in the comparison grid.
+  expect(screen.queryByText(/See where/)).not.toBeInTheDocument();
+  expect(screen.queryByText("Six technicians are included.")).not.toBeInTheDocument();
 });
 
 test("preserves contradictory facts and supports append-only correction review", async () => {
