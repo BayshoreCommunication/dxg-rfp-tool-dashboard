@@ -217,7 +217,7 @@ export default function EmailDashboard() {
                 </p>
               </div>
 
-              {/* Center */}
+              {/* Campaign metrics and actions */}
               <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-center lg:gap-4">
                 <MetricCard
                   label="Sent"
@@ -237,19 +237,17 @@ export default function EmailDashboard() {
                   icon={<MousePointerClick size={16} />}
                   tooltip="Number of times recipients clicked the submit button"
                 />
-              </div>
-
-              {/* Right side */}
-              <div className="flex justify-start lg:justify-end">
                 <button
                   type="button"
                   onClick={() => handleDelete(campaign._id)}
                   disabled={isDeleting}
-                  className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:shadow-lg hover:shadow-[#0ea5e9]/20 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                  className="flex h-[76px] w-[76px] flex-col items-center justify-center rounded-xl border border-[#008ad2]/30 text-center text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#0ea5e9]/20 disabled:cursor-not-allowed disabled:opacity-60"
                   style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
                 >
-                  <Trash2 size={15} />
-                  {isDeleting ? "Deleting..." : "Delete"}
+                  <Trash2 size={16} aria-hidden="true" />
+                  <span className="mt-1 text-[8px] font-bold uppercase leading-tight tracking-[0.12em]">
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </span>
                 </button>
               </div>
             </div>
