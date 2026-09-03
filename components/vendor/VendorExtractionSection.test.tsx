@@ -60,7 +60,10 @@ it("renders bounded evidence with its source locator and checksum-reuse state", 
   render(<VendorExtractionSection {...props} />);
   expect(await screen.findByText("Technical response.pdf")).toBeInTheDocument();
   expect(screen.getByText(/checksum reused/)).toBeInTheDocument();
-  fireEvent.click(screen.getByText("Preview extracted evidence"));
+  expect(screen.getByText(/Text plus OCR/)).toBeInTheDocument();
+  expect(screen.queryByText(/native \+ with \+ ocr/)).not.toBeInTheDocument();
+  expect(screen.getByText(/3 of 3 pages read/)).toBeInTheDocument();
+  fireEvent.click(screen.getByText(/Spot-check the text \(1 of 12 passages\)/));
   expect(screen.getByText("page 2")).toBeInTheDocument();
   expect(screen.getByText(/show caller and technical director/)).toBeInTheDocument();
 });
@@ -81,4 +84,32 @@ it("starts extraction only after the planner confirms with the button", async ()
     props.versionId,
     expect.any(String),
   ));
+});
+
+it("keeps the spot check short and offers the rest on request", async () => {
+  const passage = (ordinal: number) => ({
+    ordinal, kind: "paragraph", locator: { page: ordinal + 1 }, trustClass: "untrusted_vendor_content" as const,
+    content: `Passage ${ordinal} ${"x".repeat(400)}`,
+  });
+  getExtraction.mockResolvedValue({
+    success: true,
+    data: {
+      status: "ready",
+      runs: [{
+        runId: "run-1", jobId: null, sourceKind: "document" as const, sourceLabel: "Technical response.pdf", mimeType: "application/pdf",
+        status: "partial" as const, method: "native_with_ocr", coverage: 0.97, fragmentCount: 31, tableCount: 0, pageCount: 32,
+        warnings: [], reused: false, preview: [0, 1, 2, 3, 4, 5, 6, 7].map(passage),
+        createdAt: "2026-08-12T10:00:00.000Z", completedAt: "2026-08-12T10:01:00.000Z",
+      }],
+    },
+  });
+  render(<VendorExtractionSection {...props} />);
+  expect(await screen.findByText(/31 of 32 pages read/)).toBeInTheDocument();
+  expect(screen.getByText("Partly read")).toBeInTheDocument();
+  fireEvent.click(screen.getByText("Spot-check the text (3 of 31 passages)"));
+  expect(screen.getAllByText(/^Passage \d/)).toHaveLength(3);
+  expect(screen.getByText(/^Passage 0/).textContent?.length).toBeLessThan(300);
+  fireEvent.click(screen.getByRole("button", { name: "Show 5 more loaded passages" }));
+  expect(screen.getAllByText(/^Passage \d/)).toHaveLength(8);
+  expect(screen.getByText(/Only the first 8 passages are loaded here/)).toBeInTheDocument();
 });

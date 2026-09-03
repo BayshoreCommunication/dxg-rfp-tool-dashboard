@@ -105,6 +105,51 @@ it("separates required fields with support, missing evidence, and contradictions
     conflictTitles: ["Accessibility"],
   });
   expect(summary.needsAttention).toBe(true);
+  expect(summary.requirementCoverage).toEqual({
+    total: 5,
+    answered: 1,
+    partlyAnswered: 1,
+    notAnswered: 2,
+    conflicting: 1,
+    mandatoryNotAnswered: 1,
+  });
+  expect(summary.comparisonBlocked).toBeNull();
+  expect(summary.partialSources).toBe(false);
+  expect(summary.isComparable).toBe(true);
+});
+
+it("flags partially readable sources without excluding the response, matching the backend coverage rule", () => {
+  const byExtraction = deriveResponseCardSummary({
+    response,
+    extraction: { success: true, data: { status: "partial", runs: [] } },
+    intelligence: { success: true, data: intelligence() },
+  });
+  expect(byExtraction.comparisonBlocked).toBeNull();
+  expect(byExtraction.partialSources).toBe(true);
+  expect(byExtraction.isComparable).toBe(true);
+
+  const byPageWarning = deriveResponseCardSummary({
+    response,
+    extraction: { success: true, data: { status: "ready", runs: [] } },
+    intelligence: {
+      success: true,
+      data: intelligence({ run: { ...intelligence().run, warnings: [{ code: "PAGE_COVERAGE_INCOMPLETE", message: "Some PDF pages produced no readable text." }] } }),
+    },
+  });
+  expect(byPageWarning.comparisonBlocked).toBeNull();
+  expect(byPageWarning.partialSources).toBe(true);
+
+  const byUnavailable = deriveResponseCardSummary({
+    response,
+    extraction: { success: true, data: { status: "ready", runs: [] } },
+    intelligence: {
+      success: true,
+      data: intelligence({ run: { ...intelligence().run, warnings: [{ code: "SOURCE_UNAVAILABLE", message: "This source was not available to proposal intelligence." }] } }),
+    },
+  });
+  expect(byUnavailable.comparisonBlocked).toBe("source_unavailable");
+  expect(byUnavailable.partialSources).toBe(false);
+  expect(byUnavailable.isComparable).toBe(false);
 });
 
 it("does not treat absent analysis as compliance and excludes known unreadable responses", () => {
@@ -117,6 +162,8 @@ it("does not treat absent analysis as compliance and excludes known unreadable r
   expect(summary.requiredFields).toBeNull();
   expect(summary.headlineFacts).toEqual([]);
   expect(summary.intelligenceStatus).toBe("not_started");
+  expect(summary.requirementCoverage).toBeNull();
+  expect(summary.comparisonBlocked).toBe("unreadable");
   expect(summary.isComparable).toBe(false);
   expect(summary.needsAttention).toBe(true);
 });
