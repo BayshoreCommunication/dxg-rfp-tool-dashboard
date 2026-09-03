@@ -77,7 +77,7 @@ test("rejects a correction that does not match the extracted fact type", async (
 
 test("explains that intelligence cannot make an award decision", async () => {
   render(<VendorFactsSection proposalId="proposal" submissionId="submission" versionId="version" />);
-  expect(await screen.findByText(/nothing here ranks or picks a winner/)).toBeInTheDocument();
+  expect(await screen.findByText(/Nothing here ranks or picks a winner/)).toBeInTheDocument();
 });
 
 test("keeps partial source coverage visible without incorrectly blocking evaluation", async () => {

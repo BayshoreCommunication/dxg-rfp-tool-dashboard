@@ -13,7 +13,6 @@ import {
   reviewVendorIntelligenceAction,
   type ExtractedFact,
   type HumanReview,
-  type IntelligenceEvidence,
   type VendorIntelligenceResult,
 } from "@/app/actions/vendorIntelligence";
 
@@ -87,15 +86,6 @@ export const factCorrectionPayload = (fact: ExtractedFact, value: string): Recor
   };
 };
 
-/**
- * The response page no longer quotes the vendor's text under each finding
- * ("See where"); quotes are read from the comparison grid. Only the absence
- * of any supporting passage is still called out, since that is a gap.
- */
-function EvidenceList({ evidence }: { evidence: IntelligenceEvidence[] }) {
-  if (!evidence.length) return <p className="mt-2 text-xs italic text-slate-500">No supporting passage was identified.</p>;
-  return null;
-}
 
 /**
  * Review is opt-in. Most findings need no action, so the four decisions sit
@@ -166,7 +156,6 @@ function FactCard({ fact, review, saving, onReview }: { fact: ExtractedFact; rev
     <p className="text-base font-extrabold text-slate-900">{factValue(fact)}</p>
     <p className="mt-0.5 text-xs leading-5 text-slate-600">{fact.statement}</p>
     <p className="mt-1 text-[11px] text-slate-500">{[familyLabel(fact.family), fact.explicitness === "derived" ? "Worked out from the file, not stated directly" : null, note].filter(Boolean).join(" · ")}</p>
-    <EvidenceList evidence={fact.citations}/>
     <ReviewControls target={{ type: "fact", fact }} review={review} saving={saving} onReview={onReview}/>
   </li>;
 }
@@ -265,7 +254,6 @@ function MappingList({ mappings, attentionOnly, onAttentionOnlyChange, latestRev
           <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase ${presentation.className}`} title={presentation.description}>{presentation.label}</span>
         </div>
         {needsAttention(mapping.relationship) && <p className="mt-1 text-xs leading-5 text-slate-600">{presentation.description}</p>}
-        <EvidenceList evidence={mapping.evidence}/>
         <ReviewControls target={{ type: "mapping", mapping }} review={latestReviews.get(key)} saving={savingTarget === key} onReview={(decision, payload) => onReview(mapping.mappingId, decision, payload)}/>
       </li>;
     })}</ul>
