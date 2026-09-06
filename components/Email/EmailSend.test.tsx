@@ -437,3 +437,38 @@ describe('EmailSend — asking one vendor a question', () => {
     expect(screen.queryByRole('link', { name: /Back to the response/ })).not.toBeInTheDocument()
   })
 })
+
+describe('EmailSend — fixed to a just-published proposal', () => {
+  it('loads that proposal directly, hides the picker, and hands the send back instead of navigating', async () => {
+    const onSent = jest.fn()
+    mockSendEmail.mockResolvedValue({ success: true, message: 'sent' })
+    render(<EmailSend proposalId="prop-001" onSent={onSent} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /send invitations/i })).not.toBeDisabled(), LOAD_TIMEOUT)
+    expect(mockGetProposalById).toHaveBeenCalledWith('prop-001')
+    expect(mockGetProposals).not.toHaveBeenCalled()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.getByText(/Inviting vendors to/)).toHaveTextContent('Bayshore Summit 2026')
+    expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe(
+      'Proposal for Bayshore Summit 2026 - DXG RFP Tool',
+    )
+
+    const input = screen.getByPlaceholderText(/john@email.com/i)
+    fireEvent.change(input, { target: { value: 'bids@vendor.example' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('checkbox', { name: /reviewed the recipients/i }))
+    fireEvent.click(screen.getByRole('button', { name: /send invitations/i }))
+
+    await waitFor(() => expect(onSent).toHaveBeenCalledWith(['bids@vendor.example']))
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ proposalId: 'prop-001', recipientEmails: ['bids@vendor.example'], kind: 'invitation' }),
+    )
+    expect(mockRouterPush).not.toHaveBeenCalled()
+  })
+
+  it('reports a proposal that could not be loaded', async () => {
+    mockGetProposalById.mockResolvedValue({ success: false, message: 'Proposal not found.' })
+    render(<EmailSend proposalId="prop-404" onSent={jest.fn()} />)
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Proposal not found.'), LOAD_TIMEOUT)
+  })
+})

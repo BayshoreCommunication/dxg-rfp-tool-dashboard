@@ -1,68 +1,86 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import ProposalSuccessfullyCreate from './ProposalSuccessfullyCreate'
+import { fireEvent, render, screen } from "@testing-library/react";
+
+import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
+
+// The real composer loads the proposal and sends mail; here it is a stub that
+// reports which proposal it was fixed to and lets a test "send" to two vendors.
+jest.mock("@/components/Email/EmailSend", () => ({
+  __esModule: true,
+  default: ({ proposalId, onSent }: { proposalId: string; onSent: (recipients: string[]) => void }) => (
+    <div data-testid="composer" data-proposal-id={proposalId}>
+      <button type="button" onClick={() => onSent(["a@vendor.example", "b@vendor.example"])}>Send invitations</button>
+    </div>
+  ),
+}));
 
 const baseProps = {
-  proposalTitle: 'Bayshore Summit 2026',
+  proposalId: "prop-001",
+  proposalTitle: "Bayshore Summit 2026",
   onBackToList: jest.fn(),
-  onSendEmail: jest.fn(),
   onViewProposal: jest.fn(),
-}
+};
 
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => jest.clearAllMocks());
 
-describe('ProposalSuccessfullyCreate', () => {
-  it('shows the success heading', () => {
-    render(<ProposalSuccessfullyCreate {...baseProps} />)
-    expect(screen.getByText('Proposal published successfully')).toBeInTheDocument()
-    expect(screen.getByText(/Publishing does not send invitation emails/)).toBeInTheDocument()
-  })
+describe("ProposalSuccessfullyCreate", () => {
+  it("confirms publishing and moves straight on to inviting vendors", () => {
+    render(<ProposalSuccessfullyCreate {...baseProps} />);
+    expect(screen.getByText("Proposal published")).toBeInTheDocument();
+    expect(screen.getByText(/Bayshore Summit 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Publishing emails nobody/)).toBeInTheDocument();
+    // The composer is fixed to the proposal that was just published.
+    expect(screen.getByTestId("composer")).toHaveAttribute("data-proposal-id", "prop-001");
+    // Progress: publish done, invite current.
+    const steps = screen.getAllByRole("listitem");
+    expect(steps[0]).toHaveTextContent("Publish");
+    expect(steps[1]).toHaveAttribute("aria-current", "step");
+  });
 
-  it('displays the proposal title in the message', () => {
-    render(<ProposalSuccessfullyCreate {...baseProps} />)
-    expect(screen.getByText(/Bayshore Summit 2026/)).toBeInTheDocument()
-  })
+  it("names an update as an update", () => {
+    render(<ProposalSuccessfullyCreate {...baseProps} isUpdate />);
+    expect(screen.getByText("Update published")).toBeInTheDocument();
+  });
 
-  it('calls onBackToList when "Back To Proposal List" is clicked', () => {
-    render(<ProposalSuccessfullyCreate {...baseProps} />)
-    fireEvent.click(screen.getByText('Back To Proposal List'))
-    expect(baseProps.onBackToList).toHaveBeenCalledTimes(1)
-  })
+  it("summarises who was invited after sending and offers to invite more", () => {
+    render(<ProposalSuccessfullyCreate {...baseProps} onSaveCopy={jest.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Send invitations" }));
+    expect(screen.getByText("2 vendors invited")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Invited vendors" })).toHaveTextContent("a@vendor.example");
+    expect(screen.getByText(/2 vendors have been invited/)).toBeInTheDocument();
+    expect(screen.queryByTestId("composer")).not.toBeInTheDocument();
+    // The closing actions only appear once inviting is done or skipped.
+    expect(screen.getByRole("button", { name: "View proposal" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to proposal list" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save a copy" })).toBeInTheDocument();
 
-  it('calls onViewProposal when "View Proposal" is clicked', () => {
-    render(<ProposalSuccessfullyCreate {...baseProps} />)
-    fireEvent.click(screen.getByText('View Proposal'))
-    expect(baseProps.onViewProposal).toHaveBeenCalledTimes(1)
-  })
+    fireEvent.click(screen.getByRole("button", { name: "Invite more vendors" }));
+    expect(screen.getByTestId("composer")).toBeInTheDocument();
+    // A second send adds to the tally without double counting.
+    fireEvent.click(screen.getByRole("button", { name: "Send invitations" }));
+    expect(screen.getByText("2 vendors invited")).toBeInTheDocument();
+  });
 
-  it('opens invitation composition without sending automatically', () => {
-    render(<ProposalSuccessfullyCreate {...baseProps} />)
-    expect(baseProps.onSendEmail).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Share with vendors' }))
-    expect(baseProps.onSendEmail).toHaveBeenCalledTimes(1)
-  })
+  it("lets the planner skip inviting and says plainly that nobody was invited", () => {
+    render(<ProposalSuccessfullyCreate {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Skip for now" }));
+    expect(screen.getByText("Vendors have not been invited")).toBeInTheDocument();
+    expect(screen.getByText(/No invitations have been sent yet/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save a copy" })).not.toBeInTheDocument();
 
-  it('does not render "Save a Copy" button when onSaveCopy is not provided', () => {
-    render(<ProposalSuccessfullyCreate {...baseProps} />)
-    expect(screen.queryByText('Save a Copy')).not.toBeInTheDocument()
-  })
+    fireEvent.click(screen.getByRole("button", { name: "View proposal" }));
+    expect(baseProps.onViewProposal).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Back to proposal list" }));
+    expect(baseProps.onBackToList).toHaveBeenCalledTimes(1);
 
-  it('renders "Save a Copy" button when onSaveCopy is provided', () => {
-    render(<ProposalSuccessfullyCreate {...baseProps} onSaveCopy={jest.fn()} />)
-    expect(screen.getByText('Save a Copy')).toBeInTheDocument()
-  })
+    fireEvent.click(screen.getByRole("button", { name: "Invite vendors now" }));
+    expect(screen.getByTestId("composer")).toBeInTheDocument();
+  });
 
-  it('calls onSaveCopy when "Save a Copy" is clicked', () => {
-    const onSaveCopy = jest.fn()
-    render(<ProposalSuccessfullyCreate {...baseProps} onSaveCopy={onSaveCopy} />)
-    fireEvent.click(screen.getByText('Save a Copy'))
-    expect(onSaveCopy).toHaveBeenCalledTimes(1)
-  })
-
-  it('renders all four action buttons when onSaveCopy is provided', () => {
-    render(<ProposalSuccessfullyCreate {...baseProps} onSaveCopy={jest.fn()} />)
-    expect(screen.getByText('Back To Proposal List')).toBeInTheDocument()
-    expect(screen.getByText('View Proposal')).toBeInTheDocument()
-    expect(screen.getByText('Save a Copy')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Share with vendors' })).toBeInTheDocument()
-  })
-})
+  it("calls onSaveCopy when Save a copy is clicked", () => {
+    const onSaveCopy = jest.fn();
+    render(<ProposalSuccessfullyCreate {...baseProps} onSaveCopy={onSaveCopy} />);
+    fireEvent.click(screen.getByRole("button", { name: "Skip for now" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save a copy" }));
+    expect(onSaveCopy).toHaveBeenCalledTimes(1);
+  });
+});

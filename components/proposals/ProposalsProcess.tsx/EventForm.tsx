@@ -5,7 +5,7 @@ import GlobalSelect from "@/components/shared/GlobalSelect";
 import { useCallback, useRef } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, RadioIndicator, toggleItem, useClickOutside } from "./shared";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import {
   audienceOptions,
   eventOverviewFieldHelper,
@@ -76,6 +76,8 @@ interface EventFormProps {
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
   mode?: ProposalExperienceMode;
+  /** Drafts a vendor-ready statement of work from the confirmed event details. */
+  onGenerateStatementOfWork?: () => void;
 }
 
 const EventForm = ({
@@ -87,6 +89,7 @@ const EventForm = ({
   showErrors = false,
   proposalSettings,
   mode = "advanced",
+  onGenerateStatementOfWork,
 }: EventFormProps) => {
   const currentDateFormat = normalizeDateFormat(
     proposalSettings.proposals.dateFormat,
@@ -590,12 +593,25 @@ const EventForm = ({
 
             {/* Statement of Work */}
             <div id="statement-of-work-section" tabIndex={-1} className="scroll-mt-6" data-assistant-field-key="/content/event/statementOfWork">
-              <label className={labelClass}>
-                Statement of Work
-                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/statementOfWork")} />
-              </label>
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <label htmlFor="statement-of-work" className={labelClass}>
+                  Statement of Work
+                  <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/statementOfWork")} />
+                </label>
+                {onGenerateStatementOfWork && (
+                  <button
+                    type="button"
+                    onClick={onGenerateStatementOfWork}
+                    className="mb-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-bold text-violet-700 hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+                  >
+                    <Sparkles size={13} aria-hidden="true" />
+                    {(data.statementOfWork ?? "").trim() ? "Regenerate draft" : "Generate draft"}
+                  </button>
+                )}
+              </div>
               <textarea
+                id="statement-of-work"
                 rows={4}
                 maxLength={1500}
                 className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"

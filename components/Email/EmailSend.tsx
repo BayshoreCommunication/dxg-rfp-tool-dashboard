@@ -58,7 +58,18 @@ const getTeammateEmail = (proposal: ProposalOption | null): string => {
   return validateEmail(normalized) ? normalized : "";
 };
 
-export default function EmailSend() {
+type EmailSendProps = {
+  /**
+   * Fix the composer to one proposal — the one the planner just published.
+   * There is no proposal picker, and a successful send is handed back through
+   * `onSent` instead of navigating to the email dashboard, so the publish
+   * flow can carry on in place.
+   */
+  proposalId?: string;
+  onSent?: (recipients: string[]) => void;
+};
+
+export default function EmailSend({ proposalId: fixedProposalId, onSent }: EmailSendProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -106,6 +117,10 @@ export default function EmailSend() {
     : selectedProposalLink;
   const autoTeammateEmail = questionMode ? "" : getTeammateEmail(selectedProposal);
   const preselectedProposalId = searchParams.get("proposalId")?.trim() || "";
+  const fixedMode = Boolean(fixedProposalId);
+  // One known proposal, loaded directly: the publish flow's fixed proposal, or
+  // a question about a proposal a vendor already responded to.
+  const singleProposalId = fixedProposalId || (questionMode ? preselectedProposalId : "");
 
   useEffect(() => {
     let cancelled = false;
@@ -115,14 +130,20 @@ export default function EmailSend() {
       setLoadError(undefined);
 
       try {
-        if (questionMode && preselectedProposalId) {
+        if (singleProposalId) {
           // The proposal is known; it need not be "submitted" to ask a vendor
           // who has already responded a question about it.
-          const proposalRes = await getProposalByIdAction(preselectedProposalId);
+          const proposalRes = await getProposalByIdAction(singleProposalId);
           if (cancelled) return;
           if (proposalRes.success && proposalRes.data && typeof proposalRes.data === "object") {
-            setProposals([proposalRes.data as ProposalOption]);
-            setProposalId(preselectedProposalId);
+            const loaded = proposalRes.data as ProposalOption;
+            setProposals([loaded]);
+            setProposalId(singleProposalId);
+            if (fixedMode) setSubject((prev) =>
+              prev.trim().length > 0
+                ? prev
+                : `Proposal for ${loaded.event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
+            );
           } else {
             setProposals([]);
             setProposalId("");
@@ -179,7 +200,7 @@ export default function EmailSend() {
 
     void run();
     return () => { cancelled = true; };
-  }, [preselectedProposalId, questionMode]);
+  }, [singleProposalId, preselectedProposalId, questionMode, fixedMode]);
 
   // Gmail-style input handler
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -328,9 +349,14 @@ export default function EmailSend() {
       return;
     }
 
-    toast.success(questionMode ? `Question sent to ${questionVendor}.` : res.message || "Email campaign sent.");
+    toast.success(questionMode ? `Question sent to ${questionVendor}.` : fixedMode ? "Invitations sent." : res.message || "Email campaign sent.");
     setRecipientInput("");
     setRecipientEmails([]);
+    if (onSent) {
+      setSendApproved(false);
+      onSent(finalRecipients);
+      return;
+    }
     const destination = questionMode && returnTo ? returnTo : "/email";
     router.push(destination);
     setTimeout(() => {
@@ -371,6 +397,29 @@ export default function EmailSend() {
             {loading && <p role="status" className="mt-2 text-[12px] text-slate-500">Loading the proposal…</p>}
             {!loading && loadError && <p role="alert" className="mt-2 text-[12px] text-red-600">{loadError}</p>}
           </div>
+        ) : fixedMode ? (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 text-slate-800">
+              <Mail size={16} className="text-[#008ad2]" aria-hidden="true" />
+              <h3 className="text-[14px] font-black tracking-wide uppercase">Invite vendors</h3>
+            </div>
+            {loading && <p role="status" className="mt-2 text-[12px] text-slate-500">Loading the proposal…</p>}
+            {!loading && loadError && <p role="alert" className="mt-2 text-[12px] text-red-600">{loadError}</p>}
+            {selectedProposal && (
+              <p className="mt-2 rounded-lg border border-[#008ad2]/20 bg-[#008ad2]/5 px-3 py-2 text-[12px] text-brand-dark">
+                Inviting vendors to <span className="font-semibold">{selectedProposal.event?.eventName || "Untitled Proposal"}</span>.
+                {previewProposalLink && (
+                  <>
+                    {" "}
+                    <a href={previewProposalLink} target="_blank" rel="noreferrer" className="font-semibold underline">Open proposal</a>
+                  </>
+                )}
+                <span className="mt-1 block text-slate-600">
+                  Each vendor gets their own secure access link when the invitation is sent, and vendors cannot see the other recipients.
+                </span>
+              </p>
+            )}
+          </div>
         ) : (
           <div className="mb-4 flex items-center gap-2 text-slate-800">
             <Mail size={16} className="text-[#008ad2]" />
@@ -380,9 +429,9 @@ export default function EmailSend() {
           </div>
         )}
 
-        <div className={questionMode ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 lg:grid-cols-2"}>
+        <div className={questionMode || fixedMode ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 lg:grid-cols-2"}>
           {/* Select Proposal Section */}
-          {!questionMode && <div className="space-y-2">
+          {!questionMode && !fixedMode && <div className="space-y-2">
             <label className="text-[12px] font-semibold text-slate-600">
               Select Proposal
             </label>
@@ -570,7 +619,7 @@ export default function EmailSend() {
             style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
           >
             <Send size={14} />
-            {sending ? "Sending..." : questionMode ? "Send question" : "Send Campaign"}
+            {sending ? "Sending..." : questionMode ? "Send question" : fixedMode ? "Send invitations" : "Send Campaign"}
           </button>
         </div>
       </section>

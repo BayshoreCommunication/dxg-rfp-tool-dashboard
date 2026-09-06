@@ -2609,7 +2609,7 @@ const AddNewProposal = ({
     }));
     setAssumptionsApproved(false);
     addAuditEntry("Generated a vendor-ready statement of work", "ai");
-    toast.success("Statement of work generated. Review the draft below or edit it in Event Overview.");
+    toast.success("Statement of work drafted. Review and edit it before you continue.");
   };
 
   const refreshProposalAfterQuestion = async () => {
@@ -2627,16 +2627,13 @@ const AddNewProposal = ({
     return (
       <>
         <ProposalSuccessfullyCreate
+          proposalId={createdProposal.id}
           proposalTitle={createdProposal.title}
+          isUpdate={isEditMode}
           onBackToList={() => router.push("/proposals")}
           onViewProposal={() =>
             router.push(
               `/proposal/${toProposalSlug(createdProposal.title, createdProposal.id)}`,
-            )
-          }
-          onSendEmail={() =>
-            router.push(
-              `/email/send-email?proposalId=${encodeURIComponent(createdProposal.id)}`,
             )
           }
           onSaveCopy={() => setShowCopyModal(true)}
@@ -2783,6 +2780,7 @@ const AddNewProposal = ({
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
                 mode={experienceMode}
+                onGenerateStatementOfWork={handleGenerateStatementOfWork}
               />
             )}
             {proposalProcessStep === 2 && (
@@ -2986,7 +2984,6 @@ const AddNewProposal = ({
                     contact={proposalData.contact}
                     issues={checklistIssues}
                     provenance={fieldProvenance}
-                    auditTrail={auditTrail}
                     assumptions={basicAssumptions}
                     assumptionsApproved={assumptionsApproved}
                     onAssumptionsApprovedChange={(approved) => {
@@ -2994,7 +2991,6 @@ const AddNewProposal = ({
                       if (approved) addAuditEntry("Approved Basic mode assumptions for publishing", "user");
                     }}
                     onEditStep={navigateToReviewTarget}
-                    onGenerateStatementOfWork={handleGenerateStatementOfWork}
                   />
                 }
               />

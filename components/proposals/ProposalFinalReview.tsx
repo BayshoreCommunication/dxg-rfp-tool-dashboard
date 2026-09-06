@@ -8,7 +8,6 @@ import {
   Mail,
   MapPin,
   Pencil,
-  ShieldCheck,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -40,12 +39,10 @@ type Props = {
   contact: ContactData;
   issues: ProposalChecklistIssue[];
   provenance: Record<string, AnswerProvenance>;
-  auditTrail: ProposalAuditEntry[];
   assumptions: string[];
   assumptionsApproved: boolean;
   onAssumptionsApprovedChange: (approved: boolean) => void;
   onEditStep: (step: number, targetId?: string) => void;
-  onGenerateStatementOfWork: () => void;
 };
 
 const sourcePresentation = {
@@ -115,12 +112,10 @@ export default function ProposalFinalReview({
   contact,
   issues,
   provenance,
-  auditTrail,
   assumptions,
   assumptionsApproved,
   onAssumptionsApprovedChange,
   onEditStep,
-  onGenerateStatementOfWork,
 }: Props) {
   const recipients = [
     contact.contactEmail,
@@ -142,7 +137,7 @@ export default function ProposalFinalReview({
             Confirm what vendors will receive
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-            Review scope, dates, procurement milestones, contacts, recipients, and every AI assumption before publishing.
+            Review scope, dates, procurement milestones, contacts, and recipients before publishing. Choosing which vendors to invite is the step right after.
           </p>
         </div>
         <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-extrabold ${issues.length === 0 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
@@ -188,42 +183,6 @@ export default function ProposalFinalReview({
           <p className="mt-1 text-xs text-slate-500">Vendor invitation recipients are selected after publishing.</p>
         </ReviewCard>
 
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-violet-200 bg-white p-4">
-          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-            <div>
-              <p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Sparkles size={16} className="text-violet-600" aria-hidden="true" />Vendor-ready statement of work</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Generate a concise draft from your confirmed details. It appears below and in Event Overview → Statement of Work. Review it before publishing.</p>
-            </div>
-            <button type="button" onClick={onGenerateStatementOfWork} className="min-h-10 shrink-0 rounded-xl bg-violet-600 px-3 text-xs font-extrabold text-white hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">
-              {event.statementOfWork?.trim() ? "Regenerate draft" : "Generate draft"}
-            </button>
-          </div>
-          {event.statementOfWork?.trim() && (
-            <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/40 p-3" aria-label="Statement of work preview" aria-live="polite">
-              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{event.statementOfWork}</p>
-              <button type="button" onClick={() => onEditStep(1, "statement-of-work-section")} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-xs font-bold text-violet-700 hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-violet-600">
-                <Pencil size={13} aria-hidden="true" /> Edit statement of work
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><ShieldCheck size={16} className="text-[#0786cf]" aria-hidden="true" />AI activity and assumptions</p>
-          {auditTrail.length > 0 ? (
-            <ul className="mt-3 space-y-2 text-xs text-slate-600">
-              {auditTrail.slice(-4).map((entry) => (
-                <li key={entry.id} className="flex items-start justify-between gap-3">
-                  <span>{entry.label}</span>
-                  <SourceBadge provenance={{ source: entry.source }} />
-                </li>
-              ))}
-            </ul>
-          ) : <p className="mt-2 text-xs text-slate-500">No AI-generated or assumed values have been applied in this session.</p>}
-        </div>
       </div>
 
       {assumptions.length > 0 && (

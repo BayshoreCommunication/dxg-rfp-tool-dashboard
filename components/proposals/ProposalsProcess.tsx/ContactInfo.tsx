@@ -672,8 +672,8 @@ const ContactInfo = ({
           </p>
           <p className="text-sm text-[#4a5a8a]">
             <strong>{isEditMode ? "Publish updated proposal" : "Publish Proposal"}</strong> saves this
-            information and makes the proposal live for vendors. It does not email vendors;
-            invitations are sent separately.
+            information and makes the proposal live for vendors. Nobody is emailed yet:
+            choosing which vendors to invite is the very next step.
           </p>
         </div>
 
