@@ -580,11 +580,25 @@ export async function incrementProposalViewsAction(
 
 // ── File uploads ──────────────────────────────────────────────────────────────
 
-/**
- * Upload support documents or AV quote files to DigitalOcean Spaces.
- * FormData fields: "supportDocuments" and/or "avQuoteFiles".
- * Returns CDN URLs grouped by field name.
- */
+/** Authorize a short-lived direct upload without proxying file bytes. */
+export async function createProposalUploadTicketAction(): Promise<
+  | { success: true; ticket: string; uploadUrl: string }
+  | { success: false; message: string }
+> {
+  try {
+    const response = await authenticatedBackendFetch(`${API_URL}/api/proposals/upload-ticket`, {
+      method: "POST", cache: "no-store",
+    });
+    const body = await response.json();
+    if (!response.ok || !body.success || typeof body.data?.ticket !== "string") {
+      return { success: false, message: body.message || "Please sign in again before uploading." };
+    }
+    return { success: true, ticket: body.data.ticket, uploadUrl: `${API_URL}/api/proposals/upload-files/direct` };
+  } catch {
+    return { success: false, message: "Could not prepare the upload. Please try again." };
+  }
+}
+
 export async function uploadProposalFilesAction(formData: FormData): Promise<{
   success: boolean;
   message?: string;

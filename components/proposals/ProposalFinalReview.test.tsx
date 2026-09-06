@@ -41,3 +41,22 @@ test("summarizes vendor-visible scope without exposing planning estimates", () =
   fireEvent.click(screen.getByRole("button", { name: "Edit Invitation recipients" }));
   expect(noop).toHaveBeenCalledWith(10, "invitation-recipients-section");
 });
+
+test("shows the generated statement immediately and links to its editor", () => {
+  const onEdit = jest.fn();
+  const generate = jest.fn();
+  const props = {
+    event: { eventName: "Summit", eventType: { eventType: "Annual Meeting" }, statementOfWork: "Provide audiovisual production for the annual meeting." } as EventData,
+    venue: {} as VenueScheduleData, rooms: [], budget: {} as BudgetData,
+    contact: { additionalContacts: [] } as unknown as ContactData,
+    issues: [], provenance: {}, auditTrail: [], assumptions: [], assumptionsApproved: false,
+    onAssumptionsApprovedChange: jest.fn(), onEditStep: onEdit, onGenerateStatementOfWork: generate,
+  };
+  render(<ProposalFinalReview {...props} />);
+  expect(screen.getByLabelText("Statement of work preview")).toHaveTextContent("Provide audiovisual production for the annual meeting.");
+  fireEvent.click(screen.getByRole("button", { name: "Edit statement of work" }));
+  expect(onEdit).toHaveBeenCalledWith(1, "statement-of-work-section");
+  expect(generate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Regenerate draft" }));
+  expect(generate).toHaveBeenCalledTimes(1);
+});

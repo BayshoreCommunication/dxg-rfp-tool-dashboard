@@ -288,7 +288,7 @@ const VenueTechnicalRequirements = ({
           </label>
           <input
             className={inputClass}
-            placeholder="e.g. PSAV, Encore, Freeman AV — or leave blank if none"
+            placeholder="e.g. Encore, Pinnacle Live, Inspire — or leave blank if none"
             value={data.inHouseAvCompanyName}
             onChange={(e) => onChange({ inHouseAvCompanyName: e.target.value })}
           />

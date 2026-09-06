@@ -100,6 +100,16 @@ describe("responsive room controls", () => {
   });
 });
 
+test("room recording format can be delegated to the vendor without clearing other recording choices", () => {
+  const onRoomsChange = jest.fn();
+  const room = defaultRoom();
+  room.videoRecording = { ...room.videoRecording, videoRecording: "Yes", recordingCodec: "ProRes" };
+  render(<RoomAndProductionStep rooms={[room]} onRoomsChange={onRoomsChange} numberOfEventRooms="1" onNumberOfEventRoomsChange={jest.fn()} onContinue={jest.fn()} onBack={jest.fn()} proposalSettings={proposalSettings} />);
+  fireEvent.click(screen.getByRole("combobox", { name: "Recording format" }));
+  fireEvent.click(screen.getByRole("option", { name: "Vendor recommendation" }));
+  expect(onRoomsChange).toHaveBeenCalledWith([expect.objectContaining({ videoRecording: expect.objectContaining({ videoRecording: "Yes", recordingCodec: "Vendor recommendation" }) })]);
+});
+
 describe("parseScheduleWorkbook", () => {
   it("groups multiple functions in the same physical room under one shared AV module", async () => {
     const buffer = workbookBuffer([

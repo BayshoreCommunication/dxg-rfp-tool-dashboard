@@ -1796,6 +1796,7 @@ const RoomForm = ({
               <div>
                 <label className={labelClass}>Recording Format</label>
                 <GlobalSelect
+                  aria-label="Recording format"
                   className={`${inputClass} appearance-none`}
                   value={data.videoRecording.recordingCodec}
                   onChange={(event) =>
@@ -1811,6 +1812,7 @@ const RoomForm = ({
                   <option>H.264</option>
                   <option>H.265</option>
                   <option>ProRes</option>
+                  <option>Vendor recommendation</option>
                 </GlobalSelect>
               </div>
               <div>

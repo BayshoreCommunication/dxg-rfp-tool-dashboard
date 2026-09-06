@@ -192,15 +192,23 @@ export default function ProposalFinalReview({
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-violet-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Sparkles size={16} className="text-violet-600" aria-hidden="true" />Vendor-ready statement of work</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Generate a concise draft from the confirmed event, venue, attendance, room, and date fields.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Generate a concise draft from your confirmed details. It appears below and in Event Overview → Statement of Work. Review it before publishing.</p>
             </div>
             <button type="button" onClick={onGenerateStatementOfWork} className="min-h-10 shrink-0 rounded-xl bg-violet-600 px-3 text-xs font-extrabold text-white hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">
-              Generate draft
+              {event.statementOfWork?.trim() ? "Regenerate draft" : "Generate draft"}
             </button>
           </div>
+          {event.statementOfWork?.trim() && (
+            <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/40 p-3" aria-label="Statement of work preview" aria-live="polite">
+              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{event.statementOfWork}</p>
+              <button type="button" onClick={() => onEditStep(1, "statement-of-work-section")} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-xs font-bold text-violet-700 hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-violet-600">
+                <Pencil size={13} aria-hidden="true" /> Edit statement of work
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4">

@@ -50,3 +50,11 @@ test("requires an explicit codec and 4K choice when recording is enabled", () =>
     recordIn4k: "",
   });
 });
+
+test("accepts vendor recommendation as an explicit recording format", () => {
+  const onContinue = jest.fn();
+  render(<VideoRecordingStep data={{ ...defaultVideoRecording(), videoRecordingRequired: "YES", recordingCodec: "Vendor recommendation", recordIn4k: "NO" }} onChange={jest.fn()} onContinue={onContinue} onBack={jest.fn()} showErrors={false} proposalSettings={settings} />);
+  expect(screen.getByRole("combobox", { name: "Recording codec" })).toHaveTextContent("Vendor recommendation");
+  fireEvent.click(screen.getByRole("button", { name: /Venue & Technical/i }));
+  expect(onContinue).toHaveBeenCalledTimes(1);
+});

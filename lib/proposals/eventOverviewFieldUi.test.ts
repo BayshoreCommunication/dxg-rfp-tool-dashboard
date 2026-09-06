@@ -20,7 +20,10 @@ describe("event overview field UI contract", () => {
   });
 
   test("keeps the rendered single-select options contract-backed", () => {
-    expect(eventTypeOptions).toHaveLength(13);
+    expect(eventTypeOptions).toHaveLength(14);
+    expect(eventTypeOptions).toContain("Annual Meeting");
+    expect(eventTypeOptions).toContain("Shareholder Event");
+    expect(eventTypeOptions).not.toContain("Annual Meeting / Shareholder Event");
     expect(eventTypeOptions).toContain("Corporate Conference");
     expect(formatOptions).toEqual([
       { value: "In-Person", label: "In-Person Only" },

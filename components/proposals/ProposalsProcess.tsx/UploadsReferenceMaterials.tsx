@@ -31,7 +31,7 @@ import type {
   UploadsData,
 } from "../AddNewProposal";
 import { InfoTooltip, RadioIndicator } from "./shared";
-import { uploadProposalFilesAction } from "@/app/actions/proposals";
+import { uploadProposalFiles } from "@/lib/proposals/uploadProposalFiles";
 
 /* ─── Style constants ─── */
 const labelClass =
@@ -136,7 +136,7 @@ export const UploadBox = ({
     filesRef.current = files;
   }, [files]);
 
-  const getUrls = (res: Awaited<ReturnType<typeof uploadProposalFilesAction>>) =>
+  const getUrls = (res: Awaited<ReturnType<typeof uploadProposalFiles>>) =>
     uploadField === "supportDocuments"
       ? res.supportDocumentUrls
       : uploadField === "avQuoteFiles"
@@ -155,7 +155,7 @@ export const UploadBox = ({
     const fd = new FormData();
     fd.append(uploadField, item.file);
     try {
-      const res = await uploadProposalFilesAction(fd);
+      const res = await uploadProposalFiles(fd);
       const uploadedUrl = getUrls(res)[0];
       if (!res.success || !uploadedUrl) {
         updatePending(item.id, {
@@ -1037,7 +1037,7 @@ const UploadsReferenceMaterials = ({
           <CoVendorCard
             icon={<AudioLines size={16} strokeWidth={1.9} />}
             title="In-House Venue AV"
-            companyPlaceholder="e.g. Encore, Freeman AV, PSAV"
+            companyPlaceholder="e.g. Encore, Pinnacle Live, Inspire"
             contactPlaceholder="e.g. James Whitfield"
             helpText="The in-house AV company at your venue. External AV vendors need early contact for power access, rigging approvals, and loading dock coordination."
             statuses={IN_HOUSE_AV_STATUSES}
