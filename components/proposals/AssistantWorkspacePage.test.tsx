@@ -291,9 +291,9 @@ describe("AssistantWorkspacePage", () => {
     expect(await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/)).toBeInTheDocument();
     expect(screen.getByText("Let’s build your event RFP")).toBeInTheDocument();
     // First-time copy explains typing, attaching a document, and what happens next.
-    expect(screen.getByText(/Start by typing below to tell me about your event/)).toBeInTheDocument();
-    expect(screen.getByText(/You can also attach an existing document/)).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "How it works" })).toHaveTextContent("Answer the guided questions");
+    expect(screen.getByText(/Type a few lines about your event below/)).toBeInTheDocument();
+    expect(screen.getByText(/attach a brief or past RFP/)).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "How it works" })).toHaveTextContent("Answer a few questions");
     expect(screen.queryByText(/Start by typing your event details below/)).not.toBeInTheDocument();
     expect(screen.queryByText(/I’ll guide you through the missing details/)).not.toBeInTheDocument();
     expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();

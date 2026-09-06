@@ -4344,39 +4344,51 @@ export default function AssistantWorkspacePage({
                       copy says what to type, that a document works too, and
                       what happens next (client request R18 / 6.1; final
                       wording to come from the client). */}
-                  <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-600">
-                    Start by typing below to tell me about your event — the
-                    name, dates, venue, how many people are attending, and what
-                    you need on the AV and production side. You can also attach
-                    an existing document, such as an event brief or a past RFP,
-                    and I&apos;ll read it for you.
+                  <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-slate-600">
+                    Type a few lines about your event below — name, dates,
+                    venue, guest count, and what you need for AV and
+                    production — or attach a brief or past RFP and I&apos;ll
+                    read it.
                   </p>
-                  <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
-                    I&apos;ll then ask a few short questions to fill in anything
-                    that&apos;s missing and build your RFP as we go — you can
-                    review every detail before it&apos;s shared with vendors.
+                  <p className="mx-auto mt-1.5 max-w-lg text-sm leading-6 text-slate-500">
+                    I&apos;ll ask a few short questions to fill any gaps and
+                    build your RFP as we go.
                   </p>
                   <ol
                     aria-label="How it works"
-                    className="mx-auto mt-5 flex max-w-xl flex-wrap justify-center gap-2 text-xs font-semibold text-slate-600"
+                    className="mx-auto mt-6 flex max-w-2xl flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-center sm:gap-0"
                   >
                     {[
-                      'Tell me about your event or attach a brief',
-                      'Answer the guided questions',
-                      'Review your RFP and share it with vendors',
-                    ].map((step, index) => (
+                      'Tell me about your event',
+                      'Answer a few questions',
+                      'Review and share your RFP',
+                    ].map((step, index, steps) => (
                       <li
                         key={step}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm"
+                        className="flex items-center sm:contents"
                       >
-                        <span
-                          aria-hidden
-                          className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold text-white"
-                          style={{ background: ACCENT }}
-                        >
-                          {index + 1}
-                        </span>
-                        {step}
+                        <div className="group flex flex-1 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-3.5 py-2.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-16px_rgba(0,138,210,0.35)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-[0_1px_2px_rgba(15,23,42,0.05),0_12px_28px_-14px_rgba(0,138,210,0.45)] sm:flex-none">
+                          <span
+                            aria-hidden
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2fc6f5] to-[#087f69] text-[11px] font-bold text-white shadow-inner ring-4 ring-cyan-50"
+                          >
+                            {index + 1}
+                          </span>
+                          <span className="flex flex-col leading-tight">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                              {`Step ${index + 1}`}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-800">
+                              {step}
+                            </span>
+                          </span>
+                        </div>
+                        {index < steps.length - 1 && (
+                          <span
+                            aria-hidden
+                            className="mx-1 hidden h-px w-5 shrink-0 bg-gradient-to-r from-cyan-200 to-emerald-200 sm:block"
+                          />
+                        )}
                       </li>
                     ))}
                   </ol>
