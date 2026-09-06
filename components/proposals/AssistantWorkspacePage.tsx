@@ -19,7 +19,6 @@ import {
   type ConversationRunType,
 } from '@/app/actions/conversation';
 import {
-  deletePrivateDocumentSource,
   type PrivateDocumentSource,
 } from '@/app/actions/durableJobs';
 import GlobalDateInput from '@/components/shared/GlobalDateInput';
@@ -51,7 +50,6 @@ import { getUserData } from '@/app/actions/user';
 import AssistantOrb from '@/components/ai/shared/AssistantOrb';
 import TypingIndicator from '@/components/ai/shared/TypingIndicator';
 import type { ProposalData } from '@/components/proposals/AddNewProposal';
-import { presentJob } from '@/lib/asyncOperations';
 import {
   ArrowLeft,
   ArrowUp,
@@ -65,7 +63,6 @@ import {
   Paperclip,
   PencilLine,
   Sparkles,
-  StickyNote,
   Upload,
   X,
 } from 'lucide-react';
@@ -2541,20 +2538,7 @@ export default function AssistantWorkspacePage({
   // Files already uploaded during a failed send attempt keep their source id so
   // a retry does not upload them a second time.
   const uploadedRef = useRef(new Map<File, string>());
-  const [notesOpen, setNotesOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [notesText, setNotesText] = useState('');
-  // Rail source removal: which row is asking for confirmation, which one has a
-  // delete in flight, and per-row failure messages.
-  const [confirmRemoveId, setConfirmRemoveId] = useState<
-    string | null
-  >(null);
-  const [removingSourceId, setRemovingSourceId] = useState<
-    string | null
-  >(null);
-  const [removeErrors, setRemoveErrors] = useState<
-    Record<string, string>
-  >({});
   const [createError, setCreateError] = useState<string | null>(null);
   const [localCards, setLocalCards] = useState<LocalCard[]>([]);
   const [guidanceBusy, setGuidanceBusy] = useState(false);
@@ -2777,10 +2761,11 @@ export default function AssistantWorkspacePage({
     questionBusyId,
     questionError,
   } = useConversation(proposalId);
-  const { notesJob, notesJobId, notesError, notesBusy, submitNotes } =
-    useNotesScan(proposalId);
-  const { uploadJob, uploadJobId, uploadError, upload } =
-    useSourceUpload(proposalId);
+  // Notes and upload scan trackers still drive the source-list refresh key
+  // below; the rail card that submitted notes and listed sources is gone, and
+  // files now enter only through the composer.
+  const { notesJob, notesJobId } = useNotesScan(proposalId);
+  const { uploadJob, uploadJobId, upload } = useSourceUpload(proposalId);
   // Auto-orchestration: a send with attachments queues a watch on the new
   // sources' scans; when all of them are ready one extract_requirements message
   // is sent automatically (exactly once per originating send).
@@ -2797,7 +2782,6 @@ export default function AssistantWorkspacePage({
   );
   const {
     queueAutoExtract,
-    dropSource,
     autoScanning,
     scanCount,
     failedNotices,
@@ -2903,6 +2887,8 @@ export default function AssistantWorkspacePage({
   const openQuestions = activeQuestions.filter(
     (item) => item.status === 'open',
   );
+  // Answered and skipped both count as done for the rail checklist.
+  const resolvedQuestionCount = activeQuestions.length - openQuestions.length;
   const currentQuestion = openQuestions[0] ?? null;
   const sourceExtractionInProgress =
     autoScanning ||
@@ -3425,52 +3411,6 @@ export default function AssistantWorkspacePage({
     });
   }, []);
 
-  // Detaching a source from the rail. The row asks for confirmation inline
-  // (never a window.confirm), the source is only dropped from the list once the
-  // backend has actually deleted it, and a failure leaves the row in place with
-  // the safe message underneath it.
-  const handleRemoveSource = useCallback(
-    async (sourceId: string) => {
-      if (removingSourceId) return;
-      setRemovingSourceId(sourceId);
-      setRemoveErrors((prev) => {
-        const next = { ...prev };
-        delete next[sourceId];
-        return next;
-      });
-      const result = await deletePrivateDocumentSource(sourceId);
-      setRemovingSourceId(null);
-      setConfirmRemoveId(null);
-      if (!result.success) {
-        setRemoveErrors((prev) => ({
-          ...prev,
-          [sourceId]: result.message,
-        }));
-        return;
-      }
-      // A removed source can never become ready, so it leaves any pending
-      // extraction selection before the authoritative list is re-read.
-      dropSource(sourceId);
-      await refreshSources();
-    },
-    [removingSourceId, dropSource, refreshSources],
-  );
-
-  const handleSaveNotes = async () => {
-    if (!notesText.trim() || notesBusy) return;
-    const id = await ensureProposal();
-    if (!id) return;
-    const saved = await submitNotes(
-      notesText,
-      'non_confidential',
-      id,
-    );
-    if (saved) {
-      setNotesText('');
-      setNotesOpen(false);
-    }
-  };
-
   const runExtract = async () => {
     if (readySources.length === 0 || sending || !proposalId) return;
     await sendMessage({
@@ -3504,17 +3444,6 @@ export default function AssistantWorkspacePage({
       expectedProposalVersion: version,
     });
     if (!sent) setDraftRequestBaseline(null);
-  };
-
-  const runDraft = async () => {
-    if (
-      typeof proposalVersion !== 'number' ||
-      sending ||
-      draftInProgress ||
-      !proposalId
-    )
-      return;
-    await sendDraftMessage(proposalVersion);
   };
 
   // Same code path as the rail's "Generate draft" chip, and the single handler
@@ -3569,6 +3498,15 @@ export default function AssistantWorkspacePage({
   // extraction, rather than waiting for the idle timer to do it.
   const runUseMessages = async () => {
     if (!proposalId || segmentBusy) return;
+    // The rail chip that used to carry this guard is gone; the composer
+    // command is the only way in, so the runtime capability is checked here.
+    if (!chatExtractionEnabled) {
+      setLocalCards((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), kind: 'segment', created: false, reason: 'disabled' },
+      ]);
+      return;
+    }
     setSegmentBusy(true);
     const result = await closeConversationSegmentAction(proposalId);
     setSegmentBusy(false);
@@ -4058,8 +3996,6 @@ export default function AssistantWorkspacePage({
     );
   };
 
-  const notesPresentation = notesJob ? presentJob(notesJob) : null;
-  const uploadPresentation = uploadJob ? presentJob(uploadJob) : null;
   // Attaching only stages a chip, so the pickers stay enabled while scans run;
   // they are disabled once three files are staged or while a send uploads.
   const attachDisabled =
@@ -4333,7 +4269,9 @@ export default function AssistantWorkspacePage({
             : {
                 title: 'Ready to help',
                 detail:
-                  'Add information or choose a suggested next step.',
+                  openQuestions.length > 0
+                    ? 'Answer the key questions below, or ask me anything in the thread.'
+                    : 'Ask me anything in the thread, or say “Generate draft” when you’re ready.',
               };
 
   return (
@@ -4402,9 +4340,46 @@ export default function AssistantWorkspacePage({
                   >
                     Let’s build your event RFP
                   </p>
-                  <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-slate-600">
-                    Describe your event or attach a brief to get started.
+                  {/* First-time planners have no user guide, so the landing
+                      copy says what to type, that a document works too, and
+                      what happens next (client request R18 / 6.1; final
+                      wording to come from the client). */}
+                  <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-600">
+                    Start by typing below to tell me about your event — the
+                    name, dates, venue, how many people are attending, and what
+                    you need on the AV and production side. You can also attach
+                    an existing document, such as an event brief or a past RFP,
+                    and I&apos;ll read it for you.
                   </p>
+                  <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                    I&apos;ll then ask a few short questions to fill in anything
+                    that&apos;s missing and build your RFP as we go — you can
+                    review every detail before it&apos;s shared with vendors.
+                  </p>
+                  <ol
+                    aria-label="How it works"
+                    className="mx-auto mt-5 flex max-w-xl flex-wrap justify-center gap-2 text-xs font-semibold text-slate-600"
+                  >
+                    {[
+                      'Tell me about your event or attach a brief',
+                      'Answer the guided questions',
+                      'Review your RFP and share it with vendors',
+                    ].map((step, index) => (
+                      <li
+                        key={step}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm"
+                      >
+                        <span
+                          aria-hidden
+                          className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                          style={{ background: ACCENT }}
+                        >
+                          {index + 1}
+                        </span>
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               </div>
               <div className="w-full shrink-0 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 md:mx-auto md:max-w-xl md:bg-transparent md:p-0">
@@ -4819,7 +4794,7 @@ export default function AssistantWorkspacePage({
               <dl className="relative mt-4 grid grid-cols-3 gap-2">
                 <div className="rounded-xl border border-white/15 bg-white/10 p-2">
                   <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
-                    Sources
+                    Documents
                   </dt>
                   <dd className="mt-0.5 text-sm font-bold">
                     {readySources.length}
@@ -4827,7 +4802,7 @@ export default function AssistantWorkspacePage({
                 </div>
                 <div className="rounded-xl border border-white/15 bg-white/10 p-2">
                   <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
-                    Captured
+                    Details captured
                   </dt>
                   <dd className="mt-0.5 text-sm font-bold">
                     {overviewDetailCount}
@@ -4835,10 +4810,10 @@ export default function AssistantWorkspacePage({
                 </div>
                 <div className="rounded-xl border border-white/15 bg-white/10 p-2">
                   <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
-                    Questions
+                    Questions answered
                   </dt>
                   <dd className="mt-0.5 text-sm font-bold">
-                    {openQuestions.length}
+                    {activeQuestions.length > 0 ? `${resolvedQuestionCount}/${activeQuestions.length}` : '—'}
                   </dd>
                 </div>
               </dl>
@@ -4848,324 +4823,134 @@ export default function AssistantWorkspacePage({
                 />
                 {aiWorking
                   ? 'AI is actively working'
-                  : 'Secure proposal context is ready'}
+                  : 'Your files and answers stay private to this proposal'}
               </div>
             </section>
-            {/* Tool cards remain stationary so async content cannot create a
-                layered or shaking entrance. */}
-            <section
-              aria-labelledby="rail-sources-title"
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:shadow-md"
-            >
-              <h2
-                id="rail-sources-title"
-                className="text-sm font-bold text-slate-900"
-              >
-                Sources
-              </h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Add files or notes to this proposal
-              </p>
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={attachDisabled}
-                  title={attachDisabledTitle}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
-                >
-                  <Upload size={13} aria-hidden />
-                  Upload file
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNotesOpen((open) => !open)}
-                  aria-expanded={notesOpen}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                >
-                  <StickyNote size={13} aria-hidden />
-                  Add notes
-                </button>
-              </div>
-              {notesOpen && (
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Notes
-                    <textarea
-                      value={notesText}
-                      onChange={(event) =>
-                        setNotesText(event.target.value)
-                      }
-                      rows={4}
-                      placeholder="Paste or type notes to attach to this proposal…"
-                      className="mt-1 w-full resize-none rounded-lg border border-slate-300 bg-white p-2 text-sm font-normal"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => void handleSaveNotes()}
-                    disabled={!notesText.trim() || notesBusy}
-                    className="mt-2 w-full rounded-lg bg-[#087f69] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {notesBusy ? 'Saving notes…' : 'Save notes'}
-                  </button>
-                </div>
-              )}
-              {(uploadPresentation || notesPresentation) && (
-                <div
-                  role="status"
-                  className="mt-3 rounded-lg border border-cyan-200 bg-cyan-50 p-2.5 text-xs text-slate-700"
-                >
-                  {uploadPresentation && (
-                    <p>
-                      <span className="font-semibold">File:</span>{' '}
-                      {uploadPresentation.title}
-                    </p>
-                  )}
-                  {notesPresentation && (
-                    <p className={uploadPresentation ? 'mt-1' : ''}>
-                      <span className="font-semibold">Notes:</span>{' '}
-                      {notesPresentation.title}
-                    </p>
-                  )}
-                </div>
-              )}
-              {(uploadError || notesError) && (
-                <p
-                  role="alert"
-                  className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-800"
-                >
-                  {uploadError || notesError}
-                </p>
-              )}
-              {sources.length > 0 ? (
-                <ul
-                  aria-label="Attached sources"
-                  className="mt-3 space-y-1.5"
-                >
-                  {sources.map((source) => {
-                    const removing = removingSourceId === source.id;
-                    const removeError = removeErrors[source.id];
-                    return (
-                      <li
-                        key={source.id}
-                        className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className="min-w-0 basis-full truncate text-slate-700 sm:flex-1 sm:basis-auto"
-                            title={source.originalFilename}
-                          >
-                            {source.originalFilename}
-                          </span>
-                          {source.origin === 'conversation' && (
-                            // The planner never pressed "add this as a source" for
-                            // these — the system built them from what was typed —
-                            // so they must not look like an attached file.
-                            <span
-                              className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800"
-                              title="Built from your messages and used for extraction"
-                            >
-                              from chat
-                            </span>
-                          )}
-                          <span
-                            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${source.status === 'ready' ? 'bg-emerald-100 text-emerald-800' : source.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-white text-slate-600'}`}
-                          >
-                            {source.status.replaceAll('_', ' ')}
-                          </span>
-                          {confirmRemoveId === source.id ? (
-                            // Inline confirmation, so nothing leaves the page and
-                            // the row keeps its own context while deciding.
-                            <span className="flex shrink-0 items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handleRemoveSource(source.id)
-                                }
-                                disabled={removing}
-                                className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {removing ? 'Removing…' : 'Remove?'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setConfirmRemoveId(null)
-                                }
-                                disabled={removing}
-                                className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Cancel
-                              </button>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              aria-label={`Remove ${source.originalFilename}`}
-                              onClick={() => {
-                                setConfirmRemoveId(source.id);
-                              }}
-                              disabled={!!removingSourceId}
-                              className="shrink-0 rounded-full p-0.5 text-slate-300 transition-colors hover:bg-slate-200 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              <X size={12} aria-hidden />
-                            </button>
-                          )}
-                        </div>
-                        {removeError && (
-                          <p
-                            role="alert"
-                            className="mt-1 text-[11px] text-red-700"
-                          >
-                            {removeError}
-                          </p>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="mt-3 text-xs text-slate-400">
-                  No sources yet. Add a file or notes to get started.
-                </p>
-              )}
-              <p className="mt-3 text-[11px] text-slate-400">
-                Files are scanned and processed privately for this
-                proposal.
-              </p>
-            </section>
-
-            {/* Suggested tasks */}
-            <section
-              aria-labelledby="rail-tasks-title"
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:shadow-md"
-            >
-              <h2
-                id="rail-tasks-title"
-                className="text-sm font-bold text-slate-900"
-              >
-                Suggested tasks
-              </h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => void runUseMessages()}
-                  disabled={
-                    segmentBusy ||
-                    sending ||
-                    messages.length === 0 ||
-                    !chatExtractionEnabled
-                  }
-                  title={
-                    !chatExtractionEnabled
-                      ? segmentSkipReasons.disabled
-                      : messages.length === 0
-                        ? 'Tell me about your event first.'
-                        : "Turn what you've typed into a source and pull requirements from it."
-                  }
-                  aria-busy={segmentBusy}
-                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                >
-                  {segmentBusy
-                    ? 'Reading your messages…'
-                    : "Use what I've told you"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void runExtract()}
-                  disabled={readySources.length === 0 || sending}
-                  title={
-                    readySources.length === 0
-                      ? 'Add at least one ready source first.'
-                      : undefined
-                  }
-                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                >
-                  Extract requirements
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void runDraft()}
-                  aria-busy={draftInProgress}
-                  disabled={
-                    typeof proposalVersion !== 'number' ||
-                    sending ||
-                    draftInProgress
-                  }
-                  title={
-                    typeof proposalVersion !== 'number'
-                      ? 'Review extracted requirements first to establish the proposal version.'
-                      : undefined
-                  }
-                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                >
-                  {draftInProgress ? 'Generating…' : 'Generate draft'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void runGuidance()}
-                  disabled={!proposalId || guidanceBusy}
-                  title={
-                    !proposalId
-                      ? 'Start the conversation to create the proposal first.'
-                      : undefined
-                  }
-                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                >
-                  {guidanceBusy && (
-                    <Loader2
-                      size={11}
-                      className="mr-1 inline animate-spin"
-                      aria-hidden
-                    />
-                  )}
-                  Run readiness check
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void runInvestment()}
-                  disabled={!proposalId || investmentBusy}
-                  title={
-                    !proposalId
-                      ? 'Start the conversation to create the proposal first.'
-                      : undefined
-                  }
-                  className="rounded-full border border-[#087f69] px-3 py-1.5 text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                >
-                  {investmentBusy && (
-                    <Loader2
-                      size={11}
-                      className="mr-1 inline animate-spin"
-                      aria-hidden
-                    />
-                  )}
-                  Investment guidance
-                </button>
-              </div>
-            </section>
-
-            {/* Suggested questions */}
+            {/* Key questions checklist: every guided question the assistant
+                asks, ticked once it is answered or skipped, so the planner can
+                see how far along the intake is without scrolling the thread. */}
             <section
               aria-labelledby="rail-questions-title"
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:shadow-md"
             >
-              <h2
-                id="rail-questions-title"
-                className="text-sm font-bold text-slate-900"
-              >
-                Suggested questions
-              </h2>
-              {openQuestions.length === 0 ? (
+              <div className="flex items-baseline justify-between gap-2">
+                <h2
+                  id="rail-questions-title"
+                  className="text-sm font-bold text-slate-900"
+                >
+                  Key questions
+                </h2>
+                {activeQuestions.length > 0 && (
+                  <span className="text-[11px] font-semibold text-slate-500">
+                    {`${resolvedQuestionCount} of ${activeQuestions.length} done`}
+                  </span>
+                )}
+              </div>
+              {activeQuestions.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-400">
                   {questionsComplete
                     ? 'All key questions answered.'
-                    : 'Open clarification questions from the assistant will appear here.'}
+                    : 'Questions will appear here once the assistant reviews your event.'}
                 </p>
               ) : (
-                <p className="mt-2 text-xs text-slate-600">
-                  {`${openQuestions.length} ${openQuestions.length === 1 ? 'question is' : 'questions are'} open now. Follow-up questions may appear as earlier answers unlock venue details.`}
-                </p>
+                <>
+                  <div
+                    role="progressbar"
+                    aria-label="Key questions progress"
+                    aria-valuemin={0}
+                    aria-valuemax={activeQuestions.length}
+                    aria-valuenow={resolvedQuestionCount}
+                    className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+                  >
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#2fc6f5] to-[#087f69] transition-[width] duration-500"
+                      style={{
+                        width: `${Math.round((resolvedQuestionCount / activeQuestions.length) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-slate-600">
+                    {openQuestions.length === 0
+                      ? 'All key questions answered.'
+                      : resolvedQuestionCount === 0
+                        ? `Here are the ${activeQuestions.length} questions we need to get started. Answer or skip each one in the thread.`
+                        : `${openQuestions.length} still to answer — keep going in the thread.`}
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Follow-up questions may appear as earlier answers unlock more
+                    details.
+                  </p>
+                  <ol className="mt-3 max-h-[22rem] space-y-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                    {activeQuestions.map((question, index) => {
+                      const resolved = question.status !== 'open';
+                      const skipped = question.status === 'dismissed';
+                      const isCurrent = currentQuestion?.id === question.id;
+                      const state = skipped
+                        ? 'Skipped'
+                        : resolved
+                          ? 'Answered'
+                          : isCurrent
+                            ? 'Up next'
+                            : 'Open';
+                      return (
+                        <li
+                          key={question.id}
+                          data-question-state={state.toLowerCase().replace(' ', '-')}
+                          className={`flex items-start gap-2.5 rounded-xl px-2 py-1.5 transition-colors ${
+                            isCurrent
+                              ? 'bg-amber-50 ring-1 ring-amber-200'
+                              : resolved
+                                ? ''
+                                : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <span
+                            aria-hidden
+                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                              resolved
+                                ? skipped
+                                  ? 'border-slate-300 bg-slate-300 text-white'
+                                  : 'border-emerald-500 bg-emerald-500 text-white'
+                                : isCurrent
+                                  ? 'border-amber-400 bg-white'
+                                  : 'border-slate-300 bg-white'
+                            }`}
+                          >
+                            {resolved && <Check size={10} strokeWidth={3} />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`text-xs leading-snug ${
+                                resolved
+                                  ? 'font-medium text-slate-500'
+                                  : 'font-semibold text-slate-800'
+                              }`}
+                            >
+                              {`${index + 1}. ${displayQuestionPrompt(question)}`}
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              <span>{questionFieldLabel(question)}</span>
+                              <span aria-hidden> · </span>
+                              <span
+                                className={
+                                  skipped
+                                    ? 'text-slate-400'
+                                    : resolved
+                                      ? 'text-emerald-600'
+                                      : isCurrent
+                                        ? 'text-amber-600'
+                                        : 'text-slate-400'
+                                }
+                              >
+                                {state}
+                              </span>
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </>
               )}
             </section>
             </div>

@@ -290,7 +290,10 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage />);
     expect(await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/)).toBeInTheDocument();
     expect(screen.getByText("Let’s build your event RFP")).toBeInTheDocument();
-    expect(screen.getByText("Describe your event or attach a brief to get started.")).toBeInTheDocument();
+    // First-time copy explains typing, attaching a document, and what happens next.
+    expect(screen.getByText(/Start by typing below to tell me about your event/)).toBeInTheDocument();
+    expect(screen.getByText(/You can also attach an existing document/)).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "How it works" })).toHaveTextContent("Answer the guided questions");
     expect(screen.queryByText(/Start by typing your event details below/)).not.toBeInTheDocument();
     expect(screen.queryByText(/I’ll guide you through the missing details/)).not.toBeInTheDocument();
     expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();
@@ -1201,8 +1204,11 @@ describe("AssistantWorkspacePage", () => {
     );
     // Only ONE question card — the second question is not rendered yet.
     expect(screen.queryByText("How many event rooms are required?")).not.toBeInTheDocument();
-    // The rail no longer lists prompts; it shows the remaining count.
-    expect(await screen.findByText(/2 questions are open now/)).toBeInTheDocument();
+    // The rail lists every question as a checklist with progress; nothing is
+    // ticked yet and the active question is marked as up next.
+    expect(await screen.findByText("0 of 2 done")).toBeInTheDocument();
+    expect(screen.getByText("2. How many event rooms are required?")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Key questions progress" })).toHaveAttribute("aria-valuenow", "0");
     // Nothing was answered yet, so no completion card.
     expect(screen.queryByText(/All key questions answered/)).not.toBeInTheDocument();
   });
@@ -1918,13 +1924,13 @@ describe("AssistantWorkspacePage", () => {
     // The rail reflects completion too (it slides in asynchronously).
     expect(await screen.findByText("All key questions answered.")).toBeInTheDocument();
     // The consistent action row: one primary, a tertiary link, and no second
-    // readiness button because a report is already on screen — only the rail's
-    // own chip remains.
+    // readiness button because a report is already on screen (the rail no
+    // longer carries task chips).
     expect(screen.getByRole("button", { name: "Generate proposal draft" })).toHaveClass(
       "w-full",
       "sm:w-auto",
     );
-    expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Run readiness check" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Edit all details" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open RFP questions" })).toBeInTheDocument();
     // The old vague copy is gone for good.
@@ -1951,10 +1957,10 @@ describe("AssistantWorkspacePage", () => {
     // No percentage, no bar, and never a raw error from the guidance service.
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByText(/is not enabled for this environment/)).not.toBeInTheDocument();
-    // With no report on screen the card offers the check itself, alongside the
-    // rail's own chip (the rail slides in asynchronously).
+    // With no report on screen the card offers the check itself (the rail
+    // slides in asynchronously and no longer carries task chips).
     await screen.findByText("All key questions answered.");
-    expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Generate proposal draft" }));
     await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
@@ -2053,26 +2059,14 @@ describe("AssistantWorkspacePage", () => {
     expect(await screen.findByText(startDateQuestion.prompt)).toBeInTheDocument();
   });
 
-  test("Extract requirements is disabled when no ready non-confidential source exists", async () => {
-    mockedGetConversation.mockResolvedValue(conversationWithQuestion);
-    mockedListSources.mockResolvedValue({
-      success: true,
-      correlationId: "test-correlation",
-      data: [{ id: "src-9", status: "scanning", confidentiality: "non_confidential", originalFilename: "pending.pdf", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" as const }],
-    });
-    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("pending.pdf");
-    expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
-  });
-
-  test("Extract requirements auto-selects ready sources and sends the intent", async () => {
+  test("the Extract requirements command auto-selects ready sources and sends the intent", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithQuestion);
     mockedListSources.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
       data: [
-        { id: "src-1", status: "ready", confidentiality: "non_confidential", originalFilename: "venue.pdf", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" as const },
-        { id: "src-2", status: "ready", confidentiality: "confidential", originalFilename: "internal.pdf", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" as const },
+        { id: "src-1", status: "ready", confidentiality: "non_confidential", originalFilename: "venue.pdf", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" },
+        { id: "src-2", status: "ready", confidentiality: "confidential", originalFilename: "internal.pdf", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" },
       ],
     });
     mockedPostMessage.mockResolvedValue({
@@ -2082,9 +2076,11 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    const extractButton = await screen.findByRole("button", { name: "Extract requirements" });
-    await waitFor(() => expect(extractButton).toBeEnabled());
-    fireEvent.click(extractButton);
+    await waitFor(() => expect(mockedListSources).toHaveBeenCalled());
+    // The rail no longer carries task buttons; the command comes from the composer.
+    expect(screen.queryByRole("button", { name: "Extract requirements" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Message the proposal assistant"), { target: { value: "Extract requirements" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
       PROPOSAL_ID,
@@ -2197,7 +2193,7 @@ describe("AssistantWorkspacePage", () => {
     await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
     // No Sources card, tasks, or questions rail in the empty greeting state.
     expect(screen.queryByText("Sources")).not.toBeInTheDocument();
-    expect(screen.queryByText("Suggested tasks")).not.toBeInTheDocument();
+    expect(screen.queryByText("Key questions")).not.toBeInTheDocument();
     expect(screen.queryByText("AI workspace")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add notes" })).not.toBeInTheDocument();
 
@@ -2205,7 +2201,7 @@ describe("AssistantWorkspacePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     // Once the send lands the rail slides in and stays.
-    expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Key questions" })).toBeInTheDocument();
     expect(screen.getAllByText("AI workspace")).toHaveLength(2);
     const toolsToggle = screen.getByLabelText("Toggle AI workspace tools");
     expect(toolsToggle).toHaveAttribute("aria-expanded", "false");
@@ -2227,8 +2223,8 @@ describe("AssistantWorkspacePage", () => {
       "xl:pr-2",
       "[scrollbar-gutter:stable]",
     );
-    expect(screen.getByText("Suggested tasks")).toBeInTheDocument();
-    expect(screen.getByText("Suggested questions")).toBeInTheDocument();
+    expect(screen.queryByText("Suggested tasks")).not.toBeInTheDocument();
+    expect(screen.getByText("Key questions")).toBeInTheDocument();
   });
 
   test("right rail stays mounted while a created proposal is waiting for its first persisted message", async () => {
@@ -2681,29 +2677,6 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
   });
 
-  test("saving notes needs no approval checkbox and stores them as non_confidential", async () => {
-    mockedGetConversation.mockResolvedValue(conversationWithQuestion);
-    mockedCreateNotes.mockResolvedValue({
-      success: true,
-      correlationId: "test-correlation",
-      data: { source: { id: "src-notes", status: "uploaded", confidentiality: "non_confidential", originalFilename: "Notes", createdAt: "2026-07-21T10:00:00.000Z" , origin: "upload" as const } },
-    } as never);
-    mockedCreateScanJob.mockResolvedValue({ success: true, correlationId: "test-correlation", data: scanJob("queued") });
-    mockedGetDurableJob.mockResolvedValue({ success: true, correlationId: "test-correlation", data: scanJob("succeeded") });
-
-    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Add notes" }));
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    fireEvent.change(screen.getByPlaceholderText("Paste or type notes to attach to this proposal…"), { target: { value: "Outdoor stage, 300 guests." } });
-    fireEvent.click(screen.getByRole("button", { name: "Save notes" }));
-
-    await waitFor(() => expect(mockedCreateNotes).toHaveBeenCalledWith(
-      PROPOSAL_ID,
-      { text: "Outdoor stage, 300 guests.", classification: "non_confidential" },
-      expect.any(String),
-    ));
-  });
-
   // ── Explicit review after extraction ───────────────────────────────────────
 
   const conversationWithCompletedRun = (questions: Array<Record<string, unknown>> = []) => ({
@@ -3016,31 +2989,14 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByText("gpt-test")).not.toBeInTheDocument();
   });
 
-  test("a source built from chat is labelled, so it never looks like an attached file", async () => {
-    mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
-    mockedListSources.mockResolvedValue({
-      success: true,
-      correlationId: "test-correlation",
-      data: [
-        { ...sourceRow("ready", "src-file"), originalFilename: "venue.pdf" },
-        { ...sourceRow("ready", "src-chat"), originalFilename: "conversation-notes-2.txt", origin: "conversation" as const },
-      ],
-    });
-
-    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-
-    // The planner never pressed "add this as a source" for the chat-derived
-    // one, so it must be distinguishable from a file they chose to upload.
-    expect(await screen.findByText("conversation-notes-2.txt")).toBeInTheDocument();
-    expect(screen.getAllByText("from chat")).toHaveLength(1);
-  });
-
   test("asking the assistant to use typed messages reports what happened", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithDraft([]));
     mockedCloseSegment.mockResolvedValue({ success: true, correlationId: "c", data: { created: true } });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Use what/i }));
+    await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(screen.getByLabelText("Message the proposal assistant"), { target: { value: "Use what I've told you" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     // Extraction is otherwise silent: a source and applied fields would appear
     // with nothing explaining where they came from.
@@ -3060,11 +3016,11 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     // The runtime API is authoritative, preventing the mismatch seen in the
-    // live workflow.
-    const task = await screen.findByRole("button", { name: /Use what/i });
-    expect(task).toBeDisabled();
-    expect(task).toHaveAttribute("title", expect.stringMatching(/isn't switched on/i));
-    fireEvent.click(task);
+    // live workflow: the command explains itself instead of calling the backend.
+    await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(screen.getByLabelText("Message the proposal assistant"), { target: { value: "Use what I've told you" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    expect(await screen.findByText(/isn't switched on/i)).toBeInTheDocument();
     expect(mockedCloseSegment).not.toHaveBeenCalled();
   });
 
@@ -3091,7 +3047,9 @@ describe("AssistantWorkspacePage", () => {
     mockedCloseSegment.mockResolvedValue({ success: true, correlationId: "c", data: { created: false, reason: "insufficient" } });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Use what/i }));
+    await screen.findByLabelText("Message the proposal assistant");
+    fireEvent.change(screen.getByLabelText("Message the proposal assistant"), { target: { value: "Use what I've told you" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     const notice = await screen.findByText(/enough detail in your messages/i);
     expect(notice).toBeInTheDocument();
