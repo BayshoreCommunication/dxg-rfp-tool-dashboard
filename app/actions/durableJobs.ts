@@ -19,6 +19,18 @@ const safeMessages: Record<string, string> = {
   UNSUPPORTED_MEDIA_TYPE: "Choose a PDF, DOCX, XLSX, CSV, or TXT file.",
   FILE_SIZE_INVALID: "Choose a file smaller than the approved upload limit.",
   STORAGE_UNAVAILABLE: "Private file storage is temporarily unavailable.",
+  // The backend verifies ownership in MongoDB first, so this code means the
+  // proposal's PostgreSQL reference is missing; the server repairs it on the
+  // next attempt.
+  PROPOSAL_NOT_FOUND: "This proposal is still being prepared. Try again in a moment.",
+  ORGANIZATION_NOT_READY: "Your workspace is still being prepared. Sign out, sign back in, and try again.",
+  OBJECT_SIZE_MISMATCH: "The file changed while it was uploading. Attach it again.",
+  CONTENT_TYPE_MISMATCH: "The file content does not match its extension. Choose a PDF, DOCX, XLSX, CSV, or TXT file.",
+  IDEMPOTENCY_CONFLICT: "This request was already submitted with a different file. Attach the file again.",
+  // The auth and rate-limit middleware answer without a `code`, so these
+  // arrive as HTTP_<status>.
+  HTTP_403: "Your session is no longer valid. Sign in again.",
+  HTTP_429: "Too many requests in a short time. Wait a minute and try again.",
 };
 
 const request = async <T>(path: string, init?: RequestInit, parse?: (value: unknown) => T | null): Promise<ActionResult<T>> => {
@@ -34,7 +46,9 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
     const responseCorrelation = response.headers.get("x-correlation-id") || correlationId;
     if (!response.ok) {
       const code = typeof body.code === "string" ? body.code : `HTTP_${response.status}`;
-      return { success: false, code, message: safeMessages[code] ?? "The operation could not be completed safely.", correlationId: responseCorrelation };
+      // Unknown codes keep the code in the text so a report of "sometimes it
+      // fails" carries the backend reason.
+      return { success: false, code, message: safeMessages[code] ?? `The operation could not be completed safely (${code}).`, correlationId: responseCorrelation };
     }
     const value = parse ? parse(body.data) : body.data as T;
     if (value === null || value === undefined) return { success: false, code: "INVALID_RESPONSE", message: "The service returned an unexpected response.", correlationId: responseCorrelation };
