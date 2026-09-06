@@ -4381,8 +4381,9 @@ export default function AssistantWorkspacePage({
                 <AssistantOrb />
                 <div>
                   <h1 className="text-balance text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-                    Good {dayPart()}
-                    {firstName ? `, ${firstName}` : ''}
+                    {/* The profile resolves after mount, so server and first
+                        client render use the same timezone-neutral greeting. */}
+                    {firstName ? `Good ${dayPart()}, ${firstName}` : 'Welcome'}
                   </h1>
                   <p
                     className="mt-2 text-base font-semibold md:text-xl"

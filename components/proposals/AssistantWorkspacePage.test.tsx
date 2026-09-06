@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, isSkipQuestionInstruction, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, speechTranscriptFromSegments, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
@@ -265,6 +266,23 @@ describe("AssistantWorkspacePage", () => {
     replaceStateSpy.mockRestore();
     delete (window as typeof window & { webkitSpeechRecognition?: unknown })
       .webkitSpeechRecognition;
+  });
+
+  test("greeting is timezone-neutral until the client profile resolves", async () => {
+    let resolveProfile!: (value: Awaited<ReturnType<typeof getUserData>>) => void;
+    (getUserData as jest.Mock).mockReturnValueOnce(new Promise((resolve) => { resolveProfile = resolve; }));
+    const hour = jest.spyOn(Date.prototype, "getHours").mockReturnValue(6);
+    try {
+      expect(renderToString(<AssistantWorkspacePage />)).toContain(">Welcome</h1>");
+      hour.mockReturnValue(14);
+      expect(renderToString(<AssistantWorkspacePage />)).toContain(">Welcome</h1>");
+      render(<AssistantWorkspacePage />);
+      expect(screen.getByRole("heading", { name: "Welcome" })).toBeInTheDocument();
+      await act(async () => { resolveProfile({ ok: true, data: { name: "Travis" } } as Awaited<ReturnType<typeof getUserData>>); });
+      expect(screen.getByRole("heading", { name: "Good Afternoon, Travis" })).toBeInTheDocument();
+    } finally {
+      hour.mockRestore();
+    }
   });
 
   test("empty state greets the signed-in user by first name", async () => {
