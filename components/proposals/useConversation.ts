@@ -460,10 +460,21 @@ type AutoExtractStore = { pending: string[]; handled: string[] };
 const stringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 
+// The intent outlives the tab: a planner who reloads, opens the proposal from
+// the list later, or closes the tab while the scan runs must still get the
+// automatic extraction. localStorage is shared across tabs, and the handled
+// list it carries is what keeps two tabs from firing the same extraction.
+const autoExtractStorage = (): Storage | null => {
+  if (typeof window === "undefined") return null;
+  try { return window.localStorage; } catch { /* blocked storage */ }
+  try { return window.sessionStorage; } catch { return null; }
+};
+
 const readAutoExtractStore = (proposalId: string): AutoExtractStore => {
-  if (typeof window === "undefined") return { pending: [], handled: [] };
+  const storage = autoExtractStorage();
+  if (!storage) return { pending: [], handled: [] };
   try {
-    const raw = window.sessionStorage.getItem(autoExtractKey(proposalId));
+    const raw = storage.getItem(autoExtractKey(proposalId));
     if (!raw) return { pending: [], handled: [] };
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return { pending: [], handled: [] };
@@ -475,9 +486,10 @@ const readAutoExtractStore = (proposalId: string): AutoExtractStore => {
 };
 
 const writeAutoExtractStore = (proposalId: string, store: AutoExtractStore) => {
-  if (typeof window === "undefined") return;
+  const storage = autoExtractStorage();
+  if (!storage) return;
   try {
-    window.sessionStorage.setItem(autoExtractKey(proposalId), JSON.stringify(store));
+    storage.setItem(autoExtractKey(proposalId), JSON.stringify(store));
   } catch {
     // Storage being unavailable only loses reload-resume, never the session.
   }
@@ -485,9 +497,24 @@ const writeAutoExtractStore = (proposalId: string, store: AutoExtractStore) => {
 
 export type AutoExtractNotice = { sourceId: string; filename: string };
 
+// Backend scan outcomes: "ready" (clean), "blocked" (malware), "scan_failed"
+// (scanner unavailable — the worker retries the job). Older responses used
+// "failed"; keep it so the notice still shows.
+const AUTO_EXTRACT_FAILED_STATUSES = ["failed", "blocked"];
+// ~15 minutes at the 10 s polling ceiling. A scan that has not settled by then
+// is stuck (dead-lettered job); stop polling and tell the planner.
+const AUTO_EXTRACT_MAX_POLLS = 90;
+// A send that was refused (no healthy API target, expired session) is retried
+// automatically after this delay, on top of the manual Retry action.
+export const AUTO_EXTRACT_RETRY_DELAY_MS = 10_000;
+
 export function useAutoExtraction(
   proposalId: string | null,
   sendMessage: (input: SendInput, targetProposalId?: string) => Promise<boolean>,
+  // Source ids the thread already shows an extraction for. A watch resumed from
+  // storage (or retried after a refused send that in fact landed) must never
+  // start a second run for the same sources.
+  extractedSourceIds: string[] = [],
 ) {
   // The watch carries its own proposal id so a send right after lazy proposal
   // creation is tracked even before the hook re-renders with the new id.
@@ -495,8 +522,12 @@ export function useAutoExtraction(
   const [failedNotices, setFailedNotices] = useState<AutoExtractNotice[]>([]);
   const sendRef = useRef(sendMessage);
   useEffect(() => { sendRef.current = sendMessage; }, [sendMessage]);
+  const extractedRef = useRef(extractedSourceIds);
+  useEffect(() => { extractedRef.current = extractedSourceIds; }, [extractedSourceIds]);
   const firingRef = useRef(false);
   const pollCount = useRef(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (retryTimer.current) clearTimeout(retryTimer.current); }, []);
 
   // Resumes a persisted intent after a reload. The setState is deferred to a
   // macrotask so the effect itself never sets state synchronously.
@@ -522,7 +553,9 @@ export function useAutoExtraction(
       if (!active) return;
       if (result.success) {
         const byId = new Map(result.data.map(source => [source.id, source]));
-        const failed = watch.sourceIds.filter(id => byId.get(id)?.status === "failed");
+        const failed = watch.sourceIds.filter(id =>
+          AUTO_EXTRACT_FAILED_STATUSES.includes(byId.get(id)?.status ?? "") ||
+          pollCount.current >= AUTO_EXTRACT_MAX_POLLS);
         if (failed.length > 0) {
           // A failed scan cancels the automatic extraction for this send; the
           // user gets an inline notice and can re-upload instead.
@@ -538,10 +571,11 @@ export function useAutoExtraction(
         }
         if (watch.sourceIds.every(id => byId.get(id)?.status === "ready")) {
           const store = readAutoExtractStore(watch.proposalId);
-          const toExtract = watch.sourceIds.filter(id => !store.handled.includes(id));
+          const alreadyExtracted = extractedRef.current;
+          const toExtract = watch.sourceIds.filter(id => !store.handled.includes(id) && !alreadyExtracted.includes(id));
           // The handled ids are recorded BEFORE the send so a re-render or a
           // reload during the send can never fire the extraction twice.
-          writeAutoExtractStore(watch.proposalId, { pending: [], handled: [...store.handled, ...toExtract] });
+          writeAutoExtractStore(watch.proposalId, { pending: [], handled: [...store.handled, ...watch.sourceIds] });
           setWatch(null);
           if (toExtract.length > 0 && !firingRef.current) {
             firingRef.current = true;
@@ -553,13 +587,20 @@ export function useAutoExtraction(
               if (sent) return;
               // Acceptance failed before a run existed (for example while the
               // API had no healthy target). Do not permanently consume these
-              // sources: the failed message's Retry action must be able to
-              // submit the same source ids again without another upload.
+              // sources: put them back in the pending intent so a reload or
+              // the automatic retry below submits them again; the thread's
+              // extraction messages guard against a send that did land.
               const latest = readAutoExtractStore(watch.proposalId);
               writeAutoExtractStore(watch.proposalId, {
-                pending: latest.pending,
+                pending: [...new Set([...latest.pending, ...toExtract])],
                 handled: latest.handled.filter(id => !toExtract.includes(id)),
               });
+              if (retryTimer.current) clearTimeout(retryTimer.current);
+              retryTimer.current = setTimeout(() => {
+                retryTimer.current = null;
+                pollCount.current = 0;
+                setWatch(current => current ?? { proposalId: watch.proposalId, sourceIds: toExtract });
+              }, AUTO_EXTRACT_RETRY_DELAY_MS);
             }).finally(() => { firingRef.current = false; });
           }
           return;

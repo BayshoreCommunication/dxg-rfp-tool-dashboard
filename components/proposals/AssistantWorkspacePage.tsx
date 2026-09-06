@@ -2784,13 +2784,24 @@ export default function AssistantWorkspacePage({
   // Auto-orchestration: a send with attachments queues a watch on the new
   // sources' scans; when all of them are ready one extract_requirements message
   // is sent automatically (exactly once per originating send).
+  // Sources the thread already extracted, so a watch resumed from storage or
+  // retried after a refused send never starts a duplicate run.
+  const extractedSourceIds = useMemo(
+    () =>
+      (data?.messages ?? [])
+        .filter((message) => message.intent === 'extract_requirements')
+        .flatMap((message) =>
+          message.attachments.map((attachment) => attachment.sourceId),
+        ),
+    [data?.messages],
+  );
   const {
     queueAutoExtract,
     dropSource,
     autoScanning,
     scanCount,
     failedNotices,
-  } = useAutoExtraction(proposalId, sendMessage);
+  } = useAutoExtraction(proposalId, sendMessage, extractedSourceIds);
   const { sources, refresh: refreshSources } = useProposalSources(
     proposalId,
     `${notesJobId ?? ''}:${uploadJobId ?? ''}:${notesJob?.status ?? ''}:${uploadJob?.status ?? ''}:${autoScanning}`,

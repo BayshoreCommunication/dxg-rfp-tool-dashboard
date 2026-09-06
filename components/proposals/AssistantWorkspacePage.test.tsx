@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
+import { AUTO_EXTRACT_RETRY_DELAY_MS, autoExtractKey } from "./useConversation";
 import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, isSkipQuestionInstruction, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, speechTranscriptFromSegments, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
@@ -2410,6 +2411,154 @@ describe("AssistantWorkspacePage", () => {
       expect(screen.queryByText(/Checking your file/)).not.toBeInTheDocument();
       await act(async () => { await jest.advanceTimersByTimeAsync(60_000); });
       expect(extractCalls()).toHaveLength(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("a blocked (malware) scan shows the inline notice instead of auto-running extraction", async () => {
+    jest.useFakeTimers();
+    try {
+      let sourceStatus = "scanning";
+      mockedListSources.mockImplementation(async () => ({
+        success: true as const,
+        correlationId: "test-correlation",
+        data: [sourceRow(sourceStatus)],
+      }));
+      mockUploadChain();
+      mockedPostMessage.mockResolvedValue({
+        success: true,
+        correlationId: "test-correlation",
+        data: { created: true, message: null, assistantMessageId: null, run: null },
+      });
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await stageAndSendFile();
+      await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledTimes(1));
+
+      sourceStatus = "blocked";
+      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+
+      expect(await screen.findByText("venue.pdf couldn’t be processed — try re-uploading.")).toBeInTheDocument();
+      await act(async () => { await jest.advanceTimersByTimeAsync(60_000); });
+      expect(extractCalls()).toHaveLength(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("the auto-extraction intent survives leaving the page while the scan runs", async () => {
+    jest.useFakeTimers();
+    try {
+      let sourceStatus = "scanning";
+      mockedListSources.mockImplementation(async () => ({
+        success: true as const,
+        correlationId: "test-correlation",
+        data: [sourceRow(sourceStatus)],
+      }));
+      mockUploadChain();
+      mockedPostMessage.mockResolvedValue({
+        success: true,
+        correlationId: "test-correlation",
+        data: { created: true, message: null, assistantMessageId: null, run: null },
+      });
+
+      const first = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await stageAndSendFile();
+      await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledTimes(1));
+      // The planner navigates away (or reloads) before the scan settles.
+      first.unmount();
+      expect(extractCalls()).toHaveLength(0);
+
+      // Coming back to the proposal — a fresh mount, as after a reload or from
+      // another tab — resumes the watch and still extracts exactly once.
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      sourceStatus = "ready";
+      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+      await waitFor(() => expect(extractCalls()).toHaveLength(1));
+      expect(extractCalls()[0][1]).toEqual({
+        content: "Extracting requirements from the attached files.",
+        intent: "extract_requirements",
+        sourceIds: ["src-new"],
+      });
+      await act(async () => { await jest.advanceTimersByTimeAsync(60_000); });
+      expect(extractCalls()).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("a refused extraction send is retried automatically", async () => {
+    jest.useFakeTimers();
+    try {
+      mockedListSources.mockResolvedValue({
+        success: true as const,
+        correlationId: "test-correlation",
+        data: [sourceRow("ready")],
+      });
+      mockUploadChain();
+      let extractAttempts = 0;
+      mockedPostMessage.mockImplementation(async (_proposalId, input) => {
+        if ((input as { intent: string }).intent === "extract_requirements" && ++extractAttempts === 1) {
+          // e.g. the API had no healthy target for a moment.
+          return { success: false as const, code: "HTTP_503", message: "The operation could not be completed safely (HTTP_503).", correlationId: "test-correlation" };
+        }
+        return {
+          success: true as const,
+          correlationId: "test-correlation",
+          data: { created: true, message: null, assistantMessageId: null, run: null },
+        };
+      });
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await stageAndSendFile();
+      await waitFor(() => expect(extractCalls()).toHaveLength(1));
+
+      await act(async () => { await jest.advanceTimersByTimeAsync(AUTO_EXTRACT_RETRY_DELAY_MS + 1_000); });
+      await waitFor(() => expect(extractCalls()).toHaveLength(2));
+      // Accepted on the retry: nothing further is sent.
+      await act(async () => { await jest.advanceTimersByTimeAsync(60_000); });
+      expect(extractCalls()).toHaveLength(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("a resumed intent skips sources the thread already extracted", async () => {
+    jest.useFakeTimers();
+    try {
+      window.localStorage.setItem(autoExtractKey(PROPOSAL_ID), JSON.stringify({ pending: ["src-new"], handled: [] }));
+      mockedListSources.mockResolvedValue({
+        success: true as const,
+        correlationId: "test-correlation",
+        data: [sourceRow("ready")],
+      });
+      mockedGetConversation.mockResolvedValue({
+        ...conversationWithQuestion,
+        data: {
+          ...conversationWithQuestion.data,
+          messages: [
+            {
+              id: "msg-extract-1", ordinal: 1, role: "user" as const, kind: "action_request" as const,
+              content: "Extracting requirements from the attached files.", intent: "extract_requirements",
+              runType: null, runId: null, jobId: null, status: "complete" as const, createdAt: "2026-07-21T10:00:00.000Z",
+              attachments: [{ sourceId: "src-new", role: "input", filename: "venue.pdf", sourceStatus: "ready" }],
+            },
+          ],
+        },
+      });
+      mockedPostMessage.mockResolvedValue({
+        success: true,
+        correlationId: "test-correlation",
+        data: { created: true, message: null, assistantMessageId: null, run: null },
+      });
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await screen.findByText("Extracting requirements from the attached files.");
+      await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
+
+      expect(extractCalls()).toHaveLength(0);
+      expect(JSON.parse(window.localStorage.getItem(autoExtractKey(PROPOSAL_ID)) ?? "{}")).toEqual({ pending: [], handled: ["src-new"] });
     } finally {
       jest.useRealTimers();
     }
