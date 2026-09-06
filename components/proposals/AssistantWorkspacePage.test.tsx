@@ -289,7 +289,9 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage />);
     expect(await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/)).toBeInTheDocument();
     expect(screen.getByText("Let’s build your event RFP")).toBeInTheDocument();
-    expect(screen.getByText(/Start by typing your event details below/)).toBeInTheDocument();
+    expect(screen.getByText("Describe your event or attach a brief to get started.")).toBeInTheDocument();
+    expect(screen.queryByText(/Start by typing your event details below/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/I’ll guide you through the missing details/)).not.toBeInTheDocument();
     expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Describe your event or ask for help…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start voice input" })).toBeInTheDocument();

@@ -4392,10 +4392,7 @@ export default function AssistantWorkspacePage({
                     Let’s build your event RFP
                   </p>
                   <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-slate-600">
-                    Start by typing your event details below, or attach an existing brief or RFP using the paperclip. Share the event name, dates, location, and expected attendance if you know them.
-                  </p>
-                  <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
-                    I’ll guide you through the missing details and help prepare a draft. You can review and edit it before anything is published or sent to vendors.
+                    Describe your event or attach a brief to get started.
                   </p>
                 </div>
               </div>
