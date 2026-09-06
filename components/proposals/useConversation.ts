@@ -474,7 +474,19 @@ const readAutoExtractStore = (proposalId: string): AutoExtractStore => {
   const storage = autoExtractStorage();
   if (!storage) return { pending: [], handled: [] };
   try {
-    const raw = storage.getItem(autoExtractKey(proposalId));
+    let raw = storage.getItem(autoExtractKey(proposalId));
+    // Earlier builds kept the intent in sessionStorage; a tab that sent its
+    // attachments on that build and then reloaded onto this one must not lose it.
+    if (raw === null && typeof window !== "undefined") {
+      try {
+        const legacy = window.sessionStorage.getItem(autoExtractKey(proposalId));
+        if (legacy !== null) {
+          raw = legacy;
+          storage.setItem(autoExtractKey(proposalId), legacy);
+          window.sessionStorage.removeItem(autoExtractKey(proposalId));
+        }
+      } catch { /* session storage unavailable */ }
+    }
     if (!raw) return { pending: [], handled: [] };
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return { pending: [], handled: [] };
@@ -515,6 +527,12 @@ export function useAutoExtraction(
   // storage (or retried after a refused send that in fact landed) must never
   // start a second run for the same sources.
   extractedSourceIds: string[] = [],
+  // Source ids attached to recent chat messages that the thread shows no
+  // extraction for. The thread is the durable record: a planner who sent the
+  // attachment from another device, a tab on an older build, or a browser
+  // that lost its storage still gets the extraction when they open the
+  // proposal.
+  unextractedAttachmentSourceIds: string[] = [],
 ) {
   // The watch carries its own proposal id so a send right after lazy proposal
   // creation is tracked even before the hook re-renders with the new id.
@@ -528,6 +546,25 @@ export function useAutoExtraction(
   const pollCount = useRef(0);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (retryTimer.current) clearTimeout(retryTimer.current); }, []);
+
+  // Thread-derived intent: attachments nobody extracted yet become pending
+  // unless this browser already handled or is already watching them.
+  const unextractedKey = unextractedAttachmentSourceIds.join("|");
+  useEffect(() => {
+    if (!proposalId || !unextractedKey) return;
+    const candidates = unextractedKey.split("|");
+    const timer = setTimeout(() => {
+      const store = readAutoExtractStore(proposalId);
+      const fresh = candidates.filter(id => !store.handled.includes(id) && !store.pending.includes(id));
+      if (fresh.length === 0) return;
+      writeAutoExtractStore(proposalId, { pending: [...store.pending, ...fresh], handled: store.handled });
+      pollCount.current = 0;
+      setWatch(current => current && current.proposalId === proposalId
+        ? { ...current, sourceIds: [...new Set([...current.sourceIds, ...fresh])] }
+        : { proposalId, sourceIds: [...store.pending, ...fresh] });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [proposalId, unextractedKey]);
 
   // Resumes a persisted intent after a reload. The setState is deferred to a
   // macrotask so the effect itself never sets state synchronously.

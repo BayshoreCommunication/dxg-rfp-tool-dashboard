@@ -1132,6 +1132,8 @@ const roundedMoney = (
 };
 
 const MAX_STAGED_FILES = 3;
+// Attachments older than this are left alone when a proposal is opened.
+const UNEXTRACTED_ATTACHMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const formatFileSize = (bytes: number) => {
   if (bytes >= 1_048_576)
@@ -2778,12 +2780,37 @@ export default function AssistantWorkspacePage({
         ),
     [data?.messages],
   );
+  // Attachments on recent chat messages that never got an extraction. Recent
+  // only: older proposals predate automatic extraction and must not start
+  // runs retroactively the moment someone opens them.
+  const unextractedAttachmentSourceIds = useMemo(() => {
+    const cutoff = Date.now() - UNEXTRACTED_ATTACHMENT_WINDOW_MS;
+    return [...new Set(
+      (data?.messages ?? [])
+        .filter(
+          (message) =>
+            message.role === 'user' &&
+            message.intent !== 'extract_requirements' &&
+            message.attachments.length > 0 &&
+            Date.parse(message.createdAt) >= cutoff,
+        )
+        .flatMap((message) =>
+          message.attachments.map((attachment) => attachment.sourceId),
+        )
+        .filter((sourceId) => !extractedSourceIds.includes(sourceId)),
+    )];
+  }, [data?.messages, extractedSourceIds]);
   const {
     queueAutoExtract,
     autoScanning,
     scanCount,
     failedNotices,
-  } = useAutoExtraction(proposalId, sendMessage, extractedSourceIds);
+  } = useAutoExtraction(
+    proposalId,
+    sendMessage,
+    extractedSourceIds,
+    unextractedAttachmentSourceIds,
+  );
   const { sources, refresh: refreshSources } = useProposalSources(
     proposalId,
     `${notesJobId ?? ''}:${uploadJobId ?? ''}:${notesJob?.status ?? ''}:${uploadJob?.status ?? ''}:${autoScanning}`,

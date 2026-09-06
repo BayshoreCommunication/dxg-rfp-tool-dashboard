@@ -2562,6 +2562,106 @@ describe("AssistantWorkspacePage", () => {
     }
   });
 
+  const chatMessageWithAttachment = (createdAt: string) => ({
+    ...conversationWithQuestion,
+    data: {
+      ...conversationWithQuestion.data,
+      messages: [
+        {
+          id: "msg-attach-1", ordinal: 1, role: "user" as const, kind: "instruction" as const,
+          content: "Please review the attached file.", intent: "chat",
+          runType: null, runId: null, jobId: null, status: "complete" as const, createdAt,
+          attachments: [{ sourceId: "src-new", role: "input", filename: "venue.pdf", sourceStatus: "ready" }],
+        },
+      ],
+    },
+  });
+
+  test("opening a proposal whose recent attachment was never extracted resumes the extraction from the thread", async () => {
+    jest.useFakeTimers();
+    try {
+      // No local intent at all: another device, a cleared browser, or a tab
+      // that sent the file on an older build and then reloaded.
+      mockedListSources.mockResolvedValue({
+        success: true as const,
+        correlationId: "test-correlation",
+        data: [sourceRow("ready")],
+      });
+      mockedGetConversation.mockResolvedValue(chatMessageWithAttachment(new Date(Date.now() - 60_000).toISOString()));
+      mockedPostMessage.mockResolvedValue({
+        success: true,
+        correlationId: "test-correlation",
+        data: { created: true, message: null, assistantMessageId: null, run: null },
+      });
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await screen.findByText("Please review the attached file.");
+      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+
+      await waitFor(() => expect(extractCalls()).toHaveLength(1));
+      expect(extractCalls()[0][1]).toEqual({
+        content: "Extracting requirements from the attached files.",
+        intent: "extract_requirements",
+        sourceIds: ["src-new"],
+      });
+      await act(async () => { await jest.advanceTimersByTimeAsync(60_000); });
+      expect(extractCalls()).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("an attachment older than a day is not extracted retroactively on open", async () => {
+    jest.useFakeTimers();
+    try {
+      mockedListSources.mockResolvedValue({
+        success: true as const,
+        correlationId: "test-correlation",
+        data: [sourceRow("ready")],
+      });
+      mockedGetConversation.mockResolvedValue(chatMessageWithAttachment(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()));
+      mockedPostMessage.mockResolvedValue({
+        success: true,
+        correlationId: "test-correlation",
+        data: { created: true, message: null, assistantMessageId: null, run: null },
+      });
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await screen.findByText("Please review the attached file.");
+      await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
+      expect(extractCalls()).toHaveLength(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("an intent left in sessionStorage by an earlier build is migrated and resumed", async () => {
+    jest.useFakeTimers();
+    try {
+      window.sessionStorage.setItem(autoExtractKey(PROPOSAL_ID), JSON.stringify({ pending: ["src-new"], handled: [] }));
+      mockedListSources.mockResolvedValue({
+        success: true as const,
+        correlationId: "test-correlation",
+        data: [sourceRow("ready")],
+      });
+      mockedPostMessage.mockResolvedValue({
+        success: true,
+        correlationId: "test-correlation",
+        data: { created: true, message: null, assistantMessageId: null, run: null },
+      });
+
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await screen.findByLabelText("Message the proposal assistant");
+      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+
+      await waitFor(() => expect(extractCalls()).toHaveLength(1));
+      expect(window.sessionStorage.getItem(autoExtractKey(PROPOSAL_ID))).toBeNull();
+      expect(JSON.parse(window.localStorage.getItem(autoExtractKey(PROPOSAL_ID)) ?? "{}")).toEqual({ pending: [], handled: ["src-new"] });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test("an assistant typing indicator shows while a send is in flight", async () => {
     let resolvePost: (value: unknown) => void = () => undefined;
     mockedPostMessage.mockImplementation(() => new Promise(resolve => { resolvePost = resolve as (value: unknown) => void; }) as never);
