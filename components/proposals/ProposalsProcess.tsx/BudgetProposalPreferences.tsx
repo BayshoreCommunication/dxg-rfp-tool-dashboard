@@ -356,6 +356,13 @@ const BudgetProposalPreferences = ({
   const timelineBounds = (field: ProcurementTimelineDateField) =>
     procurementTimelineDateBounds(safeData, field, eventStartDate);
 
+  /* Hidden rows are not part of the planner's decision, so they must not carry
+     weight into scoring. Every write of the matrix clears them. */
+  const withHiddenWeightsCleared = (matrix: BudgetData["evaluationMatrix"]) =>
+    Object.fromEntries(
+      MATRIX_CRITERIA.map(({ key }) => [key, activeKeys.includes(key) ? matrix[key] : 0]),
+    ) as BudgetData["evaluationMatrix"];
+
   /* ─── Quick-balance: proportionally scale active rows to sum to 100 ─── */
   const quickBalance = () => {
     const cur = safeData.evaluationMatrix;
@@ -379,16 +386,22 @@ const BudgetProposalPreferences = ({
       });
     }
     // Touching the weights is itself a decision about them.
-    onChange({ evaluationMatrix: newM, evaluationMatrixConfirmed: true });
+    onChange({ evaluationMatrix: withHiddenWeightsCleared(newM), evaluationMatrixConfirmed: true });
   };
 
   const updateMatrix = (key: MK, raw: string) => {
     const v = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
     onChange({
-      evaluationMatrix: { ...safeData.evaluationMatrix, [key]: v },
+      evaluationMatrix: withHiddenWeightsCleared({ ...safeData.evaluationMatrix, [key]: v }),
       evaluationMatrixConfirmed: true,
     });
   };
+
+  const confirmMatrix = () =>
+    onChange({
+      evaluationMatrix: withHiddenWeightsCleared(safeData.evaluationMatrix),
+      evaluationMatrixConfirmed: true,
+    });
 
   /* ─── Budget signals ─── */
   const isProducerCallTier = ["Enterprise", "Signature", "Not Yet Determined"].includes(
@@ -696,7 +709,7 @@ const BudgetProposalPreferences = ({
             </p>
             <button
               type="button"
-              onClick={() => onChange({ evaluationMatrixConfirmed: true })}
+              onClick={confirmMatrix}
               className="mt-2 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100"
             >
               Use these weightings

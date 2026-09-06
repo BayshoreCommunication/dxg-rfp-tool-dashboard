@@ -48,7 +48,11 @@ const budget = (overrides: Partial<BudgetData> = {}): BudgetData => ({
   ...overrides,
 } as BudgetData);
 
-const renderStep = (data: BudgetData, onChange = jest.fn()) => {
+const renderStep = (
+  data: BudgetData,
+  onChange = jest.fn(),
+  event: { eventFormat?: string; hasScenicOnAnyRoom?: boolean; contentServicesNeeded?: string } = {},
+) => {
   render(
     <BudgetProposalPreferences
       data={data}
@@ -56,6 +60,7 @@ const renderStep = (data: BudgetData, onChange = jest.fn()) => {
       onContinue={jest.fn()}
       onBack={jest.fn()}
       proposalSettings={settings}
+      {...event}
     />,
   );
   return onChange;
@@ -74,7 +79,38 @@ describe("evaluation weightings", () => {
     const user = userEvent.setup();
     const onChange = renderStep(budget());
     await user.click(screen.getByRole("button", { name: /Use these weightings/i }));
-    expect(onChange).toHaveBeenCalledWith({ evaluationMatrixConfirmed: true });
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ evaluationMatrixConfirmed: true }),
+    );
+  });
+
+  test("rows hidden for the event carry no weight into what is saved", async () => {
+    // Only the visible rows have to total 100, so a hidden row's shipped
+    // default would otherwise be scored as weight the planner never saw.
+    const user = userEvent.setup();
+    const onChange = renderStep(budget(), jest.fn(), { eventFormat: "In-Person" });
+    await user.click(screen.getByRole("button", { name: /Use these weightings/i }));
+    expect(onChange).toHaveBeenCalledWith({
+      evaluationMatrix: expect.objectContaining({ hybridVirtual: 0, creativeScenic: 0, technicalApproach: 25 }),
+      evaluationMatrixConfirmed: true,
+    });
+
+    onChange.mockClear();
+    await user.type(screen.getAllByRole("spinbutton")[0], "5");
+    expect(onChange).toHaveBeenLastCalledWith({
+      evaluationMatrix: expect.objectContaining({ hybridVirtual: 0, creativeScenic: 0 }),
+      evaluationMatrixConfirmed: true,
+    });
+  });
+
+  test("rows the event uses keep their weight", async () => {
+    const user = userEvent.setup();
+    const onChange = renderStep(budget(), jest.fn(), { eventFormat: "Hybrid", hasScenicOnAnyRoom: true });
+    await user.click(screen.getByRole("button", { name: /Use these weightings/i }));
+    expect(onChange).toHaveBeenCalledWith({
+      evaluationMatrix: expect.objectContaining({ hybridVirtual: 20, creativeScenic: 10 }),
+      evaluationMatrixConfirmed: true,
+    });
   });
 
   test("adjusting a weight counts as accepting the weightings", async () => {
