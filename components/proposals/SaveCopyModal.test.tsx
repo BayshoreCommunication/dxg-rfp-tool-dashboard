@@ -35,8 +35,8 @@ describe('SaveCopyModal', () => {
 
     it('pre-fills start and end date when provided', () => {
       render(<SaveCopyModal {...baseProps} defaultStartDate="2026-06-01" defaultEndDate="2026-06-05" />)
-      expect(screen.getByDisplayValue('2026-06-01')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('2026-06-05')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('06/01/2026')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('06/05/2026')).toBeInTheDocument()
     })
   })
 
@@ -108,8 +108,8 @@ describe('SaveCopyModal', () => {
 
     it('includes start and end dates in the confirm payload', () => {
       render(<SaveCopyModal {...baseProps} />)
-      fireEvent.change(screen.getByRole('textbox', { name: /Start Date/ }), { target: { value: '2026-07-01' } })
-      fireEvent.change(screen.getByRole('textbox', { name: /End Date/ }), { target: { value: '2026-07-05' } })
+      fireEvent.change(screen.getByRole('textbox', { name: /Start Date/ }), { target: { value: '07/01/2026' } })
+      fireEvent.change(screen.getByRole('textbox', { name: /End Date/ }), { target: { value: '07/05/2026' } })
       fireEvent.click(screen.getByText('Save Copy'))
       expect(baseProps.onConfirm).toHaveBeenCalledWith(
         { eventName: 'Summit 2026', startDate: '2026-07-01', endDate: '2026-07-05' }

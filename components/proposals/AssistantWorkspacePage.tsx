@@ -1412,10 +1412,10 @@ export const displayQuestionPrompt = (
   ) {
     return 'Which venue will host the event? Enter the venue name, or use Skip if it is still undecided.';
   }
-  return (
-    question.prompt ||
-    question.code.replaceAll('_', ' ').toLowerCase()
-  );
+  // The backend hints the wire format ("(YYYY-MM-DD)") for text clients; the
+  // dashboard renders a picker in the app-wide format, so the hint is noise.
+  const prompt = (question.prompt || '').replace(/\s*\(YYYY-MM-DD\)\s*$/i, '');
+  return prompt || question.code.replaceAll('_', ' ').toLowerCase();
 };
 
 export function minimumDateForQuestion(
@@ -1719,8 +1719,6 @@ function GuidedQuestionCard({
                   setDateError(null);
                   setDay(nextDay);
                 }}
-                format="yyyy-MM-dd"
-                placeholder="YYYY-MM-DD"
                 minDate={minimumDate}
                 maxDate={maximumDate}
                 hideLabel
@@ -3811,7 +3809,7 @@ export default function AssistantWorkspacePage({
                     </span>
                   )}
                 </p>
-                <p className="whitespace-pre-wrap">{asked.prompt}</p>
+                <p className="whitespace-pre-wrap">{displayQuestionPrompt(asked)}</p>
               </div>
             </div>
           )}

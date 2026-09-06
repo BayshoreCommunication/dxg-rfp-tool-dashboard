@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { formatAppDateTime } from "@/lib/dateFormat";
 
 type Props = {
   campaignId: string;
@@ -28,14 +29,7 @@ type Props = {
 
 const PER_PAGE = 15;
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const formatDate = (iso: string) => formatAppDateTime(iso);
 
 const getInitials = (name: string) =>
   name

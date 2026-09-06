@@ -35,6 +35,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { formatAppDateTime } from "@/lib/dateFormat";
 
 export type ProposalAnalysisParticipant = {
   responseId: string;
@@ -475,7 +476,7 @@ export default function ProposalIntelligenceLiveRun({
           {(live || completedTimes.length > 0 || comparison?.run.completedAt) && <span className={cn(intelligenceSurfaceClasses.chip, "gap-1.5 border-gray-border bg-gray-panel font-mono text-navy")}>
             <Clock3 size={14} aria-hidden="true" /> {live
               ? elapsedLabel(clock - startedAt)
-              : `Finished ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(persistedEnd))}`}
+              : `Finished ${formatAppDateTime(persistedEnd)}`}
           </span>}
           {counts.failed > 0 && <span className={cn(intelligenceSurfaceClasses.chip, "border-gray-border bg-white font-mono text-navy")}>{counts.failed} failed {counts.failed === 1 ? "item" : "items"}</span>}
         </div>

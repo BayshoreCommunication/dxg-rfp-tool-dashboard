@@ -12,6 +12,7 @@ import {
   type InvestmentReport,
   type InvestmentScenario,
 } from "@/app/actions/investment";
+import { formatAppDateTime } from "@/lib/dateFormat";
 
 const money = (minor: number | null | undefined, currency: string | null) => {
   if (minor === null || minor === undefined || !currency) return "—";
@@ -907,7 +908,7 @@ export default function InvestmentGuidancePanel({
               </>
             )}{" "}
             Updated{" "}
-            {report.createdAt ? new Date(report.createdAt).toLocaleString() : ""}
+            {report.createdAt ? formatAppDateTime(report.createdAt, "") : ""}
           </p>
         </div>
       )}

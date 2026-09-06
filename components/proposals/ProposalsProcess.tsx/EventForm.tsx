@@ -16,6 +16,7 @@ import {
   toneGroups,
 } from "@/lib/proposals/eventOverviewFieldUi";
 import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
+import { formatAppDate } from "@/lib/dateFormat";
 
 /* ─── Shared style constants ─── */
 const labelClass =
@@ -463,7 +464,7 @@ const EventForm = ({
                   explained rather than mysterious. */}
               {startDateValue && !data.endDate.trim() && (
                 <p className="mt-1 text-xs text-slate-500 normal-case">
-                  Must be on or after the start date ({startDateValue.toLocaleDateString()}).
+                  Must be on or after the start date ({formatAppDate(startDateValue)}).
                 </p>
               )}
             </div>

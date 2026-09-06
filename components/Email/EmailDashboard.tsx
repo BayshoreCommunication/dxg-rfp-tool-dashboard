@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { formatAppDateTime } from "@/lib/dateFormat";
 
 type EmailCampaign = {
   _id: string;
@@ -212,7 +213,7 @@ export default function EmailDashboard() {
 
                 <p className="mt-3 text-[14px] font-medium text-slate-400">
                   {campaign?.createdAt
-                    ? new Date(campaign.createdAt).toLocaleString()
+                    ? formatAppDateTime(campaign.createdAt, "Not available")
                     : "Not available"}
                 </p>
               </div>

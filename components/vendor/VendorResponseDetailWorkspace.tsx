@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import VendorFactsSection from "./VendorFactsSection";
+import { formatAppDateTime } from "@/lib/dateFormat";
 
 const reasonLabels: Record<VendorSubmissionVersion["reason"], string> = {
   initial: "Initial response",
@@ -30,11 +31,7 @@ const reasonLabels: Record<VendorSubmissionVersion["reason"], string> = {
 };
 
 
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+const formatDate = (value: string) => formatAppDateTime(value);
 
 const formatBytes = (value: number | null | undefined) => {
   if (typeof value !== "number") return "Size unavailable";

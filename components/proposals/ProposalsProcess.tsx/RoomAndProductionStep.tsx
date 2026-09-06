@@ -40,6 +40,7 @@ import {
   normalizeLedWalls,
 } from "../ledWallPlan";
 import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience";
+import { formatAppDate } from "@/lib/dateFormat";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -81,9 +82,7 @@ export const functionScheduleDateIsWithinEventRange = (
 
 const formatScheduleDate = (iso: string): string => {
   const date = isoDateToLocalDate(iso);
-  return date
-    ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date)
-    : iso;
+  return date ? formatAppDate(date, iso) : iso;
 };
 
 const eventDateWindowLabel = (startDate: string, endDate: string): string => {

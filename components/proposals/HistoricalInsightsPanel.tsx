@@ -7,6 +7,7 @@ import {
 } from "@/app/actions/historicalInsights";
 import { getProposalsAction } from "@/app/actions/proposals";
 import { useEffect, useMemo, useState } from "react";
+import { formatAppDate } from "@/lib/dateFormat";
 
 type ProposalOption = { id: string; label: string; updatedAt: string };
 
@@ -150,7 +151,7 @@ export default function HistoricalInsightsPanel({
                 </span>
                 {option.updatedAt && (
                   <span className="text-xs text-slate-500">
-                    {new Date(option.updatedAt).toLocaleDateString("en-US")}
+                    {formatAppDate(option.updatedAt)}
                   </span>
                 )}
               </label>

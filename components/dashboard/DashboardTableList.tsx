@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import { formatAppDate } from "@/lib/dateFormat";
 
 type ProposalStatus =
   | "unsubmitted"
@@ -113,13 +114,7 @@ function toSlug(title: string) {
 }
 
 export function formatDashboardDate(value?: string): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${day}/${month}/${date.getUTCFullYear()}`;
+  return formatAppDate(value);
 }
 
 function IconButton({

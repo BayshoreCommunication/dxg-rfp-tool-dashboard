@@ -28,10 +28,10 @@ describe("DashboardTableList", () => {
 
   test("formats proposal dates identically in every runtime locale", () => {
     expect(formatDashboardDate("2026-07-27T00:00:00.000Z")).toBe(
-      "27/07/2026",
+      "07/27/2026",
     );
     expect(formatDashboardDate("2026-07-27T23:30:00-05:00")).toBe(
-      "28/07/2026",
+      "07/28/2026",
     );
     expect(formatDashboardDate("not-a-date")).toBe("-");
     expect(formatDashboardDate()).toBe("-");
@@ -52,7 +52,7 @@ describe("DashboardTableList", () => {
       />,
     );
 
-    expect(screen.getByText("27/07/2026")).toBeInTheDocument();
+    expect(screen.getByText("07/27/2026")).toBeInTheDocument();
     const heading = screen.getByRole("heading", { name: "Latest Proposals" });
     expect(heading).toHaveClass("whitespace-nowrap");
     expect(heading.parentElement).toHaveClass(

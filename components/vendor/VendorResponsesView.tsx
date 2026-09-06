@@ -30,6 +30,7 @@ import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementR
 import VendorExtractionSection from "./VendorExtractionSection";
 import VendorFactsSection from "./VendorFactsSection";
 import VendorEvaluationSection from "./VendorEvaluationSection";
+import { formatAppDate, formatAppDateTime } from "@/lib/dateFormat";
 
 type Props = {
   initialResponses: VendorResponseItem[];
@@ -43,20 +44,9 @@ type Props = {
   proposalTitle?: string;
 };
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const formatDate = (iso: string) => formatAppDateTime(iso);
 
-const formatShortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+const formatShortDate = (iso: string) => formatAppDate(iso);
 
 const initials = (name: string) =>
   name

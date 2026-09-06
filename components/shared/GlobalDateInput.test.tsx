@@ -34,7 +34,7 @@ describe('GlobalDateInput', () => {
 
   it('renders label with format by default', () => {
     render(<GlobalDateInput value={null} onChange={mockOnChange} label="Start Date" format="yyyy-MM-dd" />)
-    expect(screen.getByText('Start Date (YYYY-MM-DD)')).toBeInTheDocument()
+    expect(screen.getByText('Start Date (MM/DD/YYYY)')).toBeInTheDocument()
   })
 
   it('hides the label when hideLabel is true', () => {
@@ -45,7 +45,7 @@ describe('GlobalDateInput', () => {
   it('omits format from label when showFormatInLabel is false', () => {
     render(<GlobalDateInput value={null} onChange={mockOnChange} label="Start Date" showFormatInLabel={false} />)
     expect(screen.getByText('Start Date')).toBeInTheDocument()
-    expect(screen.queryByText(/YYYY/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/MM\/DD\/YYYY/)).not.toBeInTheDocument()
   })
 
   it('shows error message when error prop is provided', () => {

@@ -37,6 +37,7 @@ import {
   copyTextToClipboard,
 } from "@/lib/proposals/proposalShareLink";
 import type { ProposalFilterType } from "./ProposalFilters";
+import { formatAppDate } from "@/lib/dateFormat";
 
 type ProposalListItem = {
   _id: string;
@@ -144,16 +145,7 @@ export default function ProposalTableList({
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   };
 
-  const formatDisplayDate = (value?: string): string => {
-    if (!value) return "-";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  const formatDisplayDate = (value?: string): string => formatAppDate(value);
 
   const getExpiryMeta = (
     createdAt?: string,

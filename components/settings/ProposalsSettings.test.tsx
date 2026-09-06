@@ -46,13 +46,6 @@ describe('ProposalsSettings — rendering', () => {
     expect(screen.getByRole('option', { name: '30 Days' })).toBeInTheDocument()
   })
 
-  it('renders date format options', () => {
-    render(<ProposalsSettings value={defaultValue} onChange={mockOnChange} />)
-    expect(screen.getByRole('option', { name: 'MM/DD/YYYY' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'DD/MM/YYYY' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'YYYY-MM-DD' })).toBeInTheDocument()
-  })
-
   it('renders teammate email input placeholder', () => {
     render(<ProposalsSettings value={defaultValue} onChange={mockOnChange} />)
     expect(screen.getByPlaceholderText('example@email.com')).toBeInTheDocument()
@@ -123,12 +116,6 @@ describe('ProposalsSettings — onChange callbacks', () => {
     render(<ProposalsSettings value={defaultValue} onChange={mockOnChange} />)
     fireEvent.change(screen.getByDisplayValue('$'), { target: { value: '€' } })
     expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ defaultCurrency: '€' }))
-  })
-
-  it('calls onChange when date format changes', () => {
-    render(<ProposalsSettings value={defaultValue} onChange={mockOnChange} />)
-    fireEvent.change(screen.getByLabelText(/date format/i), { target: { value: 'DD/MM/YYYY' } })
-    expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({ dateFormat: 'DD/MM/YYYY' }))
   })
 
   it('calls onChange when expiry date changes', () => {

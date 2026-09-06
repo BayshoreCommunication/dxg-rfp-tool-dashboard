@@ -20,6 +20,7 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import { formatAppDateTime } from "@/lib/dateFormat";
 
 const PAGE_SIZE = 10;
 
@@ -31,11 +32,7 @@ type NotificationListProps = {
   totalCount: number;
 };
 
-const formatDateTime = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString();
-};
+const formatDateTime = (value: string) => formatAppDateTime(value);
 
 const getNotificationIcon = (type: NotificationItem["type"]) => {
   switch (type) {

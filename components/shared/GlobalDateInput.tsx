@@ -4,7 +4,7 @@ import { CalendarRangeIcon } from "lucide-react";
 import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { useDatePickerLocalePresentation } from "./datePickerLocale";
+import { APP_DATE_FORMAT, APP_DATE_FORMAT_LABEL } from "@/lib/dateFormat";
 import { datePickerPopperModifiers, useDatePickerYearNavigation } from "./DatePickerHeader";
 
 type DateFormatType =
@@ -19,6 +19,7 @@ interface GlobalDatePickerProps {
   label?: string;
   value: Date | null;
   onChange: (date: Date | null) => void;
+  /** @deprecated Every date field uses the app-wide format; ignored. */
   format?: DateFormatType;
   placeholder?: string;
   id?: string;
@@ -39,24 +40,14 @@ interface GlobalDatePickerProps {
   ariaDescribedBy?: string;
   /** Show a Today shortcut when today is inside the allowed date window. */
   showTodayShortcut?: boolean;
-  /** Match numeric field order and the first weekday to the browser locale. */
+  /** @deprecated Every date field uses the app-wide format; ignored. */
   localeAware?: boolean;
 }
-
-const formatLabelMap: Record<DateFormatType, string> = {
-  "yyyy-dd-MM": "YYYY-DD-MM",
-  "dd-MM-yyyy": "DD-MM-YYYY",
-  "MM-dd-yyyy": "MM-DD-YYYY",
-  "yyyy-MM-dd": "YYYY-MM-DD",
-  "MM/dd/yyyy": "MM/DD/YYYY",
-  "dd/MM/yyyy": "DD/MM/YYYY",
-};
 
 const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
   label = "Select Date",
   value,
   onChange,
-  format = "yyyy-MM-dd",
   placeholder,
   id,
   name,
@@ -75,12 +66,12 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
   ariaInvalid = false,
   ariaDescribedBy,
   showTodayShortcut = false,
-  localeAware = false,
 }) => {
   const dateRef = useRef<DatePicker>(null);
   const yearNavigation = useDatePickerYearNavigation({ minDate, maxDate });
-  const localePresentation = useDatePickerLocalePresentation();
-  const resolvedFormat = localeAware ? localePresentation.format : format;
+  // One format everywhere: callers cannot opt into another shape, so a date
+  // reads the same in every step, list, and panel.
+  const resolvedFormat = APP_DATE_FORMAT;
   const today = new Date();
   today.setHours(12, 0, 0, 0);
   const todayIsSelectable =
@@ -99,7 +90,7 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
       {!hideLabel && (
         <label htmlFor={id} className={labelClassName}>
           {label}
-          {showFormatInLabel ? ` (${formatLabelMap[resolvedFormat]})` : ""}
+          {showFormatInLabel ? ` (${APP_DATE_FORMAT_LABEL})` : ""}
         </label>
       )}
 
@@ -111,15 +102,14 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
           selected={value}
           onChange={onChange}
           dateFormat={resolvedFormat}
-          placeholderText={placeholder || formatLabelMap[resolvedFormat]}
+          placeholderText={placeholder || APP_DATE_FORMAT_LABEL}
           disabled={disabled}
           required={required}
           minDate={minDate}
           maxDate={maxDate}
           openToDate={value || minDate || undefined}
           todayButton={showTodayShortcut && todayIsSelectable ? "Today" : undefined}
-          calendarStartDay={localeAware ? localePresentation.calendarStartDay : undefined}
-          popperPlacement="bottom-start"
+                    popperPlacement="bottom-start"
           popperProps={{ strategy: "fixed" }}
           popperModifiers={datePickerPopperModifiers}
           className={resolvedInputClassName}

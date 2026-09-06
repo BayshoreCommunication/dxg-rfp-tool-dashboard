@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { toast } from "react-toastify";
+import { formatAppDateTime } from "@/lib/dateFormat";
 
 type NotificationSettingsProps = {
   initialPreferences: NotificationPreferences;
@@ -320,7 +321,7 @@ export default function NotificationSettings({
               <p className="mt-1 max-w-xl text-sm leading-6 text-slate-600">
                 {isMuted && preferences.mutedUntil
                   ? hydrated
-                    ? `Delivery resumes automatically ${new Date(preferences.mutedUntil).toLocaleString()}.`
+                    ? `Delivery resumes automatically ${formatAppDateTime(preferences.mutedUntil)}.`
                     : "Delivery resumes automatically at the scheduled time."
                   : "Pause every notification channel without changing individual preferences."}
               </p>

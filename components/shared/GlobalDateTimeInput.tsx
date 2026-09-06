@@ -4,7 +4,7 @@ import { CalendarRangeIcon, X } from "lucide-react";
 import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { useDatePickerLocalePresentation } from "./datePickerLocale";
+import { APP_DATE_FORMAT, APP_DATE_FORMAT_LABEL, APP_DATE_TIME_FORMAT, APP_DATE_TIME_FORMAT_LABEL, APP_TIME_FORMAT } from "@/lib/dateFormat";
 import { datePickerPopperModifiers, useDatePickerYearNavigation } from "./DatePickerHeader";
 
 type DateFormatType =
@@ -31,6 +31,7 @@ interface GlobalDatePickerProps {
   label?: string;
   value: Date | null;
   onChange: (date: Date | null) => void;
+  /** @deprecated Every date field uses the app-wide format; ignored. */
   format?: DateFormatType;
   placeholder?: string;
   id?: string;
@@ -49,7 +50,7 @@ interface GlobalDatePickerProps {
   buttonClassName?: string;
   /** Show the time picker alongside the date picker */
   showTime?: boolean;
-  /** Use 12-hour clock (AM/PM). Default: false (24-hour) */
+  /** @deprecated Times always use the 12-hour app-wide format; ignored. */
   use12Hours?: boolean;
   /** Minute interval for the time dropdown. Default: 15 */
   timeIntervals?: number;
@@ -60,36 +61,15 @@ interface GlobalDatePickerProps {
   ariaLabelledBy?: string;
   /** Show a Today shortcut when today is inside the allowed date window. */
   showTodayShortcut?: boolean;
-  /** Match numeric field order and the first weekday to the browser locale. */
+  /** @deprecated Every date field uses the app-wide format; ignored. */
   localeAware?: boolean;
 }
 
-const formatLabelMap: Record<DateFormatType, string> = {
-  "yyyy-dd-MM": "YYYY-DD-MM",
-  "dd-MM-yyyy": "DD-MM-YYYY",
-  "MM-dd-yyyy": "MM-DD-YYYY",
-  "yyyy-MM-dd": "YYYY-MM-DD",
-  "MM/dd/yyyy": "MM/DD/YYYY",
-  "dd/MM/yyyy": "DD/MM/YYYY",
-  "yyyy-dd-MM HH:mm": "YYYY-DD-MM HH:MM",
-  "dd-MM-yyyy HH:mm": "DD-MM-YYYY HH:MM",
-  "MM-dd-yyyy HH:mm": "MM-DD-YYYY HH:MM",
-  "yyyy-MM-dd HH:mm": "YYYY-MM-DD HH:MM",
-  "MM/dd/yyyy HH:mm": "MM/DD/YYYY HH:MM",
-  "dd/MM/yyyy HH:mm": "DD/MM/YYYY HH:MM",
-  "yyyy-dd-MM hh:mm aa": "YYYY-DD-MM hh:MM AM/PM",
-  "dd-MM-yyyy hh:mm aa": "DD-MM-YYYY hh:MM AM/PM",
-  "MM-dd-yyyy hh:mm aa": "MM-DD-YYYY hh:MM AM/PM",
-  "yyyy-MM-dd hh:mm aa": "YYYY-MM-DD hh:MM AM/PM",
-  "MM/dd/yyyy hh:mm aa": "MM/DD/YYYY hh:MM AM/PM",
-  "dd/MM/yyyy hh:mm aa": "DD/MM/YYYY hh:MM AM/PM",
-};
 
 const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
   label = "Select Date",
   value,
   onChange,
-  format = "yyyy-MM-dd",
   placeholder,
   id,
   name,
@@ -106,27 +86,20 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
   inputClassName,
   buttonClassName = "absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg bg-[#eafafd] text-[#1DBFD3] transition hover:bg-[#d8f6fa] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35",
   showTime = false,
-  use12Hours = false,
   timeIntervals = 15,
   clearable = true,
   ariaInvalid = false,
   ariaDescribedBy,
   ariaLabelledBy,
   showTodayShortcut = false,
-  localeAware = false,
 }) => {
   const dateRef = useRef<DatePicker>(null);
   const yearNavigation = useDatePickerYearNavigation({ minDate, maxDate });
-  const localePresentation = useDatePickerLocalePresentation();
 
-  /* Auto-resolve format when showTime is true but a date-only format is given */
-  const resolvedFormat: DateFormatType = (() => {
-    const dateFormat = localeAware ? localePresentation.format : format;
-    if (!showTime) return dateFormat;
-    if (dateFormat.includes(":")) return dateFormat; // already has time part
-    const timeToken = use12Hours ? "hh:mm aa" : "HH:mm";
-    return `${dateFormat} ${timeToken}` as DateFormatType;
-  })();
+  // One format everywhere: date-only or date + 12-hour time, never a
+  // per-field or per-locale variant.
+  const resolvedFormat: DateFormatType = showTime ? APP_DATE_TIME_FORMAT : APP_DATE_FORMAT;
+  const labelText = showTime ? APP_DATE_TIME_FORMAT_LABEL : APP_DATE_FORMAT_LABEL;
   const today = new Date();
   today.setHours(12, 0, 0, 0);
   const todayIsSelectable =
@@ -140,7 +113,6 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
         : "border-gray-300 hover:border-[#9adfe8] focus:border-[#1DBFD3] focus:ring-4 focus:ring-[#1DBFD3]/15"
     } ${disabled ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`;
 
-  const labelText = formatLabelMap[resolvedFormat] ?? resolvedFormat.toUpperCase();
 
   return (
     <div className={`w-full ${className}`}>
@@ -166,10 +138,9 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
           maxDate={maxDate}
           openToDate={value || minDate || undefined}
           todayButton={showTodayShortcut && todayIsSelectable ? "Today" : undefined}
-          calendarStartDay={localeAware ? localePresentation.calendarStartDay : undefined}
-          /* ── Time props ── */
+                    /* ── Time props ── */
           showTimeSelect={showTime}
-          timeFormat={use12Hours ? "hh:mm aa" : "HH:mm"}
+          timeFormat={APP_TIME_FORMAT}
           timeIntervals={timeIntervals}
           timeCaption="Time"
           /* ── Layout ── */

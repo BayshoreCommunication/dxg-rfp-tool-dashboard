@@ -12,6 +12,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import Link from "next/link";
+import { formatAppDate } from "@/lib/dateFormat";
 
 type Props = {
   data: ProposalListData | null;
@@ -19,15 +20,7 @@ type Props = {
   search: string;
 };
 
-const formatDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Date unavailable";
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
+const formatDate = (value: string) => formatAppDate(value, "Date unavailable");
 
 const pageHref = (page: number, search: string) => {
   const params = new URLSearchParams({ page: String(page) });

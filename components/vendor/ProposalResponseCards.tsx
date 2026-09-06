@@ -20,12 +20,9 @@ import {
   Paperclip,
 } from "lucide-react";
 import Link from "next/link";
+import { formatAppDate } from "@/lib/dateFormat";
 
-const formatDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Date unavailable";
-  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
-};
+const formatDate = (value: string) => formatAppDate(value, "Date unavailable");
 
 /**
  * The stated totals side by side, when at least two responses state exactly

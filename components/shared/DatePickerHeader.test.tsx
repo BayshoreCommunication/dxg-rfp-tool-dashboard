@@ -31,7 +31,7 @@ describe("shared date picker year navigation", () => {
     const user = userEvent.setup();
     const onChange = jest.fn();
     render(<Picker onChange={onChange} />);
-    await user.click(screen.getByLabelText("Event date (YYYY-MM-DD)"));
+    await user.click(screen.getByLabelText("Event date (MM/DD/YYYY)"));
     await user.click(screen.getByRole("button", { name: "June 2027, choose year" }));
     expect(screen.getByRole("group", { name: "Choose a year" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Choose year 2027" })).toHaveFocus();
@@ -43,14 +43,14 @@ describe("shared date picker year navigation", () => {
     const day = screen.getByRole("gridcell", { name: "Choose Monday, June 15th, 2082" });
     await user.click(day);
     expect(onChange).toHaveBeenLastCalledWith(new Date(2082, 5, 15));
-    expect(screen.getByDisplayValue("2082-06-15")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("06/15/2082")).toBeInTheDocument();
   });
 
   it("supports arrow/page/home/end keyboard navigation and Escape without committing a date", async () => {
     const user = userEvent.setup();
     const onChange = jest.fn();
     render(<Picker onChange={onChange} />);
-    await user.click(screen.getByLabelText("Event date (YYYY-MM-DD)"));
+    await user.click(screen.getByLabelText("Event date (MM/DD/YYYY)"));
     await user.click(screen.getByRole("button", { name: "June 2027, choose year" }));
     await user.keyboard("{ArrowDown}");
     expect(screen.getByRole("button", { name: "Choose year 2031" })).toHaveFocus();
@@ -68,7 +68,7 @@ describe("shared date picker year navigation", () => {
   it("restricts the list and jumps to the first allowed month in a boundary year", async () => {
     const user = userEvent.setup();
     render(<Picker date={new Date(2027, 0, 10)} minDate={new Date(2026, 8, 10)} maxDate={new Date(2028, 3, 20)} />);
-    await user.click(screen.getByLabelText("Event date (YYYY-MM-DD)"));
+    await user.click(screen.getByLabelText("Event date (MM/DD/YYYY)"));
     await user.click(screen.getByRole("button", { name: "January 2027, choose year" }));
     expect(screen.queryByRole("button", { name: "Choose year 2025" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Choose year 2029" })).not.toBeInTheDocument();
@@ -82,7 +82,7 @@ describe("shared date picker year navigation", () => {
   it("jumps to the last allowed month in a maximum year", async () => {
     const user = userEvent.setup();
     render(<Picker date={new Date(2027, 11, 10)} maxDate={new Date(2028, 3, 20)} />);
-    await user.click(screen.getByLabelText("Event date (YYYY-MM-DD)"));
+    await user.click(screen.getByLabelText("Event date (MM/DD/YYYY)"));
     await user.click(screen.getByRole("button", { name: "December 2027, choose year" }));
     await user.click(screen.getByRole("button", { name: "Choose year 2028" }));
     expect(screen.getByRole("button", { name: "April 2028, choose year" })).toBeInTheDocument();
@@ -93,24 +93,24 @@ describe("shared date picker year navigation", () => {
     const user = userEvent.setup();
     const onChange = jest.fn();
     render(<Picker withTime date={new Date(2028, 1, 29, 14, 30)} onChange={onChange} />);
-    await user.click(screen.getByLabelText("Event date (YYYY-MM-DD HH:MM)"));
+    await user.click(screen.getByLabelText("Event date (MM/DD/YYYY hh:mm AM/PM)"));
     await user.click(screen.getByRole("button", { name: "February 2028, choose year" }));
     await user.click(screen.getByRole("button", { name: "Choose year 2029" }));
     expect(onChange).not.toHaveBeenCalled();
     const day = screen.getAllByRole("gridcell").find((option) => option.textContent === "28" && !option.className.includes("outside-month"))!;
     await user.click(day);
     expect(onChange).toHaveBeenLastCalledWith(new Date(2029, 1, 28, 14, 30));
-    expect(screen.getByDisplayValue("2029-02-28 14:30")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("02/28/2029 02:30 PM")).toBeInTheDocument();
   });
 
   it("resets to calendar view when a picker is closed and reopened", async () => {
     const user = userEvent.setup();
     render(<><Picker /><button type="button">Outside</button></>);
-    await user.click(screen.getByLabelText("Event date (YYYY-MM-DD)"));
+    await user.click(screen.getByLabelText("Event date (MM/DD/YYYY)"));
     await user.click(screen.getByRole("button", { name: "June 2027, choose year" }));
     await user.click(screen.getByRole("button", { name: "Outside" }));
     await waitFor(() => expect(screen.queryByRole("group", { name: "Choose a year" })).not.toBeInTheDocument());
-    await user.click(screen.getByLabelText("Event date (YYYY-MM-DD)"));
+    await user.click(screen.getByLabelText("Event date (MM/DD/YYYY)"));
     expect(screen.getByRole("button", { name: "June 2027, choose year" })).toHaveAttribute("aria-expanded", "false");
   });
 

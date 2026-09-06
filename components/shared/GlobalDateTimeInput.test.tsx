@@ -46,7 +46,7 @@ jest.mock("react-datepicker", () => ({
 }));
 
 describe("GlobalDateTimeInput", () => {
-  it("combines a locale-aware date with a 12-hour, 15-minute time picker", () => {
+  it("always uses the app-wide date format with a 12-hour, 15-minute time picker", () => {
     render(
       <GlobalDateTimeInput
         value={null}
@@ -60,7 +60,6 @@ describe("GlobalDateTimeInput", () => {
 
     const picker = screen.getByTestId("date-time-picker");
     expect(picker).toHaveAttribute("data-date-format", "MM/dd/yyyy hh:mm aa");
-    expect(picker).toHaveAttribute("data-calendar-start-day", "0");
     expect(picker).toHaveAttribute("data-show-time", "true");
     expect(picker).toHaveAttribute("data-time-intervals", "15");
     expect(picker).toHaveAttribute(

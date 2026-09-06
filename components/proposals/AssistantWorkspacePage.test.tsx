@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
+import { formatAppDate } from "@/lib/dateFormat";
 import { AUTO_EXTRACT_RETRY_DELAY_MS, autoExtractKey } from "./useConversation";
 import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, isSkipQuestionInstruction, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, speechTranscriptFromSegments, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
@@ -1187,7 +1188,7 @@ describe("AssistantWorkspacePage", () => {
       "border",
       "p-4",
     );
-    expect(screen.getByText("When does the event start? (YYYY-MM-DD)")).toBeInTheDocument();
+    expect(screen.getByText("When does the event start?")).toBeInTheDocument();
     expect(screen.getByText("affects schedule")).toBeInTheDocument();
     expect(screen.getByLabelText("Answer this question")).toHaveClass(
       "col-span-2",
@@ -1285,7 +1286,7 @@ describe("AssistantWorkspacePage", () => {
     await screen.findByText("What date and time can production load-in?");
     const dateInput = screen.getByLabelText("Answer this question");
     const timeInput = screen.getByLabelText("Load-in time");
-    expect(dateInput).toHaveAttribute("placeholder", "YYYY-MM-DD");
+    expect(dateInput).toHaveAttribute("placeholder", "MM/DD/YYYY");
     expect(timeInput).toHaveAttribute("type", "time");
     expect(screen.getByRole("button", { name: "Answer" })).toBeDisabled();
 
@@ -1433,7 +1434,7 @@ describe("AssistantWorkspacePage", () => {
     // The date control is the shared react-datepicker wrapper, not a bare text box.
     expect(container.querySelector(".react-datepicker__input-container")).not.toBeNull();
     const input = screen.getByLabelText("Answer this question");
-    expect(input).toHaveAttribute("placeholder", "YYYY-MM-DD");
+    expect(input).toHaveAttribute("placeholder", "MM/DD/YYYY");
 
     fireEvent.change(input, { target: { value: startDate } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
@@ -1463,7 +1464,8 @@ describe("AssistantWorkspacePage", () => {
     await screen.findByText("Guided question 1");
     // The picker is seeded, the provenance note is visible, and Answer is
     // enabled without any typing.
-    expect(screen.getByLabelText("Answer this question")).toHaveValue(suggested);
+    // The suggestion arrives as an ISO day; the picker shows it in the app format.
+    expect(screen.getByLabelText("Answer this question")).toHaveValue(formatAppDate(suggested));
     expect(screen.getByText("Pre-filled from your message — confirm or edit.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
@@ -1711,14 +1713,14 @@ describe("AssistantWorkspacePage", () => {
       await screen.findByText("Guided question 1");
 
       const input = screen.getByLabelText("Answer this question");
-      fireEvent.change(input, { target: { value: "2026-09-20" } });
-      expect(input).toHaveValue("2026-09-20");
+      fireEvent.change(input, { target: { value: "09/20/2026" } });
+      expect(input).toHaveValue("09/20/2026");
 
       // No message is pending, so this is the slow (10s) poll interval — the
       // extraction-derived "2026-09-14" suggestion lands on this refresh.
       await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
 
-      expect(screen.getByLabelText("Answer this question")).toHaveValue("2026-09-20");
+      expect(screen.getByLabelText("Answer this question")).toHaveValue("09/20/2026");
       expect(screen.queryByText("Pre-filled from your message — confirm or edit.")).not.toBeInTheDocument();
     } finally {
       jest.useRealTimers();
@@ -1846,7 +1848,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     // The question that produced the answer is replayed as history above it.
-    expect(await screen.findByText("When does the event start? (YYYY-MM-DD)")).toBeInTheDocument();
+    expect(await screen.findByText("When does the event start?")).toBeInTheDocument();
     expect(screen.getByText("2027-04-14")).toBeInTheDocument();
     expect(screen.getAllByText("Asked")).toHaveLength(1);
     // The answer with no matching question renders exactly as before.
@@ -2056,7 +2058,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     fireEvent.click(await screen.findByRole("button", { name: "Continue without extraction" }));
 
-    expect(await screen.findByText(startDateQuestion.prompt)).toBeInTheDocument();
+    expect(await screen.findByText("When does the event start?")).toBeInTheDocument();
   });
 
   test("the Extract requirements command auto-selects ready sources and sends the intent", async () => {
@@ -2787,7 +2789,7 @@ describe("AssistantWorkspacePage", () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun([startDateQuestion]));
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
     const openQuestionRender = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("When does the event start? (YYYY-MM-DD)");
+    await screen.findByText("When does the event start?");
     expect(screen.queryByText(OVERVIEW_HEADING)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Generate proposal draft" })).not.toBeInTheDocument();
     openQuestionRender.unmount();

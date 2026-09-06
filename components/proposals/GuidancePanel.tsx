@@ -23,6 +23,7 @@ import {
   STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
   STANDALONE_VIDEO_RECORDING_STEP_ID,
 } from "@/lib/proposals/proposalExperience";
+import { formatAppDateTime } from "@/lib/dateFormat";
 
 const severityOrder: GuidanceSeverity[] = ["blocking", "warning", "info"];
 const severityPresentation: Record<
@@ -591,7 +592,7 @@ export default function GuidancePanel({
 
             {report.createdAt && (
               <p className="text-xs text-slate-500">
-                Last checked {new Date(report.createdAt).toLocaleString()}.
+                Last checked {formatAppDateTime(report.createdAt)}.
               </p>
             )}
           </div>

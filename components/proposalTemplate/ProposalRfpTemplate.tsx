@@ -4,6 +4,7 @@ import { resolveMonitorSize, resolveScreenSize } from "@/components/proposals/sc
 import { cameraPlanSummary, type CameraPlan } from "@/components/proposals/cameraPlan";
 import { ensureLedWallSlots, ledWallCount, normalizeLedWalls, type LedWallPlan } from "@/components/proposals/ledWallPlan";
 import { STANDALONE_VIDEO_RECORDING_STEP_ENABLED } from "@/lib/proposals/proposalExperience";
+import { formatAppDate } from "@/lib/dateFormat";
 
 /* ─── CSS matching ProposalTemplate.html design ─── */
 const TEMPLATE_CSS = `
@@ -226,12 +227,7 @@ const p = (v: unknown): string =>
 const arr = (v: unknown): string[] =>
   Array.isArray(v) ? (v as unknown[]).map((x) => p(x)).filter(Boolean) : [];
 
-const fmtDate = (v?: string): string => {
-  if (!v) return "";
-  const d = new Date(v);
-  if (isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-};
+const fmtDate = (v?: string): string => (v ? formatAppDate(v, v) : "");
 
 const yn = (v: unknown): string => {
   const s = p(v);

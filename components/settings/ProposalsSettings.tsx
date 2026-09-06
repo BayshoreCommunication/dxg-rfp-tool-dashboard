@@ -116,27 +116,6 @@ const ProposalsSettings = ({ value, onChange }: ProposalsSettingsProps) => {
         </div>
 
         <div>
-          <label htmlFor="dateFormat" className={labelClass}>
-            Date Format
-          </label>
-          <div className="relative">
-            <select
-              id="dateFormat"
-              value={value.dateFormat}
-              onChange={(e) =>
-                onChange({ ...value, dateFormat: e.target.value })
-              }
-              className={selectClass}
-            >
-              <option>MM/DD/YYYY</option>
-              <option>DD/MM/YYYY</option>
-              <option>YYYY-MM-DD</option>
-            </select>
-            <SelectCaret />
-          </div>
-        </div>
-
-        <div>
           <label htmlFor="decimalPrecision" className={labelClass}>
             Decimal Precision
           </label>
