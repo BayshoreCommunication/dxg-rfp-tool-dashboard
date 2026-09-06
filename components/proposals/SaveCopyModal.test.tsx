@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import SaveCopyModal from './SaveCopyModal'
 
 const baseProps = {
@@ -107,14 +108,32 @@ describe('SaveCopyModal', () => {
 
     it('includes start and end dates in the confirm payload', () => {
       render(<SaveCopyModal {...baseProps} />)
-      screen.getAllByRole('textbox', { hidden: true }).filter(
-        (el) => (el as HTMLInputElement).type === 'date'
-      )
-      fireEvent.change(screen.getAllByDisplayValue('')[0], { target: { value: '2026-07-01' } })
+      fireEvent.change(screen.getByRole('textbox', { name: /Start Date/ }), { target: { value: '2026-07-01' } })
+      fireEvent.change(screen.getByRole('textbox', { name: /End Date/ }), { target: { value: '2026-07-05' } })
       fireEvent.click(screen.getByText('Save Copy'))
       expect(baseProps.onConfirm).toHaveBeenCalledWith(
-        expect.objectContaining({ eventName: 'Summit 2026' })
+        { eventName: 'Summit 2026', startDate: '2026-07-01', endDate: '2026-07-05' }
       )
+    })
+
+    it('uses the same year list and does not close the modal when escaping the calendar', async () => {
+      const user = userEvent.setup()
+      render(<SaveCopyModal {...baseProps} defaultStartDate="2027-06-10" />)
+      await user.click(screen.getByRole('textbox', { name: /Start Date/ }))
+      await user.click(screen.getByRole('button', { name: 'June 2027, choose year' }))
+      await user.keyboard('{Escape}')
+      expect(baseProps.onClose).not.toHaveBeenCalled()
+      expect(screen.queryByRole('group', { name: 'Choose a year' })).not.toBeInTheDocument()
+      await user.keyboard('{Escape}')
+      expect(baseProps.onClose).not.toHaveBeenCalled()
+      expect(screen.queryByRole('dialog', { name: 'Choose Date' })).not.toBeInTheDocument()
+    })
+
+    it('keeps optional cleared dates empty in the copy payload', () => {
+      render(<SaveCopyModal {...baseProps} defaultStartDate="2027-06-10" />)
+      fireEvent.change(screen.getByRole('textbox', { name: /Start Date/ }), { target: { value: '' } })
+      fireEvent.click(screen.getByText('Save Copy'))
+      expect(baseProps.onConfirm).toHaveBeenCalledWith({ eventName: 'Summit 2026', startDate: '', endDate: '' })
     })
   })
 

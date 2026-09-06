@@ -5,6 +5,7 @@ import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useDatePickerLocalePresentation } from "./datePickerLocale";
+import { datePickerPopperModifiers, useDatePickerYearNavigation } from "./DatePickerHeader";
 
 type DateFormatType =
   | "yyyy-dd-MM"
@@ -115,6 +116,7 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
   localeAware = false,
 }) => {
   const dateRef = useRef<DatePicker>(null);
+  const yearNavigation = useDatePickerYearNavigation({ minDate, maxDate });
   const localePresentation = useDatePickerLocalePresentation();
 
   /* Auto-resolve format when showTime is true but a date-only format is given */
@@ -172,11 +174,15 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
           timeCaption="Time"
           /* ── Layout ── */
           popperPlacement="bottom-start"
+          popperProps={{ strategy: "fixed" }}
+          popperModifiers={datePickerPopperModifiers}
           className={resolvedInputClassName}
           wrapperClassName="w-full"
           popperClassName="dxg-datepicker-popper"
           showPopperArrow={false}
-          calendarClassName={`dxg-datepicker${showTime ? " dxg-datepicker--with-time" : ""}`}
+          calendarClassName={`dxg-datepicker${showTime ? " dxg-datepicker--with-time" : ""}${yearNavigation.yearViewClassName}`}
+          renderCustomHeader={yearNavigation.renderCustomHeader}
+          onCalendarClose={yearNavigation.onCalendarClose}
           ariaInvalid={ariaInvalid ? "true" : undefined}
           ariaDescribedBy={ariaDescribedBy}
           ariaLabelledBy={ariaLabelledBy}
