@@ -1,16 +1,18 @@
 "use client";
 
-import { getComparisonWorkspaceAction, recordComparisonDecisionAction, type ComparisonEvidence, type ComparisonRequirement, type ComparisonView, type ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
+import { getComparisonWorkspaceAction, type ComparisonEvidence, type ComparisonRequirement, type ComparisonView, type ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
+import { describeFreshnessReasons, describeRefusalCodes } from "@/lib/proposalIntelligence/plainLanguage";
 import { coverageFromVerdict, coveragePresentation } from "@/lib/proposalIntelligence/coverageVocabulary";
-import { buildRecommendationSummary, buildVendorComparison } from "@/lib/proposalIntelligence/recommendationSummary";
+import { buildRecommendationSummary, buildVendorComparison, comparisonOverviewCounts } from "@/lib/proposalIntelligence/recommendationSummary";
 import EvidenceExcerpt from "@/components/proposalIntelligence/EvidenceExcerpt";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, FileSearch, LockKeyhole, Printer, Scale, ShieldAlert, Users, X } from "lucide-react";
+import RerunComparisonButton from "@/components/proposalIntelligence/RerunComparisonButton";
+import ScoreGapExplanation from "@/components/proposalIntelligence/ScoreGapExplanation";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, FileSearch, Printer, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export const intelligenceTabs = ["overview", "requirements", "technical", "commercial", "risks", "evaluation", "reports"] as const;
+export const intelligenceTabs = ["overview", "requirements", "commercial", "evaluation", "reports"] as const;
 export type IntelligenceTab = (typeof intelligenceTabs)[number];
 type EvidenceSelection = {
   title: string;
@@ -31,11 +33,6 @@ const terminal = new Set(["succeeded", "succeeded_with_warnings", "failed", "can
 const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const verdictLabel = (verdict: string) => coveragePresentation[coverageFromVerdict(verdict)].label;
 const verdictTone = (verdict: string) => coveragePresentation[coverageFromVerdict(verdict)].className;
-const riskTone: Record<string, string> = {
-  high: "bg-rose-100 text-rose-800",
-  medium: "bg-amber-100 text-amber-900",
-  low: "bg-sky-100 text-sky-800",
-};
 const locatorText = (locator: Record<string, unknown>) =>
   Object.entries(locator)
     .map(([key, value]) => `${label(key)}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`)
@@ -270,13 +267,17 @@ function EmptyState({ title, text }: { title: string; text: string }) {
   );
 }
 
-function RecommendationPanel({ workspace, decisionHref }: { workspace: ComparisonWorkspace; decisionHref?: string }) {
+function RecommendationPanel({ workspace }: { workspace: ComparisonWorkspace }) {
   const recommendation = workspace.recommendation;
+  const stale = workspace.freshness.state === "stale";
   if (!recommendation) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><strong>This older comparison has no saved recommendation.</strong> Run a new comparison to produce a ranking.</div>;
   const leader = recommendation.bestParticipantId ? recommendation.ranking.find((item) => item.participantId === recommendation.bestParticipantId) : null;
+  // Past tense once the inputs have moved on: this is what an old run found.
   const title = recommendation.status === "recommended" && leader
-    ? `${leader.vendorLabel} is the strongest fit`
-    : recommendation.status === "close_call" ? "The leading vendors are a close call" : "No vendor meets every must-pass requirement";
+    ? (stale ? `Out-of-date result: ${leader.vendorLabel} was the strongest fit` : `${leader.vendorLabel} is the strongest fit`)
+    : recommendation.status === "close_call"
+      ? (stale ? "Out-of-date result: the leading vendors were a close call" : "The leading vendors are a close call")
+      : (stale ? "Out-of-date result: no vendor met every must-pass requirement" : "No vendor meets every must-pass requirement");
   const tone = recommendation.status === "recommended" ? "border-emerald-200 bg-emerald-50/60" : recommendation.status === "close_call" ? "border-amber-200 bg-amber-50/60" : "border-rose-200 bg-rose-50/60";
   const summary = leader
     ? buildRecommendationSummary({
@@ -298,15 +299,9 @@ function RecommendationPanel({ workspace, decisionHref }: { workspace: Compariso
     : `No response answers every must-pass requirement, so none can be recommended. Ask the vendors below for the missing answers, or reconsider which requirements are must-pass.`;
   return <section className={`rounded-2xl border p-5 ${tone}`} aria-labelledby="recommendation-title">
     <div className="max-w-4xl">
-      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-500">Suggested shortlist &middot; you decide</p>
+      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-500">{stale ? "Earlier suggestion \u00b7 inputs have changed since" : "Suggested shortlist \u00b7 you decide"}</p>
       <h2 id="recommendation-title" className="mt-2 text-xl font-extrabold text-slate-950">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-700">{summary ? summary.overview : noLeaderText}</p>
-      {decisionHref && <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Link href={decisionHref} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#008ad2] px-5 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#0073ad]">
-          <ClipboardCheck size={16} aria-hidden="true" />Record your decision
-        </Link>
-        <p className="text-xs leading-4 text-slate-600">Nothing is decided until you record it.</p>
-      </div>}
     </div>
 
     {summary && summary.strengths.length > 0 && <div className="mt-4 rounded-xl border border-white/80 bg-white/80 p-4">
@@ -334,11 +329,12 @@ function RecommendationPanel({ workspace, decisionHref }: { workspace: Compariso
 function ExecutiveReport({ proposalId, proposalTitle, workspace }: { proposalId: string; proposalTitle: string; workspace: ComparisonWorkspace }) {
   const overview = workspace.intelligence.overview;
   const reportBase = `/proposals/${proposalId}/intelligence/comparisons/${workspace.run.runId}`;
+  const mandatory = comparisonOverviewCounts({ requirements: workspace.intelligence.requirements, participantIds: workspace.participants.map((participant) => participant.participantId) });
   const summary = [
     { label: "Vendor responses", value: overview.responseCount },
     { label: "Approved requirements", value: overview.approvedRequirementCount },
-    { label: "Must-haves unanswered", value: overview.mandatoryGapCount, hint: "counted once per vendor" },
-    { label: "Must-haves partly answered", value: overview.mandatoryPartialCount, hint: "counted once per vendor" },
+    { label: "Must-haves unanswered", value: mandatory.mandatoryUnanswered, hint: "added up across vendors" },
+    { label: "Must-haves partly answered", value: mandatory.mandatoryPartlyAnswered, hint: "added up across vendors" },
     { label: "Unresolved reviews", value: overview.unresolvedReviewCount },
   ];
   const recommendationOrder = new Map(workspace.recommendation?.ranking.map((item, index) => [item.participantId, index]) ?? []);
@@ -467,8 +463,7 @@ function ExecutiveReport({ proposalId, proposalTitle, workspace }: { proposalId:
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h4 className="font-extrabold text-slate-950">{participant.vendorLabel}</h4>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Response version {participant.versionId.slice(0, 8)}</p>
-                  </div>
+                                      </div>
                   <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${participant.warningCount ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-800"}`}>{participant.warningCount ? `${participant.warningCount} source warning${participant.warningCount === 1 ? "" : "s"}` : "Sources ready"}</span>
                 </div>
 
@@ -514,143 +509,7 @@ function ExecutiveReport({ proposalId, proposalTitle, workspace }: { proposalId:
   );
 }
 
-function DecisionWorkspace({ proposalId, workspace, onChanged }: { proposalId: string; workspace: ComparisonWorkspace; onChanged: (workspace: ComparisonWorkspace) => void }) {
-  const [decisionType, setDecisionType] = useState<"" | "shortlist" | "selection" | "no_award">("");
-  const [selected, setSelected] = useState<string[]>([]);
-  const [rationale, setRationale] = useState("");
-  const [acknowledgeStale, setAcknowledgeStale] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string>();
-  const choose = (participantId: string) => setSelected((current) => (decisionType === "selection" ? [participantId] : current.includes(participantId) ? current.filter((id) => id !== participantId) : [...current, participantId]));
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setMessage(undefined);
-    if (!decisionType) {
-      setMessage("Choose the human decision being recorded.");
-      return;
-    }
-    setBusy(true);
-    const result = await recordComparisonDecisionAction(proposalId, workspace.run.runId, {
-      decisionType,
-      selectedParticipantIds: selected,
-      rationale,
-      acknowledgeStale,
-    });
-    if (!result.success) {
-      setBusy(false);
-      setMessage(result.message);
-      return;
-    }
-    const refreshed = await getComparisonWorkspaceAction(proposalId, workspace.run.runId);
-    setBusy(false);
-    if (refreshed.success) {
-      onChanged(refreshed.data);
-      setDecisionType("");
-      setSelected([]);
-      setRationale("");
-      setAcknowledgeStale(false);
-      setMessage("Decision recorded — it is now part of the permanent history.");
-    } else setMessage(refreshed.message);
-  };
-  return (
-    <section className="mt-6 grid scroll-mt-24 gap-4 xl:grid-cols-[1fr_1fr]" aria-labelledby="decision-record-title">
-      <form onSubmit={submit} className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-700">
-            <Scale size={18} />
-          </span>
-          <div>
-            <h2 id="decision-record-title" className="font-extrabold text-slate-950">
-              Record a human decision
-            </h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">The ranking above is advisory. The decision you record here &mdash; with your rationale &mdash; is the official outcome, saved permanently with this comparison.</p>
-          </div>
-        </div>
-        <fieldset className="mt-4">
-          <legend className="text-xs font-extrabold text-slate-700">Decision type</legend>
-          <div className="mt-2 grid gap-2 sm:grid-cols-3">
-            {(["shortlist", "selection", "no_award"] as const).map((type) => (
-              <label key={type} className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold ${decisionType === type ? "border-violet-500 bg-violet-50 text-violet-900" : "border-slate-200 text-slate-700"}`}>
-                <input
-                  type="radio"
-                  name="decisionType"
-                  value={type}
-                  checked={decisionType === type}
-                  onChange={() => {
-                    setDecisionType(type);
-                    setSelected([]);
-                  }}
-                />
-                {label(type)}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        {decisionType && decisionType !== "no_award" && (
-          <fieldset className="mt-4">
-            <legend className="text-xs font-extrabold text-slate-700">{decisionType === "selection" ? "Selected vendor" : "Shortlisted vendors"}</legend>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              {workspace.participants.map((participant) => (
-                <label key={participant.participantId} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-50 px-3 text-xs font-bold text-slate-800">
-                  <input type={decisionType === "selection" ? "radio" : "checkbox"} name="selectedVendor" checked={selected.includes(participant.participantId)} onChange={() => choose(participant.participantId)} />
-                  {participant.vendorLabel}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
-        <label className="mt-4 block text-xs font-extrabold text-slate-700">
-          Decision rationale
-          <textarea required minLength={20} maxLength={5000} rows={5} value={rationale} onChange={(event) => setRationale(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal leading-6 outline-none focus:border-violet-500" placeholder="Explain the procurement judgment, tradeoffs, and any conditions…" />
-        </label>
-        {workspace.freshness.state === "stale" && (
-          <label className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-900">
-            <input required type="checkbox" checked={acknowledgeStale} onChange={(event) => setAcknowledgeStale(event.target.checked)} className="mt-0.5" />I understand this run is historical and no longer matches the current proposal inputs.
-          </label>
-        )}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button disabled={busy} type="submit" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-extrabold text-white disabled:opacity-50">
-            <LockKeyhole size={14} />
-            {busy ? "Recording…" : "Record decision"}
-          </button>
-          {message && (
-            <p role="status" className={`text-xs font-semibold ${message.startsWith("Decision recorded") ? "text-emerald-700" : "text-rose-700"}`}>
-              {message}
-            </p>
-          )}
-        </div>
-      </form>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-extrabold text-slate-950">Decision history</h2>
-          <span className="text-xs font-bold text-slate-400">{workspace.intelligence.decisions.length} entries</span>
-        </div>
-        {workspace.intelligence.decisions.length ? (
-          <ol className="mt-4 space-y-3">
-            {workspace.intelligence.decisions.map((decision, index) => (
-              <li key={decision.decisionId} className="rounded-xl bg-slate-50 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-extrabold text-violet-800">{label(decision.decisionType)}</span>
-                  {index === 0 && <span className="text-[10px] font-extrabold uppercase text-emerald-700">Latest record</span>}
-                </div>
-                <p className="mt-2 text-sm leading-6 text-slate-700">{decision.rationale}</p>
-                {decision.selectedParticipantIds.length ? <p className="mt-2 text-xs font-bold text-slate-600">Vendors: {decision.selectedParticipantIds.map((id) => workspace.participants.find((participant) => participant.participantId === id)?.vendorLabel ?? "Historical participant").join(", ")}</p> : null}
-                <p className="mt-2 text-[10px] text-slate-400">
-                  {formatIntelligenceTimestamp(decision.createdAt)} · Manifest {decision.manifestChecksum.slice(0, 12)}…
-                </p>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No procurement decision has been recorded for this run.</p>
-        )}
-      </article>
-    </section>
-  );
-}
-
-export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitle, tab, initialWorkspace, runs }: Props) {
-  const router = useRouter();
+export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitle, tab, initialWorkspace }: Props) {
   const [workspace, setWorkspace] = useState(initialWorkspace);
   const [selection, setSelection] = useState<EvidenceSelection>();
   const [visible, setVisible] = useState(true);
@@ -668,7 +527,6 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
     }, 3000);
     return () => window.clearTimeout(timer);
   }, [proposalId, visible, workspace.run.runId, workspace.run.status]);
-  const overview = workspace.intelligence.overview;
   const formatMoney = (amount: number | null, currency: string | null) =>
     amount === null
       ? "Not submitted"
@@ -678,31 +536,6 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
           maximumFractionDigits: 2,
         }).format(amount);
   const tabHref = (nextTab: IntelligenceTab, runId = workspace.run.runId) => `/proposals/${proposalId}/intelligence/comparisons/${runId}/${nextTab}`;
-  const summary = [
-    { label: "Responses", value: overview.responseCount, icon: Users },
-    {
-      label: "Approved requirements",
-      value: overview.approvedRequirementCount,
-      icon: ClipboardCheck,
-    },
-    {
-      label: "Must-haves unanswered",
-      value: overview.mandatoryGapCount,
-      hint: "counted once per vendor",
-      icon: ShieldAlert,
-    },
-    {
-      label: "Must-haves partly answered",
-      value: overview.mandatoryPartialCount,
-      hint: "counted once per vendor",
-      icon: ShieldAlert,
-    },
-    {
-      label: "Unresolved reviews",
-      value: overview.unresolvedReviewCount,
-      icon: AlertTriangle,
-    },
-  ];
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1500px]">
@@ -718,21 +551,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 Comparison from {formatIntelligenceTimestamp(workspace.run.createdAt)} · {workspace.run.participantCount} vendors
               </p>
-              <details className="mt-2">
-                <summary className="cursor-pointer text-xs font-bold text-slate-400 hover:text-slate-600">Verification details</summary>
-                <p className="mt-1 font-mono text-xs text-slate-500">Run {workspace.run.runId} · Manifest {workspace.manifest.checksum}</p>
-              </details>
             </div>
-            <label className="text-xs font-extrabold text-slate-700">
-              Comparison run
-              <select value={workspace.run.runId} onChange={(event) => router.push(tabHref(tab, event.target.value))} className="mt-1.5 block h-11 min-w-72 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold">
-                {runs.map((run) => (
-                  <option key={run.run.runId} value={run.run.runId}>
-                    {formatIntelligenceTimestamp(run.run.createdAt)} · {run.run.participantCount} vendors · {run.freshness.state === "stale" ? "out of date" : "up to date"}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${workspace.run.status.startsWith("succeeded") ? "bg-emerald-100 text-emerald-800" : "bg-violet-100 text-violet-800"}`}>{label(workspace.run.status)}</span>
@@ -748,11 +567,12 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
             </div>
           )}
           {workspace.freshness.state === "stale" && (
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">
-              <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-              <span>
-                <strong>Out of date:</strong> the proposal inputs changed after this comparison ran ({workspace.freshness.reasons.map(label).join(", ")}). The results stay readable; run a new comparison for an up-to-date view.
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+              <AlertTriangle size={15} className="shrink-0" />
+              <span className="min-w-0 flex-1">
+                <strong>Out of date.</strong> {describeFreshnessReasons(workspace.freshness.reasons) || "The proposal inputs changed after this comparison ran."} The results stay readable; run a new comparison for an up-to-date view.
               </span>
+              <RerunComparisonButton proposalId={proposalId} className="shrink-0 bg-amber-700 hover:bg-amber-800" />
             </div>
           )}
         </header>
@@ -769,28 +589,10 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
         <section className="mt-5">
           {tab === "overview" && (
             <>
-              <RecommendationPanel workspace={workspace} decisionHref={`${tabHref("evaluation")}#decision-record-title`} />
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {summary.map((item) => (
-                  <article key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <item.icon size={17} className="text-[#008ad2]" />
-                    <p className="mt-3 text-2xl font-extrabold text-slate-950">{item.value}</p>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">{item.label}</p>
-                    {"hint" in item && item.hint && <p className="mt-0.5 text-[10px] text-slate-400">{item.hint}</p>}
-                  </article>
-                ))}
-              </div>
+              <RecommendationPanel workspace={workspace} />
             </>
           )}
           {tab === "requirements" && <RequirementMatrix requirements={workspace.intelligence.requirements} onEvidence={setSelection} />}
-          {tab === "technical" && (
-            <>
-              <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
-                <strong>Technical view:</strong> technical, staffing, reference, and sustainability requirements from this comparison snapshot. Open a cell to inspect its source evidence.
-              </div>
-              <RequirementMatrix requirements={workspace.intelligence.technical} onEvidence={setSelection} />
-            </>
-          )}
           {tab === "commercial" &&
             (!workspace.intelligence.permissions.viewCommercial ? (
               <EmptyState title="Pricing is hidden" text="Pricing is hidden for this comparison to prevent price bias during evaluation. Totals and line items will appear once commercial access is granted." />
@@ -815,7 +617,7 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
                         <dd className="mt-1 text-lg font-extrabold text-slate-950">{item.comparable ? formatMoney(item.normalizedTotal, item.normalizedCurrency) : "Not directly comparable"}</dd>
                       </div>
                     </dl>
-                    {item.refusalCodes.length ? <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">This quote can&rsquo;t be compared directly: {item.refusalCodes.map(label).join(", ")}. Ask the vendor to clarify rather than guessing.</p> : null}
+                    {item.refusalCodes.length ? <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">This quote can&rsquo;t be compared directly. {describeRefusalCodes(item.refusalCodes)} Ask the vendor to clarify rather than guessing.</p> : null}
                     {item.lineItems.length ? (
                       <details className="mt-3 rounded-xl border border-slate-200 p-3">
                         <summary className="cursor-pointer text-xs font-extrabold text-slate-800">{item.lineItems.length} cited commercial line items</summary>
@@ -836,77 +638,10 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
                 ))}
               </div>
             ))}
-          {tab === "risks" &&
-            (workspace.intelligence.risks.length ? (
-              <div className="grid gap-3 lg:grid-cols-2">
-                {workspace.intelligence.risks.map((risk) => (
-                  <article key={risk.riskId} className="rounded-2xl border border-slate-200 bg-white p-5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${riskTone[risk.severity] ?? riskTone.low}`}>{label(risk.severity)}</span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">{label(risk.category)}</span>
-                    </div>
-                    <h2 className="mt-3 font-extrabold text-slate-950">{risk.title}</h2>
-                    <p className="mt-1 text-xs font-bold text-slate-500">{risk.vendorLabel}</p>
-                    <p className="mt-3 text-sm leading-6 text-slate-700">{risk.basis}</p>
-                    {risk.question && (
-                      <div className="mt-3 rounded-xl bg-sky-50 p-3 text-xs leading-5 text-sky-900">
-                        <strong>Clarification candidate:</strong> {risk.question}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelection({
-                          title: risk.title,
-                          vendorLabel: risk.vendorLabel,
-                          rationale: risk.basis,
-                          evidence: risk.evidence,
-                        })
-                      }
-                      className="mt-3 inline-flex min-h-9 items-center gap-1 text-xs font-extrabold text-[#0077b6]"
-                    >
-                      Inspect {risk.evidence.length} citation
-                      {risk.evidence.length === 1 ? "" : "s"}
-                      <ChevronRight size={13} />
-                    </button>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <EmptyState title="No risks flagged" text="This comparison did not flag any evidence-backed risks." />
-            ))}
           {tab === "evaluation" && (
             <>
               <RecommendationPanel workspace={workspace} />
-              <div className="grid gap-4 lg:grid-cols-2">
-                {workspace.intelligence.evaluation.map((item) => (
-                  <article key={item.participantId} className="rounded-2xl border border-slate-200 bg-white p-5">
-                    <h2 className="font-extrabold text-slate-950">{item.vendorLabel}</h2>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">The scores recorded for this comparison, including RFPilot&rsquo;s starting scores where you have not scored a criterion yourself. The ranking above excludes vendors that miss a must-pass requirement, then orders the rest by these scores.</p>
-                    <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div>
-                        <dt className="text-[10px] font-extrabold uppercase text-slate-500">Contribution</dt>
-                        <dd className="mt-1 text-xl font-extrabold text-slate-950">{item.weightedContributionTotal.toFixed(2)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[10px] font-extrabold uppercase text-slate-500">Scores</dt>
-                        <dd className="mt-1 text-xl font-extrabold text-slate-950">{item.submittedScores}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[10px] font-extrabold uppercase text-slate-500">Scored</dt>
-                        <dd className="mt-1 text-xl font-extrabold text-slate-950">
-                          {item.completedEvaluatorCount > 0 ? "Yes" : "Not yet"}
-                        </dd>
-                      </div>
-                      {item.conflictCount > 0 && <div>
-                        <dt className="text-[10px] font-extrabold uppercase text-slate-500">Conflicts</dt>
-                        <dd className="mt-1 text-xl font-extrabold text-slate-950">{item.conflictCount}</dd>
-                      </div>}
-                    </dl>
-                  </article>
-                ))}
-              </div>
-              <DecisionWorkspace proposalId={proposalId} workspace={workspace} onChanged={setWorkspace} />
+              <ScoreGapExplanation workspace={workspace} className="mt-4" />
             </>
           )}
           {tab === "reports" && <ExecutiveReport proposalId={proposalId} proposalTitle={proposalTitle} workspace={workspace} />}

@@ -5,6 +5,7 @@ import { intelligenceSurfaceClasses } from "@/lib/proposalIntelligence/surfaces"
 import { extractionStatusToIntelligenceStatus } from "@/lib/proposalIntelligence/statusVocabulary";
 import { cn } from "@/lib/utils";
 import { existingVendorSummaries } from "@/lib/vendorResponses/manualResponse";
+import { formatMoney } from "@/lib/vendorResponses/money";
 import type {
   ResponseCardSummary,
 } from "@/lib/vendorResponses/responseCardSummary";
@@ -26,61 +27,22 @@ const formatDate = (value: string) => {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
 };
 
-const symbolCurrencies: Record<string, string> = {
-  "$": "USD",
-  "€": "EUR",
-  "£": "GBP",
-};
-
-const parseCommercialTotal = (value: string) => {
-  const match = value
-    .trim()
-    .replaceAll(",", "")
-    .match(/^(?:([A-Z]{3})\s*)?([$€£])?\s*(-?\d+(?:\.\d+)?)$/i);
-  if (!match) return null;
-  const currency = match[1]?.toUpperCase() ?? (match[2] ? symbolCurrencies[match[2]] : undefined);
-  const amount = Number(match[3]);
-  return currency && Number.isFinite(amount) ? { currency, amount } : null;
-};
-
-const formatMoney = (amount: number, currency: string) => {
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return `${currency} ${amount}`;
-  }
-};
-
-const formatCommercialTotal = (value: string) => {
-  const parsed = parseCommercialTotal(value);
-  return parsed ? formatMoney(parsed.amount, parsed.currency) : value;
-};
-
-const commercialTotalFact = (summary: ResponseCardSummary | undefined) =>
-  summary?.headlineFacts.find(
-    (fact) => fact.label === "Total cost" || fact.label === "Commercial total",
-  );
-
 /**
- * The stated totals side by side, when at least two responses state one in
- * the same currency. Nothing is inferred: a response without a parseable
- * total is simply absent from the range.
+ * The stated totals side by side, when at least two responses state exactly
+ * one total in the same currency. A response whose files list several
+ * different totals is left out until someone confirms which applies, so it
+ * can neither set the range nor be badged as the lowest bid.
  */
 const statedTotalRange = (
   responses: VendorResponseItem[],
   summaries: Record<string, ResponseCardSummary>,
 ) => {
   const totals = responses.flatMap((response) => {
-    const fact = commercialTotalFact(summaries[response._id]);
-    const parsed = fact ? parseCommercialTotal(fact.value) : null;
-    return parsed ? [{ responseId: response._id, ...parsed }] : [];
+    const total = summaries[response._id]?.commercialTotal;
+    return total?.status === "stated" ? [{ responseId: response._id, amount: total.amount, currency: total.currency }] : [];
   });
-  if (totals.length < 2) return null;
+  const unconfirmed = responses.filter((response) => summaries[response._id]?.commercialTotal.status === "needs_confirmation").length;
+  if (totals.length < 2) return unconfirmed > 0 ? { count: 0, unconfirmed, currency: null, lowest: null, highest: null, lowestResponseId: null } : null;
   const currency = totals[0].currency;
   if (totals.some((total) => total.currency !== currency)) return null;
   const amounts = totals.map((total) => total.amount);
@@ -89,6 +51,7 @@ const statedTotalRange = (
   const lowestIds = totals.filter((total) => total.amount === lowest).map((total) => total.responseId);
   return {
     count: totals.length,
+    unconfirmed,
     currency,
     lowest,
     highest,
@@ -96,6 +59,9 @@ const statedTotalRange = (
     lowestResponseId: lowestIds.length === 1 ? lowestIds[0] : null,
   };
 };
+
+const unconfirmedSentence = (count: number) =>
+  `${count} ${count === 1 ? "response lists" : "responses list"} more than one total and ${count === 1 ? "needs" : "need"} confirmation.`;
 
 const fileType = (name: string) => {
   const extension = name.split(".").pop()?.trim();
@@ -168,7 +134,7 @@ function ResponseCard({
   lowestStatedTotal: boolean;
 }) {
   const receivedAt = response.versionReceivedAt ?? response.createdAt;
-  const commercialTotal = commercialTotalFact(summary);
+  const commercialTotal = summary.commercialTotal;
   const extractionStatus = extractionStatusToIntelligenceStatus(summary.extractionStatus);
   return (
     <article className={cn(intelligenceSurfaceClasses.card, "@container flex h-full flex-col")}>
@@ -200,11 +166,26 @@ function ResponseCard({
       <div className="mt-4 grid grid-cols-1 gap-2.5 @min-[300px]:grid-cols-2" aria-label="Response highlights">
         <div className="min-w-0 rounded-2xl border border-gray-border bg-gray-panel p-3">
           <p className="text-xs font-extrabold uppercase tracking-wide text-gray">Total cost</p>
-          <p className="mt-1 whitespace-nowrap text-sm font-extrabold text-navy">
-            {commercialTotal ? formatCommercialTotal(commercialTotal.value) : "Not stated"}
-          </p>
-          {lowestStatedTotal && (
-            <p className="mt-1 text-xs font-semibold text-brand-dark">Lowest stated total</p>
+          {commercialTotal.status === "stated" ? (
+            <>
+              <p className="mt-1 whitespace-nowrap text-sm font-extrabold text-navy">{formatMoney(commercialTotal.amount, commercialTotal.currency)}</p>
+              {commercialTotal.confirmed && commercialTotal.otherTotals > 0 && (
+                <p className="mt-1 text-xs font-semibold text-gray">Confirmed by you over {commercialTotal.otherTotals} other stated {commercialTotal.otherTotals === 1 ? "total" : "totals"}</p>
+              )}
+              {lowestStatedTotal && (
+                <p className="mt-1 text-xs font-semibold text-brand-dark">Lowest stated total</p>
+              )}
+            </>
+          ) : commercialTotal.status === "needs_confirmation" ? (
+            <>
+              <p className="mt-1 text-sm font-extrabold text-amber-800">Needs confirmation</p>
+              <p className="mt-1 text-xs leading-4 text-gray">
+                The files list {commercialTotal.candidates.length} different totals, {formatMoney(commercialTotal.candidates[commercialTotal.candidates.length - 1].amount, commercialTotal.candidates[commercialTotal.candidates.length - 1].currency)} to {formatMoney(commercialTotal.candidates[0].amount, commercialTotal.candidates[0].currency)}.{" "}
+                <Link href={`/vendor-responses/${encodeURIComponent(response._id)}`} className="font-semibold text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Confirm which applies</Link>
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 whitespace-nowrap text-sm font-extrabold text-navy">Not stated</p>
           )}
         </div>
         <div className="min-w-0 rounded-2xl border border-gray-border bg-gray-panel p-3">
@@ -332,11 +313,19 @@ export default function ProposalResponseCards({
               </p>
               {totalRange && (
                 <p className="mt-2 text-sm font-semibold text-navy">
-                  Stated totals range from {formatMoney(totalRange.lowest, totalRange.currency)} to{" "}
-                  {formatMoney(totalRange.highest, totalRange.currency)}
-                  {totalRange.count < responses.length
-                    ? ` across ${totalRange.count} of ${responses.length} responses.`
-                    : "."}
+                  {totalRange.lowest !== null && totalRange.highest !== null && totalRange.currency && (
+                    <>
+                      {totalRange.lowest === totalRange.highest
+                        ? `${totalRange.count === responses.length ? "All" : totalRange.count} ${totalRange.count === 2 ? "both" : ""} stated totals are ${formatMoney(totalRange.lowest, totalRange.currency)}`.replace("2 both", "Both").replace("All both", "Both").replace(/\s+/g, " ")
+                        : `Stated totals range from ${formatMoney(totalRange.lowest, totalRange.currency)} to ${formatMoney(totalRange.highest, totalRange.currency)}`}
+                      {totalRange.count < responses.length
+                        ? ` across ${totalRange.count} of ${responses.length} responses.`
+                        : "."}
+                    </>
+                  )}
+                  {totalRange.unconfirmed > 0 && (
+                    <span className="block font-normal text-amber-800">{unconfirmedSentence(totalRange.unconfirmed)}</span>
+                  )}
                 </p>
               )}
             </div>

@@ -263,8 +263,11 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
 
 export default function DashboardTableList({
   proposals,
+  totalProposals,
 }: {
+  /** The most recent proposals only; the full count arrives separately. */
   proposals: ProposalItem[];
+  totalProposals?: number;
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<DashboardFilterType>("all");
@@ -413,11 +416,17 @@ export default function DashboardTableList({
 
         <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <p className="text-[12px] text-slate-400 font-medium">
+            {/* This table only ever holds the latest few; say so instead of "5 of 5". */}
             Showing{" "}
             <span className="text-slate-700 font-bold">{filtered.length}</span>{" "}
-            of{" "}
+            of your{" "}
             <span className="text-slate-700 font-bold">{proposals.length}</span>{" "}
-            proposals
+            most recent proposals
+            {typeof totalProposals === "number" && totalProposals > proposals.length ? (
+              <>
+                {" "}· <span className="text-slate-700 font-bold">{totalProposals}</span> in total
+              </>
+            ) : null}
           </p>
           <Link
             href="/proposals"

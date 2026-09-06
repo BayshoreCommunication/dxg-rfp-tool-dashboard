@@ -1,5 +1,6 @@
 import {
   buildRecommendationSummary,
+  comparisonOverviewCounts,
   type SummaryRequirement,
 } from "./recommendationSummary";
 
@@ -228,4 +229,13 @@ it("counts a must-have with no assessment at all as unanswered", () => {
   expect(summary.strengths).toContain(
     "Answered every must-have requirement, which not every vendor did.",
   );
+});
+
+it("counts must-have gaps and partials per vendor from the requirement list, matching the recommendation text", () => {
+  const requirements = [
+    { requirementId: "r1", title: "Union labor", mandatoryStatus: "mandatory", vendors: [{ participantId: "a", verdict: "partially_addressed" }, { participantId: "b", verdict: "missing" }] },
+    { requirementId: "r2", title: "Captions", mandatoryStatus: "mandatory", vendors: [{ participantId: "a", verdict: "addressed" }] },
+    { requirementId: "r3", title: "Stage", mandatoryStatus: "optional", vendors: [{ participantId: "a", verdict: "missing" }, { participantId: "b", verdict: "missing" }] },
+  ];
+  expect(comparisonOverviewCounts({ requirements, participantIds: ["a", "b"] })).toEqual({ mandatoryUnanswered: 2, mandatoryPartlyAnswered: 1 });
 });

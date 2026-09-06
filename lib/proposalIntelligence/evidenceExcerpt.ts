@@ -157,3 +157,42 @@ export const segmentHighlights = (
   if (cursor < text.length) segments.push({ text: text.slice(cursor), match: false });
   return segments;
 };
+
+/**
+ * OCR of a scanned page can come back as noise ("mMnoDid ,Jne u1 5 --‐-‐‑ D9T9").
+ * Showing that as "cited evidence" makes the product look broken and tells the
+ * reader nothing. This is a cheap test for text that is not readable prose:
+ * too few word-like tokens, or too many stray symbols. It errs towards
+ * "readable" so real quotes are never hidden.
+ */
+export const looksUnreadable = (text: string): boolean => {
+  const trimmed = text.trim();
+  if (trimmed.length < 12) return false;
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  if (tokens.length < 4) return false;
+  const wordLike = tokens.filter((token) => /^[A-Za-z][A-Za-z'’-]{1,}$/.test(token) && /[aeiouyAEIOUY]/.test(token)).length;
+  const numeric = tokens.filter((token) => /^[$€£]?[\d,.:%()/-]+$/.test(token)).length;
+  const symbolHeavy = tokens.filter((token) => /[^A-Za-z0-9$€£,.:%()/'’"\-–—]/.test(token)).length;
+  const wordRatio = wordLike / tokens.length;
+  const symbolRatio = symbolHeavy / tokens.length;
+  // Price tables are mostly numbers and are fine; noise is neither words nor numbers.
+  return (wordRatio < 0.35 && (wordLike + numeric) / tokens.length < 0.6) || symbolRatio > 0.3;
+};
+
+/**
+ * A short, readable preview of a passage for lists and checkboxes: the first
+ * lines that read as text, up to `maxChars`. Returns null when nothing in the
+ * passage reads clearly, so the caller can say so instead of quoting noise.
+ */
+export const readablePreview = (content: string, maxChars = 140): string | null => {
+  const lines = content.split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
+  const readable = lines.filter((line) => !looksUnreadable(line) && /[A-Za-z]{2,}/.test(line));
+  if (!readable.length) return null;
+  let preview = "";
+  for (const line of readable) {
+    const next = preview ? `${preview} ${line}` : line;
+    if (next.length > maxChars) { preview = preview || line.slice(0, maxChars - 1).trimEnd() + "…"; break; }
+    preview = next;
+  }
+  return preview;
+};

@@ -2,22 +2,10 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { VendorSubmissionDetail } from "@/app/actions/vendorResponse";
 import VendorResponseDetailWorkspace from "./VendorResponseDetailWorkspace";
 
-jest.mock("./VendorExtractionSection", () => ({
-  __esModule: true,
-  default: ({ versionId }: { versionId: string }) => (
-    <div data-testid="extraction">Extraction {versionId}</div>
-  ),
-}));
 jest.mock("./VendorFactsSection", () => ({
   __esModule: true,
   default: ({ versionId }: { versionId: string }) => (
     <div data-testid="facts">Facts {versionId}</div>
-  ),
-}));
-jest.mock("./VendorEvaluationSection", () => ({
-  __esModule: true,
-  default: ({ versionId }: { versionId: string }) => (
-    <div data-testid="evaluation">Evaluation {versionId}</div>
   ),
 }));
 
@@ -110,11 +98,10 @@ it("renders a keyboard-operable version timeline", () => {
     within(timeline).getByRole("button", { name: /Version 2/ }),
   ).toHaveAttribute("aria-current", "true");
   expect(screen.getAllByText("Clarification response")).toHaveLength(1);
-  expect(screen.getByText("Security scan passed")).toBeInTheDocument();
-  expect(
-    screen.getByRole("link", { name: "Open requirements checklist" }),
-  ).toHaveAttribute("href", "/proposals/proposal-1/intelligence/requirements?returnTo=%2Fvendor-responses%2Fresponse-1");
-  expect(screen.getByTestId("extraction")).toHaveTextContent("version-2");
+  expect(screen.getByText(/Security scan passed/)).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Open requirements checklist" })).not.toBeInTheDocument();
+  // "Files read" is no longer shown on the response page.
+  expect(screen.queryByTestId("extraction")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Back to proposal responses" })).toHaveAttribute(
     "href",
     "/vendor-responses/proposals/proposal-1",
@@ -132,7 +119,8 @@ it("drops the version sidebar when only one version exists", () => {
     screen.queryByRole("navigation", { name: "Immutable response versions" }),
   ).not.toBeInTheDocument();
   expect(screen.getByText(/The only version received so far/)).toBeInTheDocument();
-  expect(screen.getByTestId("evaluation")).toHaveTextContent(current.versionId);
+  // Scoring no longer lives on the response page; it happens in Proposal Intelligence.
+  expect(screen.queryByTestId("evaluation")).not.toBeInTheDocument();
   // Numbering only earns its place once there is something to number.
   expect(screen.getByRole("heading", { name: "Response as received" })).toBeInTheDocument();
   expect(screen.getByText("Files included with this response.")).toBeInTheDocument();
@@ -154,12 +142,12 @@ it("switches to historical content without representing an unverified file as an
   expect(screen.getByText("Historical, superseded")).toBeInTheDocument();
   expect(screen.getByText("Initial response.")).toBeInTheDocument();
   expect(
-    screen.getByText("Security scan pending"),
+    screen.getByText(/Security scan pending/),
   ).toBeInTheDocument();
   expect(
     screen.getByText(/isn’t included in the analysis/),
   ).toBeInTheDocument();
-  expect(screen.getByTestId("evaluation")).toHaveTextContent("version-1");
+  expect(screen.queryByText(/Score this response/)).not.toBeInTheDocument();
 });
 
 it("does not invent version history for an unversioned legacy response", () => {

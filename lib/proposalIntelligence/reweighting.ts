@@ -1,4 +1,5 @@
 import type { ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
+import { criterionOrigin, type CriterionOrigin } from "@/lib/proposalIntelligence/scoreExplanation";
 
 export type CriterionWeight = { criterionId: string; name: string; weight: number };
 export type ReweightedVendor = {
@@ -6,7 +7,7 @@ export type ReweightedVendor = {
   vendorLabel: string;
   eligible: boolean;
   score: number;
-  breakdown: Array<{ criterionId: string; name: string; meanScore: number; rubricMaximum: number; weight: number; contribution: number }>;
+  breakdown: Array<{ criterionId: string; name: string; meanScore: number; rubricMaximum: number; weight: number; contribution: number; origin: CriterionOrigin }>;
 };
 
 export const initialCriterionWeights = (workspace: ComparisonWorkspace): CriterionWeight[] => {
@@ -65,6 +66,7 @@ export const rankWithWeights = (
         rubricMaximum: criterion.rubricMaximum,
         weight: weight.weight,
         contribution: criterion.meanScore / criterion.rubricMaximum * weight.weight,
+        origin: criterionOrigin(criterion),
       }];
     });
     return {

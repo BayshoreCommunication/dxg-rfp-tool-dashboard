@@ -57,6 +57,9 @@ const sourceLabel = (requirement: RegistryRequirement) => {
   }
   return String(requirement.source_locator.path ?? "Canonical proposal").replace(/^\/content\//, "Proposal · ").replaceAll("/", " › ");
 };
+/** Generated from a planner instruction (due date, format, budget) rather than an ask; excluded by default. */
+const isPlannerInstruction = (requirement: RegistryRequirement) =>
+  requirement.source_locator?.role === "planner_instruction";
 const needsReview = (requirement: RegistryRequirement) =>
   !requirement.inclusion_reviewed || (requirement.included && (!requirement.mandatory_reviewed || !requirement.criterion_reviewed || requirement.verification_method === "pending"));
 const isRetiredStandaloneRecordingRequirement = (
@@ -153,7 +156,7 @@ function RequirementEditor({
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-extrabold text-slate-900">{requirement.title}</h3>
               {requirement.mandatory_status === "mandatory" && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold uppercase text-rose-700">Mandatory</span>}
-              {!requirement.included && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-600">Excluded</span>}
+              {!requirement.included && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-600">{isPlannerInstruction(requirement) ? "Left out · instruction to vendors" : "Left out"}</span>}
               {unresolved && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold uppercase text-amber-800">Review needed</span>}
             </div>
             <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-600">{requirement.normalized_text}</p>
@@ -165,7 +168,7 @@ function RequirementEditor({
       <form onSubmit={save} className="border-t border-slate-100 p-4 sm:p-5">
         <label className="mb-4 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700">
           <input disabled={!editable} type="checkbox" checked={included} onChange={(event) => setIncluded(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-          <span>Include in vendor evaluation<span className="mt-0.5 block font-normal text-slate-500">Exclude planning metadata, repeated narrative, and items that should not affect vendor scoring.</span></span>
+          <span>Include in vendor evaluation<span className="mt-0.5 block font-normal text-slate-500">{isPlannerInstruction(requirement) ? "This is something you told vendors (a deadline, a format, a budget), not something they answer, so it is left out unless you include it." : "Leave out planning details, repeated narrative, and anything that should not affect vendor scoring."}</span></span>
         </label>
         <div className="grid gap-4 lg:grid-cols-2">
           <label className="text-xs font-extrabold text-slate-700 lg:col-span-2">
@@ -217,8 +220,9 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
   const [sets, setSets] = useState(initialSets);
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("all");
-  const [unresolvedOnly, setUnresolvedOnly] = useState(true);
-  const [showRequirementReview, setShowRequirementReview] = useState(false);
+  const [unresolvedOnly, setUnresolvedOnly] = useState(false);
+  // The checklist is the page; it opens by default and a reader can fold it away.
+  const [showRequirementReview, setShowRequirementReview] = useState(true);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -242,14 +246,10 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
     });
   }, [activeRequirements, group, search, unresolvedOnly]);
   const blocking = registry?.set.validation?.blocking ?? [];
-  const requirementCount = activeRequirements.length;
-  const includedCount = activeRequirements.filter((item) => item.included).length;
-  const excludedCount = requirementCount - includedCount;
   const unresolvedCount = activeRequirements.filter(needsReview).length;
   const matrixReady = Boolean(registry?.matrix?.weightsConfirmed) && Math.abs((registry?.matrix?.totalWeight ?? 0) - 100) <= 0.001;
   const readyForApproval = Boolean(registry) && blocking.length === 0 && matrixReady && !registry?.freshness.stale;
   const editable = registry?.set.status === "draft" || registry?.set.status === "in_review";
-  const reviewedPercent = requirementCount ? Math.round(((requirementCount - unresolvedCount) / requirementCount) * 100) : 0;
   const applyRegistry = (next: RequirementRegistryView) => {
     setRegistry(next);
     setSets((previous) => [{
@@ -319,6 +319,12 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
             </div>
             {registry && <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${statusTone[registry.set.status]}`}>Version {registry.set.version} · {label(registry.set.status)}</span>
+              {registry.set.status === "approved" && !registry.freshness.stale && (
+                // An approved list is locked so every vendor is judged alike. To
+                // pick up generator improvements without editing the proposal,
+                // start a new version; the old one stays readable.
+                <button type="button" disabled={working} onClick={() => { if (window.confirm(`Start a new version of the requirements list from the current proposal? Version ${registry.set.version} stays readable, and comparisons keep using it until you approve the new one.`)) void supersede(); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-700 hover:border-[#008ad2] hover:text-[#0076b4] disabled:opacity-50"><RefreshCw size={13} aria-hidden="true" /> Start a new version</button>
+              )}
               {registry.freshness.stale && <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-800"><AlertTriangle size={13} /> {freshnessLabel(registry.freshness.reasons)}</span>}
             </div>}
           </div>
@@ -338,18 +344,6 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
           <>
             {registry.freshness.stale && <section className="mt-5 flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-extrabold text-rose-900">This registry is historical</p><p className="mt-1 text-sm text-rose-700">{freshnessDetail(registry.freshness.reasons)} The existing record stays unchanged; create a new version before evaluation.</p></div>{registry.set.status === "approved" ? <button disabled={working} onClick={() => void supersede()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Supersede with current proposal</button> : <button disabled={working} onClick={() => void generate()} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-xs font-extrabold text-white"><RefreshCw size={14} /> Create current version</button>}</section>}
 
-            <section aria-label="Checklist progress" className="mt-5 grid gap-3 md:grid-cols-3">
-              <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex items-center gap-3"><CheckCircle2 size={20} className="shrink-0 text-emerald-700" aria-hidden="true" /><div><p className="text-xs font-extrabold uppercase tracking-wide text-emerald-700">Proposal analyzed</p><p className="mt-0.5 text-sm font-bold text-slate-900">{requirementCount} requirements found</p></div></div>
-              </article>
-              <article className={`rounded-2xl border p-4 ${readyForApproval || registry.set.status === "approved" ? "border-emerald-200 bg-emerald-50" : "border-cyan-200 bg-cyan-50"}`}>
-                <div className="flex items-center gap-3"><CheckCircle2 size={20} className={`shrink-0 ${readyForApproval || registry.set.status === "approved" ? "text-emerald-700" : "text-[#008ad2]"}`} aria-hidden="true" /><div><p className={`text-xs font-extrabold uppercase tracking-wide ${readyForApproval || registry.set.status === "approved" ? "text-emerald-700" : "text-[#0073ad]"}`}>Evaluation prepared</p><p className="mt-0.5 text-sm font-bold text-slate-900">{readyForApproval || registry.set.status === "approved" ? "Ready" : "One guided step"}</p></div></div>
-              </article>
-              <article className={`rounded-2xl border p-4 ${registry.set.status === "approved" ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"}`}>
-                <div className="flex items-center gap-3"><CheckCircle2 size={20} className={`shrink-0 ${registry.set.status === "approved" ? "text-emerald-700" : "text-slate-300"}`} aria-hidden="true" /><div><p className={`text-xs font-extrabold uppercase tracking-wide ${registry.set.status === "approved" ? "text-emerald-700" : "text-slate-500"}`}>Approval</p><p className="mt-0.5 text-sm font-bold text-slate-900">{registry.set.status === "approved" ? "Frozen for comparison" : "Final confirmation"}</p></div></div>
-              </article>
-            </section>
-
             <section className={`mt-5 overflow-hidden rounded-3xl border ${readyForApproval || registry.set.status === "approved" ? "border-emerald-200 bg-emerald-50" : "border-cyan-200 bg-gradient-to-br from-cyan-50 to-white"}`}>
               <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
                 <div>
@@ -365,30 +359,11 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
                 {editable && readyForApproval && <button disabled={working} onClick={() => void approve()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-extrabold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"><LockKeyhole size={16} />{working ? "Approving…" : "Approve and freeze"}</button>}
                 {registry.set.status === "approved" && <span className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-extrabold text-white"><ShieldCheck size={18} /> Approved</span>}
               </div>
-              <div className="grid grid-cols-2 border-t border-black/5 bg-white/70 sm:grid-cols-4">
-                <div className="p-4"><p className="text-2xl font-extrabold text-slate-900">{includedCount}</p><p className="text-xs font-bold text-slate-500">Included</p></div>
-                <div className="border-l border-black/5 p-4"><p className="text-2xl font-extrabold text-slate-900">{excludedCount}</p><p className="text-xs font-bold text-slate-500">Duplicates excluded</p></div>
-                <div className="border-t border-black/5 p-4 sm:border-l sm:border-t-0"><p className="text-2xl font-extrabold text-slate-900">{unresolvedCount}</p><p className="text-xs font-bold text-slate-500">Need attention</p></div>
-                <div className="border-l border-t border-black/5 p-4 sm:border-t-0"><p className={`text-2xl font-extrabold ${matrixReady ? "text-emerald-700" : "text-amber-700"}`}>{registry.matrix?.totalWeight ?? 0}%</p><p className="text-xs font-bold text-slate-500">Scoring balance</p></div>
-              </div>
-            </section>
-
-            <section className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-              <article className="rounded-2xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3"><h2 className="font-extrabold text-slate-900">Scoring categories</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${matrixReady ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{matrixReady ? "Balanced to 100%" : "Needs balancing"}</span></div>
-                <ul className="mt-4 space-y-3">{criteria.map((criterion) => <li key={criterion.id}><div className="flex items-center justify-between gap-3 text-sm"><span className="truncate text-slate-700">{criterion.name}</span><span className="font-extrabold text-slate-900">{Number(criterion.weight)}%</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#18a9c8]" style={{ width: `${Math.min(100, Math.max(0, Number(criterion.weight)))}%` }} /></div></li>)}</ul>
-              </article>
-              <article className="rounded-2xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3"><h2 className="font-extrabold text-slate-900">Review summary</h2><span className="text-xs font-bold text-slate-500">{reviewedPercent}% reviewed</span></div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${reviewedPercent}%` }} /></div>
-                {blocking.length ? <ul className="mt-4 space-y-2">{blocking.map((item) => <li key={item.code} className="flex items-start justify-between gap-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-900"><span className="font-bold">{blockerLabel(item.code)}</span>{item.count && <span className="shrink-0 font-extrabold">{item.count}</span>}</li>)}</ul> : <div className="mt-4 flex items-center gap-3 rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800"><ShieldCheck size={20} /> No blocking items remain.</div>}
-                <p className="mt-4 text-xs text-slate-400">Version {registry.set.version} · Checksum {registry.set.content_checksum.slice(0, 12)}…</p>
-              </article>
             </section>
 
             <details open={showRequirementReview} onToggle={(event) => setShowRequirementReview(event.currentTarget.open)} className="mt-5 rounded-2xl border border-slate-200 bg-white">
               <summary className="cursor-pointer list-none p-5 marker:hidden">
-                <div className="flex items-center justify-between gap-4"><div><h2 className="font-extrabold text-slate-900">Review individual requirements</h2><p className="mt-1 text-sm text-slate-500">Open only when you want to inspect or override an automatic decision.</p></div><span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-600">{unresolvedCount} need attention</span></div>
+                <div className="flex items-center justify-between gap-4"><div><h2 className="font-extrabold text-slate-900">Your requirement checklist</h2><p className="mt-1 text-sm text-slate-500">Everything RFPilot found in the RFP, grouped by type. Open an item to see where it came from or to change whether it counts.</p></div><span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-600">{unresolvedCount} need attention</span></div>
               </summary>
               {showRequirementReview && <div className="border-t border-slate-100 p-4 sm:p-5">
                 <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">

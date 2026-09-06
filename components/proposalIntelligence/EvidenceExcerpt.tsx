@@ -3,6 +3,7 @@
 import {
   buildEvidenceExcerpt,
   evidenceQueryTerms,
+  looksUnreadable,
   segmentHighlights,
 } from "@/lib/proposalIntelligence/evidenceExcerpt";
 import { useMemo, useState } from "react";
@@ -32,6 +33,26 @@ export default function EvidenceExcerpt({ content, context, className }: Props) 
   );
 
   const body = `mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-700 ${className ?? ""}`;
+  // Judge what is actually shown: a readable page can still have a noisy excerpt.
+  const unreadable = useMemo(() => looksUnreadable(result.excerpt), [result.excerpt]);
+
+  // Scanned pages sometimes come back as noise. Say so instead of quoting it;
+  // the raw text stays one click away for anyone who wants to check.
+  if (unreadable && !expanded)
+    return (
+      <>
+        <p className={`${body} italic text-slate-500`}>
+          RFPilot could not read this part of the page clearly. It is scanned text, so the quote is unreliable; open the file to check it.
+        </p>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="mt-1 text-[11px] font-bold text-[#0076b4] hover:underline"
+        >
+          Show the raw text anyway
+        </button>
+      </>
+    );
 
   if (expanded)
     return (
@@ -42,7 +63,7 @@ export default function EvidenceExcerpt({ content, context, className }: Props) 
           onClick={() => setExpanded(false)}
           className="mt-1 text-[11px] font-bold text-[#0076b4] hover:underline"
         >
-          Show just the relevant lines
+          {unreadable ? "Hide the raw text" : "Show just the relevant lines"}
         </button>
       </>
     );

@@ -61,6 +61,26 @@ test("labels stale runs as readable historical comparisons", async () => {
   expect(screen.getByText(/Saved results loaded/)).toBeInTheDocument();
 });
 
+test("offers to run a new comparison once the saved one has finished, from the stale banner too", async () => {
+  list.mockResolvedValue({ success: true, data: [{ ...view, run: { ...view.run, status: "succeeded", progress: 100, completedParticipantCount: 2 }, freshness: { state: "stale", reasons: ["assessment_schema_changed"] } }] });
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
+  const buttons = await screen.findAllByRole("button", { name: "Run a new comparison" });
+  expect(buttons).toHaveLength(2);
+  expect(screen.getByRole("group", { name: "Vendors to compare" })).toBeInTheDocument();
+  fireEvent.click(buttons[1]);
+  await waitFor(() => expect(start).toHaveBeenCalledWith("proposal-1", [
+    { submissionId: "submission-1", versionId: "version-1" },
+    { submissionId: "submission-2", versionId: "version-2" },
+  ]));
+});
+
+test("does not offer a new comparison while one is still running", async () => {
+  list.mockResolvedValue({ success: true, data: [view] });
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
+  expect(await screen.findByText("1 of 2 vendors analyzed")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Run a new comparison|Compare 2 vendors/ })).not.toBeInTheDocument();
+});
+
 test("automatically prepares and approves requirements before comparison", async () => {
   render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved={false} />);
 
@@ -121,4 +141,31 @@ test("prepares missing vendor evaluations automatically when comparison starts",
   expect(screen.getByText(/Requirements, vendor mapping, evidence review, and scorecards will be prepared automatically/i)).toBeInTheDocument();
   fireEvent.click(button);
   await waitFor(() => expect(start).toHaveBeenCalled());
+});
+
+test("starts a new comparison when an out-of-date banner elsewhere on the page asks for one", async () => {
+  list.mockResolvedValue({ success: true, data: [{ ...view, run: { ...view.run, status: "succeeded", progress: 100, completedParticipantCount: 2 }, freshness: { state: "stale", reasons: ["assessment_schema_changed"] } }] });
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
+  await screen.findAllByRole("button", { name: "Run a new comparison" });
+  window.dispatchEvent(new CustomEvent("proposal-intelligence:start-comparison"));
+  await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
+});
+
+test("ignores the start request while a comparison is still running", async () => {
+  list.mockResolvedValue({ success: true, data: [view] });
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
+  expect(await screen.findByText("1 of 2 vendors analyzed")).toBeInTheDocument();
+  window.dispatchEvent(new CustomEvent("proposal-intelligence:start-comparison"));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(start).not.toHaveBeenCalled();
+});
+
+test("arriving with ?rerun=1 starts one comparison and clears the flag from the address", async () => {
+  window.history.replaceState({}, "", "/proposals/proposal-1/intelligence?rerun=1#comparison-progress-title");
+  list.mockResolvedValue({ success: true, data: [{ ...view, run: { ...view.run, status: "succeeded", progress: 100, completedParticipantCount: 2 }, freshness: { state: "stale", reasons: [] } }] });
+  render(<VendorComparisonPanel proposalId="proposal-1" responses={[response("1", "Vendor One"), response("2", "Vendor Two")]} requirementsApproved />);
+  await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
+  expect(window.location.search).toBe("");
+  expect(window.location.hash).toBe("#comparison-progress-title");
+  window.history.replaceState({}, "", "/");
 });

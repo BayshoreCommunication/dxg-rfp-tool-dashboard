@@ -5,8 +5,7 @@ import {
   MessageSquareText,
   MousePointerClick,
   Send,
-  TrendingUp,
-} from "lucide-react";
+  } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
@@ -16,9 +15,10 @@ interface StatMetric {
   value: number;
   icon: React.ReactElement<{ className?: string }>;
   gradient: string;
-  trendValue: string;
   href: string;
   actionLabel: string;
+  /** A real figure worth a pill (unread count). Never a made-up trend. */
+  badge?: string;
 }
 
 interface TopCardItemProps {
@@ -38,9 +38,9 @@ const StatCard = ({
   value,
   icon,
   gradient,
-  trendValue,
   href,
   actionLabel,
+  badge,
 }: StatMetric) => {
   return (
     <Link
@@ -59,11 +59,11 @@ const StatCard = ({
           <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm shadow-inner">
             {React.cloneElement(icon, { className: "w-6 h-6 text-white" })}
           </div>
-
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-semibold text-white">
-            <TrendingUp className="w-3 h-3" />
-            <span>{trendValue}</span>
-          </div>
+          {badge && (
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-semibold text-white">
+              <span>{badge}</span>
+            </div>
+          )}
         </div>
 
         <div>
@@ -118,7 +118,6 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       title: "Total Proposals",
       value: totals?.totalProposals ?? 0,
       gradient: "linear-gradient(135deg, #6366f1, #4338ca)",
-      trendValue: "+18%",
       icon: <FileText strokeWidth={2} />,
       href: "/proposals",
       actionLabel: "Open proposals",
@@ -128,7 +127,6 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       title: "Total Email Sent",
       value: totals?.totalEmailSent ?? 0,
       gradient: "linear-gradient(135deg, #34d399, #059669)",
-      trendValue: "+5%",
       icon: <Send strokeWidth={2} />,
       href: "/email",
       actionLabel: "Open email activity",
@@ -138,7 +136,6 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       title: "Total Email Clicked",
       value: totals?.totalEmailClicked ?? 0,
       gradient: "linear-gradient(135deg, #22d3ee, #0891b2)",
-      trendValue: "+24%",
       icon: <MousePointerClick strokeWidth={2} />,
       href: "/email",
       actionLabel: "Open email activity",
@@ -148,7 +145,6 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       title: "Total Proposal Views",
       value: totals?.totalProposalViews ?? 0,
       gradient: "linear-gradient(135deg, #fb923c, #ea580c)",
-      trendValue: "+12%",
       icon: <Eye strokeWidth={2} />,
       href: "/proposals",
       actionLabel: "Review proposals",
@@ -158,7 +154,7 @@ export default function TopCardItem({ totals, isLoading }: TopCardItemProps) {
       title: "Vendor Responses",
       value: totals?.totalVendorResponses ?? 0,
       gradient: "linear-gradient(135deg, #a855f7, #7e22ce)",
-      trendValue: `${totals?.unreadVendorResponses ?? 0} unread`,
+      badge: `${totals?.unreadVendorResponses ?? 0} unread`,
       icon: <MessageSquareText strokeWidth={2} />,
       href: "/vendor-responses",
       actionLabel: "Open responses",

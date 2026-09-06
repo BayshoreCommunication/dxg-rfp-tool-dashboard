@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { getComparisonWorkspaceAction, recordComparisonDecisionAction, type ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
+import type { ComparisonWorkspace } from "@/app/actions/comparisonOrchestration";
 import ProposalIntelligenceWorkspace from "./ProposalIntelligenceWorkspace";
 
 jest.mock("@/app/actions/comparisonOrchestration", () => ({
@@ -61,7 +61,7 @@ test("keeps every tab bound to the same run and opens exact cited evidence", asy
   );
   expect(screen.getAllByText("Eligibility gate")).toHaveLength(2);
   expect(screen.queryByText(/AI confidence/)).not.toBeInTheDocument();
-  expect(screen.getByRole("combobox", { name: "Comparison run" })).toHaveTextContent("Aug 12, 2026, 12:00 AM UTC");
+  expect(screen.queryByRole("combobox", { name: "Comparison run" })).not.toBeInTheDocument();
 });
 
 test("prints the readable executive report without requiring an export", async () => {
@@ -104,8 +104,9 @@ test("prints the readable executive report without requiring an export", async (
   expect(screen.queryByText(/Frozen comparison/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/Viewing comparison snapshot/i)).not.toBeInTheDocument();
   expect(screen.getByText("$100,000.00")).toBeInTheDocument();
-  // RFPilot has one user per proposal, so a "1/2 evaluators" ratio was fiction.
-  expect(screen.getByText("Scored")).toBeInTheDocument();
+  // The per-vendor "Contribution / Scores / Scored" cards were removed; the
+  // table above already carries the totals.
+  expect(screen.queryByText("Contribution")).not.toBeInTheDocument();
   expect(screen.queryByText(/evaluator/i)).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Human decision" })).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Priority review signals" })).not.toBeInTheDocument();
@@ -125,19 +126,13 @@ test("shows a sealed state without rendering pricing when the API denies commerc
   expect(screen.queryByText("$100,000.00")).not.toBeInTheDocument();
 });
 
-test("records only an explicit human selection and starts with no vendor selected", async () => {
+
+test("no longer asks the reader to record a decision", () => {
   const value = workspace();
-  jest.mocked(recordComparisonDecisionAction).mockResolvedValue({ success: true, data: { decisionId: "decision" } });
-  jest.mocked(getComparisonWorkspaceAction).mockResolvedValue({ success: true, data: value });
   render(<ProposalIntelligenceWorkspace proposalId={"f".repeat(24)} proposalTitle="GIH Annual Conference" tab="evaluation" initialWorkspace={value} runs={runs(value)} />);
-  expect(screen.queryByRole("radio", { name: "Northstar AV" })).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole("radio", { name: "Selection" }));
-  const vendor = screen.getByRole("radio", { name: "Northstar AV" });
-  expect(vendor).not.toBeChecked();
-  await userEvent.click(vendor);
-  await userEvent.type(screen.getByLabelText("Decision rationale"), "Best fit after committee review of the frozen evidence.");
-  await userEvent.click(screen.getByRole("button", { name: "Record decision" }));
-  await waitFor(() => expect(recordComparisonDecisionAction).toHaveBeenCalledWith("f".repeat(24), runId, expect.objectContaining({ decisionType: "selection", selectedParticipantIds: [participantId] })));
+  expect(screen.queryByRole("heading", { name: "Record a human decision" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Decision history" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Record your decision/ })).not.toBeInTheDocument();
 });
 
 test("labels closely matched eligible vendors as a close call instead of choosing one", () => {

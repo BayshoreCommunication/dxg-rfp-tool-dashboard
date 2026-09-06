@@ -45,11 +45,11 @@ function ProposalCard({ proposal }: { proposal: VendorResponseProposalSummary })
             {proposal.unreadCount > 0 ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-extrabold text-amber-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                {proposal.unreadCount} unread
+                {proposal.unreadCount} new
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-700">
-                <MailOpen size={11} aria-hidden="true" /> All reviewed
+                <MailOpen size={11} aria-hidden="true" /> Nothing new
               </span>
             )}
           </div>
@@ -109,13 +109,13 @@ export default function VendorResponseProposalList({
           <div>
             <span className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[#008ad2]">
               <Sparkles size={10} className="fill-[#008ad2]" aria-hidden="true" />
-              Proposal inbox
+              What vendors sent back
             </span>
             <h1 className="text-[30px] font-black leading-none tracking-tight text-slate-900">
               Vendor Responses
             </h1>
             <p className="mt-2 text-[13px] font-medium text-slate-500">
-              Open a proposal to review all vendor submissions together.
+              Each proposal you sent out is listed with the responses vendors returned. Open one to review them together.
             </p>
           </div>
           <div className="flex gap-3">

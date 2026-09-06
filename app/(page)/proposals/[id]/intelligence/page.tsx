@@ -15,7 +15,7 @@ import VendorComparisonPanel from "@/components/vendor/VendorComparisonPanel";
 import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
 import { findExcludedVendors } from "@/lib/proposalIntelligence/excludedVendors";
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileStack, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileStack } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -136,15 +136,6 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
           comparison={currentRun}
         />
         {currentWorkspace && <><ExcludedVendorsNotice excluded={excludedVendors} comparedCount={currentWorkspace.participants.length} /><ProposalComparisonMatrix workspace={currentWorkspace} /><ProposalReweighting workspace={currentWorkspace} /><ProposalVerdict workspace={currentWorkspace} proposalId={id} /></>}
-
-        <section className="mt-5">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="font-extrabold text-slate-950">Past comparisons</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">Every comparison is saved exactly as it was run. Older results stay readable even after requirements or responses change.</p>
-            {comparisons.length ? <ul className="mt-3 space-y-2">{comparisons.slice(0, 3).map((item) => <li key={item.run.runId}><Link href={`/proposals/${id}/intelligence/comparisons/${item.run.runId}/overview`} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"><span>{new Date(item.run.createdAt).toLocaleString()} · {item.run.participantCount} vendors</span><span className={item.freshness.state === "stale" ? "text-amber-700" : "text-emerald-700"}>{item.freshness.state === "stale" ? "Out of date" : "Up to date"}</span></Link></li>)}</ul> : <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">No comparison has been created yet.</p>}
-            <Link href={`/proposals/${id}/intelligence/submissions`} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><Users size={15} />Browse vendor submissions</Link>
-          </article>
-        </section>
 
         <section className="mt-5" aria-label="Comparison setup and recovery">
           <VendorComparisonPanel

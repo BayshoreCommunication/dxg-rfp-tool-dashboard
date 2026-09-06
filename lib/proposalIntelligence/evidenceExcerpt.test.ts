@@ -2,6 +2,8 @@ import {
   buildEvidenceExcerpt,
   evidenceQueryTerms,
   segmentHighlights,
+  looksUnreadable,
+  readablePreview,
 } from "./evidenceExcerpt";
 
 /** The real shape of a stored passage: a whole page, answer buried in it. */
@@ -84,4 +86,25 @@ it("splits text into plain and matched segments that rebuild the original", () =
 
 it("returns one plain segment when there is nothing to mark", () => {
   expect(segmentHighlights("plain", [])).toEqual([{ text: "plain", match: false }]);
+});
+
+describe("looksUnreadable", () => {
+  it("flags OCR noise but not prose, price tables or short labels", () => {
+    expect(looksUnreadable("mMnoDid ,Jne u1 5 --\u2010-\u2010\u2011 D9T9 5 u:-\u2010\u2011-\u2010\u2011 39T9 0MMT ..c2nTent5 ptRDno uu sg")).toBe(true);
+    expect(looksUnreadable("aJe.oDid ,Jne uF 5 u:B1 39T9 5 :-\u2010\u2011-\u2010\u2011 39T9 leone.oDid ,Jne uq 5 uuB1 D9T9")).toBe(true);
+    expect(looksUnreadable("Production Labor 1 $81,275.00 Production Travel & Freight 1 $25,600.00 SUBTOTAL $207,055.00 DISCOUNT AMOUNT $0.00 TOTAL $207,055.00")).toBe(false);
+    expect(looksUnreadable("DXG will provide a Technical Producer that will serve as the main point of contact in developing the technical run of show.")).toBe(false);
+    expect(looksUnreadable("Page 1 of 9")).toBe(false);
+    expect(looksUnreadable("")).toBe(false);
+  });
+});
+
+describe("readablePreview", () => {
+  it("skips noisy lines and keeps the first readable ones", () => {
+    const page = "Board Meeting Deliverables\nmMnoDid ,Jne u1 5 --\u2010-\u2010\u2011 D9T9 5 u:-\u2010\u2011-\u2010\u2011 39T9 0MMT ..c2nTent5 ptRDno uu sg\nAudio 16ch mixer w/snake (14) 12\" PTT mics";
+    expect(readablePreview(page)).toBe("Board Meeting Deliverables Audio 16ch mixer w/snake (14) 12\" PTT mics");
+    expect(readablePreview("mMnoDid ,Jne u1 5 --\u2010-\u2010\u2011 D9T9 5 u:-\u2010\u2011-\u2010\u2011 39T9 0MMT ..c2nTent5 ptRDno")).toBeNull();
+    expect(readablePreview("A".repeat(10) + " " + "word ".repeat(60), 40)?.length).toBeLessThanOrEqual(41);
+    expect(readablePreview("")).toBeNull();
+  });
 });

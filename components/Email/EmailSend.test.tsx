@@ -383,3 +383,57 @@ describe('EmailSend — proposal selection', () => {
     expect(screen.queryByText(/No submitted proposals ready to send/)).not.toBeInTheDocument()
   })
 })
+
+describe('EmailSend — asking one vendor a question', () => {
+  const questionParams: Record<string, string> = {
+    mode: 'question',
+    proposalId: 'prop-001',
+    vendor: 'Northstar AV',
+    to: 'bids@northstar.example',
+    subject: 'Questions about your response to Bayshore Summit 2026',
+    message: 'Hello,\n\nWe could not find answers to:\n- Union Labor\n\nThank you.',
+    returnTo: '/vendor-responses/response-1',
+  }
+
+  it('loads the named proposal directly, names the vendor, and drops the campaign controls', async () => {
+    mockSearchParamsGet.mockImplementation((key: string) => questionParams[key] ?? null)
+    render(<EmailSend />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Send question' })).not.toBeDisabled(), LOAD_TIMEOUT)
+    expect(screen.getByRole('heading', { name: 'Ask Northstar AV a question' })).toBeInTheDocument()
+    expect(screen.getByText(/About their response to Bayshore Summit 2026/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Back to the response/ })).toHaveAttribute('href', '/vendor-responses/response-1')
+    expect(mockGetProposalById).toHaveBeenCalledWith('prop-001')
+    expect(mockGetProposals).not.toHaveBeenCalled()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByText('Compose & Send')).not.toBeInTheDocument()
+    expect(screen.queryByText('Personalized invitation')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Send Campaign/)).not.toBeInTheDocument()
+    expect(screen.getByText('bids@northstar.example')).toBeInTheDocument()
+    expect(screen.getByText('I reviewed this message.')).toBeInTheDocument()
+  })
+
+  it('sends the question as a plain vendor email and returns to the response', async () => {
+    mockSearchParamsGet.mockImplementation((key: string) => questionParams[key] ?? null)
+    mockSendEmail.mockResolvedValue({ success: true, message: 'sent' })
+    render(<EmailSend />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Send question' })).not.toBeDisabled(), LOAD_TIMEOUT)
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send question' }))
+    await waitFor(() => expect(mockSendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      proposalId: 'prop-001',
+      recipientEmails: ['bids@northstar.example'],
+      subject: 'Questions about your response to Bayshore Summit 2026',
+      kind: 'question',
+    })))
+    expect(mockSendEmail.mock.calls[0][0].message).toContain('- Union Labor')
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith('/vendor-responses/response-1'))
+    expect(toast.success).toHaveBeenCalledWith('Question sent to Northstar AV.')
+  })
+
+  it('ignores an off-site returnTo', async () => {
+    mockSearchParamsGet.mockImplementation((key: string) => (key === 'returnTo' ? 'https://evil.example/phish' : questionParams[key] ?? null))
+    render(<EmailSend />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Send question' })).not.toBeDisabled(), LOAD_TIMEOUT)
+    expect(screen.queryByRole('link', { name: /Back to the response/ })).not.toBeInTheDocument()
+  })
+})

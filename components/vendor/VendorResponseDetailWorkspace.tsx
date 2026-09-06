@@ -4,11 +4,11 @@ import type {
   VendorSubmissionDetail,
   VendorSubmissionVersion,
 } from "@/app/actions/vendorResponse";
+import { fileTypeLabel } from "@/lib/proposalIntelligence/plainLanguage";
 import {
   AlertTriangle,
   ArrowLeft,
   CalendarDays,
-  ClipboardList,
   FileCheck2,
   FileQuestion,
   FileText,
@@ -17,15 +17,8 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
-import VendorEvaluationSection from "./VendorEvaluationSection";
-import VendorExtractionSection from "./VendorExtractionSection";
+import { useMemo, useState } from "react";
 import VendorFactsSection from "./VendorFactsSection";
-import {
-  evaluationGateFromIntelligence,
-  type EvaluationGate,
-} from "@/lib/proposalIntelligence/evaluationGate";
-import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 
 const reasonLabels: Record<VendorSubmissionVersion["reason"], string> = {
   initial: "Initial response",
@@ -70,24 +63,8 @@ export default function VendorResponseDetailWorkspace({
     selectedVersion.versionId === detail.submission?.currentVersionId,
   );
   const vendorName = selectedVersion?.vendorName ?? detail.response.vendorName;
-  const returnTo = `/vendor-responses/${detail.response._id}`;
   const proposalResponsesHref = `/vendor-responses/proposals/${encodeURIComponent(detail.response.proposalId)}`;
-  // Scoring readiness is derived from the intelligence run the facts section
-  // loads, keyed by version so switching versions never shows a stale gate.
-  const [gates, setGates] = useState<Record<string, EvaluationGate>>({});
-  const gateFor = (versionId: string): EvaluationGate => gates[versionId] ?? { state: "unknown" };
   const singleVersion = detail.versions.length === 1;
-  const handleIntelligence = useCallback(
-    (versionId: string, state: Parameters<typeof evaluationGateFromIntelligence>[0]) => {
-      const next = evaluationGateFromIntelligence(state);
-      setGates((current) =>
-        JSON.stringify(current[versionId]) === JSON.stringify(next)
-          ? current
-          : { ...current, [versionId]: next },
-      );
-    },
-    [],
-  );
 
   return (
     <section
@@ -119,12 +96,6 @@ export default function VendorResponseDetailWorkspace({
               </span>
             </p>
           </div>
-          <Link
-            href={requirementRegistryHref(detail.response.proposalId, returnTo)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#008ad2] px-4 text-sm font-extrabold text-[#0076b4] hover:bg-[#eaf7fd] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/25"
-          >
-            <ClipboardList size={16} aria-hidden="true" /> Open requirements checklist
-          </Link>
         </div>
       </header>
 
@@ -278,19 +249,14 @@ export default function VendorResponseDetailWorkspace({
                     id="intelligence-heading"
                     className="text-base font-extrabold text-slate-900"
                   >
-                    Analysis and scoring
+                    Analysis
                   </h3>
                   <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
-                    RFPilot read {singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which files were readable, which requirements the vendor answered, and the values it stated. Your scoring sits at the end. Opening anything here never reruns the analysis or changes what the vendor sent.
+                    RFPilot read {singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which requirements the vendor answered and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.
                   </p>
                 </div>
                 {detail.submission && (
                   <div className="space-y-5">
-                    <VendorExtractionSection
-                      proposalId={detail.response.proposalId}
-                      submissionId={detail.submission.submissionId}
-                      versionId={selectedVersion.versionId}
-                    />
                     <VendorFactsSection
                       key={selectedVersion.versionId}
                       proposalId={detail.response.proposalId}
@@ -299,14 +265,7 @@ export default function VendorResponseDetailWorkspace({
                       vendorEmail={selectedVersion.email}
                       submissionId={detail.submission.submissionId}
                       versionId={selectedVersion.versionId}
-                      onIntelligence={(state) => handleIntelligence(selectedVersion.versionId, state)}
-                    />
-                    <VendorEvaluationSection
-                      key={`evaluation-${selectedVersion.versionId}`}
-                      proposalId={detail.response.proposalId}
-                      submissionId={detail.submission.submissionId}
-                      versionId={selectedVersion.versionId}
-                      gate={gateFor(selectedVersion.versionId)}
+                      returnTo={`/vendor-responses/${encodeURIComponent(detail.response._id)}`}
                     />
                   </div>
                 )}
@@ -395,70 +354,48 @@ function SourceReadiness({
           message above.
         </div>
       ) : (
-        <ul className="mt-3 grid gap-3 xl:grid-cols-2">
+        <ul className="mt-3 divide-y divide-slate-100 rounded-2xl border border-slate-200">
           {documents.map((document, index) => {
             const ready = document.scanStatus === "clean";
+            const meta = [
+              fileTypeLabel(document.mimeType, document.name),
+              formatBytes(document.sizeBytes),
+              ready ? "Security scan passed" : "Security scan pending",
+              document.inheritedFromVersionId ? "Carried over from an earlier version" : null,
+            ].filter(Boolean).join(" · ");
             return (
               <li
                 key={document.documentId || `${document.name}-${index}`}
-                className="rounded-2xl border border-slate-200 p-4"
+                className="flex flex-wrap items-center gap-3 p-4 sm:flex-nowrap"
               >
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}
-                  >
-                    {ready ? (
-                      <FileCheck2 size={18} aria-hidden="true" />
-                    ) : (
-                      <ShieldAlert size={18} aria-hidden="true" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-extrabold text-slate-900">
-                      {document.name}
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}
+                >
+                  {ready ? (
+                    <FileCheck2 size={18} aria-hidden="true" />
+                  ) : (
+                    <ShieldAlert size={18} aria-hidden="true" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-extrabold text-slate-900" title={document.name}>
+                    {document.name}
+                  </p>
+                  <p className={`mt-0.5 text-xs ${ready ? "text-slate-500" : "text-amber-800"}`}>{meta}</p>
+                  {!ready && (
+                    <p className="mt-1 text-[11px] leading-4 text-amber-900">
+                      This file hasn&rsquo;t passed its security scan yet, so it isn&rsquo;t included in the analysis.
                     </p>
-                    <p
-                      className={`mt-1 text-xs font-bold ${ready ? "text-emerald-700" : "text-amber-800"}`}
-                    >
-                      {ready
-                        ? "Security scan passed"
-                        : "Security scan pending"}
-                    </p>
-                  </div>
+                  )}
                 </div>
-                <dl className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
-                  <div>
-                    <dt className="font-bold uppercase">File type</dt>
-                    <dd className="mt-0.5 truncate">
-                      {document.mimeType || "Unknown"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-bold uppercase">Size</dt>
-                    <dd className="mt-0.5">
-                      {formatBytes(document.sizeBytes)}
-                    </dd>
-                  </div>
-                </dl>
-                {document.inheritedFromVersionId && (
-                  <p className="mt-2 text-[10px] font-semibold text-slate-500">
-                    Carried over from an earlier version
-                  </p>
-                )}
-                {!ready && (
-                  <p className="mt-3 rounded-lg bg-amber-50 p-2 text-[11px] leading-4 text-amber-900">
-                    This file hasn&rsquo;t passed its security scan yet, so it
-                    isn&rsquo;t included in the analysis.
-                  </p>
-                )}
                 {document.url && (
                   <a
                     href={document.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 hover:border-[#008ad2]/30 hover:text-[#0076b4]"
+                    className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 hover:border-[#008ad2]/30 hover:text-[#0076b4]"
                   >
-                    <FileText size={14} aria-hidden="true" /> Open file
+                    <FileText size={14} aria-hidden="true" /> Open
                   </a>
                 )}
               </li>
