@@ -317,6 +317,89 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Shared MUI-style year browsing, retaining the app's existing calendar theme. */
+.dxg-datepicker .react-datepicker__header--custom {
+  padding: 8px;
+}
+
+.dxg-datepicker__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 252px;
+}
+
+.dxg-datepicker__view-toggle,
+.dxg-datepicker__month-arrow,
+.dxg-datepicker__year-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  color: #173744;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.dxg-datepicker__view-toggle {
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dxg-datepicker__month-navigation { display: flex; }
+.dxg-datepicker__month-arrow { width: 36px; height: 40px; color: #087f91; }
+.dxg-datepicker__month-arrow:disabled { opacity: .35; cursor: not-allowed; }
+.dxg-datepicker__view-toggle:hover,
+.dxg-datepicker__month-arrow:not(:disabled):hover,
+.dxg-datepicker__year-option:hover { background: #dcf7fa; }
+
+.dxg-datepicker__view-toggle:focus-visible,
+.dxg-datepicker__month-arrow:focus-visible,
+.dxg-datepicker__year-option:focus-visible {
+  outline: 2px solid #087f91;
+  outline-offset: -2px;
+}
+
+.dxg-datepicker__years {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+  gap: 6px 2px;
+  height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #a7dce5 transparent;
+  padding: 8px 4px;
+  background: #fff;
+  border-radius: 10px;
+}
+
+.dxg-datepicker__year-option {
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 999px;
+}
+
+.dxg-datepicker__year-option[aria-pressed="true"] {
+  background: #1dbfd3;
+  color: #fff;
+  font-weight: 700;
+}
+
+.dxg-datepicker--choosing-year .react-datepicker__month,
+.dxg-datepicker--choosing-year .react-datepicker__day-names,
+.dxg-datepicker--choosing-year .react-datepicker__today-button { display: none; }
+
 .dxg-datepicker .react-datepicker__day-name {
   margin-top: 8px;
   color: #58727d;
@@ -490,6 +573,14 @@ body {
   z-index: 60 !important;
   animation: dxg-datepicker-in 120ms ease-out;
   will-change: opacity;
+}
+
+@media (max-width: 767px) {
+  .dxg-datepicker.react-datepicker {
+    max-height: calc(100dvh - 160px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 @media (max-width: 420px) {

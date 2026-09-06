@@ -5,6 +5,7 @@ import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useDatePickerLocalePresentation } from "./datePickerLocale";
+import { datePickerPopperModifiers, useDatePickerYearNavigation } from "./DatePickerHeader";
 
 type DateFormatType =
   | "yyyy-dd-MM"
@@ -77,6 +78,7 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
   localeAware = false,
 }) => {
   const dateRef = useRef<DatePicker>(null);
+  const yearNavigation = useDatePickerYearNavigation({ minDate, maxDate });
   const localePresentation = useDatePickerLocalePresentation();
   const resolvedFormat = localeAware ? localePresentation.format : format;
   const today = new Date();
@@ -118,11 +120,15 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
           todayButton={showTodayShortcut && todayIsSelectable ? "Today" : undefined}
           calendarStartDay={localeAware ? localePresentation.calendarStartDay : undefined}
           popperPlacement="bottom-start"
+          popperProps={{ strategy: "fixed" }}
+          popperModifiers={datePickerPopperModifiers}
           className={resolvedInputClassName}
           wrapperClassName="w-full"
           popperClassName="dxg-datepicker-popper"
           showPopperArrow={false}
-          calendarClassName="dxg-datepicker"
+          calendarClassName={`dxg-datepicker${yearNavigation.yearViewClassName}`}
+          renderCustomHeader={yearNavigation.renderCustomHeader}
+          onCalendarClose={yearNavigation.onCalendarClose}
           ariaInvalid={ariaInvalid ? "true" : undefined}
           ariaDescribedBy={ariaDescribedBy}
         />
@@ -131,6 +137,7 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
           type="button"
           aria-label={`Open ${label || "date"} calendar`}
           onClick={() => dateRef.current?.setFocus()}
+          disabled={disabled}
           className={buttonClassName}
         >
           <CalendarRangeIcon size={20} />

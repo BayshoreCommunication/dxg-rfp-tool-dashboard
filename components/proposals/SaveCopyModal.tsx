@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { format as formatDate, isValid, parseISO } from "date-fns";
+import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import type { ProposalSettings } from "./AddNewProposal";
 
 export type CopyOverrides = {
@@ -31,6 +33,11 @@ type SaveCopyModalProps = {
   defaultStartDate?: string;
   defaultEndDate?: string;
   proposalSettings?: ProposalSettings;
+};
+
+const dateForPicker = (value: string): Date | null => {
+  const date = parseISO(value);
+  return isValid(date) ? date : null;
 };
 
 export default function SaveCopyModal({
@@ -65,7 +72,7 @@ export default function SaveCopyModal({
     if (!isOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !saving) onClose();
+      if (event.key === "Escape" && !event.defaultPrevented && !saving) onClose();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -141,27 +148,33 @@ export default function SaveCopyModal({
           {/* Date row */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label htmlFor="copy-start-date" className="block text-xs font-semibold text-slate-700 mb-1">
                 Start Date
                 <span className="ml-1 text-[10px] font-normal text-slate-400">(optional)</span>
               </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40"
+              <GlobalDateInput
+                id="copy-start-date"
+                label="Start Date"
+                hideLabel
+                value={dateForPicker(startDate)}
+                onChange={(date) => setStartDate(date ? formatDate(date, "yyyy-MM-dd") : "")}
+                disabled={saving}
+                inputClassName="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 pr-12 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label htmlFor="copy-end-date" className="block text-xs font-semibold text-slate-700 mb-1">
                 End Date
                 <span className="ml-1 text-[10px] font-normal text-slate-400">(optional)</span>
               </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40"
+              <GlobalDateInput
+                id="copy-end-date"
+                label="End Date"
+                hideLabel
+                value={dateForPicker(endDate)}
+                onChange={(date) => setEndDate(date ? formatDate(date, "yyyy-MM-dd") : "")}
+                disabled={saving}
+                inputClassName="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 pr-12 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40"
               />
             </div>
           </div>
