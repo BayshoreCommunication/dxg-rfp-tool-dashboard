@@ -142,6 +142,16 @@ describe('ProposalTableList — proposal cards', () => {
     await waitFor(() => expect(screen.getByText('Submitted')).toBeInTheDocument(), LOAD_TIMEOUT)
   })
 
+  it('keeps Share disabled for a draft proposal and explains why', async () => {
+    mockGetProposals.mockResolvedValue(successPage([makeProposal({ isDraft: true, status: 'unsubmitted' })]))
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await waitFor(() => expect(screen.getByText('Draft')).toBeInTheDocument(), LOAD_TIMEOUT)
+    expect(screen.queryByRole('link', { name: 'Share' })).not.toBeInTheDocument()
+    const share = screen.getByRole('button', { name: 'Share' })
+    expect(share).toBeDisabled()
+    expect(share).toHaveAttribute('title', 'Publish the proposal to share it with vendors.')
+  })
+
   it('shows "Draft" badge for draft proposals', async () => {
     mockGetProposals.mockResolvedValue(successPage([makeProposal({ isDraft: true, status: 'unsubmitted' })]))
     render(<ProposalTableList searchValue="" activeFilter="draft" />)

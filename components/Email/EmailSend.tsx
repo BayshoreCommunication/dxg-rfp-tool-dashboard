@@ -136,7 +136,15 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
           const proposalRes = await getProposalByIdAction(singleProposalId);
           if (cancelled) return;
           if (proposalRes.success && proposalRes.data && typeof proposalRes.data === "object") {
-            const loaded = proposalRes.data as ProposalOption;
+            const loaded = proposalRes.data as ProposalOption & { status?: string };
+            // Vendors only ever see a published proposal, so a draft opened
+            // here (e.g. from a stale link) is refused with the reason.
+            if (loaded.status === "unsubmitted") {
+              setProposals([]);
+              setProposalId("");
+              setLoadError("This proposal hasn't been published yet. Publish it before sharing it with vendors.");
+              return;
+            }
             setProposals([loaded]);
             setProposalId(singleProposalId);
             if (fixedMode) setSubject((prev) =>

@@ -537,6 +537,8 @@ export default function ProposalTableList({
                 : isEffectivelyActive
                 ? "Live"
                 : "Offline";
+              // Sharing follows the badge exactly: only a Live proposal can go to vendors.
+              const isLive = liveOrExpiredLabel === "Live";
               const statusBadgeClass = isSavedDraft
                 ? "bg-violet-50 text-violet-600 border-violet-200"
                 : isExpired
@@ -744,12 +746,24 @@ export default function ProposalTableList({
                             onClick={() => void handleDeleteProposal(proposal)}
                             disabled={deletingId === proposal._id}
                           />
-                          <ActionLink
-                            href={`/email/send-email?proposalId=${proposal._id}`}
-                            label="Share"
-                            icon={<Share2 size={15} />}
-                            emphasis
-                          />
+                          {/* Only a live (published) proposal can be sent to
+                              vendors; a draft or offline one keeps the slot but
+                              says why it cannot be shared yet. */}
+                          {isLive ? (
+                            <ActionLink
+                              href={`/email/send-email?proposalId=${proposal._id}`}
+                              label="Share"
+                              icon={<Share2 size={15} />}
+                              emphasis
+                            />
+                          ) : (
+                            <ActionButton
+                              icon={<Share2 size={15} />}
+                              label="Share"
+                              title="Publish the proposal to share it with vendors."
+                              disabled
+                            />
+                          )}
                         </div>
                       )}
                     </div>
@@ -844,17 +858,20 @@ function ActionButton({
   label,
   onClick,
   disabled = false,
+  title,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
   disabled?: boolean;
+  /** Hover text when it should say more than the label (e.g. why disabled). */
+  title?: string;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
-      title={label}
+      title={title ?? label}
       onClick={onClick}
       disabled={disabled}
       className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 text-[10px] font-bold text-slate-600 shadow-sm transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-11 sm:px-0"
