@@ -25,16 +25,24 @@ const ProposalSuccessfullyCreate = ({
 
       <div className="mt-5 text-center">
         <h2 className="text-2xl font-black text-slate-900 sm:text-3xl">
-          Proposal Created Successfully
+          Proposal published successfully
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:text-base">
           Your proposal <span className="font-semibold text-slate-800">&quot;{proposalTitle}&quot;</span>{" "}
-          is ready. You can return to the proposals list or send this proposal by
-          email now.
+          is ready to share. Publishing does not send invitation emails. Choose
+          your vendors and review the invitation next.
         </p>
       </div>
 
-      <div className="mt-8 grid w-full max-w-4xl grid-cols-1 justify-center gap-3 sm:grid-cols-2">
+      <div className="mt-6 w-full max-w-4xl rounded-2xl border border-sky-200 bg-sky-50 p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-sky-800">Next step · Share with vendors</p>
+        <p className="mt-2 text-sm text-slate-600">Send individual invitations from the email page. Vendors cannot see the other recipients.</p>
+        <button type="button" onClick={onSendEmail} className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#008ad2] px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
+          <Mail size={16} aria-hidden="true" /> Share with vendors
+        </button>
+      </div>
+
+      <div className="mt-6 grid w-full max-w-4xl grid-cols-1 justify-center gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={onBackToList}
@@ -64,15 +72,6 @@ const ProposalSuccessfullyCreate = ({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={onSendEmail}
-          className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95 ${onSaveCopy ? "" : "sm:col-span-2"}`}
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
-        >
-          <Mail size={16} />
-          Send This Proposal By Email
-        </button>
       </div>
     </section>
   );

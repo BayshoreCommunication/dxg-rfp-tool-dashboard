@@ -1,16 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { uploadProposalFilesAction } from "@/app/actions/proposals";
+import { uploadProposalFiles } from "@/lib/proposals/uploadProposalFiles";
 import ProposalRfpTemplate from "@/components/proposalTemplate/ProposalRfpTemplate";
 import type { ProposalSettings, UploadsData } from "../AddNewProposal";
 import UploadsReferenceMaterials, { UploadBox } from "./UploadsReferenceMaterials";
 
-jest.mock("@/app/actions/proposals", () => ({
-  uploadProposalFilesAction: jest.fn(),
+jest.mock("@/lib/proposals/uploadProposalFiles", () => ({
+  uploadProposalFiles: jest.fn(),
 }));
 
-const uploadFilesMock = jest.mocked(uploadProposalFilesAction);
+const uploadFilesMock = jest.mocked(uploadProposalFiles);
 const uploadResult = (supportDocumentUrls: string[] = []) => ({
   success: true,
   supportDocumentUrls,
@@ -191,5 +191,25 @@ describe("UploadBox", () => {
 
     await waitFor(() => expect(onFiles).toHaveBeenCalledWith(["https://cdn.example.com/recovered.pdf"]));
     expect(screen.getByText(/uploaded successfully/i)).toBeInTheDocument();
+  });
+
+  it("uploads a 12.7 MB brand guide without losing its size or bytes", async () => {
+    const onFiles = jest.fn();
+    uploadFilesMock.mockResolvedValue(uploadResult(["https://cdn.example.com/brand-guide.pdf"]));
+    render(<UploadBox files={[]} onFiles={onFiles} accept=".pdf" hint="Brand guide" maxSizeMb={50} />);
+    const file = new File([new Uint8Array(Math.round(12.7 * 1024 * 1024))], "brand-guide.pdf", { type: "application/pdf" });
+    fireEvent.drop(screen.getByTestId("file-dropzone"), { dataTransfer: { files: [file] } });
+    expect(await screen.findByText(/uploaded successfully/i)).toBeInTheDocument();
+    expect(screen.getByText(/12.7 MB/)).toBeInTheDocument();
+    expect((uploadFilesMock.mock.calls[0][0].get("supportDocuments") as File).size).toBe(file.size);
+    expect(onFiles).toHaveBeenCalledWith(["https://cdn.example.com/brand-guide.pdf"]);
+  });
+
+  it("still blocks files above the 50 MB limit", async () => {
+    render(<UploadBox files={[]} onFiles={jest.fn()} accept=".pdf" hint="Brand guide" maxSizeMb={50} />);
+    const file = new File([new Uint8Array(51 * 1024 * 1024)], "oversized.pdf", { type: "application/pdf" });
+    fireEvent.drop(screen.getByTestId("file-dropzone"), { dataTransfer: { files: [file] } });
+    expect(await screen.findByText(/larger than 50 MB/i)).toBeInTheDocument();
+    expect(uploadFilesMock).not.toHaveBeenCalled();
   });
 });

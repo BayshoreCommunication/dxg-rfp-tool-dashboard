@@ -373,7 +373,7 @@ async function downloadSamplePdf() {
     [194, 65, 12],
     [
       { label: "Venue AV Contact Name, Phone & Email", hint: "In-house AV contact at the venue" },
-      { label: "In-House AV Company", hint: "e.g. PSAV / Encore" },
+      { label: "In-House AV Company", hint: "e.g. Encore / Pinnacle Live / Inspire" },
       { label: "Rigging Required", hint: "Yes / No — Max weight/point: [lbs] — Points: [#]" },
       { label: "Power Drops Required", hint: "Yes / No — Amperage: 100A / 200A / 400A — Qty: [#]" },
       { label: "Wireless Internet & Use Cases", hint: "Yes / No — e.g. Livestream, Remote Speakers, Signage" },

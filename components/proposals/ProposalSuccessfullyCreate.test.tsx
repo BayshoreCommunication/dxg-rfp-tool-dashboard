@@ -13,7 +13,8 @@ beforeEach(() => jest.clearAllMocks())
 describe('ProposalSuccessfullyCreate', () => {
   it('shows the success heading', () => {
     render(<ProposalSuccessfullyCreate {...baseProps} />)
-    expect(screen.getByText('Proposal Created Successfully')).toBeInTheDocument()
+    expect(screen.getByText('Proposal published successfully')).toBeInTheDocument()
+    expect(screen.getByText(/Publishing does not send invitation emails/)).toBeInTheDocument()
   })
 
   it('displays the proposal title in the message', () => {
@@ -33,9 +34,10 @@ describe('ProposalSuccessfullyCreate', () => {
     expect(baseProps.onViewProposal).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onSendEmail when "Send This Proposal By Email" is clicked', () => {
+  it('opens invitation composition without sending automatically', () => {
     render(<ProposalSuccessfullyCreate {...baseProps} />)
-    fireEvent.click(screen.getByText('Send This Proposal By Email'))
+    expect(baseProps.onSendEmail).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Share with vendors' }))
     expect(baseProps.onSendEmail).toHaveBeenCalledTimes(1)
   })
 
@@ -61,6 +63,6 @@ describe('ProposalSuccessfullyCreate', () => {
     expect(screen.getByText('Back To Proposal List')).toBeInTheDocument()
     expect(screen.getByText('View Proposal')).toBeInTheDocument()
     expect(screen.getByText('Save a Copy')).toBeInTheDocument()
-    expect(screen.getByText('Send This Proposal By Email')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Share with vendors' })).toBeInTheDocument()
   })
 })

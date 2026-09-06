@@ -270,7 +270,8 @@ describe("AssistantWorkspacePage", () => {
   test("empty state greets the signed-in user by first name", async () => {
     render(<AssistantWorkspacePage />);
     expect(await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/)).toBeInTheDocument();
-    expect(screen.getByText("Tell me about your event?")).toBeInTheDocument();
+    expect(screen.getByText("Let’s build your event RFP")).toBeInTheDocument();
+    expect(screen.getByText(/Start by typing your event details below/)).toBeInTheDocument();
     expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Describe your event or ask for help…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start voice input" })).toBeInTheDocument();
@@ -1903,7 +1904,8 @@ describe("AssistantWorkspacePage", () => {
       "sm:w-auto",
     );
     expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "Edit all details" })).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Edit all details" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open RFP questions" })).toBeInTheDocument();
     // The old vague copy is gone for good.
     expect(screen.queryByText(/everything else is optional/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open the proposal editor" })).not.toBeInTheDocument();
@@ -2623,7 +2625,8 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
     expect(screen.getByText("Or add more details — upload another file, paste notes, or ask me anything.")).toBeInTheDocument();
     // The card's own editor link (the top bar carries the second one).
-    expect(screen.getAllByRole("link", { name: "Edit all details" }).length).toBeGreaterThan(1);
+    expect(screen.getByRole("link", { name: "Edit all details" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open RFP questions" })).toBeInTheDocument();
     // The old notice is gone for good.
     expect(screen.queryByText(/I have all the key details I need/)).not.toBeInTheDocument();
   });

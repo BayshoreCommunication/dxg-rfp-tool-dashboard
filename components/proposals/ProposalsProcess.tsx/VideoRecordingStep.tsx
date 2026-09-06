@@ -21,7 +21,7 @@ export type VideoRecordingData = {
   imagRequired: "YES" | "NO" | "";
   cameraOperators: string;
   isoRecordings: string;
-  recordingCodec: "H.264" | "H.265" | "ProRes" | "";
+  recordingCodec: "H.264" | "H.265" | "ProRes" | "Vendor recommendation" | "";
   recordIn4k: "YES" | "NO" | "";
   /* Recording & Deliverables */
   recordingResolution: string;
@@ -274,12 +274,13 @@ const VideoRecordingStep = ({
                       <InfoTooltip text="Choose the acquisition codec the vendor must use. H.264 is broadly compatible, H.265 is more efficient, and ProRes is optimized for professional post-production." />
                     </label>
                     <GlobalSelect
+                      aria-label="Recording codec"
                       className={`${inputClass} appearance-none ${revealRecordingErrors && !safeData.recordingCodec ? "border-red-400" : ""}`}
                       value={safeData.recordingCodec}
                       onChange={(e) => onChange({ recordingCodec: e.target.value as VideoRecordingData["recordingCodec"] })}
                     >
                       <option value="">Select codec…</option>
-                      <option>H.264</option><option>H.265</option><option>ProRes</option>
+                      <option>H.264</option><option>H.265</option><option>ProRes</option><option>Vendor recommendation</option>
                     </GlobalSelect>
                   </div>
 

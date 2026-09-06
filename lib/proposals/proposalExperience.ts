@@ -320,7 +320,9 @@ export const buildVendorReadyStatementOfWork = ({
   const attendance = attendees.trim() || "the anticipated audience";
   const rooms = roomCount.trim() || "the required";
   const dates = startDate && endDate ? ` from ${startDate} through ${endDate}` : "";
-  return `Provide turnkey audiovisual production for ${name}, a ${eventFormat.toLowerCase()} ${scope} at ${venue}${dates}. Scope should support approximately ${attendance} attendees across ${rooms} room${rooms === "1" ? "" : "s"}, including equipment, qualified labor, installation, rehearsals, show operation, strike, and itemized pricing. Vendors should identify assumptions, exclusions, alternates, and value-added recommendations.`;
+  const description = [eventFormat.trim().toLowerCase(), scope].filter(Boolean).join(" ");
+  const article = /^[aeiou]/i.test(description) ? "an" : "a";
+  return `Provide turnkey audiovisual production for ${name}, ${article} ${description} at ${venue}${dates}. Scope should support approximately ${attendance} attendees across ${rooms} room${rooms === "1" ? "" : "s"}, including equipment, qualified labor, installation, rehearsals, show operation, strike, and itemized pricing. Vendors should identify assumptions, exclusions, alternates, and value-added recommendations.`;
 };
 
 export const buildPersonalizedInvitation = ({

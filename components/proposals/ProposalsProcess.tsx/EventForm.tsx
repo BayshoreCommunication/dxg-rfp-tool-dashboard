@@ -236,6 +236,9 @@ const EventForm = ({
                     }
                   >
                     <option value="">Select event type...</option>
+                    {data.eventType.eventType === "Annual Meeting / Shareholder Event" && (
+                      <option value="Annual Meeting / Shareholder Event">Annual Meeting / Shareholder Event (previous selection)</option>
+                    )}
                     {eventTypeOptions.map((opt) => (
                       <option key={opt} value={opt}>
                         {opt}
@@ -586,7 +589,7 @@ const EventForm = ({
             </div>
 
             {/* Statement of Work */}
-            <div data-assistant-field-key="/content/event/statementOfWork">
+            <div id="statement-of-work-section" tabIndex={-1} className="scroll-mt-6" data-assistant-field-key="/content/event/statementOfWork">
               <label className={labelClass}>
                 Statement of Work
                 <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>

@@ -4362,7 +4362,7 @@ export default function AssistantWorkspacePage({
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
           >
             <PencilLine size={14} aria-hidden />
-            Edit all details
+            Open RFP questions
           </Link>
         )}
       </div>
@@ -4377,7 +4377,7 @@ export default function AssistantWorkspacePage({
         >
           {!started ? (
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 pb-10 text-center md:gap-6 md:p-0">
+              <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 py-6 text-center md:justify-center md:gap-6 md:p-0">
                 <AssistantOrb />
                 <div>
                   <h1 className="text-balance text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
@@ -4388,7 +4388,13 @@ export default function AssistantWorkspacePage({
                     className="mt-2 text-base font-semibold md:text-xl"
                     style={{ color: ACCENT }}
                   >
-                    Tell me about your event?
+                    Let’s build your event RFP
+                  </p>
+                  <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-slate-600">
+                    Start by typing your event details below, or attach an existing brief or RFP using the paperclip. Share the event name, dates, location, and expected attendance if you know them.
+                  </p>
+                  <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
+                    I’ll guide you through the missing details and help prepare a draft. You can review and edit it before anything is published or sent to vendors.
                   </p>
                 </div>
               </div>

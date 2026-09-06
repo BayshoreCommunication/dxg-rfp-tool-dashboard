@@ -157,7 +157,7 @@ export type RoomByRoomData = {
   videoRecording: {
     videoRecording: string;
     videoRecordingType: string;
-    recordingCodec: "H.264" | "H.265" | "ProRes" | "";
+    recordingCodec: "H.264" | "H.265" | "ProRes" | "Vendor recommendation" | "";
     recordIn4k: "Yes" | "No" | "";
   };
   stageWashLighting: {
@@ -650,6 +650,9 @@ const normalizeExtracted = (
               "Corporate Conference",
               "User / Customer Summit",
               "Sales Kickoff (SKO)",
+              "Annual Meeting",
+              "Shareholder Event",
+              // Preserve previously saved combined values without guessing a new event type.
               "Annual Meeting / Shareholder Event",
               "Product Launch",
               "Awards Show / Gala",
@@ -770,14 +773,14 @@ const normalizeExtracted = (
           return {
             videoRecording: matchOption(v.videoRecording ?? "", ["Yes", "No"]),
             videoRecordingType: matchOption(v.videoRecordingType ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]),
-            recordingCodec: matchOption(v.recordingCodec ?? "", ["H.264", "H.265", "ProRes"]) as RoomByRoomData["videoRecording"]["recordingCodec"],
+            recordingCodec: matchOption(v.recordingCodec ?? "", ["H.264", "H.265", "ProRes", "Vendor recommendation"]) as RoomByRoomData["videoRecording"]["recordingCodec"],
             recordIn4k: matchOption(v.recordIn4k ?? "", ["Yes", "No"]) as RoomByRoomData["videoRecording"]["recordIn4k"],
           };
         }
         return {
           videoRecording: matchOption((raw_n as unknown as string) ?? "", ["Yes", "No"]),
           videoRecordingType: matchOption((rRec.videoRecordingType as string) ?? "", ["Camera Feed Only", "Presentation Only", "Side by Side (Camera and Presentation)", "All The Above"]),
-          recordingCodec: matchOption((rRec.recordingCodec as string) ?? "", ["H.264", "H.265", "ProRes"]) as RoomByRoomData["videoRecording"]["recordingCodec"],
+          recordingCodec: matchOption((rRec.recordingCodec as string) ?? "", ["H.264", "H.265", "ProRes", "Vendor recommendation"]) as RoomByRoomData["videoRecording"]["recordingCodec"],
           recordIn4k: matchOption((rRec.recordIn4k as string) ?? "", ["Yes", "No"]) as RoomByRoomData["videoRecording"]["recordIn4k"],
         };
       })(),
@@ -2299,7 +2302,7 @@ const AddNewProposal = ({
             ? "Proposal updated successfully!"
             : "Proposal created successfully!",
         );
-        if (isEditMode) {
+        if (isEditMode && resolvedStatus !== "submitted") {
           router.push("/proposals");
           return;
         }
@@ -2308,7 +2311,7 @@ const AddNewProposal = ({
             ? (result.data as { _id?: string; event?: { eventName?: string } })
             : null;
 
-        const createdId = data?._id || "";
+        const createdId = data?._id || proposalId || "";
         const createdTitle =
           data?.event?.eventName ||
           proposalData.event.eventName ||
@@ -2547,6 +2550,7 @@ const AddNewProposal = ({
 
   const navigateToReviewTarget = (step: number, targetId?: string) => {
     if (!visibleStepOrder.includes(step)) return;
+    if (targetId === "statement-of-work-section") setExperienceMode("advanced");
     navigateToStep(step);
     window.setTimeout(() => {
       const target = targetId ? document.getElementById(targetId) : null;
@@ -2605,7 +2609,7 @@ const AddNewProposal = ({
     }));
     setAssumptionsApproved(false);
     addAuditEntry("Generated a vendor-ready statement of work", "ai");
-    toast.success("Statement of work generated. Review it in Advanced mode before publishing.");
+    toast.success("Statement of work generated. Review the draft below or edit it in Event Overview.");
   };
 
   const refreshProposalAfterQuestion = async () => {
