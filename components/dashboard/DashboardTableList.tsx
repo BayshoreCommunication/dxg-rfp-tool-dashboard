@@ -12,7 +12,6 @@ import {
   Copy,
   Eye,
   Search,
-  Share2,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -246,14 +245,6 @@ function ProposalRow({ proposal }: { proposal: ProposalItem }) {
           />
           <Link href={`/proposal/${slug}`} target="_blank">
             <IconButton icon={<Eye size={14} />} tooltip="Preview" />
-          </Link>
-          <Link
-            href={`/email/send-email?proposalId=${proposal._id}`}
-            className="flex items-center gap-1.5 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-150"
-            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
-          >
-            <Share2 size={12} />
-            Share
           </Link>
         </div>
       </td>
