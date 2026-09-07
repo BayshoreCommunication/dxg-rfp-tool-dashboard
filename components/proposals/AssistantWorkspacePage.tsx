@@ -2934,6 +2934,7 @@ export default function AssistantWorkspacePage({
   const attachmentSending = attachmentSendActive || sendBusy || pending.some(item => item.intent === 'chat' && item.sourceIds.length > 0 && item.state === 'sending');
   const sourceExtractionInProgress =
     attachmentSending ||
+    retryingExtractionId !== null ||
     autoScanning ||
     pending.some(
       (item) =>
@@ -3825,7 +3826,8 @@ export default function AssistantWorkspacePage({
     // thing the planner said. Its status/result is shown on the assistant side.
     if (message.role === 'user' && message.intent === 'extract_requirements') return null;
     if (message.runType === 'proposal_context' && message.status === 'pending') return null;
-    if (message.runType === 'proposal_context' && message.status === 'failed' && message.id !== latestContextRun?.id) return null;
+    if (message.runType === 'proposal_context' && message.status === 'failed' &&
+      (message.id !== latestContextRun?.id || sourceExtractionInProgress)) return null;
     if (message.role === 'system_event') {
       return (
         <li
@@ -4884,7 +4886,7 @@ export default function AssistantWorkspacePage({
                 )}
               </div>
               {sourceExtractionInProgress || extractionFailureBlocksQuestions ? (
-                <p className="mt-3 text-xs leading-5 text-slate-600">{extractionFailureBlocksQuestions ? 'Resolve the attachment issue in the conversation, or choose to continue without it.' : 'I’ll review your attachment first. Then we’ll confirm what I found and fill in any missing details, one step at a time.'}</p>
+                <p className="mt-3 text-xs leading-5 text-slate-600">{sourceExtractionInProgress ? 'I’ll review your attachment first. Then we’ll confirm what I found and fill in any missing details, one step at a time.' : 'Resolve the attachment issue in the conversation, or choose to continue without it.'}</p>
               ) : activeQuestions.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-400">
                   {questionsComplete

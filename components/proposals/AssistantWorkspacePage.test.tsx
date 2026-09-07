@@ -2044,6 +2044,10 @@ describe("AssistantWorkspacePage", () => {
     expect(sourceIdsForFailedExtraction([requestMessage, failedRun], failedRun)).toEqual(["src-existing"]);
 
     fireEvent.click(screen.getByRole("button", { name: "Retry extraction" }));
+    expect(screen.queryByText("Requirement extraction did not finish. Try again.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continue without extraction" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("status", { name: "Attachment progress" })).toHaveLength(1);
+    expect(screen.queryByText(/Resolve the attachment issue in the conversation/)).not.toBeInTheDocument();
     await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledWith(
       PROPOSAL_ID,
       { content: "Extract the requirements from the selected sources.", intent: "extract_requirements", sourceIds: ["src-existing"] },

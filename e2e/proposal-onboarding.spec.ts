@@ -92,6 +92,8 @@ test('brief upload → one progress card → extraction failure → retry → me
   await expect(page.getByText('Guided question 1', { exact: true })).toBeHidden();
   await page.getByRole('button', { name: 'Retry extraction' }).click();
   await expect(progress).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Continue without extraction', exact: true })).toHaveCount(0);
+  await expect(page.getByText('Requirement extraction did not finish. Try again.', { exact: true })).toHaveCount(0);
   await expect.poll(async () => (await (await page.request.get(fixture)).json()).requests.filter((item: { intent: string }) => item.intent === 'extract_requirements').length).toBe(2);
   await page.request.post(fixture, { data: { outcome: 'complete' } });
   await expect(page.getByText(/I found Northstar Leadership Summit/)).toBeVisible();
