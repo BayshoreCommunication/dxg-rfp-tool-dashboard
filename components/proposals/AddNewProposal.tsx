@@ -2809,22 +2809,11 @@ const AddNewProposal = ({
                 showErrors={showErrors}
                 proposalSettings={proposalSettings}
                 isInPersonOnly={isInPersonOnly}
-                proposalId={proposalId ?? null}
-                onRecommendationsApplied={refreshProposalAfterQuestion}
                 focusRoom={focusRoom}
                 eventTimeZone={proposalData.venueSchedule.timeZone}
                 eventStartDate={toIsoDate(proposalData.event.startDate)}
                 eventEndDate={toIsoDate(proposalData.event.endDate)}
-                eventAttendance={proposalData.event.attendees}
                 mode={experienceMode}
-                onTemplateApplied={(template, confidence, explanation) => {
-                  setFieldProvenance((current) => ({
-                    ...current,
-                    roomByRoom: { source: "assumed", confidence, explanation },
-                  }));
-                  setAssumptionsApproved(false);
-                  addAuditEntry(`Applied ${template} room template`, "assumed");
-                }}
                 onOpenScenicInspirations={() => {
                   setReferenceMaterialsTarget("scenic_inspiration");
                   setProposalProcessStep(9);

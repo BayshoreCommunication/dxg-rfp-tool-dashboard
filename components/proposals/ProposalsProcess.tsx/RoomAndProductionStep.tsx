@@ -12,7 +12,6 @@ import GlobalSelect from "@/components/shared/GlobalSelect";
 import GlobalTimeInput from "@/components/shared/GlobalTimeInput";
 import { fromEventZoneDisplay, toEventZoneDisplay, wallClockToIso } from "./eventTimeZone";
 import { normalizeScheduleTimesAction } from "@/app/actions/proposals";
-import RoomRecommendationsPanel from "../RoomRecommendationsPanel";
 import RoomDeletionDialog from "../RoomDeletionDialog";
 import ToastMessage from "@/components/ui/ToastMessage";
 import {
@@ -2388,10 +2387,6 @@ interface Props {
   showErrors?: boolean;
   proposalSettings: ProposalSettings;
   isInPersonOnly?: boolean;
-  /** Saved proposal id; recommendations only exist against a saved draft. */
-  proposalId?: string | null;
-  /** Re-seeds the wizard's local rooms from the saved proposal after an apply. */
-  onRecommendationsApplied?: () => void | Promise<void>;
   /**
    * Room the wizard wants brought into view because it blocked Continue.
    * Collapsed cards hide their own errors, so a blocked step is invisible
@@ -2404,77 +2399,8 @@ interface Props {
   onOpenScenicInspirations?: () => void;
   eventStartDate?: string;
   eventEndDate?: string;
-  eventAttendance?: string;
-  onTemplateApplied?: (template: string, confidence: number, explanation: string) => void;
   mode?: ProposalExperienceMode;
 }
-
-export const ROOM_TEMPLATES = [
-  { id: "general", label: "General Session", setup: "Theater", share: 1, description: "Main stage, screens, audio, cameras, lighting" },
-  { id: "breakout", label: "Breakout", setup: "Classroom", share: 0.25, description: "Presentation, speech audio, flexible display" },
-  { id: "workshop", label: "Workshop", setup: "Classroom", share: 0.15, description: "Facilitated learning with presentation support" },
-  { id: "reception", label: "Reception", setup: "Round of 8", share: 0.5, description: "Background audio, announcements, ambient lighting" },
-] as const;
-
-type RoomTemplate = (typeof ROOM_TEMPLATES)[number];
-
-export const roomFromTemplate = (
-  template: RoomTemplate,
-  eventStartDate: string,
-  eventEndDate: string,
-  eventAttendance: string,
-  eventTimeZone?: string | null,
-): RoomByRoomData => {
-  const totalAttendance = Math.max(1, Number(eventAttendance) || 100);
-  const attendees = String(Math.max(10, Math.round(totalAttendance * template.share)));
-  const start = eventStartDate
-    ? wallClockToIso(eventStartDate, { hours: 9, minutes: 0 }, eventTimeZone)
-    : "";
-  const endDate = eventEndDate || eventStartDate;
-  const end = endDate
-    ? wallClockToIso(endDate, { hours: 17, minutes: 0 }, eventTimeZone)
-    : "";
-  const isReception = template.id === "reception";
-  const needsCamera = template.id === "general";
-
-  return {
-    ...defaultRoom(),
-    roomLocation: template.label,
-    roomFunction: template.label,
-    roomSetup: template.setup,
-    scheduleDate: eventStartDate,
-    showStartDateTime: start,
-    showEndDateTime: end,
-    estimatedAttendeesInRoom: attendees,
-    functions: [{
-      functionName: template.label,
-      scheduleDate: eventStartDate,
-      scheduleDay: "",
-      showStartDateTime: start,
-      showEndDateTime: end,
-      roomSetup: template.setup,
-      estimatedAttendees: attendees,
-    }],
-    audioSystemRequired: "Yes",
-    audioSystemForHowManyPpl: attendees,
-    podiumMic: { podiumMic: isReception ? "No" : "Yes", podiumMicQty: isReception ? "" : "1" },
-    cameras: {
-      ...defaultRoom().cameras,
-      cameras: needsCamera ? "Yes" : "No",
-      cameraPlanMode: needsCamera ? CAMERA_PLAN_VENDOR_RECOMMENDATION : "",
-    },
-    largeMonitorsOrScreenProjector: {
-      ...defaultRoom().largeMonitorsOrScreenProjector,
-      largeMonitorsOrScreenProjector: "Yes",
-      numberOfScreens: "1",
-      screenSize: SCREEN_SIZE_VENDOR_RECOMMENDATION,
-    },
-    lightingRequirements: isReception
-      ? ["None / Minimal — House lighting only"]
-      : ["Stage Wash"],
-    showCrewNeeded: ["Vendor Recommendation Requested"],
-  };
-};
 
 const RoomAndProductionStep = ({
   rooms,
@@ -2486,15 +2412,11 @@ const RoomAndProductionStep = ({
   showErrors = false,
   proposalSettings,
   isInPersonOnly = false,
-  proposalId = null,
-  onRecommendationsApplied,
   focusRoom = null,
   eventTimeZone = null,
   onOpenScenicInspirations,
   eventStartDate = "",
   eventEndDate = "",
-  eventAttendance = "",
-  onTemplateApplied,
   mode = "advanced",
 }: Props) => {
   const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set([0]));
@@ -2533,27 +2455,6 @@ const RoomAndProductionStep = ({
 
   const updateRoom = (i: number, updates: Partial<RoomByRoomData>) =>
     onRoomsChange(rooms.map((r, idx) => (idx === i ? { ...r, ...updates } : r)));
-
-  const applyRoomTemplate = (template: RoomTemplate) => {
-    const templatedRoom = roomFromTemplate(
-      template,
-      eventStartDate,
-      eventEndDate,
-      eventAttendance,
-      eventTimeZone,
-    );
-    const firstRoomIsEmpty = rooms.length === 1 && !rooms[0]?.roomLocation.trim() && !rooms[0]?.roomFunction.trim();
-    const nextRooms = firstRoomIsEmpty ? [templatedRoom] : [...rooms, templatedRoom];
-    onRoomsChange(nextRooms);
-    onNumberOfEventRoomsChange(String(nextRooms.length));
-    setExpandedRooms(new Set([nextRooms.length - 1]));
-    onTemplateApplied?.(
-      template.label,
-      eventStartDate && eventAttendance ? 0.86 : 0.68,
-      `Based on ${eventAttendance ? "attendance" : "default attendance"}, event dates, and a typical ${template.label.toLowerCase()} AV profile.`,
-    );
-    toast.success(`${template.label} template added. Review the assumptions before publishing.`);
-  };
 
   const duplicateRoom = (i: number) => {
     const source = rooms[i];
@@ -2658,39 +2559,6 @@ const RoomAndProductionStep = ({
         <p className="mt-1 text-sm text-[#969798]">
           One module per room — each room generates its own section in the RFP.
         </p>
-      </div>
-
-      {/* Room recommendations — review-first suggestions for a saved draft */}
-      {proposalId && process.env.NEXT_PUBLIC_ROOM_RECOMMENDATIONS_ENABLED === "true" && (
-        <div className="px-6 pt-6">
-          <RoomRecommendationsPanel proposalId={proposalId} onApplied={onRecommendationsApplied} />
-        </div>
-      )}
-
-      <div className="px-6 pt-6">
-        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
-          <div className="flex items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-violet-700 shadow-sm"><Sparkles size={18} aria-hidden="true" /></span>
-            <div>
-              <p className="text-sm font-extrabold text-violet-950">Start with a reusable room template</p>
-              <p className="mt-1 text-xs leading-5 text-violet-800">Templates generate a schedule and recommended AV starting point. Every applied assumption remains editable and appears in Final Review.</p>
-            </div>
-          </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {ROOM_TEMPLATES.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                onClick={() => applyRoomTemplate(template)}
-                className="min-h-20 rounded-xl border border-violet-200 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
-                aria-label={`Add ${template.label} room template`}
-              >
-                <span className="block text-sm font-extrabold text-slate-900">{template.label}</span>
-                <span className="mt-1 block text-xs leading-4 text-slate-500">{template.description}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Number of Event Rooms — stepper */}

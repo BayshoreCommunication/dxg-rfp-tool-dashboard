@@ -23,4 +23,4 @@ Both modes use the same proposal data contract. Switching modes never discards v
 - The email composer creates proposal-specific invitation copy and requires recipient/message approval before sending.
 - Vendor responses retain evidence-backed per-response analysis. `VendorComparisonPanel` adds a confidence-weighted readiness comparison; it is decision support, not an automatic award decision.
 
-Saved-draft room recommendations and vendor response comparison depend on their existing feature flags and backend services. The deterministic authoring helpers remain available without a model call so the core workflow does not fail when an AI provider is unavailable.
+Vendor response comparison depends on its existing feature flag and backend services. The deterministic authoring helpers remain available without a model call so the core workflow does not fail when an AI provider is unavailable.

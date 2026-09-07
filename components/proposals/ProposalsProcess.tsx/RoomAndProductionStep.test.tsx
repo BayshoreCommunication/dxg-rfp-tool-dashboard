@@ -11,8 +11,6 @@ import RoomAndProductionStep, {
   missingRoomFields,
   parseScheduleWorkbook,
   roomProductionAccessTimeErrors,
-  roomFromTemplate,
-  ROOM_TEMPLATES,
   venueTimeValue,
 } from "./RoomAndProductionStep";
 import {
@@ -23,11 +21,6 @@ import {
 jest.mock("@/app/actions/proposals", () => ({
   normalizeScheduleTimesAction: jest.fn(),
 }));
-jest.mock("../RoomRecommendationsPanel", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
 const workbookBuffer = (rows: Record<string, unknown>[]) => {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "Schedule");
@@ -317,19 +310,6 @@ describe("mandatory function schedules", () => {
     expect(missingRoomFields(room, "advanced")).toEqual(
       expect.arrayContaining(["show crew", "camera plan"]),
     );
-  });
-
-  it("anchors generated room-template times to the venue time zone", () => {
-    const room = roomFromTemplate(
-      ROOM_TEMPLATES[0],
-      "2026-08-20",
-      "2026-08-20",
-      "300",
-      "Central Time (CT)",
-    );
-
-    expect(venueTimeValue(room.showStartDateTime, "Central Time (CT)")).toBe("09:00");
-    expect(venueTimeValue(room.showEndDateTime, "Central Time (CT)")).toBe("17:00");
   });
 
   it("allows room access up to seven days before the event and rejects an eighth day", () => {
