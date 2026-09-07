@@ -2,6 +2,13 @@ import '@testing-library/jest-dom'
 import { TextDecoder, TextEncoder } from "node:util";
 import { ReadableStream } from "node:stream/web";
 
+// jsdom has no dialog top layer. Model open/close for component tests;
+// real-browser tests cover native focus containment and Escape behavior.
+if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  HTMLDialogElement.prototype.close = function () { this.open = false; };
+}
+
 // Feature gates default to on under test so suites exercise real behaviour; a
 // test that cares about a closed gate sets the flag itself.
 process.env.NEXT_PUBLIC_CONVERSATION_EXTRACTION_ENABLED = 'true'

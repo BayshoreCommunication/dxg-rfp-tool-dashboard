@@ -13,6 +13,7 @@
     "type-check": "tsc --noEmit",
     "test": "jest --passWithNoTests",
     "test:e2e": "playwright test",
+    "test:e2e:onboarding": "playwright test --config=playwright.onboarding.config.ts",
     "test:watch": "jest --watch",
     "contracts:generate": "node scripts/generateContracts.mjs",
     "contracts:check": "node scripts/generateContracts.mjs --check",

@@ -29,8 +29,9 @@ import {
   Users,
 } from "lucide-react";
 import SaveCopyModal from "./SaveCopyModal";
+import ProposalDeletionDialog, { type ProposalDeletionMode } from "./ProposalDeletionDialog";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
   buildProposalViewShareUrl,
@@ -119,9 +120,13 @@ export default function ProposalTableList({
 }: ProposalTableListProps) {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadedFilter, setLoadedFilter] = useState(activeFilter);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [permanentDeletingId, setPermanentDeletingId] = useState<string | null>(null);
+  const [pendingDeletion, setPendingDeletion] = useState<{ proposal: ProposalListItem; mode: ProposalDeletionMode } | null>(null);
+  const [deletionError, setDeletionError] = useState("");
+  const deletionInFlight = useRef(false);
   const [favoritingId, setFavoritingId] = useState<string | null>(null);
   const [copyModalProposal, setCopyModalProposal] = useState<ProposalListItem | null>(null);
   const [copyingSaving, setCopyingSaving] = useState(false);
@@ -250,6 +255,7 @@ export default function ProposalTableList({
         });
       }
 
+      setLoadedFilter(activeFilter);
       setLoading(false);
     }, 300);
 
@@ -263,24 +269,32 @@ export default function ProposalTableList({
     setCurrentPage(1);
   }, [searchValue, activeFilter]);
 
-  const handleDeleteProposal = async (proposal: ProposalListItem) => {
-    const proposalId = proposal._id;
-    if (!proposalId || deletingId) return;
+  const requestDeletion = (proposal: ProposalListItem, mode: ProposalDeletionMode) => {
+    if (!proposal._id || deletionInFlight.current) return;
+    setDeletionError("");
+    setPendingDeletion({ proposal, mode });
+  };
 
-    const proposalName = proposal?.event?.eventName || "this proposal";
-    const confirmed = window.confirm(
-      `Archive "${proposalName}"? It will be permanently deleted after 30 days, but you can restore it from the Archive tab.`,
-    );
-    if (!confirmed) return;
+  const cancelDeletion = () => {
+    if (!deletionInFlight.current) setPendingDeletion(null);
+  };
 
-    setDeletingId(proposalId);
+  const confirmDeletion = async () => {
+    if (!pendingDeletion || deletionInFlight.current) return;
+    const proposalId = pendingDeletion.proposal._id;
+    const permanent = pendingDeletion.mode === "permanent";
+    deletionInFlight.current = true;
+    setDeletionError("");
+    if (permanent) setPermanentDeletingId(proposalId);
+    else setDeletingId(proposalId);
     try {
-      const res = await deleteProposalAction(proposalId);
+      const res = await (permanent ? permanentlyDeleteProposalAction(proposalId) : deleteProposalAction(proposalId));
       if (!res.success) {
-        toast.error(res.message || "Failed to archive proposal.");
+        setDeletionError(res.message || (permanent ? "Could not delete this proposal. Please try again." : "Could not archive this proposal. Please try again."));
         return;
       }
-      toast.success("Proposal moved to archive.");
+      setPendingDeletion(null);
+      toast.success(permanent ? "Proposal permanently deleted." : "Proposal moved to archive.");
       const nextPage =
         proposals.length === 1 && currentPage > 1
           ? currentPage - 1
@@ -288,8 +302,12 @@ export default function ProposalTableList({
       setCurrentPage(nextPage);
       setRefreshTick((prev) => prev + 1);
       onRefreshCounts?.();
+    } catch {
+      setDeletionError(permanent ? "Could not delete this proposal. Please try again." : "Could not archive this proposal. Please try again.");
     } finally {
+      deletionInFlight.current = false;
       setDeletingId(null);
+      setPermanentDeletingId(null);
     }
   };
 
@@ -312,34 +330,6 @@ export default function ProposalTableList({
       onRefreshCounts?.();
     } finally {
       setRestoringId(null);
-    }
-  };
-
-  const handlePermanentDelete = async (proposal: ProposalListItem) => {
-    const proposalId = proposal._id;
-    if (!proposalId || permanentDeletingId) return;
-
-    const proposalName = proposal?.event?.eventName || "this proposal";
-    const confirmed = window.confirm(
-      `Permanently delete "${proposalName}"? This cannot be undone.`,
-    );
-    if (!confirmed) return;
-
-    setPermanentDeletingId(proposalId);
-    try {
-      const res = await permanentlyDeleteProposalAction(proposalId);
-      if (!res.success) {
-        toast.error(res.message || "Failed to delete proposal.");
-        return;
-      }
-      toast.success("Proposal permanently deleted.");
-      const nextPage =
-        proposals.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
-      setCurrentPage(nextPage);
-      setRefreshTick((prev) => prev + 1);
-      onRefreshCounts?.();
-    } finally {
-      setPermanentDeletingId(null);
     }
   };
 
@@ -441,7 +431,7 @@ export default function ProposalTableList({
     <>
     <div className="-mt-6 min-h-screen px-1 py-6 font-sans text-slate-800 sm:px-2 lg:px-6">
       <div className="space-y-6">
-        {loading ? (
+        {loading || loadedFilter !== activeFilter ? (
           <div className="space-y-6">
             {[1, 2].map((item) => (
               <div
@@ -710,7 +700,7 @@ export default function ProposalTableList({
                           <ActionButton
                             icon={<Trash2 size={16} />}
                             label={permanentDeletingId === proposal._id ? "Deleting..." : "Delete forever"}
-                            onClick={() => void handlePermanentDelete(proposal)}
+                            onClick={() => requestDeletion(proposal, "permanent")}
                             disabled={permanentDeletingId === proposal._id}
                           />
                         </div>
@@ -743,7 +733,7 @@ export default function ProposalTableList({
                           <ActionButton
                             icon={<Trash size={16} />}
                             label={deletingId === proposal._id ? "Deleting..." : "Delete"}
-                            onClick={() => void handleDeleteProposal(proposal)}
+                            onClick={() => requestDeletion(proposal, "archive")}
                             disabled={deletingId === proposal._id}
                           />
                           {/* Only a live (published) proposal can be sent to
@@ -842,6 +832,16 @@ export default function ProposalTableList({
       </div>
     </div>
 
+    {pendingDeletion && (
+      <ProposalDeletionDialog
+        proposalName={pendingDeletion.proposal.event?.eventName || "Untitled proposal"}
+        mode={pendingDeletion.mode}
+        busy={deletingId !== null || permanentDeletingId !== null}
+        error={deletionError}
+        onCancel={cancelDeletion}
+        onConfirm={() => void confirmDeletion()}
+      />
+    )}
     <SaveCopyModal
       isOpen={!!copyModalProposal}
       onClose={() => setCopyModalProposal(null)}

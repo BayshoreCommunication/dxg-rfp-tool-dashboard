@@ -248,6 +248,17 @@ describe("useConversation send recovery", () => {
     expect(result.current.data?.messages).toEqual([persistedMessage]);
   });
 
+  test("a successful extraction retry retires the earlier refused-send error for the same sources", async () => {
+    mockedPostMessage.mockResolvedValueOnce({ success: false, code: 'NETWORK_ERROR', message: 'offline', correlationId: 'test' });
+    const { result } = renderHook(() => useConversation(null));
+    await act(async () => { await result.current.sendMessage({ content: 'Read brief', intent: 'extract_requirements', sourceIds: ['source-1'] }, PROPOSAL_ID); });
+    expect(result.current.pending[0].state).toBe('failed');
+    const persisted = { id: 'extraction-retry', ordinal: 1, role: 'user' as const, kind: 'action_request' as const, content: 'Read brief', intent: 'extract_requirements', runType: null, runId: null, jobId: null, status: 'complete' as const, createdAt: new Date().toISOString(), attachments: [{ sourceId: 'source-1', role: 'input', filename: 'brief.txt', sourceStatus: 'ready' }] };
+    mockedGetConversation.mockResolvedValue({ success: true, correlationId: 'test', data: { conversation: null, questions: [], messages: [persisted] } });
+    await act(async () => { await result.current.refresh(PROPOSAL_ID); });
+    expect(result.current.pending).toHaveLength(0);
+  });
+
   test("durable conversation polling is fast while pending and backs off when idle", () => {
     expect(conversationPollDelay(0, true)).toBe(1_000);
     expect(conversationPollDelay(9, true)).toBe(1_000);

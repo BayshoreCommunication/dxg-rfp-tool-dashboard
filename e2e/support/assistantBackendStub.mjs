@@ -1,10 +1,16 @@
 import crypto from "node:crypto";
 import http from "node:http";
+import { handleProposalOnboarding } from './proposalOnboardingFixture.mjs';
 
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
 const threads = new Map();
 const messages = new Map();
 const messageRequests = [];
+const proposals = new Map();
+const proposalDeletionRequests = [];
+let failNextDeletion = false;
+let holdDeletion = false;
+const pendingDeletions = new Set();
 
 const now = () => new Date().toISOString();
 
@@ -158,6 +164,7 @@ const streamAssistantResponse = async (request, response, thread) => {
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
   const pathname = url.pathname;
+  if (await handleProposalOnboarding(request, response, url)) return;
 
   if (request.method === "GET" && pathname === "/health") {
     json(response, 200, { status: "ok" });
@@ -168,6 +175,12 @@ const server = http.createServer(async (request, response) => {
     threads.clear();
     messages.clear();
     messageRequests.length = 0;
+    proposals.clear();
+    proposalDeletionRequests.length = 0;
+    failNextDeletion = false;
+    holdDeletion = false;
+    for (const release of pendingDeletions) release();
+    pendingDeletions.clear();
     json(response, 200, { reset: true });
     return;
   }
@@ -195,6 +208,68 @@ const server = http.createServer(async (request, response) => {
       refreshExpiresAt: expiresAt + 24 * 60 * 60_000,
       sessionId: crypto.randomUUID(),
     });
+    return;
+  }
+
+  // Synthetic proposal fixtures: never forward deletion tests to a real API.
+  if (pathname === "/__e2e/proposal-deletion") {
+    if (request.method === "POST") {
+      const body = await readJson(request);
+      if (body.seed) {
+        for (const archived of [false, true]) {
+          const id = archived ? "eeeeeeeeeeeeeeeeeeeeeeee" : "dddddddddddddddddddddddd";
+          proposals.set(id, {
+            _id: id, status: "submitted", isDraft: false, isActive: true,
+            isArchived: archived, archivedAt: archived ? now() : undefined,
+            createdAt: now(), viewsCount: 0,
+            event: { eventName: archived ? "Archived QA proposal" : (body.name || "QA ONLY — Annual Leadership Summit") },
+            contact: { contactFirstName: "Product", contactLastName: "QA" },
+          });
+        }
+      }
+      failNextDeletion = body.failNext === true;
+      holdDeletion = body.hold === true;
+      if (body.release) {
+        for (const release of pendingDeletions) release();
+        pendingDeletions.clear();
+      }
+    }
+    json(response, 200, { requests: proposalDeletionRequests });
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/api/proposals") {
+    const all = [...proposals.values()];
+    const archived = url.searchParams.get("archived") === "true";
+    const data = all.filter((proposal) => proposal.isArchived === archived);
+    json(response, 200, {
+      data,
+      pagination: { total: data.length, page: 1, limit: 5, totalPages: 1 },
+      counts: { all: all.filter((proposal) => !proposal.isArchived).length, archive: all.filter((proposal) => proposal.isArchived).length, live: all.filter((proposal) => !proposal.isArchived).length },
+    });
+    return;
+  }
+
+  const deletionMatch = /^\/api\/proposals\/([a-f0-9]{24})(\/permanent)?$/.exec(pathname);
+  if (request.method === "DELETE" && deletionMatch) {
+    proposalDeletionRequests.push({ id: deletionMatch[1], permanent: !!deletionMatch[2] });
+    const shouldFail = failNextDeletion;
+    failNextDeletion = false;
+    if (holdDeletion) await new Promise((resolve) => pendingDeletions.add(resolve));
+    if (shouldFail) {
+      json(response, 503, { message: "Temporary test failure. Please try again." });
+      return;
+    }
+    const proposal = proposals.get(deletionMatch[1]);
+    if (!proposal) {
+      json(response, 404, { message: "Synthetic proposal not found." });
+    } else if (deletionMatch[2] && !proposal.isArchived) {
+      json(response, 400, { message: "Archive the proposal first." });
+    } else {
+      if (deletionMatch[2]) proposals.delete(proposal._id);
+      else proposals.set(proposal._id, { ...proposal, isArchived: true, archivedAt: now() });
+      json(response, 200, { message: "Synthetic proposal updated." });
+    }
     return;
   }
 

@@ -87,6 +87,7 @@ import {
   useSourceUpload,
 } from './useConversation';
 import { takeProposalHandoffDraft } from '@/lib/aiAssistant/handoff';
+import SourceIntakeProgress, { type SourceIntakePhase } from './SourceIntakeProgress';
 import {
   isStandaloneVideoRecordingPath,
   STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
@@ -1872,7 +1873,8 @@ function ContextRunCard({
       <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-800">
         {message.content}
       </p>
-      {fieldCount !== null && (
+      {fieldCount === 0 && <p className="mt-2 text-sm text-amber-800">I couldn’t identify proposal details in this file. You can attach a clearer brief or enter the details below.</p>}
+      {fieldCount !== null && fieldCount > 0 && (
         <Link
           href={reviewHref}
           className="mt-2 inline-flex min-h-10 w-full flex-wrap items-center justify-center gap-2 rounded-lg border border-[#087f69] px-3 py-1.5 text-center text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 sm:w-auto"
@@ -2756,6 +2758,7 @@ export default function AssistantWorkspacePage({
     pending,
     sendMessage,
     retrySend,
+    discardFailedSend,
     resolveQuestion,
     refresh: refreshConversation,
     questionBusyId,
@@ -2803,8 +2806,10 @@ export default function AssistantWorkspacePage({
   const {
     queueAutoExtract,
     autoScanning,
-    scanCount,
     failedNotices,
+    retryFileCheck,
+    continueWithoutFiles,
+    skipSources,
   } = useAutoExtraction(
     proposalId,
     sendMessage,
@@ -2895,9 +2900,12 @@ export default function AssistantWorkspacePage({
       ),
     [messages],
   );
+  const extractionSendFailure = pending.find(item => item.intent === 'extract_requirements' && item.state === 'failed');
+  const attachmentSendFailure = pending.find(item => item.intent === 'chat' && item.sourceIds.length > 0 && item.state === 'failed');
   const extractionFailureBlocksQuestions =
-    latestContextRun?.status === 'failed' &&
-    !continuedAfterExtractionFailure.includes(latestContextRun.id);
+    failedNotices.length > 0 || !!extractionSendFailure || !!attachmentSendFailure || (!!sendError && staged.length > 0) ||
+    (latestContextRun?.status === 'failed' &&
+    !continuedAfterExtractionFailure.includes(latestContextRun.id));
   const chatExtractionEnabled =
     data?.capabilities?.conversationExtraction === true;
   const activeQuestions = useMemo(
@@ -2915,7 +2923,9 @@ export default function AssistantWorkspacePage({
   // Answered and skipped both count as done for the rail checklist.
   const resolvedQuestionCount = activeQuestions.length - openQuestions.length;
   const currentQuestion = openQuestions[0] ?? null;
+  const attachmentSending = (sendLocked && staged.length > 0) || sendBusy || pending.some(item => item.intent === 'chat' && item.sourceIds.length > 0 && item.state === 'sending');
   const sourceExtractionInProgress =
+    attachmentSending ||
     autoScanning ||
     pending.some(
       (item) =>
@@ -2927,6 +2937,7 @@ export default function AssistantWorkspacePage({
         message.runType === 'proposal_context' &&
         message.status === 'pending',
     );
+  const sourceIntakePhase: SourceIntakePhase = attachmentSending ? 'uploading' : autoScanning ? 'checking' : 'reading';
   // answer message id -> the question it answered, so the thread can replay the
   // question above the answer instead of showing a bare value.
   const askedByAnswerMessageId = useMemo(
@@ -3229,7 +3240,8 @@ export default function AssistantWorkspacePage({
       value &&
       staged.length === 0 &&
       currentQuestion &&
-      !sourceExtractionInProgress
+      !sourceExtractionInProgress &&
+      !extractionFailureBlocksQuestions
     ) {
       if (FIELD_HELP_COMMAND.test(value)) {
         setText('');
@@ -3379,7 +3391,7 @@ export default function AssistantWorkspacePage({
       for (const file of staged) {
         let sourceId = uploadedRef.current.get(file) ?? null;
         if (!sourceId)
-          sourceId = await upload(file, 'non_confidential', id);
+          sourceId = await upload(file, 'non_confidential', id).catch(() => null);
         if (!sourceId) {
           setSendBusy(false);
           setSendError(`${file.name} could not be uploaded.`);
@@ -3802,6 +3814,11 @@ export default function AssistantWorkspacePage({
   };
 
   const renderMessage = (message: ConversationMessage) => {
+    // The automated extraction request is workflow bookkeeping, not another
+    // thing the planner said. Its status/result is shown on the assistant side.
+    if (message.role === 'user' && message.intent === 'extract_requirements') return null;
+    if (message.runType === 'proposal_context' && message.status === 'pending') return null;
+    if (message.runType === 'proposal_context' && message.status === 'failed' && message.id !== latestContextRun?.id) return null;
     if (message.role === 'system_event') {
       return (
         <li
@@ -3874,6 +3891,7 @@ export default function AssistantWorkspacePage({
       ? runLabels[message.runType]
       : null;
     if (!labels && message.status === 'pending') {
+      if (sourceExtractionInProgress) return null;
       return wrapAssistantTurn(
         <TypingIndicator label="The assistant is responding" />,
         message.id,
@@ -4033,23 +4051,6 @@ export default function AssistantWorkspacePage({
 
   const composer = (
     <div className="w-full">
-      {sendBusy && (
-        <p
-          role="status"
-          className="mb-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm"
-        >
-          <Loader2
-            size={13}
-            className="animate-spin text-[#00c2c9]"
-            aria-hidden
-          />
-          Uploading{' '}
-          {staged.length === 1
-            ? 'your attachment'
-            : 'your attachments'}
-          …
-        </p>
-      )}
       {sendError && (
         <p
           role="alert"
@@ -4256,16 +4257,18 @@ export default function AssistantWorkspacePage({
 
   const aiWorking =
     chatBusy ||
-    autoScanning ||
+    sourceExtractionInProgress ||
     draftBusy ||
     draftInProgress ||
     guidanceBusy ||
     investmentBusy;
-  const aiStatus = autoScanning
+  const aiStatus = sourceExtractionInProgress
     ? {
-        title: 'Reading your sources',
-        detail: 'Checking evidence and preparing requirements.',
+        title: sourceIntakePhase === 'uploading' ? 'Uploading your brief' : sourceIntakePhase === 'checking' ? 'Checking your file' : 'Reading your brief',
+        detail: 'Your next question will follow the attachment review.',
       }
+    : extractionFailureBlocksQuestions
+      ? { title: 'Your attachment needs attention', detail: 'Use the recovery options in the conversation to continue.' }
     : draftBusy || draftInProgress
       ? {
           title: latestCompleteDraft
@@ -4526,7 +4529,7 @@ export default function AssistantWorkspacePage({
                       )}
                     </li>
                   ))}
-                  {unsentPending.map((entry) => (
+                  {unsentPending.filter(entry => entry.intent !== 'extract_requirements').map((entry) => (
                     <li
                       key={entry.localId}
                       className="flex justify-end"
@@ -4559,6 +4562,7 @@ export default function AssistantWorkspacePage({
                             >
                               Retry
                             </button>
+                            {entry.sourceIds.length > 0 && <button type="button" onClick={() => { skipSources(entry.sourceIds); discardFailedSend(entry.localId); }} className="ml-3 min-h-10 font-semibold underline underline-offset-2">Continue without attachment</button>}
                           </p>
                         )}
                       </div>
@@ -4569,42 +4573,35 @@ export default function AssistantWorkspacePage({
                       key={notice.sourceId}
                       className="flex justify-start"
                     >
-                      <p
-                        role="alert"
+                      <div
                         className="w-full rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 sm:max-w-[85%]"
                       >
-                        {`${notice.filename} couldn’t be processed — try re-uploading.`}
-                      </p>
+                        <p role="alert">{`${notice.filename} couldn’t be processed — ${notice.reason === 'blocked' ? 'the file did not pass security checks. Please attach a different file.' : notice.reason === 'timeout' ? 'the file check is taking longer than expected. I haven’t read its details yet.' : 'try re-uploading, or check its status again.'}`}</p>
+                        <div className="mt-3 flex flex-wrap gap-3">
+                          {notice.reason !== 'blocked' && <button type="button" onClick={() => retryFileCheck(notice.sourceId)} className="min-h-10 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold">Retry file check</button>}
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className="min-h-10 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold">Choose another file</button>
+                          <button type="button" onClick={continueWithoutFiles} className="min-h-10 text-xs font-semibold underline underline-offset-2">Continue without these files</button>
+                        </div>
+                      </div>
                     </li>
                   ))}
-                  {nonDraftSending && !assistantResponding && (
+                  {extractionSendFailure && (
+                    <li className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                      <p role="alert">I couldn’t start reading your attachment. {extractionSendFailure.errorMessage}</p>
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        <button type="button" onClick={() => void retrySend(extractionSendFailure.localId)} className="min-h-10 rounded-lg bg-red-700 px-3 font-semibold text-white">Retry extraction</button>
+                        <button type="button" onClick={() => { skipSources(extractionSendFailure.sourceIds); discardFailedSend(extractionSendFailure.localId); }} className="min-h-10 font-semibold underline underline-offset-2">Continue without extraction</button>
+                      </div>
+                    </li>
+                  )}
+                  {nonDraftSending && !assistantResponding && !sourceExtractionInProgress && (
                     <li className="flex justify-start">
                       <TypingIndicator label="The assistant is responding" />
                     </li>
                   )}
-                  {autoScanning && !sending && (
+                  {sourceExtractionInProgress && !extractionSendFailure && (
                     <li className="flex justify-start">
-                      <p
-                        role="status"
-                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-500 shadow-sm"
-                      >
-                        Checking your{' '}
-                        {scanCount === 1 ? 'file' : 'files'}…
-                        <span
-                          aria-hidden
-                          className="ml-0.5 flex items-center gap-0.5"
-                        >
-                          {[0, 1, 2].map((dot) => (
-                            <span
-                              key={dot}
-                              className="h-1 w-1 rounded-full bg-[#00c2c9] motion-safe:animate-[typing-bounce_1.2s_ease-in-out_infinite]"
-                              style={{
-                                animationDelay: `${dot * 150}ms`,
-                              }}
-                            />
-                          ))}
-                        </span>
-                      </p>
+                      <SourceIntakeProgress phase={sourceIntakePhase} />
                     </li>
                   )}
                   {(guidanceBusy || investmentBusy) && (
@@ -4643,15 +4640,6 @@ export default function AssistantWorkspacePage({
                       questions may synchronize before the assistant reply is
                       ready, but the next question must not jump ahead of that
                       reply in the thread. */}
-                  {currentQuestion &&
-                    !chatBusy &&
-                    !loading &&
-                    !bulkAnswerProgress &&
-                    extractionPending && (
-                      <li className="flex scroll-mt-4 justify-start py-1">
-                        <SkeletonCard label="Reading your sources before asking the next question…" />
-                      </li>
-                    )}
                   {currentQuestion &&
                     !chatBusy &&
                     !loading &&
@@ -4883,7 +4871,9 @@ export default function AssistantWorkspacePage({
                   </span>
                 )}
               </div>
-              {activeQuestions.length === 0 ? (
+              {sourceExtractionInProgress || extractionFailureBlocksQuestions ? (
+                <p className="mt-3 text-xs leading-5 text-slate-600">{extractionFailureBlocksQuestions ? 'Resolve the attachment issue in the conversation, or choose to continue without it.' : 'I’ll review your attachment first. Then we’ll work through only the missing details, one question at a time.'}</p>
+              ) : activeQuestions.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-400">
                   {questionsComplete
                     ? 'All key questions answered.'

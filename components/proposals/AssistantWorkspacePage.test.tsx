@@ -1552,9 +1552,10 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     // The persisted extraction-in-progress state is visible...
-    expect(await screen.findByText(/Extracting requirements…/)).toBeInTheDocument();
-    // ...and so is the dedicated "waiting to ask" placeholder in the question's slot...
-    expect(screen.getByText(/Reading your sources before asking the next question/)).toBeInTheDocument();
+    expect(await screen.findByRole('status', { name: 'Attachment progress' })).toHaveTextContent('Reading your brief');
+    // A single progress card replaces the two competing extraction loaders.
+    expect(screen.getAllByRole('status', { name: 'Attachment progress' })).toHaveLength(1);
+    expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
     // ...but the guided question control itself is not, even though it is open.
     expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
     expect(screen.queryByText("What is this event called?")).not.toBeInTheDocument();
@@ -1595,7 +1596,7 @@ describe("AssistantWorkspacePage", () => {
       } as never);
 
       render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-      expect(await screen.findByText(/Extracting requirements…/)).toBeInTheDocument();
+      expect(await screen.findByRole('status', { name: 'Attachment progress' })).toHaveTextContent('Reading your brief');
       expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
 
       // The pending message keeps the poll interval fast (1s), so the next
@@ -2362,7 +2363,7 @@ describe("AssistantWorkspacePage", () => {
 
       // While the scan runs, the in-thread status line shows and no
       // extraction has fired yet.
-      expect(await screen.findByText(/Checking your file/)).toBeInTheDocument();
+      expect(await screen.findByRole('status', { name: 'Attachment progress' })).toHaveTextContent('Checking your file');
       expect(extractCalls()).toHaveLength(0);
 
       sourceStatus = "ready";
@@ -2404,7 +2405,7 @@ describe("AssistantWorkspacePage", () => {
       sourceStatus = "failed";
       await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
 
-      expect(await screen.findByText("venue.pdf couldn’t be processed — try re-uploading.")).toBeInTheDocument();
+      expect(await screen.findByText(/venue.pdf couldn’t be processed/)).toBeInTheDocument();
       // The watch is over: the status line is gone and extraction never fires.
       expect(screen.queryByText(/Checking your file/)).not.toBeInTheDocument();
       await act(async () => { await jest.advanceTimersByTimeAsync(60_000); });
@@ -2437,7 +2438,7 @@ describe("AssistantWorkspacePage", () => {
       sourceStatus = "blocked";
       await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
 
-      expect(await screen.findByText("venue.pdf couldn’t be processed — try re-uploading.")).toBeInTheDocument();
+      expect(await screen.findByText(/venue.pdf couldn’t be processed/)).toBeInTheDocument();
       await act(async () => { await jest.advanceTimersByTimeAsync(60_000); });
       expect(extractCalls()).toHaveLength(0);
     } finally {
@@ -2552,7 +2553,7 @@ describe("AssistantWorkspacePage", () => {
       });
 
       render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-      await screen.findByText("Extracting requirements from the attached files.");
+      await screen.findByLabelText("Message the proposal assistant");
       await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
 
       expect(extractCalls()).toHaveLength(0);

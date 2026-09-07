@@ -42,6 +42,7 @@ beforeEach(() => {
     pending: [],
     sendMessage: jest.fn(),
     retrySend: jest.fn(),
+    discardFailedSend: jest.fn(),
     resolveQuestion,
     questionBusyId: null,
     questionError: null,

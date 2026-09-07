@@ -39,6 +39,7 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
     const response = await authenticatedBackendFetch(`${BACKEND_URL}${path}`, {
       ...init,
       cache: "no-store",
+      signal: AbortSignal.timeout(30_000),
       headers: { "X-Correlation-ID": correlationId, ...(init?.headers ?? {}) },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -53,7 +54,9 @@ const request = async <T>(path: string, init?: RequestInit, parse?: (value: unkn
     const value = parse ? parse(body.data) : body.data as T;
     if (value === null || value === undefined) return { success: false, code: "INVALID_RESPONSE", message: "The service returned an unexpected response.", correlationId: responseCorrelation };
     return { success: true, data: value, correlationId: responseCorrelation };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError'))
+      return { success: false, code: 'BACKEND_TIMEOUT', message: 'The file service took too long to respond. Please try again.', correlationId };
     return { success: false, code: "NETWORK_ERROR", message: "The service could not be reached. Try again shortly.", correlationId };
   }
 };

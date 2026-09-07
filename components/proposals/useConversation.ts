@@ -33,6 +33,18 @@ const uuidPattern = /^[0-9a-f-]{36}$/i;
 // the dashboard compatible while an older synchronous API image drains during
 // a rolling deployment.
 export const SEND_TIMEOUT_MS = 60_000;
+export const SOURCE_REQUEST_TIMEOUT_MS = 45_000;
+
+async function withSourceDeadline<T>(request: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([request, new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('SOURCE_REQUEST_TIMEOUT')), SOURCE_REQUEST_TIMEOUT_MS);
+    })]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 // Fast while an assistant generation is active, then progressively quieter.
 // Polling is deliberately the correctness path in production: unlike a
@@ -59,6 +71,7 @@ export type PendingSend = {
   acknowledgedMessageId?: string;
   state: "sending" | "failed";
   errorMessage?: string;
+  afterOrdinal?: number;
 };
 
 export type SendInput = {
@@ -108,9 +121,16 @@ export function useConversation(proposalId: string | null) {
     // the entry across that gap prevents both a blank/loading frame and a
     // second send while the first turn is still settling.
     const persistedIds = new Set(result.data.messages.map(message => message.id));
-    setPending(prev => prev.filter(item =>
-      !item.acknowledgedMessageId || !persistedIds.has(item.acknowledgedMessageId),
-    ));
+    setPending(prev => prev.filter(item => {
+      if (item.acknowledgedMessageId && persistedIds.has(item.acknowledgedMessageId)) return false;
+      // A refused automatic extraction may subsequently succeed through its
+      // safe retry. Retire the old error only when a newer persisted request
+      // covers that exact batch, never merely because older runs exist.
+      if (item.intent === 'extract_requirements' && item.state === 'failed' && item.sourceIds.length && item.afterOrdinal !== undefined) {
+        return !result.data.messages.some(message => message.role === 'user' && message.intent === 'extract_requirements' && message.ordinal > item.afterOrdinal! && item.sourceIds.every(id => message.attachments.some(attachment => attachment.sourceId === id)));
+      }
+      return true;
+    }));
     return result.data;
   }, [proposalId]);
 
@@ -234,10 +254,11 @@ export function useConversation(proposalId: string | null) {
       expectedProposalVersion: input.expectedProposalVersion,
       idempotencyKey,
       state: "sending",
+      afterOrdinal: Math.max(0, ...(data?.messages ?? []).map(message => message.ordinal)),
     };
     setPending(prev => [...prev, entry]);
     return performSend(entry);
-  }, [proposalId, performSend]);
+  }, [proposalId, performSend, data?.messages]);
 
   const retrySend = useCallback(async (localId: string) => {
     const entry = pending.find(item => item.localId === localId);
@@ -286,9 +307,12 @@ export function useConversation(proposalId: string | null) {
   }, [proposalId, refresh]);
 
   const currentQuestionId = data?.questions.find(question => question.status === "open")?.id ?? null;
+  const discardFailedSend = useCallback((localId: string) => {
+    setPending(items => items.filter(item => item.localId !== localId || item.state !== 'failed'));
+  }, []);
   const currentQuestionError = questionFailure?.questionId === currentQuestionId ? questionFailure.message : null;
   return {
-    data, loading, loadError, refresh, pending, sendMessage, retrySend, resolveQuestion,
+    data, loading, loadError, refresh, pending, sendMessage, retrySend, discardFailedSend, resolveQuestion,
     questionBusyId, questionError: currentQuestionError,
   };
 }
@@ -420,23 +444,30 @@ export function useSourceUpload(proposalId: string | null) {
     setBusy(true);
     tracker.setError(null);
     const operationKey = crypto.randomUUID();
-    const session = await createPrivateUploadSession(target, { name: file.name, type: file.type, size: file.size }, operationKey, classification);
+    try {
+    const session = await withSourceDeadline(createPrivateUploadSession(target, { name: file.name, type: file.type, size: file.size }, operationKey, classification));
     if (!session.success) { tracker.setError(session.message); setBusy(false); return null; }
     try {
-      const putResponse = await fetch(session.data.uploadUrl, { method: "PUT", headers: session.data.requiredHeaders, body: file });
+      const putResponse = await fetch(session.data.uploadUrl, { method: "PUT", headers: session.data.requiredHeaders, body: file, signal: AbortSignal.timeout(120_000) });
       if (!putResponse.ok) throw new Error("upload failed");
     } catch {
       tracker.setError("The private upload could not be completed. Check your connection and try again.");
       setBusy(false);
       return null;
     }
-    const completed = await completePrivateUpload(session.data.sourceId);
+    const completed = await withSourceDeadline(completePrivateUpload(session.data.sourceId));
     if (!completed.success) { tracker.setError(completed.message); setBusy(false); return null; }
-    const queued = await createSourceScanJob(session.data.sourceId, operationKey);
+    const queued = await withSourceDeadline(createSourceScanJob(session.data.sourceId, operationKey));
     if (!queued.success) { tracker.setError(queued.message); setBusy(false); return null; }
     tracker.track(queued.data, target);
     setBusy(false);
     return session.data.sourceId;
+    } catch {
+      tracker.setError("The private upload could not be completed. Please try again.");
+      return null;
+    } finally {
+      setBusy(false);
+    }
   }, [proposalId, busy, tracker]);
 
   return {
@@ -455,7 +486,7 @@ export function useSourceUpload(proposalId: string | null) {
 // sessionStorage; source ids that already triggered an extraction are recorded
 // under the same key so the follow-up fires exactly once per originating send.
 
-type AutoExtractStore = { pending: string[]; handled: string[] };
+type AutoExtractStore = { pending: string[]; handled: string[]; failures?: AutoExtractNotice[] };
 
 const stringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
@@ -491,7 +522,10 @@ const readAutoExtractStore = (proposalId: string): AutoExtractStore => {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return { pending: [], handled: [] };
     const record = parsed as Record<string, unknown>;
-    return { pending: stringArray(record.pending), handled: stringArray(record.handled) };
+    const failures = Array.isArray(record.failures) ? record.failures.filter((item): item is AutoExtractNotice =>
+      typeof item === "object" && item !== null && typeof item.sourceId === "string" && typeof item.filename === "string",
+    ) : [];
+    return { pending: stringArray(record.pending), handled: stringArray(record.handled), ...(failures.length ? { failures } : {}) };
   } catch {
     return { pending: [], handled: [] };
   }
@@ -501,13 +535,13 @@ const writeAutoExtractStore = (proposalId: string, store: AutoExtractStore) => {
   const storage = autoExtractStorage();
   if (!storage) return;
   try {
-    storage.setItem(autoExtractKey(proposalId), JSON.stringify(store));
+    storage.setItem(autoExtractKey(proposalId), JSON.stringify({ ...readAutoExtractStore(proposalId), ...store }));
   } catch {
     // Storage being unavailable only loses reload-resume, never the session.
   }
 };
 
-export type AutoExtractNotice = { sourceId: string; filename: string };
+export type AutoExtractNotice = { sourceId: string; filename: string; reason?: "blocked" | "failed" | "timeout" };
 
 // Backend scan outcomes: "ready" (clean), "blocked" (malware), "scan_failed"
 // (scanner unavailable — the worker retries the job). Older responses used
@@ -516,6 +550,9 @@ const AUTO_EXTRACT_FAILED_STATUSES = ["failed", "blocked"];
 // ~15 minutes at the 10 s polling ceiling. A scan that has not settled by then
 // is stuck (dead-lettered job); stop polling and tell the planner.
 const AUTO_EXTRACT_MAX_POLLS = 90;
+// Surface recovery even when every source-list request fails. Poll-count-only
+// limits used to leave these uploads waiting indefinitely with no explanation.
+export const AUTO_EXTRACT_MAX_WAIT_MS = 120_000;
 // A send that was refused (no healthy API target, expired session) is retried
 // automatically after this delay, on top of the manual Retry action.
 export const AUTO_EXTRACT_RETRY_DELAY_MS = 10_000;
@@ -537,7 +574,7 @@ export function useAutoExtraction(
   // The watch carries its own proposal id so a send right after lazy proposal
   // creation is tracked even before the hook re-renders with the new id.
   const [watch, setWatch] = useState<{ proposalId: string; sourceIds: string[] } | null>(null);
-  const [failedNotices, setFailedNotices] = useState<AutoExtractNotice[]>([]);
+  const [failedNotices, setFailedNotices] = useState<AutoExtractNotice[]>(() => proposalId ? readAutoExtractStore(proposalId).failures ?? [] : []);
   const sendRef = useRef(sendMessage);
   useEffect(() => { sendRef.current = sendMessage; }, [sendMessage]);
   const extractedRef = useRef(extractedSourceIds);
@@ -572,6 +609,7 @@ export function useAutoExtraction(
     if (!proposalId) return;
     const timer = setTimeout(() => {
       const stored = readAutoExtractStore(proposalId);
+      setFailedNotices(stored.failures ?? []);
       if (stored.pending.length === 0) return;
       pollCount.current = 0;
       setWatch(current => current ?? { proposalId, sourceIds: stored.pending });
@@ -582,28 +620,34 @@ export function useAutoExtraction(
   useEffect(() => {
     if (!watch) return;
     let active = true;
+    const startedAt = Date.now();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
       if (!active) return;
       if (document.hidden) { timer = setTimeout(poll, 2_000); return; }
-      const result = await listPrivateDocumentSources(watch.proposalId);
+      if (firingRef.current) { timer = setTimeout(poll, 500); return; }
+      const result = await withSourceDeadline(listPrivateDocumentSources(watch.proposalId)).catch(() => null);
       if (!active) return;
-      if (result.success) {
-        const byId = new Map(result.data.map(source => [source.id, source]));
+      const timedOut = Date.now() - startedAt >= AUTO_EXTRACT_MAX_WAIT_MS || pollCount.current >= AUTO_EXTRACT_MAX_POLLS;
+      if (result?.success || timedOut) {
+        const byId = new Map(result?.success ? result.data.map(source => [source.id, source]) : []);
         const failed = watch.sourceIds.filter(id =>
           AUTO_EXTRACT_FAILED_STATUSES.includes(byId.get(id)?.status ?? "") ||
-          pollCount.current >= AUTO_EXTRACT_MAX_POLLS);
+          timedOut);
         if (failed.length > 0) {
-          // A failed scan cancels the automatic extraction for this send; the
-          // user gets an inline notice and can re-upload instead.
-          setFailedNotices(prev => [
-            ...prev,
-            ...failed
-              .filter(id => !prev.some(notice => notice.sourceId === id))
-              .map(id => ({ sourceId: id, filename: byId.get(id)?.originalFilename || "A file" })),
-          ]);
-          writeAutoExtractStore(watch.proposalId, { pending: [], handled: readAutoExtractStore(watch.proposalId).handled });
-          setWatch(null);
+          const store = readAutoExtractStore(watch.proposalId);
+          const notices: AutoExtractNotice[] = failed.map(id => ({
+            sourceId: id,
+            filename: byId.get(id)?.originalFilename || "Your attachment",
+            reason: byId.get(id)?.status === "blocked" ? "blocked" : timedOut ? "timeout" : "failed",
+          }));
+          const failures = [...(store.failures ?? []).filter(item => !failed.includes(item.sourceId)), ...notices];
+          const remaining = watch.sourceIds.filter(id => !failed.includes(id));
+          // Preserve the failure across reloads and keep healthy files in the
+          // batch moving. A failed file must not silently cancel every source.
+          writeAutoExtractStore(watch.proposalId, { pending: remaining, handled: [...new Set([...store.handled, ...failed])], failures });
+          setFailedNotices(failures);
+          setWatch(remaining.length ? { ...watch, sourceIds: remaining } : null);
           return;
         }
         if (watch.sourceIds.every(id => byId.get(id)?.status === "ready")) {
@@ -655,10 +699,40 @@ export function useAutoExtraction(
     const store = readAutoExtractStore(targetProposalId);
     const fresh = sourceIds.filter(id => !store.handled.includes(id));
     if (fresh.length === 0) return;
-    writeAutoExtractStore(targetProposalId, { pending: fresh, handled: store.handled });
+    const pending = [...new Set([...store.pending, ...fresh])];
+    writeAutoExtractStore(targetProposalId, { pending, handled: store.handled });
     pollCount.current = 0;
-    setWatch({ proposalId: targetProposalId, sourceIds: fresh });
+    setWatch({ proposalId: targetProposalId, sourceIds: pending });
   }, []);
+
+  const retryFileCheck = useCallback((sourceId: string) => {
+    if (!proposalId) return;
+    const store = readAutoExtractStore(proposalId);
+    if (store.failures?.some(item => item.sourceId === sourceId && item.reason === "blocked")) return;
+    const failures = (store.failures ?? []).filter(item => item.sourceId !== sourceId);
+    writeAutoExtractStore(proposalId, { ...store, handled: store.handled.filter(id => id !== sourceId), failures });
+    setFailedNotices(failures);
+    queueAutoExtract(proposalId, [sourceId]);
+  }, [proposalId, queueAutoExtract]);
+
+  const continueWithoutFiles = useCallback(() => {
+    if (!proposalId) return;
+    const store = readAutoExtractStore(proposalId);
+    writeAutoExtractStore(proposalId, { ...store, failures: [] });
+    setFailedNotices([]);
+  }, [proposalId]);
+
+  const skipSources = useCallback((sourceIds: string[]) => {
+    if (!proposalId) return;
+    if (retryTimer.current) { clearTimeout(retryTimer.current); retryTimer.current = null; }
+    const store = readAutoExtractStore(proposalId);
+    const pending = store.pending.filter(id => !sourceIds.includes(id));
+    writeAutoExtractStore(proposalId, { ...store, pending, handled: [...new Set([...store.handled, ...sourceIds])] });
+    setWatch(current => {
+      const remaining = current?.sourceIds.filter(id => !sourceIds.includes(id)) ?? [];
+      return current && remaining.length ? { ...current, sourceIds: remaining } : null;
+    });
+  }, [proposalId]);
 
   // A source that no longer exists (it was removed from the rail) must leave
   // the pending extraction selection, in memory and in the persisted intent,
@@ -675,5 +749,9 @@ export function useAutoExtraction(
     writeAutoExtractStore(proposalId, { pending: store.pending.filter(id => id !== sourceId), handled: store.handled });
   }, [proposalId]);
 
-  return { queueAutoExtract, dropSource, autoScanning: watch !== null, scanCount: watch?.sourceIds.length ?? 0, failedNotices };
+  // Cover the first render of a restored attachment too, before the effects
+  // resume its watch. Otherwise the empty event-name question flashes first.
+  const stored = proposalId ? readAutoExtractStore(proposalId) : { pending: [], handled: [] };
+  const waitingIds = [...new Set([...stored.pending, ...unextractedAttachmentSourceIds.filter(id => !stored.handled.includes(id))])];
+  return { queueAutoExtract, dropSource, retryFileCheck, continueWithoutFiles, skipSources, autoScanning: watch !== null || waitingIds.length > 0, scanCount: watch?.sourceIds.length ?? waitingIds.length, failedNotices };
 }

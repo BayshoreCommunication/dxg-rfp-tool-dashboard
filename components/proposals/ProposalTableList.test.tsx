@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import ProposalTableList from './ProposalTableList'
+import { toast } from 'react-toastify'
 
 // ─── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -271,18 +272,170 @@ describe('ProposalTableList — API params', () => {
 describe('ProposalTableList — delete (archive)', () => {
   it('calls deleteProposalAction and shows success toast', async () => {
     mockDeleteProposal.mockResolvedValue({ success: true })
-    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    const refreshCounts = jest.fn()
+    render(<ProposalTableList searchValue="" activeFilter="all" onRefreshCounts={refreshCounts} />)
     await waitFor(() => screen.getByTitle('Delete'), LOAD_TIMEOUT)
     fireEvent.click(screen.getByTitle('Delete'))
+    const dialog = screen.getByRole('alertdialog', { name: 'Archive this proposal?' })
+    expect(within(dialog).getByText('Bayshore Summit 2026')).toBeInTheDocument()
+    expect(within(dialog).getByText('30 days to change your mind')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    expect(mockDeleteProposal).not.toHaveBeenCalled()
+    expect(window.confirm).not.toHaveBeenCalled()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Move to archive' }))
     await waitFor(() => expect(mockDeleteProposal).toHaveBeenCalledWith('prop-001'))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+    expect(mockPermanentDelete).not.toHaveBeenCalled()
+    expect(toast.success).toHaveBeenCalledWith('Proposal moved to archive.')
+    expect(refreshCounts).toHaveBeenCalledTimes(1)
   })
 
   it('does not delete when user cancels the confirm dialog', async () => {
-    window.confirm = jest.fn(() => false)
     render(<ProposalTableList searchValue="" activeFilter="all" />)
     await waitFor(() => screen.getByTitle('Delete'), LOAD_TIMEOUT)
-    fireEvent.click(screen.getByTitle('Delete'))
+    const trigger = screen.getByTitle('Delete')
+    trigger.focus()
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
     expect(mockDeleteProposal).not.toHaveBeenCalled()
+  })
+
+  it.each(['close button', 'Escape', 'backdrop'])('dismisses with %s without making a request', async (method) => {
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByTitle('Delete')
+    fireEvent.click(screen.getByTitle('Delete'))
+    if (method === 'close button') fireEvent.click(screen.getByRole('button', { name: 'Close proposal deletion dialog' }))
+    if (method === 'Escape') fireEvent(screen.getByRole('alertdialog'), new Event('cancel', { cancelable: true }))
+    if (method === 'backdrop') fireEvent.click(screen.getByRole('alertdialog'), { clientX: -1, clientY: -1 })
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(mockDeleteProposal).not.toHaveBeenCalled()
+  })
+
+  it('does not dismiss when clicking inside the dialog', async () => {
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByTitle('Delete')
+    fireEvent.click(screen.getByTitle('Delete'))
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByText('Bayshore Summit 2026'))
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    expect(mockDeleteProposal).not.toHaveBeenCalled()
+  })
+
+  it('wraps keyboard focus within the confirmation buttons', async () => {
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    fireEvent.click(await screen.findByTitle('Delete'))
+    const close = screen.getByRole('button', { name: 'Close proposal deletion dialog' })
+    const confirm = screen.getByRole('button', { name: 'Move to archive' })
+    confirm.focus()
+    fireEvent.keyDown(confirm, { key: 'Tab' })
+    expect(close).toHaveFocus()
+    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true })
+    expect(confirm).toHaveFocus()
+  })
+
+  it('does not expose permanent deletion on stale active cards while switching filters', async () => {
+    const { rerender } = render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByTitle('Delete')
+    mockGetProposals.mockReturnValue(new Promise(() => {}))
+    rerender(<ProposalTableList searchValue="" activeFilter="archive" />)
+    expect(screen.queryByTitle('Delete forever')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Delete')).not.toBeInTheDocument()
+  })
+
+  it('locks dismissal and duplicate submissions while archiving', async () => {
+    let finish!: (value: { success: boolean }) => void
+    mockDeleteProposal.mockReturnValue(new Promise((resolve) => { finish = resolve }))
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByTitle('Delete')
+    fireEvent.click(screen.getByTitle('Delete'))
+    const confirm = screen.getByRole('button', { name: 'Move to archive' })
+    fireEvent.click(confirm)
+    fireEvent.click(confirm)
+    const dialog = screen.getByRole('alertdialog')
+    expect(dialog).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('button', { name: 'Archiving…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Close proposal deletion dialog' })).toBeDisabled()
+    fireEvent(dialog, new Event('cancel', { cancelable: true }))
+    fireEvent.click(dialog, { clientX: -1, clientY: -1 })
+    expect(dialog).toBeInTheDocument()
+    expect(mockDeleteProposal).toHaveBeenCalledTimes(1)
+    await act(async () => finish({ success: true }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('keeps a failed request open with an inline error and allows retry', async () => {
+    mockDeleteProposal.mockResolvedValueOnce({ success: false, message: 'Please try again later.' }).mockResolvedValueOnce({ success: true })
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByTitle('Delete')
+    fireEvent.click(screen.getByTitle('Delete'))
+    fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please try again later.')
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+    expect(mockDeleteProposal).toHaveBeenCalledTimes(2)
+  })
+
+  it('handles network exceptions without losing the confirmation', async () => {
+    mockDeleteProposal.mockRejectedValueOnce(new Error('Network unavailable'))
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByTitle('Delete')
+    fireEvent.click(screen.getByTitle('Delete'))
+    fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not archive this proposal. Please try again.')
+    expect(screen.getByRole('button', { name: 'Move to archive' })).toBeEnabled()
+  })
+
+  it('confirms the selected proposal rather than another card', async () => {
+    mockGetProposals.mockResolvedValue(successPage([makeProposal(), makeProposal({ _id: 'prop-002', event: { eventName: 'Second proposal' } })], 2))
+    mockDeleteProposal.mockResolvedValue({ success: true })
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Second proposal')
+    fireEvent.click(screen.getAllByTitle('Delete')[1])
+    expect(within(screen.getByRole('alertdialog')).getByText('Second proposal')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }))
+    await waitFor(() => expect(mockDeleteProposal).toHaveBeenCalledWith('prop-002'))
+  })
+
+  it('shows a readable fallback for unnamed proposals', async () => {
+    mockGetProposals.mockResolvedValue(successPage([makeProposal({ event: {} })]))
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByTitle('Delete')
+    fireEvent.click(screen.getByTitle('Delete'))
+    expect(within(screen.getByRole('alertdialog')).getByText('Untitled proposal')).toBeInTheDocument()
+  })
+})
+
+describe('ProposalTableList — permanent delete confirmation', () => {
+  beforeEach(() => {
+    mockGetProposals.mockResolvedValue(successPage([makeProposal({ isArchived: true, archivedAt: '2026-09-01T00:00:00.000Z' })]))
+  })
+
+  it('uses a distinct irreversible warning and only deletes after confirmation', async () => {
+    mockPermanentDelete.mockResolvedValue({ success: true })
+    render(<ProposalTableList searchValue="" activeFilter="archive" />)
+    await screen.findByTitle('Delete forever')
+    fireEvent.click(screen.getByTitle('Delete forever'))
+    const dialog = screen.getByRole('alertdialog', { name: 'Delete proposal forever?' })
+    expect(within(dialog).getByText('This cannot be undone')).toBeInTheDocument()
+    expect(within(dialog).queryByText('30 days to change your mind')).not.toBeInTheDocument()
+    expect(mockPermanentDelete).not.toHaveBeenCalled()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete forever' }))
+    await waitFor(() => expect(mockPermanentDelete).toHaveBeenCalledWith('prop-001'))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+    expect(mockDeleteProposal).not.toHaveBeenCalled()
+    expect(window.confirm).not.toHaveBeenCalled()
+  })
+
+  it('cancels permanent deletion without calling the backend', async () => {
+    render(<ProposalTableList searchValue="" activeFilter="archive" />)
+    await screen.findByTitle('Delete forever')
+    fireEvent.click(screen.getByTitle('Delete forever'))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(mockPermanentDelete).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 })
 
