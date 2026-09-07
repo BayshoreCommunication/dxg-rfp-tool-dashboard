@@ -2357,6 +2357,12 @@ describe("AssistantWorkspacePage", () => {
     expect(await screen.findByRole("heading", { name: "Key questions" })).toBeInTheDocument();
     expect(screen.getAllByText("AI workspace")).toHaveLength(2);
     const toolsToggle = screen.getByLabelText("Toggle AI workspace tools");
+    expect(screen.getByTestId("mobile-ai-workspace-disclosure")).toHaveClass(
+      "bg-[#eef8f7]",
+      "border-y",
+      "xl:bg-transparent",
+    );
+    expect(toolsToggle).toHaveClass("hover:bg-[#e5f4f2]");
     expect(toolsToggle).toHaveAttribute("aria-expanded", "false");
     const toolsPanel = screen.getByLabelText("Proposal assistant tools");
     expect(toolsPanel).toHaveClass("hidden", "xl:flex", "overflow-hidden");

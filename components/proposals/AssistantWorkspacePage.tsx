@@ -4799,13 +4799,16 @@ export default function AssistantWorkspacePage({
             the conversation on narrow screens. At desktop widths the details
             wrapper becomes layout-transparent and restores the right rail. */}
         {railVisible && (
-          <div className="order-1 min-w-0 shrink-0 border-b border-slate-200 bg-white xl:order-2 xl:block xl:h-full xl:w-[clamp(20rem,24vw,23rem)] xl:border-0 xl:bg-transparent">
+          <div
+            data-testid="mobile-ai-workspace-disclosure"
+            className="order-1 min-w-0 shrink-0 border-y border-[#cfe9e5] bg-[#eef8f7] xl:order-2 xl:block xl:h-full xl:w-[clamp(20rem,24vw,23rem)] xl:border-0 xl:bg-transparent"
+          >
             <button
               type="button"
               aria-label="Toggle AI workspace tools"
               aria-expanded={toolsOpen}
               onClick={() => setToolsOpen((open) => !open)}
-              className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9] xl:hidden"
+              className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-[#e5f4f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9] xl:hidden"
             >
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#087f69]/15 bg-[#087f69]/10 text-[#087f69]">
                 <Sparkles size={15} aria-hidden />
