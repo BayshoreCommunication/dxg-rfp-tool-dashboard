@@ -73,11 +73,13 @@ describe("ProposalWorkflowShell", () => {
     // The assistant is reached by link, not by a second embedded copy.
     expect(screen.getByRole("link", { name: /Open the assistant/ }))
       .toHaveAttribute("href", `/proposals/${PROPOSAL_ID}/assistant`);
-    expect(screen.queryByText(/The assistant drafts the RFP/)).toBeInTheDocument();
-    expect(screen.getByText("Keep control")).toBeInTheDocument();
+    expect(screen.getByText("Build a vendor-ready proposal with AI.")).toBeInTheDocument();
+    expect(screen.getByText("Draft from what you know, find gaps, and review every change.")).toBeInTheDocument();
+    expect(screen.queryByText("Draft faster")).not.toBeInTheDocument();
+    expect(screen.queryByText("AI preparation")).not.toBeInTheDocument();
     expect(screen.getByText("Nothing is published automatically.")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.getByText("0 of 5 stages ready")).toBeInTheDocument();
+    expect(screen.getByTestId("proposal-guidance-card")).toHaveClass("mt-4", "rounded-[20px]");
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });
 
@@ -98,7 +100,7 @@ describe("ProposalWorkflowShell", () => {
 
     render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} proposalName="Testing Proposal" />);
 
-    expect(await screen.findByText("Your proposal is live and accepting responses.")).toBeInTheDocument();
+    expect(await screen.findByText("Your proposal is live.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View vendor responses/ }))
       .toHaveAttribute("href", "/vendor-responses");
   });
@@ -239,7 +241,7 @@ describe("ProposalWorkflowShell", () => {
 
     render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} proposalIsPublished />);
 
-    expect(await screen.findByText("Your proposal is live and accepting responses.")).toBeInTheDocument();
+    expect(await screen.findByText("Your proposal is live.")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "See Guidance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Check readiness" })).not.toBeInTheDocument();
   });
@@ -290,7 +292,7 @@ describe("ProposalWorkflowShell", () => {
     // Stepper and assistant banner stay. The old technical-details duplicate is
     // intentionally removed so the actual intake form begins immediately.
     expect(screen.getByRole("list", { name: "Proposal creation steps" })).toBeInTheDocument();
-    expect(screen.getByText(/The assistant drafts the RFP/)).toBeInTheDocument();
+    expect(screen.getByText("Draft from what you know, find gaps, and review every change.")).toBeInTheDocument();
     expect(screen.queryByText(/You can upload more than one source/)).not.toBeInTheDocument();
 
     // The other panels are untouched.

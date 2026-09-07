@@ -11,9 +11,7 @@ import {
   ArrowDown,
   ArrowRight,
   Check,
-  FileText,
   Lock,
-  MessageCircleQuestion,
   Radio,
   Send,
   ShieldCheck,
@@ -151,8 +149,6 @@ export default function ProposalWorkflowShell({
     : data?.state?.nextAction !== "none"
       ? (data?.state?.nextActionLabel ?? "Open the assistant")
       : "Review key questions";
-  const stagesComplete = data ? data.steps.filter((s) => s.status === "complete").length : 0;
-  const stageCount = data?.steps.length ?? 5;
   return <section aria-label="Proposal assistance" className="@container mb-0 border-b border-[#e5eaee] bg-white">
     <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-[#edf0f2] px-6 py-5 sm:px-8">
       <div>
@@ -168,47 +164,30 @@ export default function ProposalWorkflowShell({
     </header>
     {/* The conversation itself lives on one surface only: this editor links out
         to it rather than embedding a second copy. */}
-    {conversationsEnabled && <div className="mx-6 mt-6 overflow-hidden rounded-[22px] border border-[#c9e4f2] bg-[linear-gradient(135deg,#f2fbff_0%,#f8fcfe_58%,#ffffff_100%)] shadow-[0_16px_38px_rgba(16,78,112,0.09)] sm:mx-8">
-      <div className="grid @min-[600px]:grid-cols-[minmax(0,1fr)_270px]">
-        <div className="p-5 sm:p-6">
-          <div className="flex items-start gap-4 sm:gap-5">
-            <div className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#0786cf] text-white shadow-[0_8px_20px_rgba(7,134,207,0.24)] sm:h-14 sm:w-14">
-              <Send size={25} strokeWidth={1.8} aria-hidden="true" />
-              {!isPublished && <span className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full border-2 border-[#f2fbff] bg-white text-[#0786cf]"><Sparkles size={13} strokeWidth={2.2} aria-hidden="true" /></span>}
+    {conversationsEnabled && <div data-testid="proposal-guidance-card" className="mx-6 mt-4 overflow-hidden rounded-[20px] border border-[#c9e4f2] bg-[linear-gradient(135deg,#f2fbff_0%,#f8fcfe_58%,#ffffff_100%)] shadow-[0_12px_28px_rgba(16,78,112,0.08)] sm:mx-8">
+      <div className="grid @min-[600px]:grid-cols-[minmax(0,1fr)_250px]">
+        <div className="p-4 sm:p-5">
+          <div className="flex items-start gap-3.5">
+            <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#0786cf] text-white shadow-[0_6px_16px_rgba(7,134,207,0.22)]">
+              <Send size={20} strokeWidth={1.9} aria-hidden="true" />
+              {!isPublished && <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-[#f2fbff] bg-white text-[#0786cf]"><Sparkles size={11} strokeWidth={2.2} aria-hidden="true" /></span>}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "AI-guided workspace"}</p>
-              <p className="mt-2 text-lg font-extrabold tracking-[-0.02em] text-[#172b3a] sm:text-[21px]">{isPublished ? "Your proposal is live and accepting responses." : "Turn your event details into a vendor-ready proposal."}</p>
-              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#566a78]">{isPublished ? "Vendors can review the RFP and submit their proposals. Keep an eye on incoming activity and answer questions as they arrive." : "Share what you know. The assistant drafts the RFP, flags missing details, and keeps every change open for your review."}</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "AI-guided workspace"}</p>
+              <p className="mt-1.5 text-base font-extrabold tracking-[-0.02em] text-[#172b3a] sm:text-lg">{isPublished ? "Your proposal is live." : "Build a vendor-ready proposal with AI."}</p>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-[#566a78]">{isPublished ? "Monitor vendor activity and keep questions moving." : "Draft from what you know, find gaps, and review every change."}</p>
             </div>
           </div>
-
-          {!isPublished && <div className="mt-5 grid gap-2 sm:grid-cols-3">
-            <div className="flex items-center gap-1.5 rounded-xl border border-white/90 bg-white/65 px-2.5 py-2 text-[11px] font-bold text-[#476577]"><FileText size={14} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Draft faster</div>
-            <div className="flex items-center gap-1.5 rounded-xl border border-white/90 bg-white/65 px-2.5 py-2 text-[11px] font-bold text-[#476577]"><MessageCircleQuestion size={14} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Find gaps</div>
-            <div className="flex items-center gap-1.5 rounded-xl border border-white/90 bg-white/65 px-2.5 py-2 text-[11px] font-bold text-[#476577]"><ShieldCheck size={14} className="shrink-0 text-[#0786cf]" aria-hidden="true" />Keep control</div>
-          </div>}
-
-          {!isPublished && (
-            <div className="mt-5 border-t border-[#d9ebf4] pt-4">
-              <div className="flex items-center justify-between gap-4 text-xs font-bold text-[#476577]">
-                <span>AI preparation</span>
-                <span className="rounded-full bg-white px-2.5 py-1 tabular-nums text-[#172b3a] ring-1 ring-[#d9eaf3]">
-                  {data ? `${stagesComplete} of ${stageCount} stages ready` : "Loading status…"}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
 
-        <aside className="border-t border-[#d8eaf4] bg-white/80 p-5 sm:p-6 @min-[600px]:border-l @min-[600px]:border-t-0" aria-label="Recommended next action">
-          <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#0786cf]"><Sparkles size={14} aria-hidden="true" />Recommended next step</div>
-          <p className="mt-3 text-lg font-extrabold tracking-[-0.015em] text-[#172b3a]">{isPublished ? "Review vendor activity" : (data?.state?.nextActionLabel ?? "Open the assistant")}</p>
-          <p className="mt-1.5 min-h-10 text-sm leading-5 text-[#687782]">{isPublished ? "Monitor responses and keep vendor questions moving." : (data?.state?.headline ?? "Continue from the most useful next step.")}</p>
+        <aside className="border-t border-[#d8eaf4] bg-white/80 p-4 sm:p-5 @min-[600px]:border-l @min-[600px]:border-t-0" aria-label="Recommended next action">
+          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0786cf]"><Sparkles size={13} aria-hidden="true" />Recommended next step</div>
+          <p className="mt-2 text-base font-extrabold tracking-[-0.015em] text-[#172b3a]">{isPublished ? "Review vendor activity" : (data?.state?.nextActionLabel ?? "Open the assistant")}</p>
+          <p className="mt-1 text-xs leading-5 text-[#687782]">{isPublished ? "Monitor responses and questions." : (data?.state?.headline ?? "Continue from the most useful next step.")}</p>
           {/* A published RFP has no next action. Offering one that still reads
               "Answer the next question" would invite work that is already over. */}
-          <Link href={nextActionHref} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0786cf] px-4 py-2.5 text-sm font-bold text-white shadow-[0_6px_16px_rgba(7,134,207,0.2)] transition-all hover:-translate-y-px hover:bg-[#066fae] hover:shadow-[0_8px_18px_rgba(7,134,207,0.24)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]">{nextActionLabel}<ArrowRight size={15} aria-hidden="true" /></Link>
-          {!isPublished && <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] font-semibold text-[#718592]"><ShieldCheck size={12} aria-hidden="true" />Nothing is published automatically.</p>}
+          <Link href={nextActionHref} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0786cf] px-3.5 py-2 text-sm font-bold text-white shadow-[0_5px_14px_rgba(7,134,207,0.18)] transition-all hover:-translate-y-px hover:bg-[#066fae] hover:shadow-[0_7px_16px_rgba(7,134,207,0.22)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]">{nextActionLabel}<ArrowRight size={14} aria-hidden="true" /></Link>
+          {!isPublished && <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[10px] font-semibold text-[#718592]"><ShieldCheck size={11} aria-hidden="true" />Nothing is published automatically.</p>}
         </aside>
       </div>
     </div>}
