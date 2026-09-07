@@ -202,6 +202,11 @@ test('question checklist stays readable with one scroll area at narrow, tablet a
     await expect(checklist.locator('[aria-current="step"]')).toHaveCount(1);
     await expect(checklist.locator('[data-question-state="answered"]')).toHaveCount(1);
     await expect(checklist.locator('[data-question-state="skipped"]')).toHaveCount(1);
+    await expect(checklist.locator('p')).toHaveCount(9);
+    await expect(checklist.getByText(/^(Answered|Skipped|Up next|Open|Start date|Event name)$/)).toHaveCount(0);
+    await expect(checklist.getByRole('img', {name:'Answered',exact:true})).toHaveCount(1);
+    await expect(checklist.getByRole('img', {name:'Skipped',exact:true})).toHaveCount(1);
+    await expect(checklist.getByRole('img', {name:'Up next',exact:true})).toHaveCount(1);
     await expect(tools.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '2');
     expect(await tools.evaluate(element => [...element.querySelectorAll('*')].filter(node => {
       const style = getComputedStyle(node);

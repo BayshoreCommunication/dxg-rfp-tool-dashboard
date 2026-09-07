@@ -4951,7 +4951,8 @@ export default function AssistantWorkspacePage({
                           }`}
                         >
                           <span
-                            aria-hidden
+                            role="img"
+                            aria-label={state}
                             className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                               resolved
                                 ? skipped
@@ -4973,22 +4974,6 @@ export default function AssistantWorkspacePage({
                               }`}
                             >
                               {`${index + 1}. ${displayQuestionPrompt(question)}`}
-                            </p>
-                            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium leading-4 text-slate-500">
-                              <span className="min-w-0 [overflow-wrap:anywhere]">{questionFieldLabel(question)}</span>
-                              <span
-                                className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 font-semibold ${
-                                  skipped
-                                    ? 'bg-slate-100 text-slate-500'
-                                    : resolved
-                                      ? 'bg-emerald-50 text-emerald-700'
-                                      : isCurrent
-                                        ? 'bg-amber-100 text-amber-800'
-                                        : 'bg-slate-100 text-slate-500'
-                                }`}
-                              >
-                                {state}
-                              </span>
                             </p>
                           </div>
                         </li>

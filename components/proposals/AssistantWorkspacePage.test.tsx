@@ -1232,8 +1232,10 @@ describe("AssistantWorkspacePage", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveAttribute("aria-current", "step");
     expect(rows[1]).not.toHaveAttribute("aria-current");
-    expect(within(rows[0]).getByText("Up next")).toBeInTheDocument();
-    expect(within(rows[1]).getByText("Open")).toBeInTheDocument();
+    expect(within(rows[0]).getByRole("img", { name: "Up next" })).toBeInTheDocument();
+    expect(within(rows[1]).getByRole("img", { name: "Open" })).toBeInTheDocument();
+    expect(within(checklist).queryByText(/^(Start date|Event rooms|Up next|Open|Answered|Skipped)$/)).not.toBeInTheDocument();
+    expect(checklist.querySelectorAll("p")).toHaveLength(2);
     // Nothing was answered yet, so no completion card.
     expect(screen.queryByText(/All key questions answered/)).not.toBeInTheDocument();
   });
