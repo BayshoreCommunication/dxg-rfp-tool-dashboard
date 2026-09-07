@@ -1950,7 +1950,7 @@ describe("AssistantWorkspacePage", () => {
     );
     expect(screen.queryByRole("button", { name: "Run readiness check" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Edit all details" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open RFP questions" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open RFP questions" })).not.toBeInTheDocument();
     // The old vague copy is gone for good.
     expect(screen.queryByText(/everything else is optional/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open the proposal editor" })).not.toBeInTheDocument();
@@ -1988,7 +1988,7 @@ describe("AssistantWorkspacePage", () => {
     ));
   });
 
-  test("a completed extraction run links to reviewing and applying the extracted fields", async () => {
+  test("a completed extraction keeps the next step in the conversation without editor links", async () => {
     mockedGetConversation.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -2008,8 +2008,28 @@ describe("AssistantWorkspacePage", () => {
     } as never);
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    const reviewLink = await screen.findByRole("link", { name: /Review & apply 3 extracted fields/ });
-    expect(reviewLink).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+    expect(await screen.findByText("I’ve pulled out the key details from your brief. Let’s confirm them and fill in anything missing, one question at a time.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Review & apply/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "View details" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open RFP questions" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Review the suggestions together/)).not.toBeInTheDocument();
+  });
+
+  test("an extraction without captured fields keeps honest recovery text", async () => {
+    mockedGetConversation.mockResolvedValue({
+      ...conversationWithQuestion,
+      data: { ...conversationWithQuestion.data, messages: [proposalContextMessage("complete")] },
+    });
+    mockedGetProposalContext.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { run: { id: "run-1" }, evidence: [], operations: [] },
+    } as never);
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    expect(await screen.findByText("I couldn’t identify proposal details in this file. You can attach a clearer brief or enter the details below.")).toBeInTheDocument();
+    expect(screen.queryByText(/I’ve pulled out the key details/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "View details" })).not.toBeInTheDocument();
   });
 
   test("a failed extraction keeps guided questions hidden and retries the same attached sources", async () => {
@@ -2940,9 +2960,9 @@ describe("AssistantWorkspacePage", () => {
     // The explicit next step plus the softer alternatives.
     expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
     expect(screen.getByText("Or add more details — upload another file, paste notes, or ask me anything.")).toBeInTheDocument();
-    // The card's own editor link (the top bar carries the second one).
+    // The later overview keeps its editor action; the onboarding shortcut is gone.
     expect(screen.getByRole("link", { name: "Edit all details" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open RFP questions" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open RFP questions" })).not.toBeInTheDocument();
     // The old notice is gone for good.
     expect(screen.queryByText(/I have all the key details I need/)).not.toBeInTheDocument();
   });

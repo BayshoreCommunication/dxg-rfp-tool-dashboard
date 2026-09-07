@@ -10,6 +10,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/proposals/cccccccccccccccccccccccc/assistant');
   await expect(page.getByLabel('Message the proposal assistant')).toBeVisible();
+  await expect(page.getByRole('link', {name:'Open RFP questions', exact:true})).toHaveCount(0);
 });
 
 test('new proposal first attachment never flashes a guided question during slow creation and upload', async ({ page }) => {
@@ -51,6 +52,8 @@ test('new proposal first attachment never flashes a guided question during slow 
   await expect.poll(async () => (await (await page.request.get(fixture)).json()).messages.some((item: {runType:string;status:string}) => item.runType === 'proposal_context' && item.status === 'pending')).toBe(true);
   await page.request.post(fixture, { data: { outcome:'complete' } });
   await expect(page.getByText(/I found Northstar Leadership Summit/)).toBeVisible();
+  await expect(page.getByText('I’ve pulled out the key details from your brief. Let’s confirm them and fill in anything missing, one question at a time.', {exact:true})).toBeVisible();
+  await expect(page.getByRole('link', {name:/Review & apply|View details|Open RFP questions/})).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as {attachmentOrderErrors:string[]}).attachmentOrderErrors)).toEqual([]);
   const steps = await page.getByTestId('proposal-conversation-scroll').innerText();
   expect(steps.indexOf('Please review the attached file.')).toBeLessThan(steps.indexOf('I’ve received your brief'));
@@ -115,6 +118,8 @@ test('brief upload → one progress card → extraction failure → retry → me
   await expect.poll(async () => (await (await page.request.get(fixture)).json()).requests.filter((item: { intent: string }) => item.intent === 'extract_requirements').length).toBe(2);
   await page.request.post(fixture, { data: { outcome: 'complete' } });
   await expect(page.getByText(/I found Northstar Leadership Summit/)).toBeVisible();
+  await expect(page.getByText('I’ve pulled out the key details from your brief. Let’s confirm them and fill in anything missing, one question at a time.', {exact:true})).toBeVisible();
+  await expect(page.getByRole('link', {name:/Review & apply|View details|Open RFP questions/})).toHaveCount(0);
   await expect(page.getByText('Guided question 1', { exact: true })).toBeVisible();
   await expect(page.getByText('What is this event called?', { exact: true })).toHaveCount(0);
   await expect(progress).toHaveCount(0);

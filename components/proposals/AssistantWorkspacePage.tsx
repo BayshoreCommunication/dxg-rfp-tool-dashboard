@@ -1183,26 +1183,6 @@ function SourceChips({
   );
 }
 
-function CardFooter({
-  detailsHref,
-  detailsLabel,
-}: {
-  detailsHref?: string;
-  detailsLabel?: string;
-}) {
-  if (!detailsHref) return null;
-  return (
-    <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-2.5">
-      <Link
-        href={detailsHref}
-        className="text-xs font-semibold text-[#087f69] underline underline-offset-2"
-      >
-        {detailsLabel ?? 'View details'}
-      </Link>
-    </div>
-  );
-}
-
 // ── Shared card action row ───────────────────────────────────────────────────
 // Every "what next?" card in the thread offers the same three actions in the
 // same order and at the same height: one solid primary (generate/regenerate the
@@ -1806,8 +1786,8 @@ function GuidedQuestionCard({
   );
 }
 
-// Details of a completed extraction run: evidence chips grouped per source,
-// count of suggested fields linking to the review surface, and the model badge.
+// Completed extraction stays in the conversation: source evidence and a clear
+// next step, without sending the user away to the proposal editor.
 function ContextRunCard({
   proposalId,
   message,
@@ -1863,7 +1843,6 @@ function ContextRunCard({
     };
   }, [proposalId, message.runId, sourcesById]);
 
-  const reviewHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   return (
     <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <SourceChips chips={chips} />
@@ -1874,20 +1853,7 @@ function ContextRunCard({
         {message.content}
       </p>
       {fieldCount === 0 && <p className="mt-2 text-sm text-amber-800">I couldn’t identify proposal details in this file. You can attach a clearer brief or enter the details below.</p>}
-      {fieldCount !== null && fieldCount > 0 && <p className="mt-2 text-sm text-slate-600">Review the suggestions together, or confirm the pre-filled answers below. You can edit anything before saving it.</p>}
-      {fieldCount !== null && fieldCount > 0 && (
-        <Link
-          href={reviewHref}
-          className="mt-2 inline-flex min-h-10 w-full flex-wrap items-center justify-center gap-2 rounded-lg border border-[#087f69] px-3 py-1.5 text-center text-xs font-semibold text-[#087f69] transition-colors hover:bg-emerald-50 sm:w-auto"
-        >
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
-            Suggestions
-          </span>
-          Review &amp; apply {fieldCount} extracted field
-          {fieldCount === 1 ? '' : 's'}
-        </Link>
-      )}
-      <CardFooter detailsHref={reviewHref} />
+      {fieldCount !== null && fieldCount > 0 && <p className="mt-2 text-sm text-slate-600">I’ve pulled out the key details from your brief. Let’s confirm them and fill in anything missing, one question at a time.</p>}
     </div>
   );
 }
@@ -4373,17 +4339,6 @@ export default function AssistantWorkspacePage({
             {proposalId ? eventName || 'Untitled proposal' : 'New proposal'}
           </span>
         </nav>
-        {/* No proposal exists until the conversation starts, so the edit
-            escape hatch only appears once there is something to edit. */}
-        {proposalId && (
-          <Link
-            href={`/proposals/proposal-edit?proposalId=${proposalId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-          >
-            <PencilLine size={14} aria-hidden />
-            Open RFP questions
-          </Link>
-        )}
       </div>
 
       <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-0 md:h-auto md:gap-5 xl:min-h-0 xl:flex-1 xl:flex-row">
