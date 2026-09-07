@@ -1,5 +1,24 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 const fixture = 'http://127.0.0.1:8011/__e2e/onboarding';
+
+async function expectReadableSelection(option: Locator, background: string) {
+  await expect(option).toHaveCSS('background-color', background);
+  await expect(option).toHaveCSS('color', 'rgb(255, 255, 255)');
+  const contrast = await option.evaluate(element => {
+    const style = getComputedStyle(element);
+    const luminance = (color: string) => {
+      const [red, green, blue] = color.match(/[\d.]+/g)!.slice(0, 3).map(value => {
+        const channel = Number(value) / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      });
+      return red * 0.2126 + green * 0.7152 + blue * 0.0722;
+    };
+    const foreground = luminance(style.color);
+    const background = luminance(style.backgroundColor);
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+  });
+  expect(contrast).toBeGreaterThanOrEqual(4.5);
+}
 
 test.beforeEach(async ({ page }) => {
   await page.request.post(fixture, { data: { reset: true } });
@@ -70,6 +89,79 @@ test('a new empty conversation does not ask field-gap questions before the first
   await expect(page.getByText('Share a few event details or attach a brief below.', {exact:false})).toBeVisible();
   await expect(page.getByText('What is this event called?', {exact:true})).toHaveCount(0);
   await expect(page.getByText('Guided question 1', {exact:true})).toHaveCount(0);
+});
+
+test('shared date picker selections stay readable on hover and keyboard focus', async ({page}, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const year = new Date().getFullYear() + 1;
+  await page.request.post(fixture, {data: {questions: [{
+    id: 'q-start-date', code: 'field:startDate', severity: 'question',
+    paths: ['/content/event/startDate'], prompt: 'When does the event start?',
+    status: 'open', impact: 'schedule', answerType: 'date', options: [],
+    suggestedAnswer: `${year}-11-16`,
+  }]}});
+  await page.reload();
+  const input = page.getByLabel('Answer this question', {exact:true});
+  await expect(input).toHaveValue(`11/16/${year}`);
+  await page.getByRole('button', {name:'Open Select Date calendar'}).click();
+  const selected = page.locator('.dxg-datepicker .react-datepicker__day--selected');
+  await selected.hover();
+  await expectReadableSelection(selected, 'rgb(6, 101, 117)');
+  await page.screenshot({path:testInfo.outputPath('selected-date-hover.png')});
+  await selected.press('ArrowRight');
+  const keyboardDay = page.locator('.dxg-datepicker .react-datepicker__day--keyboard-selected');
+  await expectReadableSelection(keyboardDay, 'rgb(6, 101, 117)');
+  // Keyboard browsing must not commit a new value until the user chooses it.
+  await expect(input).toHaveValue(`11/16/${year}`);
+  await page.getByRole('button', {name:/November .*choose year/}).click();
+  const selectedYear = page.getByRole('button', {name:`Choose year ${year}`, exact:true});
+  await selectedYear.hover();
+  await expectReadableSelection(selectedYear, 'rgb(6, 101, 117)');
+  await selectedYear.press('Escape');
+  await input.press('Escape');
+
+  // Exercise state combinations against the actual loaded app + vendor CSS.
+  // This DOM-only local fixture also covers the shared date-time/time wrappers.
+  await page.evaluate(() => {
+    const host = document.createElement('div');
+    host.id = 'calendar-style-fixture';
+    host.style.cssText = 'position:fixed;inset:0;z-index:99999;background:white;overflow:auto;padding:16px';
+    host.innerHTML = `<div class="dxg-datepicker dxg-datepicker--with-time"><div class="react-datepicker__month-container">
+      <div tabindex="0" data-case="selected" class="react-datepicker__day react-datepicker__day--selected">16</div>
+      <div tabindex="0" data-case="keyboard" class="react-datepicker__day react-datepicker__day--keyboard-selected">17</div>
+      <div tabindex="0" data-case="today-keyboard" class="react-datepicker__day react-datepicker__day--today react-datepicker__day--keyboard-selected">7</div>
+      <div tabindex="0" data-case="outside-selected" class="react-datepicker__day react-datepicker__day--outside-month react-datepicker__day--selected">30</div>
+      <div tabindex="0" data-case="disabled-selected" class="react-datepicker__day react-datepicker__day--disabled react-datepicker__day--selected">1</div>
+      <div tabindex="0" data-case="disabled-keyboard" class="react-datepicker__day react-datepicker__day--disabled react-datepicker__day--keyboard-selected">2</div>
+    </div></div>
+    <div class="dxg-datepicker dxg-timepicker"><div class="react-datepicker__time-container"><div class="react-datepicker__time"><div class="react-datepicker__time-box"><ul class="react-datepicker__time-list">
+      <li tabindex="0" data-case="time" class="react-datepicker__time-list-item react-datepicker__time-list-item--selected">10:00 AM</li>
+    </ul></div></div></div></div>`;
+    document.body.append(host);
+  });
+  for (const name of ['selected', 'keyboard', 'today-keyboard', 'outside-selected', 'time']) {
+    const option = page.locator(`[data-case="${name}"]`);
+    await page.mouse.move(0, 0);
+    // Blur the previous option so this assertion covers the resting state.
+    await page.locator('#calendar-style-fixture').click({position:{x:2,y:2}});
+    await expectReadableSelection(option, 'rgb(8, 127, 145)');
+    await option.hover();
+    await expectReadableSelection(option, 'rgb(6, 101, 117)');
+    await page.mouse.move(0, 0);
+    await option.focus();
+    await page.keyboard.press('ArrowRight');
+    await expectReadableSelection(option, 'rgb(6, 101, 117)');
+  }
+  for (const name of ['disabled-selected', 'disabled-keyboard']) {
+    const option = page.locator(`[data-case="${name}"]`);
+    await option.hover();
+    await expect(option).toHaveCSS('background-color', 'rgb(244, 247, 248)');
+    await expect(option).toHaveCSS('color', 'rgb(166, 181, 187)');
+    await expect(option).toHaveCSS('transform', 'none');
+  }
+  expect(errors).toEqual([]);
+  expect((await (await page.request.get(fixture)).json()).requests).toHaveLength(0);
 });
 
 test('question checklist stays readable with one scroll area at narrow, tablet and desktop widths', async ({page}, testInfo) => {

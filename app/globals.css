@@ -391,9 +391,14 @@ body {
 }
 
 .dxg-datepicker__year-option[aria-pressed="true"] {
-  background: #1dbfd3;
+  background: #087f91;
   color: #fff;
   font-weight: 700;
+}
+
+.dxg-datepicker__year-option[aria-pressed="true"]:is(:hover, :focus-visible) {
+  background: #066575;
+  color: #fff;
 }
 
 .dxg-datepicker--choosing-year .react-datepicker__month,
@@ -427,17 +432,32 @@ body {
 .dxg-datepicker .react-datepicker__day:hover,
 .dxg-datepicker .react-datepicker__time-list-item:hover {
   background: #eafafd !important;
-  color: #109aaf;
+  color: #087f91;
   transform: translateY(-1px);
 }
 
 .dxg-datepicker .react-datepicker__day--keyboard-selected,
 .dxg-datepicker .react-datepicker__day--selected,
 .dxg-datepicker .react-datepicker__time-list-item--selected {
-  background: #1dbfd3 !important;
+  background: #087f91 !important;
   color: #fff !important;
   font-weight: 600 !important;
   box-shadow: 0 5px 12px rgba(29, 191, 211, 0.28);
+}
+
+/* Selected text stays white, so selection must win over the pale hover rule.
+   This also covers today's keyboard preselection and selected time options. */
+.dxg-datepicker .react-datepicker__day--selected:is(:hover, :focus-visible),
+.dxg-datepicker .react-datepicker__day--keyboard-selected:is(:hover, :focus-visible),
+.dxg-datepicker .react-datepicker__time-list-item--selected:is(:hover, :focus-visible) {
+  background: #066575 !important;
+  color: #fff !important;
+}
+
+.dxg-datepicker .react-datepicker__day:not(.react-datepicker__day--disabled):focus-visible,
+.dxg-datepicker .react-datepicker__time-list-item:not(.react-datepicker__time-list-item--disabled):focus-visible {
+  outline: 2px solid #087f91;
+  outline-offset: 2px;
 }
 
 .dxg-datepicker .react-datepicker__day--today:not(.react-datepicker__day--selected) {
