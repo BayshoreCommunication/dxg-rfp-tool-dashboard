@@ -606,12 +606,19 @@ export function useAutoExtraction(
     const timer = setTimeout(() => {
       const store = readAutoExtractStore(proposalId);
       const fresh = candidates.filter(id => !store.handled.includes(id) && !store.pending.includes(id));
-      if (fresh.length === 0) return;
-      writeAutoExtractStore(proposalId, { pending: [...store.pending, ...fresh], handled: store.handled });
-      pollCount.current = 0;
-      setWatch(current => current && current.proposalId === proposalId
-        ? { ...current, sourceIds: [...new Set([...current.sourceIds, ...fresh])] }
-        : { proposalId, sourceIds: [...store.pending, ...fresh] });
+      const pending = [...new Set([...store.pending, ...fresh])];
+      if (pending.length === 0) return;
+      if (fresh.length > 0) writeAutoExtractStore(proposalId, { pending, handled: store.handled });
+      // During the first-send route handoff, the originating workspace may
+      // persist intent after this workspace's initial restore already ran.
+      // Existing pending ids still need a live watch, not just a progress UI.
+      setWatch(current => {
+        if (current?.proposalId === proposalId && pending.every(id => current.sourceIds.includes(id))) return current;
+        pollCount.current = 0;
+        return current?.proposalId === proposalId
+          ? { ...current, sourceIds: [...new Set([...current.sourceIds, ...pending])] }
+          : { proposalId, sourceIds: pending };
+      });
     }, 0);
     return () => clearTimeout(timer);
   }, [proposalId, unextractedKey]);

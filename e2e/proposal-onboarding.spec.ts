@@ -22,7 +22,8 @@ test('new proposal first attachment never flashes a guided question during slow 
     Object.assign(window, { prematureQuestions: observed });
     new MutationObserver(() => {
       const question = [...document.querySelectorAll('p')].find(node => /^Guided question \d+$/.test(node.textContent ?? '') && node.getClientRects().length > 0);
-      if (question) observed.push(document.querySelector('main')?.textContent ?? '');
+      const emptyWelcome = [...document.querySelectorAll('li')].some(node => node.textContent?.startsWith('Share a few event details or attach a brief below.') && node.getClientRects().length > 0);
+      if (question || emptyWelcome) observed.push(document.querySelector('main')?.textContent ?? '');
     }).observe(document.body, { childList: true, subtree: true, attributes: true });
   });
   await page.getByRole('button', {name:'Send message', exact:true}).click();

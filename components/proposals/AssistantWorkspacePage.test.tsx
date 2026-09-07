@@ -526,7 +526,7 @@ describe("AssistantWorkspacePage", () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 
-  test("first send lazily creates the proposal, moves the URL to the assistant route, then posts the message", async () => {
+  test("first send lazily creates the proposal and moves the URL only after message acceptance", async () => {
     mockedCreateProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID } });
     mockedPostMessage.mockResolvedValue({
       success: true,
@@ -556,8 +556,22 @@ describe("AssistantWorkspacePage", () => {
     // shallow history swap. A router.replace() here would start a real
     // navigation that races the send and can abort its server action POST
     // mid-flight, leaving the composer stuck on "Sending…".
-    expect(replaceStateSpy).toHaveBeenCalledWith(null, "", `/proposals/${PROPOSAL_ID}/assistant`);
+    await waitFor(() => expect(replaceStateSpy).toHaveBeenCalledWith(null, "", `/proposals/${PROPOSAL_ID}/assistant`));
+    expect(mockedPostMessage.mock.invocationCallOrder[0]).toBeLessThan(replaceStateSpy.mock.invocationCallOrder[0]);
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  test("a slow first message keeps the original route until it is durably accepted", async () => {
+    mockedCreateProposal.mockResolvedValue({success:true,message:'ok',data:{_id:PROPOSAL_ID}});
+    let accept!: (value: Awaited<ReturnType<typeof postConversationMessageAction>>) => void;
+    mockedPostMessage.mockImplementationOnce(() => new Promise(resolve => {accept=resolve;}));
+    render(<AssistantWorkspacePage />);
+    fireEvent.change(await screen.findByLabelText('Message the proposal assistant'),{target:{value:'A synthetic conference brief.'}});
+    fireEvent.click(screen.getByRole('button',{name:'Send message'}));
+    await waitFor(() => expect(mockedPostMessage).toHaveBeenCalledTimes(1));
+    expect(replaceStateSpy).not.toHaveBeenCalled();
+    await act(async () => {accept({success:true,correlationId:'test',data:{created:true,message:null,assistantMessageId:null,run:null}});});
+    await waitFor(() => expect(replaceStateSpy).toHaveBeenCalledWith(null,'',`/proposals/${PROPOSAL_ID}/assistant`));
   });
 
   test("extracts a guided field value from an explicit typed instruction", () => {

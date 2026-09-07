@@ -51,6 +51,24 @@ test('restored unextracted attachments block the very first render before scan e
   expect(result.current.autoScanning).toBe(true);
 });
 
+test('late persisted intake from the first-send handoff starts a watch when its message arrives', async () => {
+  listSources.mockResolvedValue(ok([source('brief', 'ready')]));
+  const send = jest.fn().mockResolvedValue(true);
+  const { result, rerender } = renderHook(({ attached }) => useAutoExtraction(proposalId, send, [], attached), {
+    initialProps: { attached: [] as string[] },
+  });
+  await act(async () => { await jest.advanceTimersByTimeAsync(1); });
+  expect(result.current.autoScanning).toBe(false);
+  // The originating workspace can persist intake after the destination's
+  // one-time restore effect has already seen an empty store.
+  localStorage.setItem(autoExtractKey(proposalId), JSON.stringify({ pending: ['brief'], handled: [] }));
+  rerender({ attached: ['brief'] });
+  await act(async () => { await jest.advanceTimersByTimeAsync(2); });
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(send).toHaveBeenCalledWith(expect.objectContaining({ sourceIds: ['brief'] }), proposalId);
+  expect(result.current.autoScanning).toBe(false);
+});
+
 test('a failed file stays recoverable after reload and does not discard a healthy file in the same batch', async () => {
   listSources.mockResolvedValue(ok([source('bad', 'failed'), source('good', 'ready')]));
   const send = jest.fn().mockResolvedValue(true);

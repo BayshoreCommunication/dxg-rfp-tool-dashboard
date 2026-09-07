@@ -3194,17 +3194,9 @@ export default function AssistantWorkspacePage({
       return null;
     }
     setProposalId(id);
-    // Stay in place; only move the URL to the proposal's canonical assistant
-    // route so resume/share links land on one surface. This must be a shallow
-    // history swap, not router.replace(): a router navigation started here
-    // races the message send dispatched right after it, and when the
-    // navigation wins Next aborts the in-flight server action POST — the send
-    // never reaches the backend and the composer hangs on "Sending…" forever.
-    window.history.replaceState(
-      null,
-      '',
-      `/proposals/${id}/assistant`,
-    );
+    // Keep the current route while the first upload and message are in flight.
+    // Even a shallow URL swap can let a later Server Action/RSC response mount
+    // the destination route with an empty conversation in production.
     return id;
   }, [proposalId]);
 
@@ -3426,6 +3418,11 @@ export default function AssistantWorkspacePage({
     // scanning succeeds. Ordinary chat remains conversation context; users can
     // explicitly promote longer text through the "Add notes" source control.
     if (sent && sourceIds.length > 0) queueAutoExtract(id, sourceIds);
+    if (sent && !initialProposalId) {
+      // The destination can now restore the accepted message and persisted
+      // scan intent. Never navigate away from an unsent or failed first turn.
+      window.history.replaceState(null, '', `/proposals/${id}/assistant`);
+    }
   };
 
   const handleSend = async (textOverride?: string, source?: 'voice') => {
