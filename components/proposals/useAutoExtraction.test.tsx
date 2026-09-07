@@ -1,4 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
+import { hydrateRoot, type Root } from 'react-dom/client';
 import { autoExtractKey, AUTO_EXTRACT_MAX_WAIT_MS, SOURCE_REQUEST_TIMEOUT_MS, useAutoExtraction, useSourceUpload } from './useConversation';
 import { createPrivateUploadSession, listPrivateDocumentSources } from '@/app/actions/durableJobs';
 
@@ -15,6 +17,33 @@ const ok = (data: ReturnType<typeof source>[]) => ({ success: true as const, dat
 
 beforeEach(() => { jest.resetAllMocks(); jest.useFakeTimers(); localStorage.clear(); sessionStorage.clear(); });
 afterEach(() => jest.useRealTimers());
+
+test.each(['pending', 'failed'])('a persisted %s file state hydrates without a server/client mismatch', async (state) => {
+  localStorage.setItem(autoExtractKey(proposalId), JSON.stringify(state === 'pending'
+    ? { pending: ['brief'], handled: [] }
+    : { pending: [], handled: ['brief'], failures: [{ sourceId: 'brief', filename: 'brief.txt', reason: 'failed' }] }));
+  listSources.mockResolvedValue(ok([source('brief', 'scanning')]));
+  const send = jest.fn();
+  function Harness() {
+    const intake = useAutoExtraction(proposalId, send);
+    return <p>{intake.failedNotices.length ? 'File needs attention' : intake.autoScanning ? 'Reading file' : 'Loading conversation'}</p>;
+  }
+  const container = document.createElement('div');
+  container.innerHTML = renderToString(<Harness />);
+  expect(container.textContent).toBe('Loading conversation');
+  document.body.appendChild(container);
+  const onRecoverableError = jest.fn();
+  let root!: Root;
+  try {
+    await act(async () => { root = hydrateRoot(container, <Harness />, { onRecoverableError }); });
+    await act(async () => { await jest.advanceTimersByTimeAsync(1); });
+    expect(container.textContent).toBe(state === 'pending' ? 'Reading file' : 'File needs attention');
+    expect(onRecoverableError).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => root?.unmount());
+    container.remove();
+  }
+});
 
 test('restored unextracted attachments block the very first render before scan effects start', () => {
   listSources.mockResolvedValue(ok([source('brief', 'scanning')]));

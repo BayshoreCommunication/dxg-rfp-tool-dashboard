@@ -1466,7 +1466,7 @@ describe("AssistantWorkspacePage", () => {
     // enabled without any typing.
     // The suggestion arrives as an ISO day; the picker shows it in the app format.
     expect(screen.getByLabelText("Answer this question")).toHaveValue(formatAppDate(suggested));
-    expect(screen.getByText("Pre-filled from your message — confirm or edit.")).toBeInTheDocument();
+    expect(screen.getByText("Pre-filled from your message or brief — confirm or edit.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
@@ -1488,7 +1488,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("Guided question 1");
     expect(screen.getByLabelText("Answer this question")).toHaveValue(300);
-    expect(screen.getByText("Pre-filled from your message — confirm or edit.")).toBeInTheDocument();
+    expect(screen.getByText("Pre-filled from your message or brief — confirm or edit.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
@@ -1513,9 +1513,9 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("Guided question 1");
-    expect(screen.getByText("The highlighted option comes from your message — tap it to confirm.")).toBeInTheDocument();
+    expect(screen.getByText("The highlighted option comes from your message or brief — tap it to confirm.")).toBeInTheDocument();
     const suggestedPill = screen.getByRole("button", { name: "In-Person" });
-    expect(suggestedPill).toHaveAccessibleDescription("Suggested from your message");
+    expect(suggestedPill).toHaveAccessibleDescription("Suggested from your message or brief");
     // Nothing was submitted by the highlight alone; the tap is the review.
     expect(mockedPatchQuestion).not.toHaveBeenCalled();
     fireEvent.click(suggestedPill);
@@ -1608,7 +1608,7 @@ describe("AssistantWorkspacePage", () => {
       expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
       expect(screen.getByText("What is this event called?")).toBeInTheDocument();
       expect(screen.getByLabelText("Answer this question")).toHaveValue("Northstar Leadership Summit 2026");
-      expect(screen.getByText("Pre-filled from your message — confirm or edit.")).toBeInTheDocument();
+      expect(screen.getByText("Pre-filled from your message or brief — confirm or edit.")).toBeInTheDocument();
     } finally {
       jest.useRealTimers();
     }
@@ -1659,7 +1659,7 @@ describe("AssistantWorkspacePage", () => {
       await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
 
       expect(screen.getByLabelText("Answer this question")).toHaveValue("My Own Event Name");
-      expect(screen.queryByText("Pre-filled from your message — confirm or edit.")).not.toBeInTheDocument();
+      expect(screen.queryByText("Pre-filled from your message or brief — confirm or edit.")).not.toBeInTheDocument();
     } finally {
       jest.useRealTimers();
     }
@@ -1722,7 +1722,7 @@ describe("AssistantWorkspacePage", () => {
       await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
 
       expect(screen.getByLabelText("Answer this question")).toHaveValue("09/20/2026");
-      expect(screen.queryByText("Pre-filled from your message — confirm or edit.")).not.toBeInTheDocument();
+      expect(screen.queryByText("Pre-filled from your message or brief — confirm or edit.")).not.toBeInTheDocument();
     } finally {
       jest.useRealTimers();
     }

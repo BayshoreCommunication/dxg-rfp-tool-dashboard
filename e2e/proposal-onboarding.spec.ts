@@ -49,6 +49,8 @@ test('brief upload → one progress card → extraction failure → retry → me
 });
 
 test('scan failure survives reload and only explicit continue reveals the manual questions', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
   await page.request.post(fixture, { data: { scan: 'failed' } });
   await page.locator('input[type="file"]').setInputFiles({ name: 'unreadable-brief.pdf', mimeType: 'application/pdf', buffer: Buffer.from('Synthetic failed scan fixture') });
   await page.getByRole('button', { name: 'Send message' }).click();
@@ -65,4 +67,5 @@ test('scan failure survives reload and only explicit continue reveals the manual
   await expect(page.getByText('Guided question 1', { exact: true })).toBeVisible();
   const state = await (await page.request.get(fixture)).json();
   expect(state.requests.filter((item: { intent: string }) => item.intent === 'extract_requirements')).toHaveLength(0);
+  expect(errors).toEqual([]);
 });

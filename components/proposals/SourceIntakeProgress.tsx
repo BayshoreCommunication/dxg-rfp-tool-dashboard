@@ -6,7 +6,7 @@ export type SourceIntakePhase = "uploading" | "checking" | "reading";
 
 const phases = {
   uploading: { title: "Uploading your brief", detail: "Keep this page open while your attachment uploads.", step: 0 },
-  checking: { title: "Checking your file", detail: "I’ll read the brief once the file checks finish, then ask only about missing details.", step: 1 },
+  checking: { title: "Checking your file", detail: "I’ll read the brief once the file checks finish. Then we’ll confirm what I found and fill any gaps.", step: 1 },
   reading: { title: "Reading your brief", detail: "I’m looking for the event, dates, venue and production needs before asking the next question.", step: 2 },
 };
 

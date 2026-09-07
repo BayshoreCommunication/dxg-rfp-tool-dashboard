@@ -1652,7 +1652,7 @@ function GuidedQuestionCard({
                 {...(isSuggested
                   ? {
                       'aria-description':
-                        'Suggested from your message',
+                        'Suggested from your message or brief',
                     }
                   : {})}
                 onClick={() => {
@@ -1789,8 +1789,8 @@ function GuidedQuestionCard({
       {prefilled && !displayError && (
         <p role="note" className="mt-2 text-xs text-slate-600">
           {answerType === 'choice'
-            ? 'The highlighted option comes from your message — tap it to confirm.'
-            : 'Pre-filled from your message — confirm or edit.'}
+            ? 'The highlighted option comes from your message or brief — tap it to confirm.'
+            : 'Pre-filled from your message or brief — confirm or edit.'}
         </p>
       )}
       {displayError && (
@@ -1874,6 +1874,7 @@ function ContextRunCard({
         {message.content}
       </p>
       {fieldCount === 0 && <p className="mt-2 text-sm text-amber-800">I couldn’t identify proposal details in this file. You can attach a clearer brief or enter the details below.</p>}
+      {fieldCount !== null && fieldCount > 0 && <p className="mt-2 text-sm text-slate-600">Review the suggestions together, or confirm the pre-filled answers below. You can edit anything before saving it.</p>}
       {fieldCount !== null && fieldCount > 0 && (
         <Link
           href={reviewHref}
@@ -4872,7 +4873,7 @@ export default function AssistantWorkspacePage({
                 )}
               </div>
               {sourceExtractionInProgress || extractionFailureBlocksQuestions ? (
-                <p className="mt-3 text-xs leading-5 text-slate-600">{extractionFailureBlocksQuestions ? 'Resolve the attachment issue in the conversation, or choose to continue without it.' : 'I’ll review your attachment first. Then we’ll work through only the missing details, one question at a time.'}</p>
+                <p className="mt-3 text-xs leading-5 text-slate-600">{extractionFailureBlocksQuestions ? 'Resolve the attachment issue in the conversation, or choose to continue without it.' : 'I’ll review your attachment first. Then we’ll confirm what I found and fill in any missing details, one step at a time.'}</p>
               ) : activeQuestions.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-400">
                   {questionsComplete

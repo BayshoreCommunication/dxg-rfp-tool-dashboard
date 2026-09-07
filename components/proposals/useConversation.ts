@@ -24,9 +24,12 @@ import {
   type PrivateDocumentSource,
 } from "@/app/actions/durableJobs";
 import { nextPollDelay, presentJob, type DurableJob } from "@/lib/asyncOperations";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const uuidPattern = /^[0-9a-f-]{36}$/i;
+const subscribeToHydration = () => () => {};
+const browserSnapshot = () => true;
+const serverSnapshot = () => false;
 
 // Slightly wider than the server action deadline so a lost request can never
 // leave the optimistic entry in "sending" indefinitely. The bound also keeps
@@ -571,10 +574,13 @@ export function useAutoExtraction(
   // proposal.
   unextractedAttachmentSourceIds: string[] = [],
 ) {
+  // Storage is browser-only. Hydration must first match the server markup;
+  // React then reads the browser snapshot before the restored flow continues.
+  const hydrated = useSyncExternalStore(subscribeToHydration, browserSnapshot, serverSnapshot);
   // The watch carries its own proposal id so a send right after lazy proposal
   // creation is tracked even before the hook re-renders with the new id.
   const [watch, setWatch] = useState<{ proposalId: string; sourceIds: string[] } | null>(null);
-  const [failedNotices, setFailedNotices] = useState<AutoExtractNotice[]>(() => proposalId ? readAutoExtractStore(proposalId).failures ?? [] : []);
+  const [failedNotices, setFailedNotices] = useState<AutoExtractNotice[]>(() => hydrated && proposalId ? readAutoExtractStore(proposalId).failures ?? [] : []);
   const sendRef = useRef(sendMessage);
   useEffect(() => { sendRef.current = sendMessage; }, [sendMessage]);
   const extractedRef = useRef(extractedSourceIds);
@@ -751,7 +757,8 @@ export function useAutoExtraction(
 
   // Cover the first render of a restored attachment too, before the effects
   // resume its watch. Otherwise the empty event-name question flashes first.
-  const stored = proposalId ? readAutoExtractStore(proposalId) : { pending: [], handled: [] };
+  const stored = hydrated && proposalId ? readAutoExtractStore(proposalId) : { pending: [], handled: [] };
   const waitingIds = [...new Set([...stored.pending, ...unextractedAttachmentSourceIds.filter(id => !stored.handled.includes(id))])];
-  return { queueAutoExtract, dropSource, retryFileCheck, continueWithoutFiles, skipSources, autoScanning: watch !== null || waitingIds.length > 0, scanCount: watch?.sourceIds.length ?? waitingIds.length, failedNotices };
+  const visibleFailures = hydrated ? stored.failures ?? failedNotices : [];
+  return { queueAutoExtract, dropSource, retryFileCheck, continueWithoutFiles, skipSources, autoScanning: watch !== null || waitingIds.length > 0, scanCount: watch?.sourceIds.length ?? waitingIds.length, failedNotices: visibleFailures };
 }
