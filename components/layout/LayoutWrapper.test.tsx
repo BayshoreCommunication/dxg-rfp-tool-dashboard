@@ -66,6 +66,17 @@ const FieldHelpTrigger = () => {
 };
 
 describe("LayoutWrapper", () => {
+  test("clips horizontal overflow without trapping sticky route controls", () => {
+    render(
+      <LayoutWrapper>
+        <div>Dashboard</div>
+      </LayoutWrapper>,
+    );
+
+    expect(screen.getByTestId("layout-shell")).toHaveClass("overflow-x-clip");
+    expect(screen.getByTestId("layout-shell")).not.toHaveClass("overflow-x-hidden");
+  });
+
   test("omits assistant controls when organization access is disabled", () => {
     render(
       <LayoutWrapper assistantEnabled={false}>

@@ -26,6 +26,32 @@ describe("ProposalExperienceBar", () => {
     expect(onModeChange).toHaveBeenCalledWith("advanced");
   });
 
+  test("uses a compact, mode-free readiness row in the edit experience", () => {
+    render(
+      <ProposalExperienceBar
+        mode="advanced"
+        onModeChange={jest.fn()}
+        completedSteps={3}
+        totalSteps={9}
+        issues={[]}
+        onIssueClick={jest.fn()}
+        compact
+        showModeSelector={false}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Review and complete your proposal." }))
+      .toHaveClass("text-base");
+    expect(screen.queryByRole("group", { name: "Proposal detail mode" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Basic mode" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Advanced production" }))
+      .not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Proposal readiness progress" }))
+      .toHaveAttribute("aria-valuenow", "33");
+  });
+
   test("opens a clickable remaining-items checklist", async () => {
     const user = userEvent.setup();
     const onIssueClick = jest.fn();

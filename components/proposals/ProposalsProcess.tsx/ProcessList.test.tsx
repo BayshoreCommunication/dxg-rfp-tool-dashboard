@@ -66,16 +66,25 @@ describe("ProcessList", () => {
 
     expect(screen.getByTestId("proposal-process-list")).toHaveClass(
       "border-b",
-      "@min-[1000px]:min-h-screen",
-      "@min-[1000px]:border-l",
+      "@min-[1000px]:max-h-[calc(100vh-1.5rem)]",
+      "@min-[1000px]:rounded-2xl",
     );
     expect(screen.getByTestId("proposal-step-scroller")).toHaveClass(
       "overflow-x-auto",
       "@min-[1000px]:flex-col",
-      "@min-[1000px]:overflow-visible",
+      "@min-[1000px]:overflow-y-auto",
     );
     expect(screen.getByRole("button", { name: "Go to Event Overview" }).parentElement)
       .toHaveClass("min-w-[180px]", "@min-[1000px]:min-w-0");
+  });
+
+  it("keeps autosave status inside the sticky workflow rail header", () => {
+    render(<ProcessList activeStep={1} autosaveStatus="All changes saved" />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("All changes saved");
+    expect(screen.getByRole("status").parentElement).toContainElement(
+      screen.getByText("Workflow sections").parentElement,
+    );
   });
 
   it("uses sequential visible numbering without introducing a second progress indicator", () => {

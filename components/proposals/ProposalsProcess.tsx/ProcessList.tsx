@@ -52,6 +52,8 @@ const ProcessList = ({
   onStepChange,
   completedStepIds,
   mode = "advanced",
+  autosaveStatus,
+  autosaveError = false,
 }: {
   activeStep?: number;
   hideStepIds?: number[];
@@ -59,6 +61,8 @@ const ProcessList = ({
   /** Steps whose required fields are actually filled. Omit for positional. */
   completedStepIds?: number[];
   mode?: ProposalExperienceMode;
+  autosaveStatus?: string;
+  autosaveError?: boolean;
 }) => {
   const visibleSteps = steps
     .filter((s) => !hideStepIds.includes(s.id))
@@ -83,15 +87,26 @@ const ProcessList = ({
   }));
 
   return (
-    <aside data-testid="proposal-process-list" className="w-full border-b border-[#e1e8ed] bg-[#fbfdfe] px-3 py-4 font-sans shadow-[0_8px_24px_rgba(15,42,67,0.035)] sm:px-4 @min-[1000px]:min-h-screen @min-[1000px]:border-b-0 @min-[1000px]:border-l @min-[1000px]:px-5 @min-[1000px]:py-7 @min-[1000px]:shadow-[-10px_0_30px_rgba(15,42,67,0.025)]">
-      <div className="mb-3 px-1 @min-[1000px]:mb-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#647582]">
-          Workflow sections
-        </p>
-        <p className="mt-1 text-xs text-[#8a98a3]">Select any section to review or edit.</p>
+    <aside data-testid="proposal-process-list" className="w-full overflow-hidden border-b border-[#e1e8ed] bg-[#fbfdfe] px-3 py-4 font-sans shadow-[0_8px_24px_rgba(15,42,67,0.035)] sm:px-4 @min-[1000px]:max-h-[calc(100vh-1.5rem)] @min-[1000px]:rounded-2xl @min-[1000px]:border @min-[1000px]:px-5 @min-[1000px]:py-5 @min-[1000px]:shadow-[-10px_0_30px_rgba(15,42,67,0.025)]">
+      <div className="mb-3 flex items-start justify-between gap-3 px-1 @min-[1000px]:mb-4">
+        <div className="min-w-0">
+          <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.18em] text-[#647582]">
+            Workflow sections
+          </p>
+          <p className="mt-1 text-xs text-[#8a98a3]">Select any section to review or edit.</p>
+        </div>
+        {autosaveStatus && (
+          <p
+            role="status"
+            aria-live="polite"
+            className={`shrink-0 text-right text-[10px] leading-4 ${autosaveError ? "text-red-600" : "text-slate-500"}`}
+          >
+            {autosaveStatus}
+          </p>
+        )}
       </div>
 
-      <div data-testid="proposal-step-scroller" className="relative flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 [scrollbar-width:thin] @min-[1000px]:flex-col @min-[1000px]:overflow-visible @min-[1000px]:pb-0">
+      <div data-testid="proposal-step-scroller" className="relative flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 [scrollbar-width:thin] @min-[1000px]:max-h-[calc(100vh-7rem)] @min-[1000px]:flex-col @min-[1000px]:overflow-x-hidden @min-[1000px]:overflow-y-auto @min-[1000px]:pb-0 @min-[1000px]:pr-1">
         {badgedSteps.map((step, index) => {
           const isActive    = activeStep === step.id;
           // A green check reads as "this is done". Derived from position alone,

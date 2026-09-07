@@ -15,6 +15,8 @@ type Props = {
   totalSteps: number;
   issues: ProposalChecklistIssue[];
   onIssueClick: (issue: ProposalChecklistIssue) => void;
+  compact?: boolean;
+  showModeSelector?: boolean;
 };
 
 export default function ProposalExperienceBar({
@@ -24,6 +26,8 @@ export default function ProposalExperienceBar({
   totalSteps,
   issues,
   onIssueClick,
+  compact = false,
+  showModeSelector = true,
 }: Props) {
   const [checklistOpen, setChecklistOpen] = useState(false);
   const checklistId = useId();
@@ -63,53 +67,57 @@ export default function ProposalExperienceBar({
   return (
     <section
       aria-label="Proposal workflow controls"
-      className="rounded-2xl border border-[#dce7ed] bg-white p-4 shadow-[0_8px_28px_rgba(15,42,67,0.06)] sm:p-5"
+      className={`rounded-2xl border border-[#dce7ed] bg-white shadow-[0_8px_28px_rgba(15,42,67,0.06)] ${compact ? "p-4" : "p-4 sm:p-5"}`}
     >
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className={`flex flex-col ${compact ? "gap-2" : "gap-4 xl:flex-row xl:items-center xl:justify-between"}`}>
         <div>
           <p className="text-[11px] font-extrabold uppercase tracking-[0.17em] text-[#0786cf]">
             Proposal builder
           </p>
-          <h1 className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[#172b3a]">
-            Start simple. Add production detail when you need it.
+          <h1 className={`mt-1 font-extrabold tracking-[-0.02em] text-[#172b3a] ${compact ? "text-base" : "text-xl"}`}>
+            {compact
+              ? "Review and complete your proposal."
+              : "Start simple. Add production detail when you need it."}
           </h1>
         </div>
 
-        <div
-          aria-label="Proposal detail mode"
-          className="inline-flex w-full rounded-xl border border-slate-200 bg-slate-50 p-1 xl:w-auto"
-          role="group"
-        >
-          <button
-            type="button"
-            aria-pressed={mode === "basic"}
-            onClick={() => onModeChange("basic")}
-            className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] xl:flex-none ${
-              mode === "basic"
-                ? "bg-white text-[#0786cf] shadow-sm ring-1 ring-slate-200"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
+        {showModeSelector && (
+          <div
+            aria-label="Proposal detail mode"
+            className="inline-flex w-full rounded-xl border border-slate-200 bg-slate-50 p-1 xl:w-auto"
+            role="group"
           >
-            <Sparkles size={16} aria-hidden="true" />
-            Basic mode
-          </button>
-          <button
-            type="button"
-            aria-pressed={mode === "advanced"}
-            onClick={() => onModeChange("advanced")}
-            className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] xl:flex-none ${
-              mode === "advanced"
-                ? "bg-white text-[#0786cf] shadow-sm ring-1 ring-slate-200"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <SlidersHorizontal size={16} aria-hidden="true" />
-            Advanced production
-          </button>
-        </div>
+            <button
+              type="button"
+              aria-pressed={mode === "basic"}
+              onClick={() => onModeChange("basic")}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] xl:flex-none ${
+                mode === "basic"
+                  ? "bg-white text-[#0786cf] shadow-sm ring-1 ring-slate-200"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Sparkles size={16} aria-hidden="true" />
+              Basic mode
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "advanced"}
+              onClick={() => onModeChange("advanced")}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] xl:flex-none ${
+                mode === "advanced"
+                  ? "bg-white text-[#0786cf] shadow-sm ring-1 ring-slate-200"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <SlidersHorizontal size={16} aria-hidden="true" />
+              Advanced production
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,360px)] lg:items-start">
+      <div className={`grid lg:grid-cols-[minmax(0,1fr)_minmax(260px,360px)] ${compact ? "mt-3 gap-3 lg:items-center" : "mt-5 gap-4 lg:items-start"}`}>
         <div>
           <div className="flex items-center justify-between gap-4 text-xs font-bold text-slate-600">
             <span>Proposal readiness</span>
@@ -130,11 +138,13 @@ export default function ProposalExperienceBar({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            {mode === "basic"
-              ? "Essential event, venue, room, budget, and contact questions only."
-              : "Full technical, creative, recording, vendor, and evaluation controls."}
-          </p>
+          {!compact && (
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              {mode === "basic"
+                ? "Essential event, venue, room, budget, and contact questions only."
+                : "Full technical, creative, recording, vendor, and evaluation controls."}
+            </p>
+          )}
         </div>
 
         <div ref={checklistRef} className="relative">

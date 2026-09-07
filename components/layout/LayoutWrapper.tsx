@@ -94,8 +94,12 @@ export default function LayoutWrapper({
   return (
     <AssistantLauncherProvider value={launcherValue}>
       <div
+        data-testid="layout-shell"
         className={cn(
-          "min-h-svh overflow-x-hidden",
+          // `hidden` creates a non-scrolling overflow ancestor that prevents
+          // route-level sticky rails from following the viewport. `clip`
+          // keeps the same horizontal containment without breaking sticky.
+          "min-h-svh overflow-x-clip",
           proposalAssistantRoute ? "bg-white lg:bg-[#F4F7FA]" : "bg-[#F4F7FA]",
         )}
       >

@@ -2734,27 +2734,42 @@ const AddNewProposal = ({
       {/* ── Steps 1–7: Multi-step form ── */}
       {!loadingExisting && proposalProcessStep >= 1 && (
         <>
-        <ProposalExperienceBar
-          mode={experienceMode}
-          onModeChange={handleModeChange}
-          completedSteps={visibleCompletedSteps}
-          totalSteps={visibleStepOrder.length}
-          issues={checklistIssues}
-          onIssueClick={handleChecklistIssue}
-        />
+        {!isEditMode && (
+          <ProposalExperienceBar
+            mode={experienceMode}
+            onModeChange={handleModeChange}
+            completedSteps={visibleCompletedSteps}
+            totalSteps={visibleStepOrder.length}
+            issues={checklistIssues}
+            onIssueClick={handleChecklistIssue}
+          />
+        )}
         <div data-testid="proposal-editor-layout" className="flex w-full flex-col items-stretch gap-4 bg-[#f4f7f9] p-0 sm:p-3 lg:p-5 @min-[1000px]:flex-row @min-[1000px]:items-start @min-[1000px]:gap-5">
-          {/* Form area */}
-          <div
-            data-testid="proposal-editor-form"
-            className="proposal-editor-surface order-2 min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e2e8ec] bg-white shadow-[0_10px_35px_rgba(15,42,67,0.06)] @min-[1000px]:order-1"
-            data-assistant-current-section="true"
-            data-assistant-section-id={
-              assistantSectionByStep[
-                proposalProcessStep as keyof typeof assistantSectionByStep
-              ]
-            }
-            data-assistant-event-format={proposalData.event.eventFormat}
-          >
+          <div data-testid="proposal-editor-main" className="order-2 flex min-w-0 flex-1 flex-col gap-4 @min-[1000px]:order-1">
+            {isEditMode && (
+              <ProposalExperienceBar
+                mode="advanced"
+                onModeChange={handleModeChange}
+                completedSteps={visibleCompletedSteps}
+                totalSteps={visibleStepOrder.length}
+                issues={checklistIssues}
+                onIssueClick={handleChecklistIssue}
+                compact
+                showModeSelector={false}
+              />
+            )}
+            {/* Form area */}
+            <div
+              data-testid="proposal-editor-form"
+              className="proposal-editor-surface min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e2e8ec] bg-white shadow-[0_10px_35px_rgba(15,42,67,0.06)]"
+              data-assistant-current-section="true"
+              data-assistant-section-id={
+                assistantSectionByStep[
+                  proposalProcessStep as keyof typeof assistantSectionByStep
+                ]
+              }
+              data-assistant-event-format={proposalData.event.eventFormat}
+            >
             {isEditMode && proposalId && process.env.NEXT_PUBLIC_PROPOSAL_WORKFLOW_ENABLED === "true" && (
               <ProposalWorkflowShell
                 proposalId={proposalId}
@@ -2984,21 +2999,10 @@ const AddNewProposal = ({
                 }
               />
             )}
+            </div>
           </div>
           {/* Proposal progress sidebar */}
-          <div data-testid="proposal-editor-progress" className="order-1 w-full shrink-0 @min-[1000px]:sticky @min-[1000px]:top-0 @min-[1000px]:order-2 @min-[1000px]:w-[288px] @min-[1000px]:self-start">
-            {autosaveEligible && (
-              <p
-                role="status"
-                aria-live="polite"
-                className={`mb-2 px-1 text-xs ${autosaveState === "error" ? "text-red-600" : "text-slate-500"}`}
-              >
-                {autosaveState === "saving" && "Saving…"}
-                {autosaveState === "saved" && "All changes saved"}
-                {autosaveState === "error" && "Couldn't save your latest changes — they are still on screen."}
-                {autosaveState === "idle" && "Changes save automatically"}
-              </p>
-            )}
+          <div data-testid="proposal-editor-progress" className="order-1 w-full shrink-0 @min-[1000px]:sticky @min-[1000px]:top-3 @min-[1000px]:order-2 @min-[1000px]:w-[288px] @min-[1000px]:self-start">
             <ProcessList
               activeStep={proposalProcessStep}
               hideStepIds={Array.from({ length: 10 }, (_, index) => index + 1).filter(
@@ -3007,6 +3011,16 @@ const AddNewProposal = ({
               onStepChange={navigateToStep}
               completedStepIds={completedStepIds}
               mode={experienceMode}
+              autosaveStatus={autosaveEligible
+                ? autosaveState === "saving"
+                  ? "Saving…"
+                  : autosaveState === "saved"
+                    ? "All changes saved"
+                    : autosaveState === "error"
+                      ? "Save failed"
+                      : "Auto-save on"
+                : undefined}
+              autosaveError={autosaveState === "error"}
             />
           </div>
         </div>

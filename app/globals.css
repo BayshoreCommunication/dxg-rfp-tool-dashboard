@@ -98,7 +98,9 @@ body {
 html,
 body {
   max-width: 100%;
-  overflow-x: hidden;
+  /* Clip horizontal paint without turning the document into the containing
+     scroll ancestor; route-level sticky controls must follow the viewport. */
+  overflow-x: clip;
 }
 
 /* Attachment handoff — compact pixel-grid loader inspired by Beautiful UI. */
