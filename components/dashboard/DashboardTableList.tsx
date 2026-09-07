@@ -19,6 +19,8 @@ import React, { useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { formatAppDate } from "@/lib/dateFormat";
 
+const showLocalThemePreview = process.env.NODE_ENV === "development";
+
 type ProposalStatus =
   | "unsubmitted"
   | "submitted"
@@ -362,7 +364,15 @@ export default function DashboardTableList({
           </div>
         </div>
 
-        <div className="overflow-x-auto overscroll-x-contain">
+        <div
+          className={
+            showLocalThemePreview
+              ? "overflow-x-auto overscroll-x-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2fc6f5]"
+              : "overflow-x-auto overscroll-x-contain"
+          }
+          tabIndex={showLocalThemePreview ? 0 : undefined}
+          aria-label={showLocalThemePreview ? "Latest proposals table" : undefined}
+        >
           <table className="w-full min-w-[760px] text-left">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">

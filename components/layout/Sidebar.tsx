@@ -96,7 +96,7 @@ function AccountMenu({
         title={displayName}
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "group relative grid place-items-center rounded-full border border-primary/30 bg-primary/10 font-extrabold text-primary transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          "group relative grid place-items-center rounded-full border border-primary/30 bg-primary/10 font-extrabold text-primary transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:text-[#38bdf8] dark:focus-visible:ring-offset-[#0d1d28]",
           "h-10 w-10 text-xs",
           open && "border-primary/50 bg-primary/15 shadow-[0_10px_24px_-16px_rgba(0,138,210,0.9)]",
         )}
@@ -392,7 +392,7 @@ const Sidebar = ({
 
       <div
         data-testid="sidebar-footer-divider"
-        className="mx-4 h-px shrink-0 bg-linear-to-r from-transparent via-gray-200 to-transparent"
+        className="mx-4 h-px shrink-0 bg-linear-to-r from-transparent via-gray-200 to-transparent dark:via-[#283c4a]"
       />
 
       <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3">

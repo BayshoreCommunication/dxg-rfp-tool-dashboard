@@ -149,7 +149,7 @@ const GatewayCard = ({
           isSelected ? "border-[#1DBFD3] bg-[#1DBFD3]" : "border-[#e4e4e4]"
         }`}
       >
-        {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+        {isSelected && <div className="theme-preserve-white h-2 w-2 rounded-full bg-white" />}
       </div>
       <span
         className={`text-sm font-bold ${

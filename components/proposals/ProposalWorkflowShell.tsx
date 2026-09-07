@@ -170,7 +170,7 @@ export default function ProposalWorkflowShell({
           <div className="flex items-start gap-3.5">
             <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#0786cf] text-white shadow-[0_6px_16px_rgba(7,134,207,0.22)]">
               <Send size={20} strokeWidth={1.9} aria-hidden="true" />
-              {!isPublished && <span className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-[#f2fbff] bg-white text-[#0786cf]"><Sparkles size={11} strokeWidth={2.2} aria-hidden="true" /></span>}
+              {!isPublished && <span className="theme-preserve-white absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-[#f2fbff] bg-white text-[#0786cf]"><Sparkles size={11} strokeWidth={2.2} aria-hidden="true" /></span>}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "AI-guided workspace"}</p>

@@ -146,8 +146,8 @@ export default function CampaignResponsesModal({
         className="flex w-full max-w-5xl flex-col overflow-hidden rounded-3xl shadow-2xl"
         style={{
           height: "78vh",
-          background: "#fff",
-          boxShadow: "0 32px 80px -12px rgba(2,6,23,0.35), 0 0 0 1px rgba(0,0,0,0.06)",
+          background: "var(--dxg-app-surface)",
+          boxShadow: "var(--dxg-modal-shadow)",
         }}
       >
         {/* ── Header ── */}
@@ -329,7 +329,10 @@ export default function CampaignResponsesModal({
 
           {/* ── Detail panel ── */}
           {selected && (
-            <div className="flex-1 overflow-y-auto" style={{ background: "#f8fafc" }}>
+            <div
+              className="flex-1 overflow-y-auto"
+              style={{ background: "var(--dxg-app-surface-muted)" }}
+            >
               {/* Detail header */}
               <div className="sticky top-0 z-10 border-b border-slate-200/70 bg-white/95 backdrop-blur-sm px-7 py-4">
                 <div className="flex items-center justify-between gap-4">

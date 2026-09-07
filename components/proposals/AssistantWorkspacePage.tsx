@@ -1290,7 +1290,7 @@ function DraftProgressCard({ updating }: { updating: boolean }) {
       data-testid="draft-progress-card"
       className="w-full max-w-3xl overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]"
     >
-      <div className="flex items-start gap-3 bg-gradient-to-r from-emerald-50 via-white to-cyan-50/70 px-4 py-4 sm:px-5">
+      <div className="flex items-start gap-3 bg-gradient-to-r from-emerald-50 via-white to-cyan-50/70 px-4 py-4 dark:from-[#0b3033] dark:via-[#0d1d28] dark:to-[#0a2632] sm:px-5">
         <span className="relative mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#087f69] text-white shadow-sm">
           <FileText size={17} aria-hidden />
           <span
@@ -1957,7 +1957,7 @@ function DraftRunCard({
   const detailsHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   return (
     <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]">
-      <header className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-cyan-50/60 px-4 py-4 sm:px-5">
+      <header className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-cyan-50/60 px-4 py-4 dark:from-[#0b3033] dark:via-[#0d1d28] dark:to-[#0a2632] sm:px-5">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#087f69] text-white shadow-sm">
             <FileText size={17} aria-hidden />
@@ -4160,7 +4160,7 @@ export default function AssistantWorkspacePage({
                   type="button"
                   aria-label="Finish voice input"
                   onClick={finishVoiceInput}
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white text-[#202020] transition-colors hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="theme-preserve-light grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white text-[#202020] transition-colors hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   <Square size={13} fill="currentColor" aria-hidden />
                 </button>

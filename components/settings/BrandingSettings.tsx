@@ -74,7 +74,7 @@ const BrandingSettings = ({
           <button
             type="button"
             onClick={() => logoInputRef.current?.click()}
-            className="flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-md border border-[#e4e4e4] bg-[#e8ebf0] text-[#c7ccd6] hover:border-primary/50"
+            className="theme-light-proof flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-md border border-[#e4e4e4] bg-[#e8ebf0] text-[#c7ccd6] hover:border-primary/50"
             aria-label="Upload company logo"
           >
             {value.logoFile && value.logoFile !== failedLogoUrl ? (

@@ -2207,7 +2207,7 @@ const RoomCard = ({
     <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
       <div
         className="flex flex-col items-stretch gap-3 px-4 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-5"
-        style={{ borderBottom: isExpanded ? "1px solid #e4e4e4" : "none" }}
+        style={{ borderBottom: isExpanded ? "1px solid var(--dxg-divider)" : "none" }}
       >
         <button
           type="button"

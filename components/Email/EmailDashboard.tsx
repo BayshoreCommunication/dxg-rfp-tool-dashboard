@@ -450,8 +450,8 @@ function MetricCard({
   );
   const style = {
     background: highlight
-      ? "linear-gradient(to bottom, #ecfdf5, #ffffff)"
-      : "linear-gradient(to bottom, #ffffff, #f8fafc)",
+      ? "var(--dxg-stat-tile-highlight)"
+      : "var(--dxg-stat-tile)",
   };
 
   const content = (

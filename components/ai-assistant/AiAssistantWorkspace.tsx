@@ -275,7 +275,7 @@ export default function AiAssistantWorkspace({
             <div
               data-testid="assistant-control-scrim"
               aria-hidden
-              className="pointer-events-none absolute inset-x-px top-px z-20 h-16 rounded-t-[23px] bg-linear-to-b from-white/95 via-white/80 to-white/20 backdrop-blur-md"
+              className="pointer-events-none absolute inset-x-px top-px z-20 h-16 rounded-t-[23px] bg-linear-to-b from-white/95 via-white/80 to-white/20 backdrop-blur-md dark:from-[#0d1d28]/95 dark:via-[#0d1d28]/80 dark:to-[#0d1d28]/20"
             />
           )}
           {popupPresentation && onClose ? (

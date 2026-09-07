@@ -174,7 +174,7 @@ const ChannelSwitch = ({
         }`}
       >
         <span
-          className={`grid h-5 w-5 place-items-center rounded-full bg-white text-[#008ad2] shadow-sm transition-transform ${
+          className={`theme-preserve-white grid h-5 w-5 place-items-center rounded-full bg-white text-[#008ad2] shadow-sm transition-transform ${
             checked ? "translate-x-[22px]" : "translate-x-[3px]"
           }`}
         >
@@ -266,7 +266,7 @@ export default function NotificationSettings({
 
   return (
     <section className="space-y-6 px-6 pb-10">
-      <div className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/60 to-cyan-50/60 px-5 py-6 shadow-sm sm:px-7">
+      <div className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/60 to-cyan-50/60 px-5 py-6 shadow-sm dark:from-[#0d1d28] dark:via-[#0a2632] dark:to-[#0b3033] sm:px-7">
         <div className="absolute -right-16 -top-20 h-52 w-52 rounded-full bg-[#2fc6f5]/10 blur-3xl" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
