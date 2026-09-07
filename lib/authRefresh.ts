@@ -86,6 +86,13 @@ export async function createBackendRefreshCommand(
   return { ...unsigned, signature: toHex(signature) };
 }
 
+// Identical on independent server instances holding the same encrypted session.
+// This is separate from the short-lived, random Auth.js update command above.
+export async function createRefreshOperationKey(refreshToken: string): Promise<string> {
+  return toHex(await globalThis.crypto.subtle.sign('HMAC', await hmacKey(),
+    new TextEncoder().encode(JSON.stringify(['rfpilot-refresh-operation-v1', refreshToken]))));
+}
+
 export async function verifyBackendRefreshCommand(
   value: unknown,
   expectedSessionId: string,
@@ -226,7 +233,7 @@ export function createBackendRefreshCoordinator(
         `${AUTH_API_ORIGIN}/api/auth/refresh`,
         {
           method: "POST",
-          headers: authBffHeaders(),
+          headers: { ...authBffHeaders(), 'x-rfpilot-refresh-operation': await createRefreshOperationKey(token.refreshToken) },
           body: JSON.stringify({ refreshToken: token.refreshToken }),
           cache: "no-store",
         },

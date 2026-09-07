@@ -4,6 +4,7 @@ import {
   authBffHeaders,
   createBackendRefreshCommand,
   createBackendRefreshCoordinator,
+  createRefreshOperationKey,
   verifyBackendRefreshCommand,
 } from "./authRefresh";
 import {
@@ -25,6 +26,23 @@ beforeAll(() => {
 });
 
 describe("backend refresh coordinator", () => {
+  it('uses the same secret-bound operation across independent instances and changes it with the credential', async () => {
+    const headers: Headers[] = [];
+    const fetcher: typeof fetch = async (_url, init) => {
+      headers.push(new Headers(init?.headers));
+      return Response.json({ accessToken:'next', tokenExpiresAt:20000, refreshToken:'next-refresh', refreshExpiresAt:30000, sessionId:'session-1' });
+    };
+    await Promise.all([
+      createBackendRefreshCoordinator({fetcher, now:() => 100}).refresh(token),
+      createBackendRefreshCoordinator({fetcher, now:() => 100}).refresh(token),
+    ]);
+    const keys = headers.map(value => value.get('x-rfpilot-refresh-operation'));
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toMatch(/^[a-f0-9]{64}$/);
+    expect(keys[0]).toEqual(keys[1]);
+    expect(keys[0]).not.toEqual(await createRefreshOperationKey('another-refresh'));
+    expect(keys[0]).not.toContain(token.refreshToken);
+  });
   it("fails closed when the BFF shared secret is missing", () => {
     const sharedSecret = process.env.BFF_SHARED_SECRET;
     delete process.env.BFF_SHARED_SECRET;
