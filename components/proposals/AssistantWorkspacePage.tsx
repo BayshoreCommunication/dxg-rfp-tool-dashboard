@@ -4770,7 +4770,7 @@ export default function AssistantWorkspacePage({
             the conversation on narrow screens. At desktop widths the details
             wrapper becomes layout-transparent and restores the right rail. */}
         {railVisible && (
-          <div className="order-1 shrink-0 border-b border-slate-200 bg-white xl:order-2 xl:block xl:h-full xl:w-80 xl:border-0 xl:bg-transparent">
+          <div className="order-1 min-w-0 shrink-0 border-b border-slate-200 bg-white xl:order-2 xl:block xl:h-full xl:w-[clamp(20rem,24vw,23rem)] xl:border-0 xl:bg-transparent">
             <button
               type="button"
               aria-label="Toggle AI workspace tools"
@@ -4801,7 +4801,10 @@ export default function AssistantWorkspacePage({
             >
             <div
               data-testid="proposal-assistant-tools-scroll"
-              className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable] xl:-mr-1 xl:pr-2"
+              tabIndex={0}
+              role="region"
+              aria-label="AI workspace overview and questions"
+              className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl pr-1 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
             >
             <section
               aria-labelledby="rail-ai-title"
@@ -4874,9 +4877,9 @@ export default function AssistantWorkspacePage({
                 see how far along the intake is without scrolling the thread. */}
             <section
               aria-labelledby="rail-questions-title"
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-cyan-300 focus-within:shadow-md hover:shadow-md"
+              className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4"
             >
-              <div className="flex items-baseline justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                 <h2
                   id="rail-questions-title"
                   className="text-sm font-bold text-slate-900"
@@ -4884,7 +4887,7 @@ export default function AssistantWorkspacePage({
                   Key questions
                 </h2>
                 {activeQuestions.length > 0 && (
-                  <span className="text-[11px] font-semibold text-slate-500">
+                  <span className="shrink-0 whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-slate-600">
                     {`${resolvedQuestionCount} of ${activeQuestions.length} done`}
                   </span>
                 )}
@@ -4905,6 +4908,7 @@ export default function AssistantWorkspacePage({
                     aria-valuemin={0}
                     aria-valuemax={activeQuestions.length}
                     aria-valuenow={resolvedQuestionCount}
+                    aria-valuetext={`${resolvedQuestionCount} of ${activeQuestions.length} questions completed`}
                     className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
                   >
                     <div
@@ -4914,18 +4918,14 @@ export default function AssistantWorkspacePage({
                       }}
                     />
                   </div>
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className="mt-2.5 text-xs leading-5 text-slate-500">
                     {openQuestions.length === 0
                       ? 'All key questions answered.'
                       : resolvedQuestionCount === 0
-                        ? `Here are the ${activeQuestions.length} questions we need to get started. Answer or skip each one in the thread.`
-                        : `${openQuestions.length} still to answer — keep going in the thread.`}
+                        ? 'We’ll work through these together, one question at a time.'
+                        : `${openQuestions.length} to go. Continue in the conversation.`}
                   </p>
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Follow-up questions may appear as earlier answers unlock more
-                    details.
-                  </p>
-                  <ol className="mt-3 max-h-[22rem] space-y-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                  <ol aria-label="Question checklist" className="mt-4 min-w-0 space-y-2">
                     {activeQuestions.map((question, index) => {
                       const resolved = question.status !== 'open';
                       const skipped = question.status === 'dismissed';
@@ -4941,17 +4941,18 @@ export default function AssistantWorkspacePage({
                         <li
                           key={question.id}
                           data-question-state={state.toLowerCase().replace(' ', '-')}
-                          className={`flex items-start gap-2.5 rounded-xl px-2 py-1.5 transition-colors ${
+                          aria-current={isCurrent ? 'step' : undefined}
+                          className={`flex min-w-0 items-start gap-2.5 rounded-xl border p-2.5 ${
                             isCurrent
-                              ? 'bg-amber-50 ring-1 ring-amber-200'
+                              ? 'border-amber-200 bg-amber-50/80'
                               : resolved
-                                ? ''
-                                : 'hover:bg-slate-50'
+                                ? 'border-transparent bg-white'
+                                : 'border-slate-100 bg-slate-50/70'
                           }`}
                         >
                           <span
                             aria-hidden
-                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                               resolved
                                 ? skipped
                                   ? 'border-slate-300 bg-slate-300 text-white'
@@ -4961,11 +4962,11 @@ export default function AssistantWorkspacePage({
                                   : 'border-slate-300 bg-white'
                             }`}
                           >
-                            {resolved && <Check size={10} strokeWidth={3} />}
+                            {resolved ? <Check size={11} strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-amber-400" /> : null}
                           </span>
                           <div className="min-w-0 flex-1">
                             <p
-                              className={`text-xs leading-snug ${
+                              className={`text-xs leading-5 [overflow-wrap:anywhere] ${
                                 resolved
                                   ? 'font-medium text-slate-500'
                                   : 'font-semibold text-slate-800'
@@ -4973,19 +4974,18 @@ export default function AssistantWorkspacePage({
                             >
                               {`${index + 1}. ${displayQuestionPrompt(question)}`}
                             </p>
-                            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                              <span>{questionFieldLabel(question)}</span>
-                              <span aria-hidden> · </span>
+                            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium leading-4 text-slate-500">
+                              <span className="min-w-0 [overflow-wrap:anywhere]">{questionFieldLabel(question)}</span>
                               <span
-                                className={
+                                className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 font-semibold ${
                                   skipped
-                                    ? 'text-slate-400'
+                                    ? 'bg-slate-100 text-slate-500'
                                     : resolved
-                                      ? 'text-emerald-600'
+                                      ? 'bg-emerald-50 text-emerald-700'
                                       : isCurrent
-                                        ? 'text-amber-600'
-                                        : 'text-slate-400'
-                                }
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-slate-100 text-slate-500'
+                                }`}
                               >
                                 {state}
                               </span>

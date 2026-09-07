@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { formatAppDate } from "@/lib/dateFormat";
 import { AUTO_EXTRACT_RETRY_DELAY_MS, autoExtractKey } from "./useConversation";
@@ -1225,6 +1225,15 @@ describe("AssistantWorkspacePage", () => {
     expect(await screen.findByText("0 of 2 done")).toBeInTheDocument();
     expect(screen.getByText("2. How many event rooms are required?")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Key questions progress" })).toHaveAttribute("aria-valuenow", "0");
+    expect(screen.getByRole("progressbar", { name: "Key questions progress" })).toHaveAttribute("aria-valuetext", "0 of 2 questions completed");
+    const checklist = screen.getByRole("list", { name: "Question checklist" });
+    expect(checklist).not.toHaveClass("overflow-y-auto", "max-h-[22rem]");
+    const rows = within(checklist).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveAttribute("aria-current", "step");
+    expect(rows[1]).not.toHaveAttribute("aria-current");
+    expect(within(rows[0]).getByText("Up next")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Open")).toBeInTheDocument();
     // Nothing was answered yet, so no completion card.
     expect(screen.queryByText(/All key questions answered/)).not.toBeInTheDocument();
   });
@@ -2313,10 +2322,9 @@ describe("AssistantWorkspacePage", () => {
       "overflow-x-hidden",
       "overflow-y-auto",
       "pr-1",
-      "xl:-mr-1",
-      "xl:pr-2",
       "[scrollbar-gutter:stable]",
     );
+    expect(screen.getByRole("region", { name: "AI workspace overview and questions" })).toHaveAttribute("tabindex", "0");
     expect(screen.queryByText("Suggested tasks")).not.toBeInTheDocument();
     expect(screen.getByText("Key questions")).toBeInTheDocument();
   });

@@ -22,6 +22,10 @@ export async function handleProposalOnboarding(req, res, url) {
       if (input.reset) reset();
       if (input.delays) state.delays = input.delays;
       if (input.scan) state.scan = input.scan;
+      if (Array.isArray(input.questions)) {
+        state.questions = input.questions;
+        state.messages = [message({ role: 'user', kind: 'instruction', content: 'Help me plan an event.' })];
+      }
       if (input.outcome) {
         const run = [...state.messages].reverse().find(item => item.runType === 'proposal_context');
         if (run) {
@@ -65,7 +69,7 @@ export async function handleProposalOnboarding(req, res, url) {
     json(res, { data: {
       conversation: { id: 'synthetic-onboarding', title: 'Proposal assistant', status: 'active', messageCount: state.messages.length, updatedAt: `${state.eventName}:${state.messages.length}:${state.messages.at(-1)?.status}` },
       messages: state.messages,
-      questions: state.eventName === 'Untitled proposal' ? [question('eventName', 'What is this event called?')] : [{ ...question('venueName', 'Which venue will host the event?'), paths: ['/content/venueSchedule/venueName'] }],
+      questions: state.questions ?? (state.eventName === 'Untitled proposal' ? [question('eventName', 'What is this event called?')] : [{ ...question('venueName', 'Which venue will host the event?'), paths: ['/content/venueSchedule/venueName'] }]),
       capabilities: { conversationExtraction: false },
     } }); return true;
   }

@@ -72,6 +72,76 @@ test('a new empty conversation does not ask field-gap questions before the first
   await expect(page.getByText('Guided question 1', {exact:true})).toHaveCount(0);
 });
 
+test('question checklist stays readable with one scroll area at narrow, tablet and desktop widths', async ({page}, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const fields = [
+    ['event/eventName', 'What is this event called?'],
+    ['event/startDate', 'When does the event start?'],
+    ['event/endDate', 'When does the event end?'],
+    ['event/eventFormat', 'Is the event in-person, hybrid, or virtual?'],
+    ['event/eventType', 'What type of event are you planning?'],
+    ['venueSchedule/venueName', 'Which venue will host the event? Enter the venue name, or use Skip if it is still undecided.'],
+    ['event/eventCity', 'Which city will host the event?'],
+    ['event/attendees', 'How many people will attend?'],
+    ['accessibility/requirements', `Are there any accessibility requirements for this event? Include details from ${'LongUnbrokenReference'.repeat(6)} if relevant.`],
+  ];
+  await page.request.post(fixture, {data: {questions: fields.map(([path, prompt], index) => ({
+    id: `layout-question-${index}`, code: `field:${path}`, severity: 'question',
+    paths: [`/content/${path}`], prompt,
+    status: index === 0 ? 'answered' : index === 1 ? 'dismissed' : 'open',
+    impact: 'scope', answerType: 'text', options: [],
+  }))}});
+  await page.reload();
+  const toggle = page.getByRole('button', {name: 'Toggle AI workspace tools'});
+  const tools = page.getByRole('complementary', {name: 'Proposal assistant tools'});
+  const checklist = page.getByRole('list', {name: 'Question checklist'});
+  const scroll = page.getByRole('region', {name: 'AI workspace overview and questions'});
+  const viewports = testInfo.project.name === 'desktop-chromium'
+    ? [{width:1440,height:900}, {width:1280,height:720}, {width:1024,height:768}, {width:768,height:1024}, {width:640,height:450}]
+    : [{width:393,height:851}, {width:320,height:640}, {width:844,height:390}];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+    await expect(checklist).toBeVisible();
+    await expect(checklist.getByRole('listitem')).toHaveCount(9);
+    await expect(tools.getByText('2 of 9 done', {exact:true})).toBeVisible();
+    await expect(checklist.locator('[aria-current="step"]')).toHaveCount(1);
+    await expect(checklist.locator('[data-question-state="answered"]')).toHaveCount(1);
+    await expect(checklist.locator('[data-question-state="skipped"]')).toHaveCount(1);
+    await expect(tools.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '2');
+    expect(await tools.evaluate(element => [...element.querySelectorAll('*')].filter(node => {
+      const style = getComputedStyle(node);
+      return /^(auto|scroll)$/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
+    }).length)).toBe(1);
+    expect(await checklist.evaluate(element => [...element.querySelectorAll('li, p, span')].every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // The single scroll region must also work without a mouse.
+    await scroll.focus();
+    await page.keyboard.press('End');
+    await expect.poll(() => scroll.evaluate(element => element.scrollTop + element.clientHeight >= element.scrollHeight - 2)).toBe(true);
+    await expect(checklist.getByRole('listitem').last()).toBeInViewport();
+    await page.keyboard.press('Home');
+    await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBe(0);
+    await scroll.evaluate(element => {
+      const questions = element.querySelector('[aria-labelledby="rail-questions-title"]')!;
+      element.scrollTop += questions.getBoundingClientRect().top - element.getBoundingClientRect().top;
+    });
+    await page.screenshot({path: testInfo.outputPath(`question-checklist-${viewport.width}.png`)});
+    if (await toggle.isVisible()) {
+      await toggle.click();
+      await expect(tools).toBeHidden();
+      // Tablet layouts use page scrolling, including short landscape screens.
+      // Closing the tools must leave the composer reachable, not force it above the fold.
+      await page.getByLabel('Message the proposal assistant').scrollIntoViewIfNeeded();
+      await expect(page.getByLabel('Message the proposal assistant')).toBeInViewport();
+    }
+  }
+  expect(errors).toEqual([]);
+  expect((await (await page.request.get(fixture)).json()).requests).toHaveLength(0);
+});
+
 test('idle conversation uses quiet GET polling without assistant action requests', async ({page}) => {
   test.setTimeout(90_000);
   await expect(page.getByText('Share a few event details or attach a brief below.', {exact:false})).toBeVisible();
