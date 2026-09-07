@@ -184,7 +184,7 @@ test('core intake stays at nineteen through venue activation, city answers, extr
   const tools = page.getByRole('complementary',{name:'Proposal assistant tools'});
   for (const [index,phase] of phases.entries()) {
     await page.request.post(fixture,{data:{
-      questions:[...phase.active.map(q=>({...q,status:phase.answered.includes(questions.indexOf(q))?'answered':'open'})),...(phase.extra?[conflict]:[])],
+      questions:[...phase.active.slice().reverse().map(q=>({...q,status:phase.answered.includes(questions.indexOf(q))?'answered':'open'})),...(phase.extra?[conflict]:[])],
       intakeProgress:{total:19,completed:phase.answered.length,extraQuestionIds:phase.extra?['extra-conflict']:[],
         items:questions.map((q,i)=>({key:q.paths[0],paths:q.paths,prompt:q.prompt,status:phase.answered.includes(i)?'answered':'open',questionId:phase.answered.includes(i)?null:q.id}))},
     }});
@@ -197,6 +197,8 @@ test('core intake stays at nineteen through venue activation, city answers, extr
     await expect(tools.getByRole('progressbar')).toHaveAttribute('aria-valuenow',String(phase.answered.length));
     await expect(page.getByRole('list',{name:'Additional clarifications',exact:true})).toHaveCount(phase.extra?1:0);
     await expect(page.getByText(/\d+ of \d+ done/)).toHaveCount(0);
+    const nextCoreIndex=questions.findIndex((q,i)=>!phase.answered.includes(i)&&phase.active.includes(q));
+    if(nextCoreIndex>=0) await expect(page.getByText(`Guided question ${nextCoreIndex+1}`,{exact:true})).toHaveCount(1);
     if(index===4) {
       await expect(page.getByText('Additional clarification',{exact:true})).toHaveCount(1);
       await expect(page.getByText('Guided question 20',{exact:true})).toHaveCount(0);

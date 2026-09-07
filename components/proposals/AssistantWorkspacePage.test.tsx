@@ -1270,6 +1270,24 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByRole('list',{name:'Additional clarifications'})).toBeInTheDocument();
   });
 
+  test("core questions follow the fixed catalog even when database rows arrive out of order", async () => {
+    const snapshot = conversationWithGuidedQuestions([roomsQuestion, startDateQuestion]);
+    const items = Array.from({length:19}, (_, index) => ({key:`/content/qa/${index}`,paths:[`/content/qa/${index}`],
+      prompt:`Core question ${index + 1}?`,status:'open' as const,questionId:null as string | null}));
+    items[0] = {...items[0],questionId:startDateQuestion.id};
+    items[10] = {...items[10],questionId:roomsQuestion.id};
+    mockedGetConversation.mockResolvedValue({...snapshot,data:{...snapshot.data,
+      intakeProgress:{total:19,completed:0,items,extraQuestionIds:[]}}});
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    expect(await screen.findByText('0/19')).toBeInTheDocument();
+    expect(screen.getByText('Guided question 1')).toBeInTheDocument();
+    expect(screen.getByText('When does the event start?')).toBeInTheDocument();
+    expect(screen.queryByText('How many event rooms are required?')).not.toBeInTheDocument();
+    const rows = within(screen.getByRole('list',{name:'Question checklist'})).getAllByRole('listitem');
+    expect(rows[0]).toHaveAttribute('aria-current','step');
+    expect(rows[10]).not.toHaveAttribute('aria-current');
+  });
+
   test("event start date validation uses the user's local calendar day", () => {
     const now = new Date(2026, 6, 27, 23, 45);
 

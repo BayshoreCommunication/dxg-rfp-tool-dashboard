@@ -2897,13 +2897,22 @@ export default function AssistantWorkspacePage({
       ),
     [data?.questions, firstContributionReceived],
   );
+  const intakeProgress = data?.intakeProgress;
+  const coreQuestionOrder = new Map(
+    intakeProgress?.items.flatMap((item, index) => item.questionId ? [[item.questionId, index] as const] : []) ?? [],
+  );
+  // Rows inserted in one database transaction can share created_at. Use the
+  // same canonical order as the checklist, not their incidental return order.
+  // Extra clarifications remain actionable after the core intake.
   const openQuestions = activeQuestions.filter(
     (item) => item.status === 'open',
+  ).sort((a, b) =>
+    (coreQuestionOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+    (coreQuestionOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER),
   );
   // Answered and skipped both count as done for the rail checklist.
   const resolvedQuestionCount = activeQuestions.length - openQuestions.length;
   const currentQuestion = openQuestions[0] ?? null;
-  const intakeProgress = data?.intakeProgress;
   const totalIntakeCount = intakeProgress?.total ?? activeQuestions.length;
   const completedIntakeCount = intakeProgress?.completed ?? resolvedQuestionCount;
   const coreChecklist = firstContributionReceived && intakeProgress
