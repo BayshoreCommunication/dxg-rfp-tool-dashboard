@@ -28,6 +28,7 @@ const mockedPostMessage = postConversationMessageAction as jest.MockedFunction<t
 const mockedGetConversation = getConversationAction as jest.MockedFunction<typeof getConversationAction>;
 
 const PROPOSAL_ID = "proposal-e2e-recovery";
+jest.mock('@/lib/proposals/conversationRead', () => ({readConversationSnapshot: (...args: unknown[]) => getConversationAction(...args as [string])}));
 
 describe("useConversation send recovery", () => {
   beforeEach(() => {
@@ -260,11 +261,12 @@ describe("useConversation send recovery", () => {
   });
 
   test("durable conversation polling is fast while pending and backs off when idle", () => {
-    expect(conversationPollDelay(0, true)).toBe(1_000);
-    expect(conversationPollDelay(9, true)).toBe(1_000);
-    expect(conversationPollDelay(10, true)).toBe(2_000);
-    expect(conversationPollDelay(19, true)).toBe(2_000);
-    expect(conversationPollDelay(20, true)).toBe(5_000);
-    expect(conversationPollDelay(0, false)).toBe(10_000);
+    expect(conversationPollDelay(0, true)).toBe(2_000);
+    expect(conversationPollDelay(2, true)).toBe(2_000);
+    expect(conversationPollDelay(3, true)).toBe(5_000);
+    expect(conversationPollDelay(8, true)).toBe(5_000);
+    expect(conversationPollDelay(9, true)).toBe(10_000);
+    expect(conversationPollDelay(0, false)).toBe(30_000);
+    expect(conversationPollDelay(2, false)).toBe(60_000);
   });
 });

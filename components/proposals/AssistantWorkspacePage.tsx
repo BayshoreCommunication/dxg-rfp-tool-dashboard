@@ -2536,6 +2536,9 @@ export default function AssistantWorkspacePage({
   const [staged, setStaged] = useState<File[]>([]);
   const [sendBusy, setSendBusy] = useState(false);
   const [sendLocked, setSendLocked] = useState(false);
+  // A send owns its attachment intent until the scan handoff settles. The
+  // composer chips are cleared earlier and are not a reliable loading flag.
+  const [attachmentSendActive, setAttachmentSendActive] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [inputClarification, setInputClarification] = useState<string | null>(null);
   // Files already uploaded during a failed send attempt keep their source id so
@@ -2909,14 +2912,18 @@ export default function AssistantWorkspacePage({
     !continuedAfterExtractionFailure.includes(latestContextRun.id));
   const chatExtractionEnabled =
     data?.capabilities?.conversationExtraction === true;
+  // A freshly-created conversation may return its eight field gaps before
+  // the first upload/message is visible. Those gaps are not a conversational
+  // turn: never ask them before the planner's first contribution arrives.
+  const firstContributionReceived = messages.some(message => message.role === 'user' || Boolean(message.runType));
   const activeQuestions = useMemo(
     () =>
-      (data?.questions ?? []).filter(
+      (firstContributionReceived ? data?.questions ?? [] : []).filter(
         (question) =>
           STANDALONE_VIDEO_RECORDING_STEP_ENABLED ||
           !question.paths.some(isStandaloneVideoRecordingPath),
       ),
-    [data?.questions],
+    [data?.questions, firstContributionReceived],
   );
   const openQuestions = activeQuestions.filter(
     (item) => item.status === 'open',
@@ -2924,7 +2931,7 @@ export default function AssistantWorkspacePage({
   // Answered and skipped both count as done for the rail checklist.
   const resolvedQuestionCount = activeQuestions.length - openQuestions.length;
   const currentQuestion = openQuestions[0] ?? null;
-  const attachmentSending = (sendLocked && staged.length > 0) || sendBusy || pending.some(item => item.intent === 'chat' && item.sourceIds.length > 0 && item.state === 'sending');
+  const attachmentSending = attachmentSendActive || sendBusy || pending.some(item => item.intent === 'chat' && item.sourceIds.length > 0 && item.state === 'sending');
   const sourceExtractionInProgress =
     attachmentSending ||
     autoScanning ||
@@ -3425,11 +3432,13 @@ export default function AssistantWorkspacePage({
     if (sendLockRef.current) return;
     sendLockRef.current = true;
     setSendLocked(true);
+    setAttachmentSendActive(staged.length > 0);
     try {
       await performSend(textOverride, source);
     } finally {
       sendLockRef.current = false;
       setSendLocked(false);
+      setAttachmentSendActive(false);
     }
   };
   // ChatGPT-style staged attach: picking a file only adds a composer chip; the
@@ -4448,6 +4457,11 @@ export default function AssistantWorkspacePage({
                   </p>
                 )}
                 <ol className="space-y-3">
+                  {!loading && !loadError && !firstContributionReceived && !sourceExtractionInProgress && !chatBusy && !sendLocked && !extractionFailureBlocksQuestions && (
+                    <li className="rounded-2xl border border-cyan-100 bg-cyan-50/50 p-5 text-sm leading-6 text-slate-700">
+                      Share a few event details or attach a brief below. I’ll review what you send before asking the next question.
+                    </li>
+                  )}
                   {threadMessages.map(renderMessage)}
                   {showOverview && proposalId && (
                     <li className="flex justify-start">

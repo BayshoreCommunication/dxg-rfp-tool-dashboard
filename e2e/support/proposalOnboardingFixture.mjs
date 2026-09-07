@@ -5,7 +5,7 @@ const proposalId = 'cccccccccccccccccccccccc';
 const sourceId = '11111111-1111-4111-8111-111111111111';
 const stamp = () => new Date().toISOString();
 let state;
-const reset = () => { state = { messages: [], scan: 'scanning', uploaded: false, name: 'brief.txt', requests: [], uploadCount: 0, eventName: 'Untitled proposal' }; };
+const reset = () => { state = { messages: [], scan: 'scanning', uploaded: false, name: 'brief.txt', requests: [], uploadCount: 0, eventName: 'Untitled proposal', delays: {} }; };
 reset();
 const json = (res, data, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify(data)); };
 const body = async req => { const chunks = []; for await (const chunk of req) chunks.push(chunk); return JSON.parse(Buffer.concat(chunks).toString() || '{}'); };
@@ -20,6 +20,7 @@ export async function handleProposalOnboarding(req, res, url) {
     if (req.method === 'POST') {
       const input = await body(req);
       if (input.reset) reset();
+      if (input.delays) state.delays = input.delays;
       if (input.scan) state.scan = input.scan;
       if (input.outcome) {
         const run = [...state.messages].reverse().find(item => item.runType === 'proposal_context');
@@ -34,12 +35,18 @@ export async function handleProposalOnboarding(req, res, url) {
     }
     json(res, state); return true;
   }
+  if (path === '/api/proposals' && req.method === 'POST') {
+    await body(req);
+    await new Promise(resolve => setTimeout(resolve, state.delays.create ?? 0));
+    json(res, { data: { _id: proposalId, version: 1, isDraft: true, status: 'unsubmitted', event: { eventName: state.eventName } } }); return true;
+  }
   if (path === `/api/proposals/${proposalId}` && req.method === 'GET') {
     json(res, { data: { _id: proposalId, version: 1, isDraft: true, status: 'unsubmitted', event: { eventName: state.eventName } } }); return true;
   }
   const base = `/api/v1/proposals/${proposalId}`;
   if (path === `${base}/sources/upload-session`) {
     const input = await body(req); state.name = input.filename;
+    await new Promise(resolve => setTimeout(resolve, state.delays.upload ?? 0));
     json(res, { data: { source: { id: sourceId }, uploadUrl: `http://127.0.0.1:8011/__e2e/onboarding-upload`, requiredHeaders: {} } }); return true;
   }
   if (path === '/__e2e/onboarding-upload') {
@@ -64,6 +71,7 @@ export async function handleProposalOnboarding(req, res, url) {
   }
   if (path === `${base}/conversation/messages`) {
     const input = await body(req); state.requests.push(input);
+    await new Promise(resolve => setTimeout(resolve, state.delays.chat ?? 0));
     const user = message({ role: 'user', kind: 'instruction', content: input.content, intent: input.intent, attachments: (input.sourceIds ?? []).map(id => ({ sourceId: id, filename: state.name, role: 'input', sourceStatus: state.scan })) });
     state.messages.push(user);
     const extract = input.intent === 'extract_requirements';

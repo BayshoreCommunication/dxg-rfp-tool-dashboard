@@ -20,6 +20,7 @@ import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
 import { storeProposalHandoffDraft } from "@/lib/aiAssistant/handoff";
 
 const replace = jest.fn();
+jest.mock('@/lib/proposals/conversationRead', () => ({readConversationSnapshot: (...args: unknown[]) => getConversationAction(...args as [string])}));
 jest.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 
 jest.mock("@/app/actions/conversation", () => ({
@@ -1599,11 +1600,11 @@ describe("AssistantWorkspacePage", () => {
       expect(await screen.findByRole('status', { name: 'Attachment progress' })).toHaveTextContent('Reading your brief');
       expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
 
-      // The pending message keeps the poll interval fast (1s), so the next
+      // The pending message keeps the poll interval responsive (2s), so the next
       // poll lands the completed run and the now-suggested question without
       // any remount — the same clarification-question row/id stays open the
       // whole time.
-      await act(async () => { await jest.advanceTimersByTimeAsync(1_000); });
+      await act(async () => { await jest.advanceTimersByTimeAsync(2_000); });
 
       expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
       expect(screen.getByText("What is this event called?")).toBeInTheDocument();
@@ -1655,8 +1656,8 @@ describe("AssistantWorkspacePage", () => {
       fireEvent.change(input, { target: { value: "My Own Event Name" } });
       expect(input).toHaveValue("My Own Event Name");
 
-      // No message is pending, so this is the slow (10s) poll interval.
-      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+      // No message is pending, so this is the quiet (30s) poll interval.
+      await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
 
       expect(screen.getByLabelText("Answer this question")).toHaveValue("My Own Event Name");
       expect(screen.queryByText("Pre-filled from your message or brief — confirm or edit.")).not.toBeInTheDocument();
@@ -1690,7 +1691,7 @@ describe("AssistantWorkspacePage", () => {
       await screen.findByText("Guided question 1");
       await waitFor(() => expect(mockedGetProposal).toHaveBeenCalledTimes(1));
 
-      await act(async () => { await jest.advanceTimersByTimeAsync(10_000); });
+      await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
 
       await waitFor(() => expect(mockedGetProposal).toHaveBeenCalledTimes(2));
     } finally {
@@ -2160,6 +2161,18 @@ describe("AssistantWorkspacePage", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: "Remove venue.pdf" })).not.toBeInTheDocument());
     // Still no confirmation checkbox anywhere in the flow.
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  test("empty conversation field gaps cannot appear before a new proposal's first attachment message", async () => {
+    mockedGetConversation.mockResolvedValue({
+      ...conversationWithGuidedQuestions([eventNameQuestion]),
+      data: { ...conversationWithGuidedQuestions([eventNameQuestion]).data, messages: [] },
+    });
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    expect(await screen.findByText(/Share a few event details or attach a brief below/)).toBeInTheDocument();
+    expect(screen.queryByText('What is this event called?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Guided question 1')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', {name:'Key questions progress'})).not.toBeInTheDocument();
   });
 
   test("a failed staged upload keeps the chip and offers an inline retry", async () => {

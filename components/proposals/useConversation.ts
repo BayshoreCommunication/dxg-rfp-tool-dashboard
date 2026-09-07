@@ -8,13 +8,13 @@
 
 import {
   createProposalNotesAction,
-  getConversationAction,
   patchConversationQuestionAction,
   postConversationMessageAction,
   type ConversationData,
   type ConversationIntent,
   type ConversationQuestionAnswer,
 } from "@/app/actions/conversation";
+import { readConversationSnapshot as getConversationAction } from '@/lib/proposals/conversationRead';
 import {
   completePrivateUpload,
   createPrivateUploadSession,
@@ -53,10 +53,10 @@ async function withSourceDeadline<T>(request: Promise<T>): Promise<T> {
 // Polling is deliberately the correctness path in production: unlike a
 // long-lived Vercel SSE proxy, every request is bounded and reconnect-safe.
 export const conversationPollDelay = (pollCount: number, pending: boolean) => {
-  if (!pending) return 10_000;
-  if (pollCount < 10) return 1_000;
-  if (pollCount < 20) return 2_000;
-  return 5_000;
+  if (!pending) return pollCount < 2 ? 30_000 : 60_000;
+  if (pollCount < 3) return 2_000;
+  if (pollCount < 9) return 5_000;
+  return 10_000;
 };
 
 export const notesScanKey = (proposalId: string) => `rfpilot:notes-scan:${proposalId}`;
@@ -103,6 +103,7 @@ export function useConversation(proposalId: string | null) {
   // conversation snapshot (it used to make the populated thread go blank
   // until the following poll restored it).
   const latestReadRef = useRef(0);
+  const pollingUnauthorized = useRef(false);
   const pendingMessageCount = data?.messages.filter(item => item.status === "pending").length ?? 0;
 
   const refresh = useCallback(async (targetProposalId?: string) => {
@@ -113,11 +114,13 @@ export function useConversation(proposalId: string | null) {
     if (readId !== latestReadRef.current) return null;
     if (!result.success) {
       setLoadError(result.message);
+      pollingUnauthorized.current = result.code === 'AUTHENTICATION_REQUIRED' || result.code === 'AUTHORIZATION_DENIED';
       return null;
     }
     setSettledFor(target);
     setLoadError(null);
-    setData(result.data);
+    pollingUnauthorized.current = false;
+    setData(previous => JSON.stringify(previous) === JSON.stringify(result.data) ? previous : result.data);
     // A successful POST is only retired from the optimistic layer after its
     // persisted user message is visible in the authoritative conversation.
     // Atlas/read timing can briefly return an older empty snapshot; retaining
@@ -144,8 +147,9 @@ export function useConversation(proposalId: string | null) {
     void getConversationAction(proposalId).then(result => {
       if (!active || readId !== latestReadRef.current) return;
       setSettledFor(proposalId);
-      if (!result.success) { setLoadError(result.message); return; }
+      if (!result.success) { setLoadError(result.message); pollingUnauthorized.current = result.code === 'AUTHENTICATION_REQUIRED' || result.code === 'AUTHORIZATION_DENIED'; return; }
       setLoadError(null);
+      pollingUnauthorized.current = false;
       setData(result.data);
     });
     return () => { active = false; };
@@ -155,18 +159,20 @@ export function useConversation(proposalId: string | null) {
   // periodically re-reads it with short, bounded requests. This survives
   // Vercel function limits, navigation, reloads, and transient disconnects.
   useEffect(() => {
-    if (!proposalId) return;
+    if (!proposalId || loading) return;
     let active = true;
+    let reading = false;
     let pollTimer: ReturnType<typeof setTimeout> | undefined;
     let pollCount = 0;
     const schedule = () => {
-      if (!active) return;
+      if (!active || pollingUnauthorized.current) return;
       pollTimer = setTimeout(poll, conversationPollDelay(pollCount, pendingMessageCount > 0));
     };
     const poll = async () => {
-      if (!active) return;
+      if (!active || reading || pollingUnauthorized.current) return;
       if (document.hidden) { pollTimer = setTimeout(poll, 2_000); return; }
-      await refresh();
+      reading = true;
+      try { await refresh(); } finally { reading = false; }
       if (!active) return;
       pollCount += 1;
       schedule();
@@ -174,6 +180,7 @@ export function useConversation(proposalId: string | null) {
     const onVisibility = () => {
       if (document.hidden || !active) return;
       if (pollTimer) clearTimeout(pollTimer);
+      pollingUnauthorized.current = false;
       pollCount = 0;
       void poll();
     };
@@ -184,7 +191,7 @@ export function useConversation(proposalId: string | null) {
       if (pollTimer) clearTimeout(pollTimer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [pendingMessageCount, proposalId, refresh]);
+  }, [loading, pendingMessageCount, proposalId, refresh]);
 
   const performSend = useCallback(async (entry: PendingSend) => {
     let result: Awaited<ReturnType<typeof postConversationMessageAction>>;
