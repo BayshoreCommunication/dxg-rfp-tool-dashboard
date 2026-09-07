@@ -101,6 +101,44 @@ body {
   overflow-x: hidden;
 }
 
+/* Attachment handoff — compact pixel-grid loader inspired by Beautiful UI. */
+.dxg-source-shimmer {
+  color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    #64748b 35%,
+    #0f172a 50%,
+    #64748b 65%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: dxg-source-shimmer 1.4s linear infinite;
+}
+
+@keyframes dxg-source-shimmer {
+  from { background-position: 150% center; }
+  to { background-position: -50% center; }
+}
+
+@keyframes dxg-source-pixel-on {
+  0%, 100% { opacity: 0.15; }
+  18%, 42% { opacity: 1; }
+  62% { opacity: 0.15; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dxg-source-shimmer {
+    color: #334155;
+    background-image: none;
+    animation: none;
+  }
+
+  [data-attachment-loader-pixel] {
+    animation: none !important;
+  }
+}
+
 /* One quiet scrollbar treatment for every app-owned scroll surface. */
 :root {
   --dxg-scrollbar-size: 3px;

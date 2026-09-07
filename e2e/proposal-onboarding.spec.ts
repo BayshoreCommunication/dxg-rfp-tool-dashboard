@@ -32,7 +32,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('link', {name:'Open RFP questions', exact:true})).toHaveCount(0);
 });
 
-test('new proposal first attachment never flashes a guided question during slow creation and upload', async ({ page }) => {
+test('new proposal first attachment uses one compact timed loader and never flashes a guided question', async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   await page.request.post(fixture, { data: { delays: { create: 500, upload: 1500, chat: 1200 } } });
   await page.goto('/proposals/add-new-proposal');
@@ -59,7 +59,14 @@ test('new proposal first attachment never flashes a guided question during slow 
   await page.getByRole('button', {name:'Send message', exact:true}).click();
   await expect(page.getByText('Please review the attached file.', {exact:true})).toBeVisible();
   await expect(page.getByTestId('attachment-acknowledgement')).toBeVisible();
-  await expect(page.getByRole('status', {name:'Attachment progress'})).toContainText('Uploading your brief');
+  const attachmentProgress = page.getByRole('status', {name:'Attachment progress'});
+  await expect(attachmentProgress).toContainText('Uploading your brief');
+  await expect(attachmentProgress.locator('[data-attachment-loader-pixel]')).toHaveCount(9);
+  await expect(attachmentProgress).toContainText(/\d+\.\d+s/);
+  const compactLoader = await attachmentProgress.boundingBox();
+  expect(compactLoader?.height).toBeLessThanOrEqual(48);
+  expect(compactLoader?.width).toBeLessThanOrEqual(280);
+  await page.screenshot({path:testInfo.outputPath('attachment-pixel-loader.png')});
   await expect(page).toHaveURL(/\/proposals\/cccccccccccccccccccccccc\/assistant$/, {timeout:30_000});
   await expect(page.getByRole('status', {name:'Attachment progress'})).toContainText('Checking your file', { timeout: 20_000 });
   expect(await page.evaluate(() => (window as unknown as {prematureQuestions:string[]}).prematureQuestions)).toEqual([]);

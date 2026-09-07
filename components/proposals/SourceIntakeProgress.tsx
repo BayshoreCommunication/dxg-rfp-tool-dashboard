@@ -1,37 +1,94 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export type SourceIntakePhase = "uploading" | "checking" | "reading";
 
 const phases = {
-  uploading: { title: "Uploading your brief", detail: "Keep this page open while your attachment uploads.", step: 0 },
-  checking: { title: "Checking your file", detail: "I’ll read the brief once the file checks finish. Then we’ll confirm what I found and fill any gaps.", step: 1 },
-  reading: { title: "Reading your brief", detail: "I’m looking for the event, dates, venue and production needs before asking the next question.", step: 2 },
+  uploading: {
+    title: "Uploading your brief",
+    detail: "Keep this page open while your attachment uploads.",
+  },
+  checking: {
+    title: "Checking your file",
+    detail: "The attachment is being checked before it is read.",
+  },
+  reading: {
+    title: "Reading your brief",
+    detail: "The event, dates, venue and production needs are being extracted.",
+  },
 };
 
-/** One truthful status for the upload → scan → extraction handoff. */
+// The chevron wave moves right while a second wave enters behind it, matching
+// the selected Beautiful UI loader without introducing another progress card.
+const pixelDelays = Array.from({ length: 9 }, (_, index) => {
+  const row = Math.floor(index / 3);
+  const column = index % 3;
+  return (column + Math.abs(row - 1)) * 90;
+});
+
+function formatElapsed(deciseconds: number) {
+  const total = deciseconds / 10;
+  if (total < 60) return `${total.toFixed(1)}s`;
+  return `${Math.floor(total / 60)}m ${(total % 60).toFixed(1)}s`;
+}
+
+function useElapsed() {
+  const [deciseconds, setDeciseconds] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setDeciseconds(current => current + 1),
+      100,
+    );
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return formatElapsed(deciseconds);
+}
+
+function PixelGrid() {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid shrink-0 grid-cols-[repeat(3,4px)] gap-[1.5px]"
+    >
+      {pixelDelays.map((delay, index) => (
+        <span
+          key={index}
+          data-attachment-loader-pixel
+          className="size-1 rounded-[1px] bg-[#087f90]"
+          style={{
+            opacity: 0.15,
+            animation: `dxg-source-pixel-on 650ms ease-in-out ${delay}ms infinite`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** One compact, truthful status for the upload → scan → extraction handoff. */
 export default function SourceIntakeProgress({ phase }: { phase: SourceIntakePhase }) {
   const current = phases[phase];
+  const elapsed = useElapsed();
+
   return (
-    <div role="status" aria-label="Attachment progress" className="w-full max-w-3xl rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4 sm:p-5">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 rounded-xl bg-white p-2 text-cyan-700">
-          <Loader2 size={18} className="motion-safe:animate-spin" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900">{current.title}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">{current.detail}</p>
-        </div>
-      </div>
-      <ol aria-label="File processing steps" className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-cyan-100 pt-3 text-xs">
-        {["Upload", "File check", "Read details"].map((label, index) => (
-          <li key={label} aria-current={index === current.step ? "step" : undefined} className={`flex items-center gap-1.5 ${index <= current.step ? "font-semibold text-cyan-800" : "text-slate-500"}`}>
-            {index < current.step ? <Check size={14} aria-hidden /> : <span aria-hidden className="grid h-4 w-4 place-items-center rounded-full border border-current text-[10px]">{index + 1}</span>}
-            {label}
-          </li>
-        ))}
-      </ol>
+    <div
+      role="status"
+      aria-label="Attachment progress"
+      aria-live="polite"
+      aria-atomic="true"
+      className="inline-flex max-w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm"
+    >
+      <PixelGrid />
+      <span className="dxg-source-shimmer truncate text-[13px] font-semibold">
+        {current.title}
+      </span>
+      <span aria-hidden="true" className="shrink-0 font-mono text-xs tabular-nums text-slate-400">
+        {elapsed}
+      </span>
+      <span className="sr-only">{current.detail}</span>
     </div>
   );
 }
