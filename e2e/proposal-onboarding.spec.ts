@@ -198,7 +198,8 @@ test('question checklist stays readable with one scroll area at narrow, tablet a
     if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
     await expect(checklist).toBeVisible();
     await expect(checklist.getByRole('listitem')).toHaveCount(9);
-    await expect(tools.getByText('2 of 9 done', {exact:true})).toBeVisible();
+    await expect(tools.getByText('2/9', {exact:true})).toHaveCount(1);
+    await expect(tools.getByText(/\d+ of \d+ done/)).toHaveCount(0);
     await expect(checklist.locator('[aria-current="step"]')).toHaveCount(1);
     await expect(checklist.locator('[data-question-state="answered"]')).toHaveCount(1);
     await expect(checklist.locator('[data-question-state="skipped"]')).toHaveCount(1);

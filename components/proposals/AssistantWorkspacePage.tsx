@@ -4886,11 +4886,6 @@ export default function AssistantWorkspacePage({
                 >
                   Key questions
                 </h2>
-                {activeQuestions.length > 0 && (
-                  <span className="shrink-0 whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-slate-600">
-                    {`${resolvedQuestionCount} of ${activeQuestions.length} done`}
-                  </span>
-                )}
               </div>
               {sourceExtractionInProgress || extractionFailureBlocksQuestions ? (
                 <p className="mt-3 text-xs leading-5 text-slate-600">{sourceExtractionInProgress ? 'I’ll review your attachment first. Then we’ll confirm what I found and fill in any missing details, one step at a time.' : 'Resolve the attachment issue in the conversation, or choose to continue without it.'}</p>

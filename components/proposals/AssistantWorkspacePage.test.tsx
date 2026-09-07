@@ -1222,7 +1222,8 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByText("How many event rooms are required?")).not.toBeInTheDocument();
     // The rail lists every question as a checklist with progress; nothing is
     // ticked yet and the active question is marked as up next.
-    expect(await screen.findByText("0 of 2 done")).toBeInTheDocument();
+    expect(await screen.findByText("0/2")).toBeInTheDocument();
+    expect(screen.queryByText(/\d+ of \d+ done/)).not.toBeInTheDocument();
     expect(screen.getByText("2. How many event rooms are required?")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Key questions progress" })).toHaveAttribute("aria-valuenow", "0");
     expect(screen.getByRole("progressbar", { name: "Key questions progress" })).toHaveAttribute("aria-valuetext", "0 of 2 questions completed");
