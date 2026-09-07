@@ -212,7 +212,7 @@ export default function MessageList({
           <ol
             className={
               compact
-                ? "relative mx-auto max-w-3xl space-y-4 before:absolute before:bottom-4 before:left-4 before:top-4 before:w-px before:bg-slate-200"
+                ? "relative mx-auto max-w-3xl space-y-4 before:absolute before:bottom-4 before:left-4 before:top-4 before:w-px before:bg-slate-200 dark:before:bg-[#203641]"
                 : "mx-auto max-w-3xl space-y-4"
             }
           >

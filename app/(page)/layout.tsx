@@ -1,5 +1,6 @@
 import { getAssistantAccessAction } from "@/app/actions/aiAssistant";
 import { auth } from "@/auth";
+import DevThemeToggle from "@/components/layout/DevThemeToggle";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { Analytics } from "@vercel/analytics/next";
@@ -25,9 +26,15 @@ export default async function RootLayout({
     auth(),
   ]);
   const assistantEnabled = access?.success === true && access.data.enabled;
+  const showLocalThemePreview = process.env.NODE_ENV === "development";
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={showLocalThemePreview ? "dark" : undefined}
+      data-theme={showLocalThemePreview ? "dark" : undefined}
+      suppressHydrationWarning
+    >
       <head>
         {/* Signature cursive fonts – loaded via <link> for print/PDF templates */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
@@ -36,7 +43,10 @@ export default async function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-sans antialiased" suppressHydrationWarning>
+      <body
+        className="font-sans antialiased dark:bg-[#07131c] dark:text-[#e6eef5]"
+        suppressHydrationWarning
+      >
         <ToastProvider>
           <LayoutWrapper
             assistantEnabled={assistantEnabled}
@@ -52,6 +62,7 @@ export default async function RootLayout({
             {children}
           </LayoutWrapper>
         </ToastProvider>
+        {showLocalThemePreview && <DevThemeToggle defaultDark />}
         <Analytics />
         <SpeedInsights />
       </body>

@@ -202,7 +202,7 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
 
               {/* Preview */}
               {value.signatureImageUrl && (
-                <div className="relative flex items-center justify-center rounded-xl border border-[#e4e4e4] bg-[#f7f8fa] p-6">
+                <div className="theme-light-proof relative flex items-center justify-center rounded-xl border border-[#e4e4e4] bg-[#f7f8fa] p-6">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={value.signatureImageUrl}
@@ -258,7 +258,7 @@ const SignaturesSettings = ({ value, onChange }: SignaturesSettingsProps) => {
               </div>
 
               {/* Live preview */}
-              <div className="flex min-h-[140px] items-center justify-center rounded-xl border border-dashed border-[#e4e4e4] bg-white px-6 py-4">
+              <div className="theme-light-proof flex min-h-[140px] items-center justify-center rounded-xl border border-dashed border-[#e4e4e4] bg-white px-6 py-4">
                 {value.signatureText.trim() ? (
                   <span
                     className={`${SIGN_FONTS[chosenFontIdx]?.className || ""} select-none text-[52px] leading-none text-[#222628]`}

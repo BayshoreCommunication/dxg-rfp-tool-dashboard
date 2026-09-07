@@ -385,7 +385,7 @@ export default function ProposalContextPanel({
       aria-labelledby="proposal-context-title"
       className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
     >
-      <div className="border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 sm:p-6">
+      <div className="border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 dark:from-[#0a1923] dark:to-[#0d1d28] sm:p-6">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-[#087f69]">
             <Sparkles aria-hidden="true" className="size-5" />

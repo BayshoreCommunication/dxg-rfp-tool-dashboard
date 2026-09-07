@@ -577,9 +577,18 @@ export default function ProposalTableList({
                           {daysUntilPurge !== null && (
                             <span
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
-                              style={daysUntilPurge <= 7
-                                ? { background: "#fff1f2", color: "#e11d48", borderColor: "#fecdd3" }
-                                : { background: "#fffbeb", color: "#d97706", borderColor: "#fde68a" }
+                              style={
+                                daysUntilPurge <= 7
+                                  ? {
+                                      background: "var(--dxg-danger-surface)",
+                                      color: "var(--dxg-danger-text)",
+                                      borderColor: "var(--dxg-danger-border)",
+                                    }
+                                  : {
+                                      background: "var(--dxg-warning-surface)",
+                                      color: "var(--dxg-warning-text)",
+                                      borderColor: "var(--dxg-warning-border)",
+                                    }
                               }
                             >
                               {daysUntilPurge}d until deletion

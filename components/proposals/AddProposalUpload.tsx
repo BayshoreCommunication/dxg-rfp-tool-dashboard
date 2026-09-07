@@ -459,7 +459,7 @@ function GuideModal({ onClose }: { onClose: () => void }) {
           width: "100%",
           maxWidth: "720px",
           borderRadius: "16px",
-          background: "white",
+          background: "var(--dxg-app-surface)",
           boxShadow: "0 25px 60px rgba(0,0,0,0.25)",
           overflow: "hidden",
         }}
@@ -544,9 +544,7 @@ function GuideModal({ onClose }: { onClose: () => void }) {
           {/* Tip */}
           <div
             className="rounded-xl border border-amber-200 px-4 py-3"
-            style={{
-              background: "linear-gradient(to right, #fffbeb, #fff7ed)",
-            }}
+            style={{ background: "var(--dxg-warning-gradient)" }}
           >
             <p className="text-sm text-amber-800">
               <span className="font-bold">💡 Tip:</span> The more detail your

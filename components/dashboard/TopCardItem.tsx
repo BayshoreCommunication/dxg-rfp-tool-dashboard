@@ -46,6 +46,7 @@ const StatCard = ({
     <Link
       href={href}
       aria-label={`${title}: ${value}. ${actionLabel}`}
+      data-dashboard-stat-card
       className="group relative min-h-40 overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-[transform,box-shadow,filter] duration-300 hover:-translate-y-1 hover:brightness-[1.03] hover:shadow-xl active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-200 sm:p-6"
       style={{ background: gradient }}
     >
