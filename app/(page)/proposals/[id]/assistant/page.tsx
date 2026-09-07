@@ -1,7 +1,8 @@
 import AssistantWorkspacePage from "@/components/proposals/AssistantWorkspacePage";
 import { getProposalByIdAction } from "@/app/actions/proposals";
 import { isSafeProposalId } from "@/lib/aiAssistant/handoff";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import ProposalLoadRecovery from '@/components/proposals/ProposalLoadRecovery';
 
 // Live-AI calls (conversation replies, requirement extraction, draft
 // generation) routinely run 10-30s. Vercel's default function timeout is
@@ -28,7 +29,11 @@ const Page = async ({
   // Revalidate ownership and availability at the destination. The selector is
   // only a convenience; it never becomes an authorization boundary.
   const proposal = await getProposalByIdAction(id);
-  if (!proposal.success) notFound();
+  if (!proposal.success) {
+    if (proposal.status === 404) notFound();
+    if (proposal.status === 401) redirect(`/sign-in?${new URLSearchParams({ callbackUrl: `/proposals/${id}/assistant`, reason: 'session-expired' })}`);
+    return <ProposalLoadRecovery denied={proposal.status === 403} />;
+  }
 
   // ?task=generate_draft (the workflow shell's "Create my first draft" CTA)
   // asks the workspace to start draft generation on arrival.

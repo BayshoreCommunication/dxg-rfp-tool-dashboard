@@ -18,7 +18,9 @@ jest.mock("@/app/actions/proposals", () => ({
 const mockNotFound = jest.fn(() => {
   throw new Error("NEXT_NOT_FOUND");
 });
-jest.mock("next/navigation", () => ({ notFound: mockNotFound }));
+const mockRedirect = jest.fn(() => { throw new Error('NEXT_REDIRECT'); });
+jest.mock("next/navigation", () => ({ notFound: mockNotFound, redirect: mockRedirect, useRouter: () => ({ refresh: jest.fn() }) }));
+jest.mock('@/components/proposals/ProposalLoadRecovery', () => ({ __esModule: true, default: ({denied}: {denied:boolean}) => <div>{denied ? 'Access needs checking' : 'Try again'}</div> }));
 
 const PROPOSAL_ID = "abc123abc123abc123abc123";
 
@@ -69,6 +71,7 @@ describe("/proposals/[id]/assistant", () => {
     mockGetProposalById.mockResolvedValueOnce({
       success: false,
       message: "Proposal not found",
+      status: 404,
     });
     const Page = await loadPage("true");
 
@@ -86,5 +89,27 @@ describe("/proposals/[id]/assistant", () => {
       Page({ params: Promise.resolve({ id: "../../settings" }) }),
     ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(mockGetProposalById).not.toHaveBeenCalled();
+  });
+  test.each([503, 502, undefined])('shows recovery, not missing data, for status %s', async status => {
+    mockGetProposalById.mockResolvedValueOnce({success:false, status});
+    const Page = await loadPage('true');
+    render(await Page({params:Promise.resolve({id:PROPOSAL_ID})}));
+    expect(screen.getByText('Try again')).toBeVisible();
+    expect(mockNotFound).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('assistant-workspace')).not.toBeInTheDocument();
+  });
+  test('expired authentication returns to sign in without pretending the proposal is missing', async () => {
+    mockGetProposalById.mockResolvedValueOnce({success:false, status:401});
+    const Page = await loadPage('true');
+    await expect(Page({params:Promise.resolve({id:PROPOSAL_ID})})).rejects.toThrow('NEXT_REDIRECT');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringContaining('reason=session-expired'));
+    expect(mockNotFound).not.toHaveBeenCalled();
+  });
+  test('denied access never mounts the workspace', async () => {
+    mockGetProposalById.mockResolvedValueOnce({success:false, status:403});
+    const Page = await loadPage('true');
+    render(await Page({params:Promise.resolve({id:PROPOSAL_ID})}));
+    expect(screen.getByText('Access needs checking')).toBeVisible();
+    expect(screen.queryByTestId('assistant-workspace')).not.toBeInTheDocument();
   });
 });

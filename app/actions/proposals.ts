@@ -29,6 +29,8 @@ export type ProposalCounts = {
 
 type ApiResponse = {
   success: boolean;
+  status?: number;
+  code?: string;
   message?: string;
   data?: unknown;
   pagination?: unknown;
@@ -297,11 +299,13 @@ export async function getProposalByIdAction(id: string): Promise<ApiResponse> {
     const data = await res.json();
     return {
       success: res.ok,
+      status: res.status,
+      code: typeof data.code === 'string' ? data.code : undefined,
       message: data.message || (res.ok ? "Proposal fetched" : "Fetch failed"),
       data: withProposalMeta(data.data),
     };
   } catch (error: any) {
-    return { success: false, message: error.message || "Network error" };
+    return { success: false, status: 503, message: error.message || "Network error" };
   }
 }
 

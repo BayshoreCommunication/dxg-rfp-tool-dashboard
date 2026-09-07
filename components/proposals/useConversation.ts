@@ -78,6 +78,8 @@ export type PendingSend = {
 };
 
 export type SendInput = {
+  /** Reconcile a composer turn shown before its files finish uploading. */
+  localId?: string;
   content: string;
   intent: ConversationIntent;
   sourceIds?: string[];
@@ -254,7 +256,7 @@ export function useConversation(proposalId: string | null) {
   const sendMessage = useCallback(async (input: SendInput, targetProposalId?: string) => {
     const target = targetProposalId ?? proposalId;
     if (!target || !input.content.trim()) return false;
-    const idempotencyKey = crypto.randomUUID();
+    const idempotencyKey = input.localId ?? crypto.randomUUID();
     const entry: PendingSend = {
       localId: idempotencyKey,
       proposalId: target,

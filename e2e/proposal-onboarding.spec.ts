@@ -13,31 +13,49 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('new proposal first attachment never flashes a guided question during slow creation and upload', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.request.post(fixture, { data: { delays: { create: 500, upload: 1500, chat: 1200 } } });
   await page.goto('/proposals/add-new-proposal');
   await expect(page.getByText('Let’s build your event RFP', {exact:true})).toBeVisible();
   await page.locator('input[type="file"]').setInputFiles({ name: 'first-brief.txt', mimeType: 'text/plain', buffer: Buffer.from('Northstar Leadership Summit, September 14–16, 2027.') });
   await page.evaluate(() => {
     const observed: string[] = [];
-    Object.assign(window, { prematureQuestions: observed });
+    const orderErrors: string[] = [];
+    Object.assign(window, { prematureQuestions: observed, attachmentOrderErrors: orderErrors });
     new MutationObserver(() => {
+      const thread = document.querySelector('[data-testid="proposal-conversation-scroll"]');
+      const progress = thread?.querySelector('[aria-label="Attachment progress"]');
+      if (progress) {
+        const paragraphs = [...thread!.querySelectorAll('p, [data-testid="attachment-acknowledgement"]')];
+        const user = paragraphs.find(node => node.textContent === 'Please review the attached file.');
+        const ack = paragraphs.find(node => /^(I’ll upload your brief|I’ve received your brief)/.test(node.textContent ?? ''));
+        if (!user || !ack || !(user.compareDocumentPosition(ack) & Node.DOCUMENT_POSITION_FOLLOWING) || !(ack.compareDocumentPosition(progress) & Node.DOCUMENT_POSITION_FOLLOWING)) orderErrors.push(thread!.textContent ?? '');
+      }
       const question = [...document.querySelectorAll('p')].find(node => /^Guided question \d+$/.test(node.textContent ?? '') && node.getClientRects().length > 0);
       const emptyWelcome = [...document.querySelectorAll('li')].some(node => node.textContent?.startsWith('Share a few event details or attach a brief below.') && node.getClientRects().length > 0);
       if (question || emptyWelcome) observed.push(document.querySelector('main')?.textContent ?? '');
     }).observe(document.body, { childList: true, subtree: true, attributes: true });
   });
   await page.getByRole('button', {name:'Send message', exact:true}).click();
-  await expect(page).toHaveURL(/\/proposals\/cccccccccccccccccccccccc\/assistant$/);
+  await expect(page.getByText('Please review the attached file.', {exact:true})).toBeVisible();
+  await expect(page.getByTestId('attachment-acknowledgement')).toBeVisible();
+  await expect(page.getByRole('status', {name:'Attachment progress'})).toContainText('Uploading your brief');
+  await expect(page).toHaveURL(/\/proposals\/cccccccccccccccccccccccc\/assistant$/, {timeout:30_000});
   await expect(page.getByRole('status', {name:'Attachment progress'})).toContainText('Checking your file', { timeout: 20_000 });
   expect(await page.evaluate(() => (window as unknown as {prematureQuestions:string[]}).prematureQuestions)).toEqual([]);
   await expect(page.getByText('Guided question 1', {exact:true})).toBeHidden();
   await page.request.post(fixture, { data: { scan: 'ready' } });
-  await expect(page.getByRole('status', {name:'Attachment progress'})).toContainText('Reading your brief', {timeout:15_000});
+  await expect(page.getByRole('status', {name:'Attachment progress'})).toContainText('Reading your brief', {timeout:30_000});
   expect(await page.evaluate(() => (window as unknown as {prematureQuestions:string[]}).prematureQuestions)).toEqual([]);
   await expect.poll(async () => (await (await page.request.get(fixture)).json()).requests.filter((item: {intent:string}) => item.intent === 'extract_requirements').length).toBe(1);
   await expect.poll(async () => (await (await page.request.get(fixture)).json()).messages.some((item: {runType:string;status:string}) => item.runType === 'proposal_context' && item.status === 'pending')).toBe(true);
   await page.request.post(fixture, { data: { outcome:'complete' } });
   await expect(page.getByText(/I found Northstar Leadership Summit/)).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as {attachmentOrderErrors:string[]}).attachmentOrderErrors)).toEqual([]);
+  const steps = await page.getByTestId('proposal-conversation-scroll').innerText();
+  expect(steps.indexOf('Please review the attached file.')).toBeLessThan(steps.indexOf('I’ve received your brief'));
+  expect(steps.indexOf('I’ve received your brief')).toBeLessThan(steps.indexOf('I found Northstar'));
+  expect(steps.indexOf('I found Northstar')).toBeLessThan(steps.indexOf('GUIDED QUESTION'));
   await expect(page.getByText('What is this event called?', {exact:true})).toHaveCount(0);
   const state = await (await page.request.get(fixture)).json();
   expect(state.uploadCount).toBe(1);

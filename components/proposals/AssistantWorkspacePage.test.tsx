@@ -2055,6 +2055,25 @@ describe("AssistantWorkspacePage", () => {
     ));
   });
 
+  test('a completed retry replaces progress even before its send response returns', async () => {
+    mockedGetProposalContext.mockResolvedValue({ success: false, code: "CONTEXT_RUN_UNAVAILABLE", message: "none" });
+    const request = { ...conversationWithQuestion.data.messages[0], id:'extract-input', ordinal:1, intent:'extract_requirements', attachments:[{sourceId:'src-existing',role:'primary',filename:'brief.txt',sourceStatus:'ready'}] };
+    const failed = {...proposalContextMessage('failed'), ordinal:2};
+    let snapshot = {...conversationWithQuestion, data:{...conversationWithQuestion.data, messages:[request, failed]}};
+    mockedGetConversation.mockImplementation(async () => snapshot);
+    let finishSend!: (result: Awaited<ReturnType<typeof postConversationMessageAction>>) => void;
+    mockedPostMessage.mockReturnValueOnce(new Promise(resolve => { finishSend = resolve; }));
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    fireEvent.click(await screen.findByRole('button',{name:'Retry extraction'}));
+    expect(await screen.findByRole('status',{name:'Attachment progress'})).toBeInTheDocument();
+    const complete = {...proposalContextMessage('complete'), id:'completed-retry', ordinal:4, content:'The brief is ready to review.'};
+    snapshot = {...snapshot, data:{...snapshot.data, messages:[request, failed, {...request,id:'retry-input',ordinal:3}, complete]}};
+    await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+    expect(await screen.findByText('The brief is ready to review.')).toBeInTheDocument();
+    expect(screen.queryByRole('status',{name:'Attachment progress'})).not.toBeInTheDocument();
+    await act(async () => finishSend({success:true,correlationId:'test',data:{created:true,message:null,assistantMessageId:null,run:null}}));
+  });
+
   test("a planner can explicitly continue to guided questions after extraction fails", async () => {
     const requestMessage = {
       id: "msg-extract-request", ordinal: 1, role: "user" as const, kind: "action_request" as const,
@@ -2179,6 +2198,27 @@ describe("AssistantWorkspacePage", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: "Remove venue.pdf" })).not.toBeInTheDocument());
     // Still no confirmation checkbox anywhere in the flow.
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  test('first file turn and acknowledgement precede upload progress even while proposal creation waits', async () => {
+    let finishCreate!: (value: {success:boolean; message:string}) => void;
+    mockedCreateProposal.mockReturnValueOnce(new Promise(resolve => { finishCreate = resolve; }));
+    render(<AssistantWorkspacePage />);
+    await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, {target:{files:[new File(['brief'], 'slow-brief.txt', {type:'text/plain'})]}});
+    fireEvent.click(screen.getByRole('button', {name:'Send message'}));
+    const userTurn = screen.getByTestId('attachment-user-turn');
+    const acknowledgement = screen.getByTestId('attachment-acknowledgement');
+    const progress = screen.getByRole('status', {name:'Attachment progress'});
+    expect(userTurn).toHaveTextContent('slow-brief.txt');
+    expect(userTurn.compareDocumentPosition(acknowledgement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(acknowledgement.compareDocumentPosition(progress) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+    expect(screen.queryByText('What is this event called?')).not.toBeInTheDocument();
+    await act(async () => finishCreate({success:false,message:'Synthetic creation failure'}));
+    expect(screen.queryByRole('status', {name:'Attachment progress'})).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name:'Remove slow-brief.txt'})).toBeInTheDocument();
   });
 
   test("empty conversation field gaps cannot appear before a new proposal's first attachment message", async () => {

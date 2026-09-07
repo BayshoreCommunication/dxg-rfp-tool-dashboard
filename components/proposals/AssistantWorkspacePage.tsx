@@ -2539,6 +2539,10 @@ export default function AssistantWorkspacePage({
   // A send owns its attachment intent until the scan handoff settles. The
   // composer chips are cleared earlier and are not a reliable loading flag.
   const [attachmentSendActive, setAttachmentSendActive] = useState(false);
+  const [attachmentTurn, setAttachmentTurn] = useState<{
+    localId: string; content: string; filenames: string[];
+    afterOrdinal: number; sourceIds: string[];
+  } | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [inputClarification, setInputClarification] = useState<string | null>(null);
   // Files already uploaded during a failed send attempt keep their source id so
@@ -2934,12 +2938,16 @@ export default function AssistantWorkspacePage({
   const attachmentSending = attachmentSendActive || sendBusy || pending.some(item => item.intent === 'chat' && item.sourceIds.length > 0 && item.state === 'sending');
   const sourceExtractionInProgress =
     attachmentSending ||
-    retryingExtractionId !== null ||
+    (retryingExtractionId !== null && !(latestContextRun?.status === 'complete' && latestContextRun.id !== retryingExtractionId)) ||
     autoScanning ||
     pending.some(
       (item) =>
         item.intent === 'extract_requirements' &&
-        item.state === 'sending',
+        item.state === 'sending' &&
+        // A fast worker/read can deliver the final card before the send
+        // promise settles. Never show a second progress card beneath it.
+        !(latestContextRun && latestContextRun.status !== 'pending' &&
+          item.afterOrdinal !== undefined && latestContextRun.ordinal > item.afterOrdinal),
     ) ||
     messages.some(
       (message) =>
@@ -2998,7 +3006,20 @@ export default function AssistantWorkspacePage({
           !sentContent.has(entry.content.trim())),
     );
   }, [pending, messages]);
+  // Match this exact batch, not just its text: two successive attachment-only
+  // turns both say "Please review the attached file."
+  const persistedAttachmentTurn = attachmentTurn?.sourceIds.length
+    ? messages.find(message => message.role === 'user' && message.intent === 'chat' &&
+      message.ordinal > attachmentTurn.afterOrdinal &&
+      attachmentTurn.sourceIds.every(id => message.attachments.some(file => file.sourceId === id)))
+    : undefined;
+  const attachmentAcknowledged = persistedAttachmentTurn && messages.some(message =>
+    message.role === 'assistant' && !message.runType && message.status === 'complete' &&
+    message.ordinal === persistedAttachmentTurn.ordinal + 1);
+  const localAttachmentPending = pending.find(entry => entry.localId === attachmentTurn?.localId);
+  const showLocalAttachment = !!attachmentTurn && !persistedAttachmentTurn && localAttachmentPending?.state !== 'failed';
   const started =
+    !!attachmentTurn ||
     !!proposalId ||
     messages.length > 0 ||
     pending.length > 0 ||
@@ -3201,7 +3222,7 @@ export default function AssistantWorkspacePage({
     return id;
   }, [proposalId]);
 
-  const performSend = async (textOverride?: string, source?: 'voice') => {
+  const performSend = async (textOverride?: string, source?: 'voice', attachmentLocalId?: string) => {
     const value = (textOverride ?? text).trim();
     if (chatBusy || sendBusy) return;
     if (!value && staged.length === 0) return;
@@ -3404,6 +3425,7 @@ export default function AssistantWorkspacePage({
       setSendBusy(false);
     }
     const content = value || 'Please review the attached file.';
+    if (attachmentLocalId) setAttachmentTurn(turn => turn?.localId === attachmentLocalId ? { ...turn, sourceIds } : turn);
     setText('');
     setStaged([]);
     uploadedRef.current.clear();
@@ -3411,6 +3433,7 @@ export default function AssistantWorkspacePage({
       {
         content,
         intent: 'chat',
+        ...(attachmentLocalId ? { localId: attachmentLocalId } : {}),
         ...(sourceIds.length > 0 ? { sourceIds } : {}),
       },
       id,
@@ -3427,12 +3450,22 @@ export default function AssistantWorkspacePage({
   };
 
   const handleSend = async (textOverride?: string, source?: 'voice') => {
-    if (sendLockRef.current) return;
+    if (sendLockRef.current || chatBusy || sendBusy) return;
     sendLockRef.current = true;
     setSendLocked(true);
     setAttachmentSendActive(staged.length > 0);
+    const attachmentLocalId = staged.length ? crypto.randomUUID() : undefined;
+    if (attachmentLocalId) {
+      // Synchronous visual handoff before the first network await. These are
+      // local receipt/intent, not claims that the server has read the file.
+      setAttachmentTurn({ localId: attachmentLocalId,
+        content: (textOverride ?? text).trim() || 'Please review the attached file.',
+        filenames: staged.map(file => file.name), sourceIds: [],
+        afterOrdinal: Math.max(0, ...messages.map(message => message.ordinal)),
+      });
+    }
     try {
-      await performSend(textOverride, source);
+      await performSend(textOverride, source, attachmentLocalId);
     } finally {
       sendLockRef.current = false;
       setSendLocked(false);
@@ -4450,7 +4483,7 @@ export default function AssistantWorkspacePage({
                     {loadError}
                   </p>
                 )}
-                {loading && pending.length === 0 && messages.length === 0 && (
+                {loading && !attachmentTurn && pending.length === 0 && messages.length === 0 && (
                   <p role="status" className="text-sm text-slate-500">
                     Loading the conversation…
                   </p>
@@ -4461,7 +4494,28 @@ export default function AssistantWorkspacePage({
                       Share a few event details or attach a brief below. I’ll review what you send before asking the next question.
                     </li>
                   )}
-                  {threadMessages.map(renderMessage)}
+                  {threadMessages.flatMap(message => [
+                    renderMessage(message),
+                    ...(message.id === persistedAttachmentTurn?.id && !attachmentAcknowledged
+                      ? [wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">I’ll upload your brief and check the file, then read the event details. We’ll review what I find before moving to the next question.</div>, 'attachment-acknowledgement')]
+                      : []),
+                  ])}
+                  {showLocalAttachment && attachmentTurn && (
+                    <li data-testid="attachment-user-turn" className="flex justify-end">
+                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 sm:max-w-[75%]">
+                        <p className="whitespace-pre-wrap">{attachmentTurn.content}</p>
+                        <ul className="mt-2 flex flex-wrap gap-1.5">
+                          {attachmentTurn.filenames.map((name, index) => <li key={`${index}:${name}`} className="max-w-full break-all rounded-full border border-[#00c2c9]/40 bg-white px-2 py-0.5 text-xs text-slate-600">{name}</li>)}
+                        </ul>
+                      </div>
+                    </li>
+                  )}
+                  {showLocalAttachment && wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">I’ll upload your brief and check the file, then read the event details. We’ll review what I find before moving to the next question.</div>, 'attachment-acknowledgement')}
+                  {sourceExtractionInProgress && !extractionSendFailure && (
+                    <li className="flex justify-start">
+                      <SourceIntakeProgress phase={sourceIntakePhase} />
+                    </li>
+                  )}
                   {showOverview && proposalId && (
                     <li className="flex justify-start">
                       <OverviewCard
@@ -4543,7 +4597,7 @@ export default function AssistantWorkspacePage({
                       )}
                     </li>
                   ))}
-                  {unsentPending.filter(entry => entry.intent !== 'extract_requirements').map((entry) => (
+                  {unsentPending.filter(entry => entry.intent !== 'extract_requirements' && !(entry.state !== 'failed' && entry.localId === attachmentTurn?.localId && (showLocalAttachment || persistedAttachmentTurn))).map((entry) => (
                     <li
                       key={entry.localId}
                       className="flex justify-end"
@@ -4611,11 +4665,6 @@ export default function AssistantWorkspacePage({
                   {nonDraftSending && !assistantResponding && !sourceExtractionInProgress && (
                     <li className="flex justify-start">
                       <TypingIndicator label="The assistant is responding" />
-                    </li>
-                  )}
-                  {sourceExtractionInProgress && !extractionSendFailure && (
-                    <li className="flex justify-start">
-                      <SourceIntakeProgress phase={sourceIntakePhase} />
                     </li>
                   )}
                   {(guidanceBusy || investmentBusy) && (
