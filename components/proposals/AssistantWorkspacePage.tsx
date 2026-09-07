@@ -1386,7 +1386,7 @@ const isLoadInTimeQuestion = (question: ConversationQuestion) =>
   );
 
 export const displayQuestionPrompt = (
-  question: ConversationQuestion,
+  question: Pick<ConversationQuestion, 'paths' | 'prompt' | 'code'>,
 ): string => {
   if (
     question.paths.some((path) =>
@@ -1446,6 +1446,7 @@ function parseIsoLocalDate(iso: string): Date {
 function GuidedQuestionCard({
   question,
   current,
+  clarification = false,
   busy,
   error,
   minimumDate,
@@ -1457,6 +1458,7 @@ function GuidedQuestionCard({
 }: {
   question: ConversationQuestion;
   current: number;
+  clarification?: boolean;
   busy: boolean;
   error: string | null;
   minimumDate: Date;
@@ -1593,7 +1595,7 @@ function GuidedQuestionCard({
     <div className="my-2 w-full max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
-          Guided question {current}
+          {clarification ? 'Additional clarification' : `Guided question ${current}`}
         </p>
         {impactLabel && (
           <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-800">
@@ -2901,6 +2903,21 @@ export default function AssistantWorkspacePage({
   // Answered and skipped both count as done for the rail checklist.
   const resolvedQuestionCount = activeQuestions.length - openQuestions.length;
   const currentQuestion = openQuestions[0] ?? null;
+  const intakeProgress = data?.intakeProgress;
+  const totalIntakeCount = intakeProgress?.total ?? activeQuestions.length;
+  const completedIntakeCount = intakeProgress?.completed ?? resolvedQuestionCount;
+  const coreChecklist = firstContributionReceived && intakeProgress
+    ? intakeProgress.items.map(item => ({...item, id: item.key, code: ''}))
+    : activeQuestions.map(question => ({...question, questionId: question.id}));
+  const remainingIntakeCount = coreChecklist.filter(item => item.status === 'open').length;
+  const extraQuestions = intakeProgress && firstContributionReceived
+    ? activeQuestions.filter(question => intakeProgress.extraQuestionIds.includes(question.id))
+    : [];
+  const questionGroups = [
+    { label: 'Question checklist', title: null, items: coreChecklist },
+    ...(extraQuestions.length ? [{label: 'Additional clarifications', title: 'Additional clarifications',
+      items: extraQuestions.map(question => ({...question, questionId: question.id}))}] : []),
+  ];
   const attachmentSending = attachmentSendActive || sendBusy || pending.some(item => item.intent === 'chat' && item.sourceIds.length > 0 && item.state === 'sending');
   const sourceExtractionInProgress =
     attachmentSending ||
@@ -3702,12 +3719,14 @@ export default function AssistantWorkspacePage({
     answeredCount + skippedCount,
     resolvedQuestions,
   );
-  const questionProgressCurrent = answeredTotal + 1;
+  const coreQuestionIndex = intakeProgress?.items.findIndex(item => item.questionId === currentQuestion?.id) ?? -1;
+  const questionProgressCurrent = coreQuestionIndex >= 0 ? coreQuestionIndex + 1 : answeredTotal + 1;
   const questionsComplete =
     answeredTotal > 0 &&
     !loading &&
     !!data &&
-    openQuestions.length === 0;
+    openQuestions.length === 0 &&
+    (!intakeProgress || completedIntakeCount === totalIntakeCount);
 
   // Finishing the questions is a progress moment, so the card reports real
   // numbers: the guidance engine is deterministic and synchronous, so it is run
@@ -4669,6 +4688,7 @@ export default function AssistantWorkspacePage({
                           key={currentQuestion.id}
                           question={currentQuestion}
                           current={questionProgressCurrent}
+                          clarification={!!currentQuestion && extraQuestions.some(question => question.id === currentQuestion.id)}
                           busy={questionBusyId === currentQuestion.id}
                           error={questionError}
                           minimumDate={minimumDateForQuestion(
@@ -4856,10 +4876,10 @@ export default function AssistantWorkspacePage({
                 </div>
                 <div className="rounded-xl border border-white/15 bg-white/10 p-2">
                   <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
-                    Questions answered
+                    Questions completed
                   </dt>
                   <dd className="mt-0.5 text-sm font-bold">
-                    {activeQuestions.length > 0 ? `${resolvedQuestionCount}/${activeQuestions.length}` : '—'}
+                    {totalIntakeCount > 0 ? `${completedIntakeCount}/${totalIntakeCount}` : '—'}
                   </dd>
                 </div>
               </dl>
@@ -4889,7 +4909,7 @@ export default function AssistantWorkspacePage({
               </div>
               {sourceExtractionInProgress || extractionFailureBlocksQuestions ? (
                 <p className="mt-3 text-xs leading-5 text-slate-600">{sourceExtractionInProgress ? 'I’ll review your attachment first. Then we’ll confirm what I found and fill in any missing details, one step at a time.' : 'Resolve the attachment issue in the conversation, or choose to continue without it.'}</p>
-              ) : activeQuestions.length === 0 ? (
+              ) : coreChecklist.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-400">
                   {questionsComplete
                     ? 'All key questions answered.'
@@ -4901,31 +4921,37 @@ export default function AssistantWorkspacePage({
                     role="progressbar"
                     aria-label="Key questions progress"
                     aria-valuemin={0}
-                    aria-valuemax={activeQuestions.length}
-                    aria-valuenow={resolvedQuestionCount}
-                    aria-valuetext={`${resolvedQuestionCount} of ${activeQuestions.length} questions completed`}
+                    aria-valuemax={totalIntakeCount}
+                    aria-valuenow={completedIntakeCount}
+                    aria-valuetext={`${completedIntakeCount} of ${totalIntakeCount} questions completed`}
                     className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
                   >
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-[#2fc6f5] to-[#087f69] transition-[width] duration-500"
                       style={{
-                        width: `${Math.round((resolvedQuestionCount / activeQuestions.length) * 100)}%`,
+                        width: `${Math.round((completedIntakeCount / totalIntakeCount) * 100)}%`,
                       }}
                     />
                   </div>
                   <p className="mt-2.5 text-xs leading-5 text-slate-500">
-                    {openQuestions.length === 0
-                      ? 'All key questions answered.'
-                      : resolvedQuestionCount === 0
+                    {remainingIntakeCount === 0
+                      ? extraQuestions.some(question => question.status === 'open')
+                        ? 'Key questions complete. Let’s resolve the additional clarifications.'
+                        : 'All key questions completed.'
+                      : completedIntakeCount === 0
                         ? 'We’ll work through these together, one question at a time.'
-                        : `${openQuestions.length} to go. Continue in the conversation.`}
+                        : `${remainingIntakeCount} to go. Continue in the conversation.`}
                   </p>
-                  <ol aria-label="Question checklist" className="mt-4 min-w-0 space-y-2">
-                    {activeQuestions.map((question, index) => {
+                  {questionGroups.map(group => (
+                  <div key={group.label} className="min-w-0">
+                  {group.title && <h3 className="mt-5 border-t border-slate-100 pt-4 text-xs font-bold text-slate-800">{group.title}</h3>}
+                  <ol aria-label={group.label} className="mt-4 min-w-0 space-y-2">
+                    {group.items.map((question, index) => {
                       const resolved = question.status !== 'open';
-                      const skipped = question.status === 'dismissed';
-                      const isCurrent = currentQuestion?.id === question.id;
-                      const state = skipped
+                      const notApplicable = question.status === 'not_applicable';
+                      const skipped = question.status === 'dismissed' || notApplicable;
+                      const isCurrent = currentQuestion?.id === question.questionId;
+                      const state = notApplicable ? 'Not needed' : skipped
                         ? 'Skipped'
                         : resolved
                           ? 'Answered'
@@ -4958,7 +4984,7 @@ export default function AssistantWorkspacePage({
                                   : 'border-slate-300 bg-white'
                             }`}
                           >
-                            {resolved ? <Check size={11} strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-amber-400" /> : null}
+                            {notApplicable ? <span aria-hidden>−</span> : resolved ? <Check size={11} strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-amber-400" /> : null}
                           </span>
                           <div className="min-w-0 flex-1">
                             <p
@@ -4975,6 +5001,8 @@ export default function AssistantWorkspacePage({
                       );
                     })}
                   </ol>
+                  </div>
+                  ))}
                 </>
               )}
             </section>

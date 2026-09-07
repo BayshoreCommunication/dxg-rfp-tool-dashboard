@@ -1241,6 +1241,35 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByText(/All key questions answered/)).not.toBeInTheDocument();
   });
 
+  test("the fixed intake checklist includes future questions and separates extra clarification progress", async () => {
+    const snapshot = conversationWithGuidedQuestions([startDateQuestion, roomsQuestion]);
+    const items = Array.from({length:19}, (_, index) => ({key:`/content/qa/${index}`,paths:[`/content/qa/${index}`],
+      prompt:`Core question ${index + 1}?`,status:'open' as const,questionId:null as string | null}));
+    items[0] = {...items[0],questionId:startDateQuestion.id};
+    mockedGetConversation.mockResolvedValue({...snapshot,data:{...snapshot.data,
+      intakeProgress:{total:19,completed:0,items,extraQuestionIds:[roomsQuestion.id]}}});
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    expect(await screen.findByText('0/19')).toBeInTheDocument();
+    expect(within(screen.getByRole('list',{name:'Question checklist'})).getAllByRole('listitem')).toHaveLength(19);
+    expect(within(screen.getByRole('list',{name:'Additional clarifications'})).getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByRole('progressbar',{name:'Key questions progress'})).toHaveAttribute('aria-valuemax','19');
+    expect(screen.getByText('Guided question 1')).toBeInTheDocument();
+    expect(screen.queryByText(/\d+ of \d+ done/)).not.toBeInTheDocument();
+  });
+
+  test("finished intake does not hide an unresolved extra decision or inflate its count", async () => {
+    const snapshot = conversationWithGuidedQuestions([roomsQuestion]);
+    const items = Array.from({length:19}, (_, index) => ({key:`/content/qa/${index}`,paths:[`/content/qa/${index}`],
+      prompt:`Core question ${index + 1}?`,status:'answered' as const,questionId:null}));
+    mockedGetConversation.mockResolvedValue({...snapshot,data:{...snapshot.data,
+      intakeProgress:{total:19,completed:19,items,extraQuestionIds:[roomsQuestion.id]}}});
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    expect(await screen.findByText('19/19')).toBeInTheDocument();
+    expect(screen.getByText('Key questions complete. Let’s resolve the additional clarifications.')).toBeInTheDocument();
+    expect(screen.getByText('How many event rooms are required?')).toBeInTheDocument();
+    expect(screen.getByRole('list',{name:'Additional clarifications'})).toBeInTheDocument();
+  });
+
   test("event start date validation uses the user's local calendar day", () => {
     const now = new Date(2026, 6, 27, 23, 45);
 

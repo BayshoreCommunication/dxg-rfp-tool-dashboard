@@ -22,6 +22,7 @@ export async function handleProposalOnboarding(req, res, url) {
       if (input.reset) reset();
       if (input.delays) state.delays = input.delays;
       if (input.scan) state.scan = input.scan;
+      if (input.intakeProgress) state.intakeProgress = input.intakeProgress;
       if (Array.isArray(input.questions)) {
         state.questions = input.questions;
         state.messages = [message({ role: 'user', kind: 'instruction', content: 'Help me plan an event.' })];
@@ -71,6 +72,7 @@ export async function handleProposalOnboarding(req, res, url) {
       messages: state.messages,
       questions: state.questions ?? (state.eventName === 'Untitled proposal' ? [question('eventName', 'What is this event called?')] : [{ ...question('venueName', 'Which venue will host the event?'), paths: ['/content/venueSchedule/venueName'] }]),
       capabilities: { conversationExtraction: false },
+      intakeProgress: state.intakeProgress,
     } }); return true;
   }
   if (path === `${base}/conversation/messages`) {

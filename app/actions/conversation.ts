@@ -131,10 +131,24 @@ export type ConversationQuestion = {
   createdAt: string;
 };
 export type ConversationSummary = { id: string; title: string; status: string; messageCount: number; updatedAt: string };
+export type IntakeProgressItem = {
+  key: string;
+  paths: string[];
+  prompt: string;
+  status: "open" | "answered" | "dismissed" | "not_applicable";
+  questionId: string | null;
+};
+export type IntakeProgress = {
+  total: number;
+  completed: number;
+  items: IntakeProgressItem[];
+  extraQuestionIds: string[];
+};
 export type ConversationData = {
   conversation: ConversationSummary | null;
   messages: ConversationMessage[];
   questions: ConversationQuestion[];
+  intakeProgress?: IntakeProgress;
   capabilities?: { conversationExtraction: boolean };
 };
 export type ConversationRunRef = { runType: ConversationRunType; runId: string; jobId: string };
@@ -215,6 +229,29 @@ const parseQuestion = (value: unknown): ConversationQuestion | null => {
   };
 };
 
+const parseIntakeProgress = (value: unknown): IntakeProgress | undefined => {
+  if (!isRecord(value) || !Array.isArray(value.items) || !value.items.length) return undefined;
+  const items: IntakeProgressItem[] = [];
+  for (const item of value.items) {
+    if (!isRecord(item) || typeof item.key !== "string" || typeof item.prompt !== "string" ||
+      !Array.isArray(item.paths) || !item.paths.length || !item.paths.every(path => typeof path === "string") ||
+      !["open", "answered", "dismissed", "not_applicable"].includes(String(item.status))) return undefined;
+    items.push({ key: item.key, prompt: item.prompt, paths: item.paths as string[],
+      status: item.status as IntakeProgressItem["status"],
+      questionId: typeof item.questionId === "string" ? item.questionId : null });
+  }
+  if (new Set(items.map(item => item.key)).size !== items.length) return undefined;
+  return {
+    // Derive both counts from the same validated catalog, never a stale pair
+    // of separately returned counters. Old servers remain supported below.
+    total: items.length,
+    completed: items.filter(item => item.status !== "open").length,
+    items,
+    extraQuestionIds: Array.isArray(value.extraQuestionIds)
+      ? value.extraQuestionIds.filter((id): id is string => typeof id === "string") : [],
+  };
+};
+
 const parseConversationData = (value: unknown): ConversationData | null => {
   if (!isRecord(value)) return null;
   const conversation = isRecord(value.conversation) && typeof value.conversation.id === "string"
@@ -230,6 +267,7 @@ const parseConversationData = (value: unknown): ConversationData | null => {
     conversation,
     messages: Array.isArray(value.messages) ? value.messages.flatMap(item => { const parsed = parseMessage(item); return parsed ? [parsed] : []; }) : [],
     questions: Array.isArray(value.questions) ? value.questions.flatMap(item => { const parsed = parseQuestion(item); return parsed ? [parsed] : []; }) : [],
+    intakeProgress: parseIntakeProgress(value.intakeProgress),
     capabilities: isRecord(value.capabilities)
       ? { conversationExtraction: value.capabilities.conversationExtraction === true }
       : undefined,

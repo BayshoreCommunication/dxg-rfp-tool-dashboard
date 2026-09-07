@@ -164,6 +164,47 @@ test('shared date picker selections stay readable on hover and keyboard focus', 
   expect((await (await page.request.get(fixture)).json()).requests).toHaveLength(0);
 });
 
+test('core intake stays at nineteen through venue activation, city answers, extraction and reload', async ({page}, testInfo) => {
+  const fields = ['event/eventName','event/startDate','event/endDate','event/eventFormat','event/eventType/eventType',
+    'venueSchedule/venueName','venueSchedule/venueCity','event/attendees','venueSchedule/venueState','venueSchedule/venueType',
+    'venueSchedule/numberOfEventRooms','venueSchedule/venueConfirmedStatus','venueSchedule/isUnionVenue','venue/inHouseAvRequired',
+    'venue/riggingRequired','venue/powerDropsRequired','venueSchedule/loadInDate','venue/venueAccessRequirements','budget/proposalSubmissionDueDate'];
+  const questions = fields.map((path,index) => ({id:`fixed-${index}`,code:`MISSING_FIELD:/content/${path}`,severity:'question',paths:[`/content/${path}`],
+    prompt:`Intake question ${index+1}?`,status:'open',answerType:'text',options:[]}));
+  const conflict = {...questions[0],id:'extra-conflict',code:'CROSS_SOURCE_CONFLICT',severity:'blocking',prompt:'Which event name is correct?'};
+  const phases = [
+    {answered:[], active:questions.slice(0,8), extra:false},
+    {answered:[0,1,2,3,4,5], active:questions, extra:false},
+    {answered:[0,1,2,3,4,5,6,8], active:questions.filter((_,i)=>i!==8), extra:false},
+    {answered:[0,1,2,3,4,5,6,8], active:questions, extra:true},
+    {answered:fields.map((_,i)=>i), active:questions, extra:true},
+    {answered:fields.map((_,i)=>i), active:questions, extra:false},
+  ];
+  const checklist = page.getByRole('list',{name:'Question checklist',exact:true});
+  const tools = page.getByRole('complementary',{name:'Proposal assistant tools'});
+  for (const [index,phase] of phases.entries()) {
+    await page.request.post(fixture,{data:{
+      questions:[...phase.active.map(q=>({...q,status:phase.answered.includes(questions.indexOf(q))?'answered':'open'})),...(phase.extra?[conflict]:[])],
+      intakeProgress:{total:19,completed:phase.answered.length,extraQuestionIds:phase.extra?['extra-conflict']:[],
+        items:questions.map((q,i)=>({key:q.paths[0],paths:q.paths,prompt:q.prompt,status:phase.answered.includes(i)?'answered':'open',questionId:phase.answered.includes(i)?null:q.id}))},
+    }});
+    await page.reload();
+    const toggle=page.getByRole('button',{name:'Toggle AI workspace tools'});
+    if(await toggle.isVisible() && await toggle.getAttribute('aria-expanded')==='false') await toggle.click();
+    await expect(checklist.getByRole('listitem')).toHaveCount(19);
+    await expect(tools.getByText(`${phase.answered.length}/19`,{exact:true})).toHaveCount(1);
+    await expect(tools.getByRole('progressbar')).toHaveAttribute('aria-valuemax','19');
+    await expect(tools.getByRole('progressbar')).toHaveAttribute('aria-valuenow',String(phase.answered.length));
+    await expect(page.getByRole('list',{name:'Additional clarifications',exact:true})).toHaveCount(phase.extra?1:0);
+    await expect(page.getByText(/\d+ of \d+ done/)).toHaveCount(0);
+    if(index===4) {
+      await expect(page.getByText('Additional clarification',{exact:true})).toHaveCount(1);
+      await expect(page.getByText('Guided question 20',{exact:true})).toHaveCount(0);
+    }
+  }
+  await page.screenshot({path:testInfo.outputPath('fixed-nineteen-complete.png')});
+});
+
 test('question checklist stays readable with one scroll area at narrow, tablet and desktop widths', async ({page}, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
