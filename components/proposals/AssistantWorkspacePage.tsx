@@ -1592,7 +1592,7 @@ function GuidedQuestionCard({
   );
 
   return (
-    <div className="my-2 w-full max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+    <div data-testid="guided-question-card" className="my-2 w-full max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
           {clarification ? 'Additional clarification' : `Guided question ${current}`}
@@ -4495,9 +4495,11 @@ export default function AssistantWorkspacePage({
                   )}
                   {showLocalAttachment && wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">I’ll upload your brief and check the file, then read the event details. We’ll review what I find before moving to the next question.</div>, 'attachment-acknowledgement')}
                   {sourceExtractionInProgress && !extractionSendFailure && (
-                    <li className="flex justify-start">
-                      <SourceIntakeProgress phase={sourceIntakePhase} />
-                    </li>
+                    wrapAssistantTurn(
+                      <SourceIntakeProgress phase={sourceIntakePhase} />,
+                      'source-intake-progress',
+                      true,
+                    )
                   )}
                   {showOverview && proposalId && (
                     <li className="flex justify-start">
@@ -4692,37 +4694,40 @@ export default function AssistantWorkspacePage({
                     !bulkAnswerProgress &&
                     !extractionPending &&
                     !extractionFailureBlocksQuestions && (
-                      <li className="flex scroll-mt-4 justify-start py-1">
-                        <GuidedQuestionCard
-                          key={currentQuestion.id}
-                          question={currentQuestion}
-                          current={questionProgressCurrent}
-                          clarification={!!currentQuestion && extraQuestions.some(question => question.id === currentQuestion.id)}
-                          busy={questionBusyId === currentQuestion.id}
-                          error={questionError}
-                          minimumDate={minimumDateForQuestion(
-                            currentQuestion,
-                            proposal,
-                          )}
-                          maximumDate={maximumDateForQuestion(
-                            currentQuestion,
-                            proposal,
-                          )}
-                          initialDate={
-                            currentQuestion.answerType === 'date_time'
-                              ? currentLoadInDate
-                              : undefined
-                          }
-                          initialTime={
-                            currentQuestion.answerType === 'date_time'
-                              ? currentLoadInTime
-                              : undefined
-                          }
-                          onAnswer={(answer) =>
-                            void answerCurrentQuestion(answer)
-                          }
-                          onSkip={() => void skipCurrentQuestion()}
-                        />
+                      <li data-testid="guided-question-row" className="flex scroll-mt-4 items-start gap-2.5 py-1 sm:gap-3">
+                        <span aria-hidden="true" className="mt-0.5 h-8 w-8 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <GuidedQuestionCard
+                            key={currentQuestion.id}
+                            question={currentQuestion}
+                            current={questionProgressCurrent}
+                            clarification={!!currentQuestion && extraQuestions.some(question => question.id === currentQuestion.id)}
+                            busy={questionBusyId === currentQuestion.id}
+                            error={questionError}
+                            minimumDate={minimumDateForQuestion(
+                              currentQuestion,
+                              proposal,
+                            )}
+                            maximumDate={maximumDateForQuestion(
+                              currentQuestion,
+                              proposal,
+                            )}
+                            initialDate={
+                              currentQuestion.answerType === 'date_time'
+                                ? currentLoadInDate
+                                : undefined
+                            }
+                            initialTime={
+                              currentQuestion.answerType === 'date_time'
+                                ? currentLoadInTime
+                                : undefined
+                            }
+                            onAnswer={(answer) =>
+                              void answerCurrentQuestion(answer)
+                            }
+                            onSkip={() => void skipCurrentQuestion()}
+                          />
+                        </div>
                       </li>
                     )}
                   {questionsComplete && proposalId && (

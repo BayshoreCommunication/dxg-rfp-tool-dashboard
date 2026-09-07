@@ -1627,6 +1627,7 @@ describe("AssistantWorkspacePage", () => {
 
     // The persisted extraction-in-progress state is visible...
     expect(await screen.findByRole('status', { name: 'Attachment progress' })).toHaveTextContent('Reading your brief');
+    expect(screen.getByRole('status', { name: 'Attachment progress' }).parentElement?.parentElement).toHaveClass('items-start', 'gap-2.5');
     // A single progress card replaces the two competing extraction loaders.
     expect(screen.getAllByRole('status', { name: 'Attachment progress' })).toHaveLength(1);
     expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
@@ -1680,6 +1681,8 @@ describe("AssistantWorkspacePage", () => {
       await act(async () => { await jest.advanceTimersByTimeAsync(2_000); });
 
       expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
+      expect(screen.getByTestId('guided-question-row')).toHaveClass('items-start', 'gap-2.5');
+      expect(screen.getByTestId('guided-question-card')).toHaveClass('w-full', 'max-w-3xl');
       expect(screen.getByText("What is this event called?")).toBeInTheDocument();
       expect(screen.getByLabelText("Answer this question")).toHaveValue("Northstar Leadership Summit 2026");
       expect(screen.getByText("Pre-filled from your message or brief — confirm or edit.")).toBeInTheDocument();

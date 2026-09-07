@@ -79,7 +79,7 @@ export default function SourceIntakeProgress({ phase }: { phase: SourceIntakePha
       aria-label="Attachment progress"
       aria-live="polite"
       aria-atomic="true"
-      className="inline-flex max-w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm"
+      className="flex w-full max-w-3xl items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm"
     >
       <PixelGrid />
       <span className="dxg-source-shimmer truncate text-[13px] font-semibold">

@@ -11,6 +11,7 @@ describe("SourceIntakeProgress", () => {
     const { container } = render(<SourceIntakeProgress phase="uploading" />);
 
     const status = screen.getByRole("status", { name: "Attachment progress" });
+    expect(status).toHaveClass("w-full", "max-w-3xl");
     expect(status).toHaveTextContent("Uploading your brief");
     expect(status).toHaveTextContent("0.0s");
     expect(container.querySelectorAll("[data-attachment-loader-pixel]")).toHaveLength(9);
