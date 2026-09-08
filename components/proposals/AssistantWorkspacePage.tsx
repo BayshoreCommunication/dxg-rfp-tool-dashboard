@@ -4951,7 +4951,7 @@ export default function AssistantWorkspacePage({
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                 <h2
                   id="rail-questions-title"
-                  className="text-sm font-bold text-slate-900"
+                  className="text-[15px] font-bold text-slate-900"
                 >
                   Key questions
                 </h2>
@@ -4993,8 +4993,8 @@ export default function AssistantWorkspacePage({
                   </p>
                   {questionGroups.map(group => (
                   <div key={group.label} className="min-w-0">
-                  {group.title && <h3 className="mt-5 border-t border-slate-100 pt-4 text-xs font-bold text-slate-800">{group.title}</h3>}
-                  <ol aria-label={group.label} className="mt-4 min-w-0 space-y-2">
+                  {group.title && <h3 className="mt-3 border-t border-slate-100 pt-3 text-[13px] font-bold text-slate-800">{group.title}</h3>}
+                  <ol aria-label={group.label} className="mt-3 min-w-0 space-y-1">
                     {group.items.map((question, index) => {
                       const resolved = question.status !== 'open';
                       const notApplicable = question.status === 'not_applicable';
@@ -5012,7 +5012,7 @@ export default function AssistantWorkspacePage({
                           key={question.id}
                           data-question-state={state.toLowerCase().replace(' ', '-')}
                           aria-current={isCurrent ? 'step' : undefined}
-                          className={`flex min-w-0 items-start gap-2.5 rounded-xl border p-2.5 ${
+                          className={`flex min-w-0 items-start gap-2.5 rounded-xl border px-2.5 py-1.5 ${
                             isCurrent
                               ? 'border-amber-200 bg-amber-50/80'
                               : resolved
@@ -5037,7 +5037,7 @@ export default function AssistantWorkspacePage({
                           </span>
                           <div className="min-w-0 flex-1">
                             <p
-                              className={`text-xs leading-5 [overflow-wrap:anywhere] ${
+                              className={`text-[13px] leading-[1.35rem] [overflow-wrap:anywhere] ${
                                 resolved
                                   ? 'font-medium text-slate-500'
                                   : 'font-semibold text-slate-800'

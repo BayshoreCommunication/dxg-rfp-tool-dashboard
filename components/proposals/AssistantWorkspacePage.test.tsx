@@ -1228,9 +1228,12 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByRole("progressbar", { name: "Key questions progress" })).toHaveAttribute("aria-valuenow", "0");
     expect(screen.getByRole("progressbar", { name: "Key questions progress" })).toHaveAttribute("aria-valuetext", "0 of 2 questions completed");
     const checklist = screen.getByRole("list", { name: "Question checklist" });
-    expect(checklist).not.toHaveClass("overflow-y-auto", "max-h-[22rem]");
+    expect(checklist).toHaveClass("mt-3", "space-y-1");
+    expect(checklist).not.toHaveClass("overflow-y-auto", "max-h-[22rem]", "space-y-2");
     const rows = within(checklist).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveClass("px-2.5", "py-1.5");
+    expect(rows[0].querySelector("p")).toHaveClass("text-[13px]", "leading-[1.35rem]");
     expect(rows[0]).toHaveAttribute("aria-current", "step");
     expect(rows[1]).not.toHaveAttribute("aria-current");
     expect(within(rows[0]).getByRole("img", { name: "Up next" })).toBeInTheDocument();
