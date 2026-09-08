@@ -894,30 +894,58 @@ const questionFieldLabel = (
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
-const citationLabel = (citation: string): string => {
-  const segment =
-    citation.split('/').filter(Boolean).pop() ?? citation;
-  const labels: Record<string, string> = {
-    aboutOrganization: 'Organization',
-    editionYear: 'Edition / year',
-    endDate: 'End date',
-    eventFormat: 'Event format',
-    eventName: 'Event name',
-    eventObjectives: 'Event objectives',
-    eventType: 'Event type',
-    startDate: 'Start date',
-    statementOfWork: 'Scope of work',
-  };
-  if (labels[segment]) return labels[segment];
-  const words = segment
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/[_-]+/g, ' ')
-    .toLowerCase()
-    .trim();
-  return words
-    ? words.charAt(0).toUpperCase() + words.slice(1)
-    : 'Proposal detail';
+type DraftHighlightRange = { start: number; end: number };
+
+// The overview is a readable summary, not a field audit. Pull the few facts a
+// planner scans for first out of the generated sentence and emphasize them in
+// place; citations remain part of the stored draft without becoming UI chips.
+const draftOverviewHighlightRanges = (
+  text: string,
+): DraftHighlightRange[] => {
+  const patterns = [
+    /^(.+?)(?=\s+is\s+(?:an?|the)\s+)/i,
+    /\bis\s+(?:an?|the)\s+(.+?)(?=\s+(?:scheduled|planned|taking place)\b)/i,
+    /\b(?:scheduled|planned)\s+for\s+(.+?)(?=,\s+with\b)/i,
+    /\bwith\s+([\d,]+\s+(?:in-person\s+)?attendees?)\b/i,
+    /\bevent format is\s+([^.]+)/i,
+  ];
+
+  return patterns
+    .flatMap((pattern) => {
+      const match = pattern.exec(text);
+      const value = match?.[1];
+      if (!match || !value || match.index === undefined) return [];
+      const start = match.index + match[0].indexOf(value);
+      return [{ start, end: start + value.length }];
+    })
+    .sort((a, b) => a.start - b.start)
+    .filter(
+      (range, index, ranges) =>
+        index === 0 || range.start >= ranges[index - 1].end,
+    );
 };
+
+function DraftOverviewText({ text }: { text: string }) {
+  const highlights = draftOverviewHighlightRanges(text);
+  if (highlights.length === 0) return text;
+
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  highlights.forEach((range) => {
+    if (range.start > cursor) parts.push(text.slice(cursor, range.start));
+    parts.push(
+      <mark
+        key={`${range.start}-${range.end}`}
+        className="rounded-md bg-emerald-100/80 px-1 py-0.5 font-semibold text-[#075e54] [box-decoration-break:clone] [-webkit-box-decoration-break:clone]"
+      >
+        {text.slice(range.start, range.end)}
+      </mark>,
+    );
+    cursor = range.end;
+  });
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return parts;
+}
 
 // A picked calendar day submitted as YYYY-MM-DD from its LOCAL parts:
 // toISOString() would shift the day for anyone behind UTC.
@@ -2017,51 +2045,45 @@ function DraftRunCard({
           </div>
         ) : sections.length > 0 ? (
           <article className="space-y-3" aria-label="Proposal draft preview">
-            {sections.map((section, sectionIndex) => (
-              <section key={section.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_4px_14px_-12px_rgba(15,23,42,0.45)]">
-                <div className="flex items-center gap-2.5">
-                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-bold text-[#087f69]">
-                    {sectionIndex + 1}
-                  </span>
-                  <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-600">
-                    {section.heading}
-                  </h4>
-                </div>
-                <div className="mt-3 space-y-3 pl-0 sm:pl-8">
-                {section.paragraphs.length > 0 ? (
-                  section.paragraphs.map((paragraph, index) => (
-                    <div key={index}>
-                      <p className="text-sm leading-6 text-slate-700">
-                        {paragraph.text}
-                      </p>
-                      {paragraph.citations.length > 0 && (
-                        <div
-                          className="mt-2 flex flex-wrap gap-1.5"
-                          aria-label="Sources"
-                        >
-                          {paragraph.citations.map((citation) => (
-                            <span
-                              key={citation}
-                              data-citation={citation}
-                              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500"
-                            >
-                              <Check size={9} className="text-emerald-600" aria-hidden />
-                              {citationLabel(citation)}
-                            </span>
-                          ))}
+            {sections.map((section, sectionIndex) => {
+              const isOverview = section.key === 'event_overview';
+              return (
+                <section
+                  key={section.id}
+                  data-testid={`draft-section-${section.key}`}
+                  className={`rounded-xl border p-4 shadow-[0_4px_14px_-12px_rgba(15,23,42,0.45)] ${isOverview ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white'}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${isOverview ? 'bg-[#087f69] text-white' : 'bg-emerald-50 text-[#087f69]'}`}>
+                      {sectionIndex + 1}
+                    </span>
+                    <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-600">
+                      {section.heading}
+                    </h4>
+                  </div>
+                  <div className="mt-3 space-y-3 pl-0 sm:pl-8">
+                    {section.paragraphs.length > 0 ? (
+                      section.paragraphs.map((paragraph, index) => (
+                        <div key={index}>
+                          <p className="text-sm leading-6 text-slate-700">
+                            {isOverview ? (
+                              <DraftOverviewText text={paragraph.text} />
+                            ) : (
+                              paragraph.text
+                            )}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm italic leading-6 text-slate-400">
-                    Nothing supported by evidence yet for this
-                    section.
-                  </p>
-                )}
-              </div>
-              </section>
-            ))}
+                      ))
+                    ) : (
+                      <p className="text-sm italic leading-6 text-slate-400">
+                        Nothing supported by evidence yet for this
+                        section.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
           </article>
         ) : (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center">

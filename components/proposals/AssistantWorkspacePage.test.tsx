@@ -3206,7 +3206,7 @@ describe("AssistantWorkspacePage", () => {
 
   const STALE_HINT = "This draft was written before your latest answers.";
 
-  test("completed draft paragraphs display their citations", async () => {
+  test("completed draft overview removes field-key chips and emphasizes the important facts", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithDraft());
     mockedGetProposal.mockResolvedValue(proposalAtVersion(7));
     mockedGetDraft.mockResolvedValue({
@@ -3220,8 +3220,8 @@ describe("AssistantWorkspacePage", () => {
           heading: "Event Overview",
           ordinal: 0,
           paragraphs: [{
-            text: "Northstar Summit is a hybrid event.",
-            citations: ["/content/event/eventName", "/content/event/eventFormat"],
+            text: "Northstar Leadership Summit 2026 is a corporate conference scheduled for September 14–16, 2026, with 450 attendees listed. The event format is hybrid.",
+            citations: ["/content/event/endDate", "/content/event/eventName", "/content/event/startDate"],
           }],
           decision: null,
           decisionReason: null,
@@ -3234,10 +3234,10 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    const draftParagraph = await screen.findByText(
-      "Northstar Summit is a hybrid event.",
+    const draftSection = await screen.findByTestId("draft-section-event_overview");
+    expect(draftSection).toHaveTextContent(
+      "Northstar Leadership Summit 2026 is a corporate conference scheduled for September 14–16, 2026, with 450 attendees listed. The event format is hybrid.",
     );
-    expect(draftParagraph).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Proposal draft ready" })).toBeInTheDocument();
     expect(screen.getByLabelText("Proposal draft preview")).toBeInTheDocument();
     expect(screen.getByText("1 section")).toBeInTheDocument();
@@ -3247,12 +3247,24 @@ describe("AssistantWorkspacePage", () => {
       "w-full",
       "sm:w-auto",
     );
-    const citationSources = draftParagraph.parentElement?.querySelector(
-      '[aria-label="Sources"]',
+    const draftPreview = screen.getByLabelText("Proposal draft preview");
+    expect(within(draftPreview).queryByLabelText("Sources")).not.toBeInTheDocument();
+    expect(within(draftSection).queryByText("End date")).not.toBeInTheDocument();
+    expect(within(draftSection).queryByText("Event name")).not.toBeInTheDocument();
+    expect(within(draftSection).queryByText("Start date")).not.toBeInTheDocument();
+    expect(
+      Array.from(draftSection.querySelectorAll("mark"), (mark) =>
+        mark.textContent,
+      ),
+    ).toEqual(
+      [
+        "Northstar Leadership Summit 2026",
+        "corporate conference",
+        "September 14–16, 2026",
+        "450 attendees",
+        "hybrid",
+      ],
     );
-    expect(citationSources).toHaveTextContent("Event name");
-    expect(citationSources).toHaveTextContent("Event format");
-    expect(citationSources).not.toHaveTextContent("/content/");
     expect(screen.queryByRole("button", { name: "Copy" })).not.toBeInTheDocument();
     expect(screen.queryByText("gpt-test")).not.toBeInTheDocument();
   });
