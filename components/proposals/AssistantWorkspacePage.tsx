@@ -1184,12 +1184,9 @@ function SourceChips({
 }
 
 // ── Shared card action row ───────────────────────────────────────────────────
-// Every "what next?" card in the thread offers the same three actions in the
-// same order and at the same height: one solid primary (generate/regenerate the
-// draft), an outline secondary (readiness check, only while no report is on
-// screen) and a quiet tertiary link into the editor. Two cards must never show
-// two primary buttons that do the same thing, so the caller decides which card
-// owns the row.
+// "What next?" cards share the same primary and optional readiness actions.
+// Cards that still need an editor handoff can opt into the quiet tertiary link;
+// the completed-questions card keeps the user in the conversation instead.
 const ACTION_BASE =
   'inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:min-h-0 sm:w-auto sm:shrink-0';
 const ACTION_PRIMARY = `${ACTION_BASE} bg-[#087f69] text-white hover:bg-[#0a9a81]`;
@@ -1203,6 +1200,7 @@ function CardActionRow({
   onGenerateDraft,
   onRunReadiness,
   readinessBusy = false,
+  showEditDetails = true,
 }: {
   proposalId: string;
   hasDraft: boolean;
@@ -1212,6 +1210,7 @@ function CardActionRow({
   // competes with a result the user is already reading.
   onRunReadiness?: () => void;
   readinessBusy?: boolean;
+  showEditDetails?: boolean;
 }) {
   return (
     <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
@@ -1245,12 +1244,14 @@ function CardActionRow({
           {readinessBusy ? 'Checking…' : 'Run readiness check'}
         </button>
       )}
-      <Link
-        href={`/proposals/proposal-edit?proposalId=${proposalId}`}
-        className={ACTION_TERTIARY}
-      >
-        Edit all details
-      </Link>
+      {showEditDetails && (
+        <Link
+          href={`/proposals/proposal-edit?proposalId=${proposalId}`}
+          className={ACTION_TERTIARY}
+        >
+          Edit all details
+        </Link>
+      )}
     </div>
   );
 }
@@ -2246,7 +2247,7 @@ function CompletionCard({
     : null;
   const weakest = report ? weakestSections(report) : [];
   return (
-    <div className="w-full max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+    <div data-testid="completion-card" className="w-full max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
       <p className="text-sm font-semibold text-emerald-900">
         {/* Not "X% complete": the stepper uses "complete" for how far
             through the workflow a proposal is, and this measures how much of
@@ -2311,6 +2312,7 @@ function CompletionCard({
         onGenerateDraft={onGenerateDraft}
         onRunReadiness={onRunReadiness}
         readinessBusy={readinessBusy}
+        showEditDetails={false}
       />
       {draftError && (
         <p
@@ -2335,7 +2337,7 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
     (f) => f.severity === 'warning',
   ).length;
   return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:max-w-[85%]">
+    <div data-testid="guidance-card" className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
         Results — Readiness check
       </p>
@@ -4527,9 +4529,14 @@ export default function AssistantWorkspacePage({
                     </li>
                   )}
                   {localCards.map((card) => (
-                    <li key={card.id} className="flex justify-start">
+                    <li key={card.id} className={card.kind === 'guidance' ? 'flex items-start gap-2.5 sm:gap-3' : 'flex justify-start'}>
                       {card.kind === 'guidance' && (
-                        <GuidanceCard report={card.report} />
+                        <>
+                          <span aria-hidden="true" className="mt-0.5 h-8 w-8 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <GuidanceCard report={card.report} />
+                          </div>
+                        </>
                       )}
                       {card.kind === 'investment' && (
                         <InvestmentCard
@@ -4731,24 +4738,27 @@ export default function AssistantWorkspacePage({
                       </li>
                     )}
                   {questionsComplete && proposalId && (
-                    <li className="flex justify-start">
-                      <CompletionCard
-                        proposalId={proposalId}
-                        report={completionReport}
-                        checking={completionChecking}
-                        hasDraft={hasDraftRun}
-                        draftBusy={draftBusy || sending || draftInProgress}
-                        draftError={draftError}
-                        onGenerateDraft={() =>
-                          void runDraftFromCard()
-                        }
-                        onRunReadiness={
-                          guidanceDisplayed
-                            ? undefined
-                            : () => void runGuidance()
-                        }
-                        readinessBusy={guidanceBusy}
-                      />
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <span aria-hidden="true" className="mt-0.5 h-8 w-8 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <CompletionCard
+                          proposalId={proposalId}
+                          report={completionReport}
+                          checking={completionChecking}
+                          hasDraft={hasDraftRun}
+                          draftBusy={draftBusy || sending || draftInProgress}
+                          draftError={draftError}
+                          onGenerateDraft={() =>
+                            void runDraftFromCard()
+                          }
+                          onRunReadiness={
+                            guidanceDisplayed
+                              ? undefined
+                              : () => void runGuidance()
+                          }
+                          readinessBusy={guidanceBusy}
+                        />
+                      </div>
                     </li>
                   )}
                   {draftInProgress &&

@@ -2011,7 +2011,14 @@ describe("AssistantWorkspacePage", () => {
       "sm:w-auto",
     );
     expect(screen.queryByRole("button", { name: "Run readiness check" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Edit all details" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Edit all details" })).not.toBeInTheDocument();
+    const completionCard = screen.getByTestId("completion-card");
+    expect(completionCard).toHaveClass("w-full", "max-w-3xl");
+    expect(completionCard.closest("li")).toHaveClass(
+      "items-start",
+      "gap-2.5",
+      "sm:gap-3",
+    );
     expect(screen.queryByRole("link", { name: "Open RFP questions" })).not.toBeInTheDocument();
     // The old vague copy is gone for good.
     expect(screen.queryByText(/everything else is optional/)).not.toBeInTheDocument();
@@ -3329,6 +3336,14 @@ describe("AssistantWorkspacePage", () => {
 
     expect(await screen.findByText("Results — Readiness check")).toBeInTheDocument();
     expect(screen.getByText("The venue is missing.")).toBeInTheDocument();
+    const guidanceCard = screen.getByTestId("guidance-card");
+    expect(guidanceCard).toHaveClass("w-full", "max-w-3xl");
+    expect(guidanceCard).not.toHaveClass("sm:max-w-[85%]");
+    expect(guidanceCard.closest("li")).toHaveClass(
+      "items-start",
+      "gap-2.5",
+      "sm:gap-3",
+    );
   });
 
   test("a readiness card hides every finding that touches standalone recording data", async () => {
