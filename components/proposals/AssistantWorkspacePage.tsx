@@ -896,37 +896,68 @@ const questionFieldLabel = (
 
 type DraftHighlightRange = { start: number; end: number };
 
-// The overview is a readable summary, not a field audit. Pull the few facts a
-// planner scans for first out of the generated sentence and emphasize them in
-// place; citations remain part of the stored draft without becoming UI chips.
-const draftOverviewHighlightRanges = (
+const DRAFT_OVERVIEW_FACT_PATTERNS = [
+  /^(.+?)(?=\s+is\s+(?:an?|the)\s+)/gi,
+  /\bis\s+(?:an?|the)\s+(.+?)(?=\s+(?:scheduled|planned|taking place)\b)/gi,
+];
+
+const DRAFT_FACT_PATTERNS = [
+  /\b(?:scheduled|planned)\s+for\s+(.+?)(?=\s+in\s+the\s+[A-Za-z_]+\/[A-Za-z_]+\s+time zone|,\s+with\b|[.;]|$)/gi,
+  /\bvenue is\s+([^.;]+?)(?=\s+in\s+)/gi,
+  /\bvenue is\s+[^.;]+?\s+in\s+([^.;]+?)(?=,\s+with\b|[.;]|$)/gi,
+  /\bin the\s+([A-Za-z_]+\/[A-Za-z_]+)\s+time zone\b/gi,
+  /\bevent format is(?:\s+listed as)?\s+(.+?)(?=[.;]|$)/gi,
+  /\b(?:is|are)\s+(?:listed|set|marked|specified|identified|recorded)\s+as\s+(?:an?\s+)?["“]([^"”]+?)[,.;]?["”]/gi,
+  /\b(?:is|are)\s+(?:listed|set|marked|specified|identified|recorded)\s+as\s+(?:an?|the)\s+([^,.;]+?)(?=,\s+|\s+(?:and|but)\s+|[.;]|$)/gi,
+  /\b(?:is|are)\s+(?:listed|set|marked|specified|identified|recorded)\s+as\s+(?!(?:an?|the)\s|["“])([^,.;]+?)(?=,\s+|\s+(?:and|but)\s+|[.;]|$)/gi,
+  /\b(?:is|are)\s+(?:scheduled|planned|set)\s+(?:for|to)\s+(.+?)(?=,\s+(?:and|with)\b|\s+in\s+the\s+[A-Za-z_]+\/[A-Za-z_]+\s+time zone|[.;]|$)/gi,
+  /\b(?:venue|event|format|rigging|power|streaming|recording|platform|budget|proposal)\s+(?:type\s+)?(?:is|are)\s+(?:an?|the)?\s*(?!(?:not|confirmed|identified|listed|marked|specified|set|scheduled|planned)\b)(.+?)(?=\s+(?:and|but)\s+|[,.;]|$)/gi,
+  /\b(?:venue|event|proposal|booking|evaluation matrix)\s+(?:is|are)\s+((?:not\s+)?confirmed(?:\s+via\s+[^,.;]+)?|tentative|pending|TBD)\b/gi,
+  /\bsupports?\s+(.+?)\s+as\s+included\b/gi,
+  /\bindicates?\s+((?:[\d,]+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:event\s+)?(?:rooms?|sessions?|stages?|screens?|speakers?|vendors?|cameras?))\b/gi,
+  /\b(?:due date|deadline)\s+(?:is|are)\s+(?:listed|scheduled|set)\s+for\s+(.+?)(?=[.;]|$)/gi,
+  /\b(?:includes?|with|for)\s+([\d,]+(?:\s*(?:-|–|to)\s*[\d,]+)?\s+(?:in-person\s+)?(?:attendees?|rooms?|days?|hours?|minutes?|sessions?|stages?|screens?|speakers?|vendors?|cameras?|guests?))\b/gi,
+  /([$€£]\s?[\d,.]+(?:\s*(?:-|–|to)\s*[$€£]?\s?[\d,.]+)?(?:\s*(?:USD|CAD|EUR|GBP))?)/gi,
+];
+
+// Draft sections are readable summaries, not field audits. Pull the concrete
+// facts a planner scans for first out of each generated paragraph and emphasize
+// them in place; citations remain part of the stored draft without becoming UI
+// chips.
+const draftImportantFactRanges = (
   text: string,
+  includeOverviewLead: boolean,
 ): DraftHighlightRange[] => {
   const patterns = [
-    /^(.+?)(?=\s+is\s+(?:an?|the)\s+)/i,
-    /\bis\s+(?:an?|the)\s+(.+?)(?=\s+(?:scheduled|planned|taking place)\b)/i,
-    /\b(?:scheduled|planned)\s+for\s+(.+?)(?=,\s+with\b)/i,
-    /\bwith\s+([\d,]+\s+(?:in-person\s+)?attendees?)\b/i,
-    /\bevent format is\s+([^.]+)/i,
+    ...(includeOverviewLead ? DRAFT_OVERVIEW_FACT_PATTERNS : []),
+    ...DRAFT_FACT_PATTERNS,
   ];
 
   return patterns
     .flatMap((pattern) => {
-      const match = pattern.exec(text);
-      const value = match?.[1];
-      if (!match || !value || match.index === undefined) return [];
-      const start = match.index + match[0].indexOf(value);
-      return [{ start, end: start + value.length }];
+      return Array.from(text.matchAll(pattern)).flatMap((match) => {
+        const value = match[1];
+        if (!value || match.index === undefined) return [];
+        const start = match.index + match[0].indexOf(value);
+        return [{ start, end: start + value.length }];
+      });
     })
     .sort((a, b) => a.start - b.start)
-    .filter(
-      (range, index, ranges) =>
-        index === 0 || range.start >= ranges[index - 1].end,
-    );
+    .reduce<DraftHighlightRange[]>((ranges, range) => {
+      const previous = ranges.at(-1);
+      if (!previous || range.start >= previous.end) ranges.push(range);
+      return ranges;
+    }, []);
 };
 
-function DraftOverviewText({ text }: { text: string }) {
-  const highlights = draftOverviewHighlightRanges(text);
+function DraftHighlightedText({
+  text,
+  includeOverviewLead,
+}: {
+  text: string;
+  includeOverviewLead: boolean;
+}) {
+  const highlights = draftImportantFactRanges(text, includeOverviewLead);
   if (highlights.length === 0) return text;
 
   const parts: ReactNode[] = [];
@@ -936,7 +967,7 @@ function DraftOverviewText({ text }: { text: string }) {
     parts.push(
       <mark
         key={`${range.start}-${range.end}`}
-        className="rounded-md bg-emerald-100/80 px-1 py-0.5 font-semibold text-[#075e54] [box-decoration-break:clone] [-webkit-box-decoration-break:clone]"
+        className="bg-transparent p-0 font-bold text-slate-950"
       >
         {text.slice(range.start, range.end)}
       </mark>,
@@ -2066,11 +2097,10 @@ function DraftRunCard({
                       section.paragraphs.map((paragraph, index) => (
                         <div key={index}>
                           <p className="text-sm leading-6 text-slate-700">
-                            {isOverview ? (
-                              <DraftOverviewText text={paragraph.text} />
-                            ) : (
-                              paragraph.text
-                            )}
+                            <DraftHighlightedText
+                              text={paragraph.text}
+                              includeOverviewLead={isOverview}
+                            />
                           </p>
                         </div>
                       ))
@@ -2113,7 +2143,6 @@ function OverviewCard({
   rows,
   detailCount,
   detailSource,
-  pendingReview,
   busy,
   error,
   showActions,
@@ -2127,7 +2156,6 @@ function OverviewCard({
   eventName: string | null;
   rows: OverviewRow[];
   detailCount: number;
-  pendingReview: number;
   busy: boolean;
   error: string | null;
   showActions: boolean;
@@ -2136,7 +2164,6 @@ function OverviewCard({
   onRunReadiness?: () => void;
   readinessBusy: boolean;
 }) {
-  const editorHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
   const title =
     eventName && eventName !== PLACEHOLDER_EVENT_NAME
       ? eventName
@@ -2181,22 +2208,6 @@ function OverviewCard({
               ? 'your answers'
               : 'your sources and answers'}
           .
-        </p>
-      )}
-      {pendingReview > 0 && (
-        <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-950">
-          <span className="font-bold uppercase tracking-wide text-amber-800">
-            Suggestions · not yet confirmed
-          </span>
-          {' — '}
-          Extracted fields still need your explicit review before they
-          become proposal values.{' '}
-          <Link
-            href={editorHref}
-            className="font-semibold text-[#087f69] underline underline-offset-2"
-          >
-            Review suggestions
-          </Link>
         </p>
       )}
       {showActions && (
@@ -3075,7 +3086,6 @@ export default function AssistantWorkspacePage({
     openQuestions.length === 0 &&
     !hasDraftRun;
   const overviewDetailCount = overviewRows.length;
-  const overviewPendingReview = completedContextRuns > 0 ? 1 : 0;
   // Details reach a proposal by extraction, by answered questions, or both.
   const overviewDetailSource: 'sources' | 'answers' | 'both' =
     completedContextRuns > 0 && answeredQuestions > 0
@@ -4533,7 +4543,6 @@ export default function AssistantWorkspacePage({
                         rows={overviewRows}
                         detailCount={overviewDetailCount}
                         detailSource={overviewDetailSource}
-                        pendingReview={overviewPendingReview}
                         busy={draftBusy || sending || draftInProgress}
                         error={draftError}
                         showActions={!questionsComplete}

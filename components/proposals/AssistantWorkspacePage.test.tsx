@@ -2969,7 +2969,7 @@ describe("AssistantWorkspacePage", () => {
     data: { run: { id: "run-1", model: "gpt-test" }, evidence: [], operations: [{}, {}, {}, {}, {}] },
   } as never;
 
-  test("a completed extraction stays read-only and sends the user to explicit review", async () => {
+  test("a completed extraction stays read-only without showing the retired suggestions notice", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
     mockedGetProposal.mockResolvedValue({
@@ -2980,8 +2980,8 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     expect(await screen.findByText("I reviewed your sources and extracted the requirements below.")).toBeInTheDocument();
     expect(screen.queryByText(/Added .* field.* to your proposal/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review suggestions" }))
-      .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+    expect(screen.queryByText(/Suggestions · not yet confirmed/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
   });
 
   // ── Captured-details overview ───────────────────────────────────────────────
@@ -3031,9 +3031,9 @@ describe("AssistantWorkspacePage", () => {
     // isUnionVenue is "NO", so no union row.
     expect(screen.queryByText("Union venue")).not.toBeInTheDocument();
     expect(screen.getByText("9 details captured from your sources.")).toBeInTheDocument();
-    // Extraction output stays read-only and links to the explicit review.
-    expect(screen.getByText(/need your explicit review/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review suggestions" })).toBeInTheDocument();
+    // The retired suggestions notice no longer competes with the overview.
+    expect(screen.queryByText(/need your explicit review/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
     // The explicit next step plus the softer alternatives.
     expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
     expect(screen.getByText("Or add more details — upload another file, paste notes, or ask me anything.")).toBeInTheDocument();
@@ -3154,7 +3154,7 @@ describe("AssistantWorkspacePage", () => {
     );
   });
 
-  test("the overview sends extracted suggestions to explicit review without applying them", async () => {
+  test("the overview hides the retired suggestions notice without applying extracted operations", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
     mockedGetProposal.mockResolvedValue(capturedProposal);
@@ -3162,9 +3162,8 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     expect(await screen.findByText(/details captured from your sources/)).toBeInTheDocument();
-    expect(screen.getByText(/need your explicit review/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review suggestions" }))
-      .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
+    expect(screen.queryByText(/need your explicit review/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
     expect(screen.queryByText(/Added .* field.* to your proposal/)).not.toBeInTheDocument();
   });
 
@@ -3209,7 +3208,7 @@ describe("AssistantWorkspacePage", () => {
 
   const STALE_HINT = "This draft was written before your latest answers.";
 
-  test("completed draft overview removes field-key chips and emphasizes the important facts", async () => {
+  test("completed draft sections remove field-key chips and emphasize important facts without highlight fills", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithDraft());
     mockedGetProposal.mockResolvedValue(proposalAtVersion(7));
     mockedGetDraft.mockResolvedValue({
@@ -3217,18 +3216,44 @@ describe("AssistantWorkspacePage", () => {
       correlationId: "test-correlation",
       data: {
         run: { id: "run-2", model: "gpt-test", expected_proposal_version: 7 },
-        sections: [{
-          id: "section-1",
-          key: "event_overview",
-          heading: "Event Overview",
-          ordinal: 0,
-          paragraphs: [{
-            text: "Northstar Leadership Summit 2026 is a corporate conference scheduled for September 14–16, 2026, with 450 attendees listed. The event format is hybrid.",
-            citations: ["/content/event/endDate", "/content/event/eventName", "/content/event/startDate"],
-          }],
-          decision: null,
-          decisionReason: null,
-        }],
+        sections: [
+          {
+            id: "section-1",
+            key: "event_overview",
+            heading: "Event Overview",
+            ordinal: 0,
+            paragraphs: [{
+              text: "Northstar Leadership Summit 2026 is a corporate conference scheduled for September 14–16, 2026, with 450 attendees listed. The event format is hybrid.",
+              citations: ["/content/event/endDate", "/content/event/eventName", "/content/event/startDate"],
+            }],
+            decision: null,
+            decisionReason: null,
+          },
+          {
+            id: "section-2",
+            key: "format_experience",
+            heading: "Format and Experience",
+            ordinal: 1,
+            paragraphs: [{
+              text: "The event format is listed as Hybrid.",
+              citations: ["/content/event/eventFormat"],
+            }],
+            decision: null,
+            decisionReason: null,
+          },
+          {
+            id: "section-3",
+            key: "venue_schedule",
+            heading: "Venue and Schedule",
+            ordinal: 2,
+            paragraphs: [{
+              text: "The venue is Lakeside Grand Chicago in Chicago, Illinois, with the event set in the America/Chicago time zone. The venue type is listed as Cruise Ship. The venue schedule indicates four event rooms.",
+              citations: ["/content/venue/name", "/content/venue/city", "/content/venue/type"],
+            }],
+            decision: null,
+            decisionReason: null,
+          },
+        ],
         gaps: [],
         regenerations: [],
         proposalMutation: false,
@@ -3243,7 +3268,7 @@ describe("AssistantWorkspacePage", () => {
     );
     expect(screen.getByRole("heading", { name: "Proposal draft ready" })).toBeInTheDocument();
     expect(screen.getByLabelText("Proposal draft preview")).toBeInTheDocument();
-    expect(screen.getByText("1 section")).toBeInTheDocument();
+    expect(screen.getByText("3 sections")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review & edit draft" }))
       .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
     expect(screen.getByRole("link", { name: "Review & edit draft" })).toHaveClass(
@@ -3268,6 +3293,24 @@ describe("AssistantWorkspacePage", () => {
         "hybrid",
       ],
     );
+    const formatSection = screen.getByTestId("draft-section-format_experience");
+    const venueSection = screen.getByTestId("draft-section-venue_schedule");
+    expect(
+      Array.from(formatSection.querySelectorAll("mark"), (mark) => mark.textContent),
+    ).toEqual(["Hybrid"]);
+    expect(
+      Array.from(venueSection.querySelectorAll("mark"), (mark) => mark.textContent),
+    ).toEqual([
+      "Lakeside Grand Chicago",
+      "Chicago, Illinois",
+      "America/Chicago",
+      "Cruise Ship",
+      "four event rooms",
+    ]);
+    for (const mark of screen.getByLabelText("Proposal draft preview").querySelectorAll("mark")) {
+      expect(mark).toHaveClass("bg-transparent", "p-0", "font-bold", "text-slate-950");
+      expect(mark).not.toHaveClass("bg-emerald-100/80");
+    }
     expect(screen.queryByRole("button", { name: "Copy" })).not.toBeInTheDocument();
     expect(screen.queryByText("gpt-test")).not.toBeInTheDocument();
   });
