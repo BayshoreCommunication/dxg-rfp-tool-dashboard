@@ -22,6 +22,7 @@ import {
   type PrivateDocumentSource,
 } from '@/app/actions/durableJobs';
 import GlobalDateInput from '@/components/shared/GlobalDateInput';
+import GlobalDateTimeInput from '@/components/shared/GlobalDateTimeInput';
 import { getCandidateReviewAction } from '@/app/actions/candidateApplication';
 import {
   generateGuidanceAction,
@@ -1503,6 +1504,18 @@ function parseIsoLocalDate(iso: string): Date {
   return new Date(year, month - 1, day);
 }
 
+function withLocalTime(day: Date | null, time: string): Date | null {
+  const matched = time.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!day || !matched) return null;
+  const combined = new Date(day);
+  combined.setHours(Number(matched[1]), Number(matched[2]), 0, 0);
+  return combined;
+}
+
+function localTimeOf(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 function GuidedQuestionCard({
   question,
   current,
@@ -1616,7 +1629,12 @@ function GuidedQuestionCard({
   const prefilled =
     answerType === 'choice'
       ? !!suggestedOption
-      : answerType === 'date' || answerType === 'date_time'
+      : answerType === 'date_time'
+        ? !!suggestedDayIso &&
+          !!day &&
+          localIsoDay(day) === suggestedDayIso &&
+          !!value
+        : answerType === 'date'
         ? !!suggestedDayIso &&
           !!day &&
           localIsoDay(day) === suggestedDayIso
@@ -1626,6 +1644,8 @@ function GuidedQuestionCard({
   const inputId = `guided-answer-${question.id}`;
   const errorId = `guided-answer-error-${question.id}`;
   const displayError = dateError || error;
+  const dateTimeSelection =
+    answerType === 'date_time' ? withLocalTime(day, value) : null;
   // A picked day is submitted from its LOCAL calendar parts; toISOString would
   // shift the date by a day for anyone west of UTC.
   const answer: ConversationQuestionAnswer | null =
@@ -1728,7 +1748,7 @@ function GuidedQuestionCard({
             if (answer !== null && !busy) onAnswer(answer);
           }}
         >
-          {answerType === 'date' || answerType === 'date_time' ? (
+          {answerType === 'date' ? (
             <div className="col-span-2 flex w-full items-center sm:min-w-[11rem] sm:flex-1 sm:basis-48">
               <label htmlFor={inputId} className="sr-only">
                 Answer this question
@@ -1777,7 +1797,64 @@ function GuidedQuestionCard({
               />
             </div>
           ) : null}
-          {answerType !== 'date' && (
+          {answerType === 'date_time' ? (
+            <div className="col-span-2 flex w-full items-center sm:min-w-[16rem] sm:flex-1 sm:basis-72">
+              <label htmlFor={inputId} className="sr-only">
+                Answer this question
+              </label>
+              <GlobalDateTimeInput
+                id={inputId}
+                label="Date and time"
+                value={dateTimeSelection}
+                onChange={(nextDateTime) => {
+                  setEdited(true);
+                  if (!nextDateTime) {
+                    setDay(null);
+                    setValue('');
+                    setDateError(null);
+                    return;
+                  }
+                  if (isBeforeLocalToday(nextDateTime, minimumDate)) {
+                    setDay(null);
+                    setValue('');
+                    setDateError(
+                      'Production load-in cannot be earlier than today.',
+                    );
+                    return;
+                  }
+                  if (
+                    maximumDate &&
+                    localIsoDay(nextDateTime) > localIsoDay(maximumDate)
+                  ) {
+                    setDay(null);
+                    setValue('');
+                    setDateError(
+                      'Production load-in cannot be after the event start date.',
+                    );
+                    return;
+                  }
+                  setDateError(null);
+                  setDay(nextDateTime);
+                  setValue(localTimeOf(nextDateTime));
+                }}
+                minDate={minimumDate}
+                maxDate={maximumDate}
+                hideLabel
+                showFormatInLabel={false}
+                showTime
+                timeIntervals={15}
+                showTodayShortcut
+                disabled={busy}
+                error={displayError ?? undefined}
+                ariaInvalid={!!displayError}
+                ariaDescribedBy={displayError ? errorId : undefined}
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-16 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
+                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
+                placeholder="Select date & time"
+              />
+            </div>
+          ) : null}
+          {answerType !== 'date' && answerType !== 'date_time' && (
             <input
               type={
                 isTimeAnswer
@@ -1804,15 +1881,11 @@ function GuidedQuestionCard({
               placeholder={
                 answerType === 'number'
                   ? 'Enter a number…'
-                  : isTimeAnswer || answerType === 'date_time'
+                  : isTimeAnswer
                     ? 'HH:MM'
                     : 'Type your answer…'
               }
-              aria-label={
-                answerType === 'date_time'
-                  ? 'Load-in time'
-                  : 'Answer this question'
-              }
+              aria-label="Answer this question"
               aria-invalid={displayError ? true : undefined}
               aria-describedby={displayError ? errorId : undefined}
               className={`${ANSWER_FIELD_CLASS} col-span-2 sm:basis-48`}

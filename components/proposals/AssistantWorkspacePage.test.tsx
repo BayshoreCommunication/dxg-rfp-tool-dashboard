@@ -1343,6 +1343,14 @@ describe("AssistantWorkspacePage", () => {
 
   test("production load-in uses one card with coordinated date and time controls", async () => {
     const loadInDate = futureIsoDate();
+    mockedGetProposal.mockResolvedValue({
+      success: true,
+      message: "ok",
+      data: {
+        _id: PROPOSAL_ID,
+        event: { eventName: "", startDate: loadInDate },
+      },
+    });
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([combinedLoadInQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
@@ -1361,14 +1369,17 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("What date and time can production load-in?");
-    const dateInput = screen.getByLabelText("Answer this question");
-    const timeInput = screen.getByLabelText("Load-in time");
-    expect(dateInput).toHaveAttribute("placeholder", "MM/DD/YYYY");
-    expect(timeInput).toHaveAttribute("type", "time");
+    const dateTimeInput = screen.getByLabelText("Answer this question");
+    expect(dateTimeInput).toHaveAttribute("placeholder", "Select date & time");
+    expect(dateTimeInput).not.toHaveAttribute("type", "time");
+    expect(screen.queryByLabelText("Load-in time")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Date and time calendar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Answer" })).toBeDisabled();
 
-    fireEvent.change(dateInput, { target: { value: loadInDate } });
-    fireEvent.input(timeInput, { target: { value: "07:30" } });
+    const [year, month, day] = loadInDate.split("-");
+    fireEvent.change(dateTimeInput, {
+      target: { value: `${month}/${day}/${year} 07:30 AM` },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
