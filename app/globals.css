@@ -911,6 +911,45 @@ strong {
   scrollbar-gutter: stable;
 }
 
+/* Keep the proposal editor dense and readable without changing any step data.
+   Individual steps predate the shared editor surface, so this scoped bridge
+   normalizes only their outer frame and muted copy. */
+.proposal-editor-surface > [class~="min-h-screen"] {
+  min-height: auto;
+}
+
+.proposal-editor-surface [class~="text-[#969798]"] {
+  color: #687782;
+}
+
+@media (min-width: 640px) {
+  .proposal-editor-surface
+    > [class~="min-h-screen"]
+    > [class~="px-8"] {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+
+  .proposal-editor-surface
+    > [class~="min-h-screen"]
+    > [class~="py-8"] {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+
+  .proposal-editor-surface
+    > [class~="min-h-screen"]
+    > [class~="pt-7"] {
+    padding-top: 1.25rem !important;
+  }
+
+  .proposal-editor-surface
+    > [class~="min-h-screen"]
+    > [class~="pb-6"] {
+    padding-bottom: 1rem !important;
+  }
+}
+
 /* Proposal editor sections share desktop-oriented form primitives. Keep the
    existing visual system, while letting every step shrink cleanly on phones. */
 @media (max-width: 639px) {

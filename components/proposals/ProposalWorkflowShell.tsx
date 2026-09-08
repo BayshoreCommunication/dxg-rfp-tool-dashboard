@@ -150,71 +150,75 @@ export default function ProposalWorkflowShell({
       ? (data?.state?.nextActionLabel ?? "Open the assistant")
       : "Review key questions";
   return <section aria-label="Proposal assistance" className="@container mb-0 border-b border-[#e5eaee] bg-white">
-    <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-[#edf0f2] px-6 py-5 sm:px-8">
+    <header className="flex min-h-[68px] flex-wrap items-center justify-between gap-3 border-b border-[#edf0f2] px-5 py-3 sm:px-6 lg:px-7">
       <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-[22px] font-extrabold tracking-[-0.025em] text-[#172b3a]">{proposalName || "Proposal"}</h1>
-          {isPublished && <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"><Radio size={13} aria-hidden="true" />Published</span>}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="text-xl font-extrabold tracking-[-0.025em] text-[#172b3a]">{proposalName || "Proposal"}</h1>
+          {isPublished && <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700"><Radio size={12} aria-hidden="true" />Published</span>}
         </div>
-        <p className="mt-1.5 text-sm text-[#687782]">{isPublished ? "Live vendor-facing proposal" : "Build, review, and prepare your proposal"}</p>
+        <p className="mt-1 text-xs text-[#687782]">{isPublished ? "Live vendor-facing proposal" : "Build, review, and prepare your proposal"}</p>
       </div>
       <div className="flex items-center gap-2.5">
-        <a href="#manual-proposal-details" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#0786cf] px-4 py-2.5 text-sm font-bold text-white shadow-[0_5px_14px_rgba(7,134,207,0.2)] transition hover:bg-[#066fae] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] sm:px-5">Edit form directly<ArrowDown size={15} aria-hidden="true" /></a>
+        <a href="#manual-proposal-details" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0069a0] px-3.5 py-2 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(0,105,160,0.18)] transition hover:bg-[#172b3a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0069a0] sm:px-4">Edit form directly<ArrowDown size={14} aria-hidden="true" /></a>
       </div>
     </header>
     {/* The conversation itself lives on one surface only: this editor links out
         to it rather than embedding a second copy. */}
-    {conversationsEnabled && <div data-testid="proposal-guidance-card" className="mx-6 mt-4 overflow-hidden rounded-[20px] border border-[#c9e4f2] bg-[linear-gradient(135deg,#f2fbff_0%,#f8fcfe_58%,#ffffff_100%)] shadow-[0_12px_28px_rgba(16,78,112,0.08)] sm:mx-8">
-      <div className="grid @min-[600px]:grid-cols-[minmax(0,1fr)_250px]">
-        <div className="p-4 sm:p-5">
-          <div className="flex items-start gap-3.5">
-            <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#0786cf] text-white shadow-[0_6px_16px_rgba(7,134,207,0.22)]">
-              <Send size={20} strokeWidth={1.9} aria-hidden="true" />
-              {!isPublished && <span className="theme-preserve-white absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-[#f2fbff] bg-white text-[#0786cf]"><Sparkles size={11} strokeWidth={2.2} aria-hidden="true" /></span>}
+    {conversationsEnabled && <div data-testid="proposal-guidance-card" className="mx-5 mt-3 overflow-hidden rounded-2xl border border-[#c9e4f2] bg-[linear-gradient(135deg,#f2fbff_0%,#f8fcfe_58%,#ffffff_100%)] shadow-[0_8px_22px_rgba(16,78,112,0.07)] sm:mx-6 lg:mx-7">
+      <div className="grid @min-[880px]:grid-cols-[minmax(0,1fr)_minmax(380px,430px)]">
+        <div className="p-3.5 @min-[880px]:p-4">
+          <div className="flex items-center gap-3">
+            <div className="relative grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[#0069a0] text-white shadow-[0_5px_14px_rgba(0,105,160,0.2)]">
+              <Send size={18} strokeWidth={1.9} aria-hidden="true" />
+              {!isPublished && <span className="theme-preserve-white absolute -right-1.5 -top-1.5 grid h-[18px] w-[18px] place-items-center rounded-full border-2 border-[#f2fbff] bg-white text-[#0786cf]"><Sparkles size={10} strokeWidth={2.2} aria-hidden="true" /></span>}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#0786cf]">{isPublished ? "Published and live" : "AI-guided workspace"}</p>
-              <p className="mt-1.5 text-base font-extrabold tracking-[-0.02em] text-[#172b3a] sm:text-lg">{isPublished ? "Your proposal is live." : "Build a vendor-ready proposal with AI."}</p>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-[#566a78]">{isPublished ? "Monitor vendor activity and keep questions moving." : "Draft from what you know, find gaps, and review every change."}</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0069a0]">{isPublished ? "Published and live" : "AI-guided workspace"}</p>
+              <p className="mt-1 text-[15px] font-extrabold leading-5 tracking-[-0.02em] text-[#172b3a]">{isPublished ? "Your proposal is live." : "Build a vendor-ready proposal with AI."}</p>
+              <p className="mt-0.5 max-w-2xl text-[11px] leading-4 text-[#566a78]">{isPublished ? "Monitor vendor activity and keep questions moving." : "Draft from what you know, find gaps, and review every change."}</p>
             </div>
           </div>
         </div>
 
-        <aside className="border-t border-[#d8eaf4] bg-white/80 p-4 sm:p-5 @min-[600px]:border-l @min-[600px]:border-t-0" aria-label="Recommended next action">
-          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#0786cf]"><Sparkles size={13} aria-hidden="true" />Recommended next step</div>
-          <p className="mt-2 text-base font-extrabold tracking-[-0.015em] text-[#172b3a]">{isPublished ? "Review vendor activity" : (data?.state?.nextActionLabel ?? "Open the assistant")}</p>
-          <p className="mt-1 text-xs leading-5 text-[#687782]">{isPublished ? "Monitor responses and questions." : (data?.state?.headline ?? "Continue from the most useful next step.")}</p>
-          {/* A published RFP has no next action. Offering one that still reads
-              "Answer the next question" would invite work that is already over. */}
-          <Link href={nextActionHref} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0786cf] px-3.5 py-2 text-sm font-bold text-white shadow-[0_5px_14px_rgba(7,134,207,0.18)] transition-all hover:-translate-y-px hover:bg-[#066fae] hover:shadow-[0_7px_16px_rgba(7,134,207,0.22)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]">{nextActionLabel}<ArrowRight size={14} aria-hidden="true" /></Link>
-          {!isPublished && <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[10px] font-semibold text-[#718592]"><ShieldCheck size={11} aria-hidden="true" />Nothing is published automatically.</p>}
+        <aside className="grid gap-3 border-t border-[#d8eaf4] bg-white/80 p-3.5 @min-[520px]:grid-cols-[minmax(0,1fr)_auto] @min-[520px]:items-center @min-[880px]:border-l @min-[880px]:border-t-0 @min-[880px]:px-4 @min-[880px]:py-3" aria-label="Recommended next action">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.13em] text-[#0069a0]"><Sparkles size={11} aria-hidden="true" />Recommended next step</div>
+            <p className="mt-1 text-sm font-extrabold leading-5 tracking-[-0.015em] text-[#172b3a]">{isPublished ? "Review vendor activity" : (data?.state?.nextActionLabel ?? "Open the assistant")}</p>
+            <p className="mt-0.5 text-[11px] leading-4 text-[#687782]">{isPublished ? "Monitor responses and questions." : (data?.state?.headline ?? "Continue from the most useful next step.")}</p>
+          </div>
+          <div className="flex min-w-[148px] max-w-[200px] flex-col items-stretch">
+            {/* A published RFP has no next action. Offering one that still reads
+                "Answer the next question" would invite work that is already over. */}
+            <Link href={nextActionHref} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-[#0069a0] px-3 py-1.5 text-center text-xs font-bold leading-4 text-white shadow-[0_4px_12px_rgba(0,105,160,0.17)] transition-all motion-reduce:transition-none hover:-translate-y-px hover:bg-[#172b3a] hover:shadow-[0_6px_14px_rgba(0,105,160,0.2)] motion-reduce:hover:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0069a0]">{nextActionLabel}<ArrowRight size={13} className="shrink-0" aria-hidden="true" /></Link>
+            {!isPublished && <p className="mt-1 flex items-center justify-center gap-1 text-center text-[10px] font-semibold leading-[14px] text-[#566a78]"><ShieldCheck size={10} className="shrink-0" aria-hidden="true" />Nothing is published automatically.</p>}
+          </div>
         </aside>
       </div>
     </div>}
     {error && <p role="alert" className="mx-6 mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-800 sm:mx-8">{error}</p>}
-    <div className="mx-6 mb-3 mt-6 flex flex-wrap items-end justify-between gap-2 sm:mx-8">
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#718592]">Proposal journey</p>
-        <p className="mt-1 text-sm text-[#687782]">Select a stage to review its details.</p>
+    <div className="mx-5 mb-2 mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:mx-6 lg:mx-7">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#566a78]">Proposal journey</p>
+        <p className="text-xs text-[#566a78]">Select a stage to review its details.</p>
       </div>
       {isPublished && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"><Check size={13} strokeWidth={2.5} aria-hidden="true" />Sent to vendors</span>}
     </div>
-    <ol aria-label="Proposal creation steps" aria-busy={busy} className="mx-6 mb-6 grid gap-2 rounded-[20px] border border-[#e7edf1] bg-[#f8fafb] p-2 sm:mx-8 sm:grid-cols-5">{steps.map((item, index) => {
+    <ol aria-label="Proposal creation steps" aria-busy={busy} className="mx-5 mb-5 grid snap-x snap-mandatory grid-flow-col auto-cols-[168px] gap-1.5 overflow-x-auto rounded-2xl border border-[#e7edf1] bg-[#f8fafb] p-1.5 [scrollbar-width:thin] sm:mx-6 lg:mx-7 @min-[820px]:grid-flow-row @min-[820px]:grid-cols-5 @min-[820px]:auto-cols-auto @min-[820px]:overflow-visible">{steps.map((item, index) => {
       const isActive = step === item.id;
       const hasNext = index < steps.length - 1;
-      return <li key={item.id} className="relative min-w-0">
-        {hasNext && <span aria-hidden="true" className="pointer-events-none absolute left-8 top-8 z-0 h-[calc(100%+0.5rem)] w-px bg-[#dfe7ec] sm:bottom-auto sm:left-[calc(50%+20px)] sm:right-[calc(-50%+20px)] sm:top-8 sm:h-px sm:w-auto" />}
-        <button type="button" aria-current={isActive ? "step" : undefined} onClick={() => choose(item.id)} className={`relative z-[1] flex h-full min-h-[72px] w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf] sm:min-h-[104px] sm:flex-col sm:items-center sm:px-2 sm:text-center ${isActive ? "border-[#b9def2] bg-[#f3faff] text-[#0786cf] shadow-[0_6px_18px_rgba(7,134,207,0.08)]" : "border-transparent bg-[#f8fafb] text-[#263744] hover:border-[#dce7ed] hover:bg-white"}`}>
-          <span className={`relative z-[2] grid h-10 w-10 shrink-0 place-items-center rounded-full border text-sm font-bold shadow-sm ${
+      return <li key={item.id} className="relative min-w-0 snap-start">
+        {hasNext && <span aria-hidden="true" className="pointer-events-none absolute left-[calc(50%+16px)] right-[calc(-50%+16px)] top-6 z-0 hidden h-px bg-[#dfe7ec] @min-[820px]:block" />}
+        <button type="button" aria-current={isActive ? "step" : undefined} onClick={() => choose(item.id)} className={`relative z-[1] flex h-full min-h-16 w-full items-start gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-all motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0069a0] @min-[820px]:min-h-[78px] @min-[820px]:flex-col @min-[820px]:items-center @min-[820px]:gap-1.5 @min-[820px]:px-2 @min-[820px]:text-center ${isActive ? "border-[#b9def2] bg-[#f3faff] text-[#0069a0] shadow-[0_4px_14px_rgba(0,105,160,0.07)]" : "border-transparent bg-[#f8fafb] text-[#263744] hover:border-[#dce7ed] hover:bg-white"}`}>
+          <span className={`relative z-[2] grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-bold shadow-sm ${
             isActive
-              ? "border-[#0786cf] bg-[#0786cf] text-white shadow-[0_0_0_4px_rgba(7,134,207,0.10)]"
+              ? "border-[#0069a0] bg-[#0069a0] text-white shadow-[0_0_0_3px_rgba(0,105,160,0.10)]"
               : item.status === "complete"
-                ? "border-emerald-500 bg-emerald-500 text-white"
+                ? "border-[#087f69] bg-[#087f69] text-white"
                 : "border-[#d6dfe4] bg-white text-[#687782]"
           }`}>
-            {item.status === "complete" ? <Check size={17} strokeWidth={3} aria-label={`${item.label} complete`} /> : item.status === "gated" ? <Lock size={15} aria-label={`${item.label} locked`} /> : item.id}
+            {item.status === "complete" ? <Check size={15} strokeWidth={3} aria-label={`${item.label} complete`} /> : item.status === "gated" ? <Lock size={13} aria-label={`${item.label} locked`} /> : item.id}
           </span>
-          <span className={`min-w-0 sm:max-w-[150px] ${item.status === "gated" && !isActive ? "opacity-60" : ""}`}><span className="block text-sm font-bold leading-snug">{item.label}</span><span className="mt-1 block text-[11px] leading-4 text-[#71818d]">{item.summary}</span></span>
+          <span className="min-w-0 @min-[820px]:w-full"><span className="block text-[13px] font-bold leading-4">{item.label}</span><span className="mt-0.5 block text-[11px] leading-[15px] text-[#566a78]">{item.summary}</span></span>
         </button>
       </li>;
     })}</ol>
