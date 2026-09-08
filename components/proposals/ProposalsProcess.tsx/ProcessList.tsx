@@ -87,7 +87,7 @@ const ProcessList = ({
   }));
 
   return (
-    <aside data-testid="proposal-process-list" className="w-full overflow-hidden border-b border-[#e1e8ed] bg-[#fbfdfe] px-3 py-3 font-sans shadow-[0_6px_20px_rgba(15,42,67,0.03)] sm:px-4 @min-[1000px]:max-h-[calc(100vh-1.5rem)] @min-[1000px]:rounded-2xl @min-[1000px]:border @min-[1000px]:px-3.5 @min-[1000px]:py-4 @min-[1000px]:shadow-[-8px_0_24px_rgba(15,42,67,0.02)]">
+    <aside data-testid="proposal-process-list" className="w-full overflow-hidden rounded-2xl border border-[#dfe7ec] bg-[#fbfdfe] px-3 py-3 font-sans shadow-[0_6px_20px_rgba(15,42,67,0.04)] sm:px-4 @min-[1000px]:max-h-[calc(100vh-1.5rem)] @min-[1000px]:px-3.5 @min-[1000px]:py-4 @min-[1000px]:shadow-[-8px_0_24px_rgba(15,42,67,0.02)]">
       <div className="mb-2 flex items-start justify-between gap-2 px-0.5 @min-[1000px]:mb-2.5">
         <div className="min-w-0">
           <p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.17em] text-[#566a78]">
@@ -106,7 +106,7 @@ const ProcessList = ({
         )}
       </div>
 
-      <div data-testid="proposal-step-scroller" className="relative flex snap-x snap-mandatory gap-1 overflow-x-auto pb-1.5 [scrollbar-width:thin] @min-[1000px]:max-h-[calc(100vh-5.75rem)] @min-[1000px]:flex-col @min-[1000px]:overflow-x-hidden @min-[1000px]:overflow-y-auto @min-[1000px]:pb-0 @min-[1000px]:pr-0.5">
+      <div data-testid="proposal-step-scroller" className="relative flex snap-x snap-mandatory gap-1 overflow-x-auto rounded-xl border border-[#e7edf1] bg-white/70 p-1 pb-2 [scrollbar-width:thin] @min-[1000px]:max-h-[calc(100vh-5.75rem)] @min-[1000px]:flex-col @min-[1000px]:overflow-x-hidden @min-[1000px]:overflow-y-auto @min-[1000px]:border-transparent @min-[1000px]:bg-transparent @min-[1000px]:p-0 @min-[1000px]:pr-0.5">
         {badgedSteps.map((step, index) => {
           const isActive    = activeStep === step.id;
           // A green check reads as "this is done". Derived from position alone,
@@ -119,7 +119,7 @@ const ProcessList = ({
           const isNavigable = typeof onStepChange === "function";
 
           return (
-            <div key={step.id} className="relative flex min-w-[168px] snap-start items-start @min-[1000px]:min-w-0">
+            <div key={step.id} className="relative flex min-w-[calc((100%-0.25rem)/2)] snap-start items-start min-[520px]:min-w-[calc((100%-0.5rem)/3)] @min-[1000px]:!min-w-0">
               {/* Connecting Line */}
               {!isLast && (
                 <div
@@ -135,11 +135,11 @@ const ProcessList = ({
                 aria-label={`Go to ${step.label}${isCompleted ? ", complete" : ""}`}
                 disabled={!isNavigable}
                 onClick={() => onStepChange?.(step.id)}
-                className={`group flex min-h-[52px] flex-1 items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-all duration-200 motion-reduce:transition-none ${
-                  isActive ? "bg-white shadow-[0_3px_12px_rgba(15,42,67,0.07)] ring-1 ring-[#d6dfe4]" : ""}
+                className={`group flex min-h-[52px] flex-1 items-center gap-2.5 rounded-xl border px-2 py-1.5 text-left transition-[background-color,border-color,box-shadow] duration-200 motion-reduce:transition-none ${
+                  isActive ? "border-[#b9def2] bg-white shadow-[0_4px_14px_rgba(0,105,160,0.09)]" : "border-transparent"}
                   ${
                   isNavigable
-                    ? "cursor-pointer hover:bg-white hover:shadow-[0_2px_10px_rgba(15,42,67,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069a0]"
+                    ? "cursor-pointer hover:bg-white hover:shadow-[0_2px_10px_rgba(15,42,67,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0069a0]"
                     : "cursor-default"
                 }`}
               >

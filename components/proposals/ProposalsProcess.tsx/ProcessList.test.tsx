@@ -61,21 +61,44 @@ describe("ProcessList", () => {
     });
   });
 
+  it("keeps the selected row outline inside the clipped workflow scroller", () => {
+    render(<ProcessList activeStep={1} onStepChange={jest.fn()} />);
+
+    const selectedStep = screen.getByRole("button", {
+      name: "Go to Event Overview",
+    });
+
+    expect(selectedStep).toHaveClass(
+      "border",
+      "border-[#b9def2]",
+      "bg-white",
+      "focus-visible:ring-inset",
+    );
+    expect(selectedStep).not.toHaveClass("ring-1", "ring-[#d6dfe4]");
+  });
+
   it("uses a compact horizontal navigator before the desktop rail breakpoint", () => {
     render(<ProcessList activeStep={1} />);
 
     expect(screen.getByTestId("proposal-process-list")).toHaveClass(
-      "border-b",
+      "rounded-2xl",
+      "border",
       "@min-[1000px]:max-h-[calc(100vh-1.5rem)]",
-      "@min-[1000px]:rounded-2xl",
     );
     expect(screen.getByTestId("proposal-step-scroller")).toHaveClass(
       "overflow-x-auto",
+      "rounded-xl",
+      "border",
+      "p-1",
       "@min-[1000px]:flex-col",
       "@min-[1000px]:overflow-y-auto",
     );
     expect(screen.getByRole("button", { name: "Go to Event Overview" }).parentElement)
-      .toHaveClass("min-w-[168px]", "@min-[1000px]:min-w-0");
+      .toHaveClass(
+        "min-w-[calc((100%-0.25rem)/2)]",
+        "min-[520px]:min-w-[calc((100%-0.5rem)/3)]",
+        "@min-[1000px]:!min-w-0",
+      );
   });
 
   it("keeps autosave status inside the sticky workflow rail header", () => {
