@@ -79,7 +79,7 @@ describe("ProposalWorkflowShell", () => {
     expect(screen.queryByText("AI preparation")).not.toBeInTheDocument();
     expect(screen.getByText("Nothing is published automatically.")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.getByTestId("proposal-guidance-card")).toHaveClass("mt-4", "rounded-[20px]");
+    expect(screen.getByTestId("proposal-guidance-card")).toHaveClass("mt-3", "rounded-2xl");
     expect(screen.queryByPlaceholderText(/Ask a question or describe what you need/)).not.toBeInTheDocument();
   });
 
@@ -137,8 +137,8 @@ describe("ProposalWorkflowShell", () => {
       expect(stage.querySelector("svg")).toBeInTheDocument();
       // The selected stage keeps the blue highlight; other completed stages
       // read as done in emerald.
-      if (index === 0) expect(indicator).toHaveClass("bg-[#0786cf]", "text-white");
-      else expect(indicator).toHaveClass("bg-emerald-500", "text-white");
+      if (index === 0) expect(indicator).toHaveClass("bg-[#0069a0]", "text-white");
+      else expect(indicator).toHaveClass("bg-[#087f69]", "text-white");
     }
   });
 

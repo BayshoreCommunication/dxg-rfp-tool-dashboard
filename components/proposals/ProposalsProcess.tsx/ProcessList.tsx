@@ -21,26 +21,26 @@ const steps: Step[] = [
 ];
 
 const circleClass = (isActive: boolean, isCompleted: boolean): string => {
-  const base = "relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all duration-200";
-  if (isCompleted) return `${base} border-[#10B981] bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.2)]`;
-  if (isActive)    return `${base} border-[#0786cf] bg-[#0786cf] text-white shadow-[0_0_0_4px_rgba(7,134,207,0.12),0_5px_14px_rgba(7,134,207,0.22)]`;
-  return `${base} border-[#dce3e8] bg-white text-[#66727d] shadow-sm`;
+  const base = "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold transition-all duration-200";
+  if (isCompleted) return `${base} border-[#087f69] bg-[#087f69] text-white shadow-[0_3px_9px_rgba(8,127,105,0.18)]`;
+  if (isActive)    return `${base} border-[#0069a0] bg-[#0069a0] text-white shadow-[0_0_0_3px_rgba(0,105,160,0.11),0_4px_11px_rgba(0,105,160,0.2)]`;
+  return `${base} border-[#dce3e8] bg-white text-[#566a78] shadow-sm`;
 };
 
 const labelClass = (isActive: boolean, isCompleted: boolean): string => {
-  if (isCompleted) return "text-[13px] font-semibold text-[#10B981] leading-tight";
-  if (isActive)    return "text-[13px] font-bold text-[#102a43] leading-tight";
-  return "text-[13px] font-semibold text-[#596773] leading-tight";
+  if (isCompleted) return "text-[12px] font-bold leading-4 text-[#087f69]";
+  if (isActive)    return "text-[12px] font-bold leading-4 text-[#172b3a]";
+  return "text-[12px] font-semibold leading-4 text-[#31445a]";
 };
 
 const subClass = (isActive: boolean, isCompleted: boolean): string => {
-  if (isCompleted) return "mt-1 text-[11px] leading-tight text-[#10B981]/80";
-  if (isActive)    return "mt-1 text-[11px] leading-tight text-[#527089]";
-  return "mt-1 text-[11px] leading-tight text-[#98a2aa]";
+  if (isCompleted) return "mt-0.5 text-[11px] leading-4 text-[#087f69]";
+  if (isActive)    return "mt-0.5 text-[11px] leading-4 text-[#566a78]";
+  return "mt-0.5 text-[11px] leading-4 text-[#687782]";
 };
 
 const lineClass = (isCompleted: boolean, isActive: boolean): string => {
-  const base = "pointer-events-none absolute left-7 top-1/2 z-[1] hidden h-[calc(100%+0.5rem)] w-px transition-colors duration-200 @min-[1000px]:block";
+  const base = "pointer-events-none absolute left-6 top-1/2 z-[1] hidden h-[calc(100%+0.25rem)] w-px transition-colors duration-200 @min-[1000px]:block";
   if (isCompleted) return `${base} bg-[#49cfa4]`;
   if (isActive)    return `${base} bg-[#8ac9ed]`;
   return `${base} bg-[#dfe6ea]`;
@@ -87,26 +87,26 @@ const ProcessList = ({
   }));
 
   return (
-    <aside data-testid="proposal-process-list" className="w-full overflow-hidden border-b border-[#e1e8ed] bg-[#fbfdfe] px-3 py-4 font-sans shadow-[0_8px_24px_rgba(15,42,67,0.035)] sm:px-4 @min-[1000px]:max-h-[calc(100vh-1.5rem)] @min-[1000px]:rounded-2xl @min-[1000px]:border @min-[1000px]:px-5 @min-[1000px]:py-5 @min-[1000px]:shadow-[-10px_0_30px_rgba(15,42,67,0.025)]">
-      <div className="mb-3 flex items-start justify-between gap-3 px-1 @min-[1000px]:mb-4">
+    <aside data-testid="proposal-process-list" className="w-full overflow-hidden border-b border-[#e1e8ed] bg-[#fbfdfe] px-3 py-3 font-sans shadow-[0_6px_20px_rgba(15,42,67,0.03)] sm:px-4 @min-[1000px]:max-h-[calc(100vh-1.5rem)] @min-[1000px]:rounded-2xl @min-[1000px]:border @min-[1000px]:px-3.5 @min-[1000px]:py-4 @min-[1000px]:shadow-[-8px_0_24px_rgba(15,42,67,0.02)]">
+      <div className="mb-2 flex items-start justify-between gap-2 px-0.5 @min-[1000px]:mb-2.5">
         <div className="min-w-0">
-          <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.18em] text-[#647582]">
+          <p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.17em] text-[#566a78]">
             Workflow sections
           </p>
-          <p className="mt-1 text-xs text-[#8a98a3]">Select any section to review or edit.</p>
+          <p className="mt-0.5 text-[11px] leading-4 text-[#687782]">Select any section to review or edit.</p>
         </div>
         {autosaveStatus && (
           <p
             role="status"
             aria-live="polite"
-            className={`shrink-0 text-right text-[10px] leading-4 ${autosaveError ? "text-red-600" : "text-slate-500"}`}
+            className={`shrink-0 text-right text-[10px] leading-4 ${autosaveError ? "text-red-600" : "text-[#566a78]"}`}
           >
             {autosaveStatus}
           </p>
         )}
       </div>
 
-      <div data-testid="proposal-step-scroller" className="relative flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 [scrollbar-width:thin] @min-[1000px]:max-h-[calc(100vh-7rem)] @min-[1000px]:flex-col @min-[1000px]:overflow-x-hidden @min-[1000px]:overflow-y-auto @min-[1000px]:pb-0 @min-[1000px]:pr-1">
+      <div data-testid="proposal-step-scroller" className="relative flex snap-x snap-mandatory gap-1 overflow-x-auto pb-1.5 [scrollbar-width:thin] @min-[1000px]:max-h-[calc(100vh-5.75rem)] @min-[1000px]:flex-col @min-[1000px]:overflow-x-hidden @min-[1000px]:overflow-y-auto @min-[1000px]:pb-0 @min-[1000px]:pr-0.5">
         {badgedSteps.map((step, index) => {
           const isActive    = activeStep === step.id;
           // A green check reads as "this is done". Derived from position alone,
@@ -119,7 +119,7 @@ const ProcessList = ({
           const isNavigable = typeof onStepChange === "function";
 
           return (
-            <div key={step.id} className="relative flex min-w-[180px] snap-start items-start @min-[1000px]:min-w-0">
+            <div key={step.id} className="relative flex min-w-[168px] snap-start items-start @min-[1000px]:min-w-0">
               {/* Connecting Line */}
               {!isLast && (
                 <div
@@ -132,19 +132,19 @@ const ProcessList = ({
               <button
                 type="button"
                 aria-current={isActive ? "step" : undefined}
-                aria-label={`Go to ${step.label}`}
+                aria-label={`Go to ${step.label}${isCompleted ? ", complete" : ""}`}
                 disabled={!isNavigable}
                 onClick={() => onStepChange?.(step.id)}
-                className={`group flex min-h-[60px] flex-1 items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-all duration-200 ${
-                  isActive ? "bg-white shadow-[0_4px_16px_rgba(15,42,67,0.08)] ring-1 ring-[#dcebf4]" : ""}
+                className={`group flex min-h-[52px] flex-1 items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-all duration-200 motion-reduce:transition-none ${
+                  isActive ? "bg-white shadow-[0_3px_12px_rgba(15,42,67,0.07)] ring-1 ring-[#d6dfe4]" : ""}
                   ${
                   isNavigable
-                    ? "cursor-pointer hover:bg-white hover:shadow-[0_3px_12px_rgba(15,42,67,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0786cf]"
+                    ? "cursor-pointer hover:bg-white hover:shadow-[0_2px_10px_rgba(15,42,67,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069a0]"
                     : "cursor-default"
                 }`}
               >
                 <div className={circleClass(isActive, isCompleted)}>
-                  {isCompleted ? <Check size={16} strokeWidth={3} /> : step.badge}
+                  {isCompleted ? <Check size={14} strokeWidth={3} /> : step.badge}
                 </div>
 
                 <div className="flex min-w-0 flex-1 flex-col">

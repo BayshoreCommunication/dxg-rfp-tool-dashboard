@@ -20,11 +20,13 @@ import { formatAppDate } from "@/lib/dateFormat";
 
 /* ─── Shared style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-2 text-sm font-semibold text-[#263744]";
+  "mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#172b3a]";
 const inputClass =
-  "h-12 w-full rounded-lg border border-[#dce3e8] bg-white px-4 text-sm text-[#263744] shadow-[0_1px_2px_rgba(15,42,67,0.03)] outline-none transition hover:border-[#c7d3da] focus:border-[#1DBFD3] focus:ring-4 focus:ring-[#1DBFD3]/15";
+  "h-11 w-full rounded-lg border border-[#dce3e8] bg-white px-3.5 text-sm text-[#172b3a] placeholder:text-[#687782] shadow-[0_1px_2px_rgba(15,42,67,0.025)] outline-none transition hover:border-[#c7d3da] focus:border-[#0069a0] focus:ring-4 focus:ring-[#0069a0]/15";
+const textareaClass =
+  "w-full resize-none rounded-lg border border-[#dce3e8] bg-white px-3.5 py-2.5 text-sm leading-5 text-[#172b3a] placeholder:text-[#687782] shadow-[0_1px_2px_rgba(15,42,67,0.025)] outline-none transition hover:border-[#c7d3da] focus:border-[#0069a0] focus:ring-4 focus:ring-[#0069a0]/15";
 const groupLabelClass =
-  "mb-6 text-base font-semibold text-[#222628]";
+  "mb-4 text-[15px] font-bold text-[#172b3a]";
 
 const normalizeDateFormat = (format: string) =>
   (format || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
@@ -130,13 +132,13 @@ const EventForm = ({
   const rfpTimelineLen = (data.rfpTimeline ?? "").length;
 
   return (
-    <section id="event-overview-section" tabIndex={-1} className="flex min-h-screen scroll-mt-6 flex-col bg-white focus:outline-none">
+    <section id="event-overview-section" tabIndex={-1} className="flex scroll-mt-6 flex-col bg-white focus:outline-none">
       {/* Header */}
-      <div className="border-t border-[#edf0f2] bg-[#fbfcfd] px-8 pb-6 pt-7">
-        <h2 className="text-[30px] font-extrabold tracking-tight text-[#172b3a]">
+      <div className="border-t border-[#edf0f2] bg-[#fbfcfd] px-5 pb-4 pt-5 sm:px-6 lg:px-7">
+        <h2 className="text-2xl font-extrabold tracking-tight text-[#172b3a]">
           {mode === "basic" ? "Event Essentials" : "Event Overview & Narrative"}
         </h2>
-        <p className="mt-2 max-w-4xl text-[15px] leading-6 text-[#687782]">
+        <p className="mt-1.5 max-w-4xl text-[13px] leading-5 text-[#566a78]">
           {mode === "basic"
             ? "Capture the event, format, dates, and attendance. You can add narrative and audience strategy in Advanced production."
             : "These fields power the auto-generated narrative on your RFP cover page and set the tone for every section that follows."}
@@ -144,15 +146,15 @@ const EventForm = ({
       </div>
 
       {/* Form Body */}
-      <div className="flex-1 space-y-12 px-8 py-8">
+      <div className="flex-1 space-y-9 px-5 py-6 sm:px-6 lg:px-7">
 
         {/* ── Group: Event Information ── */}
         <div>
           <p className={groupLabelClass}>Event Information</p>
-          <div className="space-y-5">
+          <div className="space-y-4">
 
             {/* Row 1: Event Name + Edition/Year */}
-            <div className={`grid grid-cols-1 gap-8 ${mode === "advanced" ? "lg:grid-cols-2" : ""}`}>
+            <div className={`grid grid-cols-1 gap-5 ${mode === "advanced" ? "lg:grid-cols-2" : ""}`}>
               <div data-assistant-field-key="/content/event/name">
                 <label className={labelClass}>
                   Event Name <span className="text-red-500">*</span>
@@ -165,11 +167,11 @@ const EventForm = ({
                   value={data.eventName}
                   onChange={(e) => onChange({ eventName: e.target.value })}
                 />
-                <div className="mt-1 flex justify-between items-start">
+                <div className="mt-0.5 flex items-start justify-between">
                   {showErrors && !data.eventName.trim() ? (
                     <p className="text-sm text-red-500 normal-case">Event name is required.</p>
                   ) : <span />}
-                  <span className="text-xs text-[#969798] shrink-0 ml-2">
+                  <span className="ml-2 shrink-0 text-[11px] text-[#687782]">
                     {data.eventName.length}/120
                   </span>
                 </div>
@@ -178,7 +180,7 @@ const EventForm = ({
               {mode === "advanced" && <div data-assistant-field-key="/content/event/edition">
                 <label className={labelClass}>
                   Edition / Year
-                  <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/edition")} />
                 </label>
                 <input
@@ -196,24 +198,24 @@ const EventForm = ({
                 Event summary / Narrative <span className="text-red-500">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
               </label>
-              <p className="mb-2 text-sm text-[#565859] normal-case">
+              <p className="mb-1.5 text-[13px] leading-5 text-[#566a78] normal-case">
                 Provide a short summary of the event goals, audience, and key outcomes. This narrative will appear on your RFP cover page.
               </p>
               <textarea
-                rows={4}
+                rows={3}
                 maxLength={800}
-                className="w-full resize-none rounded-lg border border-[#dce3e8] bg-white px-4 py-3 text-sm text-[#263744] shadow-[0_1px_2px_rgba(15,42,67,0.03)] outline-none transition hover:border-[#c7d3da] focus:border-[#1DBFD3] focus:ring-4 focus:ring-[#1DBFD3]/15"
+                className={textareaClass}
                 placeholder="Start typing or use Ask AI to generate..."
                 value={objectives}
                 onChange={(e) => onChange({ eventObjectives: e.target.value })}
               />
-              <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${objLen > 720 ? "text-amber-600" : "text-[#969798]"}`}>{objLen}/800</span>
+              <div className="mt-0.5 flex justify-end">
+                <span className={`text-[11px] ${objLen > 720 ? "text-amber-600" : "text-[#687782]"}`}>{objLen}/800</span>
               </div>
             </div>}
 
             {/* Row 2: Event Type + Theme/Tagline */}
-            <div className={`grid grid-cols-1 gap-5 ${mode === "advanced" ? "sm:grid-cols-2" : ""}`}>
+            <div className={`grid grid-cols-1 gap-4 ${mode === "advanced" ? "sm:grid-cols-2" : ""}`}>
               <div data-assistant-field-key="/content/event/type">
                 <label className={labelClass}>
                   Event Type <span className="text-red-500">*</span>
@@ -275,7 +277,7 @@ const EventForm = ({
               {mode === "advanced" && <div data-assistant-field-key="/content/event/theme">
                 <label className={labelClass}>
                   Event Theme / Tagline
-                  <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/theme")} />
                 </label>
                 <input
@@ -289,11 +291,11 @@ const EventForm = ({
             </div>
 
             {/* Row 3: Event Website */}
-            {mode === "advanced" && <div className="grid grid-cols-2 gap-5">
+            {mode === "advanced" && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div data-assistant-field-key="/content/event/website">
                 <label className={labelClass}>
                   Event Website
-                  <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/website")} />
                 </label>
                 <input
@@ -312,7 +314,7 @@ const EventForm = ({
         {/* ── Group: Format & Audience ── */}
         <div>
           <p className={groupLabelClass}>Format &amp; Audience</p>
-          <div className="space-y-6">
+          <div className="space-y-5">
 
             {/* Event Format */}
             <div data-assistant-field-key="/content/event/format">
@@ -320,14 +322,14 @@ const EventForm = ({
                 Event Format <span className="text-red-500">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/format")} />
               </label>
-              <p className="mb-3 text-xs text-slate-500 normal-case">
+              <p className="mb-2 text-xs text-[#566a78] normal-case">
                 Your selection adds Hybrid &amp; Virtual Production when applicable.
               </p>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
                 {formatOptions.map((fmt) => (
                   <label
                     key={fmt.value}
-                    className="flex items-center gap-3 cursor-pointer text-sm text-[#222628]"
+                    className="flex cursor-pointer items-center gap-2.5 text-sm text-[#172b3a]"
                   >
                     <input
                       type="radio"
@@ -342,7 +344,7 @@ const EventForm = ({
                 ))}
               </div>
               {(data.eventFormat === "Hybrid" || data.eventFormat === "Virtual") && (
-                <div className="mt-3 flex items-start gap-2 rounded-md border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-4 py-3 text-sm text-brand-dark">
+                <div className="mt-2.5 flex items-start gap-2 rounded-md border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-3.5 py-2.5 text-[13px] leading-5 text-brand-dark">
                   <span className="font-bold">⚡</span>
                   <span>
                     <strong>Hybrid scope added:</strong> Hybrid &amp; Virtual Production fields are now active in Advanced production.
@@ -357,11 +359,11 @@ const EventForm = ({
                 Primary Audience <span className="text-red-500">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/primaryAudiences/*")} />
               </label>
-              <p className="mb-3 text-xs text-slate-500 normal-case">
+              <p className="mb-2 text-xs text-[#566a78] normal-case">
                 Select up to {maximumAudienceSelections} audience types.
                 {audienceSelected.length > 0 && ` ${audienceSelected.length}/${maximumAudienceSelections} selected.`}
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2">
                 {audienceOptions.map((opt) => {
                   const checked = audienceSelected.includes(opt);
                   const maxReached =
@@ -399,7 +401,7 @@ const EventForm = ({
         {/* ── Group: Dates & Scale ── */}
         <div>
           <p className={groupLabelClass}>Dates &amp; Scale</p>
-          <div className="grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 
             {/* Start Date */}
             <div data-assistant-field-key="/content/event/startDate">
@@ -421,7 +423,7 @@ const EventForm = ({
                     ? "border-red-500 focus:border-red-500"
                     : ""
                 }`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#969798] hover:text-primary"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#687782] hover:text-primary"
               />
               {isStartInPast && data.startDate && (
                 <p className="mt-1 text-xs text-amber-600 normal-case">
@@ -454,7 +456,7 @@ const EventForm = ({
                     ? "border-red-500 focus:border-red-500"
                     : ""
                 }`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#969798] hover:text-primary"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#687782] hover:text-primary"
               />
               {showErrors && !data.endDate.trim() && (
                 <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
@@ -463,7 +465,7 @@ const EventForm = ({
                   empties the field. State the rule so a date that vanishes is
                   explained rather than mysterious. */}
               {startDateValue && !data.endDate.trim() && (
-                <p className="mt-1 text-xs text-slate-500 normal-case">
+                <p className="mt-1 text-xs text-[#566a78] normal-case">
                   Must be on or after the start date ({formatAppDate(startDateValue)}).
                 </p>
               )}
@@ -498,23 +500,23 @@ const EventForm = ({
         {/* ── Group: Company Information ── */}
         {mode === "advanced" && <div>
           <p className={groupLabelClass}>Company Information</p>
-          <div className="space-y-6">
+          <div className="space-y-5">
 
             {/* Tone / Brand Direction */}
             <div data-assistant-field-key="/content/event/toneDirections/*">
               <label className={labelClass}>
                 Tone / Brand Direction
-                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/toneDirections/*")} />
               </label>
-              <p className="mb-3 text-xs text-slate-500 normal-case">
+              <p className="mb-2 text-xs text-[#566a78] normal-case">
                 Select up to {maximumToneSelections} tags.
                 {toneSelected.length > 0 && ` ${toneSelected.length}/${maximumToneSelections} selected.`}
               </p>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {toneGroups.map((group) => (
                   <div key={group.label}>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#969798]">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[#687782]">
                       {group.label}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -552,19 +554,19 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/sacredConstraints">
               <label className={labelClass}>
                 Sacred Constraints / Special Considerations
-                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/sacredConstraints")} />
               </label>
               <textarea
                 rows={3}
                 maxLength={500}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
+                className={textareaClass}
                 placeholder="e.g. CEO keynote must run exactly 22 minutes. No standing ovations during memorial segment. Sponsor logos cannot appear on main stage screens."
                 value={data.sacredConstraints ?? ""}
                 onChange={(e) => onChange({ sacredConstraints: e.target.value })}
               />
-              <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${constraintsLen > 450 ? "text-amber-600" : "text-[#969798]"}`}>
+              <div className="mt-0.5 flex justify-end">
+                <span className={`text-[11px] ${constraintsLen > 450 ? "text-amber-600" : "text-[#687782]"}`}>
                   {constraintsLen}/500
                 </span>
               </div>
@@ -574,19 +576,19 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/organizationBackground">
               <label className={labelClass}>
                 About The Organization
-                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/organizationBackground")} />
               </label>
               <textarea
-                rows={4}
+                rows={3}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
+                className={textareaClass}
                 placeholder="Describe the organization: who you are, what you do, and any relevant background vendors should know."
                 value={data.aboutOrganization ?? ""}
                 onChange={(e) => onChange({ aboutOrganization: e.target.value })}
               />
-              <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${aboutOrganizationLen > 1350 ? "text-amber-600" : "text-[#969798]"}`}>
+              <div className="mt-0.5 flex justify-end">
+                <span className={`text-[11px] ${aboutOrganizationLen > 1350 ? "text-amber-600" : "text-[#687782]"}`}>
                   {aboutOrganizationLen}/1500
                 </span>
               </div>
@@ -597,14 +599,14 @@ const EventForm = ({
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <label htmlFor="statement-of-work" className={labelClass}>
                   Statement of Work
-                  <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/statementOfWork")} />
                 </label>
                 {onGenerateStatementOfWork && (
                   <button
                     type="button"
                     onClick={onGenerateStatementOfWork}
-                    className="mb-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-bold text-violet-700 hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+                    className="mb-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-bold text-violet-700 hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
                   >
                     <Sparkles size={13} aria-hidden="true" />
                     {(data.statementOfWork ?? "").trim() ? "Regenerate draft" : "Generate draft"}
@@ -613,15 +615,15 @@ const EventForm = ({
               </div>
               <textarea
                 id="statement-of-work"
-                rows={4}
+                rows={3}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
+                className={textareaClass}
                 placeholder="Describe the scope of work: what deliverables and responsibilities vendors are being asked to provide."
                 value={data.statementOfWork ?? ""}
                 onChange={(e) => onChange({ statementOfWork: e.target.value })}
               />
-              <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${statementOfWorkLen > 1350 ? "text-amber-600" : "text-[#969798]"}`}>
+              <div className="mt-0.5 flex justify-end">
+                <span className={`text-[11px] ${statementOfWorkLen > 1350 ? "text-amber-600" : "text-[#687782]"}`}>
                   {statementOfWorkLen}/1500
                 </span>
               </div>
@@ -631,19 +633,19 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/eventProfile">
               <label className={labelClass}>
                 Event Profile
-                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/eventProfile")} />
               </label>
               <textarea
-                rows={4}
+                rows={3}
                 maxLength={1500}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
+                className={textareaClass}
                 placeholder="Describe the event's profile: history, significance, past editions, or stature."
                 value={data.eventProfile ?? ""}
                 onChange={(e) => onChange({ eventProfile: e.target.value })}
               />
-              <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${eventProfileLen > 1350 ? "text-amber-600" : "text-[#969798]"}`}>
+              <div className="mt-0.5 flex justify-end">
+                <span className={`text-[11px] ${eventProfileLen > 1350 ? "text-amber-600" : "text-[#687782]"}`}>
                   {eventProfileLen}/1500
                 </span>
               </div>
@@ -653,19 +655,19 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/rfpTimelineNotes">
               <label className={labelClass}>
                 RFP Timeline
-                <span className="text-[#969798] text-xs font-normal normal-case tracking-normal ml-1">(optional)</span>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/rfpTimelineNotes")} />
               </label>
               <textarea
-                rows={4}
+                rows={3}
                 maxLength={1000}
-                className="w-full rounded-md border border-[#e4e4e4] bg-white px-4 py-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20 resize-none"
+                className={textareaClass}
                 placeholder="e.g. RFP issued July 1, questions due July 10, proposals due July 24, vendor selected August 5."
                 value={data.rfpTimeline ?? ""}
                 onChange={(e) => onChange({ rfpTimeline: e.target.value })}
               />
-              <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${rfpTimelineLen > 900 ? "text-amber-600" : "text-[#969798]"}`}>
+              <div className="mt-0.5 flex justify-end">
+                <span className={`text-[11px] ${rfpTimelineLen > 900 ? "text-amber-600" : "text-[#687782]"}`}>
                   {rfpTimelineLen}/1000
                 </span>
               </div>
@@ -675,8 +677,8 @@ const EventForm = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="sticky bottom-0 flex items-center justify-between border-t border-[#e4e4e4] bg-white/95 px-8 py-4 backdrop-blur">
-        <button type="button" onClick={onSaveDraft ?? onBack} className="text-sm font-semibold text-[#1DBFD3] hover:text-[#0069a0]">Save draft</button>
+      <div className="sticky bottom-0 flex items-center justify-between border-t border-[#e4e4e4] bg-white/95 px-5 py-3 backdrop-blur sm:px-6 lg:px-7">
+        <button type="button" onClick={onSaveDraft ?? onBack} className="text-sm font-semibold text-[#0069a0] hover:text-[#172b3a]">Save draft</button>
         {/* <button
           type="button"
           onClick={onBack}
@@ -688,7 +690,7 @@ const EventForm = ({
         <button
           type="button"
           onClick={onContinue}
-          className="group relative flex items-center gap-3 overflow-hidden rounded-md bg-[#1DBFD3] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#0069a0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1DBFD3]"
+          className="group relative flex min-h-10 items-center gap-2.5 overflow-hidden rounded-md bg-[#0069a0] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172b3a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0069a0]"
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Save &amp; continue

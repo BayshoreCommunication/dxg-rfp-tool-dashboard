@@ -32,18 +32,18 @@ describe("ProcessList", () => {
     const { rerender } = render(<ProcessList activeStep={10} completedStepIds={[1, 2]} />);
     const completedLabel = screen.getByText("Event Overview");
     const incompleteLabel = screen.getByText("Venue & Technical");
-    expect(completedLabel.className).toContain("#10B981");
-    expect(incompleteLabel.className).not.toContain("#10B981");
+    expect(completedLabel.className).toContain("#087f69");
+    expect(incompleteLabel.className).not.toContain("#087f69");
 
     // Without the prop the positional fallback still applies.
     rerender(<ProcessList activeStep={10} />);
-    expect(screen.getByText("Venue & Technical").className).toContain("#10B981");
+    expect(screen.getByText("Venue & Technical").className).toContain("#087f69");
   });
 
   it("never paints the step the planner is standing on as complete", () => {
     render(<ProcessList activeStep={2} completedStepIds={[1, 2, 3]} />);
-    expect(screen.getByText("Venue & Schedule").className).not.toContain("#10B981");
-    expect(screen.getByText("Event Overview").className).toContain("#10B981");
+    expect(screen.getByText("Venue & Schedule").className).not.toContain("#087f69");
+    expect(screen.getByText("Event Overview").className).toContain("#087f69");
   });
 
   it("connects each step through the center of its status circle", () => {
@@ -54,9 +54,9 @@ describe("ProcessList", () => {
       screen.getAllByRole("button", { name: /^Go to / }).length - 1,
     );
     connectors.forEach((connector) => {
-      expect(connector.className).toContain("left-7");
+      expect(connector.className).toContain("left-6");
       expect(connector.className).toContain("top-1/2");
-      expect(connector.className).toContain("h-[calc(100%+0.5rem)]");
+      expect(connector.className).toContain("h-[calc(100%+0.25rem)]");
       expect(connector.className).toContain("@min-[1000px]:block");
     });
   });
@@ -75,7 +75,7 @@ describe("ProcessList", () => {
       "@min-[1000px]:overflow-y-auto",
     );
     expect(screen.getByRole("button", { name: "Go to Event Overview" }).parentElement)
-      .toHaveClass("min-w-[180px]", "@min-[1000px]:min-w-0");
+      .toHaveClass("min-w-[168px]", "@min-[1000px]:min-w-0");
   });
 
   it("keeps autosave status inside the sticky workflow rail header", () => {
