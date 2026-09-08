@@ -3265,6 +3265,54 @@ describe("AssistantWorkspacePage", () => {
             decision: null,
             decisionReason: null,
           },
+          {
+            id: "section-4",
+            key: "production_scope",
+            heading: "Production Scope",
+            ordinal: 3,
+            paragraphs: [{
+              text: "Production requirements explicitly include in-house AV, rigging, and power drops. Human captioning is also specified for the hybrid delivery.",
+              citations: ["/content/technical/av", "/content/hybrid/captioning"],
+            }],
+            decision: null,
+            decisionReason: null,
+          },
+          {
+            id: "section-5",
+            key: "venue_technical",
+            heading: "Venue Technical",
+            ordinal: 4,
+            paragraphs: [{
+              text: "The venue requires in-house AV, rigging, power drops, and venue access requirements are marked yes. No further technical specifications were provided.",
+              citations: ["/content/venue/technical"],
+            }],
+            decision: null,
+            decisionReason: null,
+          },
+          {
+            id: "section-6",
+            key: "budget_procurement",
+            heading: "Budget and Procurement",
+            ordinal: 5,
+            paragraphs: [{
+              text: "The proposal submission due date is October 31, 2026. No budget tier or question deadline was provided.",
+              citations: ["/content/procurement/proposalDueDate"],
+            }],
+            decision: null,
+            decisionReason: null,
+          },
+          {
+            id: "section-7",
+            key: "information_gaps",
+            heading: "Information Gaps",
+            ordinal: 6,
+            paragraphs: [{
+              text: "Missing information includes event objectives and audience profile beyond total attendance; detailed show format and content plan; room-by-room set-up and technical needs; load-out/strike timing; internet, rigging, and power specifications; AV/vendor coordination details; procurement question deadline; budget tier; and vendor submission or confidentiality terms.",
+              citations: [],
+            }],
+            decision: null,
+            decisionReason: null,
+          },
         ],
         gaps: [],
         regenerations: [],
@@ -3280,7 +3328,7 @@ describe("AssistantWorkspacePage", () => {
     );
     expect(screen.getByRole("heading", { name: "Proposal draft ready" })).toBeInTheDocument();
     expect(screen.getByLabelText("Proposal draft preview")).toBeInTheDocument();
-    expect(screen.getByText("3 sections")).toBeInTheDocument();
+    expect(screen.getByText("7 sections")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review & edit draft" }))
       .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
     expect(screen.getByRole("link", { name: "Review & edit draft" })).toHaveClass(
@@ -3307,6 +3355,10 @@ describe("AssistantWorkspacePage", () => {
     );
     const formatSection = screen.getByTestId("draft-section-format_experience");
     const venueSection = screen.getByTestId("draft-section-venue_schedule");
+    const productionSection = screen.getByTestId("draft-section-production_scope");
+    const venueTechnicalSection = screen.getByTestId("draft-section-venue_technical");
+    const budgetSection = screen.getByTestId("draft-section-budget_procurement");
+    const gapsSection = screen.getByTestId("draft-section-information_gaps");
     expect(
       Array.from(formatSection.querySelectorAll("mark"), (mark) => mark.textContent),
     ).toEqual(["Hybrid"]);
@@ -3318,6 +3370,37 @@ describe("AssistantWorkspacePage", () => {
       "America/Chicago",
       "Cruise Ship",
       "four event rooms",
+    ]);
+    expect(
+      Array.from(productionSection.querySelectorAll("mark"), (mark) => mark.textContent),
+    ).toEqual([
+      "in-house AV, rigging, and power drops",
+      "Human captioning",
+    ]);
+    expect(
+      Array.from(venueTechnicalSection.querySelectorAll("mark"), (mark) => mark.textContent),
+    ).toEqual([
+      "in-house AV, rigging, power drops, and venue access requirements are marked yes",
+      "further technical specifications",
+    ]);
+    expect(
+      Array.from(budgetSection.querySelectorAll("mark"), (mark) => mark.textContent),
+    ).toEqual([
+      "October 31, 2026",
+      "budget tier or question deadline",
+    ]);
+    expect(
+      Array.from(gapsSection.querySelectorAll("mark"), (mark) => mark.textContent),
+    ).toEqual([
+      "event objectives and audience profile beyond total attendance",
+      "detailed show format and content plan",
+      "room-by-room set-up and technical needs",
+      "load-out/strike timing",
+      "internet, rigging, and power specifications",
+      "AV/vendor coordination details",
+      "procurement question deadline",
+      "budget tier",
+      "and vendor submission or confidentiality terms",
     ]);
     for (const mark of screen.getByLabelText("Proposal draft preview").querySelectorAll("mark")) {
       expect(mark).toHaveClass("bg-transparent", "p-0", "font-bold", "text-slate-950");

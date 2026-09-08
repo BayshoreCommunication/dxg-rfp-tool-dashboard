@@ -918,8 +918,17 @@ const DRAFT_FACT_PATTERNS = [
   /\bsupports?\s+(.+?)\s+as\s+included\b/gi,
   /\bindicates?\s+((?:[\d,]+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:event\s+)?(?:rooms?|sessions?|stages?|screens?|speakers?|vendors?|cameras?))\b/gi,
   /\b(?:due date|deadline)\s+(?:is|are)\s+(?:listed|scheduled|set)\s+for\s+(.+?)(?=[.;]|$)/gi,
+  /\b(?:proposal submission\s+)?(?:due date|deadline)\s+(?:is|are)\s+(?:listed|scheduled|set)?\s*(?:for\s+)?(.+?)(?=[.;]|$)/gi,
+  /\b(?:production\s+)?requirements?\s+(?:explicitly\s+)?(?:includes?|requires?)\s+(.+?)(?=[.;]|$)/gi,
+  /\b(?:venue|event|production)\s+(?:also\s+)?(?:includes?|requires?)\s+(.+?)(?=[.;]|$)/gi,
+  /\b((?:human\s+)?(?:closed\s+)?caption(?:ing|s))\s+(?:is|are)\s+(?:also\s+)?(?:required|specified|included)\b/gi,
+  /\bNo\s+(.+?)(?=\s+(?:was|were)\s+provided\b)/gi,
   /\b(?:includes?|with|for)\s+([\d,]+(?:\s*(?:-|–|to)\s*[\d,]+)?\s+(?:in-person\s+)?(?:attendees?|rooms?|days?|hours?|minutes?|sessions?|stages?|screens?|speakers?|vendors?|cameras?|guests?))\b/gi,
   /([$€£]\s?[\d,.]+(?:\s*(?:-|–|to)\s*[$€£]?\s?[\d,.]+)?(?:\s*(?:USD|CAD|EUR|GBP))?)/gi,
+];
+
+const DRAFT_GAP_FACT_PATTERNS = [
+  /(?:\bMissing information includes|;)\s+(.+?)(?=;|\.(?:\s|$)|$)/gi,
 ];
 
 // Draft sections are readable summaries, not field audits. Pull the concrete
@@ -928,11 +937,16 @@ const DRAFT_FACT_PATTERNS = [
 // chips.
 const draftImportantFactRanges = (
   text: string,
-  includeOverviewLead: boolean,
+  sectionKey: string,
 ): DraftHighlightRange[] => {
   const patterns = [
-    ...(includeOverviewLead ? DRAFT_OVERVIEW_FACT_PATTERNS : []),
+    ...(sectionKey === 'event_overview'
+      ? DRAFT_OVERVIEW_FACT_PATTERNS
+      : []),
     ...DRAFT_FACT_PATTERNS,
+    ...(sectionKey === 'information_gaps'
+      ? DRAFT_GAP_FACT_PATTERNS
+      : []),
   ];
 
   return patterns
@@ -954,12 +968,12 @@ const draftImportantFactRanges = (
 
 function DraftHighlightedText({
   text,
-  includeOverviewLead,
+  sectionKey,
 }: {
   text: string;
-  includeOverviewLead: boolean;
+  sectionKey: string;
 }) {
-  const highlights = draftImportantFactRanges(text, includeOverviewLead);
+  const highlights = draftImportantFactRanges(text, sectionKey);
   if (highlights.length === 0) return text;
 
   const parts: ReactNode[] = [];
@@ -2192,7 +2206,7 @@ function DraftRunCard({
                           <p className="text-sm leading-6 text-slate-700">
                             <DraftHighlightedText
                               text={paragraph.text}
-                              includeOverviewLead={isOverview}
+                              sectionKey={section.key}
                             />
                           </p>
                         </div>
