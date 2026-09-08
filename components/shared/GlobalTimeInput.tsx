@@ -4,6 +4,7 @@ import { Clock3 } from "lucide-react";
 import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { datePickerPopperModifiers } from "./DatePickerHeader";
 
 interface GlobalTimeInputProps {
   id: string;
@@ -15,7 +16,12 @@ interface GlobalTimeInputProps {
   interval?: number;
   minTime?: string;
   maxTime?: string;
+  hideLabel?: boolean;
+  showErrorMessage?: boolean;
+  placeholder?: string;
   inputClassName?: string;
+  buttonClassName?: string;
+  ariaInvalid?: boolean;
   ariaDescribedBy?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -46,7 +52,12 @@ const GlobalTimeInput = ({
   interval = 15,
   minTime,
   maxTime,
+  hideLabel = false,
+  showErrorMessage = true,
+  placeholder = "Select time",
   inputClassName,
+  buttonClassName = "absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg bg-[#eafafd] text-[#1DBFD3] transition hover:bg-[#d8f6fa] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35 disabled:cursor-not-allowed disabled:opacity-50",
+  ariaInvalid = false,
   ariaDescribedBy,
   open,
   onOpenChange,
@@ -66,9 +77,11 @@ const GlobalTimeInput = ({
 
   return (
     <div className="w-full">
-      <label htmlFor={id} className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#3d4143]">
-        {label} <span className="text-red-500">*</span>
-      </label>
+      {!hideLabel && (
+        <label htmlFor={id} className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#3d4143]">
+          {label} <span className="text-red-500">*</span>
+        </label>
+      )}
       <div className="relative">
         <DatePicker
           ref={pickerRef}
@@ -87,17 +100,20 @@ const GlobalTimeInput = ({
           timeIntervals={interval}
           timeCaption="Time"
           dateFormat="h:mm aa"
-          placeholderText="Select time"
+          placeholderText={placeholder}
           minTime={timeValueToDate(resolvedMinTime) || undefined}
           maxTime={timeValueToDate(resolvedMaxTime) || undefined}
           disabled={disabled}
+          popperPlacement="bottom-start"
+          popperProps={{ strategy: "fixed" }}
+          popperModifiers={datePickerPopperModifiers}
           className={resolvedInputClassName}
           wrapperClassName="w-full"
           popperClassName="dxg-datepicker-popper"
           calendarClassName="dxg-datepicker dxg-timepicker"
           showPopperArrow={false}
-          ariaInvalid={error ? "true" : undefined}
-          ariaDescribedBy={error ? ariaDescribedBy : undefined}
+          ariaInvalid={error || ariaInvalid ? "true" : undefined}
+          ariaDescribedBy={error || ariaInvalid ? ariaDescribedBy : undefined}
         />
         <button
           type="button"
@@ -107,12 +123,12 @@ const GlobalTimeInput = ({
             onOpenChange?.(true);
             pickerRef.current?.setFocus();
           }}
-          className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg bg-[#eafafd] text-[#1DBFD3] transition hover:bg-[#d8f6fa] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35 disabled:cursor-not-allowed disabled:opacity-50"
+          className={buttonClassName}
         >
           <Clock3 size={18} aria-hidden="true" />
         </button>
       </div>
-      {error && <p id={ariaDescribedBy} className="mt-1 text-xs text-red-500">{error}</p>}
+      {showErrorMessage && error && <p id={ariaDescribedBy} className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
 };

@@ -1317,7 +1317,7 @@ describe("AssistantWorkspacePage", () => {
     expect(maximumDateForQuestion(endDatePickerQuestion, proposal)).toBeUndefined();
   });
 
-  test("production load-in time uses a native time picker and submits HH:MM", async () => {
+  test("production load-in time uses the shared picker and submits HH:MM", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([loadInTimePickerQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
@@ -1328,10 +1328,11 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("What time can production load in? (HH:MM)");
     const timeInput = screen.getByLabelText("Answer this question");
-    expect(timeInput).toHaveAttribute("type", "time");
-    expect(timeInput).toHaveAttribute("step", "300");
+    expect(timeInput).not.toHaveAttribute("type", "time");
+    expect(timeInput).toHaveAttribute("placeholder", "Select time");
+    expect(screen.getByRole("button", { name: "Open time picker" })).toBeInTheDocument();
 
-    fireEvent.input(timeInput, { target: { value: "07:30" } });
+    fireEvent.change(timeInput, { target: { value: "7:30 AM" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(

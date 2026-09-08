@@ -23,6 +23,7 @@ import {
 } from '@/app/actions/durableJobs';
 import GlobalDateInput from '@/components/shared/GlobalDateInput';
 import GlobalDateTimeInput from '@/components/shared/GlobalDateTimeInput';
+import GlobalTimeInput from '@/components/shared/GlobalTimeInput';
 import { getCandidateReviewAction } from '@/app/actions/candidateApplication';
 import {
   generateGuidanceAction,
@@ -1854,20 +1855,41 @@ function GuidedQuestionCard({
               />
             </div>
           ) : null}
-          {answerType !== 'date' && answerType !== 'date_time' && (
+          {isTimeAnswer && answerType !== 'date_time' ? (
+            <div className="col-span-2 flex w-full items-center sm:min-w-[11rem] sm:flex-1 sm:basis-48">
+              <label htmlFor={inputId} className="sr-only">
+                Answer this question
+              </label>
+              <GlobalTimeInput
+                id={inputId}
+                label="Time"
+                value={value}
+                onChange={(nextTime) => {
+                  setEdited(true);
+                  setValue(nextTime);
+                }}
+                interval={15}
+                hideLabel
+                showErrorMessage={false}
+                disabled={busy}
+                error={displayError ?? undefined}
+                ariaInvalid={!!displayError}
+                ariaDescribedBy={displayError ? errorId : undefined}
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
+                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]/35"
+              />
+            </div>
+          ) : null}
+          {answerType !== 'date' && answerType !== 'date_time' && !isTimeAnswer && (
             <input
               type={
-                isTimeAnswer
-                  ? 'time'
-                  : answerType === 'number'
+                answerType === 'number'
                     ? 'number'
                     : 'text'
               }
               {...(answerType === 'number'
                 ? { min: 0, inputMode: 'numeric' as const, step: 1 }
-                : isTimeAnswer
-                  ? { step: 300 }
-                  : {})}
+                : {})}
               value={value}
               onChange={(event) => {
                 setEdited(true);
@@ -1881,9 +1903,7 @@ function GuidedQuestionCard({
               placeholder={
                 answerType === 'number'
                   ? 'Enter a number…'
-                  : isTimeAnswer
-                    ? 'HH:MM'
-                    : 'Type your answer…'
+                  : 'Type your answer…'
               }
               aria-label="Answer this question"
               aria-invalid={displayError ? true : undefined}

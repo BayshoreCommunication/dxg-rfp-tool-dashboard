@@ -696,26 +696,29 @@ body {
 }
 
 .dxg-timepicker.react-datepicker {
-  width: 200px !important;
+  width: 216px !important;
 }
 
 .dxg-timepicker .react-datepicker__time-container,
 .dxg-timepicker .react-datepicker__time,
 .dxg-timepicker .react-datepicker__time-box {
-  width: 200px !important;
+  width: 216px !important;
 }
 
 .dxg-timepicker .react-datepicker__time-list {
   width: 100% !important;
-  height: 250px !important;
-  padding: 6px !important;
+  height: 264px !important;
+  padding: 8px !important;
 }
 
 .dxg-timepicker .react-datepicker__time-list-item {
   box-sizing: border-box;
   width: 100% !important;
   height: auto !important;
-  padding: 9px 12px !important;
+  margin-bottom: 2px;
+  padding: 9px 14px !important;
+  font-size: 13px;
+  text-align: left;
   white-space: nowrap;
 }
 
