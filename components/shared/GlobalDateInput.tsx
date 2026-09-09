@@ -5,7 +5,7 @@ import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { APP_DATE_FORMAT, APP_DATE_FORMAT_LABEL } from "@/lib/dateFormat";
-import { datePickerPopperModifiers, useDatePickerYearNavigation } from "./DatePickerHeader";
+import { containedDatePickerPopperModifiers, datePickerPopperModifiers, useDatePickerYearNavigation } from "./DatePickerHeader";
 
 type DateFormatType =
   | "yyyy-dd-MM"
@@ -40,6 +40,8 @@ interface GlobalDatePickerProps {
   ariaDescribedBy?: string;
   /** Show a Today shortcut when today is inside the allowed date window. */
   showTodayShortcut?: boolean;
+  /** Keep the popup inside the nearest data-datepicker-boundary scroll viewport. */
+  constrainToScrollParent?: boolean;
   /** @deprecated Every date field uses the app-wide format; ignored. */
   localeAware?: boolean;
 }
@@ -66,6 +68,7 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
   ariaInvalid = false,
   ariaDescribedBy,
   showTodayShortcut = false,
+  constrainToScrollParent = false,
 }) => {
   const dateRef = useRef<DatePicker>(null);
   const yearNavigation = useDatePickerYearNavigation({ minDate, maxDate });
@@ -111,10 +114,10 @@ const GlobalDateInput: React.FC<GlobalDatePickerProps> = ({
           todayButton={showTodayShortcut && todayIsSelectable ? "Today" : undefined}
                     popperPlacement="bottom-start"
           popperProps={{ strategy: "fixed" }}
-          popperModifiers={datePickerPopperModifiers}
+          popperModifiers={constrainToScrollParent ? containedDatePickerPopperModifiers : datePickerPopperModifiers}
           className={resolvedInputClassName}
           wrapperClassName="w-full"
-          popperClassName="dxg-datepicker-popper"
+          popperClassName={`dxg-datepicker-popper${constrainToScrollParent ? " dxg-datepicker-popper--contained" : ""}`}
           showPopperArrow={false}
           calendarClassName={`dxg-datepicker${yearNavigation.yearViewClassName}`}
           renderCustomHeader={yearNavigation.renderCustomHeader}

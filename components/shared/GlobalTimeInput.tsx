@@ -4,7 +4,7 @@ import { Clock3 } from "lucide-react";
 import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { datePickerPopperModifiers } from "./DatePickerHeader";
+import { containedDatePickerPopperModifiers, datePickerPopperModifiers } from "./DatePickerHeader";
 
 interface GlobalTimeInputProps {
   id: string;
@@ -25,6 +25,8 @@ interface GlobalTimeInputProps {
   ariaDescribedBy?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Keep the popup inside the nearest data-datepicker-boundary scroll viewport. */
+  constrainToScrollParent?: boolean;
 }
 
 const timeValueToDate = (value?: string): Date | null => {
@@ -61,6 +63,7 @@ const GlobalTimeInput = ({
   ariaDescribedBy,
   open,
   onOpenChange,
+  constrainToScrollParent = false,
 }: GlobalTimeInputProps) => {
   const pickerRef = useRef<DatePicker>(null);
   // react-datepicker requires time bounds as a pair, even when callers only
@@ -106,10 +109,10 @@ const GlobalTimeInput = ({
           disabled={disabled}
           popperPlacement="bottom-start"
           popperProps={{ strategy: "fixed" }}
-          popperModifiers={datePickerPopperModifiers}
+          popperModifiers={constrainToScrollParent ? containedDatePickerPopperModifiers : datePickerPopperModifiers}
           className={resolvedInputClassName}
           wrapperClassName="w-full"
-          popperClassName="dxg-datepicker-popper"
+          popperClassName={`dxg-datepicker-popper${constrainToScrollParent ? " dxg-datepicker-popper--contained" : ""}`}
           calendarClassName="dxg-datepicker dxg-timepicker"
           showPopperArrow={false}
           ariaInvalid={error || ariaInvalid ? "true" : undefined}

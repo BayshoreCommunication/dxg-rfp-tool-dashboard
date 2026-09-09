@@ -745,6 +745,15 @@ body {
   will-change: opacity;
 }
 
+.dxg-datepicker-popper--contained .dxg-datepicker.react-datepicker {
+  max-height: min(
+    var(--dxg-datepicker-available-height, calc(100dvh - 16px)),
+    calc(100dvh - 16px)
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 @media (max-width: 767px) {
   .dxg-datepicker.react-datepicker {
     max-height: calc(100dvh - 160px);

@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { ReactDatePickerCustomHeaderProps } from "react-datepicker";
-import { shift } from "@floating-ui/react";
+import { flip, shift, size, type Middleware } from "@floating-ui/react";
 
 // Reuse react-datepicker's existing Floating UI dependency. Allow the popup to
 // escape scrollable modals and keep it above the mobile bottom navigation.
@@ -15,6 +15,49 @@ export const datePickerPopperModifiers = [shift(({ elements }) => ({
     ? { top: 72, bottom: 88, left: 8, right: 8 }
     : 8,
 }))];
+
+const containedPickerPadding = 8;
+
+/**
+ * Keep a picker inside an explicitly marked scroll viewport. This is opt-in:
+ * regular form pickers can still escape modal clipping, while compact
+ * workspaces can flip the picker above its field instead of growing the page.
+ */
+export const containedDatePickerPopperModifiers: Middleware[] = [
+  flip(({ elements }) => ({
+    boundary:
+      elements.reference instanceof Element
+        ? elements.reference.closest('[data-datepicker-boundary]') ?? 'clippingAncestors'
+        : 'clippingAncestors',
+    rootBoundary: 'viewport',
+    fallbackPlacements: ['top-start'],
+    fallbackStrategy: 'bestFit',
+    padding: containedPickerPadding,
+  })),
+  shift(({ elements }) => ({
+    boundary:
+      elements.reference instanceof Element
+        ? elements.reference.closest('[data-datepicker-boundary]') ?? 'clippingAncestors'
+        : 'clippingAncestors',
+    rootBoundary: 'viewport',
+    crossAxis: true,
+    padding: containedPickerPadding,
+  })),
+  size(({ elements }) => ({
+    boundary:
+      elements.reference instanceof Element
+        ? elements.reference.closest('[data-datepicker-boundary]') ?? 'clippingAncestors'
+        : 'clippingAncestors',
+    rootBoundary: 'viewport',
+    padding: containedPickerPadding,
+    apply({ availableHeight, elements: nextElements }) {
+      nextElements.floating.style.setProperty(
+        '--dxg-datepicker-available-height',
+        `${Math.max(0, Math.floor(availableHeight))}px`,
+      );
+    },
+  })),
+];
 
 type DateBounds = { minDate?: Date; maxDate?: Date };
 

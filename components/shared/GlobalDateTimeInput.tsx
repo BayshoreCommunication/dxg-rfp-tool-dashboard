@@ -5,7 +5,7 @@ import React, { useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { APP_DATE_FORMAT, APP_DATE_FORMAT_LABEL, APP_DATE_TIME_FORMAT, APP_DATE_TIME_FORMAT_LABEL, APP_TIME_FORMAT } from "@/lib/dateFormat";
-import { datePickerPopperModifiers, useDatePickerYearNavigation } from "./DatePickerHeader";
+import { containedDatePickerPopperModifiers, datePickerPopperModifiers, useDatePickerYearNavigation } from "./DatePickerHeader";
 
 type DateFormatType =
   | "yyyy-dd-MM"
@@ -61,6 +61,8 @@ interface GlobalDatePickerProps {
   ariaLabelledBy?: string;
   /** Show a Today shortcut when today is inside the allowed date window. */
   showTodayShortcut?: boolean;
+  /** Keep the popup inside the nearest data-datepicker-boundary scroll viewport. */
+  constrainToScrollParent?: boolean;
   /** @deprecated Every date field uses the app-wide format; ignored. */
   localeAware?: boolean;
 }
@@ -92,6 +94,7 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
   ariaDescribedBy,
   ariaLabelledBy,
   showTodayShortcut = false,
+  constrainToScrollParent = false,
 }) => {
   const dateRef = useRef<DatePicker>(null);
   const yearNavigation = useDatePickerYearNavigation({ minDate, maxDate });
@@ -146,10 +149,10 @@ const GlobalDateTimeInput: React.FC<GlobalDatePickerProps> = ({
           /* ── Layout ── */
           popperPlacement="bottom-start"
           popperProps={{ strategy: "fixed" }}
-          popperModifiers={datePickerPopperModifiers}
+          popperModifiers={constrainToScrollParent ? containedDatePickerPopperModifiers : datePickerPopperModifiers}
           className={resolvedInputClassName}
           wrapperClassName="w-full"
-          popperClassName="dxg-datepicker-popper"
+          popperClassName={`dxg-datepicker-popper${constrainToScrollParent ? " dxg-datepicker-popper--contained" : ""}`}
           showPopperArrow={false}
           calendarClassName={`dxg-datepicker${showTime ? " dxg-datepicker--with-time" : ""}${yearNavigation.yearViewClassName}`}
           renderCustomHeader={yearNavigation.renderCustomHeader}

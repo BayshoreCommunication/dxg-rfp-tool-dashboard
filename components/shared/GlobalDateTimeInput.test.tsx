@@ -15,6 +15,8 @@ jest.mock("react-datepicker", () => ({
     ariaDescribedBy,
     ariaLabelledBy,
     calendarClassName,
+    popperClassName,
+    popperModifiers,
   }: {
     dateFormat?: string;
     calendarStartDay?: number;
@@ -27,6 +29,8 @@ jest.mock("react-datepicker", () => ({
     ariaDescribedBy?: string;
     ariaLabelledBy?: string;
     calendarClassName?: string;
+    popperClassName?: string;
+    popperModifiers?: Array<{ name: string }>;
   }) => (
     <input
       data-testid="date-time-picker"
@@ -41,6 +45,8 @@ jest.mock("react-datepicker", () => ({
       aria-describedby={ariaDescribedBy}
       aria-labelledby={ariaLabelledBy}
       data-calendar-class={calendarClassName}
+      data-popper-class={popperClassName}
+      data-popper-modifiers={popperModifiers?.map((modifier) => modifier.name).join(",")}
     />
   ),
 }));
@@ -109,5 +115,22 @@ describe("GlobalDateTimeInput", () => {
     );
 
     expect(screen.getByTestId("date-time-picker")).toHaveAttribute("data-today-button", "Today");
+  });
+
+  it("can flip and size the popup within a marked scroll viewport", () => {
+    render(
+      <GlobalDateTimeInput
+        value={null}
+        onChange={jest.fn()}
+        constrainToScrollParent
+      />,
+    );
+
+    const picker = screen.getByTestId("date-time-picker");
+    expect(picker).toHaveAttribute(
+      "data-popper-class",
+      "dxg-datepicker-popper dxg-datepicker-popper--contained",
+    );
+    expect(picker).toHaveAttribute("data-popper-modifiers", "flip,shift,size");
   });
 });

@@ -1368,7 +1368,7 @@ describe("AssistantWorkspacePage", () => {
       },
     });
 
-    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     await screen.findByText("What date and time can production load-in?");
     const dateTimeInput = screen.getByLabelText("Answer this question");
     expect(dateTimeInput).toHaveAttribute("placeholder", "Select date & time");
@@ -1376,6 +1376,7 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByLabelText("Load-in time")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Date and time calendar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Answer" })).toBeDisabled();
+    expect(container.querySelector('[data-datepicker-boundary]')).not.toBeNull();
 
     const [year, month, day] = loadInDate.split("-");
     fireEvent.change(dateTimeInput, {

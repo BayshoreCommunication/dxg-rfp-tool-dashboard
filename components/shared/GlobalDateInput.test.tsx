@@ -3,7 +3,7 @@ import GlobalDateInput from './GlobalDateInput'
 
 jest.mock('react-datepicker', () => ({
   __esModule: true,
-  default: ({ onChange, placeholderText, disabled, id, name, minDate, ariaInvalid, ariaDescribedBy }: {
+  default: ({ onChange, placeholderText, disabled, id, name, minDate, ariaInvalid, ariaDescribedBy, popperClassName }: {
     onChange: (date: Date | null) => void
     placeholderText?: string
     disabled?: boolean
@@ -12,6 +12,7 @@ jest.mock('react-datepicker', () => ({
     minDate?: Date
     ariaInvalid?: 'true' | 'false'
     ariaDescribedBy?: string
+    popperClassName?: string
   }) => (
     <input
       data-testid="datepicker"
@@ -22,6 +23,7 @@ jest.mock('react-datepicker', () => ({
       min={minDate ? `${minDate.getFullYear()}-${String(minDate.getMonth() + 1).padStart(2, '0')}-${String(minDate.getDate()).padStart(2, '0')}` : undefined}
       aria-invalid={ariaInvalid}
       aria-describedby={ariaDescribedBy}
+      data-popper-class={popperClassName}
       onChange={(e) => onChange(e.target.value ? new Date(e.target.value) : null)}
     />
   ),
@@ -97,5 +99,20 @@ describe('GlobalDateInput', () => {
     expect(screen.getByTestId('datepicker')).toHaveAttribute('min', '2026-07-27')
     expect(screen.getByTestId('datepicker')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByTestId('datepicker')).toHaveAttribute('aria-describedby', 'date-error')
+  })
+
+  it('can keep the calendar inside a marked scroll viewport', () => {
+    render(
+      <GlobalDateInput
+        value={null}
+        onChange={mockOnChange}
+        constrainToScrollParent
+      />,
+    )
+
+    expect(screen.getByTestId('datepicker')).toHaveAttribute(
+      'data-popper-class',
+      'dxg-datepicker-popper dxg-datepicker-popper--contained',
+    )
   })
 })

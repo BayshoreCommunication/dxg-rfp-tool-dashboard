@@ -1823,6 +1823,7 @@ function GuidedQuestionCard({
                 ariaDescribedBy={displayError ? errorId : undefined}
                 inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
+                constrainToScrollParent
               />
             </div>
           ) : null}
@@ -1880,6 +1881,7 @@ function GuidedQuestionCard({
                 inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-16 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
                 placeholder="Select date & time"
+                constrainToScrollParent
               />
             </div>
           ) : null}
@@ -1905,6 +1907,7 @@ function GuidedQuestionCard({
                 ariaDescribedBy={displayError ? errorId : undefined}
                 inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]/35"
+                constrainToScrollParent
               />
             </div>
           ) : null}
@@ -4614,6 +4617,7 @@ export default function AssistantWorkspacePage({
             <>
               <div
                 data-testid="proposal-conversation-scroll"
+                data-datepicker-boundary
                 className="min-h-0 flex-1 scroll-py-4 overflow-y-auto px-4 pb-4 pt-4 md:-mr-3 md:px-0 md:pb-0 md:pr-4 md:pt-0"
                 aria-live="polite"
               >

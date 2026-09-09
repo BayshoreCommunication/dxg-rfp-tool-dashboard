@@ -3,12 +3,13 @@ import GlobalTimeInput from "./GlobalTimeInput";
 
 jest.mock("react-datepicker", () => ({
   __esModule: true,
-  default: ({ minTime, maxTime, ariaInvalid, ariaDescribedBy, placeholderText }: {
+  default: ({ minTime, maxTime, ariaInvalid, ariaDescribedBy, placeholderText, popperClassName }: {
     minTime?: Date;
     maxTime?: Date;
     ariaInvalid?: "true";
     ariaDescribedBy?: string;
     placeholderText?: string;
+    popperClassName?: string;
   }) => (
     <input
       data-testid="time-picker"
@@ -17,6 +18,7 @@ jest.mock("react-datepicker", () => ({
       aria-invalid={ariaInvalid}
       aria-describedby={ariaDescribedBy}
       placeholder={placeholderText}
+      data-popper-class={popperClassName}
     />
   ),
 }));
@@ -85,5 +87,22 @@ describe("GlobalTimeInput", () => {
     expect(screen.getByTestId("time-picker")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByTestId("time-picker")).toHaveAttribute("aria-describedby", "guided-time-error");
     expect(screen.getByTestId("time-picker")).toHaveAttribute("placeholder", "Select time");
+  });
+
+  it("can keep the time menu inside a marked scroll viewport", () => {
+    render(
+      <GlobalTimeInput
+        id="contained-time"
+        label="Time"
+        value=""
+        onChange={jest.fn()}
+        constrainToScrollParent
+      />,
+    );
+
+    expect(screen.getByTestId("time-picker")).toHaveAttribute(
+      "data-popper-class",
+      "dxg-datepicker-popper dxg-datepicker-popper--contained",
+    );
   });
 });
