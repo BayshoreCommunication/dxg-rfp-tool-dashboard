@@ -3338,10 +3338,20 @@ describe("AssistantWorkspacePage", () => {
             key: "information_gaps",
             heading: "Information Gaps",
             ordinal: 6,
-            paragraphs: [{
-              text: "Missing information includes event objectives and audience profile beyond total attendance; detailed show format and content plan; room-by-room set-up and technical needs; load-out/strike timing; internet, rigging, and power specifications; AV/vendor coordination details; procurement question deadline; budget tier; and vendor submission or confidentiality terms.",
-              citations: [],
-            }],
+            paragraphs: [
+              {
+                text: "Missing information includes event objectives and audience profile beyond total attendance; detailed show format and content plan; room-by-room set-up and technical needs; load-out/strike timing; internet, rigging, and power specifications; AV/vendor coordination details; procurement question deadline; budget tier; and vendor submission or confidentiality terms.",
+                citations: [],
+              },
+              {
+                text: "The supplied evidence does not specify room-by-room setups, show times, strike timing, detailed technical specifications, crew counts, in-house AV constraints, procurement submission rules beyond dates, confidentiality or coordination clauses beyond draft status, or a final evaluation matrix.",
+                citations: [],
+              },
+              {
+                text: "Technical requirements remain unspecified: internet bandwidth and redundancy; security staffing; load-out timing.",
+                citations: [],
+              },
+            ],
             decision: null,
             decisionReason: null,
           },
@@ -3432,7 +3442,19 @@ describe("AssistantWorkspacePage", () => {
       "AV/vendor coordination details",
       "procurement question deadline",
       "budget tier",
-      "and vendor submission or confidentiality terms",
+      "vendor submission or confidentiality terms",
+      "room-by-room setups",
+      "show times",
+      "strike timing",
+      "detailed technical specifications",
+      "crew counts",
+      "in-house AV constraints",
+      "procurement submission rules beyond dates",
+      "confidentiality or coordination clauses beyond draft status",
+      "a final evaluation matrix",
+      "internet bandwidth and redundancy",
+      "security staffing",
+      "load-out timing",
     ]);
     for (const mark of screen.getByLabelText("Proposal draft preview").querySelectorAll("mark")) {
       expect(mark).toHaveClass("bg-transparent", "p-0", "font-bold", "text-slate-950");

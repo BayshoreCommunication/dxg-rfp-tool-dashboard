@@ -941,9 +941,45 @@ const DRAFT_FACT_PATTERNS = [
   /([$€£]\s?[\d,.]+(?:\s*(?:-|–|to)\s*[$€£]?\s?[\d,.]+)?(?:\s*(?:USD|CAD|EUR|GBP))?)/gi,
 ];
 
-const DRAFT_GAP_FACT_PATTERNS = [
-  /(?:\bMissing information includes|;)\s+(.+?)(?=;|\.(?:\s|$)|$)/gi,
+const DRAFT_GAP_LIST_PATTERNS = [
+  /\b(?:does|do)\s+not\s+(?:specify|include|provide|state|identify|describe|define|confirm|list)\s+(.+?)(?=[.!?](?:\s|$)|$)/gi,
+  /\b(?:missing|unspecified|unknown|unconfirmed)\s+(?:information|details|requirements?|items?)\s*(?:includes?|are|:|—|-)\s*(.+?)(?=[.!?](?:\s|$)|$)/gi,
+  /\b(?:information|details|requirements?|items?)\s+(?:remain|are)\s+(?:missing|unspecified|unknown|unconfirmed)\s*(?::|—|-)?\s*(.+?)(?=[.!?](?:\s|$)|$)/gi,
 ];
+
+// Gap copy is generated prose, so the missing fields are not known in
+// advance. Find the clause that communicates absence, then derive its list
+// items from punctuation. Semicolon lists keep comma-connected concepts (for
+// example "internet, rigging, and power specifications") together; otherwise
+// comma-separated items are emphasized individually.
+const draftGapFactRanges = (text: string): DraftHighlightRange[] =>
+  DRAFT_GAP_LIST_PATTERNS.flatMap((pattern) =>
+    Array.from(text.matchAll(pattern)).flatMap((match) => {
+      const value = match[1];
+      if (!value || match.index === undefined) return [];
+      const valueStart = match.index + match[0].indexOf(value);
+      const delimiter = value.includes(';') ? /;/g : /,/g;
+      const ranges: DraftHighlightRange[] = [];
+      let itemStart = 0;
+
+      const addItem = (itemEnd: number) => {
+        const item = value.slice(itemStart, itemEnd);
+        const prefix = item.match(/^\s*(?:(?:and|or)\s+)?/i)?.[0].length ?? 0;
+        const suffix = item.match(/\s*$/)?.[0].length ?? 0;
+        const start = valueStart + itemStart + prefix;
+        const end = valueStart + itemEnd - suffix;
+        if (end > start) ranges.push({ start, end });
+      };
+
+      for (const separator of value.matchAll(delimiter)) {
+        if (separator.index === undefined) continue;
+        addItem(separator.index);
+        itemStart = separator.index + separator[0].length;
+      }
+      addItem(value.length);
+      return ranges;
+    }),
+  );
 
 // Draft sections are readable summaries, not field audits. Pull the concrete
 // facts a planner scans for first out of each generated paragraph and emphasize
@@ -958,20 +994,19 @@ const draftImportantFactRanges = (
       ? DRAFT_OVERVIEW_FACT_PATTERNS
       : []),
     ...DRAFT_FACT_PATTERNS,
-    ...(sectionKey === 'information_gaps'
-      ? DRAFT_GAP_FACT_PATTERNS
-      : []),
   ];
 
-  return patterns
-    .flatMap((pattern) => {
+  return [
+    ...patterns.flatMap((pattern) => {
       return Array.from(text.matchAll(pattern)).flatMap((match) => {
         const value = match[1];
         if (!value || match.index === undefined) return [];
         const start = match.index + match[0].indexOf(value);
         return [{ start, end: start + value.length }];
       });
-    })
+    }),
+    ...(sectionKey === 'information_gaps' ? draftGapFactRanges(text) : []),
+  ]
     .sort((a, b) => a.start - b.start)
     .reduce<DraftHighlightRange[]>((ranges, range) => {
       const previous = ranges.at(-1);
