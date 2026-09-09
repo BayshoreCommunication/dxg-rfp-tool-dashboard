@@ -3133,6 +3133,37 @@ describe("AssistantWorkspacePage", () => {
     ));
   });
 
+  test("Generate proposal draft re-reads the authoritative version even when one is cached", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithCompletedRun([]));
+    mockedGetProposalContext.mockResolvedValue(contextRunResult);
+    mockedGetProposal
+      .mockResolvedValueOnce({
+        ...capturedProposal,
+        data: { ...capturedProposal.data, version: 8 },
+      } as never)
+      .mockResolvedValue({
+        ...capturedProposal,
+        data: { ...capturedProposal.data, version: 9 },
+      } as never);
+    mockedPostMessage.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: { created: true, message: null, assistantMessageId: null, run: { runType: "proposal_draft", runId: "run-2", jobId: "job-2" } },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    const generate = await screen.findByRole("button", { name: "Generate proposal draft" });
+    await waitFor(() => expect(mockedGetProposal).toHaveBeenCalledTimes(1));
+    fireEvent.click(generate);
+
+    await waitFor(() => expect(mockedGetProposal).toHaveBeenCalledTimes(2));
+    expect(mockedPostMessage).toHaveBeenCalledWith(
+      PROPOSAL_ID,
+      { content: "Generate a proposal draft from the current information.", intent: "generate_draft", expectedProposalVersion: 9 },
+      expect.any(String),
+    );
+  });
+
   test("Generate draft command invokes the same version-safe action without posting chat", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun([]));
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
@@ -3461,6 +3492,33 @@ describe("AssistantWorkspacePage", () => {
 
     expect(visibleRunMessages(messages).map(message => message.id)).toEqual(["draft-complete"]);
     expect(visibleRunMessages([messages[0]])).toEqual([messages[0]]);
+  });
+
+  test("a failed draft shows the backend's conflict-specific recovery guidance", async () => {
+    const conflictCopy = "The proposal changed while drafting. Please regenerate the draft.";
+    mockedGetConversation.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        conversation: { id: "conv-1", title: "Proposal assistant", status: "active", messageCount: 1, updatedAt: "2026-07-21T10:01:00.000Z" },
+        questions: [],
+        messages: [{
+          id: "draft-conflict", ordinal: 1, role: "assistant", kind: "run_result", content: conflictCopy,
+          intent: null, runType: "proposal_draft", runId: "run-1", jobId: "job-1", status: "failed",
+          createdAt: "2026-07-21T10:01:00.000Z", attachments: [],
+        }],
+      },
+    } as never);
+    mockedGetProposal.mockResolvedValue({
+      success: true,
+      message: "ok",
+      data: { _id: PROPOSAL_ID, version: 9, event: { eventName: "Annual Leadership Summit" } },
+    } as never);
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(conflictCopy);
+    expect(screen.queryByText("Draft generation did not finish. Try again.")).not.toBeInTheDocument();
   });
 
   test("nothing new to use is reported as a normal outcome, not an error", async () => {

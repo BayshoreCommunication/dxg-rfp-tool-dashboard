@@ -777,6 +777,20 @@ const runLabels: Record<
   },
 };
 
+// Linked-run content is authored by the backend's bounded status narrator, but
+// an old or malformed row can still carry success copy (or a bare "failed")
+// while its status says failed. Use specific failure/conflict guidance when it
+// is actually actionable, and otherwise retain the known-safe local fallback.
+const runFailureCopy = (content: string, fallback: string): string => {
+  const copy = content.trim();
+  if (copy.length < 12 || copy.length > 300) return fallback;
+  return /\b(?:changed|conflict|failed|failure|retry|unavailable|disabled|stopped)\b|\b(?:could|did) not\b|couldn['’]t/i.test(
+    copy,
+  )
+    ? copy
+    : fallback;
+};
+
 const taskContent: Record<
   'extract_requirements' | 'generate_draft',
   string
@@ -3658,19 +3672,23 @@ export default function AssistantWorkspacePage({
   };
 
   // Same code path as the rail's "Generate draft" chip, and the single handler
-  // behind every card-level generate/regenerate action. A card can be clicked
-  // before the version lookup settled — in that case the CURRENT version is
-  // re-read first so the draft never runs against a stale one.
+  // behind every card-level generate/regenerate action. A guided answer can
+  // increment the proposal after the last background read, so every click must
+  // re-read the authoritative version instead of trusting the cached display
+  // value. The worker still performs its own version check as the final guard.
   const runDraftFromCard = async () => {
     if (!proposalId || sending || draftBusy || draftInProgress) return;
     setDraftError(null);
-    let version = proposalVersion;
-    if (typeof version !== 'number') {
-      setDraftBusy(true);
+    setDraftBusy(true);
+    let version: number | undefined;
+    try {
       version = await fetchProposalVersion(proposalId);
+    } catch {
+      version = undefined;
+    } finally {
       setDraftBusy(false);
-      if (typeof version === 'number') setProposalVersion(version);
     }
+    if (typeof version === 'number') setProposalVersion(version);
     if (typeof version !== 'number') {
       setDraftError(
         'I couldn’t confirm the current version of your proposal. Open the editor, review the details, and try again.',
@@ -4103,7 +4121,7 @@ export default function AssistantWorkspacePage({
         <div
           className="w-full max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
         >
-          <p role="alert">{labels.failed}</p>
+          <p role="alert">{runFailureCopy(message.content, labels.failed)}</p>
           {message.runType === 'proposal_context' && (
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <button
