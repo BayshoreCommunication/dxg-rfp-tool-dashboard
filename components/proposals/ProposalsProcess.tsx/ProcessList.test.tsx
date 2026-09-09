@@ -77,6 +77,26 @@ describe("ProcessList", () => {
     expect(selectedStep).not.toHaveClass("ring-1", "ring-[#d6dfe4]");
   });
 
+  it("keeps desktop workflow steps readable with a comfortable row height", () => {
+    render(<ProcessList activeStep={1} autosaveStatus="Auto-save on" />);
+
+    const selectedStep = screen.getByRole("button", {
+      name: "Go to Event Overview",
+    });
+
+    expect(selectedStep).toHaveClass("min-h-[62px]", "gap-3", "py-2");
+    expect(screen.getByText("Event Overview")).toHaveClass(
+      "text-[13px]",
+      "leading-[18px]",
+    );
+    expect(screen.getByText("Identity & narrative")).toHaveClass(
+      "text-xs",
+      "leading-[17px]",
+    );
+    expect(screen.getByText("Workflow sections")).toHaveClass("text-[11px]");
+    expect(screen.getByRole("status")).toHaveClass("text-[11px]");
+  });
+
   it("uses a compact horizontal navigator before the desktop rail breakpoint", () => {
     render(<ProcessList activeStep={1} />);
 

@@ -28,15 +28,15 @@ const circleClass = (isActive: boolean, isCompleted: boolean): string => {
 };
 
 const labelClass = (isActive: boolean, isCompleted: boolean): string => {
-  if (isCompleted) return "text-[12px] font-bold leading-4 text-[#087f69]";
-  if (isActive)    return "text-[12px] font-bold leading-4 text-[#172b3a]";
-  return "text-[12px] font-semibold leading-4 text-[#31445a]";
+  if (isCompleted) return "text-[13px] font-bold leading-[18px] text-[#087f69]";
+  if (isActive)    return "text-[13px] font-bold leading-[18px] text-[#172b3a]";
+  return "text-[13px] font-semibold leading-[18px] text-[#31445a]";
 };
 
 const subClass = (isActive: boolean, isCompleted: boolean): string => {
-  if (isCompleted) return "mt-0.5 text-[11px] leading-4 text-[#087f69]";
-  if (isActive)    return "mt-0.5 text-[11px] leading-4 text-[#566a78]";
-  return "mt-0.5 text-[11px] leading-4 text-[#687782]";
+  if (isCompleted) return "mt-0.5 text-xs leading-[17px] text-[#087f69]";
+  if (isActive)    return "mt-0.5 text-xs leading-[17px] text-[#566a78]";
+  return "mt-0.5 text-xs leading-[17px] text-[#687782]";
 };
 
 const lineClass = (isCompleted: boolean, isActive: boolean): string => {
@@ -90,16 +90,16 @@ const ProcessList = ({
     <aside data-testid="proposal-process-list" className="w-full overflow-hidden rounded-2xl border border-[#dfe7ec] bg-[#fbfdfe] px-3 py-3 font-sans shadow-[0_6px_20px_rgba(15,42,67,0.04)] sm:px-4 @min-[1000px]:max-h-[calc(100vh-1.5rem)] @min-[1000px]:px-3.5 @min-[1000px]:py-4 @min-[1000px]:shadow-[-8px_0_24px_rgba(15,42,67,0.02)]">
       <div className="mb-2 flex items-start justify-between gap-2 px-0.5 @min-[1000px]:mb-2.5">
         <div className="min-w-0">
-          <p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.17em] text-[#566a78]">
+          <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.17em] text-[#566a78]">
             Workflow sections
           </p>
-          <p className="mt-0.5 text-[11px] leading-4 text-[#687782]">Select any section to review or edit.</p>
+          <p className="mt-1 text-xs leading-4 text-[#687782]">Select any section to review or edit.</p>
         </div>
         {autosaveStatus && (
           <p
             role="status"
             aria-live="polite"
-            className={`shrink-0 text-right text-[10px] leading-4 ${autosaveError ? "text-red-600" : "text-[#566a78]"}`}
+            className={`shrink-0 text-right text-[11px] leading-4 ${autosaveError ? "text-red-600" : "text-[#566a78]"}`}
           >
             {autosaveStatus}
           </p>
@@ -135,7 +135,7 @@ const ProcessList = ({
                 aria-label={`Go to ${step.label}${isCompleted ? ", complete" : ""}`}
                 disabled={!isNavigable}
                 onClick={() => onStepChange?.(step.id)}
-                className={`group flex min-h-[52px] flex-1 items-center gap-2.5 rounded-xl border px-2 py-1.5 text-left transition-[background-color,border-color,box-shadow] duration-200 motion-reduce:transition-none ${
+                className={`group flex min-h-[62px] flex-1 items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition-[background-color,border-color,box-shadow] duration-200 motion-reduce:transition-none ${
                   isActive ? "border-[#b9def2] bg-white shadow-[0_4px_14px_rgba(0,105,160,0.09)]" : "border-transparent"}
                   ${
                   isNavigable
