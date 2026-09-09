@@ -401,17 +401,14 @@ export default function ProposalResponseCards({
           </section>
         ) : (
           <section className="mt-5" aria-label="Submitted vendor responses">
-            {/* One or two cards leave room beside them, so the action sits above
-                the row. A full row of three has no such gap — it goes below. */}
-            {responses.length < 3 && (
-              <div className="mb-3 flex justify-end">
-                <ManualVendorResponseDialog
-                  proposalId={proposalId}
-                  existingVendors={existingVendorSummaries(responses)}
-                  defaultOpen={openManualResponse}
-                />
-              </div>
-            )}
+            <div className="mb-3 flex justify-end">
+              <ManualVendorResponseDialog
+                proposalId={proposalId}
+                existingVendors={existingVendorSummaries(responses)}
+                emphasis="primary"
+                defaultOpen={openManualResponse}
+              />
+            </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {responses.map((response) => (
                 <ResponseCard
@@ -422,15 +419,6 @@ export default function ProposalResponseCards({
                 />
               ))}
             </div>
-            {responses.length >= 3 && (
-              <div className="mt-4 flex justify-end">
-                <ManualVendorResponseDialog
-                  proposalId={proposalId}
-                  existingVendors={existingVendorSummaries(responses)}
-                  defaultOpen={openManualResponse}
-                />
-              </div>
-            )}
           </section>
         )}
       </div>

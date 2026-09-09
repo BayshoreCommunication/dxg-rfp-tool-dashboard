@@ -198,24 +198,20 @@ const renderWithResponses = (count: number) => {
   );
 };
 
-it.each([1, 2])(
-  "puts manual entry above the row while %i card(s) leave room beside them",
+it.each([1, 2, 3, 4])(
+  "keeps manual entry above the cards and keyboard-focusable with %i response(s)",
   (count) => {
     renderWithResponses(count);
 
     const section = screen.getByLabelText("Submitted vendor responses");
-    expect(within(section).getByRole("button", { name: /Add response manually/ })).toBeInTheDocument();
+    const button = within(section).getByRole("button", { name: /Add response manually/ });
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveClass("bg-brand", "text-white");
     expect(manualEntryPrecedesCards()).toBe(true);
+    button.focus();
+    expect(button).toHaveFocus();
   },
 );
-
-it("drops manual entry below a full row of three cards", () => {
-  renderWithResponses(3);
-
-  const section = screen.getByLabelText("Submitted vendor responses");
-  expect(within(section).getByRole("button", { name: /Add response manually/ })).toBeInTheDocument();
-  expect(manualEntryPrecedesCards()).toBe(false);
-});
 
 it("keeps manual entry out of the proposal header", () => {
   renderWithResponses(2);
