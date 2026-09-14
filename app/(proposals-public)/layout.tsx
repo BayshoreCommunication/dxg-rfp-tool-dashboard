@@ -5,6 +5,7 @@ import "../globals.css";
 
 export const metadata = {
   metadataBase: new URL("https://dxg-rfp-tool-dashboard.vercel.app"),
+  title: "Vendor response | RFPilot",
 };
 
 export default function RootLayout({

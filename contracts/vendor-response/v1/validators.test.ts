@@ -13,6 +13,22 @@ describe("vendor response v1 contracts", () => {
     expect(validateVendorResponseWorkspaceV1({ schemaVersion: "vendor-response-workspace.v1" })).toBe(false);
   });
 
+  it("accepts a capability-only legacy workspace without a questionnaire", () => {
+    expect(validateVendorResponseWorkspaceV1({
+      schemaVersion: "vendor-response-workspace.v1",
+      proposalTitle: "Annual Summit",
+      capabilities: {
+        structuredResponse: false,
+        responseFormat: "legacy_unstructured",
+        reason: "proposal_not_enabled",
+      },
+      access: { state: "open", canEdit: true, canSubmit: true },
+      questionnaire: null,
+      draft: null,
+      currentSubmission: null,
+    })).toBe(true);
+  });
+
   it("accepts an integer-minor-unit calculation snapshot", () => {
     expect(
       validateVendorResponseCalculationV1({

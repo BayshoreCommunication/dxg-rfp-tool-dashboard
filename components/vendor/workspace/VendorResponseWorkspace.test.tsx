@@ -31,8 +31,18 @@ const room = (index: number) => ({
   ],
 });
 
-const workspace = (): VendorResponseWorkspaceV1 => ({
+type StructuredWorkspace = VendorResponseWorkspaceV1 & {
+  questionnaire: NonNullable<VendorResponseWorkspaceV1["questionnaire"]>;
+};
+
+const workspace = (): StructuredWorkspace => ({
   schemaVersion: "vendor-response-workspace.v1",
+  proposalTitle: "Annual Forum",
+  capabilities: {
+    structuredResponse: true,
+    responseFormat: "structured_v1",
+    reason: "enabled",
+  },
   access: { state: "open", canEdit: true, canSubmit: true },
   questionnaire: {
     schemaVersion: "vendor-response-questionnaire.v1",

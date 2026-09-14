@@ -357,7 +357,7 @@ export default function VendorResponseForm({
             </div>
           </div>
         </section>
-        <p className="mt-5 text-center text-xs font-semibold text-slate-400">
+        <p className="mt-5 text-center text-xs font-semibold text-slate-600">
           Powered by DXG RFP Tool
         </p>
       </main>
@@ -429,11 +429,11 @@ export default function VendorResponseForm({
           <section aria-labelledby="contact-heading" className="px-6 py-7 sm:px-8 lg:px-10">
             <div className="flex flex-col gap-2 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Step 1 of 3</p>
+                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#0069a0]">Step 1 of 3</p>
                 <h2 id="contact-heading" className="mt-1 text-xl font-extrabold text-slate-950">Contact information</h2>
                 <p className="mt-1 text-sm text-slate-500">Tell the planner who is submitting this response.</p>
               </div>
-              <p className="text-xs font-semibold text-slate-400"><span className="text-rose-500">*</span> Required fields</p>
+              <p className="text-xs font-semibold text-slate-600"><span className="text-rose-500">*</span> Required fields</p>
             </div>
 
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -524,12 +524,12 @@ export default function VendorResponseForm({
           </section>
 
           <section aria-labelledby="details-heading" className="border-t border-slate-100 bg-slate-50/60 px-6 py-7 sm:px-8 lg:px-10">
-            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Step 2 of 3</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#0069a0]">Step 2 of 3</p>
             <h2 id="details-heading" className="mt-1 text-xl font-extrabold text-slate-950">Proposal details</h2>
             <p className="mt-1 text-sm text-slate-500">Summarize your approach so the planner can evaluate it quickly.</p>
 
             <label htmlFor="proposal-message" className="mt-6 mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
-              <FileText size={15} className="text-slate-400" aria-hidden="true" /> Message or executive summary <span className="font-normal text-slate-400">(optional)</span>
+              <FileText size={15} className="text-slate-400" aria-hidden="true" /> Message or executive summary <span className="font-normal text-slate-600">(optional)</span>
             </label>
             <textarea
               id="proposal-message"
@@ -545,7 +545,7 @@ export default function VendorResponseForm({
           <section aria-labelledby="documents-heading" className="border-t border-slate-100 px-6 py-7 sm:px-8 lg:px-10">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Step 3 of 3</p>
+                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#0069a0]">Step 3 of 3</p>
                 <h2 id="documents-heading" className="mt-1 text-xl font-extrabold text-slate-950">Supporting documents</h2>
                 <p className="mt-1 text-sm text-slate-500">Attach pricing, equipment lists, schedules, or other supporting files.</p>
               </div>
@@ -594,7 +594,7 @@ export default function VendorResponseForm({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={files.length >= MAX_FILES}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-extrabold text-slate-700 shadow-sm transition hover:border-[#008ad2] hover:text-[#0069a0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-extrabold text-slate-700 shadow-sm transition hover:border-[#008ad2] hover:text-[#0069a0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Paperclip size={15} aria-hidden="true" />
                 {existingDocs.length > 0 ? "Choose additional files" : "Choose files"}
@@ -662,7 +662,7 @@ export default function VendorResponseForm({
           </div>
         </form>
 
-        <p className="mt-5 text-center text-xs font-semibold text-slate-400">
+        <p className="mt-5 text-center text-xs font-semibold text-slate-600">
           Powered by DXG RFP Tool · Secure vendor response portal
         </p>
       </div>
