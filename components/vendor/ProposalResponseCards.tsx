@@ -36,7 +36,9 @@ const statedTotalRange = (
 ) => {
   const totals = responses.flatMap((response) => {
     const total = summaries[response._id]?.commercialTotal;
-    return total?.status === "stated" ? [{ responseId: response._id, amount: total.amount, currency: total.currency }] : [];
+    return total?.status === "stated" || total?.status === "calculated"
+      ? [{ responseId: response._id, amount: total.amount, currency: total.currency }]
+      : [];
   });
   const unconfirmed = responses.filter((response) => summaries[response._id]?.commercialTotal.status === "needs_confirmation").length;
   if (totals.length < 2) return unconfirmed > 0 ? { count: 0, unconfirmed, currency: null, lowest: null, highest: null, lowestResponseId: null } : null;
@@ -73,6 +75,7 @@ const extractionLabels: Record<ResponseCardSummary["extractionStatus"], string> 
   unreadable: "Files could not be read",
   failed: "Reading failed",
   unavailable: "Read status unavailable",
+  structured: "Structured response",
 };
 
 const exclusionNotes: Record<NonNullable<ResponseCardSummary["comparisonBlocked"]>, string> = {
@@ -83,6 +86,10 @@ const exclusionNotes: Record<NonNullable<ResponseCardSummary["comparisonBlocked"
 };
 
 const coverageSentence = (summary: ResponseCardSummary) => {
+  if (summary.structuredCoverage) {
+    const { rooms, specs, completionPercent, requestedRoomNights } = summary.structuredCoverage;
+    return `${rooms.responded} of ${rooms.total} rooms covered. ${specs.answered} of ${specs.total} specifications answered (${specs.comply} comply, ${specs.substitute} substitute, ${specs.exception} exception). ${completionPercent}% required completion${requestedRoomNights ? ` · ${requestedRoomNights} requested room nights` : ""}.`;
+  }
   const coverage = summary.requirementCoverage;
   if (!coverage) {
     return summary.extractionStatus === "ready"
@@ -132,7 +139,9 @@ function ResponseCard({
 }) {
   const receivedAt = response.versionReceivedAt ?? response.createdAt;
   const commercialTotal = summary.commercialTotal;
-  const extractionStatus = extractionStatusToIntelligenceStatus(summary.extractionStatus);
+  const extractionStatus = summary.extractionStatus === "structured"
+    ? "complete"
+    : extractionStatusToIntelligenceStatus(summary.extractionStatus);
   return (
     <article className={cn(intelligenceSurfaceClasses.card, "@container flex h-full flex-col")}>
       <div className="flex items-start justify-between gap-4">
@@ -143,6 +152,9 @@ function ResponseCard({
           <p className="mt-1 font-mono text-xs text-gray">
             Version {response.currentVersionNumber ?? 1} · {formatDate(receivedAt)}
           </p>
+          <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${summary.responseFormat === "structured_v1" ? "bg-sky-50 text-brand-dark" : "bg-amber-50 text-amber-800"}`}>
+            {summary.responseFormat === "structured_v1" ? "Structured response" : "Legacy document response"}
+          </span>
         </div>
         {!response.isRead && (
           <IntelligenceStatusChip status="attention" label="New" className="shrink-0" />
@@ -150,7 +162,7 @@ function ResponseCard({
       </div>
 
       <IntelligenceStatusChip status={extractionStatus} className="mt-3 w-fit gap-1.5">
-        {summary.extractionStatus === "ready" ? (
+        {summary.extractionStatus === "structured" || summary.extractionStatus === "ready" ? (
           <Check size={13} strokeWidth={2.5} aria-hidden="true" />
         ) : summary.extractionStatus === "partial" ? (
           <Minus size={13} strokeWidth={2.5} aria-hidden="true" />
@@ -163,14 +175,16 @@ function ResponseCard({
       <div className="mt-4 grid grid-cols-1 gap-2.5 @min-[300px]:grid-cols-2" aria-label="Response highlights">
         <div className="min-w-0 rounded-2xl border border-gray-border bg-gray-panel p-3">
           <p className="text-xs font-extrabold uppercase tracking-wide text-gray">Total cost</p>
-          {commercialTotal.status === "stated" ? (
+          {commercialTotal.status === "stated" || commercialTotal.status === "calculated" ? (
             <>
               <p className="mt-1 whitespace-nowrap text-sm font-extrabold text-navy">{formatMoney(commercialTotal.amount, commercialTotal.currency)}</p>
-              {commercialTotal.confirmed && commercialTotal.otherTotals > 0 && (
+              {commercialTotal.status === "calculated" ? (
+                <p className="mt-1 text-xs font-semibold text-emerald-700">Frozen server calculation</p>
+              ) : commercialTotal.confirmed && commercialTotal.otherTotals > 0 && (
                 <p className="mt-1 text-xs font-semibold text-gray">Confirmed by you over {commercialTotal.otherTotals} other stated {commercialTotal.otherTotals === 1 ? "total" : "totals"}</p>
               )}
               {lowestStatedTotal && (
-                <p className="mt-1 text-xs font-semibold text-brand-dark">Lowest stated total</p>
+                <p className="mt-1 text-xs font-semibold text-brand-dark">Lowest comparable total</p>
               )}
             </>
           ) : commercialTotal.status === "needs_confirmation" ? (
@@ -217,6 +231,14 @@ function ResponseCard({
           )}
         </div>
       </div>
+
+      {summary.structuredCoverage ? (
+        <dl className="mt-2 grid grid-cols-3 gap-2 rounded-2xl border border-sky-100 bg-sky-50/60 p-3" aria-label="Structured response coverage">
+          <div><dt className="text-[10px] font-extrabold uppercase text-gray">Rooms</dt><dd className="mt-1 text-sm font-extrabold text-navy">{summary.structuredCoverage.rooms.responded}/{summary.structuredCoverage.rooms.total}</dd></div>
+          <div><dt className="text-[10px] font-extrabold uppercase text-gray">Specs</dt><dd className="mt-1 text-sm font-extrabold text-navy">{summary.structuredCoverage.specs.answered}/{summary.structuredCoverage.specs.total}</dd></div>
+          <div><dt className="text-[10px] font-extrabold uppercase text-gray">Files</dt><dd className="mt-1 text-sm font-extrabold text-navy">{summary.structuredCoverage.categorizedDocuments}</dd></div>
+        </dl>
+      ) : null}
 
       {response.documents.length > 1 && (
         <div className="mt-2 text-xs">
@@ -313,8 +335,8 @@ export default function ProposalResponseCards({
                   {totalRange.lowest !== null && totalRange.highest !== null && totalRange.currency && (
                     <>
                       {totalRange.lowest === totalRange.highest
-                        ? `${totalRange.count === responses.length ? "All" : totalRange.count} ${totalRange.count === 2 ? "both" : ""} stated totals are ${formatMoney(totalRange.lowest, totalRange.currency)}`.replace("2 both", "Both").replace("All both", "Both").replace(/\s+/g, " ")
-                        : `Stated totals range from ${formatMoney(totalRange.lowest, totalRange.currency)} to ${formatMoney(totalRange.highest, totalRange.currency)}`}
+                        ? `${totalRange.count === responses.length ? "All" : totalRange.count} ${totalRange.count === 2 ? "both" : ""} comparable totals are ${formatMoney(totalRange.lowest, totalRange.currency)}`.replace("2 both", "Both").replace("All both", "Both").replace(/\s+/g, " ")
+                        : `Comparable totals range from ${formatMoney(totalRange.lowest, totalRange.currency)} to ${formatMoney(totalRange.highest, totalRange.currency)}`}
                       {totalRange.count < responses.length
                         ? ` across ${totalRange.count} of ${responses.length} responses.`
                         : "."}

@@ -85,6 +85,11 @@ describe("VendorResponseForm", () => {
           versionNumber: 1,
           receivedAt: "2026-08-12T10:00:00.000Z",
           manifestChecksum: "a".repeat(64),
+          confirmationDelivery: {
+            status: "accepted",
+            attemptedAt: "2026-08-12T10:00:01.000Z",
+            acceptedAt: "2026-08-12T10:00:02.000Z",
+          },
         },
       }),
     });
@@ -103,7 +108,7 @@ describe("VendorResponseForm", () => {
     expect((request.body as FormData).get("submissionIdempotencyKey")).toEqual(expect.any(String));
     expect((request.body as FormData).get("submissionReason")).toBe("initial");
     expect(await screen.findByRole("heading", { name: "Thank you, Jordan Lee." })).toBeInTheDocument();
-    expect(screen.getByText("Confirmation sent to jordan@acme.test")).toBeInTheDocument();
+    expect(screen.getByText("Confirmation email accepted for delivery to jordan@acme.test")).toBeInTheDocument();
     expect(screen.getByText("version-1")).toBeInTheDocument();
   });
 

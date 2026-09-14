@@ -224,3 +224,56 @@ it("keeps a versioned response comparable when only its summary lookup is tempor
   expect(summary.isComparable).toBe(true);
   expect(summary.needsAttention).toBe(true);
 });
+
+it("uses the frozen server calculation for structured responses without consulting extracted totals", () => {
+  const summary = deriveResponseCardSummary({
+    response: {
+      ...response,
+      responseFormat: "structured_v1",
+      structuredSummary: {
+        questionnaire: {
+          questionnaireId: "questionnaire-1",
+          questionnaireVersion: 2,
+          questionnaireChecksum: "a".repeat(64),
+          proposalVersion: 3,
+          decimalPrecision: 2,
+        },
+        calculation: {
+          currency: "USD",
+          grandTotalMinor: 12500000,
+          completion: { percent: 100 },
+          specCounts: { total: 5, answered: 5, comply: 4, substitute: 1, exception: 0 },
+          requestedRoomNights: 8,
+        } as never,
+        roomCoverage: { total: 2, responded: 2 },
+        crewCount: 4,
+        alternateCount: 1,
+        referenceCount: 2,
+        documentCounts: [{ purposeId: "pricing", count: 1 }],
+      },
+    },
+    extraction: { success: true, data: { status: "ready", runs: [] } },
+    intelligence: {
+      success: true,
+      data: intelligence({
+        facts: [fact({ normalizedValue: "USD 999999", typedValue: { number: 999999, currency: "USD" } })],
+      }),
+    },
+  });
+
+  expect(summary.responseFormat).toBe("structured_v1");
+  expect(summary.extractionStatus).toBe("structured");
+  expect(summary.commercialTotal).toEqual({
+    status: "calculated",
+    amount: 125000,
+    currency: "USD",
+    source: "server_calculated",
+  });
+  expect(summary.structuredCoverage).toEqual(expect.objectContaining({
+    rooms: { total: 2, responded: 2 },
+    completionPercent: 100,
+    categorizedDocuments: 1,
+  }));
+  expect(summary.isComparable).toBe(true);
+  expect(summary.needsAttention).toBe(false);
+});

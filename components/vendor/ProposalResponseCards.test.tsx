@@ -38,6 +38,7 @@ const statedTotal = (amount: number): Extract<ResponseCardSummary["commercialTot
   ({ status: "stated", factId: "fact-1", amount, currency: "USD", source: pricingSource, confirmed: false, otherTotals: 0 });
 
 const summary = (overrides: Partial<ResponseCardSummary> = {}): ResponseCardSummary => ({
+  responseFormat: "legacy_unstructured",
   extractionStatus: "ready",
   intelligenceStatus: "ready",
   headlineFacts: [],
@@ -49,6 +50,7 @@ const summary = (overrides: Partial<ResponseCardSummary> = {}): ResponseCardSumm
   contradictionCount: 0,
   isComparable: true,
   needsAttention: true,
+  structuredCoverage: null,
   ...overrides,
 });
 
@@ -255,10 +257,10 @@ it("tells the planner when a response is left out of the comparison and shows th
   expect(within(cards[1]).getByText(/Some pages could not be read, so its findings may be incomplete/)).toBeInTheDocument();
   expect(within(cards[1]).queryByText(/Left out of the vendor comparison/)).not.toBeInTheDocument();
   expect(within(cards[1]).queryByText("Attention flags")).not.toBeInTheDocument();
-  expect(within(cards[2]).getByText("Lowest stated total")).toBeInTheDocument();
-  expect(within(cards[0]).queryByText("Lowest stated total")).not.toBeInTheDocument();
+  expect(within(cards[2]).getByText("Lowest comparable total")).toBeInTheDocument();
+  expect(within(cards[0]).queryByText("Lowest comparable total")).not.toBeInTheDocument();
   const overview = screen.getByLabelText("Proposal response overview");
-  expect(within(overview).getByText(/Stated totals range from \$100,180 to \$208,601\.50\./)).toBeInTheDocument();
+  expect(within(overview).getByText(/Comparable totals range from \$100,180 to \$208,601\.50\./)).toBeInTheDocument();
   // A partially readable response is still comparable; the caveat is on its card.
   expect(within(overview).getByRole("link", { name: "Proposal Intelligence" })).toHaveAttribute(
     "href",
@@ -294,10 +296,10 @@ it("withholds a price and the lowest badge when a response states several differ
   expect(within(cards[2]).getByText("Needs confirmation")).toBeInTheDocument();
   expect(within(cards[2]).getByText(/The files list 2 different totals, \$100,180 to \$207,055\./)).toBeInTheDocument();
   expect(within(cards[2]).getByRole("link", { name: "Confirm which applies" })).toHaveAttribute("href", "/vendor-responses/response-3");
-  expect(within(cards[2]).queryByText("Lowest stated total")).not.toBeInTheDocument();
-  expect(within(cards[0]).getByText("Lowest stated total")).toBeInTheDocument();
+  expect(within(cards[2]).queryByText("Lowest comparable total")).not.toBeInTheDocument();
+  expect(within(cards[0]).getByText("Lowest comparable total")).toBeInTheDocument();
   const overview = screen.getByLabelText("Proposal response overview");
-  expect(within(overview).getByText(/Stated totals range from \$208,601\.50 to \$208,700 across 2 of 3 responses\./)).toBeInTheDocument();
+  expect(within(overview).getByText(/Comparable totals range from \$208,601\.50 to \$208,700 across 2 of 3 responses\./)).toBeInTheDocument();
   expect(within(overview).getByText("1 response lists more than one total and needs confirmation.")).toBeInTheDocument();
 });
 
