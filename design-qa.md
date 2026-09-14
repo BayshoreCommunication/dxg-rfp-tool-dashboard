@@ -40,6 +40,53 @@ final result: passed
 
 ---
 
+# Design QA: Structured response consumption task 7
+
+## Source of truth and evidence
+
+- Product-flow source: `/Users/swoptechnologies/Downloads/rfpilot-vendor-portal-v9.html`, CUA in-app browser tab 2 at the Document uploads state.
+- Current design-system source: authenticated planner response overview at `http://localhost:3000/vendor-responses/proposals/6a7d6aa0556f07bff684ad67`, CUA in-app browser tab 1.
+- Implementation evidence: isolated Task 7 planner preview at `http://localhost:3017/vendor-response/task7-preview`, CUA in-app browser tab 7.
+- The source and implementation screenshots were emitted together in one comparison input. The temporary public preview route and environment links were removed immediately after inspection and are not part of the shipped change.
+
+## Required fidelity surfaces
+
+| Surface | Result | Evidence |
+| --- | --- | --- |
+| Typography and hierarchy | Passed | The proposal title, uppercase eyebrow, vendor names, metadata, and dense response facts use the current dashboard's existing hierarchy. |
+| Layout and rhythm | Passed | The existing overview header and three-column response grid remain intact. Structured coverage occupies a compact full-width band inside each card without changing legacy card height or action placement. |
+| Colors and tokens | Passed | Structured-origin labels use the established cyan family; frozen calculations use emerald; legacy document responses use amber. Existing navy, slate, border, and focus tokens are preserved. |
+| Provenance clarity | Passed | Each structured card says `Structured response`, each total says `Frozen server calculation`, and the mixed range is described as `Comparable totals` instead of incorrectly calling every value stated or extracted. |
+| Content fidelity | Passed | Room coverage, specification verdict counts, categorized files, required completion, room nights, and immutable version metadata carry the same information model introduced by the v9 vendor workspace. |
+| Legacy compatibility | Passed | The side-by-side preview showed two structured responses and one legacy document response; legacy extraction status and requirement coverage remain visually and semantically separate. |
+
+## Interaction and accessibility verification
+
+- The implementation DOM exposed one proposal heading, three vendor card headings, a labeled `Response highlights` region per card, and a `Structured response coverage` definition list for each structured response.
+- Planner actions remain semantic links or buttons, including Proposal Intelligence, full-response navigation, and manual legacy intake.
+- New and response-format states are conveyed with text in addition to color.
+- Focused component verification covers card rendering, mixed structured/legacy comparison, detail version history, confirmation delivery states, and manual intake wording.
+- The source and implementation both keep all primary response information above the first action row at the inspected desktop viewport.
+
+## Findings and comparison history
+
+### Pass 1
+
+- [P2] Mixed structured and legacy totals were initially described as `stated totals`, which blurred server-calculated and document-extracted provenance.
+- [P2] The per-card minimum marker used `Lowest stated total` even when the winning amount came from a frozen calculation.
+- [P2] Version navigation did not explicitly identify structured versus legacy versions.
+
+### Pass 2
+
+- Fix: renamed aggregate and card comparison language to `comparable totals` while retaining the explicit `Frozen server calculation` label.
+- Fix: added `Structured` and `Legacy documents` format labels to immutable version navigation.
+- Post-fix evidence: combined CUA screenshot comparison plus focused DOM inspection showing structured and legacy cards together, correct source labels, coverage metrics, and intact dashboard composition.
+- No actionable P0, P1, or P2 findings remain.
+
+final result: passed
+
+---
+
 # Proposal Voice Composer — Design QA
 
 ## Evidence and target

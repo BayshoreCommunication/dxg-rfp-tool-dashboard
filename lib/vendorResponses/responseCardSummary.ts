@@ -18,7 +18,8 @@ type LoadResult<T> =
 
 export type CardExtractionStatus =
   | EvidenceExtractionSummary["status"]
-  | "unavailable";
+  | "unavailable"
+  | "structured";
 
 export type HeadlineFact = {
   factId: string;
@@ -72,6 +73,12 @@ export type CommercialTotalCandidate = {
  */
 export type CommercialTotal =
   | {
+      status: "calculated";
+      amount: number;
+      currency: string;
+      source: "server_calculated";
+    }
+  | {
       status: "stated";
       factId: string;
       amount: number;
@@ -86,6 +93,7 @@ export type CommercialTotal =
   | { status: "not_stated" };
 
 export type ResponseCardSummary = {
+  responseFormat: "structured_v1" | "legacy_unstructured";
   extractionStatus: CardExtractionStatus;
   intelligenceStatus: "ready" | "not_started" | "unavailable";
   /** Headline values other than price; see `commercialTotal` for that. */
@@ -106,6 +114,19 @@ export type ResponseCardSummary = {
   contradictionCount: number;
   isComparable: boolean;
   needsAttention: boolean;
+  structuredCoverage: null | {
+    rooms: { total: number; responded: number };
+    specs: {
+      total: number;
+      answered: number;
+      comply: number;
+      substitute: number;
+      exception: number;
+    };
+    completionPercent: number;
+    requestedRoomNights: number;
+    categorizedDocuments: number;
+  };
 };
 
 const headlinePriority: Record<string, number> = {
@@ -297,6 +318,38 @@ export const deriveResponseCardSummary = ({
   extraction: LoadResult<EvidenceExtractionSummary> | null;
   intelligence: LoadResult<VendorIntelligenceResult> | null;
 }): ResponseCardSummary => {
+  if (response.responseFormat === "structured_v1" && response.structuredSummary) {
+    const { calculation, roomCoverage, documentCounts } = response.structuredSummary;
+    return {
+      responseFormat: "structured_v1",
+      extractionStatus: "structured",
+      intelligenceStatus: "ready",
+      headlineFacts: [],
+      commercialTotal: {
+        status: "calculated",
+        amount: calculation.grandTotalMinor
+          / (10 ** response.structuredSummary.questionnaire.decimalPrecision),
+        currency: calculation.currency,
+        source: "server_calculated",
+      },
+      requirementCoverage: null,
+      comparisonBlocked: null,
+      partialSources: false,
+      requiredFields: null,
+      contradictionCount: 0,
+      isComparable: true,
+      needsAttention:
+        calculation.completion.percent < 100
+        || calculation.specCounts.answered < calculation.specCounts.total,
+      structuredCoverage: {
+        rooms: roomCoverage,
+        specs: calculation.specCounts,
+        completionPercent: calculation.completion.percent,
+        requestedRoomNights: calculation.requestedRoomNights,
+        categorizedDocuments: documentCounts.reduce((total, item) => total + item.count, 0),
+      },
+    };
+  }
   const extractionStatus: CardExtractionStatus = extraction?.success
     ? extraction.data.status
     : extraction
@@ -335,6 +388,7 @@ export const deriveResponseCardSummary = ({
     Boolean(intelligenceResult?.run.contradictionCount);
 
   return {
+    responseFormat: "legacy_unstructured",
     extractionStatus,
     intelligenceStatus,
     headlineFacts: intelligenceResult
@@ -350,5 +404,6 @@ export const deriveResponseCardSummary = ({
     contradictionCount: intelligenceResult?.run.contradictionCount ?? 0,
     isComparable: comparisonBlocked === null,
     needsAttention,
+    structuredCoverage: null,
   };
 };

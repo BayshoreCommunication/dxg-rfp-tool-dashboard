@@ -59,6 +59,14 @@ type Receipt = {
   versionNumber: number;
   receivedAt: string;
   manifestChecksum: string;
+  questionnaire?: { questionnaireVersion: number } | null;
+  calculation?: { currency: string; grandTotalMinor: number } | null;
+  documents?: Array<{ documentId: string }>;
+  confirmationDelivery?: {
+    status: "accepted" | "failed" | "unknown";
+    attemptedAt: string | null;
+    acceptedAt: string | null;
+  };
 };
 
 const AVAILABLE_SECTIONS = new Set<SectionId>([
@@ -1215,6 +1223,20 @@ function SubmissionConfirmation({
               timeStyle: "short",
             }).format(new Date(receipt.receivedAt))}
           </p>
+          <div className={`mt-5 rounded-md border p-4 text-left ${receipt.confirmationDelivery?.status === "accepted" ? "border-emerald-200 bg-emerald-50" : receipt.confirmationDelivery?.status === "failed" ? "border-amber-200 bg-amber-50" : "border-[#dce4eb] bg-[#f8fafb]"}`}>
+            <p className="text-sm font-extrabold text-[#16283c]">
+              {receipt.confirmationDelivery?.status === "accepted"
+                ? `Confirmation email accepted for delivery to ${response.identity.email}`
+                : receipt.confirmationDelivery?.status === "failed"
+                  ? "Your response is saved, but the confirmation email could not be sent"
+                  : "Email delivery has not been confirmed"}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-[#607487]">
+              {receipt.confirmationDelivery?.status === "accepted"
+                ? "The mail provider accepted the message. Keep the receipt details above for your records."
+                : "The planner can still review your submitted response. Keep this receipt ID for your records."}
+            </p>
+          </div>
         </div>
       </section>
     </main>

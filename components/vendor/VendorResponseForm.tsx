@@ -58,6 +58,11 @@ type SubmissionReceipt = {
   versionNumber: number;
   receivedAt: string;
   manifestChecksum: string;
+  confirmationDelivery: {
+    status: "accepted" | "failed" | "unknown";
+    attemptedAt: string | null;
+    acceptedAt: string | null;
+  };
 };
 
 type RequiredField = "vendorName" | "submittedBy" | "email";
@@ -280,6 +285,11 @@ export default function VendorResponseForm({
           versionNumber: Number(json.submission.versionNumber ?? 1),
           receivedAt: String(json.submission.receivedAt ?? ""),
           manifestChecksum: String(json.submission.manifestChecksum ?? ""),
+          confirmationDelivery: ["accepted", "failed"].includes(
+            String(json.submission.confirmationDelivery?.status),
+          )
+            ? json.submission.confirmationDelivery
+            : { status: "unknown", attemptedAt: null, acceptedAt: null },
         });
       }
       setSubmitted(true);
@@ -330,9 +340,17 @@ export default function VendorResponseForm({
               <div className="flex items-start gap-3">
                 <Mail size={18} className="mt-0.5 shrink-0 text-[#008ad2]" aria-hidden="true" />
                 <div>
-                  <p className="text-sm font-extrabold text-slate-900">Confirmation sent to {email.trim()}</p>
+                  <p className="text-sm font-extrabold text-slate-900">
+                    {receipt?.confirmationDelivery.status === "accepted"
+                      ? `Confirmation email accepted for delivery to ${email.trim()}`
+                      : receipt?.confirmationDelivery.status === "failed"
+                        ? "Your response is saved, but the confirmation email could not be sent"
+                        : "Email delivery has not been confirmed"}
+                  </p>
                   <p className="mt-1 text-sm leading-5 text-slate-500">
-                    Keep that email for your records. You can safely close this window.
+                    {receipt?.confirmationDelivery.status === "accepted"
+                      ? "The mail provider accepted the message. Keep the receipt above for your records."
+                      : "The planner can still review your response. Keep the receipt above for your records."}
                   </p>
                 </div>
               </div>

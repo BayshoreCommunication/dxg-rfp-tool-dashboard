@@ -25,7 +25,9 @@ export const metadata: Metadata = { title: "Proposal Intelligence | RFPilot" };
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 const hasComparableEvidence = (response: VendorResponseItem) =>
-  response.documents.length > 0 || response.message.trim().length > 0;
+  response.responseFormat === "structured_v1"
+  || response.documents.length > 0
+  || response.message.trim().length > 0;
 
 export default async function ProposalIntelligencePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

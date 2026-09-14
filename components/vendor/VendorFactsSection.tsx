@@ -19,6 +19,11 @@ const coverage = (relationship: string) => coveragePresentation[coverageFromRela
 const confidenceNote = (confidence: number) =>
   confidence < 0.7 ? `Needs a human check · the AI was ${Math.round(confidence * 100)}% sure` : null;
 type RequirementMapping = VendorIntelligenceResult["mappings"][number];
+const provenanceLabel = (value: "vendor_stated" | "server_calculated" | "document_extracted") => ({
+  vendor_stated: "Vendor stated",
+  server_calculated: "Server calculated",
+  document_extracted: "Document extracted",
+})[value];
 /** The value is the headline; money is shown as money. */
 const factValue = (fact: ExtractedFact) => {
   if (fact.valueKind === "money") {
@@ -41,7 +46,14 @@ const factValue = (fact: ExtractedFact) => {
 
 function FactRow({ fact }: { fact: ExtractedFact }) {
   // Rows sit under their group heading, so the family is not repeated here.
-  const note = [fact.explicitness === "derived" ? "Worked out from the file, not stated directly" : null, confidenceNote(fact.confidence)].filter(Boolean).join(" · ");
+  const provenance = fact.citations[0]?.provenance ?? "document_extracted";
+  const note = [
+    provenanceLabel(provenance),
+    provenance === "document_extracted" && fact.explicitness === "derived"
+      ? "Worked out from the file, not stated directly"
+      : null,
+    provenance === "document_extracted" ? confidenceNote(fact.confidence) : null,
+  ].filter(Boolean).join(" · ");
   return <li className="flex flex-col gap-x-4 gap-y-0.5 px-4 py-3 sm:flex-row sm:items-baseline">
     <p className="shrink-0 text-sm font-extrabold text-slate-900 sm:w-44">{factValue(fact)}</p>
     <div className="min-w-0 flex-1">
@@ -137,7 +149,8 @@ function MappingList({ mappings }: { mappings: VendorIntelligenceResult["mapping
             const level = coverageFromRelationship(mapping.relationship);
             const presentation = coverage(mapping.relationship);
             const showChip = level !== column.key;
-            const meta = [mapping.mandatory ? "Mandatory" : null, confidenceNote(mapping.confidence)].filter(Boolean).join(" · ");
+            const provenance = mapping.evidence[0]?.provenance ?? "document_extracted";
+            const meta = [mapping.mandatory ? "Mandatory" : null, provenanceLabel(provenance), provenance === "document_extracted" ? confidenceNote(mapping.confidence) : null].filter(Boolean).join(" · ");
             return <li key={mapping.mappingId} className="px-3 py-3">
               <p className="text-sm font-bold leading-5 text-slate-800">{mapping.requirementTitle}</p>
               {(meta || showChip) && <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">

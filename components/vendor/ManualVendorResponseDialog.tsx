@@ -224,6 +224,9 @@ export default function ManualVendorResponseDialog({
           >
             <div className="flex items-start justify-between gap-4">
               <div>
+                <span className="mb-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-800">
+                  Legacy document intake
+                </span>
                 <h2
                   id={titleId}
                   className="text-lg font-extrabold leading-6 text-navy"
@@ -233,7 +236,9 @@ export default function ManualVendorResponseDialog({
                 <p className="mt-1 text-sm leading-5 text-gray">
                   For responses that arrived outside the portal. The vendor is
                   not emailed, and the response joins the same version history
-                  as a portal submission.
+                  as a portal submission. RFPilot labels values read from these
+                  files as document-extracted so they cannot be mistaken for
+                  vendor-entered structured answers.
                 </p>
               </div>
               <button
