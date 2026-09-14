@@ -1,4 +1,5 @@
-import VendorResponseForm from "@/components/vendor/VendorResponseForm";
+import type { VendorResponseWorkspaceV1 } from "@/contracts/generated/vendor-response-workspace-v1";
+import VendorResponseWorkspace, { WorkspaceProblem } from "@/components/vendor/workspace/VendorResponseWorkspace";
 import { BACKEND_URL } from "@/lib/config";
 
 type PageProps = {
@@ -28,23 +29,34 @@ export const proposalTitleFromSlug = (slug: string): string => {
     .join(" ");
 };
 
-const fetchProposalInfo = async (
+type WorkspaceResult =
+  | { ok: true; workspace: VendorResponseWorkspaceV1 }
+  | { ok: false; message: string };
+
+export const fetchVendorWorkspace = async (
   proposalId: string,
-  accessGrant?: string,
-): Promise<{ title: string; proposalId: string } | null> => {
-  if (!proposalId) return null;
+  accessGrant: string,
+): Promise<WorkspaceResult> => {
+  if (!proposalId || !accessGrant) {
+    return { ok: false, message: "This invitation link is incomplete. Ask the planner for a new vendor response link." };
+  }
 
   try {
-    const query = accessGrant ? `?accessGrant=${encodeURIComponent(accessGrant)}` : "";
-    const res = await fetch(`${BACKEND_URL}/api/proposals/${proposalId}${query}`, {
+    const query = new URLSearchParams({ proposalId });
+    const res = await fetch(`${BACKEND_URL}/api/vendor-responses/workspace?${query.toString()}`, {
       cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        "x-rfpilot-access-grant": accessGrant,
+      },
     });
-    if (!res.ok) return null;
     const json = await res.json();
-    const title = json?.data?.event?.eventName?.trim() || "Untitled Proposal";
-    return { title, proposalId };
+    if (!res.ok || !json?.success || !json?.data) {
+      return { ok: false, message: json?.message || "This vendor response workspace is unavailable." };
+    }
+    return { ok: true, workspace: json.data as VendorResponseWorkspaceV1 };
   } catch {
-    return null;
+    return { ok: false, message: "The vendor response workspace is temporarily unavailable. Check your connection and try again." };
   }
 };
 
@@ -53,18 +65,13 @@ export default async function VendorResponsePage({
   searchParams,
 }: PageProps) {
   const { slug } = await params;
-  const { email, tid, accessGrant } = await searchParams;
+  const { email, accessGrant = "" } = await searchParams;
   const proposalId = proposalIdFromSlug(slug);
-  const info = await fetchProposalInfo(proposalId, accessGrant);
+  const result = await fetchVendorWorkspace(proposalId, accessGrant);
 
-  return (
-    <VendorResponseForm
-      slug={slug}
-      proposalId={proposalId}
-      proposalTitle={info?.title ?? proposalTitleFromSlug(slug)}
-      initialEmail={email ?? ""}
-      initialTrackingId={tid ?? ""}
-      accessGrant={accessGrant}
-    />
-  );
+  if (!result.ok) {
+    return <WorkspaceProblem title={proposalTitleFromSlug(slug) || "Vendor response"} message={result.message} />;
+  }
+
+  return <VendorResponseWorkspace workspace={result.workspace} accessGrant={accessGrant} initialEmail={email ?? ""} />;
 }

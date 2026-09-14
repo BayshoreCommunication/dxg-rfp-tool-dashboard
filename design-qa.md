@@ -1041,3 +1041,57 @@ final result: passed
 No actionable P0, P1, or P2 issue remains.
 
 final result: passed
+
+---
+
+# Design QA: Vendor response workspace task 5
+
+## Source of truth
+
+- Target: `/Users/swoptechnologies/Downloads/rfpilot-vendor-portal-v9.html`
+- Reference capture: CUA in-app browser tab 2 at `1044 × 900`, URL `http://127.0.0.1:43124/rfpilot-vendor-portal-v9.html`
+- Implementation capture: CUA in-app browser tab 4 at `1045 × 900`, URL `http://localhost:3015/vendor-response/nigp-annual-forum-6a7d6aa0556f07bff684ad67?accessGrant=design-qa-grant`
+- Compared states: Compliance, Room-by-room response, and All-in pricing summary.
+
+## Asset catalog
+
+The supplied target contains no raster photography, illustration, or decorative image assets. Its brand mark is typographic and its remaining visual language consists of status dots, form controls, tables, and cards. The implementation therefore uses the repository's Proxima Nova font, RFPilot color tokens, and existing Lucide icon dependency without introducing substitute imagery.
+
+## Visual comparison
+
+| Area | Result | Evidence |
+| --- | --- | --- |
+| Header | Passed | Dark navy proposal header, compact RFPilot wordmark, right-aligned proposal context, and due date match the target hierarchy. |
+| Progress rail | Passed | Fixed-width white rail, cyan selected border, status dots, percentage bar, optional labels, and explanatory note match the target structure. |
+| Section canvas | Passed | White bordered card, numbered heading, scoring pill, dense form rhythm, and pale gray page background match the target. |
+| Room workflow | Passed | Client-owned room metadata is read-only; the selected room alone renders its specification, equipment, labor, and hybrid body. |
+| Pricing | Passed | Two-column editor and navy live-rollup card preserve the target's commercial hierarchy and running-total messaging. |
+| Submission dock | Passed | Persistent white dock includes progress, compliance, total, save state, blocker summary, and disabled/ready submission treatment. |
+| Typography and color | Passed | Proxima Nova and the current `#008ad2` / `#16283c` / slate palette align with the dashboard design system. |
+
+## Interaction and accessibility QA
+
+- Section navigation exposes real buttons with `aria-current`; mobile exposes a labeled native selector.
+- Completion and save changes are announced through status regions; save failures use an alert and keep the local response intact for retry.
+- Specification verdicts are native radio groups with visible focus behavior and required substitute/exception notes.
+- The blocker summary groups validation messages by stable server section/path and navigates back to the relevant section.
+- Focusable fields use bottom scroll margin and the page reserves dock space so focused controls are not obscured.
+- At 1045 px, measured page `scrollWidth` was 1034 px, below the viewport width; the page has no horizontal overflow.
+- The 80-room component test confirms all rooms stay searchable while only one room body is mounted.
+- Browser console inspection found no application warnings or errors.
+
+## Defects found and corrected
+
+- P2: Review and optional value-add navigation statuses initially appeared complete while required blockers remained. Status semantics now show not started until applicable work is complete.
+- P2: Scoring pills could wrap unnecessarily under section headings. The header now reserves a stable column for the pill at desktop widths.
+- P2: Focused fields near the fixed dock needed explicit clearance. Scroll margins were added to inputs, selects, and text areas.
+
+## Final severity summary
+
+- P0: 0
+- P1: 0
+- P2: 0 unresolved
+
+## Final result
+
+**PASSED**
