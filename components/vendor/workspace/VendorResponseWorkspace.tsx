@@ -47,7 +47,9 @@ import type {
 } from "./documentTypes";
 
 type Props = {
-  workspace: VendorResponseWorkspaceV1;
+  workspace: VendorResponseWorkspaceV1 & {
+    questionnaire: NonNullable<VendorResponseWorkspaceV1["questionnaire"]>;
+  };
   accessGrant: string;
   initialEmail?: string;
 };

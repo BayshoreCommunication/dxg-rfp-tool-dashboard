@@ -171,6 +171,14 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
+  if (
+    request.method === "GET" &&
+    pathname === "/api/vendor-responses/check"
+  ) {
+    json(response, 200, { success: true, alreadySubmitted: false });
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/__e2e/reset") {
     threads.clear();
     messages.clear();
