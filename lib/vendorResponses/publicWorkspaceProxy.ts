@@ -1,7 +1,7 @@
 import { BACKEND_URL } from "@/lib/config";
 import { NextRequest, NextResponse } from "next/server";
 
-const PRIVATE_HEADERS = {
+export const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store, max-age=0",
   Vary: "x-rfpilot-access-grant",
 };
@@ -14,7 +14,8 @@ export const publicWorkspaceProxy = async (
   backendPath: string,
   init: RequestInit = {},
 ) => {
-  const accessGrant = request.headers.get("x-rfpilot-access-grant")?.trim() ?? "";
+  const accessGrant =
+    request.headers.get("x-rfpilot-access-grant")?.trim() ?? "";
   const proposalId = proposalIdFromRequest(request);
   if (!proposalId || !accessGrant) {
     return NextResponse.json(
@@ -25,6 +26,8 @@ export const publicWorkspaceProxy = async (
 
   const query = new URLSearchParams({ proposalId });
   try {
+    const hasMultipartBody =
+      typeof FormData !== "undefined" && init.body instanceof FormData;
     const response = await fetch(
       `${BACKEND_URL}/api/vendor-responses${backendPath}?${query.toString()}`,
       {
@@ -32,7 +35,7 @@ export const publicWorkspaceProxy = async (
         cache: "no-store",
         headers: {
           Accept: "application/json",
-          "Content-Type": "application/json",
+          ...(hasMultipartBody ? {} : { "Content-Type": "application/json" }),
           "x-rfpilot-access-grant": accessGrant,
           ...init.headers,
         },
@@ -48,7 +51,10 @@ export const publicWorkspaceProxy = async (
     });
   } catch {
     return NextResponse.json(
-      { success: false, message: "The vendor response service is temporarily unavailable." },
+      {
+        success: false,
+        message: "The vendor response service is temporarily unavailable.",
+      },
       { status: 502, headers: PRIVATE_HEADERS },
     );
   }

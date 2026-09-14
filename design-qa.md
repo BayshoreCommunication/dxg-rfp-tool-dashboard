@@ -1095,3 +1095,44 @@ The supplied target contains no raster photography, illustration, or decorative 
 ## Final result
 
 **PASSED**
+
+---
+
+# Design QA: Vendor response workspace task 6
+
+## Source of truth and evidence
+
+- Source visual truth: `/Users/swoptechnologies/Downloads/rfpilot-vendor-portal-v9.html`.
+- Reference screenshot: CUA in-app browser tab 2, Document uploads and Crew states, `1045 × 900` CSS pixels at device pixel ratio 1.
+- Implementation screenshot: CUA in-app browser tab 5, Document uploads and Crew states, `1045 × 900` CSS pixels at device pixel ratio 1.
+- Implementation URL: `http://127.0.0.1:3016/vendor-response/6a7d6aa0556f07bff684ad67?accessGrant=test-grant`.
+- Density normalization: both captures were browser-rendered at device pixel ratio 1. The source and implementation Document uploads captures were emitted together in one CUA comparison input.
+- State alignment: empty categorized-upload state and one proposed crew-member state. The implementation renders categories from the published questionnaire, so the mock supplied one COI category while the static reference shows four sample categories.
+
+## Required fidelity surfaces
+
+| Surface | Result | Evidence |
+| --- | --- | --- |
+| Fonts and typography | Passed | Proxima Nova, compact uppercase metadata, heavy section titles, helper-copy hierarchy, and small status labels match the existing RFPilot system and the reference density. |
+| Spacing and layout rhythm | Passed | The `268px` sticky rail, white section canvas, numbered header, bordered nested cards, fixed dock, and field rhythm preserve the reference composition. The implementation measured `scrollWidth 1045px` at a `1045px` viewport. |
+| Colors and tokens | Passed | Navy header, cyan navigation accent, pale-blue information panels, slate helper copy, emerald completion, rose blocker states, and current dashboard borders use the existing design tokens. |
+| Image and icon fidelity | Passed | The source has no raster assets. Existing Lucide icons represent uploads, scanning, travel, money, add, and retirement without custom SVG or placeholder artwork. |
+| Copy and content | Passed | Crew role coverage, conditional travel/housing, signed alternate deltas, reference limits, private scanned files, and optional value-add guidance preserve the reference intent while using questionnaire-provided rules instead of demo constants. |
+
+## Interaction and accessibility verification
+
+- Verified Crew add/edit structure, required-role coverage, bio limit feedback, and save-state transition.
+- Verified Travel appears only after a stable labor line is flagged, disappears when unflagged, and restores that line's lodging dates when re-enabled.
+- Verified Alternates, References, Documents, and Value-adds navigation and empty/editor states.
+- Verified questionnaire MIME/count/size messaging, file-picker disabled states, and the inherited/add/replace/retire labels used by revision drafts.
+- Verified semantic buttons, fieldsets, legends, labels, native date/file controls, `aria-current`, blocker navigation, and live save feedback remain present.
+- Browser console inspection found no application errors or warnings; only normal development and analytics-debug messages were present.
+- Automated verification passed 158 Jest suites / 1,113 tests, strict TypeScript, zero-warning ESLint, contract checks, and the production build.
+
+## Comparison history and findings
+
+- Initial combined comparison: no actionable P0, P1, or P2 mismatch was found. The implementation intentionally uses questionnaire-driven category count and the current design-system card treatment rather than copying prototype-only sample categories and demo upload buttons.
+- Focused-region comparison was used for the Crew role-coverage/editor card and the categorized upload card because their labels, statuses, and controls were too small to judge from navigation alone.
+- Residual P3: the reference's upload category header uses a gray band, while the implementation uses the current dashboard's plain bordered card with a pale-blue security summary. This is an intentional design-system alignment and does not reduce hierarchy or usability.
+
+final result: passed
