@@ -25,6 +25,7 @@ import GlobalDateInput from '@/components/shared/GlobalDateInput';
 import GlobalDateTimeInput from '@/components/shared/GlobalDateTimeInput';
 import GlobalTimeInput from '@/components/shared/GlobalTimeInput';
 import { getCandidateReviewAction } from '@/app/actions/candidateApplication';
+import { getAiAvailabilityAction, type AiAvailability } from '@/app/actions/aiAvailability';
 import {
   generateGuidanceAction,
   getLatestGuidanceAction,
@@ -66,6 +67,7 @@ import {
   Paperclip,
   PencilLine,
   Sparkles,
+  TriangleAlert,
   Upload,
   X,
 } from 'lucide-react';
@@ -2857,6 +2859,11 @@ export default function AssistantWorkspacePage({
   const [staged, setStaged] = useState<File[]>([]);
   const [sendBusy, setSendBusy] = useState(false);
   const [sendLocked, setSendLocked] = useState(false);
+  // Every exit from this composer is a live-AI call, so when the provider
+  // cannot serve requests there is nothing useful to send. null means "not
+  // asked yet" and stays permissive: the composer is never blocked on an
+  // answer we do not have.
+  const [aiAvailability, setAiAvailability] = useState<AiAvailability | null>(null);
   // A send owns its attachment intent until the scan handoff settles. The
   // composer chips are cleared earlier and are not a reliable loading flag.
   const [attachmentSendActive, setAttachmentSendActive] = useState(false);
@@ -4517,14 +4524,45 @@ export default function AssistantWorkspacePage({
     );
   };
 
+  // Asked on mount and then on a slow interval, so a provider that recovers
+  // reopens the composer without anyone reloading the page. The backend caches
+  // its answer per organization, so this costs one query a minute at most.
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      const next = await getAiAvailabilityAction();
+      // A healthy answer renders identically to "not asked yet", so hold the
+      // previous state rather than re-rendering every open tab once a minute.
+      if (!cancelled)
+        setAiAvailability((previous) => (next.available && previous === null ? previous : next));
+    };
+    void check();
+    const timer = setInterval(() => { void check(); }, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  // Undetermined (null) is treated as working: a signal we could not read must
+  // never be what stops someone from writing their RFP.
+  const aiHalted = aiAvailability?.available === false;
+  const aiHaltedMessage = !aiHalted
+    ? null
+    : aiAvailability?.reason === 'PROVIDER_UNAVAILABLE'
+      ? 'AI assistance is temporarily unavailable. We cannot reach the AI service at the moment, so sending is paused. Your work is saved — please try again shortly.'
+      : 'AI assistance is switched off for your organization right now, so sending is paused. Please contact your administrator.';
+
   // Attaching only stages a chip, so the pickers stay enabled while scans run;
   // they are disabled once three files are staged or while a send uploads.
   const attachDisabled =
-    staged.length >= MAX_STAGED_FILES || sendBusy;
+    staged.length >= MAX_STAGED_FILES || sendBusy || aiHalted;
   const attachDisabledTitle = attachDisabled
-    ? sendBusy
-      ? 'Wait for the current send to finish.'
-      : `You can attach up to ${MAX_STAGED_FILES} files per message.`
+    ? aiHalted
+      ? 'AI assistance is temporarily unavailable.'
+      : sendBusy
+        ? 'Wait for the current send to finish.'
+        : `You can attach up to ${MAX_STAGED_FILES} files per message.`
     : 'Attach a PDF, DOCX, XLSX, CSV, or TXT file.';
 
   // First-run starters. A brand-new planner faces an empty composer with no
@@ -4755,6 +4793,16 @@ export default function AssistantWorkspacePage({
         </div>
       ) : (
       <div className="rounded-[1.75rem] border border-slate-200 bg-white p-1.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.55)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#00c2c9] focus-within:shadow-[0_0_0_3px_rgba(0,194,201,0.12)] md:rounded-2xl md:p-2 md:shadow-sm">
+        {aiHaltedMessage ? (
+          <p
+            role="status"
+            data-testid="ai-unavailable-notice"
+            className="mb-1.5 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 md:rounded-xl"
+          >
+            <TriangleAlert size={14} className="mt-0.5 shrink-0 text-amber-600" aria-hidden />
+            <span>{aiHaltedMessage}</span>
+          </p>
+        ) : null}
         {staged.length > 0 && (
           <ul className="mb-1.5 flex flex-wrap gap-1.5 px-1 pt-1">
             {staged.map((file, index) => (
@@ -4817,7 +4865,7 @@ export default function AssistantWorkspacePage({
               type="button"
               aria-label="Start voice input"
               onClick={() => startVoiceInput()}
-              disabled={sendBusy}
+              disabled={sendBusy || aiHalted}
               title="Describe your event by voice"
               className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -4845,18 +4893,21 @@ export default function AssistantWorkspacePage({
             aria-label="Send message"
             aria-busy={chatBusy || sendBusy || sendLocked}
             title={
-              chatBusy || sendBusy || sendLocked
-                ? 'Sending message'
-                : started
-                  ? 'Send message'
-                  : 'Send your details to start building your RFP'
+              aiHalted
+                ? 'AI assistance is temporarily unavailable.'
+                : chatBusy || sendBusy || sendLocked
+                  ? 'Sending message'
+                  : started
+                    ? 'Send message'
+                    : 'Send your details to start building your RFP'
             }
             onClick={() => void handleSend()}
             disabled={
               (!text.trim() && staged.length === 0) ||
               chatBusy ||
               sendBusy ||
-              sendLocked
+              sendLocked ||
+              aiHalted
             }
             className={`grid h-10 shrink-0 place-items-center rounded-full border border-white/30 p-0 text-white shadow-[0_5px_14px_-5px_rgba(8,145,150,0.85)] transition-[transform,box-shadow,filter,opacity] duration-150 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_8px_18px_-6px_rgba(8,145,150,0.9)] active:translate-y-0 active:scale-95 active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:translate-y-0 disabled:scale-100 disabled:opacity-55 disabled:shadow-none ${started ? 'w-10' : 'grid-flow-col gap-1.5 px-4'}`}
             style={{

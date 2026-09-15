@@ -17,9 +17,11 @@ import {
 import { createProposalAction, getProposalByIdAction } from "@/app/actions/proposals";
 import { getUserData } from "@/app/actions/user";
 import { getCandidateReviewAction } from "@/app/actions/candidateApplication";
+import { getAiAvailabilityAction } from "@/app/actions/aiAvailability";
 import { storeProposalHandoffDraft } from "@/lib/aiAssistant/handoff";
 
 const replace = jest.fn();
+const mockedAiAvailability = getAiAvailabilityAction as jest.MockedFunction<typeof getAiAvailabilityAction>;
 jest.mock('@/lib/proposals/conversationRead', () => ({readConversationSnapshot: (...args: unknown[]) => getConversationAction(...args as [string])}));
 jest.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 
@@ -59,6 +61,7 @@ jest.mock("@/app/actions/proposalContext", () => ({
   getProposalContextAction: jest.fn(),
 }));
 jest.mock("@/app/actions/proposalDraft", () => ({ getProposalDraftAction: jest.fn() }));
+jest.mock("@/app/actions/aiAvailability", () => ({ getAiAvailabilityAction: jest.fn() }));
 jest.mock("@/app/actions/candidateApplication", () => ({
   getCandidateReviewAction: jest.fn(),
 }));
@@ -240,6 +243,7 @@ describe("AssistantWorkspacePage", () => {
     window.sessionStorage.clear();
     window.localStorage.clear();
     mockedGetUser.mockResolvedValue({ ok: true, data: { name: "Travis Deployment" } });
+    mockedAiAvailability.mockResolvedValue({ available: true, reason: null, since: null, checkedAt: "2026-09-15T00:00:00.000Z" });
     mockedGetConversation.mockResolvedValue(emptyConversation);
     mockedListSources.mockResolvedValue({ success: true, data: [], correlationId: "test-correlation" });
     mockedCloseSegment.mockResolvedValue({ success: true, data: { created: false, reason: "empty" }, correlationId: "test-correlation" });
@@ -315,6 +319,56 @@ describe("AssistantWorkspacePage", () => {
     // No proposal exists yet, so nothing was created or loaded.
     expect(mockedCreateProposal).not.toHaveBeenCalled();
     expect(mockedGetConversation).not.toHaveBeenCalled();
+  });
+
+  test("a provider outage pauses the composer and says so", async () => {
+    // Every exit from this composer is a live-AI call, so when OpenAI cannot
+    // serve requests (exhausted quota, revoked key, outage) sending would only
+    // produce "Requirement extraction failed" a few seconds later.
+    mockedAiAvailability.mockResolvedValue({
+      available: false, reason: "PROVIDER_UNAVAILABLE",
+      since: "2026-09-12T07:16:58.000Z", checkedAt: "2026-09-15T11:00:00.000Z",
+    });
+    render(<AssistantWorkspacePage />);
+
+    const notice = await screen.findByTestId("ai-unavailable-notice");
+    expect(notice).toHaveTextContent(/temporarily unavailable/i);
+    expect(notice).toHaveTextContent(/your work is saved/i);
+    expect(notice).toHaveAttribute("role", "status");
+
+    fireEvent.change(screen.getByPlaceholderText("Example: Sales kickoff, Dallas, 500 guests…"), {
+      target: { value: "Sales kickoff, Dallas, 500 guests" },
+    });
+    // Typed text would normally enable the button.
+    const send = screen.getByRole("button", { name: "Send message" });
+    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute("title", "AI assistance is temporarily unavailable.");
+    expect(screen.getByRole("button", { name: "Attach a file" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Start voice input" })).toBeDisabled();
+  });
+
+  test("a configuration halt is worded for the administrator, not the provider", async () => {
+    mockedAiAvailability.mockResolvedValue({
+      available: false, reason: "KILL_SWITCH", since: null, checkedAt: "2026-09-15T11:00:00.000Z",
+    });
+    render(<AssistantWorkspacePage />);
+    const notice = await screen.findByTestId("ai-unavailable-notice");
+    expect(notice).toHaveTextContent(/switched off for your organization/i);
+    expect(notice).toHaveTextContent(/administrator/i);
+  });
+
+  test("an unreadable availability signal never blocks the composer", async () => {
+    // The signal is an optimisation, not a gate. If it cannot be read the
+    // composer must stay usable and let the real call produce the real error.
+    mockedAiAvailability.mockResolvedValue({
+      available: true, reason: null, since: null, checkedAt: "2026-09-15T11:00:00.000Z",
+    });
+    render(<AssistantWorkspacePage />);
+    fireEvent.change(screen.getByPlaceholderText("Example: Sales kickoff, Dallas, 500 guests…"), {
+      target: { value: "Sales kickoff" },
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled());
+    expect(screen.queryByTestId("ai-unavailable-notice")).not.toBeInTheDocument();
   });
 
   test("composer exposes and enforces the backend's 8,000-character message maximum", async () => {
