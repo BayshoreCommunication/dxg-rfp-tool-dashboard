@@ -26,3 +26,14 @@ export const FRONTEND_URL = (
 )
   .trim()
   .replace(/\/+$/, "");
+
+/**
+ * Public click-through demo of RFPilot (no sign-in, fictional data). Linked
+ * from the Help page so a new planner can see the whole flow before risking
+ * their own files. Override with NEXT_PUBLIC_DEMO_URL when the demo moves.
+ */
+export const DEMO_URL = (
+  process.env.NEXT_PUBLIC_DEMO_URL || "https://demo.av-rfpilot.com"
+)
+  .trim()
+  .replace(/\/+$/, "");

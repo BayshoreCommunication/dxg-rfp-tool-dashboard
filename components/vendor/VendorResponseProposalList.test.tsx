@@ -1,5 +1,16 @@
-import { render, screen } from "@testing-library/react";
+import { deleteSelectedVendorResponsesAction } from "@/app/actions/vendorResponse";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import VendorResponseProposalList from "./VendorResponseProposalList";
+
+jest.mock("@/app/actions/vendorResponse", () => ({
+  deleteSelectedVendorResponsesAction: jest.fn(),
+  deleteVendorResponseAction: jest.fn(),
+}));
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: jest.fn() }),
+}));
 
 const data = {
   proposals: [
@@ -7,6 +18,12 @@ const data = {
       proposalId: "proposal/one",
       proposalTitle: "Annual Summit",
       responseCount: 4,
+      responseIds: [
+        "64b7f1012f9f4a0012ab3401",
+        "64b7f1012f9f4a0012ab3402",
+        "64b7f1012f9f4a0012ab3403",
+        "64b7f1012f9f4a0012ab3404",
+      ],
       unreadCount: 2,
       latestResponseAt: "2026-08-16T10:00:00.000Z",
       latestVendorName: "Apex Events",
@@ -15,6 +32,7 @@ const data = {
       proposalId: "proposal-two",
       proposalTitle: "Leadership Retreat",
       responseCount: 1,
+      responseIds: ["64b7f1012f9f4a0012ab3405"],
       unreadCount: 0,
       latestResponseAt: "2026-08-15T10:00:00.000Z",
       latestVendorName: "Northstar",
@@ -24,6 +42,10 @@ const data = {
   responseCount: 5,
   unreadCount: 2,
 };
+
+jest.mock("react-toastify", () => ({
+  toast: { success: jest.fn() },
+}));
 
 it("presents vendor responses under their proposals with accurate status", () => {
   render(<VendorResponseProposalList data={data} search="" />);
@@ -35,6 +57,36 @@ it("presents vendor responses under their proposals with accurate status", () =>
   expect(
     screen.getByRole("link", { name: "View 4 responses for Annual Summit" }),
   ).toHaveAttribute("href", "/vendor-responses/proposals/proposal%2Fone");
+  expect(screen.queryByRole("button", { name: /Delete all responses/ })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Select responses" })).toBeInTheDocument();
+});
+
+it("deletes responses only from the proposal groups the planner selects", async () => {
+  const user = userEvent.setup();
+  jest.mocked(deleteSelectedVendorResponsesAction).mockResolvedValue({
+    success: true,
+    message: "4 vendor responses deleted",
+    deletedCount: 4,
+  });
+  render(<VendorResponseProposalList data={data} search="" />);
+
+  await user.click(screen.getByRole("button", { name: "Select responses" }));
+  expect(screen.getByText("0 selected")).toBeInTheDocument();
+  await user.click(
+    screen.getByRole("checkbox", {
+      name: "Select 4 responses for Annual Summit",
+    }),
+  );
+  expect(screen.getByText("1 selected")).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Delete selected (4)" }));
+  await user.click(screen.getByRole("button", { name: "Delete 4 responses" }));
+
+  await waitFor(() =>
+    expect(deleteSelectedVendorResponsesAction).toHaveBeenCalledWith(
+      data.proposals[0].responseIds,
+    ),
+  );
 });
 
 it("explains when a proposal search has no response groups", () => {

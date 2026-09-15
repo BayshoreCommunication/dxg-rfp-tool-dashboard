@@ -1,6 +1,7 @@
 import type { VendorResponseItem } from "@/app/actions/vendorResponse";
 import IntelligenceStatusChip from "@/components/proposalIntelligence/IntelligenceStatusChip";
 import ManualVendorResponseDialog from "@/components/vendor/ManualVendorResponseDialog";
+import VendorResponseSelectionPanel from "@/components/vendor/VendorResponseSelectionPanel";
 import { intelligenceSurfaceClasses } from "@/lib/proposalIntelligence/surfaces";
 import { extractionStatusToIntelligenceStatus } from "@/lib/proposalIntelligence/statusVocabulary";
 import { cn } from "@/lib/utils";
@@ -279,7 +280,7 @@ function ResponseCard({
 
       <p className="mt-4 text-sm leading-6 text-gray">{responseOverview(summary)}</p>
 
-      <div className="mt-auto pt-5">
+      <div className="mt-auto flex flex-wrap gap-2 pt-5">
         <Link
           href={`/vendor-responses/${encodeURIComponent(response._id)}`}
           className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-gray-border px-3 text-sm font-extrabold text-navy hover:border-brand hover:text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -423,18 +424,20 @@ export default function ProposalResponseCards({
           </section>
         ) : (
           <section className="mt-5" aria-label="Submitted vendor responses">
-            {/* One or two cards leave room beside them, so the action sits above
-                the row. A full row of three has no such gap — it goes below. */}
-            {responses.length < 3 && (
-              <div className="mb-3 flex justify-end">
+            <VendorResponseSelectionPanel
+              responses={responses.map((response) => ({
+                responseId: response._id,
+                vendorName: response.vendorName || response.submittedBy,
+              }))}
+              actions={
                 <ManualVendorResponseDialog
                   proposalId={proposalId}
                   existingVendors={existingVendorSummaries(responses)}
+                  emphasis="primary"
                   defaultOpen={openManualResponse}
                 />
-              </div>
-            )}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              }
+            >
               {responses.map((response) => (
                 <ResponseCard
                   key={response._id}
@@ -443,16 +446,7 @@ export default function ProposalResponseCards({
                   lowestStatedTotal={totalRange?.lowestResponseId === response._id}
                 />
               ))}
-            </div>
-            {responses.length >= 3 && (
-              <div className="mt-4 flex justify-end">
-                <ManualVendorResponseDialog
-                  proposalId={proposalId}
-                  existingVendors={existingVendorSummaries(responses)}
-                  defaultOpen={openManualResponse}
-                />
-              </div>
-            )}
+            </VendorResponseSelectionPanel>
           </section>
         )}
       </div>

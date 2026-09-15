@@ -2,6 +2,7 @@ import type {
   VendorResponseProposalList as ProposalListData,
   VendorResponseProposalSummary,
 } from "@/app/actions/vendorResponse";
+import VendorResponseProposalSelectionPanel from "@/components/vendor/VendorResponseProposalSelectionPanel";
 import {
   ArrowRight,
   CalendarDays,
@@ -90,6 +91,7 @@ export default function VendorResponseProposalList({
   search,
 }: Props) {
   const proposals = data?.proposals ?? [];
+  const responseCount = data?.responseCount ?? 0;
   const pagination = data?.pagination;
   const currentPage = pagination?.page ?? 1;
   const totalPages = Math.max(1, pagination?.totalPages ?? 1);
@@ -111,14 +113,16 @@ export default function VendorResponseProposalList({
               Each proposal you sent out is listed with the responses vendors returned. Open one to review them together.
             </p>
           </div>
-          <div className="flex gap-3">
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-              <p className="text-xl font-black leading-none text-slate-800">{data?.responseCount ?? 0}</p>
-              <p className="mt-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Responses</p>
-            </div>
-            <div className="rounded-xl border border-[#008ad2]/20 bg-[#eaf7fd] px-4 py-2.5">
-              <p className="text-xl font-black leading-none text-[#0076b4]">{data?.unreadCount ?? 0}</p>
-              <p className="mt-1 text-[9px] font-extrabold uppercase tracking-widest text-[#0076b4]/70">Unread</p>
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <div className="flex gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+                <p className="text-xl font-black leading-none text-slate-800">{responseCount}</p>
+                <p className="mt-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Responses</p>
+              </div>
+              <div className="rounded-xl border border-[#008ad2]/20 bg-[#eaf7fd] px-4 py-2.5">
+                <p className="text-xl font-black leading-none text-[#0076b4]">{data?.unreadCount ?? 0}</p>
+                <p className="mt-1 text-[9px] font-extrabold uppercase tracking-widest text-[#0076b4]/70">Unread</p>
+              </div>
             </div>
           </div>
         </div>
@@ -169,9 +173,17 @@ export default function VendorResponseProposalList({
             </p>
           </div>
         ) : (
-          proposals.map((proposal) => (
-            <ProposalCard key={proposal.proposalId} proposal={proposal} />
-          ))
+          <VendorResponseProposalSelectionPanel
+            proposals={proposals.map((proposal) => ({
+              proposalId: proposal.proposalId,
+              proposalTitle: proposal.proposalTitle,
+              responseIds: proposal.responseIds,
+            }))}
+          >
+            {proposals.map((proposal) => (
+              <ProposalCard key={proposal.proposalId} proposal={proposal} />
+            ))}
+          </VendorResponseProposalSelectionPanel>
         )}
 
         {pagination && totalPages > 1 && (

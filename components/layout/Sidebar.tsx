@@ -531,7 +531,7 @@ const Sidebar = ({
         aria-label="Mobile primary navigation"
         className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_30px_-24px_rgba(15,23,42,0.45)] backdrop-blur lg:hidden"
       >
-        <div className="grid h-[4.5rem] grid-cols-4 px-1">
+        <div className="grid h-[4.5rem] grid-cols-5 px-1">
         {navigationConfig.map((item) => {
           const isActive = isItemActive(item);
           const badge =

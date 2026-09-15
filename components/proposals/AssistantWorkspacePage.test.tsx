@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { renderToString } from "react-dom/server";
 import { formatAppDate } from "@/lib/dateFormat";
 import { AUTO_EXTRACT_RETRY_DELAY_MS, autoExtractKey } from "./useConversation";
-import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, isSkipQuestionInstruction, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, speechTranscriptFromSegments, visibleRunMessages } from "./AssistantWorkspacePage";
+import AssistantWorkspacePage, { displayQuestionPrompt, fieldAnswerFromInstruction, isBeforeLocalToday, isSkipQuestionInstruction, maximumDateForQuestion, mentionedFieldAnswers, minimumDateForQuestion, naturalDateToIso, naturalTimeTo24Hour, PROPOSAL_MESSAGE_MAX_CHARACTERS, proposalWorkspaceActionFromInstruction, questionAnswerHint, questionFieldContract, sourceIdsForFailedExtraction, speechTranscriptFromSegments, visibleRunMessages } from "./AssistantWorkspacePage";
 import { closeConversationSegmentAction, createProposalNotesAction, getConversationAction, patchConversationQuestionAction, postConversationMessageAction } from "@/app/actions/conversation";
 import { getLatestProposalContextAction, getProposalContextAction } from "@/app/actions/proposalContext";
 import { getProposalDraftAction } from "@/app/actions/proposalDraft";
@@ -152,7 +152,7 @@ const guidedQuestion = (
   prompt: string,
   path: string | string[],
   impact: "schedule" | "cost" | "production" | "scope",
-  control: { answerType?: "date" | "time" | "date_time" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string; suggestedAnswer?: string } = {},
+  control: { answerType?: "date" | "time" | "date_time" | "choice" | "number" | "text"; options?: string[]; status?: "open" | "answered"; answeredMessageId?: string; suggestedAnswer?: string; reviewAnswer?: string } = {},
 ) => ({
   id,
   code: `MISSING_FIELD:${path}`,
@@ -164,6 +164,7 @@ const guidedQuestion = (
   answerType: control.answerType ?? ("text" as const),
   options: control.options ?? [],
   suggestedAnswer: control.suggestedAnswer ?? null,
+  reviewAnswer: control.reviewAnswer ?? control.suggestedAnswer ?? null,
   answeredMessageId: control.answeredMessageId ?? null,
   contextRunId: "run-1",
   createdAt: "2026-07-21T10:00:00.000Z",
@@ -292,18 +293,289 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage />);
     expect(await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/)).toBeInTheDocument();
     expect(screen.getByText("Let’s build your event RFP")).toBeInTheDocument();
-    // First-time copy explains typing, attaching a document, and what happens next.
-    expect(screen.getByText(/Type a few lines about your event below/)).toBeInTheDocument();
-    expect(screen.getByText(/attach a brief or past RFP/)).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "How it works" })).toHaveTextContent("Answer a few questions");
-    expect(screen.queryByText(/Start by typing your event details below/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/I’ll guide you through the missing details/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/your mind\?/i)).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Describe your event or ask for help…")).toBeInTheDocument();
+    // First-run definition: one sentence naming the product, defining the
+    // RFP, and promising nothing goes out without the planner. It sits right
+    // under the tagline; there is no step strip, so the next thing after it
+    // is the starter row.
+    const definition = screen.getByTestId("assistant-product-definition");
+    expect(definition).toHaveTextContent(
+      "RFPilot turns your event details into an AV production RFP, the request you send to vendors so they can quote. Nothing goes out until you pick vendors.",
+    );
+    expect(definition.compareDocumentPosition(screen.getByText("Let’s build your event RFP")) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(definition.compareDocumentPosition(screen.getByRole("group", { name: "Ways to start" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The former instruction, hint, and "How it works" step strip are gone:
+    // the starters and the placeholder carry that guidance now.
+    expect(screen.queryByText(/Tell me what you're planning/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Include if you know:/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "How it works" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Annual sales kickoff/)).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Example: Sales kickoff, Dallas, 500 guests…")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send message" })).toHaveTextContent("Send");
     expect(screen.getByRole("button", { name: "Start voice input" })).toBeInTheDocument();
     // No proposal exists yet, so nothing was created or loaded.
     expect(mockedCreateProposal).not.toHaveBeenCalled();
     expect(mockedGetConversation).not.toHaveBeenCalled();
+  });
+
+  test("composer exposes and enforces the backend's 8,000-character message maximum", async () => {
+    render(<AssistantWorkspacePage />);
+    await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+    const composer = screen.getByLabelText("Message the proposal assistant");
+    expect(PROPOSAL_MESSAGE_MAX_CHARACTERS).toBe(8000);
+    expect(composer).toHaveAttribute("maxlength", "8000");
+
+    fireEvent.change(composer, { target: { value: "a".repeat(8001) } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText(/Shorten this message by 1 character/)).toBeInTheDocument();
+    expect(mockedCreateProposal).not.toHaveBeenCalled();
+  });
+
+  describe("first-run starters", () => {
+    const EXAMPLE_BRIEF_NAME = "Example brief - Northstar Leadership Summit.docx";
+
+    test("empty state offers three ways to start and none of them creates a proposal", async () => {
+      render(<AssistantWorkspacePage />);
+      await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+      const starters = screen.getByRole("group", { name: "Ways to start" });
+      expect(starters).not.toHaveTextContent("Or start with");
+      // Compact chips: the label is the whole visible text, and the
+      // explanation lives in the tooltip so the row stays one line.
+      expect(within(starters).getByRole("button", { name: /Upload my brief or old RFP/ })).toHaveAttribute(
+        "title",
+        "PDF, DOCX, XLSX, CSV or TXT",
+      );
+      expect(within(starters).getByRole("button", { name: /Try an example brief/ })).toBeEnabled();
+      expect(within(starters).getByRole("button", { name: /Upload my brief or old RFP/ })).toBeEnabled();
+      expect(within(starters).getByRole("button", { name: /Describe it from scratch/ })).toBeEnabled();
+      // The starters sit between the definition and the composer.
+      const definition = screen.getByTestId("assistant-product-definition");
+      expect(definition.compareDocumentPosition(starters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(starters.compareDocumentPosition(screen.getByLabelText("Message the proposal assistant")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(mockedCreateProposal).not.toHaveBeenCalled();
+    });
+
+    test("starters disappear once a conversation has started", async () => {
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await waitFor(() => expect(mockedGetConversation).toHaveBeenCalled());
+      expect(screen.queryByRole("group", { name: "Ways to start" })).not.toBeInTheDocument();
+    });
+
+    test("example brief stages the fictional Northstar DOCX and prefills the message without sending", async () => {
+      const originalFetch = globalThis.fetch;
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        blob: async () => new Blob(["northstar brief"]),
+      });
+      (globalThis as unknown as { fetch: unknown }).fetch = fetchMock;
+      try {
+        render(<AssistantWorkspacePage />);
+        await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+        fireEvent.click(screen.getByRole("button", { name: /Try an example brief/ }));
+
+        // The brief is staged as an ordinary composer chip…
+        expect(await screen.findByText(EXAMPLE_BRIEF_NAME)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: `Remove ${EXAMPLE_BRIEF_NAME}` })).toBeInTheDocument();
+        expect(fetchMock).toHaveBeenCalledWith("/files/RFPilot%20example-event-brief.docx");
+        // …the message explains it is an example, and the planner keeps control of Send.
+        const composer = screen.getByLabelText("Message the proposal assistant") as HTMLTextAreaElement;
+        expect(composer.value).toBe(
+          "This is an example brief so I can see how RFPilot works. Pull out everything you can from it.",
+        );
+        expect(composer).toHaveFocus();
+        expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
+        expect(mockedCreateProposal).not.toHaveBeenCalled();
+        expect(mockedCreateSession).not.toHaveBeenCalled();
+        expect(mockedPostMessage).not.toHaveBeenCalled();
+
+        // A second tap does not stage the brief twice.
+        fireEvent.click(screen.getByRole("button", { name: /Try an example brief/ }));
+        await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+        expect(screen.getAllByText(EXAMPLE_BRIEF_NAME)).toHaveLength(1);
+      } finally {
+        (globalThis as unknown as { fetch: unknown }).fetch = originalFetch;
+      }
+    });
+
+    test("example brief failure explains itself and leaves the composer untouched", async () => {
+      const originalFetch = globalThis.fetch;
+      (globalThis as unknown as { fetch: unknown }).fetch = jest.fn().mockResolvedValue({ ok: false, status: 404 });
+      try {
+        render(<AssistantWorkspacePage />);
+        await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+        fireEvent.click(screen.getByRole("button", { name: /Try an example brief/ }));
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+          "The example brief could not be loaded. Try again, or attach a file of your own.",
+        );
+        expect(screen.queryByText(EXAMPLE_BRIEF_NAME)).not.toBeInTheDocument();
+        expect((screen.getByLabelText("Message the proposal assistant") as HTMLTextAreaElement).value).toBe("");
+        expect(screen.getByRole("button", { name: /Try an example brief/ })).toBeEnabled();
+      } finally {
+        (globalThis as unknown as { fetch: unknown }).fetch = originalFetch;
+      }
+    });
+
+    test("upload starter opens the same file picker as the paperclip", async () => {
+      const clickSpy = jest.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
+      try {
+        render(<AssistantWorkspacePage />);
+        await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+        fireEvent.click(screen.getByRole("button", { name: /Upload my brief or old RFP/ }));
+        expect(clickSpy).toHaveBeenCalledTimes(1);
+        expect(clickSpy.mock.instances[0]).toBe(document.querySelector('input[type="file"]'));
+      } finally {
+        clickSpy.mockRestore();
+      }
+    });
+
+    test("scratch starter drops an editable sample into the composer and never overwrites typed text", async () => {
+      render(<AssistantWorkspacePage />);
+      await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+      const composer = screen.getByLabelText("Message the proposal assistant") as HTMLTextAreaElement;
+      fireEvent.click(screen.getByRole("button", { name: /Describe it from scratch/ }));
+      await waitFor(() => expect(composer.value).toMatch(/^Sales kickoff in Dallas/));
+      expect(composer).toHaveFocus();
+      expect(composer.selectionStart).toBe(composer.value.length);
+      expect(mockedCreateProposal).not.toHaveBeenCalled();
+
+      fireEvent.change(composer, { target: { value: "Board retreat, Austin" } });
+      fireEvent.click(screen.getByRole("button", { name: /Describe it from scratch/ }));
+      expect(composer.value).toBe("Board retreat, Austin");
+    });
+  });
+
+  describe("starter carried in from the dashboard (?start=)", () => {
+    test("scratch starter prefills the composer once and strips the param", async () => {
+      window.history.replaceState(null, "", "/proposals/add-new-proposal?start=scratch");
+      render(<AssistantWorkspacePage initialStarter="scratch" />);
+      const composer = screen.getByLabelText("Message the proposal assistant") as HTMLTextAreaElement;
+      await waitFor(() => expect(composer.value).toMatch(/^Sales kickoff in Dallas/));
+      expect(window.location.search).toBe("");
+      expect(mockedCreateProposal).not.toHaveBeenCalled();
+    });
+
+    test("example starter stages the example brief without sending", async () => {
+      const originalFetch = globalThis.fetch;
+      (globalThis as unknown as { fetch: unknown }).fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        blob: async () => new Blob(["northstar brief"]),
+      });
+      try {
+        render(<AssistantWorkspacePage initialStarter="example" />);
+        expect(await screen.findByText("Example brief - Northstar Leadership Summit.docx")).toBeInTheDocument();
+        expect(mockedCreateProposal).not.toHaveBeenCalled();
+        expect(mockedPostMessage).not.toHaveBeenCalled();
+      } finally {
+        (globalThis as unknown as { fetch: unknown }).fetch = originalFetch;
+      }
+    });
+
+    test("a starter is ignored on an existing proposal", async () => {
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} initialStarter="scratch" />);
+      await waitFor(() => expect(mockedGetConversation).toHaveBeenCalled());
+      const composer = screen.getByLabelText("Message the proposal assistant") as HTMLTextAreaElement;
+      expect(composer.value).toBe("");
+    });
+  });
+
+  describe("attachment drop target", () => {
+    const workspace = () => screen.getByRole("region", { name: "Proposal assistant workspace" });
+    const dragData = (files: File[]) => ({ dataTransfer: { files, types: ["Files"], dropEffect: "none" } });
+
+    test("empty state names the accepted file types under the composer", async () => {
+      render(<AssistantWorkspacePage />);
+      await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+      expect(screen.getByTestId("attachment-caption")).toHaveTextContent(
+        "Drop a file here or use the paperclip: PDF, DOCX, XLSX, CSV or TXT, up to 3 per message.",
+      );
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(input.accept).toBe(".pdf,.docx,.xlsx,.csv,.txt");
+    });
+
+    test("caption is gone once the conversation has started", async () => {
+      render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+      await waitFor(() => expect(mockedGetConversation).toHaveBeenCalled());
+      expect(screen.queryByTestId("attachment-caption")).not.toBeInTheDocument();
+    });
+
+    test("dragging a file over the workspace shows an overlay that clears when it leaves", async () => {
+      render(<AssistantWorkspacePage />);
+      await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+      const file = new File(["brief"], "brief.pdf", { type: "application/pdf" });
+      expect(screen.queryByTestId("attachment-dropzone")).not.toBeInTheDocument();
+
+      fireEvent.dragEnter(workspace(), dragData([file]));
+      expect(screen.getByTestId("attachment-dropzone")).toHaveTextContent("Drop to attach");
+      expect(screen.getByTestId("attachment-dropzone")).toHaveTextContent("PDF, DOCX, XLSX, CSV or TXT, up to 3 files per message");
+
+      // Crossing into a child fires another enter/leave pair; the overlay must survive it.
+      fireEvent.dragEnter(screen.getByLabelText("Message the proposal assistant"), dragData([file]));
+      fireEvent.dragLeave(screen.getByLabelText("Message the proposal assistant"), dragData([file]));
+      expect(screen.getByTestId("attachment-dropzone")).toBeInTheDocument();
+
+      fireEvent.dragLeave(workspace(), dragData([file]));
+      expect(screen.queryByTestId("attachment-dropzone")).not.toBeInTheDocument();
+    });
+
+    test("a non-file drag (text selection) is ignored", async () => {
+      render(<AssistantWorkspacePage />);
+      await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+      fireEvent.dragEnter(workspace(), { dataTransfer: { files: [], types: ["text/plain"] } });
+      expect(screen.queryByTestId("attachment-dropzone")).not.toBeInTheDocument();
+    });
+
+    test("dropping supported files stages chips without uploading", async () => {
+      render(<AssistantWorkspacePage />);
+      await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+      const brief = new File(["brief"], "brief.pdf", { type: "application/pdf" });
+      const agenda = new File(["agenda"], "agenda.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      fireEvent.dragEnter(workspace(), dragData([brief, agenda]));
+      fireEvent.drop(workspace(), dragData([brief, agenda]));
+
+      expect(await screen.findByText("brief.pdf")).toBeInTheDocument();
+      expect(screen.getByText("agenda.xlsx")).toBeInTheDocument();
+      expect(screen.queryByTestId("attachment-dropzone")).not.toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(mockedCreateProposal).not.toHaveBeenCalled();
+      expect(mockedCreateSession).not.toHaveBeenCalled();
+      expect(mockedPostMessage).not.toHaveBeenCalled();
+    });
+
+    test("unsupported and overflow files are skipped with one plain explanation", async () => {
+      render(<AssistantWorkspacePage />);
+      await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+      const files = [
+        new File(["a"], "one.pdf", { type: "application/pdf" }),
+        new File(["b"], "two.docx", { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }),
+        new File(["c"], "three.txt", { type: "text/plain" }),
+        new File(["d"], "four.csv", { type: "text/csv" }),
+        new File(["e"], "photo.png", { type: "image/png" }),
+      ];
+      fireEvent.drop(workspace(), dragData(files));
+
+      expect(await screen.findByText("one.pdf")).toBeInTheDocument();
+      expect(screen.getByText("two.docx")).toBeInTheDocument();
+      expect(screen.getByText("three.txt")).toBeInTheDocument();
+      expect(screen.queryByText("four.csv")).not.toBeInTheDocument();
+      expect(screen.queryByText("photo.png")).not.toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "One file was skipped: only PDF, DOCX, XLSX, CSV or TXT files can be attached. You can attach up to 3 files per message, so one file was left out.",
+      );
+    });
+
+    test("dropping while three files are already staged explains the limit instead of staging", async () => {
+      render(<AssistantWorkspacePage />);
+      await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
+      const staged = ["a.pdf", "b.pdf", "c.pdf"].map((name) => new File(["x"], name, { type: "application/pdf" }));
+      fireEvent.drop(workspace(), dragData(staged));
+      await screen.findByText("c.pdf");
+
+      fireEvent.dragEnter(workspace(), dragData([new File(["y"], "d.pdf", { type: "application/pdf" })]));
+      expect(screen.getByTestId("attachment-dropzone")).toHaveTextContent("You can attach up to 3 files per message.");
+      fireEvent.drop(workspace(), dragData([new File(["y"], "d.pdf", { type: "application/pdf" })]));
+      expect(screen.queryByText("d.pdf")).not.toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent("You can attach up to 3 files per message.");
+    });
   });
 
   test("transcribes voice into an editable draft without auto-submitting", async () => {
@@ -1352,7 +1624,14 @@ describe("AssistantWorkspacePage", () => {
         event: { eventName: "", startDate: loadInDate },
       },
     });
-    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([combinedLoadInQuestion]));
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([combinedLoadInQuestion]))
+      .mockResolvedValue(conversationWithGuidedQuestions([{
+        ...combinedLoadInQuestion,
+        status: "answered" as const,
+        answeredMessageId: "msg-answer-load-in",
+        reviewAnswer: `${loadInDate} at 07:30`,
+      }]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1389,7 +1668,10 @@ describe("AssistantWorkspacePage", () => {
       "q-load-in-combined",
       { status: "answered", answer: { date: loadInDate, time: "07:30" } },
     ));
-    expect(await screen.findByText(`Production load-in: ${loadInDate} at 07:30 ✓`)).toBeInTheDocument();
+    const review = await screen.findByTestId("suggested-answers-review");
+    expect(review).toHaveTextContent("1 saved detail");
+    expect(review).toHaveTextContent(`${loadInDate} at 07:30`);
+    expect(screen.queryByText(`Production load-in: ${loadInDate} at 07:30 ✓`)).not.toBeInTheDocument();
   });
 
   test("venue-name guidance points undecided users to Skip, not a missing option", () => {
@@ -1404,11 +1686,17 @@ describe("AssistantWorkspacePage", () => {
     expect(displayQuestionPrompt(venueQuestion)).not.toMatch(/Not selected/i);
   });
 
-  test("answering a question confirms the value and advances to the next one", async () => {
+  test("answering a question adds the value to proposal details and advances", async () => {
     const startDate = futureIsoDate();
+    const answeredStartDate = {
+      ...startDateQuestion,
+      status: "answered" as const,
+      answeredMessageId: "msg-answer-start",
+      reviewAnswer: startDate,
+    };
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([startDateQuestion, roomsQuestion]))
-      .mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
+      .mockResolvedValue(conversationWithGuidedQuestions([answeredStartDate, roomsQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1434,8 +1722,12 @@ describe("AssistantWorkspacePage", () => {
     ));
     // …and resolving a question refetches the conversation (useConversation).
     await waitFor(() => expect(mockedGetConversation.mock.calls.length).toBeGreaterThan(initialLoads));
-    // The confirmed value shows and the flow advances to the next question.
-    expect(await screen.findByText(`Start date: ${startDate} ✓`)).toBeInTheDocument();
+    // The answer joins the persistent editable details instead of rendering as
+    // a detached chat-style confirmation.
+    const review = await screen.findByTestId("suggested-answers-review");
+    expect(review).toHaveTextContent("Start date");
+    expect(review).toHaveTextContent(startDate);
+    expect(screen.queryByText(`Start date: ${startDate} ✓`)).not.toBeInTheDocument();
     expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
     expect(screen.getByText("How many event rooms are required?")).toBeInTheDocument();
     expect(screen.getByText("affects cost")).toBeInTheDocument();
@@ -1470,7 +1762,12 @@ describe("AssistantWorkspacePage", () => {
     mockedPatchQuestion.mockImplementation(async () => {
       // Simulate Mongo accepting the value while the live synchronizer retires
       // the Postgres question before the request finishes.
-      mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([]));
+      mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([{
+        ...roomsQuestion,
+        status: "answered" as const,
+        answeredMessageId: "msg-answer-rooms",
+        reviewAnswer: "4",
+      }]));
       return {
         success: false,
         code: "INTERNAL_ERROR",
@@ -1484,7 +1781,8 @@ describe("AssistantWorkspacePage", () => {
     fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "4" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
 
-    expect(await screen.findByText("Number of event rooms: 4 ✓")).toBeInTheDocument();
+    expect(await screen.findByTestId("suggested-answers-review")).toHaveTextContent("4");
+    expect(screen.queryByText("Number of event rooms: 4 ✓")).not.toBeInTheDocument();
     expect(screen.queryByText(/Reference: recovery-test/)).not.toBeInTheDocument();
   });
 
@@ -1510,9 +1808,15 @@ describe("AssistantWorkspacePage", () => {
 
   test("a date question renders the date picker and submits a YYYY-MM-DD value", async () => {
     const startDate = futureIsoDate();
+    const answeredStartDate = {
+      ...datePickerQuestion,
+      status: "answered" as const,
+      answeredMessageId: "msg-answer-start",
+      reviewAnswer: startDate,
+    };
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([datePickerQuestion, roomsQuestion]))
-      .mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
+      .mockResolvedValue(conversationWithGuidedQuestions([answeredStartDate, roomsQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1534,16 +1838,31 @@ describe("AssistantWorkspacePage", () => {
       "q-start",
       { status: "answered", answer: startDate },
     ));
-    expect(await screen.findByText(`Start date: ${startDate} ✓`)).toBeInTheDocument();
+    expect(await screen.findByTestId("suggested-answers-review")).toHaveTextContent(startDate);
+    expect(screen.queryByText(`Start date: ${startDate} ✓`)).not.toBeInTheDocument();
   });
 
-  test("an extraction-suggested date pre-fills the picker and one click confirms it", async () => {
+  test("an extraction-suggested date appears in the review and can be edited", async () => {
     // A suggestion outside the picker's bounds is deliberately not seeded, so a
     // literal here stops pre-filling once it falls into the past.
     const suggested = futureIsoDate(45);
-    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([
-      guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date", suggestedAnswer: suggested }),
-    ]));
+    const answeredSuggestion = guidedQuestion(
+      "q-start",
+      "When does the event start? (YYYY-MM-DD)",
+      "/content/event/startDate",
+      "schedule",
+      {
+        answerType: "date",
+        status: "answered",
+        answeredMessageId: "msg-answer-start",
+        suggestedAnswer: suggested,
+      },
+    );
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([
+        guidedQuestion("q-start", "When does the event start? (YYYY-MM-DD)", "/content/event/startDate", "schedule", { answerType: "date", suggestedAnswer: suggested }),
+      ]))
+      .mockResolvedValue(conversationWithGuidedQuestions([answeredSuggestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1551,13 +1870,21 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
-    // The picker is seeded, the provenance note is visible, and Answer is
-    // enabled without any typing.
-    // The suggestion arrives as an ISO day; the picker shows it in the app format.
+    expect(await screen.findByText("1 saved detail")).toBeInTheDocument();
+    const review = screen.getByTestId("suggested-answers-review");
+    expect(screen.getByText(suggested)).toBeInTheDocument();
+    expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use these details" })).not.toBeInTheDocument();
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit Start date" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Edit Start date" }));
+    expect(await screen.findByText("Edit extracted detail")).toBeInTheDocument();
+    expect(review).toContainElement(screen.getByTestId("guided-question-card"));
     expect(screen.getByLabelText("Answer this question")).toHaveValue(formatAppDate(suggested));
-    expect(screen.getByText("Pre-filled from your message or brief — confirm or edit.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+    expect(screen.getByText("Saved to your proposal. Change it only if needed.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Skip" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save change" }));
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
       PROPOSAL_ID,
       "q-start",
@@ -1565,10 +1892,20 @@ describe("AssistantWorkspacePage", () => {
     ));
   });
 
-  test("an extraction-suggested number pre-fills the input and submits unchanged", async () => {
-    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([
+  test("all extraction-suggested answers are shown together and applied automatically", async () => {
+    const suggestions = [
+      guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope", { suggestedAnswer: "Northstar Leadership Summit 2026" }),
       guidedQuestion("q-attendees", "Roughly how many people will attend?", "/content/event/attendees", "scope", { answerType: "number", suggestedAnswer: "300" }),
-    ]));
+    ];
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions(suggestions))
+      .mockResolvedValue(conversationWithGuidedQuestions(
+        suggestions.map((question, index) => ({
+          ...question,
+          status: "answered" as const,
+          answeredMessageId: `msg-answer-${index}`,
+        })),
+      ));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1576,25 +1913,41 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
-    expect(screen.getByLabelText("Answer this question")).toHaveValue(300);
-    expect(screen.getByText("Pre-filled from your message or brief — confirm or edit.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Answer" }));
-    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+    const review = await screen.findByTestId("suggested-answers-review");
+    expect(review).toHaveTextContent("2 saved details");
+    expect(review).toHaveTextContent("Northstar Leadership Summit 2026");
+    expect(review).toHaveTextContent("300");
+    expect(screen.queryByTestId("guided-question-card")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use these details" })).not.toBeInTheDocument();
+    expect(review).toHaveTextContent(/Saved|Saving details/);
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledTimes(2));
+    expect(mockedPatchQuestion).toHaveBeenNthCalledWith(
+      1,
+      PROPOSAL_ID,
+      "q-name",
+      { status: "answered", answer: "Northstar Leadership Summit 2026", useOnlyIfEmpty: true },
+    );
+    expect(mockedPatchQuestion).toHaveBeenNthCalledWith(
+      2,
       PROPOSAL_ID,
       "q-attendees",
-      { status: "answered", answer: "300" },
-    ));
+      { status: "answered", answer: "300", useOnlyIfEmpty: true },
+    );
   });
 
-  test("an extraction-suggested choice highlights its pill without auto-selecting it", async () => {
-    mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([
-      guidedQuestion("q-format", "Is the event in-person, hybrid, or virtual?", "/content/event/eventFormat", "scope", {
-        answerType: "choice",
-        options: ["In-Person", "Hybrid", "Virtual"],
-        suggestedAnswer: "In-Person",
-      }),
-    ]));
+  test("an extraction-suggested choice can be edited from the review", async () => {
+    const suggestion = guidedQuestion("q-format", "Is the event in-person, hybrid, or virtual?", "/content/event/eventFormat", "scope", {
+          answerType: "choice",
+          options: ["In-Person", "Hybrid", "Virtual"],
+          suggestedAnswer: "In-Person",
+        });
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([suggestion]))
+      .mockResolvedValue(conversationWithGuidedQuestions([{
+        ...suggestion,
+        status: "answered" as const,
+        answeredMessageId: "msg-answer-format",
+      }]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1602,18 +1955,77 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
-    expect(screen.getByText("The highlighted option comes from your message or brief — tap it to confirm.")).toBeInTheDocument();
+    await screen.findByText("1 saved detail");
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit Event format" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Edit Event format" }));
+    expect(await screen.findByText("Edit extracted detail")).toBeInTheDocument();
     const suggestedPill = screen.getByRole("button", { name: "In-Person" });
     expect(suggestedPill).toHaveAccessibleDescription("Suggested from your message or brief");
-    // Nothing was submitted by the highlight alone; the tap is the review.
-    expect(mockedPatchQuestion).not.toHaveBeenCalled();
     fireEvent.click(suggestedPill);
-    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledTimes(2));
+    expect(mockedPatchQuestion).toHaveBeenLastCalledWith(
       PROPOSAL_ID,
       "q-format",
       { status: "answered", answer: "In-Person" },
-    ));
+    );
+  });
+
+  test("an edited extracted default replaces the automatically used value", async () => {
+    const openSuggestion = guidedQuestion(
+      "q-name",
+      "What is this event called?",
+      "/content/event/eventName",
+      "scope",
+      { suggestedAnswer: "Northstar Leadership Summit 2026" },
+    );
+    const answeredSuggestion = {
+      ...openSuggestion,
+      status: "answered" as const,
+      answeredMessageId: "msg-answer-name",
+    };
+    mockedGetConversation
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([openSuggestion]))
+      .mockResolvedValueOnce(conversationWithGuidedQuestions([answeredSuggestion]))
+      .mockResolvedValue(conversationWithGuidedQuestions([{
+        ...answeredSuggestion,
+        suggestedAnswer: "Northstar Executive Summit 2026",
+        reviewAnswer: "Northstar Executive Summit 2026",
+      }]));
+    mockedPatchQuestion.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: {
+        id: "q-name",
+        status: "answered",
+        answeredMessageId: "msg-answer-name",
+        appliedField: {
+          path: "/content/event/eventName",
+          mongoPath: "event.eventName",
+          value: "Northstar Executive Summit 2026",
+        },
+      },
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit Event name" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Edit Event name" }));
+    const input = screen.getByLabelText("Answer this question");
+    fireEvent.change(input, { target: { value: "Northstar Executive Summit 2026" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save change" }));
+
+    await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledTimes(2));
+    expect(mockedPatchQuestion).toHaveBeenLastCalledWith(
+      PROPOSAL_ID,
+      "q-name",
+      { status: "answered", answer: "Northstar Executive Summit 2026" },
+    );
+    expect(await screen.findByText("Northstar Executive Summit 2026")).toBeInTheDocument();
+    expect(screen.getByTestId("suggested-answers-review")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Event name: Northstar Executive Summit 2026 ✓"),
+    ).not.toBeInTheDocument();
   });
 
   test("a question without a suggestion renders no prefill note and an empty control", async () => {
@@ -1654,7 +2066,7 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByText("Please review the venue requirements.")).toBeInTheDocument();
   });
 
-  test("a guided question appears with its extracted suggestion once extraction finishes", async () => {
+  test("an extracted suggestion appears in the review once extraction finishes", async () => {
     jest.useFakeTimers();
     try {
       const withoutSuggestion = guidedQuestion("q-name", "What is this event called?", "/content/event/eventName", "scope");
@@ -1690,18 +2102,12 @@ describe("AssistantWorkspacePage", () => {
       expect(await screen.findByRole('status', { name: 'Attachment progress' })).toHaveTextContent('Reading your brief');
       expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
 
-      // The pending message keeps the poll interval responsive (2s), so the next
-      // poll lands the completed run and the now-suggested question without
-      // any remount — the same clarification-question row/id stays open the
-      // whole time.
       await act(async () => { await jest.advanceTimersByTimeAsync(2_000); });
 
-      expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
-      expect(screen.getByTestId('guided-question-row')).toHaveClass('items-start', 'gap-2.5');
-      expect(screen.getByTestId('guided-question-card')).toHaveClass('w-full', 'max-w-3xl');
-      expect(screen.getByText("What is this event called?")).toBeInTheDocument();
-      expect(screen.getByLabelText("Answer this question")).toHaveValue("Northstar Leadership Summit 2026");
-      expect(screen.getByText("Pre-filled from your message or brief — confirm or edit.")).toBeInTheDocument();
+      const review = await screen.findByTestId("suggested-answers-review");
+      expect(review).toHaveTextContent("Northstar Leadership Summit 2026");
+      expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Edit Event name" })).toBeInTheDocument();
     } finally {
       jest.useRealTimers();
     }
@@ -1833,9 +2239,15 @@ describe("AssistantWorkspacePage", () => {
   });
 
   test("a choice question renders pills and clicking one submits that option immediately", async () => {
+    const answeredFormat = {
+      ...formatQuestion,
+      status: "answered" as const,
+      answeredMessageId: "msg-answer-format",
+      reviewAnswer: "Hybrid",
+    };
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([formatQuestion, roomsQuestion]))
-      .mockResolvedValue(conversationWithGuidedQuestions([roomsQuestion]));
+      .mockResolvedValue(conversationWithGuidedQuestions([answeredFormat, roomsQuestion]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1857,7 +2269,8 @@ describe("AssistantWorkspacePage", () => {
       "q-format",
       { status: "answered", answer: "Hybrid" },
     ));
-    expect(await screen.findByText("Event format: Hybrid ✓")).toBeInTheDocument();
+    expect(await screen.findByTestId("suggested-answers-review")).toHaveTextContent("Hybrid");
+    expect(screen.queryByText("Event format: Hybrid ✓")).not.toBeInTheDocument();
     expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
   });
 
@@ -1868,7 +2281,12 @@ describe("AssistantWorkspacePage", () => {
     });
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([platformQuestion]))
-      .mockResolvedValue(conversationWithGuidedQuestions([]));
+      .mockResolvedValue(conversationWithGuidedQuestions([{
+        ...platformQuestion,
+        status: "answered" as const,
+        answeredMessageId: "msg-answer-platform",
+        reviewAnswer: "Vendor Recommendation Needed",
+      }]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1887,14 +2305,19 @@ describe("AssistantWorkspacePage", () => {
       "q-platform",
       { status: "answered", answer: "Vendor Recommendation Needed" },
     ));
-    expect(await screen.findByText("Streaming platform: Vendor Recommendation Needed ✓")).toBeInTheDocument();
+    expect(await screen.findByTestId("suggested-answers-review")).toHaveTextContent("Vendor Recommendation Needed");
   });
 
   test("a text question keeps the typed answer plus Answer button behaviour", async () => {
     const platformQuestion = guidedQuestion("q-platform", "Which streaming platform will the event use?", "/content/hybridVirtual/streamingPlatform", "production", { answerType: "text" });
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([platformQuestion]))
-      .mockResolvedValue(conversationWithGuidedQuestions([]));
+      .mockResolvedValue(conversationWithGuidedQuestions([{
+        ...platformQuestion,
+        status: "answered" as const,
+        answeredMessageId: "msg-answer-platform",
+        reviewAnswer: "Zoom",
+      }]));
     mockedPatchQuestion.mockResolvedValue({
       success: true,
       correlationId: "test-correlation",
@@ -1915,7 +2338,7 @@ describe("AssistantWorkspacePage", () => {
       "q-platform",
       { status: "answered", answer: "Zoom" },
     ));
-    expect(await screen.findByText("Streaming platform: Zoom ✓")).toBeInTheDocument();
+    expect(await screen.findByTestId("suggested-answers-review")).toHaveTextContent("Zoom");
   });
 
   test("an answered question is replayed above its answer, and an unmatched answer still renders alone", async () => {
@@ -1957,6 +2380,12 @@ describe("AssistantWorkspacePage", () => {
     correlationId: "test-correlation",
     data: { id: "q-rooms", status: "answered" as const, answeredMessageId: null, appliedField: { path: "/content/venueSchedule/numberOfEventRooms", mongoPath: "venueSchedule.numberOfEventRooms", value: "6" } },
   };
+  const roomsAnsweredQuestion = {
+    ...roomsQuestion,
+    status: "answered" as const,
+    answeredMessageId: "msg-answer-rooms",
+    reviewAnswer: "6",
+  };
 
   // "Event basics" is complete, so it must never appear among the weakest three;
   // "Risk" is the fourth-thinnest and is cut by the cap.
@@ -1985,13 +2414,13 @@ describe("AssistantWorkspacePage", () => {
     await screen.findByText("Guided question 1");
     fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "6" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
-    await screen.findByText("Number of event rooms: 6 ✓");
+    expect(await screen.findByTestId("suggested-answers-review")).toHaveTextContent("6");
   };
 
   test("answering the last question shows a completion progress card built from the guidance report", async () => {
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([roomsQuestion]))
-      .mockResolvedValue(conversationWithGuidedQuestions([]));
+      .mockResolvedValue(conversationWithGuidedQuestions([roomsAnsweredQuestion]));
     mockedPatchQuestion.mockResolvedValue(roomsAnswered);
     mockedGenerateGuidance.mockResolvedValue({ success: true, data: guidanceReport });
 
@@ -2018,7 +2447,7 @@ describe("AssistantWorkspacePage", () => {
     expect(mockedGenerateGuidance).toHaveBeenCalledTimes(1);
     expect(mockedGenerateGuidance).toHaveBeenCalledWith(PROPOSAL_ID);
     // The rail reflects completion too (it slides in asynchronously).
-    expect(await screen.findByText("All key questions answered.")).toBeInTheDocument();
+    expect(await screen.findByText("All key questions completed.")).toBeInTheDocument();
     // The consistent action row: one primary, a tertiary link, and no second
     // readiness button because a report is already on screen (the rail no
     // longer carries task chips).
@@ -2044,7 +2473,7 @@ describe("AssistantWorkspacePage", () => {
   test("a failed readiness check falls back to the plain headline with the actions still working", async () => {
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithGuidedQuestions([roomsQuestion]))
-      .mockResolvedValue(conversationWithGuidedQuestions([]));
+      .mockResolvedValue(conversationWithGuidedQuestions([roomsAnsweredQuestion]));
     mockedPatchQuestion.mockResolvedValue(roomsAnswered);
     mockedGetProposal.mockResolvedValue({ success: true, message: "ok", data: { _id: PROPOSAL_ID, version: 4, event: { eventName: "" } } });
     mockedPostMessage.mockResolvedValue({
@@ -2058,11 +2487,11 @@ describe("AssistantWorkspacePage", () => {
 
     expect(await screen.findByText("Key questions answered.")).toBeInTheDocument();
     // No percentage, no bar, and never a raw error from the guidance service.
-    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByRole("progressbar", { name: "Proposal completeness" })).not.toBeInTheDocument();
     expect(screen.queryByText(/is not enabled for this environment/)).not.toBeInTheDocument();
     // With no report on screen the card offers the check itself (the rail
     // slides in asynchronously and no longer carries task chips).
-    await screen.findByText("All key questions answered.");
+    await screen.findByText("All key questions completed.");
     expect(screen.getAllByRole("button", { name: "Run readiness check" })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Generate proposal draft" }));
@@ -2093,7 +2522,7 @@ describe("AssistantWorkspacePage", () => {
     } as never);
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    expect(await screen.findByText("I’ve pulled out the key details from your brief. Let’s confirm them and fill in anything missing, one question at a time.")).toBeInTheDocument();
+    expect(await screen.findByText("I’ve pulled out the key details from your brief. Review them together, then we’ll ask only about anything missing.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Review & apply/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "View details" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open RFP questions" })).not.toBeInTheDocument();
@@ -2997,12 +3426,12 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
   });
 
-  // ── Captured-details overview ───────────────────────────────────────────────
+  // ── Captured-details summary removal ───────────────────────────────────────
 
   const OVERVIEW_HEADING = "Here’s what I have for Annual Leadership Summit";
 
-  // Legacy standalone recording data is intentionally present to prove the
-  // retired section cannot leak into the active captured-details overview.
+  // Proposal data remains available to the rail count and downstream actions;
+  // it is no longer repeated as a summary card in the conversation.
   const capturedProposal = {
     success: true as const,
     message: "ok",
@@ -3022,42 +3451,25 @@ describe("AssistantWorkspacePage", () => {
     },
   };
 
-  test("the overview card renders the captured details and the next step once extraction completes with no questions", async () => {
+  test("captured details are not repeated in the conversation while next actions remain available", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun([]));
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
     mockedGetProposal.mockResolvedValue(capturedProposal);
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    expect(await screen.findByText(OVERVIEW_HEADING)).toBeInTheDocument();
-    // Only fields that carry a value, with humanized labels and values.
-    expect(screen.getByText("Dates")).toBeInTheDocument();
-    expect(screen.getByText("16–18 Mar 2027")).toBeInTheDocument();
-    expect(screen.getByText("Hybrid")).toBeInTheDocument();
-    expect(screen.getByText("450")).toBeInTheDocument();
-    expect(screen.getByText("Riverfront Convention Center")).toBeInTheDocument();
-    expect(screen.getByText("Detroit")).toBeInTheDocument();
-    expect(screen.getByText("Zoom Events")).toBeInTheDocument();
-    expect(screen.queryByText("Yes — 4 cameras")).not.toBeInTheDocument();
-    expect(screen.queryByText("Video recording")).not.toBeInTheDocument();
-    expect(screen.getByText("15 Aug 2026")).toBeInTheDocument();
-    // isUnionVenue is "NO", so no union row.
-    expect(screen.queryByText("Union venue")).not.toBeInTheDocument();
-    expect(screen.getByText("9 details captured from your sources.")).toBeInTheDocument();
-    // The retired suggestions notice no longer competes with the overview.
+    expect(await screen.findByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
+    expect(screen.queryByText(OVERVIEW_HEADING)).not.toBeInTheDocument();
+    expect(screen.queryByText("Confirmed in proposal")).not.toBeInTheDocument();
+    expect(screen.queryByText(/details captured from your sources/)).not.toBeInTheDocument();
     expect(screen.queryByText(/need your explicit review/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
-    // The explicit next step plus the softer alternatives.
-    expect(screen.getByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
-    expect(screen.getByText("Or add more details — upload another file, paste notes, or ask me anything.")).toBeInTheDocument();
-    // The later overview keeps its editor action; the onboarding shortcut is gone.
+    // The action-only fallback keeps the workflow moving without the summary.
     expect(screen.getByRole("link", { name: "Edit all details" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open RFP questions" })).not.toBeInTheDocument();
-    // The old notice is gone for good.
-    expect(screen.queryByText(/I have all the key details I need/)).not.toBeInTheDocument();
   });
 
-  test("the overview card never shows before an extraction has completed, while a question is open, or once a draft exists", async () => {
+  test("the removed summary never appears before extraction, with an open question, or after a draft", async () => {
     // A chat-only conversation without a completed extraction shows nothing.
     mockedGetConversation.mockResolvedValue(conversationWithQuestion);
     mockedGetProposal.mockResolvedValue(capturedProposal);
@@ -3198,14 +3610,15 @@ describe("AssistantWorkspacePage", () => {
     );
   });
 
-  test("the overview hides the retired suggestions notice without applying extracted operations", async () => {
+  test("removing the summary does not restore the retired suggestions notice or apply extracted operations", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithCompletedRun());
     mockedGetProposalContext.mockResolvedValue(contextRunResult);
     mockedGetProposal.mockResolvedValue(capturedProposal);
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    expect(await screen.findByText(/details captured from your sources/)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Generate proposal draft" })).toBeInTheDocument();
+    expect(screen.queryByText(/details captured from your sources/)).not.toBeInTheDocument();
     expect(screen.queryByText(/need your explicit review/)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Review suggestions" })).not.toBeInTheDocument();
     expect(screen.queryByText(/Added .* field.* to your proposal/)).not.toBeInTheDocument();
@@ -3371,9 +3784,9 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByRole("heading", { name: "Proposal draft ready" })).toBeInTheDocument();
     expect(screen.getByLabelText("Proposal draft preview")).toBeInTheDocument();
     expect(screen.getByText("7 sections")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review & edit draft" }))
+    expect(screen.getByRole("link", { name: "Complete 21 missing details" }))
       .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
-    expect(screen.getByRole("link", { name: "Review & edit draft" })).toHaveClass(
+    expect(screen.getByRole("link", { name: "Complete 21 missing details" })).toHaveClass(
       "w-full",
       "sm:w-auto",
     );
@@ -3431,31 +3844,15 @@ describe("AssistantWorkspacePage", () => {
       "October 31, 2026",
       "budget tier or question deadline",
     ]);
-    expect(
-      Array.from(gapsSection.querySelectorAll("mark"), (mark) => mark.textContent),
-    ).toEqual([
-      "event objectives and audience profile beyond total attendance",
-      "detailed show format and content plan",
-      "room-by-room set-up and technical needs",
-      "load-out/strike timing",
-      "internet, rigging, and power specifications",
-      "AV/vendor coordination details",
-      "procurement question deadline",
-      "budget tier",
-      "vendor submission or confidentiality terms",
-      "room-by-room setups",
-      "show times",
-      "strike timing",
-      "detailed technical specifications",
-      "crew counts",
-      "in-house AV constraints",
-      "procurement submission rules beyond dates",
-      "confidentiality or coordination clauses beyond draft status",
-      "a final evaluation matrix",
-      "internet bandwidth and redundancy",
-      "security staffing",
-      "load-out timing",
-    ]);
+    expect(gapsSection.querySelectorAll("mark")).toHaveLength(0);
+    expect(within(gapsSection).getByText("21 details still needed")).toBeInTheDocument();
+    const gapList = within(gapsSection).getByRole("list", {
+      name: "Missing proposal details",
+    });
+    expect(within(gapList).getAllByRole("listitem")).toHaveLength(21);
+    expect(within(gapList).getByText("Event objectives and audience profile beyond total attendance")).toBeInTheDocument();
+    expect(within(gapList).getByText("Detailed show format and content plan")).toBeInTheDocument();
+    expect(within(gapList).getByText("Vendor submission or confidentiality terms")).toBeInTheDocument();
     for (const mark of screen.getByLabelText("Proposal draft preview").querySelectorAll("mark")) {
       expect(mark).toHaveClass("bg-transparent", "p-0", "font-bold", "text-slate-950");
       expect(mark).not.toHaveClass("bg-emerald-100/80");
@@ -3639,7 +4036,7 @@ describe("AssistantWorkspacePage", () => {
   test("the primary action reads Regenerate draft once a draft exists", async () => {
     mockedGetConversation
       .mockResolvedValueOnce(conversationWithDraft([roomsQuestion]))
-      .mockResolvedValue(conversationWithDraft([]));
+      .mockResolvedValue(conversationWithDraft([roomsAnsweredQuestion]));
     mockedPatchQuestion.mockResolvedValue(roomsAnswered);
     mockedGenerateGuidance.mockResolvedValue({ success: true, data: guidanceReport });
     mockedGetDraft.mockResolvedValue(draftRun(7));

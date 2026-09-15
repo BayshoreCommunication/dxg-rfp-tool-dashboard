@@ -42,13 +42,13 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
       {children}
       <ToastContainer
         aria-label="Notifications"
-        position="top-right"
-        autoClose={4500}
-        hideProgressBar={false}
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar
         newestOnTop
         limit={3}
         closeOnClick={false}
-        pauseOnFocusLoss
+        pauseOnFocusLoss={false}
         draggable="touch"
         pauseOnHover
         theme="light"
@@ -57,7 +57,6 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
         closeButton={ToastCloseButton}
         className="dxg-toast-container"
         toastClassName={(context) => `${context?.defaultClassName || ""} dxg-toast dxg-toast--${context?.type || "default"}`}
-        progressClassName="dxg-toast-progress"
       />
     </>
   );

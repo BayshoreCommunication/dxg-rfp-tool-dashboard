@@ -88,16 +88,34 @@ describe('ProposalTableList — loading state', () => {
 })
 
 describe('ProposalTableList — empty state', () => {
-  it('shows "No proposals found" message when list is empty', async () => {
+  it('with no proposals at all, invites the planner to create the first RFP instead of blaming a filter', async () => {
     mockGetProposals.mockResolvedValue(emptyPage())
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await waitFor(() => expect(screen.getByText(/No proposals found/)).toBeInTheDocument(), LOAD_TIMEOUT)
+    const card = await screen.findByTestId('proposals-first-run', {}, LOAD_TIMEOUT)
+    expect(card).toHaveTextContent('Create your first RFP')
+    expect(card).toHaveTextContent('RFPilot turns your event details into an AV production RFP')
+    expect(card).not.toHaveTextContent(/filter/i)
+    const starters = within(card).getByRole('group', { name: 'Ways to start' })
+    expect(within(starters).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '/proposals/add-new-proposal?start=example',
+      '/proposals/add-new-proposal',
+      '/proposals/add-new-proposal?start=scratch',
+    ])
   })
 
-  it('shows "New Proposal" link in empty state', async () => {
+  it('with an empty filter view, names the filter and keeps the New Proposal link', async () => {
     mockGetProposals.mockResolvedValue(emptyPage())
-    render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await waitFor(() => expect(screen.getByText('New Proposal')).toBeInTheDocument(), LOAD_TIMEOUT)
+    render(<ProposalTableList searchValue="" activeFilter="draft" />)
+    await waitFor(() => expect(screen.getByText('No draft proposals yet. Try another filter.')).toBeInTheDocument(), LOAD_TIMEOUT)
+    expect(screen.getByText('New Proposal')).toBeInTheDocument()
+    expect(screen.queryByTestId('proposals-first-run')).not.toBeInTheDocument()
+  })
+
+  it('with an empty search, names the search term', async () => {
+    mockGetProposals.mockResolvedValue(emptyPage())
+    render(<ProposalTableList searchValue="gala" activeFilter="all" />)
+    await waitFor(() => expect(screen.getByText('Nothing matches “gala”. Try a different search.')).toBeInTheDocument(), LOAD_TIMEOUT)
+    expect(screen.queryByTestId('proposals-first-run')).not.toBeInTheDocument()
   })
 })
 
@@ -448,6 +466,36 @@ describe('ProposalTableList — favorite toggle', () => {
     await waitFor(() => {
       expect(mockUpdateMeta).toHaveBeenCalledWith('prop-001', { isFavorite: true })
     })
+  })
+
+  it('removes an unfavorited proposal from the favorite list immediately', async () => {
+    mockGetProposals
+      .mockResolvedValueOnce(successPage([makeProposal({ isFavorite: true })]))
+      .mockResolvedValue(emptyPage())
+    mockUpdateMeta.mockResolvedValue({ success: true })
+
+    render(<ProposalTableList searchValue="" activeFilter="favorite" />)
+    await screen.findByTitle('Remove favorite', {}, LOAD_TIMEOUT)
+    fireEvent.click(screen.getByTitle('Remove favorite'))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Bayshore Summit 2026')).not.toBeInTheDocument()
+    }, LOAD_TIMEOUT)
+    expect(mockUpdateMeta).toHaveBeenCalledWith('prop-001', { isFavorite: false })
+  })
+
+  it('restores the favorite row when removing the favorite fails', async () => {
+    mockGetProposals.mockResolvedValue(
+      successPage([makeProposal({ isFavorite: true })]),
+    )
+    mockUpdateMeta.mockResolvedValue({ success: false, message: 'Update failed' })
+
+    render(<ProposalTableList searchValue="" activeFilter="favorite" />)
+    await screen.findByTitle('Remove favorite', {}, LOAD_TIMEOUT)
+    fireEvent.click(screen.getByTitle('Remove favorite'))
+
+    expect(await screen.findByText('Bayshore Summit 2026', {}, LOAD_TIMEOUT)).toBeInTheDocument()
+    expect(toast.error).toHaveBeenCalledWith('Update failed')
   })
 })
 

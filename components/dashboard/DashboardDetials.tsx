@@ -1,5 +1,6 @@
 import { getDashboardOverviewAction } from "@/app/actions/overview";
 import { getVendorResponsesAction } from "@/app/actions/vendorResponse";
+import FirstRunDashboard from "./FirstRunDashboard";
 import DashboardTableList from "./DashboardTableList";
 import TopCardItem from "./TopCardItem";
 import TopHeader from "./TopHeader";
@@ -64,8 +65,16 @@ const DashboardDetials = async () => {
 
       <div className="space-y-5 pb-6 sm:space-y-7 sm:pb-10 lg:space-y-8 lg:pb-12">
         <TopHeader />
-        <TopCardItem totals={totals} />
-        <DashboardTableList proposals={latestProposals} totalProposals={totals.totalProposals} />
+        {totals.totalProposals === 0 ? (
+          // No proposals yet: five zero-value metrics tell a new planner
+          // nothing, so show what the product is and how to start instead.
+          <FirstRunDashboard />
+        ) : (
+          <>
+            <TopCardItem totals={totals} />
+            <DashboardTableList proposals={latestProposals} totalProposals={totals.totalProposals} />
+          </>
+        )}
       </div>
     </div>
   );

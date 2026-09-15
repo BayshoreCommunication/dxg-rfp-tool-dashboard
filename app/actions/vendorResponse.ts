@@ -71,6 +71,7 @@ export type VendorResponseProposalSummary = {
   proposalId: string;
   proposalTitle: string;
   responseCount: number;
+  responseIds: string[];
   unreadCount: number;
   latestResponseAt: string;
   latestVendorName: string;
@@ -312,12 +313,17 @@ const parseProposalSummary = (
   if (!isRecord(value)) return null;
   const responseCount = parseNonNegativeInteger(value.responseCount);
   const unreadCount = parseNonNegativeInteger(value.unreadCount);
+  const responseIds = Array.isArray(value.responseIds)
+    ? value.responseIds.filter(isString)
+    : [];
   if (
     !isString(value.proposalId) ||
     !isString(value.proposalTitle) ||
     !isString(value.latestResponseAt) ||
     !isString(value.latestVendorName) ||
     responseCount === null ||
+    responseIds.length !== responseCount ||
+    responseIds.some((responseId) => !vendorResponseObjectId.test(responseId)) ||
     unreadCount === null ||
     unreadCount > responseCount
   )
@@ -326,6 +332,7 @@ const parseProposalSummary = (
     proposalId: value.proposalId,
     proposalTitle: value.proposalTitle,
     responseCount,
+    responseIds,
     unreadCount,
     latestResponseAt: value.latestResponseAt,
     latestVendorName: value.latestVendorName,
@@ -645,6 +652,92 @@ export const markVendorResponseReadAction = async (id: string) => {
   } catch {
     return { success: false, message: "Error marking response as read" };
   }
+};
+
+export type DeleteVendorResponsesResult =
+  | { success: true; message: string; deletedCount: number }
+  | { success: false; message: string };
+
+const vendorResponseObjectId = /^[0-9a-f]{24}$/i;
+
+const deleteVendorResponsesRequest = async (
+  url: string,
+  responseIds?: string[],
+): Promise<DeleteVendorResponsesResult> => {
+  try {
+    const res = await authenticatedBackendFetch(url, {
+      method: "DELETE",
+      ...(responseIds
+        ? {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ responseIds }),
+          }
+        : {}),
+      cache: "no-store",
+    });
+    const json: unknown = await res.json().catch(() => ({}));
+    if (!res.ok || !isRecord(json) || json.success !== true) {
+      return {
+        success: false,
+        message:
+          isRecord(json) && isString(json.message)
+            ? json.message
+            : "The vendor response could not be deleted.",
+      };
+    }
+    const deletedCount = parseNonNegativeInteger(json.deletedCount);
+    if (deletedCount === null) {
+      return {
+        success: false,
+        message: "The vendor response service returned an unexpected response.",
+      };
+    }
+    revalidatePath("/vendor-responses");
+    return {
+      success: true,
+      message: isString(json.message) ? json.message : "Vendor responses deleted",
+      deletedCount,
+    };
+  } catch {
+    return {
+      success: false,
+      message: "The vendor response could not be deleted. Please try again.",
+    };
+  }
+};
+
+export const deleteVendorResponseAction = async (
+  id: string,
+): Promise<DeleteVendorResponsesResult> => {
+  if (!vendorResponseObjectId.test(id)) {
+    return { success: false, message: "This vendor response could not be identified." };
+  }
+  const result = await deleteVendorResponsesRequest(
+    `${BACKEND_URL}/api/vendor-responses/${encodeURIComponent(id)}`,
+  );
+  if (result.success) revalidatePath(`/vendor-responses/${id}`);
+  return result;
+};
+
+export const deleteSelectedVendorResponsesAction = async (
+  responseIds: string[],
+): Promise<DeleteVendorResponsesResult> => {
+  const selectedIds = [...new Set(responseIds)];
+  if (
+    selectedIds.length === 0 ||
+    selectedIds.length > 100 ||
+    selectedIds.some((responseId) => !vendorResponseObjectId.test(responseId))
+  ) {
+    return {
+      success: false,
+      message: "Select between 1 and 100 valid vendor responses.",
+    };
+  }
+  const result = await deleteVendorResponsesRequest(
+    `${BACKEND_URL}/api/vendor-responses`,
+    selectedIds,
+  );
+  return result;
 };
 
 export type ManualVendorResponseResult =
