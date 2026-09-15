@@ -149,3 +149,15 @@ normalized vendor email, and scoped public grant; it never forwards arbitrary
 query parameters or exposes storage URLs.
 Historical version navigation remains part of Task 8; the dashboard must not
 reconstruct history from the compatibility response.
+
+Response deletion uses small client-side selection and confirmation controls
+over typed server actions while the response cards remain server rendered. On
+the main Vendor Responses page, each checkbox selects the exact response IDs in
+one displayed proposal group and the toolbar reports the total responses
+selected; Select all applies only to the current page. On a proposal response
+page, planners can select individual responses. Response cards do not expose
+separate delete buttons, so both lists have one consistent deletion path. Every
+destructive action names its scope, warns that the operation cannot be undone,
+and refreshes the server-rendered counts only after success. Backend tenant and
+ownership checks remain authoritative and selected bulk deletion fails closed
+if any requested response is unavailable.

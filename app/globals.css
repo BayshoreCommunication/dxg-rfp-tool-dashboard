@@ -283,114 +283,150 @@ body {
   display: none;
 }
 
-/* Product notifications: roomy, calm, and consistent across every workflow. */
+/* Product notifications: split status rail with a bright, readable message surface. */
 .dxg-toast-container.Toastify__toast-container {
-  top: 20px;
+  top: auto;
   right: 20px;
-  width: min(410px, calc(100vw - 40px));
+  bottom: max(76px, calc(env(safe-area-inset-bottom) + 20px));
+  width: min(380px, calc(100vw - 40px));
   padding: 0;
   z-index: 9999;
 }
 
 .dxg-toast.Toastify__toast {
-  --dxg-toast-accent: #008ad2;
-  --dxg-toast-tint: #eef8fd;
-  min-height: 76px;
+  --dxg-toast-accent: #0786cf;
+  --dxg-toast-label: #0877b3;
+  display: flex;
+  width: 100%;
+  min-height: 74px;
   margin-bottom: 12px;
-  padding: 0;
+  padding: 31px 44px 13px 76px;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid var(--dxg-toast-accent);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.98);
-  color: #1e293b;
+  border: 1px solid #d8e2e8;
+  border-radius: 15px;
+  background: #ffffff;
+  color: #172433;
   box-shadow:
-    0 20px 45px rgba(15, 23, 42, 0.14),
-    0 4px 12px rgba(15, 23, 42, 0.06);
+    0 18px 44px rgb(2 15 27 / 0.22),
+    0 4px 12px rgb(2 15 27 / 0.09);
   font-family: var(--font-sans);
-  backdrop-filter: blur(12px);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .dxg-toast--success.Toastify__toast {
-  --dxg-toast-accent: #0f9f6e;
-  --dxg-toast-tint: #eaf9f2;
+  --dxg-toast-accent: #08b8ad;
+  --dxg-toast-label: #637789;
 }
 
 .dxg-toast--error.Toastify__toast {
   --dxg-toast-accent: #dc2626;
-  --dxg-toast-tint: #fef2f2;
+  --dxg-toast-label: #b91c1c;
 }
 
 .dxg-toast--warning.Toastify__toast {
   --dxg-toast-accent: #d97706;
-  --dxg-toast-tint: #fff7e8;
+  --dxg-toast-label: #b45309;
 }
 
 .dxg-toast--info.Toastify__toast {
   --dxg-toast-accent: #0786cf;
-  --dxg-toast-tint: #eaf7ff;
+  --dxg-toast-label: #0877b3;
 }
 
-.dxg-toast .Toastify__toast-body {
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 0;
-  margin: 0;
-  padding: 16px 48px 16px 16px;
-  color: #334155;
-  font-size: 14px;
-  line-height: 1.45;
+.dxg-toast::before {
+  position: absolute;
+  top: 15px;
+  left: 76px;
+  color: var(--dxg-toast-label);
+  content: "NOTICE";
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.dxg-toast--success::before {
+  content: "SUCCESS";
+}
+
+.dxg-toast--error::before {
+  content: "ERROR";
+}
+
+.dxg-toast--warning::before {
+  content: "WARNING";
+}
+
+.dxg-toast--info::before {
+  content: "INFO";
 }
 
 .dxg-toast .Toastify__toast-icon {
-  width: 36px;
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: grid;
+  width: 60px;
+  height: 100%;
   margin: 0;
+  place-items: center;
+  background: var(--dxg-toast-accent);
 }
 
 .dxg-toast-icon {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   place-items: center;
-  border-radius: 11px;
-  background: var(--dxg-toast-tint);
-  color: var(--dxg-toast-accent);
+  border: 2px solid rgb(255 255 255 / 0.92);
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+}
+
+.dxg-toast > :not(.Toastify__toast-icon):not(.Toastify__close-button):not(.Toastify__progress-bar--wrp) {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .dxg-toast-message {
   min-width: 0;
-  padding-top: 1px;
+  padding-top: 0;
 }
 
 .dxg-toast-message-title {
-  color: #0f172a;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
+  margin: 0;
+  color: #172433;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  line-height: 1.35;
 }
 
 .dxg-toast-message-description {
-  margin-top: 4px;
+  margin: 3px 0 0;
   color: #64748b;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 1.4;
 }
 
 .dxg-toast-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 50%;
+  right: 7px;
   display: grid;
   width: 30px;
   height: 30px;
   place-items: center;
   border: 0;
-  border-radius: 9px;
+  border-radius: 8px;
   background: transparent;
-  color: #94a3b8;
+  color: #7c8a99;
   cursor: pointer;
+  transform: translateY(-50%);
   transition: background-color 150ms ease, color 150ms ease;
 }
 
@@ -404,24 +440,34 @@ body {
   outline-offset: 2px;
 }
 
-.dxg-toast-progress.Toastify__progress-bar {
-  height: 3px;
-  background: var(--dxg-toast-accent);
-  opacity: 0.75;
+/* React Toastify uses this invisible animation to trigger auto-dismiss. */
+.dxg-toast .Toastify__progress-bar--wrp {
+  display: block;
+  pointer-events: none;
 }
 
 @media (max-width: 640px) {
   .dxg-toast-container.Toastify__toast-container {
-    top: max(12px, env(safe-area-inset-top));
+    top: auto;
     right: 12px;
+    bottom: max(72px, calc(env(safe-area-inset-bottom) + 12px));
     left: 12px;
     width: auto;
   }
 
   .dxg-toast.Toastify__toast {
-    min-height: 72px;
+    min-height: 70px;
     margin-bottom: 8px;
+    padding-left: 70px;
     border-radius: 14px;
+  }
+
+  .dxg-toast .Toastify__toast-icon {
+    width: 56px;
+  }
+
+  .dxg-toast::before {
+    left: 70px;
   }
 }
 
@@ -1984,46 +2030,29 @@ strong {
 /* Toasts and calendars are styled with plain CSS, so they need their own
    bridge in addition to the utility mappings above. */
 .dark .dxg-toast.Toastify__toast {
-  border-color: #283c4a;
-  background: rgb(13 29 40 / 0.98);
-  color: #e6eef5;
+  border-color: #d8e2e8;
+  background: #ffffff;
+  color: #172433;
   box-shadow:
-    0 20px 45px rgb(0 0 0 / 0.38),
-    0 4px 12px rgb(0 0 0 / 0.24);
+    0 18px 44px rgb(0 0 0 / 0.38),
+    0 4px 12px rgb(0 0 0 / 0.22);
 }
 
-.dark .dxg-toast .Toastify__toast-body,
 .dark .dxg-toast-message-title {
-  color: #eef5f8;
+  color: #172433;
 }
 
 .dark .dxg-toast-message-description {
-  color: #97a9b8;
+  color: #64748b;
 }
 
 .dark .dxg-toast-close {
-  color: #7f93a4;
+  color: #7c8a99;
 }
 
 .dark .dxg-toast-close:hover {
-  background: #19313f;
-  color: #d7e2e9;
-}
-
-.dark .dxg-toast--success.Toastify__toast {
-  --dxg-toast-tint: rgb(6 78 59 / 0.5);
-}
-
-.dark .dxg-toast--error.Toastify__toast {
-  --dxg-toast-tint: rgb(76 5 25 / 0.58);
-}
-
-.dark .dxg-toast--warning.Toastify__toast {
-  --dxg-toast-tint: rgb(69 26 3 / 0.58);
-}
-
-.dark .dxg-toast--info.Toastify__toast {
-  --dxg-toast-tint: rgb(8 51 68 / 0.65);
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .dark .dxg-datepicker.react-datepicker {

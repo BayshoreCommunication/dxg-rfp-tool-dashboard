@@ -28,15 +28,16 @@ describe("ToastProvider", () => {
 
     expect(mockToastContainerProps).toEqual(expect.objectContaining({
       "aria-label": "Notifications",
-      position: "top-right",
-      autoClose: 4500,
+      position: "bottom-right",
+      autoClose: 5000,
       closeOnClick: false,
       draggable: "touch",
+      pauseOnFocusLoss: false,
       pauseOnHover: true,
       newestOnTop: true,
       limit: 3,
+      hideProgressBar: true,
       className: "dxg-toast-container",
-      progressClassName: "dxg-toast-progress",
     }));
     expect(mockToastContainerProps?.icon).toEqual(expect.any(Function));
     expect(mockToastContainerProps?.closeButton).toEqual(expect.any(Function));
@@ -46,7 +47,7 @@ describe("ToastProvider", () => {
       ? toastClassName({
           type: "success",
           defaultClassName: "Toastify__toast Toastify__toast-theme--light",
-          position: "top-right",
+          position: "bottom-right",
           rtl: false,
         })
       : ""

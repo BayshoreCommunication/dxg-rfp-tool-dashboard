@@ -119,11 +119,13 @@ export type ConversationQuestion = {
   impact?: ConversationQuestionImpact | null;
   answerType: ConversationAnswerType;
   options: string[];
-  // Extraction-sourced prefill for the answer control: a value the planner's
-  // own message already contained, ready to submit as-is. Confirming it is
-  // still the explicit per-field review — nothing is applied automatically.
+  // Extraction-sourced default for the answer control: a normalized value the
+  // workspace applies automatically and keeps available for later editing.
   // Optional so payloads and fixtures that predate the field stay valid.
   suggestedAnswer?: string | null;
+  // Current value displayed in the persistent proposal-details review. This
+  // includes both extracted defaults and answers supplied by the planner.
+  reviewAnswer?: string | null;
   // The answer message this question produced, so the thread can show the
   // question above the answer it belongs to.
   answeredMessageId: string | null;
@@ -222,6 +224,10 @@ const parseQuestion = (value: unknown): ConversationQuestion | null => {
     suggestedAnswer:
       typeof value.suggestedAnswer === "string" && value.suggestedAnswer.trim().length > 0 && value.suggestedAnswer.length <= 4000
         ? value.suggestedAnswer
+        : null,
+    reviewAnswer:
+      typeof value.reviewAnswer === "string" && value.reviewAnswer.trim().length > 0 && value.reviewAnswer.length <= 4000
+        ? value.reviewAnswer
         : null,
     answeredMessageId: typeof value.answeredMessageId === "string" && value.answeredMessageId ? value.answeredMessageId : null,
     contextRunId: typeof value.contextRunId === "string" ? value.contextRunId : null,
@@ -332,7 +338,7 @@ export const closeConversationSegmentAction = async (
 export const patchConversationQuestionAction = async (
   proposalId: string,
   questionId: string,
-  input: { status: "answered" | "dismissed"; answer?: ConversationQuestionAnswer },
+  input: { status: "answered" | "dismissed"; answer?: ConversationQuestionAnswer; useOnlyIfEmpty?: boolean },
 ): Promise<ActionResult<{ id: string; status: string; answeredMessageId: string | null; appliedField: AppliedQuestionField | null; appliedFields?: AppliedQuestionField[] }>> =>
   request(`/api/v1/proposals/${encodeURIComponent(proposalId)}/conversation/questions/${encodeURIComponent(questionId)}`, {
     method: "PATCH",

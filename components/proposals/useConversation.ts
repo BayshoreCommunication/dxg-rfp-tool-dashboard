@@ -282,7 +282,7 @@ export function useConversation(proposalId: string | null) {
 
   const resolveQuestion = useCallback(async (
     questionId: string,
-    input: { status: "answered" | "dismissed"; answer?: ConversationQuestionAnswer },
+    input: { status: "answered" | "dismissed"; answer?: ConversationQuestionAnswer; useOnlyIfEmpty?: boolean },
     options?: { refresh?: boolean },
   ) => {
     if (!proposalId) return false;

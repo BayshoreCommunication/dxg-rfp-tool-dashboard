@@ -5,9 +5,12 @@ import {
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 import {
   createManualVendorResponseAction,
+  deleteSelectedVendorResponsesAction,
+  deleteVendorResponseAction,
   getVendorResponseProposalsAction,
   getVendorSubmissionDetailAction,
 } from "./vendorResponse";
+import { revalidatePath } from "next/cache";
 
 jest.mock("@/lib/server/backendClient", () => ({
   authenticatedBackendFetch: jest.fn(),
@@ -121,6 +124,12 @@ it("loads and validates proposal-level vendor response summaries", async () => {
           proposalId: "proposal-1",
           proposalTitle: "Annual Summit",
           responseCount: 4,
+          responseIds: [
+            "64b7f1012f9f4a0012ab3401",
+            "64b7f1012f9f4a0012ab3402",
+            "64b7f1012f9f4a0012ab3403",
+            "64b7f1012f9f4a0012ab3404",
+          ],
           unreadCount: 2,
           latestResponseAt: "2026-08-16T10:00:00.000Z",
           latestVendorName: "Apex Events",
@@ -150,6 +159,12 @@ it("loads and validates proposal-level vendor response summaries", async () => {
         expect.objectContaining({
           proposalId: "proposal-1",
           responseCount: 4,
+          responseIds: [
+            "64b7f1012f9f4a0012ab3401",
+            "64b7f1012f9f4a0012ab3402",
+            "64b7f1012f9f4a0012ab3403",
+            "64b7f1012f9f4a0012ab3404",
+          ],
           unreadCount: 2,
         }),
       ],
@@ -170,6 +185,7 @@ it("rejects impossible proposal summary counts", async () => {
           proposalId: "proposal-1",
           proposalTitle: "Annual Summit",
           responseCount: 1,
+          responseIds: ["64b7f1012f9f4a0012ab3401"],
           unreadCount: 2,
           latestResponseAt: "2026-08-16T10:00:00.000Z",
           latestVendorName: "Apex Events",
@@ -184,6 +200,74 @@ it("rejects impossible proposal summary counts", async () => {
   await expect(getVendorResponseProposalsAction()).resolves.toEqual({
     success: false,
     message: "The vendor response service returned an unexpected response.",
+  });
+});
+
+describe("vendor response deletion actions", () => {
+  const responseId = "64b7f1012f9f4a0012ab3401";
+  const proposalId = "64b7f1012f9f4a0012ab3402";
+
+  it("deletes one response and revalidates its list and detail routes", async () => {
+    jest.mocked(authenticatedBackendFetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        message: "Vendor response deleted",
+        deletedCount: 1,
+      }),
+    } as Response);
+
+    await expect(deleteVendorResponseAction(responseId)).resolves.toEqual({
+      success: true,
+      message: "Vendor response deleted",
+      deletedCount: 1,
+    });
+    expect(authenticatedBackendFetch).toHaveBeenCalledWith(
+      expect.stringContaining(`/api/vendor-responses/${responseId}`),
+      { method: "DELETE", cache: "no-store" },
+    );
+    expect(revalidatePath).toHaveBeenCalledWith("/vendor-responses");
+    expect(revalidatePath).toHaveBeenCalledWith(`/vendor-responses/${responseId}`);
+  });
+
+  it("deletes only the explicitly selected response ids", async () => {
+    jest.mocked(authenticatedBackendFetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        message: "4 vendor responses deleted",
+        deletedCount: 4,
+      }),
+    } as Response);
+
+    await expect(
+      deleteSelectedVendorResponsesAction([responseId, proposalId]),
+    ).resolves.toEqual({
+      success: true,
+      message: "4 vendor responses deleted",
+      deletedCount: 4,
+    });
+    expect(authenticatedBackendFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/vendor-responses"),
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responseIds: [responseId, proposalId] }),
+        cache: "no-store",
+      },
+    );
+  });
+
+  it("rejects malformed ids before sending a destructive request", async () => {
+    await expect(deleteVendorResponseAction("response-1")).resolves.toEqual({
+      success: false,
+      message: "This vendor response could not be identified.",
+    });
+    await expect(deleteSelectedVendorResponsesAction(["response-1"])).resolves.toEqual({
+      success: false,
+      message: "Select between 1 and 100 valid vendor responses.",
+    });
+    expect(authenticatedBackendFetch).not.toHaveBeenCalled();
   });
 });
 

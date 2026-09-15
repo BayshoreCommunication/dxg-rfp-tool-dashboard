@@ -31,6 +31,7 @@ import {
 import SaveCopyModal from "./SaveCopyModal";
 import ProposalDeletionDialog, { type ProposalDeletionMode } from "./ProposalDeletionDialog";
 import Link from "next/link";
+import StarterLinks from "./StarterLinks";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
@@ -65,6 +66,17 @@ type ProposalListItem = {
     contactFirstName?: string;
     contactLastName?: string;
   };
+};
+
+// Plain words for each filter in the empty state ("No draft proposals yet").
+const EMPTY_FILTER_LABEL: Record<ProposalFilterType, string> = {
+  all: "",
+  draft: "draft",
+  live: "live",
+  favorite: "favorite",
+  expired: "expired",
+  archive: "archived",
+  saved: "saved",
 };
 
 type ProposalTableListProps = {
@@ -395,15 +407,22 @@ export default function ProposalTableList({
     if (!proposal?._id || favoritingId) return;
 
     const nextFavorite = !Boolean(proposal.isFavorite);
+    const removeFromFavoriteList =
+      activeFilter === "favorite" && !nextFavorite;
+    const originalIndex = proposals.findIndex(
+      (item) => item._id === proposal._id,
+    );
     setFavoritingId(proposal._id);
 
     try {
       setProposals((prev) =>
-        prev.map((item) =>
-          item._id === proposal._id
-            ? { ...item, isFavorite: nextFavorite }
-            : item,
-        ),
+        removeFromFavoriteList
+          ? prev.filter((item) => item._id !== proposal._id)
+          : prev.map((item) =>
+              item._id === proposal._id
+                ? { ...item, isFavorite: nextFavorite }
+                : item,
+            ),
       );
 
       const res = await updateProposalMetaAction(proposal._id, {
@@ -411,15 +430,28 @@ export default function ProposalTableList({
       });
 
       if (!res.success) {
-        setProposals((prev) =>
-          prev.map((item) =>
-            item._id === proposal._id
-              ? { ...item, isFavorite: !nextFavorite }
-              : item,
-          ),
-        );
+        setProposals((prev) => {
+          if (!removeFromFavoriteList) {
+            return prev.map((item) =>
+              item._id === proposal._id
+                ? { ...item, isFavorite: !nextFavorite }
+                : item,
+            );
+          }
+          if (prev.some((item) => item._id === proposal._id)) return prev;
+          const restored = [...prev];
+          restored.splice(
+            Math.max(0, Math.min(originalIndex, restored.length)),
+            0,
+            { ...proposal, isFavorite: true },
+          );
+          return restored;
+        });
         toast.error(res.message || "Failed to update favorite.");
       } else {
+        if (removeFromFavoriteList) {
+          setRefreshTick((prev) => prev + 1);
+        }
         onRefreshCounts?.();
       }
     } finally {
@@ -453,6 +485,31 @@ export default function ProposalTableList({
               </div>
             ))}
           </div>
+        ) : proposals.length === 0 && activeFilter === "all" && !searchValue.trim() ? (
+          // The account has no proposals at all. Say what the product is and
+          // offer the three ways to start, instead of blaming a filter the
+          // planner never touched.
+          <section
+            aria-labelledby="proposals-first-run-title"
+            data-testid="proposals-first-run"
+            className="rounded-3xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              No proposals yet
+            </p>
+            <h2
+              id="proposals-first-run-title"
+              className="mt-2 text-balance text-2xl font-bold tracking-tight text-slate-900"
+            >
+              Create your first RFP
+            </h2>
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600">
+              RFPilot turns your event details into an AV production RFP, the
+              request you send to vendors so they can quote. Nothing goes out
+              until you pick vendors.
+            </p>
+            <StarterLinks className="mt-6" />
+          </section>
         ) : proposals.length === 0 ? (
           <div className="rounded-3xl border border-slate-200 bg-white py-12 px-6 text-center shadow-sm">
             <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full bg-slate-100 text-slate-500">
@@ -460,8 +517,9 @@ export default function ProposalTableList({
             </div>
 
             <p className="mx-auto mt-7 max-w-md text-[20px] font-semibold leading-snug text-slate-700">
-              No proposals found for this filter. Try another filter or clear
-              your search.
+              {searchValue.trim()
+                ? `Nothing matches “${searchValue.trim()}”. Try a different search.`
+                : `No ${EMPTY_FILTER_LABEL[activeFilter]} proposals yet. Try another filter.`}
             </p>
 
             <div className="mt-7 mx-auto max-w-[180px]">

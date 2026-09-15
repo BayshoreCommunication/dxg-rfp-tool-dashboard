@@ -59,6 +59,7 @@ import {
   ChevronDown,
   Download,
   FileText,
+  ListChecks,
   Loader2,
   Mic,
   Square,
@@ -79,6 +80,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type DragEvent as ReactDragEvent,
   type ReactNode,
 } from 'react';
 import {
@@ -1221,7 +1223,31 @@ const roundedMoney = (
   }
 };
 
+export const PROPOSAL_MESSAGE_MAX_CHARACTERS = 8000;
+const MESSAGE_LIMIT_WARNING_AT = 7000;
 const MAX_STAGED_FILES = 3;
+// One list drives the hidden file input's accept attribute, drag-and-drop
+// validation, and the caption that tells the planner what they can attach.
+const ACCEPTED_ATTACHMENT_EXTENSIONS = ['.pdf', '.docx', '.xlsx', '.csv', '.txt'] as const;
+const ACCEPTED_ATTACHMENT_LABEL = 'PDF, DOCX, XLSX, CSV or TXT';
+const isAcceptedAttachment = (file: File) => {
+  const name = file.name.toLowerCase();
+  return ACCEPTED_ATTACHMENT_EXTENSIONS.some((extension) => name.endsWith(extension));
+};
+
+// First-run starters. The example brief is the fictional Northstar summit used
+// by the sales demo (its own header reads "Confidentiality: Demo only"); it is
+// served as a static file so a new planner can watch extraction work without
+// risking a document of their own. Staging it is a normal attach: nothing is
+// uploaded or created until the planner presses Send.
+const EXAMPLE_BRIEF_PATH = '/files/RFPilot%20example-event-brief.docx';
+const EXAMPLE_BRIEF_FILE_NAME = 'Example brief - Northstar Leadership Summit.docx';
+const EXAMPLE_BRIEF_MIME =
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const EXAMPLE_BRIEF_MESSAGE =
+  'This is an example brief so I can see how RFPilot works. Pull out everything you can from it.';
+const SCRATCH_EXAMPLE_TEXT =
+  'Sales kickoff in Dallas, March 10–12, 2027, about 500 guests. One general session plus six breakouts. We need audio, projection, stage lighting, and a recording of the main stage.';
 // Attachments older than this are left alone when a proposal is opened.
 const UNEXTRACTED_ATTACHMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -1549,33 +1575,38 @@ function GuidedQuestionCard({
   question,
   current,
   clarification = false,
+  reviewMode = false,
   busy,
   error,
   minimumDate,
   maximumDate,
   initialDate,
   initialTime,
+  onEditStarted,
+  onCancelEdit,
   onAnswer,
   onSkip,
 }: {
   question: ConversationQuestion;
   current: number;
   clarification?: boolean;
+  reviewMode?: boolean;
   busy: boolean;
   error: string | null;
   minimumDate: Date;
   maximumDate?: Date;
   initialDate?: string;
   initialTime?: string;
+  onEditStarted?: () => void;
+  onCancelEdit?: () => void;
   onAnswer: (answer: ConversationQuestionAnswer) => void;
   onSkip: () => void;
 }) {
   // The caller keys this card by question id, so the control resets per question.
   const answerType = question.answerType;
-  // Extraction-sourced prefill: the control is seeded with what the planner's
-  // own message already contained, so confirming is one action. Nothing is
-  // written until they answer — the confirmation IS the per-field review.
-  const suggested = question.suggestedAnswer ?? null;
+  // Extraction-sourced prefill: the review control is seeded with the value
+  // already applied as the default, so the planner only acts to revise it.
+  const suggested = question.reviewAnswer ?? question.suggestedAnswer ?? null;
   // A stable primitive (not a Date instance): the Date built below would
   // otherwise get a fresh identity every render even when the underlying
   // suggestion is unchanged, which would make an effect keyed on it re-fire
@@ -1687,7 +1718,16 @@ function GuidedQuestionCard({
           ? { date: localIsoDay(day), time: value.trim() }
           : null
         : value.trim() || null;
-  const skipButton = (
+  const skipButton = reviewMode ? (
+    <button
+      type="button"
+      onClick={onCancelEdit}
+      disabled={busy}
+      className={`${SKIP_BUTTON_CLASS} w-full sm:w-auto sm:shrink-0`}
+    >
+      Cancel
+    </button>
+  ) : (
     <button
       type="button"
       onClick={() => {
@@ -1701,13 +1741,24 @@ function GuidedQuestionCard({
   );
 
   return (
-    <div data-testid="guided-question-card" className="my-2 w-full max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+    <div
+      data-testid="guided-question-card"
+      className={
+        reviewMode
+          ? 'mt-2 w-full rounded-xl border border-cyan-200 bg-cyan-50/40 p-3'
+          : 'my-2 w-full max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm'
+      }
+    >
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
-          {clarification ? 'Additional clarification' : `Guided question ${current}`}
+        <p className={`text-[11px] font-bold uppercase tracking-widest ${reviewMode ? 'text-[#087f69]' : 'text-amber-700'}`}>
+          {reviewMode
+            ? 'Edit extracted detail'
+            : clarification
+              ? 'Additional clarification'
+              : `Guided question ${current}`}
         </p>
         {impactLabel && (
-          <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+          <span className={`rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold ${reviewMode ? 'border-cyan-200 text-[#087f69]' : 'border-amber-300 text-amber-800'}`}>
             {impactLabel}
           </span>
         )}
@@ -1748,6 +1799,7 @@ function GuidedQuestionCard({
                   : {})}
                 onClick={() => {
                   if (busy) return;
+                  onEditStarted?.();
                   setPendingOption(option);
                   onAnswer(option);
                 }}
@@ -1786,6 +1838,7 @@ function GuidedQuestionCard({
                 id={inputId}
                 value={day}
                 onChange={(nextDay) => {
+                  onEditStarted?.();
                   setEdited(true);
                   if (
                     nextDay &&
@@ -1837,6 +1890,7 @@ function GuidedQuestionCard({
                 label="Date and time"
                 value={dateTimeSelection}
                 onChange={(nextDateTime) => {
+                  onEditStarted?.();
                   setEdited(true);
                   if (!nextDateTime) {
                     setDay(null);
@@ -1895,6 +1949,7 @@ function GuidedQuestionCard({
                 label="Time"
                 value={value}
                 onChange={(nextTime) => {
+                  onEditStarted?.();
                   setEdited(true);
                   setValue(nextTime);
                 }}
@@ -1923,10 +1978,12 @@ function GuidedQuestionCard({
                 : {})}
               value={value}
               onChange={(event) => {
+                onEditStarted?.();
                 setEdited(true);
                 setValue(event.target.value);
               }}
               onInput={(event) => {
+                onEditStarted?.();
                 setEdited(true);
                 setValue(event.currentTarget.value);
               }}
@@ -1947,14 +2004,16 @@ function GuidedQuestionCard({
             disabled={busy || answer === null}
             className={PRIMARY_BUTTON_CLASS}
           >
-            {busy ? 'Saving…' : 'Answer'}
+            {busy ? 'Saving…' : reviewMode ? 'Save change' : 'Answer'}
           </button>
           {skipButton}
         </form>
       )}
       {prefilled && !displayError && (
         <p role="note" className="mt-2 text-xs text-slate-600">
-          {answerType === 'choice'
+          {reviewMode
+            ? 'Saved to your proposal. Change it only if needed.'
+            : answerType === 'choice'
             ? 'The highlighted option comes from your message or brief — tap it to confirm.'
             : 'Pre-filled from your message or brief — confirm or edit.'}
         </p>
@@ -1969,6 +2028,92 @@ function GuidedQuestionCard({
         </p>
       )}
     </div>
+  );
+}
+
+function SuggestedAnswersReviewCard({
+  questions,
+  editingQuestionId,
+  busy,
+  error,
+  editor,
+  onEdit,
+}: {
+  questions: ConversationQuestion[];
+  editingQuestionId: string | null;
+  busy: boolean;
+  error: string | null;
+  editor: ReactNode;
+  onEdit: (questionId: string) => void;
+}) {
+  return (
+    <section
+      data-testid="suggested-answers-review"
+      aria-labelledby="suggested-answers-title"
+      className="my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm"
+    >
+      <div className="border-b border-cyan-100 bg-cyan-50/70 px-4 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[#087f69]">
+              Proposal details
+            </p>
+            <h3 id="suggested-answers-title" className="mt-1 text-sm font-bold text-slate-900">
+              {questions.length} saved {questions.length === 1 ? 'detail' : 'details'}
+            </h3>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-white px-2 py-1 text-[10px] font-bold text-emerald-700">
+            {busy && !editingQuestionId ? (
+              <Loader2 size={12} className="animate-spin" aria-hidden />
+            ) : (
+              <Check size={12} aria-hidden />
+            )}
+            {busy && !editingQuestionId ? 'Saving details' : 'Saved'}
+          </span>
+        </div>
+        <p className="mt-1 text-xs leading-5 text-slate-600">
+          Answers from your brief and guided questions are included here. Edit only what needs changing.
+        </p>
+      </div>
+
+      <dl className="divide-y divide-slate-100 px-4">
+        {questions.map((question) => {
+          const label = questionFieldLabel(question);
+          const editing = editingQuestionId === question.id;
+          return (
+            <div key={question.id} className="py-3">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <dt className="text-xs font-semibold text-slate-500">{label}</dt>
+                  <dd className="mt-0.5 break-words text-sm font-medium text-slate-900">
+                    {question.reviewAnswer ?? question.suggestedAnswer}
+                  </dd>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Edit ${label}`}
+                  disabled={busy}
+                  onClick={() => onEdit(question.id)}
+                  className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <PencilLine size={13} aria-hidden />
+                  {editing ? 'Editing' : 'Edit'}
+                </button>
+              </div>
+              {editing ? editor : null}
+            </div>
+          );
+        })}
+      </dl>
+
+      {error && (
+        <div className="border-t border-red-100 bg-red-50/60 px-4 py-3">
+          <p role="alert" className="mt-2 text-xs text-red-700">
+            {error}
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -2039,7 +2184,7 @@ function ContextRunCard({
         {message.content}
       </p>
       {fieldCount === 0 && <p className="mt-2 text-sm text-amber-800">I couldn’t identify proposal details in this file. You can attach a clearer brief or enter the details below.</p>}
-      {fieldCount !== null && fieldCount > 0 && <p className="mt-2 text-sm text-slate-600">I’ve pulled out the key details from your brief. Let’s confirm them and fill in anything missing, one question at a time.</p>}
+      {fieldCount !== null && fieldCount > 0 && <p className="mt-2 text-sm text-slate-600">I’ve pulled out the key details from your brief. Review them together, then we’ll ask only about anything missing.</p>}
     </div>
   );
 }
@@ -2087,6 +2232,61 @@ function PreviousDraftCard({ message }: { message: ConversationMessage }) {
         <p className="whitespace-pre-wrap">{message.content}</p>
       </div>
     </details>
+  );
+}
+
+function informationGapItems(text: string): string[] {
+  const body = text
+    .trim()
+    .replace(/^Missing (?:details|information) (?:includes|include)\s*/i, '')
+    .replace(/[.!?]+$/, '');
+  if (!body) return [];
+  const separator = body.includes(';') ? ';' : ',';
+  return body
+    .split(separator)
+    .map((item) => item.trim().replace(/^(?:and|or)\s+/i, ''))
+    .filter(Boolean)
+    .map((item) => `${item.charAt(0).toUpperCase()}${item.slice(1)}`);
+}
+
+function InformationGapsList({ paragraphs }: { paragraphs: ProposalDraftSection['paragraphs'] }) {
+  const items = paragraphs.flatMap((paragraph) =>
+    informationGapItems(paragraph.text),
+  );
+  if (items.length < 2) {
+    return (
+      <div className="space-y-3">
+        {paragraphs.map((paragraph, index) => (
+          <p key={index} className="text-sm leading-6 text-slate-700">
+            {paragraph.text}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div>
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+        {items.length} {items.length === 1 ? 'detail' : 'details'} still needed
+      </p>
+      <ul
+        aria-label="Missing proposal details"
+        className="mt-2 grid gap-2 sm:grid-cols-2"
+      >
+        {items.map((item, index) => (
+          <li
+            key={`${item}-${index}`}
+            className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50/55 px-3 py-2.5 text-sm leading-5 text-slate-700 dark:border-amber-300/15 dark:bg-amber-300/[0.06] dark:text-slate-200"
+          >
+            <span
+              aria-hidden="true"
+              className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+            />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -2139,6 +2339,13 @@ function DraftRunCard({
     currentProposalVersion > draftVersion;
 
   const detailsHref = `/proposals/proposal-edit?proposalId=${proposalId}`;
+  const missingDetailCount = sections
+    .filter((section) => section.key === 'information_gaps')
+    .flatMap((section) => section.paragraphs)
+    .flatMap((paragraph) => informationGapItems(paragraph.text)).length;
+  const detailsActionLabel = missingDetailCount > 0
+    ? `Complete ${missingDetailCount} missing ${missingDetailCount === 1 ? 'detail' : 'details'}`
+    : 'Complete proposal details';
   return (
     <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]">
       <header className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-cyan-50/60 px-4 py-4 dark:from-[#0b3033] dark:via-[#0d1d28] dark:to-[#0a2632] sm:px-5">
@@ -2202,6 +2409,7 @@ function DraftRunCard({
           <article className="space-y-3" aria-label="Proposal draft preview">
             {sections.map((section, sectionIndex) => {
               const isOverview = section.key === 'event_overview';
+              const isInformationGaps = section.key === 'information_gaps';
               return (
                 <section
                   key={section.id}
@@ -2217,7 +2425,9 @@ function DraftRunCard({
                     </h4>
                   </div>
                   <div className="mt-3 space-y-3 pl-0 sm:pl-8">
-                    {section.paragraphs.length > 0 ? (
+                    {section.paragraphs.length > 0 && isInformationGaps ? (
+                      <InformationGapsList paragraphs={section.paragraphs} />
+                    ) : section.paragraphs.length > 0 ? (
                       section.paragraphs.map((paragraph, index) => (
                         <div key={index}>
                           <p className="text-sm leading-6 text-slate-700">
@@ -2248,109 +2458,44 @@ function DraftRunCard({
       </div>
       <footer className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-5">
         <Link href={detailsHref} className={ACTION_PRIMARY}>
-          <PencilLine size={13} aria-hidden />
-          Review &amp; edit draft
+          <ListChecks size={13} aria-hidden />
+          {detailsActionLabel}
         </Link>
       </footer>
     </div>
   );
 }
 
-// "Here's what I captured" overview: the key details already on the proposal
-// plus the explicit next step (generate the draft). It replaces the old
-// no-questions notice and disappears once a draft run exists.
-// `showActions` is false when the completion progress card is on screen — that
-// card then owns the single primary action for the whole thread.
-function OverviewCard({
+// If extraction finishes without producing guided questions, keep the next
+// actions available without repeating proposal details in the conversation.
+function ExtractionNextStepCard({
   proposalId,
-  eventName,
-  rows,
-  detailCount,
-  detailSource,
   busy,
   error,
-  showActions,
   hasDraft,
   onGenerateDraft,
   onRunReadiness,
   readinessBusy,
 }: {
   proposalId: string;
-  detailSource: 'sources' | 'answers' | 'both';
-  eventName: string | null;
-  rows: OverviewRow[];
-  detailCount: number;
   busy: boolean;
   error: string | null;
-  showActions: boolean;
   hasDraft: boolean;
   onGenerateDraft: () => void;
   onRunReadiness?: () => void;
   readinessBusy: boolean;
 }) {
-  const title =
-    eventName && eventName !== PLACEHOLDER_EVENT_NAME
-      ? eventName
-      : 'your proposal';
   return (
     <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-semibold text-slate-900">
-          Here&rsquo;s what I have for {title}
-        </p>
-        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
-          Confirmed in proposal
-        </span>
-      </div>
-      {rows.length > 0 && (
-        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
-          {rows.map((row) => (
-            <div
-              key={row.label}
-              className="flex flex-col items-start gap-0.5 border-b border-slate-100 pb-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3"
-            >
-              <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                {row.label}
-              </dt>
-              <dd
-                className="min-w-0 max-w-full whitespace-normal break-words text-left text-sm text-slate-800 sm:truncate sm:text-right"
-                title={row.value}
-              >
-                {row.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {detailCount > 0 && (
-        <p className="mt-2.5 text-xs text-slate-500">
-          {detailCount} detail{detailCount === 1 ? '' : 's'} captured
-          from{' '}
-          {detailSource === 'sources'
-            ? 'your sources'
-            : detailSource === 'answers'
-              ? 'your answers'
-              : 'your sources and answers'}
-          .
-        </p>
-      )}
-      {showActions && (
-        <div className="mt-3 border-t border-slate-100 pt-3">
-          <CardActionRow
-            proposalId={proposalId}
-            hasDraft={hasDraft}
-            draftBusy={busy}
-            onGenerateDraft={onGenerateDraft}
-            onRunReadiness={onRunReadiness}
-            readinessBusy={readinessBusy}
-          />
-          <p className="mt-2 text-xs text-slate-500">
-            Or add more details — upload another file, paste notes, or
-            ask me anything.
-          </p>
-        </div>
-      )}
-      {showActions && error && (
+      <CardActionRow
+        proposalId={proposalId}
+        hasDraft={hasDraft}
+        draftBusy={busy}
+        onGenerateDraft={onGenerateDraft}
+        onRunReadiness={onRunReadiness}
+        readinessBusy={readinessBusy}
+      />
+      {error && (
         <p
           role="alert"
           className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800"
@@ -2622,12 +2767,17 @@ function wrapAssistantTurn(
 export default function AssistantWorkspacePage({
   initialProposalId,
   autoTask,
+  initialStarter,
   voiceInputEnabled = true,
 }: {
   initialProposalId?: string;
   /** Task to start on arrival, e.g. from the workflow shell's
       "Create my first draft" deep link (?task=generate_draft). */
   autoTask?: 'generate_draft';
+  /** Starter chosen before arriving, from a first-run dashboard or empty
+      proposals list link (?start=example|scratch). Fires once, only while
+      the workspace is still empty, then the param is stripped. */
+  initialStarter?: 'example' | 'scratch';
   /** Allows a parent surface to hide voice input when needed. */
   voiceInputEnabled?: boolean;
 }) {
@@ -2646,8 +2796,8 @@ export default function AssistantWorkspacePage({
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  // Guided clarification flow: progress across this session plus the latest
-  // confirmed value ("Rooms: 6") shown after a successful answer.
+  // Guided clarification flow: session progress plus a small notice when a
+  // question is skipped. Submitted answers live in the proposal-details list.
   const [answeredCount, setAnsweredCount] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
   const [lastConfirmed, setLastConfirmed] = useState<{
@@ -2658,6 +2808,15 @@ export default function AssistantWorkspacePage({
     current: number;
     total: number;
   } | null>(null);
+  const [reviewEditingQuestionId, setReviewEditingQuestionId] = useState<
+    string | null
+  >(null);
+  const [reviewEditedQuestionIds, setReviewEditedQuestionIds] = useState<
+    string[]
+  >([]);
+  const [suggestedReviewError, setSuggestedReviewError] = useState<
+    string | null
+  >(null);
   // ChatGPT-style staged attachments: picking a file only adds a chip to the
   // composer; the actual upload happens when the message is sent.
   const [staged, setStaged] = useState<File[]>([]);
@@ -3071,7 +3230,31 @@ export default function AssistantWorkspacePage({
   );
   // Answered and skipped both count as done for the rail checklist.
   const resolvedQuestionCount = activeQuestions.length - openQuestions.length;
-  const currentQuestion = openQuestions[0] ?? null;
+  const hasReviewAnswer = (question: ConversationQuestion) => {
+    const value = question.reviewAnswer ?? question.suggestedAnswer;
+    return typeof value === 'string' && value.trim().length > 0;
+  };
+  // Extracted defaults and completed guided answers share one persistent
+  // review. If the planner started typing before a late suggestion arrived,
+  // keep that live control mounted so their work is never replaced.
+  const suggestedReviewQuestions = activeQuestions.filter(
+    (question) =>
+      (question.status === 'open' || question.status === 'answered') &&
+      hasReviewAnswer(question) &&
+      (!reviewEditedQuestionIds.includes(question.id) ||
+        reviewEditingQuestionId === question.id),
+  );
+  const editingSuggestedQuestion = reviewEditingQuestionId
+    ? (activeQuestions.find(
+        (question) => question.id === reviewEditingQuestionId,
+      ) ?? null)
+    : null;
+  const currentQuestion =
+    editingSuggestedQuestion ??
+    openQuestions.find(
+      (question) => !suggestedReviewQuestions.some((item) => item.id === question.id),
+    ) ??
+    null;
   const totalIntakeCount = intakeProgress?.total ?? activeQuestions.length;
   const completedIntakeCount = intakeProgress?.completed ?? resolvedQuestionCount;
   const coreChecklist = firstContributionReceived && intakeProgress
@@ -3180,10 +3363,8 @@ export default function AssistantWorkspacePage({
       m.runType === 'proposal_context' && m.status === 'complete',
   ).length;
 
-  // Captured-details overview: shown once an extraction has completed, no open
-  // clarification question is waiting (the guided flow always goes first).
-  // Extracted candidates remain read-only until the user reviews them in the
-  // editor; this workspace never saves review decisions or applies fields.
+  // When extraction finishes without questions, retain only the next actions;
+  // proposal details already have one editable source of truth elsewhere.
   const hasDraftRun = messages.some(
     (message) =>
       message.runType === 'proposal_draft' &&
@@ -3196,27 +3377,16 @@ export default function AssistantWorkspacePage({
   // A proposal built by conversation alone never has an extraction run, so the
   // hand-off also opens once questions have been answered or the proposal has
   // real content — otherwise that path dead-ends with no way to reach a draft.
-  const answeredQuestions = activeQuestions.filter(
-    (question) => question.status === 'answered',
-  ).length;
   const hasCapturedContent =
     completedContextRuns > 0 ||
-    answeredQuestions > 0 ||
     overviewRows.length > 0;
-  const showOverview =
+  const showExtractionNextStep =
     hasCapturedContent &&
     !loading &&
     !!data &&
     openQuestions.length === 0 &&
     !hasDraftRun;
   const overviewDetailCount = overviewRows.length;
-  // Details reach a proposal by extraction, by answered questions, or both.
-  const overviewDetailSource: 'sources' | 'answers' | 'both' =
-    completedContextRuns > 0 && answeredQuestions > 0
-      ? 'both'
-      : completedContextRuns > 0
-        ? 'sources'
-        : 'answers';
 
   // Keep the rail mounted as soon as a proposal exists. During the first send,
   // `pending` can clear one render before the persisted assistant message is
@@ -3334,7 +3504,7 @@ export default function AssistantWorkspacePage({
     failedNotices.length,
     openQuestions.length,
     lastConfirmed,
-    showOverview,
+    showExtractionNextStep,
     draftInProgress,
     latestDraftActivity?.status,
     latestCompleteDraft?.id,
@@ -3378,6 +3548,12 @@ export default function AssistantWorkspacePage({
     if (!value && staged.length === 0) return;
     setSendError(null);
     setInputClarification(null);
+    if (value.length > PROPOSAL_MESSAGE_MAX_CHARACTERS) {
+      setInputClarification(
+        `Messages can be up to ${PROPOSAL_MESSAGE_MAX_CHARACTERS.toLocaleString()} characters. Shorten this message by ${(value.length - PROPOSAL_MESSAGE_MAX_CHARACTERS).toLocaleString()} characters and try again.`,
+      );
+      return;
+    }
     const id = await ensureProposal();
     if (!id) return;
     const workspaceAction =
@@ -3443,7 +3619,6 @@ export default function AssistantWorkspacePage({
         setText('');
         setBulkAnswerProgress({ current: 0, total: bundledAnswers.length });
         let applied = 0;
-        let latest = bundledAnswers[0];
         for (const item of bundledAnswers) {
           const resolved = await resolveQuestion(item.question.id, {
             status: 'answered',
@@ -3456,20 +3631,12 @@ export default function AssistantWorkspacePage({
             return;
           }
           applied += 1;
-          latest = item;
           setBulkAnswerProgress({ current: applied, total: bundledAnswers.length });
         }
         await refreshConversation();
         setBulkAnswerProgress(null);
         setAnsweredCount((count) => count + applied);
-        setLastConfirmed({
-          label: `${applied} details`,
-          value: `last: ${questionFieldLabel(latest.question)} = ${
-            typeof latest.answer === 'string'
-              ? latest.answer
-              : `${latest.answer.date} at ${latest.answer.time}`
-          }`,
-        });
+        setLastConfirmed(null);
         return;
       }
       const isFillCommand = FIELD_COMMAND.test(value);
@@ -3536,13 +3703,7 @@ export default function AssistantWorkspacePage({
         });
         if (resolved) {
           setAnsweredCount((count) => count + 1);
-          setLastConfirmed({
-            label: questionFieldLabel(currentQuestion),
-            value:
-              typeof answer === 'string'
-                ? answer
-                : `${answer.date} at ${answer.time}`,
-          });
+          setLastConfirmed(null);
         } else {
           if (source === 'voice') {
             continueVoiceAfterClarification(
@@ -3948,21 +4109,98 @@ export default function AssistantWorkspacePage({
   ) => {
     if (!currentQuestion) return;
     const question = currentQuestion;
+    const editingExtractedDetail = reviewEditingQuestionId === question.id;
     const resolved = await resolveQuestion(question.id, {
       status: 'answered',
       answer,
     });
+    if (!resolved && editingExtractedDetail) {
+      setSuggestedReviewError(
+        "I couldn't save this detail. Check the value and try again.",
+      );
+      return;
+    }
     if (resolved) {
-      setAnsweredCount((count) => count + 1);
-      setLastConfirmed({
-        label: questionFieldLabel(question),
-        value:
-          typeof answer === 'string'
-            ? answer
-            : `${answer.date} at ${answer.time}`,
-      });
+      if (editingExtractedDetail) {
+        setReviewEditingQuestionId(null);
+      }
+      setReviewEditedQuestionIds((questionIds) =>
+        questionIds.filter((questionId) => questionId !== question.id),
+      );
+      setSuggestedReviewError(null);
+      setLastConfirmed(null);
+      if (question.status === 'open') {
+        setAnsweredCount((count) => count + 1);
+      }
     }
   };
+
+  const autoAppliedSuggestionIdsRef = useRef(new Set<string>());
+  const unappliedSuggestedDefaults = suggestedReviewQuestions.filter(
+    (question) =>
+      question.status === 'open' &&
+      typeof question.suggestedAnswer === 'string' &&
+      question.suggestedAnswer.trim().length > 0,
+  );
+  const unappliedSuggestedDefaultsKey = unappliedSuggestedDefaults
+    .map((question) => `${question.id}:${question.suggestedAnswer ?? ''}`)
+    .join('|');
+
+  // Extracted values are defaults, not another confirmation step. Persist each
+  // safe, normalized suggestion once, while keeping the answered question in
+  // the review so the planner can revise it later with the same Edit control.
+  useEffect(() => {
+    if (
+      !proposalId ||
+      extractionPending ||
+      extractionFailureBlocksQuestions ||
+      reviewEditingQuestionId ||
+      bulkAnswerProgress ||
+      !unappliedSuggestedDefaultsKey
+    )
+      return;
+    const defaults = unappliedSuggestedDefaults.filter(
+      (question) => !autoAppliedSuggestionIdsRef.current.has(question.id),
+    );
+    if (defaults.length === 0) return;
+    defaults.forEach((question) =>
+      autoAppliedSuggestionIdsRef.current.add(question.id),
+    );
+    void (async () => {
+      setSuggestedReviewError(null);
+      setBulkAnswerProgress({ current: 0, total: defaults.length });
+      let applied = 0;
+      for (const question of defaults) {
+        const answer = question.suggestedAnswer;
+        if (!answer) continue;
+        const resolved = await resolveQuestion(
+          question.id,
+          { status: 'answered', answer, useOnlyIfEmpty: true },
+          { refresh: false },
+        );
+        if (!resolved) {
+          setSuggestedReviewError(
+            `I couldn't save ${questionFieldLabel(question).toLowerCase()}. Edit that detail and try again.`,
+          );
+          break;
+        }
+        applied += 1;
+        setBulkAnswerProgress({ current: applied, total: defaults.length });
+      }
+      await refreshConversation();
+      if (applied > 0) setAnsweredCount((count) => count + applied);
+      setBulkAnswerProgress(null);
+    })();
+    // The stable key represents the exact defaults that still need applying;
+    // callbacks are intentionally omitted to avoid restarting an in-flight batch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    unappliedSuggestedDefaultsKey,
+    proposalId,
+    extractionPending,
+    extractionFailureBlocksQuestions,
+    reviewEditingQuestionId,
+  ]);
 
   const skipCurrentQuestion = async () => {
     if (!currentQuestion) return;
@@ -4014,6 +4252,13 @@ export default function AssistantWorkspacePage({
     // The automated extraction request is workflow bookkeeping, not another
     // thing the planner said. Its status/result is shown on the assistant side.
     if (message.role === 'user' && message.intent === 'extract_requirements') return null;
+    if (
+      message.kind === 'question_answer' &&
+      suggestedReviewQuestions.some(
+        (question) => question.answeredMessageId === message.id,
+      )
+    )
+      return null;
     if (message.runType === 'proposal_context' && message.status === 'pending') return null;
     if (message.runType === 'proposal_context' && message.status === 'failed' &&
       (message.id !== latestContextRun?.id || sourceExtractionInProgress)) return null;
@@ -4245,7 +4490,150 @@ export default function AssistantWorkspacePage({
     ? sendBusy
       ? 'Wait for the current send to finish.'
       : `You can attach up to ${MAX_STAGED_FILES} files per message.`
-    : undefined;
+    : 'Attach a PDF, DOCX, XLSX, CSV, or TXT file.';
+
+  // First-run starters. A brand-new planner faces an empty composer with no
+  // idea what to type, so the empty state offers three concrete ways in. None
+  // of them sends anything: they stage a file or prefill the composer and hand
+  // control back, so a proposal is still created only by the planner's Send.
+  const [exampleBriefBusy, setExampleBriefBusy] = useState(false);
+  const [starterError, setStarterError] = useState<string | null>(null);
+  // Prefilled text lands on the next render, so focusing and placing the
+  // caret at the end has to wait for that render rather than run inline.
+  const focusComposerAfterPrefillRef = useRef(false);
+  useEffect(() => {
+    if (!focusComposerAfterPrefillRef.current) return;
+    focusComposerAfterPrefillRef.current = false;
+    const composerEl = composerRef.current;
+    if (!composerEl) return;
+    composerEl.focus();
+    const end = composerEl.value.length;
+    composerEl.setSelectionRange(end, end);
+  }, [text]);
+
+  const startFromExampleBrief = async () => {
+    if (exampleBriefBusy || attachDisabled) return;
+    setStarterError(null);
+    setExampleBriefBusy(true);
+    try {
+      const response = await fetch(EXAMPLE_BRIEF_PATH);
+      if (!response.ok) throw new Error(`Example brief returned ${response.status}`);
+      const blob = await response.blob();
+      const alreadyStaged = staged.some(
+        (file) => file.name === EXAMPLE_BRIEF_FILE_NAME,
+      );
+      if (!alreadyStaged) {
+        stageFile(
+          new File([blob], EXAMPLE_BRIEF_FILE_NAME, { type: EXAMPLE_BRIEF_MIME }),
+        );
+      }
+      focusComposerAfterPrefillRef.current = true;
+      setText(EXAMPLE_BRIEF_MESSAGE);
+    } catch {
+      setStarterError(
+        'The example brief could not be loaded. Try again, or attach a file of your own.',
+      );
+    } finally {
+      setExampleBriefBusy(false);
+    }
+  };
+
+  const startFromUpload = () => {
+    if (attachDisabled) return;
+    setStarterError(null);
+    fileInputRef.current?.click();
+  };
+
+  const startFromScratch = () => {
+    setStarterError(null);
+    focusComposerAfterPrefillRef.current = true;
+    // Never overwrite something the planner has already typed.
+    setText((current) => (current.trim() ? current : SCRATCH_EXAMPLE_TEXT));
+  };
+
+  // A starter chosen on the dashboard or proposals list arrives as
+  // ?start=. Same one-shot pattern as ?task=generate_draft: fire once, strip
+  // the param so refresh or back cannot repeat it, and only while the
+  // workspace is still empty so an existing thread is never touched.
+  const initialStarterFired = useRef(false);
+  useEffect(() => {
+    if (!initialStarter || initialStarterFired.current || started) return;
+    initialStarterFired.current = true;
+    window.history.replaceState(null, '', window.location.pathname);
+    if (initialStarter === 'example') void startFromExampleBrief();
+    else startFromScratch();
+    // The handlers are recreated per render; the fired ref makes this one-shot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialStarter, started]);
+
+  const starterButtonClass =
+    'inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50/60 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white';
+
+  // Drag-and-drop onto the whole workspace card. The paperclip is an
+  // unlabelled icon, and uploading a brief is the product's strongest path,
+  // so the card itself accepts files. Dropping only stages chips, exactly
+  // like the picker; nothing uploads until Send. The overlay exists only
+  // while a file is being dragged, so the resting screen gains no chrome.
+  const [dragActive, setDragActive] = useState(false);
+  // dragenter/dragleave fire for every child crossed, so a depth counter is
+  // the only way to know when the pointer has really left the card.
+  const dragDepthRef = useRef(0);
+
+  const dragCarriesFiles = (event: ReactDragEvent<HTMLElement>) =>
+    Array.from(event.dataTransfer?.types ?? []).includes('Files');
+
+  const onWorkspaceDragEnter = (event: ReactDragEvent<HTMLElement>) => {
+    if (!dragCarriesFiles(event)) return;
+    event.preventDefault();
+    dragDepthRef.current += 1;
+    setDragActive(true);
+  };
+
+  const onWorkspaceDragOver = (event: ReactDragEvent<HTMLElement>) => {
+    if (!dragCarriesFiles(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = attachDisabled ? 'none' : 'copy';
+  };
+
+  const onWorkspaceDragLeave = (event: ReactDragEvent<HTMLElement>) => {
+    if (!dragCarriesFiles(event)) return;
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setDragActive(false);
+  };
+
+  const onWorkspaceDrop = (event: ReactDragEvent<HTMLElement>) => {
+    if (!dragCarriesFiles(event)) return;
+    event.preventDefault();
+    dragDepthRef.current = 0;
+    setDragActive(false);
+    if (attachDisabled) {
+      setInputClarification(attachDisabledTitle);
+      return;
+    }
+    const dropped = Array.from(event.dataTransfer.files ?? []);
+    if (dropped.length === 0) return;
+    const accepted = dropped.filter(isAcceptedAttachment);
+    const rejected = dropped.length - accepted.length;
+    const room = MAX_STAGED_FILES - staged.length;
+    const overflow = Math.max(0, accepted.length - room);
+    accepted.slice(0, room).forEach(stageFile);
+    if (rejected > 0 || overflow > 0) {
+      setInputClarification(
+        [
+          rejected > 0
+            ? `${rejected === 1 ? 'One file was' : `${rejected} files were`} skipped: only ${ACCEPTED_ATTACHMENT_LABEL} files can be attached.`
+            : null,
+          overflow > 0
+            ? `You can attach up to ${MAX_STAGED_FILES} files per message, so ${overflow === 1 ? 'one file was' : `${overflow} files were`} left out.`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+    } else {
+      setInputClarification(null);
+    }
+  };
 
   const composer = (
     <div className="w-full">
@@ -4370,7 +4758,7 @@ export default function AssistantWorkspacePage({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.xlsx,.csv,.txt"
+            accept={ACCEPTED_ATTACHMENT_EXTENSIONS.join(',')}
             className="hidden"
             aria-label="Attach a file"
             onChange={(event) => {
@@ -4407,15 +4795,27 @@ export default function AssistantWorkspacePage({
             onChange={(event) => setText(event.target.value)}
             onKeyDown={onComposerKeyDown}
             rows={1}
-            placeholder="Describe your event or ask for help…"
+            maxLength={PROPOSAL_MESSAGE_MAX_CHARACTERS}
+            placeholder={
+              started
+                ? 'Message the proposal assistant…'
+                : 'Example: Sales kickoff, Dallas, 500 guests…'
+            }
             aria-label="Message the proposal assistant"
+            aria-describedby="proposal-message-character-limit"
             className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-slate-900 outline-none placeholder:text-slate-400 max-sm:!h-9 max-sm:!max-h-9 max-sm:overflow-x-auto max-sm:overflow-y-hidden max-sm:whitespace-nowrap max-sm:text-[11px] max-sm:leading-5"
           />
           <button
             type="button"
             aria-label="Send message"
             aria-busy={chatBusy || sendBusy || sendLocked}
-            title={chatBusy || sendBusy || sendLocked ? 'Sending message' : 'Send message'}
+            title={
+              chatBusy || sendBusy || sendLocked
+                ? 'Sending message'
+                : started
+                  ? 'Send message'
+                  : 'Send your details to start building your RFP'
+            }
             onClick={() => void handleSend()}
             disabled={
               (!text.trim() && staged.length === 0) ||
@@ -4423,7 +4823,7 @@ export default function AssistantWorkspacePage({
               sendBusy ||
               sendLocked
             }
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/30 p-0 text-white shadow-[0_5px_14px_-5px_rgba(8,145,150,0.85)] transition-[transform,box-shadow,filter,opacity] duration-150 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_8px_18px_-6px_rgba(8,145,150,0.9)] active:translate-y-0 active:scale-90 active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:translate-y-0 disabled:scale-100 disabled:opacity-55 disabled:shadow-none"
+            className={`grid h-10 shrink-0 place-items-center rounded-full border border-white/30 p-0 text-white shadow-[0_5px_14px_-5px_rgba(8,145,150,0.85)] transition-[transform,box-shadow,filter,opacity] duration-150 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_8px_18px_-6px_rgba(8,145,150,0.9)] active:translate-y-0 active:scale-95 active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:translate-y-0 disabled:scale-100 disabled:opacity-55 disabled:shadow-none ${started ? 'w-10' : 'grid-flow-col gap-1.5 px-4'}`}
             style={{
               background: `linear-gradient(135deg, ${ACCENT} 0%, ${DEEP} 100%)`,
             }}
@@ -4431,10 +4831,23 @@ export default function AssistantWorkspacePage({
             {chatBusy || sendBusy || sendLocked ? (
               <Loader2 size={17} className="animate-spin" aria-hidden />
             ) : (
-              <ArrowUp size={17} strokeWidth={2.4} aria-hidden />
+              <>
+                {!started && (
+                  <span className="text-xs font-bold">Send</span>
+                )}
+                <ArrowUp size={17} strokeWidth={2.4} aria-hidden />
+              </>
             )}
           </button>
         </div>
+        <p
+          id="proposal-message-character-limit"
+          className={text.length >= MESSAGE_LIMIT_WARNING_AT
+            ? 'mt-1 text-right text-[11px] text-slate-500'
+            : 'sr-only'}
+        >
+          {text.length.toLocaleString()} of {PROPOSAL_MESSAGE_MAX_CHARACTERS.toLocaleString()} characters
+        </p>
       </div>
       )}
       {voiceError && (
@@ -4537,13 +4950,35 @@ export default function AssistantWorkspacePage({
             composer stays put, instead of the whole page growing. */}
         <section
           aria-label="Proposal assistant workspace"
-          className="order-2 flex h-full min-h-0 max-h-none flex-1 flex-col overflow-hidden border-0 bg-white p-0 shadow-none md:h-[calc(100svh-18rem)] md:min-h-[30rem] md:max-h-[calc(100svh-18rem)] md:rounded-3xl md:border md:border-slate-200 md:p-6 md:shadow-sm lg:h-[calc(100svh-10rem)] lg:min-h-[36rem] lg:max-h-[calc(100svh-10rem)] lg:p-7 xl:order-1 xl:h-full xl:min-h-0 xl:max-h-none"
+          data-drag-active={dragActive ? 'true' : undefined}
+          onDragEnter={onWorkspaceDragEnter}
+          onDragOver={onWorkspaceDragOver}
+          onDragLeave={onWorkspaceDragLeave}
+          onDrop={onWorkspaceDrop}
+          className="relative order-2 flex h-full min-h-0 max-h-none flex-1 flex-col overflow-hidden border-0 bg-white p-0 shadow-none md:h-[calc(100svh-18rem)] md:min-h-[30rem] md:max-h-[calc(100svh-18rem)] md:rounded-3xl md:border md:border-slate-200 md:p-6 md:shadow-sm lg:h-[calc(100svh-10rem)] lg:min-h-[36rem] lg:max-h-[calc(100svh-10rem)] lg:p-7 xl:order-1 xl:h-full xl:min-h-0 xl:max-h-none"
         >
+          {dragActive && (
+            <div
+              role="status"
+              data-testid="attachment-dropzone"
+              className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-[#00c2c9] bg-white/90 text-center md:rounded-3xl"
+            >
+              <Upload size={26} aria-hidden className="text-[#00aeb5]" />
+              <p className="text-base font-semibold text-slate-900">
+                {attachDisabled ? attachDisabledTitle : 'Drop to attach'}
+              </p>
+              {!attachDisabled && (
+                <p className="text-xs text-slate-500">
+                  {ACCEPTED_ATTACHMENT_LABEL}, up to {MAX_STAGED_FILES} files per message
+                </p>
+              )}
+            </div>
+          )}
           {!started ? (
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 py-6 text-center md:justify-center md:gap-6 md:p-0">
-                <AssistantOrb />
-                <div>
+              <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 py-6 text-center md:justify-center md:p-0">
+                <AssistantOrb className="h-24 w-24 sm:h-28 sm:w-28" />
+                <div className="max-w-xl">
                   <h1 className="text-balance text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
                     {/* The profile resolves after mount, so server and first
                         client render use the same timezone-neutral greeting. */}
@@ -4555,62 +4990,110 @@ export default function AssistantWorkspacePage({
                   >
                     Let’s build your event RFP
                   </p>
-                  {/* First-time planners have no user guide, so the landing
-                      copy says what to type, that a document works too, and
-                      what happens next (client request R18 / 6.1; final
-                      wording to come from the client). */}
-                  <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-slate-600">
-                    Type a few lines about your event below — name, dates,
-                    venue, guest count, and what you need for AV and
-                    production — or attach a brief or past RFP and I&apos;ll
-                    read it.
-                  </p>
-                  <p className="mx-auto mt-1.5 max-w-lg text-sm leading-6 text-slate-500">
-                    I&apos;ll ask a few short questions to fill any gaps and
-                    build your RFP as we go.
-                  </p>
-                  <ol
-                    aria-label="How it works"
-                    className="mx-auto mt-6 flex max-w-2xl flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-center sm:gap-0"
+                  {/* First-run definition: the one sentence that says what
+                      the product does, what an RFP is, and that nothing goes
+                      out without the planner. The old "Tell me what you're
+                      planning" and "Include if you know" lines were dropped:
+                      the starters and the composer placeholder say it. */}
+                  <p
+                    data-testid="assistant-product-definition"
+                    className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600"
                   >
-                    {[
-                      'Tell me about your event',
-                      'Answer a few questions',
-                      'Review and share your RFP',
-                    ].map((step, index, steps) => (
-                      <li
-                        key={step}
-                        className="flex items-center sm:contents"
-                      >
-                        <div className="group flex flex-1 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-3.5 py-2.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-16px_rgba(0,138,210,0.35)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-[0_1px_2px_rgba(15,23,42,0.05),0_12px_28px_-14px_rgba(0,138,210,0.45)] sm:flex-none">
-                          <span
-                            aria-hidden
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2fc6f5] to-[#087f69] text-[11px] font-bold text-white shadow-inner ring-4 ring-cyan-50"
-                          >
-                            {index + 1}
-                          </span>
-                          <span className="flex flex-col leading-tight">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                              {`Step ${index + 1}`}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-800">
-                              {step}
-                            </span>
-                          </span>
-                        </div>
-                        {index < steps.length - 1 && (
-                          <span
-                            aria-hidden
-                            className="mx-1 hidden h-px w-5 shrink-0 bg-gradient-to-r from-cyan-200 to-emerald-200 sm:block"
-                          />
-                        )}
-                      </li>
-                    ))}
-                  </ol>
+                    RFPilot turns your event details into an AV production RFP,
+                    the request you send to vendors so they can quote. Nothing
+                    goes out until you pick vendors.
+                  </p>
+                </div>
+                <div
+                  role="group"
+                  aria-label="Ways to start"
+                  data-testid="assistant-starters"
+                  className="w-full max-w-2xl"
+                >
+                  {/* One row of compact chips. The explanatory line each chip
+                      used to carry repeated step 1, so it moved into the
+                      chip's tooltip. */}
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void startFromExampleBrief()}
+                      disabled={exampleBriefBusy || attachDisabled}
+                      aria-busy={exampleBriefBusy}
+                      title={
+                        attachDisabled
+                          ? attachDisabledTitle
+                          : 'A fictional summit brief, so you can watch RFPilot read a document'
+                      }
+                      className={starterButtonClass}
+                    >
+                      {exampleBriefBusy ? (
+                        <Loader2
+                          size={15}
+                          aria-hidden
+                          className="shrink-0 animate-spin text-[#00aeb5]"
+                        />
+                      ) : (
+                        <Sparkles
+                          size={15}
+                          aria-hidden
+                          className="shrink-0 text-[#00aeb5]"
+                        />
+                      )}
+                      Try an example brief
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startFromUpload}
+                      disabled={attachDisabled}
+                      title={
+                        attachDisabled
+                          ? attachDisabledTitle
+                          : 'PDF, DOCX, XLSX, CSV or TXT'
+                      }
+                      className={starterButtonClass}
+                    >
+                      <Upload
+                        size={15}
+                        aria-hidden
+                        className="shrink-0 text-[#00aeb5]"
+                      />
+                      Upload my brief or old RFP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startFromScratch}
+                      title="Drops a sample description into the box for you to edit"
+                      className={starterButtonClass}
+                    >
+                      <PencilLine
+                        size={15}
+                        aria-hidden
+                        className="shrink-0 text-[#00aeb5]"
+                      />
+                      Describe it from scratch
+                    </button>
+                  </div>
+                  {starterError && (
+                    <p
+                      role="alert"
+                      className="mx-auto mt-2 max-w-lg rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-800"
+                    >
+                      {starterError}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="w-full shrink-0 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 md:mx-auto md:max-w-xl md:bg-transparent md:p-0">
+              <div className="w-full shrink-0 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-4 md:mx-auto md:max-w-xl md:bg-transparent md:px-0 md:pb-0 md:pt-4">
                 {composer}
+                {/* The one visible line that says what the paperclip and
+                    the drop target accept. Empty state only; once the
+                    thread starts, the chips and thread carry the context. */}
+                <p
+                  data-testid="attachment-caption"
+                  className="mt-2 text-center text-[11px] leading-4 text-slate-500"
+                >
+                  Drop a file here or use the paperclip: {ACCEPTED_ATTACHMENT_LABEL}, up to {MAX_STAGED_FILES} per message.
+                </p>
               </div>
             </div>
           ) : (
@@ -4664,17 +5147,12 @@ export default function AssistantWorkspacePage({
                       true,
                     )
                   )}
-                  {showOverview && proposalId && (
+                  {showExtractionNextStep && !questionsComplete && proposalId && (
                     <li className="flex justify-start">
-                      <OverviewCard
+                      <ExtractionNextStepCard
                         proposalId={proposalId}
-                        eventName={eventName}
-                        rows={overviewRows}
-                        detailCount={overviewDetailCount}
-                        detailSource={overviewDetailSource}
                         busy={draftBusy || sending || draftInProgress}
                         error={draftError}
-                        showActions={!questionsComplete}
                         hasDraft={hasDraftRun}
                         onGenerateDraft={() =>
                           void runDraftFromCard()
@@ -4830,7 +5308,7 @@ export default function AssistantWorkspacePage({
                       />
                     </li>
                   )}
-                  {bulkAnswerProgress && (
+                  {bulkAnswerProgress && suggestedReviewQuestions.length === 0 && (
                     <li className="flex justify-start">
                       <p
                         role="status"
@@ -4841,6 +5319,80 @@ export default function AssistantWorkspacePage({
                       </p>
                     </li>
                   )}
+                  {suggestedReviewQuestions.length > 0 &&
+                    !chatBusy &&
+                    !loading &&
+                    !extractionPending &&
+                    !extractionFailureBlocksQuestions && (
+                      <li data-testid="suggested-answers-row" className="flex scroll-mt-4 items-start gap-2.5 py-1 sm:gap-3">
+                        <span aria-hidden="true" className="mt-0.5 h-8 w-8 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <SuggestedAnswersReviewCard
+                            questions={suggestedReviewQuestions}
+                            editingQuestionId={reviewEditingQuestionId}
+                            busy={!!bulkAnswerProgress || questionBusyId !== null}
+                            error={suggestedReviewError}
+                            editor={editingSuggestedQuestion ? (
+                              <GuidedQuestionCard
+                                key={editingSuggestedQuestion.id}
+                                question={editingSuggestedQuestion}
+                                current={questionProgressCurrent}
+                                clarification={extraQuestions.some(
+                                  (question) =>
+                                    question.id === editingSuggestedQuestion.id,
+                                )}
+                                reviewMode
+                                busy={questionBusyId === editingSuggestedQuestion.id}
+                                error={suggestedReviewError || questionError}
+                                minimumDate={minimumDateForQuestion(
+                                  editingSuggestedQuestion,
+                                  proposal,
+                                )}
+                                maximumDate={maximumDateForQuestion(
+                                  editingSuggestedQuestion,
+                                  proposal,
+                                )}
+                                initialDate={
+                                  editingSuggestedQuestion.answerType === 'date_time'
+                                    ? currentLoadInDate
+                                    : undefined
+                                }
+                                initialTime={
+                                  editingSuggestedQuestion.answerType === 'date_time'
+                                    ? currentLoadInTime
+                                    : undefined
+                                }
+                                onEditStarted={() => {
+                                  setReviewEditedQuestionIds((questionIds) =>
+                                    questionIds.includes(editingSuggestedQuestion.id)
+                                      ? questionIds
+                                      : [...questionIds, editingSuggestedQuestion.id],
+                                  );
+                                }}
+                                onCancelEdit={() => {
+                                  setSuggestedReviewError(null);
+                                  setReviewEditingQuestionId(null);
+                                  setReviewEditedQuestionIds((questionIds) =>
+                                    questionIds.filter(
+                                      (questionId) =>
+                                        questionId !== editingSuggestedQuestion.id,
+                                    ),
+                                  );
+                                }}
+                                onAnswer={(answer) =>
+                                  void answerCurrentQuestion(answer)
+                                }
+                                onSkip={() => void skipCurrentQuestion()}
+                              />
+                            ) : null}
+                            onEdit={(questionId) => {
+                              setSuggestedReviewError(null);
+                              setReviewEditingQuestionId(questionId);
+                            }}
+                          />
+                        </div>
+                      </li>
+                    )}
                   {lastConfirmed && (
                     <li className="flex justify-start">
                       <p
@@ -4856,6 +5408,7 @@ export default function AssistantWorkspacePage({
                       ready, but the next question must not jump ahead of that
                       reply in the thread. */}
                   {currentQuestion &&
+                    !editingSuggestedQuestion &&
                     !chatBusy &&
                     !loading &&
                     !bulkAnswerProgress &&
@@ -4889,6 +5442,13 @@ export default function AssistantWorkspacePage({
                                 ? currentLoadInTime
                                 : undefined
                             }
+                            onEditStarted={() => {
+                              setReviewEditedQuestionIds((questionIds) =>
+                                questionIds.includes(currentQuestion.id)
+                                  ? questionIds
+                                  : [...questionIds, currentQuestion.id],
+                              );
+                            }}
                             onAnswer={(answer) =>
                               void answerCurrentQuestion(answer)
                             }
@@ -5126,7 +5686,9 @@ export default function AssistantWorkspacePage({
                         ? 'Key questions complete. Let’s resolve the additional clarifications.'
                         : 'All key questions completed.'
                       : completedIntakeCount === 0
-                        ? 'We’ll work through these together, one question at a time.'
+                        ? suggestedReviewQuestions.length > 0
+                          ? 'Review what I found, then answer only the missing details.'
+                          : 'We’ll work through these together, one question at a time.'
                         : `${remainingIntakeCount} to go. Continue in the conversation.`}
                   </p>
                   {questionGroups.map(group => (

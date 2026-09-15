@@ -1,4 +1,5 @@
 import {
+  CircleHelp,
   House,
   Mail,
   MessageSquareText,
@@ -37,5 +38,13 @@ export const navigationConfig: NavItem[] = [
     title: "Vendor Responses",
     href: "/vendor-responses",
     icon: <MessageSquareText size={22} />,
+  },
+  // Always-on help. The AI Assistant is gated by an organization allowlist,
+  // so until now a production user had no help entry at all.
+  {
+    id: "help",
+    title: "Help",
+    href: "/help",
+    icon: <CircleHelp size={22} />,
   },
 ];

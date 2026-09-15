@@ -7,6 +7,8 @@ import ProposalResponseCards from "./ProposalResponseCards";
 // is covered by its own suite.
 jest.mock("@/app/actions/vendorResponse", () => ({
   createManualVendorResponseAction: jest.fn(),
+  deleteSelectedVendorResponsesAction: jest.fn(),
+  deleteVendorResponseAction: jest.fn(),
 }));
 
 jest.mock("next/navigation", () => ({
@@ -84,6 +86,10 @@ it("renders compact response cards with auditable commercial totals, attachments
     "href",
     "/vendor-responses/response-1",
   );
+  expect(
+    within(card).queryByRole("button", { name: "Delete response from Northstar AV" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Select responses" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Back to responses" })).toHaveAttribute(
     "href",
     "/vendor-responses",

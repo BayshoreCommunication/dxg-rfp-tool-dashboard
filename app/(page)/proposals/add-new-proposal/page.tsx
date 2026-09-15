@@ -13,9 +13,13 @@ const conversationsEnabled = process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED === "
 const Page = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ proposalId?: string }>;
+  searchParams: Promise<{ proposalId?: string; start?: string }>;
 }) => {
-  const { proposalId } = await searchParams;
+  const { proposalId, start } = await searchParams;
+  // A first-run dashboard or empty proposals list can arrive with the
+  // starter already chosen; anything else is ignored.
+  const initialStarter =
+    start === "example" || start === "scratch" ? start : undefined;
 
   // Flag on: chat-first AI workspace with lazy proposal creation.
   // Flag off: the existing wizard-based create flow, unchanged.
@@ -24,7 +28,7 @@ const Page = async ({
     // exists it has one canonical assistant URL, so older links carrying
     // ?proposalId= are sent there instead of rendering a second copy.
     if (proposalId) redirect(`/proposals/${proposalId}/assistant`);
-    return <AssistantWorkspacePage />;
+    return <AssistantWorkspacePage initialStarter={initialStarter} />;
   }
 
   return (
