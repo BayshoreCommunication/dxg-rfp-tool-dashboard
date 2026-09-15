@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import VendorFactsSection from "./VendorFactsSection";
+import StructuredResponseDetail from "./StructuredResponseDetail";
 import { formatAppDateTime } from "@/lib/dateFormat";
 
 const reasonLabels: Record<VendorSubmissionVersion["reason"], string> = {
@@ -62,6 +63,9 @@ export default function VendorResponseDetailWorkspace({
   const vendorName = selectedVersion?.vendorName ?? detail.response.vendorName;
   const proposalResponsesHref = `/vendor-responses/proposals/${encodeURIComponent(detail.response.proposalId)}`;
   const singleVersion = detail.versions.length === 1;
+  const parentVersion = selectedVersion?.parentVersionId
+    ? detail.versions.find((version) => version.versionId === selectedVersion.parentVersionId)
+    : undefined;
 
   return (
     <section
@@ -153,6 +157,9 @@ export default function VendorResponseDetailWorkspace({
                       <span className="mt-1 block text-xs font-semibold text-[#0076b4]">
                         {reasonLabels[version.reason]}
                       </span>
+                      <span className="mt-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        {version.format === "structured_v1" ? "Structured" : "Legacy documents"}
+                      </span>
                       <span className="mt-1 block text-[10px] text-slate-500">
                         {formatDate(version.receivedAt)}
                       </span>
@@ -219,6 +226,16 @@ export default function VendorResponseDetailWorkspace({
                 />
               </dl>
 
+              {selectedVersion.format === "structured_v1"
+                && selectedVersion.structuredResponse
+                && selectedVersion.questionnaire
+                && selectedVersion.calculationSnapshot ? (
+                <StructuredResponseDetail
+                  responseId={detail.response._id}
+                  version={selectedVersion}
+                  parentVersion={parentVersion}
+                />
+              ) : <>
               <section
                 className="mt-5 rounded-2xl border border-slate-200 p-5"
                 aria-labelledby="message-heading"
@@ -239,6 +256,7 @@ export default function VendorResponseDetailWorkspace({
                 documents={selectedVersion.documents}
                 versionLabel={singleVersion ? "this response" : `Version ${selectedVersion.versionNumber}`}
               />
+              </>}
 
               <section className="mt-6" aria-labelledby="intelligence-heading">
                 <div className="mb-3">
@@ -246,10 +264,12 @@ export default function VendorResponseDetailWorkspace({
                     id="intelligence-heading"
                     className="text-base font-extrabold text-slate-900"
                   >
-                    Analysis
+                    {selectedVersion.format === "structured_v1" ? "Document analysis" : "Analysis"}
                   </h3>
                   <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
-                    RFPilot read {singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which requirements the vendor answered and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.
+                    {selectedVersion.format === "structured_v1"
+                      ? "Vendor-entered fields and frozen server calculations above are authoritative. Document analysis can enrich or verify those answers, but it never replaces them. Every result is labeled by source."
+                      : `RFPilot read ${singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which requirements the vendor answered and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.`}
                   </p>
                 </div>
                 {detail.submission && (

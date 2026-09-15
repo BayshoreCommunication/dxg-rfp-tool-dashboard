@@ -3751,10 +3751,20 @@ describe("AssistantWorkspacePage", () => {
             key: "information_gaps",
             heading: "Information Gaps",
             ordinal: 6,
-            paragraphs: [{
-              text: "Missing information includes event objectives and audience profile beyond total attendance; detailed show format and content plan; room-by-room set-up and technical needs; load-out/strike timing; internet, rigging, and power specifications; AV/vendor coordination details; procurement question deadline; budget tier; and vendor submission or confidentiality terms.",
-              citations: [],
-            }],
+            paragraphs: [
+              {
+                text: "Missing information includes event objectives and audience profile beyond total attendance; detailed show format and content plan; room-by-room set-up and technical needs; load-out/strike timing; internet, rigging, and power specifications; AV/vendor coordination details; procurement question deadline; budget tier; and vendor submission or confidentiality terms.",
+                citations: [],
+              },
+              {
+                text: "The supplied evidence does not specify room-by-room setups, show times, strike timing, detailed technical specifications, crew counts, in-house AV constraints, procurement submission rules beyond dates, confidentiality or coordination clauses beyond draft status, or a final evaluation matrix.",
+                citations: [],
+              },
+              {
+                text: "Technical requirements remain unspecified: internet bandwidth and redundancy; security staffing; load-out timing.",
+                citations: [],
+              },
+            ],
             decision: null,
             decisionReason: null,
           },
@@ -3774,9 +3784,9 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getByRole("heading", { name: "Proposal draft ready" })).toBeInTheDocument();
     expect(screen.getByLabelText("Proposal draft preview")).toBeInTheDocument();
     expect(screen.getByText("7 sections")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Complete 9 missing details" }))
+    expect(screen.getByRole("link", { name: "Complete 21 missing details" }))
       .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`);
-    expect(screen.getByRole("link", { name: "Complete 9 missing details" })).toHaveClass(
+    expect(screen.getByRole("link", { name: "Complete 21 missing details" })).toHaveClass(
       "w-full",
       "sm:w-auto",
     );
@@ -3835,11 +3845,11 @@ describe("AssistantWorkspacePage", () => {
       "budget tier or question deadline",
     ]);
     expect(gapsSection.querySelectorAll("mark")).toHaveLength(0);
-    expect(within(gapsSection).getByText("9 details still needed")).toBeInTheDocument();
+    expect(within(gapsSection).getByText("21 details still needed")).toBeInTheDocument();
     const gapList = within(gapsSection).getByRole("list", {
       name: "Missing proposal details",
     });
-    expect(within(gapList).getAllByRole("listitem")).toHaveLength(9);
+    expect(within(gapList).getAllByRole("listitem")).toHaveLength(21);
     expect(within(gapList).getByText("Event objectives and audience profile beyond total attendance")).toBeInTheDocument();
     expect(within(gapList).getByText("Detailed show format and content plan")).toBeInTheDocument();
     expect(within(gapList).getByText("Vendor submission or confidentiality terms")).toBeInTheDocument();

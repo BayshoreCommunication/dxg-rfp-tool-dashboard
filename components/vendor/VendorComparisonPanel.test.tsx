@@ -119,7 +119,7 @@ test("excludes an empty response instead of blocking prepared vendors", async ()
 
   const button = await screen.findByRole("button", { name: "Compare 2 vendors" });
   await waitFor(() => expect(button).toBeEnabled());
-  expect(screen.getByText(/1 vendor response was left out because it has no message or attached document/i)).toBeInTheDocument();
+  expect(screen.getByText(/1 vendor response was left out because it has no structured answers, message, or attached document/i)).toBeInTheDocument();
   fireEvent.click(button);
   await waitFor(() => expect(start).toHaveBeenCalledWith("proposal-1", [
     { submissionId: "submission-1", versionId: "version-1" },

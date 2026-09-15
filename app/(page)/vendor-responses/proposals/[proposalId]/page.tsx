@@ -102,7 +102,9 @@ export default async function ProposalVendorResponsesPage({
   const summaryEntries = await Promise.all(
     responses.map(async (response) => {
       const versioned = response.submissionId && response.currentVersionId;
+      const needsDocumentIntelligence = response.responseFormat !== "structured_v1";
       const [extraction, intelligence] = versioned
+        && needsDocumentIntelligence
         ? await Promise.all([
             getEvidenceExtractionsAction(
               proposalId,

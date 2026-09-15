@@ -10,6 +10,9 @@ import {
   MANUAL_RESPONSE_MAX_FILES,
 } from "@/lib/vendorResponses/manualResponse";
 import { revalidatePath } from "next/cache";
+import type { VendorResponseCalculationV1 } from "@/contracts/generated/vendor-response-calculation-v1";
+import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
+import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
 
 export type VendorDocument = {
   name: string;
@@ -19,6 +22,26 @@ export type VendorDocument = {
   sha256?: string | null;
   sizeBytes?: number | null;
   scanStatus?: "clean" | "skipped" | "legacy_unknown";
+  purposeId?: string | null;
+  scopeType?: "proposal" | "room" | "crew_member" | "reference" | null;
+  scopeId?: string | null;
+  versionDisposition?: "added" | "inherited" | "legacy";
+};
+
+export type StructuredResponseSummary = {
+  questionnaire: {
+    questionnaireId: string;
+    questionnaireVersion: number;
+    questionnaireChecksum: string;
+    proposalVersion: number;
+    decimalPrecision: number;
+  };
+  calculation: VendorResponseCalculationV1;
+  roomCoverage: { total: number; responded: number };
+  crewCount: number;
+  alternateCount: number;
+  referenceCount: number;
+  documentCounts: Array<{ purposeId: string; count: number }>;
 };
 
 export type VendorResponseItem = {
@@ -40,6 +63,8 @@ export type VendorResponseItem = {
   versionReason?: string;
   versionReceivedAt?: string;
   manifestChecksum?: string;
+  responseFormat?: "structured_v1" | "legacy_unstructured";
+  structuredSummary?: StructuredResponseSummary | null;
 };
 
 export type VendorResponseProposalSummary = {
@@ -76,12 +101,20 @@ export type VendorSubmissionVersion = {
     | "administrative_correction"
     | "legacy_backfill";
   sourceSystem: "public_portal" | "planner_upload" | "legacy_migration" | "api";
+  format: "structured_v1" | "legacy_unstructured";
   receivedAt: string;
   manifestChecksum: string;
   vendorName: string;
   submittedBy: string;
   email: string;
   message: string;
+  questionnaire: VendorResponseQuestionnaireV1 | null;
+  structuredResponse: VendorResponseV1 | null;
+  calculationSnapshot: VendorResponseCalculationV1 | null;
+  retiredDocuments: Array<{
+    documentId: string;
+    retiredFromVersionId: string;
+  }>;
   documents: Array<
     VendorDocument & { mimeType: string; inheritedFromVersionId: string | null }
   >;
@@ -153,6 +186,57 @@ const parseDocument = (value: unknown): VendorDocument | null => {
     sha256: isString(value.sha256) ? value.sha256 : null,
     sizeBytes: typeof value.sizeBytes === "number" ? value.sizeBytes : null,
     scanStatus,
+    purposeId: isString(value.purposeId) ? value.purposeId : null,
+    scopeType: ["proposal", "room", "crew_member", "reference"].includes(
+      String(value.scopeType),
+    )
+      ? (value.scopeType as NonNullable<VendorDocument["scopeType"]>)
+      : null,
+    scopeId: isString(value.scopeId) ? value.scopeId : null,
+    versionDisposition: ["added", "inherited", "legacy"].includes(
+      String(value.versionDisposition),
+    )
+      ? (value.versionDisposition as NonNullable<VendorDocument["versionDisposition"]>)
+      : "legacy",
+  };
+};
+
+const parseStructuredSummary = (value: unknown): StructuredResponseSummary | null => {
+  if (!isRecord(value) || !isRecord(value.questionnaire) || !isRecord(value.calculation)) return null;
+  const questionnaire = value.questionnaire;
+  const calculation = value.calculation;
+  const roomCoverage = isRecord(value.roomCoverage) ? value.roomCoverage : null;
+  if (
+    !isString(questionnaire.questionnaireId)
+    || !Number.isInteger(questionnaire.questionnaireVersion)
+    || !isString(questionnaire.questionnaireChecksum)
+    || !Number.isInteger(questionnaire.proposalVersion)
+    || calculation.schemaVersion !== "vendor-response-calculation.v1"
+    || !roomCoverage
+    || !Number.isInteger(roomCoverage.total)
+    || !Number.isInteger(roomCoverage.responded)
+  ) return null;
+  return {
+    questionnaire: {
+      questionnaireId: questionnaire.questionnaireId,
+      questionnaireVersion: Number(questionnaire.questionnaireVersion),
+      questionnaireChecksum: questionnaire.questionnaireChecksum,
+      proposalVersion: Number(questionnaire.proposalVersion),
+      decimalPrecision: parseNonNegativeInteger(questionnaire.decimalPrecision) ?? 2,
+    },
+    calculation: calculation as unknown as VendorResponseCalculationV1,
+    roomCoverage: {
+      total: Number(roomCoverage.total),
+      responded: Number(roomCoverage.responded),
+    },
+    crewCount: parseNonNegativeInteger(value.crewCount) ?? 0,
+    alternateCount: parseNonNegativeInteger(value.alternateCount) ?? 0,
+    referenceCount: parseNonNegativeInteger(value.referenceCount) ?? 0,
+    documentCounts: (Array.isArray(value.documentCounts) ? value.documentCounts : []).flatMap((item) =>
+      isRecord(item) && isString(item.purposeId) && parseNonNegativeInteger(item.count) !== null
+        ? [{ purposeId: item.purposeId, count: Number(item.count) }]
+        : [],
+    ),
   };
 };
 
@@ -171,6 +255,9 @@ const parseResponse = (value: unknown): VendorResponseItem | null => {
     "updatedAt",
   ] as const;
   if (required.some((key) => !isString(value[key]))) return null;
+  const responseFormat = value.responseFormat === "structured_v1"
+    ? "structured_v1"
+    : "legacy_unstructured";
   return {
     _id: value._id as string,
     proposalId: value.proposalId as string,
@@ -203,6 +290,10 @@ const parseResponse = (value: unknown): VendorResponseItem | null => {
     manifestChecksum: isString(value.manifestChecksum)
       ? value.manifestChecksum
       : undefined,
+    responseFormat,
+    structuredSummary: responseFormat === "structured_v1"
+      ? parseStructuredSummary(value.structuredSummary)
+      : null,
   };
 };
 
@@ -293,12 +384,32 @@ const parseVersion = (value: unknown): VendorSubmissionVersion | null => {
       : null,
     reason: value.reason as VendorSubmissionVersion["reason"],
     sourceSystem: value.sourceSystem as VendorSubmissionVersion["sourceSystem"],
+    format: value.format === "structured_v1"
+      ? "structured_v1"
+      : "legacy_unstructured",
     receivedAt: value.receivedAt as string,
     manifestChecksum: value.manifestChecksum as string,
     vendorName: value.vendorName as string,
     submittedBy: value.submittedBy as string,
     email: value.email as string,
     message: value.message as string,
+    questionnaire: isRecord(value.questionnaire)
+      && value.questionnaire.schemaVersion === "vendor-response-questionnaire.v1"
+      ? value.questionnaire as unknown as VendorResponseQuestionnaireV1
+      : null,
+    structuredResponse: isRecord(value.structuredResponse)
+      && value.structuredResponse.schemaVersion === "vendor-response.v1"
+      ? value.structuredResponse as unknown as VendorResponseV1
+      : null,
+    calculationSnapshot: isRecord(value.calculationSnapshot)
+      && value.calculationSnapshot.schemaVersion === "vendor-response-calculation.v1"
+      ? value.calculationSnapshot as unknown as VendorResponseCalculationV1
+      : null,
+    retiredDocuments: (Array.isArray(value.retiredDocuments) ? value.retiredDocuments : []).flatMap((item) =>
+      isRecord(item) && isString(item.documentId) && isString(item.retiredFromVersionId)
+        ? [{ documentId: item.documentId, retiredFromVersionId: item.retiredFromVersionId }]
+        : [],
+    ),
     documents,
   };
 };

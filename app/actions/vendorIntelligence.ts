@@ -4,7 +4,13 @@ import { BACKEND_URL } from "@/lib/config";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 
 type Result<T> = { success: true; data: T } | { success: false; code: string; message: string };
-export type IntelligenceEvidence = { fragmentId: string; content: string; locator: Record<string, string | number>; sourceLabel: string };
+export type IntelligenceEvidence = {
+  fragmentId: string;
+  content: string;
+  locator: Record<string, string | number>;
+  sourceLabel: string;
+  provenance?: "vendor_stated" | "server_calculated" | "document_extracted";
+};
 export type RequirementMapping = {
   mappingId: string; requirementId: string; requirementTitle: string; requirementKind: string; mandatory: boolean;
   relationship: string; confidence: number; ambiguityReasons: string[]; evidence: IntelligenceEvidence[];
@@ -27,7 +33,16 @@ const strings = (value: unknown) => Array.isArray(value) ? value.filter((item): 
 const locator = (value: unknown): Record<string, string | number> => isRecord(value)
   ? Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string | number] => typeof entry[1] === "string" || typeof entry[1] === "number")) : {};
 const evidence = (value: unknown): IntelligenceEvidence | null => isRecord(value) && typeof value.fragmentId === "string"
-  ? { fragmentId: value.fragmentId, content: String(value.content ?? ""), locator: locator(value.locator), sourceLabel: String(value.sourceLabel ?? "Evidence") } : null;
+  ? (() => {
+      const parsedLocator = locator(value.locator);
+      const provenance = parsedLocator.provenance === "vendor_stated"
+        ? "vendor_stated"
+        : parsedLocator.provenance === "server_calculated"
+          ? "server_calculated"
+          : "document_extracted";
+      return { fragmentId: value.fragmentId, content: String(value.content ?? ""), locator: parsedLocator, sourceLabel: String(value.sourceLabel ?? "Evidence"), provenance };
+    })()
+  : null;
 
 const parseResult = (value: unknown): VendorIntelligenceResult | null => {
   if (!isRecord(value) || !isRecord(value.run) || typeof value.run.runId !== "string") return null;
