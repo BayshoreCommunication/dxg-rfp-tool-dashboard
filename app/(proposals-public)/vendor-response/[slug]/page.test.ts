@@ -1,7 +1,5 @@
 import type { VendorResponseWorkspaceV1 } from "@/contracts/generated/vendor-response-workspace-v1";
 import {
-  dashboardStructuredResponsesEnabled,
-  fetchLegacyProposalTitle,
   fetchVendorWorkspace,
   proposalIdFromSlug,
   proposalTitleFromSlug,
@@ -47,33 +45,7 @@ describe("vendor response email links", () => {
     global.fetch = originalFetch;
   });
 
-  it("loads the legacy proposal title without putting the grant in the URL", async () => {
-    const originalFetch = global.fetch;
-    const mockFetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: { event: { eventName: "Private Summit" } } }),
-    } as Response);
-    global.fetch = mockFetch as typeof fetch;
-    await expect(fetchLegacyProposalTitle(
-      "6a701cfb83266d4a2fd0fc39",
-      "secure-grant",
-    )).resolves.toBe("Private Summit");
-    expect(mockFetch.mock.calls[0][0]).not.toContain("secure-grant");
-    expect(mockFetch.mock.calls[0][1]).toEqual(expect.objectContaining({
-      headers: expect.objectContaining({
-        "x-rfpilot-access-grant": "secure-grant",
-      }),
-    }));
-    global.fetch = originalFetch;
-  });
-
-  it("requires the dashboard flag and server capability before selecting structured mode", () => {
-    const original = process.env.NEXT_PUBLIC_VENDOR_STRUCTURED_RESPONSES_ENABLED;
-    process.env.NEXT_PUBLIC_VENDOR_STRUCTURED_RESPONSES_ENABLED = "false";
-    expect(dashboardStructuredResponsesEnabled()).toBe(false);
-    process.env.NEXT_PUBLIC_VENDOR_STRUCTURED_RESPONSES_ENABLED = "true";
-    expect(dashboardStructuredResponsesEnabled()).toBe(true);
-
+  it("requires an authoritative structured workspace and never selects a legacy form", () => {
     const legacy = {
       capabilities: {
         structuredResponse: false,
@@ -98,8 +70,5 @@ describe("vendor response email links", () => {
     expect(usesStructuredWorkspace(structured)).toBe(true);
     structured.questionnaire = null;
     expect(usesStructuredWorkspace(structured)).toBe(false);
-
-    if (original === undefined) delete process.env.NEXT_PUBLIC_VENDOR_STRUCTURED_RESPONSES_ENABLED;
-    else process.env.NEXT_PUBLIC_VENDOR_STRUCTURED_RESPONSES_ENABLED = original;
   });
 });

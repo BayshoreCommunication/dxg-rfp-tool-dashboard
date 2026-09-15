@@ -1,15 +1,10 @@
-# Structured vendor response dashboard rollout
+# Structured vendor response production experience
 
-`NEXT_PUBLIC_VENDOR_STRUCTURED_RESPONSES_ENABLED=true` allows the dashboard to
-request and render the structured vendor workspace. The backend remains
-authoritative: its global flag and the proposal capability marker must also
-resolve to `structured_v1`.
+The public vendor URL always requests and renders the structured vendor
+workspace. The legacy upload-led form and its dashboard API proxies have been
+removed. The backend remains authoritative for grant, proposal lifecycle,
+questionnaire, draft, and submission validation.
 
-If the dashboard flag is off, or the workspace capability resolves to
-`legacy_unstructured`, the existing public vendor form is rendered at the same
-emailed URL. Email, tracking ID, and access-grant context are preserved.
-
-Rollback therefore consists of either turning off the dashboard switch, turning
-off the backend switch, or setting one proposal back to `legacy_unstructured`.
-None of these operations deletes a draft, questionnaire, response version, or
-document.
+If the backend capability is unavailable, the URL renders a safe unavailable
+state and directs the vendor back to the planner. It does not restore the old
+form. Existing emailed links keep the same route and access-grant behavior.
