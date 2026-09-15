@@ -30,7 +30,6 @@ Public submission routes retain scoped public grants and become version aware:
 | Method | Resource | Purpose |
 |---|---|---|
 | `POST` | `/api/vendor-responses` | Create an initial or revised immutable version. |
-| `GET` | `/api/vendor-responses/check` | Return submission identity, latest version, and whether another version is allowed. |
 | `GET` | `/api/vendor-responses/:id/receipt/:versionId` | Scoped receipt metadata, never private file URLs. |
 
 Authenticated planner routes:
