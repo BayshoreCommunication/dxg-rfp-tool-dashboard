@@ -1,5 +1,6 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
+import { countRequirement } from "@/lib/vendorResponses/workspaceModel";
 import { ImageUp, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { UploadDocuments } from "./documentTypes";
@@ -67,7 +68,7 @@ export default function ReferencesSection({
       title={section?.title ?? "Comparable references"}
       helperText={
         section?.helperText ??
-        `Provide ${questionnaire.references.minimumCount}–${questionnaire.references.maximumCount} structured references from the last ${questionnaire.references.maxAgeMonths} months. Visuals are optional.`
+        `${countRequirement("Provide", questionnaire.references.minimumCount, questionnaire.references.maximumCount, "structured reference")} from the last ${questionnaire.references.maxAgeMonths} months. Visuals are optional.`
       }
       evaluationMappings={section?.evaluationMappings}
     >

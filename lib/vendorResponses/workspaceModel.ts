@@ -4,6 +4,21 @@ import type {
 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
 
+/**
+ * Phrase a count requirement without the "between 3 and 3" the naive range
+ * wording produces when a questionnaire pins an exact number.
+ */
+export const countRequirement = (
+  verb: string,
+  minimum: number,
+  maximum: number,
+  noun: string,
+): string => {
+  const plural = (count: number) => (count === 1 ? noun : `${noun}s`);
+  if (minimum === maximum) return `${verb} ${minimum} ${plural(minimum)}`;
+  return `${verb} between ${minimum} and ${maximum} ${plural(maximum)}`;
+};
+
 export type VendorDraftDto = {
   draftId: string;
   draftRevision: number;
@@ -429,7 +444,7 @@ export const validateWorkspaceResponse = (
       issues,
       "references",
       "/references",
-      `Provide between ${questionnaire.references.minimumCount} and ${questionnaire.references.maximumCount} references.`,
+      `${countRequirement("Provide", questionnaire.references.minimumCount, questionnaire.references.maximumCount, "reference")}.`,
     );
   }
   if (
