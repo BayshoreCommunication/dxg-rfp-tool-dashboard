@@ -125,9 +125,25 @@ describe('ProposalTableList — proposal cards', () => {
     await waitFor(() => expect(screen.getByText('Bayshore Summit 2026')).toBeInTheDocument(), LOAD_TIMEOUT)
   })
 
-  it('renders the owner name', async () => {
+  it('leaves the owner off the row — it is the planner themselves on every card', async () => {
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await waitFor(() => expect(screen.getByText('AR Sahak')).toBeInTheDocument(), LOAD_TIMEOUT)
+    await screen.findByText('Bayshore Summit 2026', {}, LOAD_TIMEOUT)
+    expect(screen.queryByText('AR Sahak')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Owner:/)).not.toBeInTheDocument()
+  })
+
+  it('keeps the expiry date and its remaining-days pill on one line', async () => {
+    mockGetProposals.mockResolvedValue(
+      successPage([makeProposal({ proposalSetting: { proposals: { expiryDate: '30 days' } } })])
+    )
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Bayshore Summit 2026', {}, LOAD_TIMEOUT)
+
+    // The date and the "Expired N days ago" pill are one fact — they must not
+    // split across two lines the way a wrapping flex row would let them.
+    const expiry = screen.getByText(/Expiry:/)
+    expect(expiry).toHaveClass('whitespace-nowrap')
+    expect(within(expiry).getByText(/days ago$/)).toBeInTheDocument()
   })
 
   it('renders the view count', async () => {
@@ -149,7 +165,7 @@ describe('ProposalTableList — proposal cards', () => {
       '/proposals/proposal-edit?proposalId=prop-001'
     )
     expect(screen.getByRole('button', { name: 'Save a copy' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Share' })).toHaveAttribute(
       'href',
       '/email/send-email?proposalId=prop-001'
@@ -292,8 +308,8 @@ describe('ProposalTableList — delete (archive)', () => {
     mockDeleteProposal.mockResolvedValue({ success: true })
     const refreshCounts = jest.fn()
     render(<ProposalTableList searchValue="" activeFilter="all" onRefreshCounts={refreshCounts} />)
-    await waitFor(() => screen.getByTitle('Delete'), LOAD_TIMEOUT)
-    fireEvent.click(screen.getByTitle('Delete'))
+    await waitFor(() => screen.getByRole('button', { name: 'Archive' }), LOAD_TIMEOUT)
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
     const dialog = screen.getByRole('alertdialog', { name: 'Archive this proposal?' })
     expect(within(dialog).getByText('Bayshore Summit 2026')).toBeInTheDocument()
     expect(within(dialog).getByText('30 days to change your mind')).toBeInTheDocument()
@@ -310,8 +326,8 @@ describe('ProposalTableList — delete (archive)', () => {
 
   it('does not delete when user cancels the confirm dialog', async () => {
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await waitFor(() => screen.getByTitle('Delete'), LOAD_TIMEOUT)
-    const trigger = screen.getByTitle('Delete')
+    await waitFor(() => screen.getByRole('button', { name: 'Archive' }), LOAD_TIMEOUT)
+    const trigger = screen.getByRole('button', { name: 'Archive' })
     trigger.focus()
     fireEvent.click(trigger)
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -320,11 +336,10 @@ describe('ProposalTableList — delete (archive)', () => {
     expect(mockDeleteProposal).not.toHaveBeenCalled()
   })
 
-  it.each(['close button', 'Escape', 'backdrop'])('dismisses with %s without making a request', async (method) => {
+  it.each(['Escape', 'backdrop'])('dismisses with %s without making a request', async (method) => {
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await screen.findByTitle('Delete')
-    fireEvent.click(screen.getByTitle('Delete'))
-    if (method === 'close button') fireEvent.click(screen.getByRole('button', { name: 'Close proposal deletion dialog' }))
+    await screen.findByRole('button', { name: 'Archive' })
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
     if (method === 'Escape') fireEvent(screen.getByRole('alertdialog'), new Event('cancel', { cancelable: true }))
     if (method === 'backdrop') fireEvent.click(screen.getByRole('alertdialog'), { clientX: -1, clientY: -1 })
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
@@ -333,8 +348,8 @@ describe('ProposalTableList — delete (archive)', () => {
 
   it('does not dismiss when clicking inside the dialog', async () => {
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await screen.findByTitle('Delete')
-    fireEvent.click(screen.getByTitle('Delete'))
+    await screen.findByRole('button', { name: 'Archive' })
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
     fireEvent.click(within(screen.getByRole('alertdialog')).getByText('Bayshore Summit 2026'))
     expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     expect(mockDeleteProposal).not.toHaveBeenCalled()
@@ -342,31 +357,41 @@ describe('ProposalTableList — delete (archive)', () => {
 
   it('wraps keyboard focus within the confirmation buttons', async () => {
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    fireEvent.click(await screen.findByTitle('Delete'))
-    const close = screen.getByRole('button', { name: 'Close proposal deletion dialog' })
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }))
+    // Cancel and confirm are the only two controls left — Tab cycles between
+    // them and never escapes to the page behind the modal.
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
     const confirm = screen.getByRole('button', { name: 'Move to archive' })
     confirm.focus()
     fireEvent.keyDown(confirm, { key: 'Tab' })
-    expect(close).toHaveFocus()
-    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true })
+    expect(cancel).toHaveFocus()
+    fireEvent.keyDown(cancel, { key: 'Tab', shiftKey: true })
     expect(confirm).toHaveFocus()
+  })
+
+  it('has no close button — Cancel, Escape and the backdrop are the ways out', async () => {
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }))
+    const dialog = screen.getByRole('alertdialog')
+    expect(within(dialog).queryByRole('button', { name: /close/i })).not.toBeInTheDocument()
+    expect(within(dialog).getAllByRole('button')).toHaveLength(2)
   })
 
   it('does not expose permanent deletion on stale active cards while switching filters', async () => {
     const { rerender } = render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await screen.findByTitle('Delete')
+    await screen.findByRole('button', { name: 'Archive' })
     mockGetProposals.mockReturnValue(new Promise(() => {}))
     rerender(<ProposalTableList searchValue="" activeFilter="archive" />)
     expect(screen.queryByTitle('Delete forever')).not.toBeInTheDocument()
-    expect(screen.queryByTitle('Delete')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument()
   })
 
   it('locks dismissal and duplicate submissions while archiving', async () => {
     let finish!: (value: { success: boolean }) => void
     mockDeleteProposal.mockReturnValue(new Promise((resolve) => { finish = resolve }))
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await screen.findByTitle('Delete')
-    fireEvent.click(screen.getByTitle('Delete'))
+    await screen.findByRole('button', { name: 'Archive' })
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
     const confirm = screen.getByRole('button', { name: 'Move to archive' })
     fireEvent.click(confirm)
     fireEvent.click(confirm)
@@ -374,7 +399,6 @@ describe('ProposalTableList — delete (archive)', () => {
     expect(dialog).toHaveAttribute('aria-busy', 'true')
     expect(screen.getByRole('button', { name: 'Archiving…' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Close proposal deletion dialog' })).toBeDisabled()
     fireEvent(dialog, new Event('cancel', { cancelable: true }))
     fireEvent.click(dialog, { clientX: -1, clientY: -1 })
     expect(dialog).toBeInTheDocument()
@@ -386,8 +410,8 @@ describe('ProposalTableList — delete (archive)', () => {
   it('keeps a failed request open with an inline error and allows retry', async () => {
     mockDeleteProposal.mockResolvedValueOnce({ success: false, message: 'Please try again later.' }).mockResolvedValueOnce({ success: true })
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await screen.findByTitle('Delete')
-    fireEvent.click(screen.getByTitle('Delete'))
+    await screen.findByRole('button', { name: 'Archive' })
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
     fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Please try again later.')
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
@@ -399,8 +423,8 @@ describe('ProposalTableList — delete (archive)', () => {
   it('handles network exceptions without losing the confirmation', async () => {
     mockDeleteProposal.mockRejectedValueOnce(new Error('Network unavailable'))
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await screen.findByTitle('Delete')
-    fireEvent.click(screen.getByTitle('Delete'))
+    await screen.findByRole('button', { name: 'Archive' })
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
     fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not archive this proposal. Please try again.')
     expect(screen.getByRole('button', { name: 'Move to archive' })).toBeEnabled()
@@ -411,7 +435,7 @@ describe('ProposalTableList — delete (archive)', () => {
     mockDeleteProposal.mockResolvedValue({ success: true })
     render(<ProposalTableList searchValue="" activeFilter="all" />)
     await screen.findByText('Second proposal')
-    fireEvent.click(screen.getAllByTitle('Delete')[1])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Archive' })[1])
     expect(within(screen.getByRole('alertdialog')).getByText('Second proposal')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }))
     await waitFor(() => expect(mockDeleteProposal).toHaveBeenCalledWith('prop-002'))
@@ -420,8 +444,8 @@ describe('ProposalTableList — delete (archive)', () => {
   it('shows a readable fallback for unnamed proposals', async () => {
     mockGetProposals.mockResolvedValue(successPage([makeProposal({ event: {} })]))
     render(<ProposalTableList searchValue="" activeFilter="all" />)
-    await screen.findByTitle('Delete')
-    fireEvent.click(screen.getByTitle('Delete'))
+    await screen.findByRole('button', { name: 'Archive' })
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
     expect(within(screen.getByRole('alertdialog')).getByText('Untitled proposal')).toBeInTheDocument()
   })
 })
@@ -538,5 +562,158 @@ describe('ProposalTableList — archive view', () => {
     await waitFor(() => screen.getByText('Restore'), LOAD_TIMEOUT)
     fireEvent.click(screen.getByText('Restore'))
     await waitFor(() => expect(mockRestoreProposal).toHaveBeenCalledWith('prop-001'))
+  })
+})
+
+describe('ProposalTableList — infinite scroll', () => {
+  // jsdom has no IntersectionObserver; this fake lets a test say "the sentinel
+  // scrolled into view" by calling the registered callback.
+  const installObserver = () => {
+    const instances: { trigger: () => void; disconnect: jest.Mock }[] = []
+    class FakeIntersectionObserver {
+      constructor(private cb: IntersectionObserverCallback) {
+        instances.push({
+          trigger: () => this.cb([{ isIntersecting: true } as IntersectionObserverEntry], this as never),
+          disconnect: this.disconnect as jest.Mock,
+        })
+      }
+      observe = jest.fn()
+      unobserve = jest.fn()
+      disconnect = jest.fn()
+      takeRecords = jest.fn(() => [])
+      root = null
+      rootMargin = ''
+      thresholds = []
+    }
+    ;(window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = FakeIntersectionObserver
+    ;(global as unknown as { IntersectionObserver: unknown }).IntersectionObserver = FakeIntersectionObserver
+    return instances
+  }
+
+  const page = (ids: string[], total: number, pageNumber: number) => ({
+    success: true,
+    data: ids.map((id) => makeProposal({ _id: id, event: { eventName: `Proposal ${id}` } })),
+    pagination: { total, page: pageNumber, limit: 10, totalPages: Math.ceil(total / 10) },
+  })
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).IntersectionObserver
+    delete (global as unknown as Record<string, unknown>).IntersectionObserver
+  })
+
+  it('replaces the pager with a scroll sentinel while more pages remain', async () => {
+    installObserver()
+    mockGetProposals.mockResolvedValue(page(['a'], 25, 1))
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Proposal a', {}, LOAD_TIMEOUT)
+
+    expect(screen.queryByRole('navigation', { name: 'Proposals pagination' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('proposals-scroll-sentinel')).toBeInTheDocument()
+  })
+
+  it('appends the next page when the sentinel scrolls into view', async () => {
+    const observers = installObserver()
+    mockGetProposals
+      .mockResolvedValueOnce(page(['a', 'b'], 25, 1))
+      .mockResolvedValueOnce(page(['c', 'd'], 25, 2))
+
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Proposal a', {}, LOAD_TIMEOUT)
+    expect(mockGetProposals).toHaveBeenCalledWith(expect.objectContaining({ page: 1, limit: 10 }))
+
+    await act(async () => observers[observers.length - 1].trigger())
+
+    await waitFor(() => {
+      expect(mockGetProposals).toHaveBeenCalledWith(expect.objectContaining({ page: 2, limit: 10 }))
+    }, LOAD_TIMEOUT)
+    // Earlier pages stay on screen — this appends, it does not replace.
+    expect(await screen.findByText('Proposal c', {}, LOAD_TIMEOUT)).toBeInTheDocument()
+    expect(screen.getByText('Proposal a')).toBeInTheDocument()
+  })
+
+  it('never renders a proposal twice when a page repeats a row', async () => {
+    const observers = installObserver()
+    mockGetProposals
+      .mockResolvedValueOnce(page(['a', 'b'], 25, 1))
+      // Archiving a row upstream shifts the offset, so page 2 repeats "b".
+      .mockResolvedValueOnce(page(['b', 'c'], 25, 2))
+
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Proposal a', {}, LOAD_TIMEOUT)
+    await act(async () => observers[observers.length - 1].trigger())
+
+    await screen.findByText('Proposal c', {}, LOAD_TIMEOUT)
+    expect(screen.getAllByText('Proposal b')).toHaveLength(1)
+  })
+
+  it('stops observing once the last page is loaded and says so', async () => {
+    const observers = installObserver()
+    mockGetProposals
+      .mockResolvedValueOnce(page(['a'], 11, 1))
+      .mockResolvedValueOnce(page(['b'], 11, 2))
+
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Proposal a', {}, LOAD_TIMEOUT)
+    await act(async () => observers[observers.length - 1].trigger())
+    await screen.findByText('Proposal b', {}, LOAD_TIMEOUT)
+
+    expect(screen.queryByTestId('proposals-scroll-sentinel')).not.toBeInTheDocument()
+    expect(screen.getByText('All 11 proposals loaded')).toBeInTheDocument()
+  })
+
+  it('restarts from page 1 when the filter changes', async () => {
+    const observers = installObserver()
+    mockGetProposals
+      .mockResolvedValueOnce(page(['a'], 25, 1))
+      .mockResolvedValueOnce(page(['b'], 25, 2))
+      .mockResolvedValue(page(['z'], 25, 1))
+
+    const { rerender } = render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Proposal a', {}, LOAD_TIMEOUT)
+    await act(async () => observers[observers.length - 1].trigger())
+    await screen.findByText('Proposal b', {}, LOAD_TIMEOUT)
+
+    mockGetProposals.mockClear()
+    rerender(<ProposalTableList searchValue="" activeFilter="draft" />)
+
+    await waitFor(() => {
+      expect(mockGetProposals).toHaveBeenCalledWith(expect.objectContaining({ page: 1, isDraft: true }))
+    }, LOAD_TIMEOUT)
+    // No stale page-2 request for the list we just left.
+    expect(mockGetProposals).not.toHaveBeenCalledWith(expect.objectContaining({ page: 2 }))
+    await screen.findByText('Proposal z', {}, LOAD_TIMEOUT)
+    expect(screen.queryByText('Proposal a')).not.toBeInTheDocument()
+  })
+
+  it('keeps loaded proposals and offers a retry when the next page fails', async () => {
+    const observers = installObserver()
+    mockGetProposals
+      .mockResolvedValueOnce(page(['a'], 25, 1))
+      .mockResolvedValueOnce({ success: false, message: 'boom' })
+      .mockResolvedValueOnce(page(['c'], 25, 2))
+
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Proposal a', {}, LOAD_TIMEOUT)
+    await act(async () => observers[observers.length - 1].trigger())
+
+    expect(await screen.findByRole('alert', {}, LOAD_TIMEOUT)).toHaveTextContent('Could not load more proposals.')
+    expect(screen.getByText('Proposal a')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('Proposal c', {}, LOAD_TIMEOUT)).toBeInTheDocument()
+    // The retry re-requests the page that failed rather than skipping it.
+    expect(mockGetProposals).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }))
+  })
+
+  it('still loads more without an IntersectionObserver, via the fallback button', async () => {
+    mockGetProposals
+      .mockResolvedValueOnce(page(['a'], 25, 1))
+      .mockResolvedValueOnce(page(['c'], 25, 2))
+
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByText('Proposal a', {}, LOAD_TIMEOUT)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more proposals' }))
+    expect(await screen.findByText('Proposal c', {}, LOAD_TIMEOUT)).toBeInTheDocument()
   })
 })

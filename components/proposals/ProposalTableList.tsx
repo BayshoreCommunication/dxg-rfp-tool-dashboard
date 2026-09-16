@@ -12,8 +12,6 @@ import {
 import {
   Archive,
   ArchiveRestore,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Copy,
   CopyPlus,
@@ -21,18 +19,17 @@ import {
   Eye,
   FileText,
   Heart,
+  Loader2,
   Plus,
   Share2,
-  Trash,
   Trash2,
   TrendingUp,
-  Users,
 } from "lucide-react";
 import SaveCopyModal from "./SaveCopyModal";
 import ProposalDeletionDialog, { type ProposalDeletionMode } from "./ProposalDeletionDialog";
 import Link from "next/link";
 import StarterLinks from "./StarterLinks";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
   buildProposalViewShareUrl,
@@ -92,36 +89,23 @@ type ProposalPagination = {
   totalPages?: number;
 };
 
-const PER_PAGE = 5;
+// Cards are compact, so a scroll page can hold more than the old pager did.
+const PER_PAGE = 10;
 
-const buildPageItems = (currentPage: number, totalPages: number) => {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1);
-  }
-
-  if (currentPage <= 3) {
-    return [1, 2, 3, 4, "...", totalPages];
-  }
-
-  if (currentPage >= totalPages - 2) {
-    return [
-      1,
-      "...",
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages,
-    ];
-  }
-
+/**
+ * Append a freshly fetched page, dropping ids already on screen.
+ *
+ * Offset pagination shifts when a proposal is archived mid-scroll, so the next
+ * page can repeat a row we already hold. Duplicate React keys would follow.
+ */
+const mergeProposals = (
+  current: ProposalListItem[],
+  incoming: ProposalListItem[],
+) => {
+  const seen = new Set(current.map((item) => item._id).filter(Boolean));
   return [
-    1,
-    "...",
-    currentPage - 1,
-    currentPage,
-    currentPage + 1,
-    "...",
-    totalPages,
+    ...current,
+    ...incoming.filter((item) => !item._id || !seen.has(item._id)),
   ];
 };
 
@@ -144,13 +128,41 @@ export default function ProposalTableList({
   const [copyingSaving, setCopyingSaving] = useState(false);
   const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState<ProposalPagination>({
     page: 1,
     limit: PER_PAGE,
     total: 0,
     totalPages: 1,
   });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState("");
+  const [retryTick, setRetryTick] = useState(0);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Which list we are scrolling through, and how deep into it we are. Filter,
+  // search and refresh all start a different list, so the page number travels
+  // with the key: a stale page number can never be applied to a new list.
+  const listKey = `${activeFilter}::${searchValue.trim()}::${refreshTick}`;
+  const [cursor, setCursor] = useState({ key: listKey, page: 1 });
+  if (cursor.key !== listKey) {
+    // Reset during render (not in an effect) so the fetch below never fires
+    // once for the old page and again for page 1.
+    setCursor({ key: listKey, page: 1 });
+  }
+  const currentPage = cursor.page;
+
+  const totalPages = Math.max(1, pagination.totalPages || 1);
+  const hasMore = currentPage < totalPages;
+
+  const loadMore = useCallback(() => {
+    if (loadMoreError) {
+      // Retry the page that failed rather than skipping past it.
+      setLoadMoreError("");
+      setRetryTick((tick) => tick + 1);
+      return;
+    }
+    setCursor((prev) => ({ ...prev, page: prev.page + 1 }));
+  }, [loadMoreError]);
 
   const parseExpiryDays = (expiryValue?: string): number | null => {
     if (!expiryValue) return null;
@@ -209,9 +221,14 @@ export default function ProposalTableList({
 
   useEffect(() => {
     let mounted = true;
-    const timer = setTimeout(async () => {
-      setLoading(true);
+    // Page 1 is a fresh list and follows the search debounce; a scrolled-to page
+    // is already a deliberate request, so it goes out immediately.
+    const isFirstPage = currentPage === 1;
 
+    if (isFirstPage) setLoading(true);
+    else setLoadingMore(true);
+
+    const fetchPage = async () => {
       const params: {
         page: number;
         limit: number;
@@ -251,13 +268,17 @@ export default function ProposalTableList({
       if (!mounted) return;
 
       if (listRes.success && Array.isArray(listRes.data)) {
-        setProposals(listRes.data as ProposalListItem[]);
+        const incoming = listRes.data as ProposalListItem[];
+        setProposals((prev) =>
+          isFirstPage ? incoming : mergeProposals(prev, incoming),
+        );
         setPagination(
           listRes.pagination && typeof listRes.pagination === "object"
             ? (listRes.pagination as ProposalPagination)
             : { page: currentPage, limit: PER_PAGE, total: 0, totalPages: 1 },
         );
-      } else {
+        setLoadMoreError("");
+      } else if (isFirstPage) {
         setProposals([]);
         setPagination({
           page: currentPage,
@@ -265,21 +286,60 @@ export default function ProposalTableList({
           total: 0,
           totalPages: 1,
         });
+      } else {
+        // Keep what is already on screen and let the planner retry this page.
+        setLoadMoreError("Could not load more proposals.");
       }
 
       setLoadedFilter(activeFilter);
       setLoading(false);
-    }, 300);
+      setLoadingMore(false);
+    };
+
+    const timer = setTimeout(() => void fetchPage(), isFirstPage ? 300 : 0);
 
     return () => {
       mounted = false;
       clearTimeout(timer);
     };
-  }, [activeFilter, currentPage, refreshTick, searchValue]);
+  }, [activeFilter, currentPage, refreshTick, retryTick, searchValue]);
 
+  // Pull the next page as the sentinel below the list comes into view. Paused
+  // while a request is in flight or a retry is waiting, so scrolling past the
+  // end cannot queue a burst of requests.
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchValue, activeFilter]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || loading || loadingMore || loadMoreError) return;
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) loadMore();
+      },
+      // Start fetching before the sentinel is actually on screen.
+      { rootMargin: "300px 0px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, loadMoreError, loadMore]);
+
+  /**
+   * Drop a row the planner just archived, restored or deleted.
+   *
+   * Re-fetching would mean replaying every page they had scrolled through, so
+   * the row goes out locally. If that empties the list we do reload from the
+   * top, because the next page's rows have shifted up into view.
+   */
+  const removeProposalLocally = (proposalId: string) => {
+    const remaining = proposals.filter((item) => item._id !== proposalId);
+    setProposals(remaining);
+    setPagination((prev) => ({
+      ...prev,
+      total: Math.max(0, (prev.total ?? 1) - 1),
+    }));
+    if (remaining.length === 0) setRefreshTick((tick) => tick + 1);
+  };
 
   const requestDeletion = (proposal: ProposalListItem, mode: ProposalDeletionMode) => {
     if (!proposal._id || deletionInFlight.current) return;
@@ -307,12 +367,7 @@ export default function ProposalTableList({
       }
       setPendingDeletion(null);
       toast.success(permanent ? "Proposal permanently deleted." : "Proposal moved to archive.");
-      const nextPage =
-        proposals.length === 1 && currentPage > 1
-          ? currentPage - 1
-          : currentPage;
-      setCurrentPage(nextPage);
-      setRefreshTick((prev) => prev + 1);
+      removeProposalLocally(proposalId);
       onRefreshCounts?.();
     } catch {
       setDeletionError(permanent ? "Could not delete this proposal. Please try again." : "Could not archive this proposal. Please try again.");
@@ -335,17 +390,13 @@ export default function ProposalTableList({
         return;
       }
       toast.success("Proposal restored successfully.");
-      const nextPage =
-        proposals.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
-      setCurrentPage(nextPage);
-      setRefreshTick((prev) => prev + 1);
+      removeProposalLocally(proposalId);
       onRefreshCounts?.();
     } finally {
       setRestoringId(null);
     }
   };
 
-  const totalPages = Math.max(1, pagination.totalPages || 1);
   const handleCopyProposalUrl = async (
     proposalId: string,
     proposalSlug: string,
@@ -462,25 +513,26 @@ export default function ProposalTableList({
   return (
     <>
     <div className="-mt-6 min-h-screen px-1 py-6 font-sans text-slate-800 sm:px-2 lg:px-6">
-      <div className="space-y-6">
+      <div className="space-y-4">
         {loading || loadedFilter !== activeFilter ? (
-          <div className="space-y-6">
-            {[1, 2].map((item) => (
+          <div className="space-y-3">
+            {[1, 2, 3].map((item) => (
               <div
                 key={`proposal-skeleton-${item}`}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
               >
-                <div className="h-4 w-28 rounded bg-slate-100 animate-pulse" />
-                <div className="mt-4 space-y-3">
-                  <div className="h-6 w-3/5 rounded bg-slate-100 animate-pulse" />
-                  <div className="h-4 w-2/5 rounded bg-slate-100 animate-pulse" />
-                  <div className="h-4 w-1/3 rounded bg-slate-100 animate-pulse" />
-                </div>
-                <div className="mt-6 flex items-center gap-4">
-                  <div className="h-16 w-20 rounded-xl bg-slate-100 animate-pulse" />
-                  <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
-                  <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
-                  <div className="h-10 w-10 rounded-xl bg-slate-100 animate-pulse" />
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 w-2/5 rounded bg-slate-100 animate-pulse" />
+                    <div className="h-3 w-1/3 rounded bg-slate-100 animate-pulse" />
+                    <div className="h-3 w-1/4 rounded bg-slate-100 animate-pulse" />
+                  </div>
+                  <div className="hidden items-center gap-1.5 sm:flex">
+                    <div className="h-9 w-16 rounded-lg bg-slate-100 animate-pulse" />
+                    <div className="h-9 w-9 rounded-lg bg-slate-100 animate-pulse" />
+                    <div className="h-9 w-9 rounded-lg bg-slate-100 animate-pulse" />
+                    <div className="h-9 w-9 rounded-lg bg-slate-100 animate-pulse" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -535,7 +587,7 @@ export default function ProposalTableList({
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {proposals.map((proposal, index) => {
               const title = proposal?.event?.eventName || "Untitled Proposal";
               const slugTitle = title
@@ -546,12 +598,6 @@ export default function ProposalTableList({
               const proposalSlug = proposal?._id
                 ? `${slugTitle}-${proposal._id}`
                 : slugTitle || "proposal";
-              const ownerName = [
-                proposal?.contact?.contactFirstName,
-                proposal?.contact?.contactLastName,
-              ]
-                .filter(Boolean)
-                .join(" ");
               const createdAt = formatDisplayDate(proposal?.createdAt);
               const views = proposal?.viewsCount ?? 0;
               const isDraft = proposal?.isDraft === true;
@@ -608,173 +654,170 @@ export default function ProposalTableList({
                 : null;
 
               return (
-                <div
+                <article
                   key={proposal._id || `proposal-${index}`}
-                  className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6"
+                  data-testid="proposal-card"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md sm:px-4 sm:py-3"
                 >
-                  <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#008ad2]/5 blur-3xl pointer-events-none" />
-                  <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-[#2563eb]/5 blur-3xl pointer-events-none" />
-
-                  <div className="relative z-10 mb-5 flex items-start justify-between gap-3 sm:mb-6">
-                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                      {isArchiveView ? (
-                        <>
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-slate-100 text-slate-600 border-slate-300">
-                            <Archive size={10} />
-                            Archived
-                          </span>
-                          {archivedDate && (
-                            <span className="text-slate-400 text-[11px] font-medium flex items-center gap-1">
-                              <Clock size={10} />
-                              Archived:{" "}
-                              <b className="text-slate-700 ml-1">
-                                {formatDisplayDate(proposal.archivedAt)}
-                              </b>
+                  <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+                    <div className="min-w-0 flex-1">
+                      {/* State first, then what the RFP is called, then its dates. */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {isArchiveView ? (
+                          <>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                              <Archive size={9} />
+                              Archived
                             </span>
-                          )}
-                          {daysUntilPurge !== null && (
+                            {daysUntilPurge !== null && (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-bold"
+                                style={
+                                  daysUntilPurge <= 7
+                                    ? {
+                                        background: "var(--dxg-danger-surface)",
+                                        color: "var(--dxg-danger-text)",
+                                        borderColor: "var(--dxg-danger-border)",
+                                      }
+                                    : {
+                                        background: "var(--dxg-warning-surface)",
+                                        color: "var(--dxg-warning-text)",
+                                        borderColor: "var(--dxg-warning-border)",
+                                      }
+                                }
+                              >
+                                {daysUntilPurge}d until deletion
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {isCopy ? (
+                              <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                                Saved Copy
+                              </span>
+                            ) : isDraft ? (
+                              <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                Draft
+                              </span>
+                            ) : null}
+                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                              {submittedLabel}
+                            </span>
                             <span
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
-                              style={
-                                daysUntilPurge <= 7
-                                  ? {
-                                      background: "var(--dxg-danger-surface)",
-                                      color: "var(--dxg-danger-text)",
-                                      borderColor: "var(--dxg-danger-border)",
-                                    }
-                                  : {
-                                      background: "var(--dxg-warning-surface)",
-                                      color: "var(--dxg-warning-text)",
-                                      borderColor: "var(--dxg-warning-border)",
-                                    }
-                              }
+                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusBadgeClass}`}
                             >
-                              {daysUntilPurge}d until deletion
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${statusDotClass}`}
+                              />
+                              {liveOrExpiredLabel}
                             </span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {isCopy ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-violet-50 text-violet-700 border-violet-200">
-                              Saved Copy
-                            </span>
-                          ) : isDraft ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
-                              Draft
-                            </span>
-                          ) : null}
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
-                            {submittedLabel}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${statusBadgeClass}`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${statusDotClass}`}
-                            />
-                            {liveOrExpiredLabel}
-                          </span>
-                          <span className="text-slate-400 text-[11px] ml-1 font-medium flex items-center gap-1">
-                            <Clock size={10} />
-                            Created:{" "}
-                            <b className="text-slate-700 ml-1">{createdAt}</b>
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    {/* Favorite button — hidden for copies (copies cannot be favourited) */}
-                    {!isCopy && (
-                      <button
-                        type="button"
-                        aria-label={proposal?.isFavorite ? "Remove favorite" : "Mark as favorite"}
-                        title={proposal?.isFavorite ? "Remove favorite" : "Mark as favorite"}
-                        disabled={favoritingId === proposal._id}
-                        onClick={() => void handleToggleFavorite(proposal)}
-                        className={`text-slate-400 transition-colors duration-150 p-1 rounded-lg border hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed ${proposal?.isFavorite ? "text-rose-500 border-rose-200 bg-rose-50 hover:text-rose-600" : "border-transparent hover:border-slate-200 hover:text-slate-600"}`}
-                      >
-                        <Heart
-                          size={18}
-                          className={proposal?.isFavorite ? "fill-current text-rose-500" : ""}
-                        />
-                      </button>
-                    )}
-                  </div>
+                          </>
+                        )}
+                      </div>
 
-                  <div className="relative z-10 flex flex-col justify-between gap-5 md:flex-row md:items-end md:gap-6">
-                    <div className="flex-1 min-w-0">
-                      <h1 className="break-words text-xl font-black tracking-tight text-slate-900 sm:text-2xl md:truncate">
+                      <h3 className="mt-1.5 break-words text-[15px] font-bold leading-snug tracking-tight text-slate-900 sm:truncate">
                         {title}
-                      </h1>
-                      <div className="mt-3 space-y-1.5">
-                        <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2">
-                          <Users size={11} className="text-slate-400" />
-                          Owner:{" "}
-                          <span className="text-slate-800 font-semibold">
-                            {ownerName || "-"}
-                          </span>
-                        </p>
+                      </h3>
+
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-medium text-slate-400">
+                        {isArchiveView
+                          ? archivedDate && (
+                              <span className="flex items-center gap-1 whitespace-nowrap">
+                                <Clock size={9} />
+                                Archived:{" "}
+                                <b className="ml-0.5 text-slate-700">
+                                  {formatDisplayDate(proposal.archivedAt)}
+                                </b>
+                              </span>
+                            )
+                          : (
+                              <span className="flex items-center gap-1 whitespace-nowrap">
+                                <Clock size={9} />
+                                Created:{" "}
+                                <b className="ml-0.5 text-slate-700">{createdAt}</b>
+                              </span>
+                            )}
+
+                        {/* Date and remaining-days pill are one fact, so they
+                            wrap as one unit instead of splitting across lines. */}
                         {expiryMeta.expiryDateLabel !== "-" && (
-                          <p className="text-[12px] text-slate-500 font-medium flex items-center gap-2 flex-wrap">
+                          <span className="flex items-center gap-1 whitespace-nowrap">
                             <Clock
-                              size={11}
-                              className={
-                                isExpired ? "text-rose-400" : "text-slate-400"
-                              }
+                              size={9}
+                              className={isExpired ? "text-rose-400" : undefined}
                             />
                             Expiry:{" "}
-                            <span
-                              className={`font-semibold ${isExpired ? "text-rose-600" : "text-slate-800"}`}
+                            <b
+                              className={`ml-0.5 ${isExpired ? "text-rose-600" : "text-slate-700"}`}
                             >
                               {expiryMeta.expiryDateLabel}
-                            </span>
+                            </b>
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
                                 isExpired
-                                  ? "bg-rose-50 text-rose-500 border border-rose-100"
-                                  : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                  ? "border border-rose-100 bg-rose-50 text-rose-500"
+                                  : "border border-emerald-100 bg-emerald-50 text-emerald-600"
                               }`}
                             >
                               {expiryMeta.expiryLabel}
                             </span>
-                          </p>
+                          </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end md:w-auto md:shrink-0">
-                      <div className="flex h-12 w-full items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 sm:h-auto sm:w-auto sm:block sm:text-center">
-                        <div className="text-3xl font-black text-slate-800 leading-none">
-                          {views}
-                        </div>
-                        <div className="flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-widest text-slate-400 sm:mt-1">
-                          <TrendingUp size={8} className="text-emerald-500" />
-                          views
+                    <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:w-auto lg:shrink-0">
+                      <div className="flex items-center gap-2">
+                        {/* Favorite button — hidden for copies (copies cannot be favourited) */}
+                        {!isCopy && (
+                          <button
+                            type="button"
+                            aria-label={proposal?.isFavorite ? "Remove favorite" : "Mark as favorite"}
+                            title={proposal?.isFavorite ? "Remove favorite" : "Mark as favorite"}
+                            disabled={favoritingId === proposal._id}
+                            onClick={() => void handleToggleFavorite(proposal)}
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-slate-400 shadow-sm transition-colors duration-150 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 ${proposal?.isFavorite ? "border-rose-200 bg-rose-50 text-rose-500 hover:text-rose-600" : "border-slate-200 bg-white hover:border-slate-300 hover:text-slate-600"}`}
+                          >
+                            <Heart
+                              size={15}
+                              className={proposal?.isFavorite ? "fill-current text-rose-500" : ""}
+                            />
+                          </button>
+                        )}
+                        <div className="flex h-9 w-full flex-1 items-center justify-between gap-1.5 rounded-lg border border-slate-100 bg-slate-50 px-3 sm:w-auto sm:flex-none sm:justify-center">
+                          <TrendingUp size={10} className="text-emerald-500" />
+                          <span className="text-base font-black leading-none text-slate-800">
+                            {views}
+                          </span>
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                            views
+                          </span>
                         </div>
                       </div>
 
                       {isArchiveView ? (
-                        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+                        <div className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:items-center">
                           <button
                             type="button"
                             onClick={() => void handleRestoreProposal(proposal)}
                             disabled={restoringId === proposal._id}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 text-[12px] font-bold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-5 sm:text-[13px]"
+                            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-3 text-[11px] font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-4"
                           >
-                            <ArchiveRestore size={15} />
+                            <ArchiveRestore size={14} />
                             {restoringId === proposal._id ? "Restoring..." : "Restore"}
                           </button>
                           <ActionButton
-                            icon={<Trash2 size={16} />}
+                            icon={<Trash2 size={14} />}
                             label={permanentDeletingId === proposal._id ? "Deleting..." : "Delete forever"}
                             onClick={() => requestDeletion(proposal, "permanent")}
                             disabled={permanentDeletingId === proposal._id}
                           />
                         </div>
                       ) : (
-                        <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:items-center">
+                        <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:items-center">
                           <ActionButton
-                            icon={<Copy size={16} />}
+                            icon={<Copy size={14} />}
                             label={copyingLinkId === proposal._id ? "Creating link..." : "Copy URL"}
                             onClick={() => void handleCopyProposalUrl(proposal._id, proposalSlug)}
                             disabled={copyingLinkId !== null}
@@ -782,24 +825,25 @@ export default function ProposalTableList({
                           <ActionLink
                             href={`/proposal/${proposalSlug}`}
                             label="Preview"
-                            icon={<Eye size={16} />}
+                            icon={<Eye size={14} />}
                             target="_blank"
                           />
                           <ActionLink
                             href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`}
                             label="Edit"
-                            icon={<Edit3 size={16} />}
+                            icon={<Edit3 size={14} />}
                           />
                           {!isCopy && (
                             <ActionButton
-                              icon={<CopyPlus size={16} />}
+                              icon={<CopyPlus size={14} />}
                               label="Save a copy"
                               onClick={() => setCopyModalProposal(proposal)}
                             />
                           )}
                           <ActionButton
-                            icon={<Trash size={16} />}
-                            label={deletingId === proposal._id ? "Deleting..." : "Delete"}
+                            icon={<Archive size={14} />}
+                            label={deletingId === proposal._id ? "Archiving..." : "Archive"}
+                            title="Move to archive — recoverable for 30 days."
                             onClick={() => requestDeletion(proposal, "archive")}
                             disabled={deletingId === proposal._id}
                           />
@@ -810,12 +854,12 @@ export default function ProposalTableList({
                             <ActionLink
                               href={`/email/send-email?proposalId=${proposal._id}`}
                               label="Share"
-                              icon={<Share2 size={15} />}
+                              icon={<Share2 size={13} />}
                               emphasis
                             />
                           ) : (
                             <ActionButton
-                              icon={<Share2 size={15} />}
+                              icon={<Share2 size={13} />}
                               label="Share"
                               title="Publish the proposal to share it with vendors."
                               disabled
@@ -825,75 +869,62 @@ export default function ProposalTableList({
                       )}
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })}
 
-            <div className="pt-2">
-              <div className="flex max-w-full justify-end overflow-x-auto pb-1">
-                <nav aria-label="Proposals pagination">
-                  <ul className="flex min-w-max -space-x-px text-sm">
-                    <li>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCurrentPage((page) => Math.max(1, page - 1))
-                        }
-                        disabled={currentPage === 1}
-                        className="flex h-10 w-10 items-center justify-center rounded-s-lg border border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
+            {hasMore && (
+              <div ref={sentinelRef} data-testid="proposals-scroll-sentinel">
+                {loadMoreError ? (
+                  <div className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-5 text-center">
+                    <p role="alert" className="text-[12px] font-medium text-slate-600">
+                      {loadMoreError}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={loadMore}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : loadingMore ? (
+                  <div className="space-y-3">
+                    {[1, 2].map((item) => (
+                      <div
+                        key={`proposal-more-skeleton-${item}`}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                        aria-hidden="true"
                       >
-                        <span className="sr-only">Previous</span>
-                        <ChevronLeft size={16} />
-                      </button>
-                    </li>
-
-                    {buildPageItems(currentPage, totalPages).map(
-                      (item, index) =>
-                        item === "..." ? (
-                          <li key={`ellipsis-${index}`}>
-                            <span className="flex h-10 w-10 items-center justify-center border border-slate-200 bg-slate-50 text-slate-400">
-                              ...
-                            </span>
-                          </li>
-                        ) : (
-                          <li key={item}>
-                            <button
-                              type="button"
-                              onClick={() => setCurrentPage(item as number)}
-                              aria-current={
-                                currentPage === item ? "page" : undefined
-                              }
-                              className={`flex h-10 w-10 items-center justify-center border border-slate-200 font-semibold transition-colors ${
-                                currentPage === item
-                                  ? "bg-sky-100 text-sky-700"
-                                  : "bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                              }`}
-                            >
-                              {item}
-                            </button>
-                          </li>
-                        ),
-                    )}
-
-                    <li>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCurrentPage((page) =>
-                            Math.min(totalPages, page + 1),
-                          )
-                        }
-                        disabled={currentPage >= totalPages}
-                        className="flex h-10 w-10 items-center justify-center rounded-e-lg border border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
-                      >
-                        <span className="sr-only">Next</span>
-                        <ChevronRight size={16} />
-                      </button>
-                    </li>
-                  </ul>
-                </nav>
+                        <div className="h-4 w-2/5 rounded bg-slate-100 animate-pulse" />
+                        <div className="mt-2 h-3 w-1/4 rounded bg-slate-100 animate-pulse" />
+                      </div>
+                    ))}
+                    <p className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                      <Loader2 size={12} className="animate-spin" />
+                      Loading more
+                    </p>
+                  </div>
+                ) : (
+                  // Scrolling loads the next page on its own; this keeps the
+                  // same reach for keyboard users and for anything without an
+                  // IntersectionObserver.
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    className="mx-auto block rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 transition-colors hover:text-slate-700"
+                  >
+                    Load more proposals
+                  </button>
+                )}
               </div>
-            </div>
+            )}
+
+            {!hasMore && (pagination.total ?? 0) > PER_PAGE && (
+              <p className="text-center text-[11px] font-medium text-slate-400">
+                All {pagination.total} proposals loaded
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -941,7 +972,7 @@ function ActionButton({
       title={title ?? label}
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 text-[10px] font-bold text-slate-600 shadow-sm transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-11 sm:px-0"
+      className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold text-slate-600 shadow-sm transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-9 sm:px-0"
     >
       {icon}
       <span className="truncate sm:sr-only">{label}</span>
@@ -969,10 +1000,10 @@ function ActionLink({
       rel={target === "_blank" ? "noopener noreferrer" : undefined}
       aria-label={label}
       title={label}
-      className={`inline-flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 text-[10px] font-bold shadow-sm transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 sm:px-0 ${
+      className={`inline-flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[10px] font-bold shadow-sm transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 sm:px-0 ${
         emphasis
-          ? "border-[#008ad2] bg-gradient-to-br from-[#2fc6f5] to-[#008ad2] text-white hover:shadow-lg hover:shadow-[#0ea5e9]/20 sm:w-auto sm:px-4 sm:text-[13px]"
-          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 sm:w-11"
+          ? "border-[#008ad2] bg-gradient-to-br from-[#2fc6f5] to-[#008ad2] text-white hover:shadow-md hover:shadow-[#0ea5e9]/20 sm:w-auto sm:px-3.5 sm:text-[11px]"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 sm:w-9"
       }`}
     >
       {icon}
