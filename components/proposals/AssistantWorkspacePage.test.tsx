@@ -1520,7 +1520,10 @@ describe("AssistantWorkspacePage", () => {
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([startDateQuestion, roomsQuestion]));
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    const guidedLabel = await screen.findByText("Guided question 1");
+    // "Guided question 5" on its own read as though 1-4 had gone missing: the
+    // count jumps because extraction already answered the earlier ones. The
+    // total is what makes the number legible.
+    const guidedLabel = await screen.findByText("Guided question 1 of 2");
     expect(guidedLabel).toBeInTheDocument();
     const guidedCard = guidedLabel.parentElement?.parentElement;
     expect(guidedCard).toHaveClass(
@@ -1582,7 +1585,7 @@ describe("AssistantWorkspacePage", () => {
     expect(within(screen.getByRole('list',{name:'Question checklist'})).getAllByRole('listitem')).toHaveLength(19);
     expect(within(screen.getByRole('list',{name:'Additional clarifications'})).getAllByRole('listitem')).toHaveLength(1);
     expect(screen.getByRole('progressbar',{name:'Key questions progress'})).toHaveAttribute('aria-valuemax','19');
-    expect(screen.getByText('Guided question 1')).toBeInTheDocument();
+    expect(screen.getByText(/^Guided question 1\b/)).toBeInTheDocument();
     expect(screen.queryByText(/\d+ of \d+ done/)).not.toBeInTheDocument();
   });
 
@@ -1609,7 +1612,7 @@ describe("AssistantWorkspacePage", () => {
       intakeProgress:{total:19,completed:0,items,extraQuestionIds:[]}}});
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     expect(await screen.findByText('0/19')).toBeInTheDocument();
-    expect(screen.getByText('Guided question 1')).toBeInTheDocument();
+    expect(screen.getByText(/^Guided question 1\b/)).toBeInTheDocument();
     expect(screen.getByText('When does the event start?')).toBeInTheDocument();
     expect(screen.queryByText('How many event rooms are required?')).not.toBeInTheDocument();
     const rows = within(screen.getByRole('list',{name:'Question checklist'})).getAllByRole('listitem');
@@ -1758,7 +1761,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     const initialLoads = mockedGetConversation.mock.calls.length;
 
     // Ported from the retired ConversationWorkspace suite: the Answer control
@@ -1782,7 +1785,7 @@ describe("AssistantWorkspacePage", () => {
     expect(review).toHaveTextContent("Start date");
     expect(review).toHaveTextContent(startDate);
     expect(screen.queryByText(`Start date: ${startDate} ✓`)).not.toBeInTheDocument();
-    expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
+    expect(await screen.findByText(/^Guided question 2\b/)).toBeInTheDocument();
     expect(screen.getByText("How many event rooms are required?")).toBeInTheDocument();
     expect(screen.getByText("affects cost")).toBeInTheDocument();
   });
@@ -1797,7 +1800,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     const answerInput = screen.getByLabelText("Answer this question");
     fireEvent.change(answerInput, { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
@@ -1851,11 +1854,11 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
 
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledWith(PROPOSAL_ID, "q-start", { status: "dismissed" }));
-    expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
+    expect(await screen.findByText(/^Guided question 2\b/)).toBeInTheDocument();
     // Skipping never shows a confirmed value and never completes the flow.
     expect(screen.queryByText(/✓/)).not.toBeInTheDocument();
     // And it posts nothing to the conversation. Skipping several questions in
@@ -1884,7 +1887,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     // The date control is the shared react-datepicker wrapper, not a bare text box.
     expect(container.querySelector(".react-datepicker__input-container")).not.toBeNull();
     const input = screen.getByLabelText("Answer this question");
@@ -1933,7 +1936,7 @@ describe("AssistantWorkspacePage", () => {
     expect(await screen.findByText("1 saved detail")).toBeInTheDocument();
     const review = screen.getByTestId("suggested-answers-review");
     expect(screen.getByText(suggested)).toBeInTheDocument();
-    expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Guided question 1\b/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Use these details" })).not.toBeInTheDocument();
     await waitFor(() => expect(mockedPatchQuestion).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.getByRole("button", { name: "Edit Start date" })).toBeEnabled());
@@ -2094,7 +2097,7 @@ describe("AssistantWorkspacePage", () => {
     ]));
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     expect(screen.getByLabelText("Answer this question")).toHaveValue("");
     expect(screen.queryByText(/Pre-filled from your message/)).not.toBeInTheDocument();
     expect(screen.queryByText(/highlighted option comes from your message/)).not.toBeInTheDocument();
@@ -2120,7 +2123,7 @@ describe("AssistantWorkspacePage", () => {
     expect(screen.getAllByRole('status', { name: 'Attachment progress' })).toHaveLength(1);
     expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
     // ...but the guided question control itself is not, even though it is open.
-    expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Guided question 1\b/)).not.toBeInTheDocument();
     expect(screen.queryByText("What is this event called?")).not.toBeInTheDocument();
     // Normal conversation content is not hidden by the pending extraction.
     expect(screen.getByText("Please review the venue requirements.")).toBeInTheDocument();
@@ -2160,13 +2163,13 @@ describe("AssistantWorkspacePage", () => {
 
       render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
       expect(await screen.findByRole('status', { name: 'Attachment progress' })).toHaveTextContent('Reading your brief');
-      expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Guided question 1\b/)).not.toBeInTheDocument();
 
       await act(async () => { await jest.advanceTimersByTimeAsync(2_000); });
 
       const review = await screen.findByTestId("suggested-answers-review");
       expect(review).toHaveTextContent("Northstar Leadership Summit 2026");
-      expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Guided question 1\b/)).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Edit Event name" })).toBeInTheDocument();
     } finally {
       jest.useRealTimers();
@@ -2187,12 +2190,12 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     expect(await screen.findByText("Requirement extraction did not finish. Try again.")).toBeInTheDocument();
-    expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Guided question 1\b/)).not.toBeInTheDocument();
     expect(screen.queryByText("What is this event called?")).not.toBeInTheDocument();
     expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Continue without extraction" }));
-    expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
+    expect(await screen.findByText(/^Guided question 1\b/)).toBeInTheDocument();
     expect(screen.getByText("What is this event called?")).toBeInTheDocument();
   });
 
@@ -2208,7 +2211,7 @@ describe("AssistantWorkspacePage", () => {
         .mockResolvedValue(conversationWithGuidedQuestions([withSuggestion]));
 
       render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-      await screen.findByText("Guided question 1");
+      await screen.findByText(/^Guided question 1\b/);
 
       const input = screen.getByLabelText("Answer this question");
       fireEvent.change(input, { target: { value: "My Own Event Name" } });
@@ -2246,7 +2249,7 @@ describe("AssistantWorkspacePage", () => {
       });
 
       render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-      await screen.findByText("Guided question 1");
+      await screen.findByText(/^Guided question 1\b/);
       await waitFor(() => expect(mockedGetProposal).toHaveBeenCalledTimes(1));
 
       await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
@@ -2270,7 +2273,7 @@ describe("AssistantWorkspacePage", () => {
         .mockResolvedValue(conversationWithGuidedQuestions([withSuggestion]));
 
       render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-      await screen.findByText("Guided question 1");
+      await screen.findByText(/^Guided question 1\b/);
 
       const input = screen.getByLabelText("Answer this question");
       fireEvent.change(input, { target: { value: "09/20/2026" } });
@@ -2293,7 +2296,7 @@ describe("AssistantWorkspacePage", () => {
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
-    expect(await screen.findByText("Guided question 1")).toBeInTheDocument();
+    expect(await screen.findByText(/^Guided question 1\b/)).toBeInTheDocument();
     expect(screen.getByLabelText("Answer this question")).toBeInTheDocument();
     expect(screen.queryByText(/Reading your sources before asking the next question/)).not.toBeInTheDocument();
   });
@@ -2315,7 +2318,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     for (const option of ["In-Person", "Hybrid", "Virtual"])
       expect(screen.getByRole("button", { name: option })).toBeInTheDocument();
     // A closed option set answers in one tap: no separate Answer control.
@@ -2331,7 +2334,7 @@ describe("AssistantWorkspacePage", () => {
     ));
     expect(await screen.findByTestId("suggested-answers-review")).toHaveTextContent("Hybrid");
     expect(screen.queryByText("Event format: Hybrid ✓")).not.toBeInTheDocument();
-    expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
+    expect(await screen.findByText(/^Guided question 2\b/)).toBeInTheDocument();
   });
 
   test("a long choice list renders every option as a pill and submits the clicked one", async () => {
@@ -2354,7 +2357,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     for (const option of STREAMING_PLATFORMS)
       expect(screen.getByRole("button", { name: option })).toBeInTheDocument();
 
@@ -2385,7 +2388,7 @@ describe("AssistantWorkspacePage", () => {
     });
 
     const { container } = render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     const input = screen.getByLabelText("Answer this question");
     expect(input).toHaveAttribute("type", "text");
     expect(container.querySelector(".react-datepicker__input-container")).toBeNull();
@@ -2471,7 +2474,7 @@ describe("AssistantWorkspacePage", () => {
   };
 
   const answerLastQuestion = async () => {
-    await screen.findByText("Guided question 1");
+    await screen.findByText(/^Guided question 1\b/);
     fireEvent.change(screen.getByLabelText("Answer this question"), { target: { value: "6" } });
     fireEvent.click(screen.getByRole("button", { name: "Answer" }));
     expect(await screen.findByTestId("suggested-answers-review")).toHaveTextContent("6");
@@ -2806,6 +2809,14 @@ describe("AssistantWorkspacePage", () => {
     const acknowledgement = screen.getByTestId('attachment-acknowledgement');
     const progress = screen.getByRole('status', {name:'Attachment progress'});
     expect(userTurn).toHaveTextContent('slow-brief.txt');
+    // This optimistic placeholder is replaced by the message the server
+    // persists for the same turn, so the two must read identically. They used
+    // to differ, and the bubble visibly rewrote itself several seconds after
+    // the planner had read it. Source of truth: the backend's
+    // attachmentAcknowledgement in src/modules/conversations/attachmentReply.ts.
+    expect(acknowledgement).toHaveTextContent(
+      'I’ve received your brief. I’ll check the file and pull out the event details, then we’ll review what I found and work through anything missing together.',
+    );
     expect(userTurn.compareDocumentPosition(acknowledgement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(acknowledgement.compareDocumentPosition(progress) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(mockedCreateSession).not.toHaveBeenCalled();
@@ -2823,7 +2834,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
     expect(await screen.findByText(/Share a few event details or attach a brief below/)).toBeInTheDocument();
     expect(screen.queryByText('What is this event called?')).not.toBeInTheDocument();
-    expect(screen.queryByText('Guided question 1')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Guided question 1\b/)).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar', {name:'Key questions progress'})).not.toBeInTheDocument();
   });
 
@@ -3417,7 +3428,7 @@ describe("AssistantWorkspacePage", () => {
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
 
     expect(await screen.findByLabelText("The assistant is responding")).toBeInTheDocument();
-    expect(screen.queryByText("Guided question 1")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Guided question 1\b/)).not.toBeInTheDocument();
     expect(screen.queryByText("What is the event date?")).not.toBeInTheDocument();
     const composer = screen.getByLabelText("Message the proposal assistant");
     fireEvent.change(composer, { target: { value: "Do not send this twice." } });

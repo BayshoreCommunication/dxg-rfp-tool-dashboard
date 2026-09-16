@@ -1265,6 +1265,13 @@ const isAcceptedAttachment = (file: File) => {
 // served as a static file so a new planner can watch extraction work without
 // risking a document of their own. Staging it is a normal attach: nothing is
 // uploaded or created until the planner presses Send.
+/* The wording the server persists for the same turn (attachmentReply.ts). It is
+   duplicated here rather than shared because the repositories are separate — but
+   it must stay identical, or the bubble visibly rewrites itself a few seconds
+   after the planner has read it, when the persisted message replaces this
+   optimistic placeholder. */
+const ATTACHMENT_ACKNOWLEDGEMENT =
+  'I’ve received your brief. I’ll check the file and pull out the event details, then we’ll review what I found and work through anything missing together.';
 const EXAMPLE_BRIEF_PATH = '/files/RFPilot%20example-event-brief.docx';
 const EXAMPLE_BRIEF_FILE_NAME = 'Example brief - Northstar Leadership Summit.docx';
 const EXAMPLE_BRIEF_MIME =
@@ -1599,6 +1606,7 @@ function localTimeOf(date: Date): string {
 function GuidedQuestionCard({
   question,
   current,
+  total,
   clarification = false,
   reviewMode = false,
   busy,
@@ -1614,6 +1622,9 @@ function GuidedQuestionCard({
 }: {
   question: ConversationQuestion;
   current: number;
+  /* Without the total, "Guided question 5" reads as though 1-4 went missing —
+     the count jumps because extraction already answered the earlier ones. */
+  total: number;
   clarification?: boolean;
   reviewMode?: boolean;
   busy: boolean;
@@ -1780,7 +1791,9 @@ function GuidedQuestionCard({
             ? 'Edit extracted detail'
             : clarification
               ? 'Additional clarification'
-              : `Guided question ${current}`}
+              : total > 0
+                ? `Guided question ${current} of ${total}`
+                : `Guided question ${current}`}
         </p>
         {impactLabel && (
           <span className={`rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold ${reviewMode ? 'border-cyan-200 text-[#087f69]' : 'border-amber-300 text-amber-800'}`}>
@@ -5188,7 +5201,7 @@ export default function AssistantWorkspacePage({
                   {threadMessages.flatMap(message => [
                     renderMessage(message),
                     ...(message.id === persistedAttachmentTurn?.id && !attachmentAcknowledged
-                      ? [wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">I’ll upload your brief and check the file, then read the event details. We’ll review what I find before moving to the next question.</div>, 'attachment-acknowledgement')]
+                      ? [wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">{ATTACHMENT_ACKNOWLEDGEMENT}</div>, 'attachment-acknowledgement')]
                       : []),
                   ])}
                   {showLocalAttachment && attachmentTurn && (
@@ -5201,7 +5214,7 @@ export default function AssistantWorkspacePage({
                       </div>
                     </li>
                   )}
-                  {showLocalAttachment && wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">I’ll upload your brief and check the file, then read the event details. We’ll review what I find before moving to the next question.</div>, 'attachment-acknowledgement')}
+                  {showLocalAttachment && wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">{ATTACHMENT_ACKNOWLEDGEMENT}</div>, 'attachment-acknowledgement')}
                   {sourceExtractionInProgress && !extractionSendFailure && (
                     wrapAssistantTurn(
                       <SourceIntakeProgress phase={sourceIntakePhase} />,
@@ -5379,6 +5392,7 @@ export default function AssistantWorkspacePage({
                                 key={editingSuggestedQuestion.id}
                                 question={editingSuggestedQuestion}
                                 current={questionProgressCurrent}
+                                total={totalIntakeCount}
                                 clarification={extraQuestions.some(
                                   (question) =>
                                     question.id === editingSuggestedQuestion.id,
@@ -5463,6 +5477,7 @@ export default function AssistantWorkspacePage({
                             key={currentQuestion.id}
                             question={currentQuestion}
                             current={questionProgressCurrent}
+                            total={totalIntakeCount}
                             clarification={!!currentQuestion && extraQuestions.some(question => question.id === currentQuestion.id)}
                             busy={questionBusyId === currentQuestion.id}
                             error={questionError}
