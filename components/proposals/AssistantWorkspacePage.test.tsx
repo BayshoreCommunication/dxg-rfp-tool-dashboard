@@ -1858,6 +1858,12 @@ describe("AssistantWorkspacePage", () => {
     expect(await screen.findByText("Guided question 2")).toBeInTheDocument();
     // Skipping never shows a confirmed value and never completes the flow.
     expect(screen.queryByText(/✓/)).not.toBeInTheDocument();
+    // And it posts nothing to the conversation. Skipping several questions in
+    // a row used to stack up a wall of near-identical "you can add it later"
+    // notices; the Key questions rail carries a persistent Skipped badge for
+    // each one instead, which survives a refresh as a local card never did.
+    expect(screen.queryByText(/you can add it later/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Open Venue/)).not.toBeInTheDocument();
   });
 
   test("a date question renders the date picker and submits a YYYY-MM-DD value", async () => {
