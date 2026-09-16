@@ -343,8 +343,15 @@ describe("AssistantWorkspacePage", () => {
     const send = screen.getByRole("button", { name: "Send message" });
     expect(send).toBeDisabled();
     expect(send).toHaveAttribute("title", "AI assistance is temporarily unavailable.");
-    expect(screen.getByRole("button", { name: "Attach a file" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Start voice input" })).toBeDisabled();
+    // ...but preparing still works. Staging a file, prefilling the composer and
+    // dictating are local; nothing is uploaded or created until Send. Gating
+    // them stopped a planner getting ready while they waited, and did it
+    // unevenly: "Describe it from scratch" has no picker to disable, so it
+    // stayed live and prefilled text into a composer that could not send.
+    expect(screen.getByRole("button", { name: "Attach a file" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Start voice input" })).toBeEnabled();
+    for (const starter of ["Try an example brief", "Upload my brief or old RFP", "Describe it from scratch"])
+      expect(screen.getByRole("button", { name: starter })).toBeEnabled();
   });
 
   test("a configuration halt is worded for the administrator, not the provider", async () => {

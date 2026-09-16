@@ -4531,14 +4531,18 @@ export default function AssistantWorkspacePage({
 
   // Attaching only stages a chip, so the pickers stay enabled while scans run;
   // they are disabled once three files are staged or while a send uploads.
+  // Deliberately NOT gated on aiHalted: staging a file, prefilling the
+  // composer and dictating are all local, and nothing is uploaded or created
+  // until Send. Blocking them stopped a planner preparing while they waited,
+  // and did it inconsistently — "Describe it from scratch" has no picker to
+  // disable, so it stayed live and prefilled text into a composer whose Send
+  // was disabled. Only Send is gated; the notice above it says why.
   const attachDisabled =
-    staged.length >= MAX_STAGED_FILES || sendBusy || aiHalted;
+    staged.length >= MAX_STAGED_FILES || sendBusy;
   const attachDisabledTitle = attachDisabled
-    ? aiHalted
-      ? 'AI assistance is temporarily unavailable.'
-      : sendBusy
-        ? 'Wait for the current send to finish.'
-        : `You can attach up to ${MAX_STAGED_FILES} files per message.`
+    ? sendBusy
+      ? 'Wait for the current send to finish.'
+      : `You can attach up to ${MAX_STAGED_FILES} files per message.`
     : 'Attach a PDF, DOCX, XLSX, CSV, or TXT file.';
 
   // First-run starters. A brand-new planner faces an empty composer with no
@@ -4841,7 +4845,7 @@ export default function AssistantWorkspacePage({
               type="button"
               aria-label="Start voice input"
               onClick={() => startVoiceInput()}
-              disabled={sendBusy || aiHalted}
+              disabled={sendBusy}
               title="Describe your event by voice"
               className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
