@@ -72,10 +72,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
-import {
-  isRetiredStandaloneRecordingFinding,
-  stepForPath,
-} from './GuidancePanel';
+import { isRetiredStandaloneRecordingFinding } from './GuidancePanel';
 import {
   useCallback,
   useEffect,
@@ -811,15 +808,6 @@ type LocalCard =
   // Extraction from typed messages happens in the background, so without a
   // card the planner sees sources and applied fields appear from nowhere.
   | { id: string; kind: 'segment'; created: boolean; reason?: string }
-  // A skipped question otherwise vanishes: nothing records it and the only way
-  // back is to know which editor page owns the field.
-  | {
-      id: string;
-      kind: 'skipped';
-      label: string;
-      step?: number;
-      stepLabel?: string;
-    }
   | { id: string; kind: 'error'; message: string };
 
 // Why a "use what I've told you" request produced nothing. Deliberately plain:
@@ -4252,22 +4240,10 @@ export default function AssistantWorkspacePage({
     });
     if (!resolved) return;
     setSkippedCount((count) => count + 1);
-    // Leave a trace with a way back, so skipping is deferral rather than a
-    // silent, unrecoverable decision.
-    const target =
-      question.paths.length === 1
-        ? stepForPath(question.paths[0])
-        : undefined;
-    setLocalCards((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        kind: 'skipped',
-        label: questionFieldLabel(question),
-        step: target?.step,
-        stepLabel: target?.label,
-      },
-    ]);
+    // No chat card. Skipping several questions in a row stacked up a wall of
+    // near-identical notices, and the "Key questions" rail already carries a
+    // persistent Skipped badge for each one — backend-sourced, so unlike a
+    // local card it survives a refresh and stays a way back to the field.
   };
 
   // A readiness report already on screen (the completion card's own numbers, or
@@ -5281,26 +5257,6 @@ export default function AssistantWorkspacePage({
                                 card.reason ?? ''
                               ] ??
                               "There's nothing new for me to read yet.")}
-                        </p>
-                      )}
-                      {card.kind === 'skipped' && (
-                        <p
-                          role="status"
-                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 sm:max-w-[85%]"
-                        >
-                          Skipped <strong>{card.label}</strong> — you
-                          can add it later.
-                          {card.step && proposalId && (
-                            <>
-                              {' '}
-                              <Link
-                                href={`/proposals/proposal-edit?proposalId=${proposalId}&step=${card.step}`}
-                                className="font-semibold text-[#008ad2] underline underline-offset-2"
-                              >
-                                Open {card.stepLabel}
-                              </Link>
-                            </>
-                          )}
                         </p>
                       )}
                       {card.kind === 'error' && (
