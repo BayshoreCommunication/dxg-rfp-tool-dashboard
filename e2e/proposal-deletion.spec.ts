@@ -12,13 +12,13 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole("button", { name: "Sign In to Dashboard" }).click();
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
   await page.goto("/proposals");
-  await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Archive", exact: true })).toBeVisible();
 });
 
 test("safe focus, keyboard containment, Escape and Cancel make no delete request", async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  const trigger = page.getByRole("button", { name: "Delete", exact: true });
+  const trigger = page.getByRole("button", { name: "Archive", exact: true });
   await trigger.click();
   const dialog = page.getByRole("alertdialog", { name: "Archive this proposal?" });
   await expect(dialog).toBeVisible();
@@ -28,7 +28,7 @@ test("safe focus, keyboard containment, Escape and Cancel make no delete request
   await page.keyboard.press("Tab");
   await expect(dialog.getByRole("button", { name: "Move to archive" })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(dialog.getByRole("button", { name: "Close proposal deletion dialog" })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(dialog.getByRole("button", { name: "Move to archive" })).toBeFocused();
   expect((await new AxeBuilder({ page }).include('[role="alertdialog"]').analyze()).violations).toEqual([]);
@@ -40,9 +40,6 @@ test("safe focus, keyboard containment, Escape and Cancel make no delete request
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(dialog).toBeHidden();
   await trigger.click();
-  await dialog.getByRole("button", { name: "Close proposal deletion dialog" }).click();
-  await expect(dialog).toBeHidden();
-  await trigger.click();
   await page.mouse.click(2, 2);
   await expect(dialog).toBeHidden();
   expect((await (await page.request.get(fixtureUrl)).json()).requests).toEqual([]);
@@ -51,7 +48,7 @@ test("safe focus, keyboard containment, Escape and Cancel make no delete request
 
 test("archive request is guarded while pending and can be retried after failure", async ({ page }) => {
   await page.request.post(fixtureUrl, { data: { failNext: true, hold: true } });
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
   const dialog = page.getByRole("alertdialog");
   await dialog.getByRole("button", { name: "Move to archive" }).click();
   await expect(dialog.getByRole("button", { name: "Archiving…" })).toBeDisabled();
@@ -95,7 +92,7 @@ test("long proposal names fit a narrow screen without hiding the actions", async
   const name = "QA ONLY — International Healthcare Innovation and Leadership Summit — " + "LongProposalName".repeat(15);
   await page.request.post(fixtureUrl, { data: { seed: true, name } });
   await page.reload();
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog.getByText(name, { exact: true })).toBeVisible();
   for (const label of ["Cancel", "Move to archive"]) {

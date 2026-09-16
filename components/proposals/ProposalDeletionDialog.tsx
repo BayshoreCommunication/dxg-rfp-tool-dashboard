@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, FileText, LoaderCircle, ShieldAlert, Trash2, X } from "lucide-react";
+import { Archive, ArchiveRestore, FileText, LoaderCircle, ShieldAlert, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 
@@ -78,22 +78,7 @@ export default function ProposalDeletionDialog({
       className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[460px] overflow-hidden rounded-3xl border border-white/80 bg-white p-0 text-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.25)] backdrop:bg-slate-950/45 backdrop:backdrop-blur-sm open:flex open:flex-col"
     >
       <div className="min-h-0 overflow-y-auto px-5 pb-5 pt-5 sm:px-7 sm:pb-6 sm:pt-6">
-        <div className="flex items-start justify-between gap-4">
-          <span className="grid h-14 w-14 place-items-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-600">
-            <ActionIcon size={26} strokeWidth={1.7} aria-hidden="true" />
-          </span>
-          <button
-            type="button"
-            aria-label="Close proposal deletion dialog"
-            onClick={dismiss}
-            disabled={busy}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <X size={20} aria-hidden="true" />
-          </button>
-        </div>
-
-        <h2 id={titleId} className="mt-5 text-2xl font-bold tracking-tight text-slate-950">
+        <h2 id={titleId} className="text-2xl font-bold tracking-tight text-slate-950">
           {permanent ? "Delete proposal forever?" : "Archive this proposal?"}
         </h2>
         <p id={descriptionId} className="mt-2 text-sm leading-6 text-slate-500">
@@ -135,7 +120,7 @@ export default function ProposalDeletionDialog({
           aria-label={confirmLabel}
           onClick={() => { if (!busy) onConfirm(); }}
           disabled={busy}
-          className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-rose-800 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy ? <LoaderCircle size={17} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <ActionIcon size={17} aria-hidden="true" />}
           <span aria-live="polite">{confirmLabel}</span>
