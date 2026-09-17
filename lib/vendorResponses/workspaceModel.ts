@@ -462,17 +462,19 @@ export const validateWorkspaceResponse = (
       "Complete the client, event, and services for every reference.",
     );
   }
+  // A one-day event is ordinary and ends on the day it starts, so only a range
+  // that runs backwards is wrong. ISO yyyy-mm-dd compares correctly as a string.
   if (
     response.references.some(
       (entry) =>
-        entry.startDate && entry.endDate && entry.endDate <= entry.startDate,
+        entry.startDate && entry.endDate && entry.endDate < entry.startDate,
     )
   ) {
     issue(
       issues,
       "references",
       "/references/dates",
-      "Reference end dates must be after their start dates.",
+      "Reference end dates cannot be before their start dates.",
     );
   }
   if (
