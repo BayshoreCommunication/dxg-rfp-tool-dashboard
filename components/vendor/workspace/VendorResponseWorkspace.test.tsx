@@ -245,6 +245,29 @@ describe("VendorResponseWorkspace", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows streaming delivery only when the proposal questionnaire requests it", () => {
+    const withoutStreaming = workspace();
+    const firstRender = render(
+      <VendorResponseWorkspace workspace={withoutStreaming} accessGrant="grant" />,
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /3\. Room responses/i })[0],
+    );
+    expect(screen.queryByText("D · Streaming delivery")).not.toBeInTheDocument();
+    firstRender.unmount();
+
+    const withStreaming = workspace();
+    withStreaming.questionnaire.rooms[0].streamingApplicable = true;
+    withStreaming.questionnaire.hybrid.platformPlanRequired = true;
+    render(
+      <VendorResponseWorkspace workspace={withStreaming} accessGrant="grant" />,
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /3\. Room responses/i })[0],
+    );
+    expect(screen.getByText("D · Streaming delivery")).toBeInTheDocument();
+  });
+
   it("captures the optional DBA services detail in the company profile", () => {
     render(
       <VendorResponseWorkspace workspace={workspace()} accessGrant="grant" />,
