@@ -258,15 +258,8 @@ export default function VendorResponseDetailWorkspace({
               />
               </>}
 
-              <section
-                className="mt-6"
-                aria-labelledby={
-                  selectedVersion.format === "structured_v1"
-                    ? undefined
-                    : "intelligence-heading"
-                }
-              >
-                {selectedVersion.format !== "structured_v1" ? (
+              {selectedVersion.format !== "structured_v1" ? (
+                <section className="mt-6" aria-labelledby="intelligence-heading">
                   <div className="mb-3">
                     <h3
                       id="intelligence-heading"
@@ -278,22 +271,22 @@ export default function VendorResponseDetailWorkspace({
                       {`RFPilot read ${singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which requirements the vendor answered and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.`}
                     </p>
                   </div>
-                ) : null}
-                {detail.submission && (
-                  <div className="space-y-5">
-                    <VendorFactsSection
-                      key={selectedVersion.versionId}
-                      proposalId={detail.response.proposalId}
-                      proposalTitle={detail.response.proposalTitle}
-                      vendorName={vendorName}
-                      vendorEmail={selectedVersion.email}
-                      submissionId={detail.submission.submissionId}
-                      versionId={selectedVersion.versionId}
-                      returnTo={`/vendor-responses/${encodeURIComponent(detail.response._id)}`}
-                    />
-                  </div>
-                )}
-              </section>
+                  {detail.submission ? (
+                    <div className="space-y-5">
+                      <VendorFactsSection
+                        key={selectedVersion.versionId}
+                        proposalId={detail.response.proposalId}
+                        proposalTitle={detail.response.proposalTitle}
+                        vendorName={vendorName}
+                        vendorEmail={selectedVersion.email}
+                        submissionId={detail.submission.submissionId}
+                        versionId={selectedVersion.versionId}
+                        returnTo={`/vendor-responses/${encodeURIComponent(detail.response._id)}`}
+                      />
+                    </div>
+                  ) : null}
+                </section>
+              ) : null}
             </main>
           )}
         </div>

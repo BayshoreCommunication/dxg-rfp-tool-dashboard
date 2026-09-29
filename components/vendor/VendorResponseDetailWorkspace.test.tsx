@@ -140,11 +140,12 @@ it("drops the version sidebar when only one version exists", () => {
   expect(screen.getByRole("heading", { name: "Response as received" })).toBeInTheDocument();
   expect(screen.getByText("Files included with this response.")).toBeInTheDocument();
   expect(screen.getByText(/RFPilot read this response's files once/)).toBeInTheDocument();
+  expect(screen.getByTestId("facts")).toBeInTheDocument();
   expect(screen.queryByText(/Version 1/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Version 2/)).not.toBeInTheDocument();
 });
 
-it("removes the document analysis intro from structured responses", () => {
+it("removes document analysis from structured responses", () => {
   const structuredVersion: VendorSubmissionDetail["versions"][number] = {
     ...detail.versions[0],
     format: "structured_v1",
@@ -174,7 +175,7 @@ it("removes the document analysis intro from structured responses", () => {
   );
 
   expect(screen.getByTestId("structured-response")).toBeInTheDocument();
-  expect(screen.getByTestId("facts")).toBeInTheDocument();
+  expect(screen.queryByTestId("facts")).not.toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Document analysis" }),
   ).not.toBeInTheDocument();
