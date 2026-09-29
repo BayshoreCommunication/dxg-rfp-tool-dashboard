@@ -1,17 +1,18 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { Fragment, useState } from "react";
 import { formatMoney, moneyFromInput, moneyInput, workspaceTotals } from "@/lib/vendorResponses/workspaceModel";
 import WorkspaceSection, { fieldClass, labelClass } from "./WorkspaceSection";
 
-export default function PricingSection({ questionnaire, response, onChange, onViewRoom, sectionNumber, disabled }: {
+export default function PricingSection({ questionnaire, response, onChange, sectionNumber, disabled }: {
   questionnaire: VendorResponseQuestionnaireV1;
   response: VendorResponseV1;
   onChange: (response: VendorResponseV1) => void;
-  onViewRoom: (roomId: string) => void;
   sectionNumber: number;
   disabled: boolean;
 }) {
+  const [expandedRoomId, setExpandedRoomId] = useState("");
   const section = questionnaire.sections.find((entry) => entry.sectionId === "pricing");
   const pricing = response.pricing;
   const precision = questionnaire.pricing.decimalPrecision;
@@ -61,17 +62,81 @@ export default function PricingSection({ questionnaire, response, onChange, onVi
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e6ebef]">
-                    {roomSummaries.map((room) => (
-                      <tr className="bg-white" key={room.roomId}>
-                        <th className="px-4 py-3.5 font-extrabold text-[#16283c]" scope="row">{room.name}</th>
-                        <td className="px-4 py-3.5 tabular-nums text-[#42576a]">{formatMoney(room.equipment, currency, precision)}</td>
-                        <td className="px-4 py-3.5 tabular-nums text-[#42576a]">{formatMoney(room.labor, currency, precision)}</td>
-                        <td className="bg-[#f3faff] px-4 py-3.5 font-extrabold tabular-nums text-[#16283c]">{formatMoney(room.total, currency, precision)}</td>
-                        <td className="px-4 py-2.5">
-                          <button type="button" className="min-h-9 rounded-md border border-[#008ad2] px-3 text-xs font-extrabold text-[#0075b4] transition hover:bg-[#eef8fd] focus:outline-none focus:ring-3 focus:ring-[#dff3fc]" aria-label={`View ${room.name} details`} onClick={() => onViewRoom(room.roomId)}>View details</button>
-                        </td>
-                      </tr>
-                    ))}
+                    {roomSummaries.map((room) => {
+                      const roomResponse = responsesByRoomId.get(room.roomId);
+                      const expanded = expandedRoomId === room.roomId;
+                      const detailsId = `pricing-room-details-${room.roomId}`;
+                      return (
+                        <Fragment key={room.roomId}>
+                          <tr className={expanded ? "bg-[#fbfdff]" : "bg-white"}>
+                            <th className="px-4 py-3.5 font-extrabold text-[#16283c]" scope="row">{room.name}</th>
+                            <td className="px-4 py-3.5 tabular-nums text-[#42576a]">{formatMoney(room.equipment, currency, precision)}</td>
+                            <td className="px-4 py-3.5 tabular-nums text-[#42576a]">{formatMoney(room.labor, currency, precision)}</td>
+                            <td className="bg-[#f3faff] px-4 py-3.5 font-extrabold tabular-nums text-[#16283c]">{formatMoney(room.total, currency, precision)}</td>
+                            <td className="px-4 py-2.5">
+                              <button type="button" className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-[#008ad2] px-3 text-xs font-extrabold text-[#0075b4] transition hover:bg-[#eef8fd] focus:outline-none focus:ring-3 focus:ring-[#dff3fc]" aria-controls={detailsId} aria-expanded={expanded} onClick={() => setExpandedRoomId(expanded ? "" : room.roomId)}>
+                                {expanded ? "Hide details" : "View details"}
+                                <ChevronDown className={`transition-transform ${expanded ? "rotate-180" : ""}`} size={14} aria-hidden="true" />
+                              </button>
+                            </td>
+                          </tr>
+                          {expanded ? (
+                            <tr id={detailsId}>
+                              <td className="border-t border-[#dce4eb] bg-[#f8fbfd] px-4 py-4" colSpan={5}>
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                  <section className="rounded-md border border-[#dce4eb] bg-white p-4" aria-labelledby={`${detailsId}-equipment`}>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <h3 className="text-sm font-extrabold text-[#16283c]" id={`${detailsId}-equipment`}>Equipment breakdown</h3>
+                                      <strong className="text-sm tabular-nums text-[#16283c]">{formatMoney(room.equipment, currency, precision)}</strong>
+                                    </div>
+                                    {roomResponse?.categoryTotals.length ? (
+                                      <dl className="mt-3 divide-y divide-[#edf1f4]">
+                                        {roomResponse.categoryTotals.map((entry) => (
+                                          <div className="flex justify-between gap-3 py-2 text-xs" key={entry.categoryId}>
+                                            <dt className="font-bold text-[#607487]">{questionnaire.pricing.equipmentCategories.find((category) => category.id === entry.categoryId)?.label ?? entry.categoryId}</dt>
+                                            <dd className="font-extrabold tabular-nums text-[#16283c]">{formatMoney(entry.amount.amountMinor, currency, precision)}</dd>
+                                          </div>
+                                        ))}
+                                      </dl>
+                                    ) : <p className="mt-3 text-xs leading-5 text-[#718496]">No equipment subtotals entered yet.</p>}
+                                    {roomResponse?.equipmentLines.length ? (
+                                      <ul className="mt-3 space-y-2 border-t border-[#edf1f4] pt-3">
+                                        {roomResponse.equipmentLines.map((line) => (
+                                          <li className="flex justify-between gap-3 text-xs" key={line.equipmentLineId}>
+                                            <span className="text-[#42576a]">{line.description || "Equipment item"}</span>
+                                            <span className="shrink-0 font-bold text-[#607487]">Qty {line.quantity}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    ) : null}
+                                  </section>
+
+                                  <section className="rounded-md border border-[#dce4eb] bg-white p-4" aria-labelledby={`${detailsId}-labor`}>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <h3 className="text-sm font-extrabold text-[#16283c]" id={`${detailsId}-labor`}>Labor plan</h3>
+                                      <strong className="text-sm tabular-nums text-[#16283c]">{formatMoney(room.labor, currency, precision)}</strong>
+                                    </div>
+                                    {roomResponse?.laborLines.length ? (
+                                      <ul className="mt-3 divide-y divide-[#edf1f4]">
+                                        {roomResponse.laborLines.map((line) => (
+                                          <li className="flex items-start justify-between gap-4 py-2 text-xs" key={line.laborLineId}>
+                                            <div>
+                                              <p className="font-bold text-[#42576a]">{questionnaire.crew.roles.find((role) => role.id === line.roleId)?.label ?? line.roleId}</p>
+                                              {line.notes ? <p className="mt-0.5 text-[#718496]">{line.notes}</p> : null}
+                                            </div>
+                                            <span className="shrink-0 text-right text-[#607487]">{line.days} day{line.days === 1 ? "" : "s"} · {line.regularHours}h{line.overtimeHours ? ` + ${line.overtimeHours}h OT` : ""}{line.travel ? " · Travel" : ""}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    ) : <p className="mt-3 text-xs leading-5 text-[#718496]">No labor breakdown entered yet.</p>}
+                                  </section>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

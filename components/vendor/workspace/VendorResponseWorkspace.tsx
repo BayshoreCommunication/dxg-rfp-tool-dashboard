@@ -153,7 +153,6 @@ export default function VendorResponseWorkspace({
     startingResponse.current,
   );
   const [activeSection, setActiveSection] = useState<SectionId>("compliance");
-  const [requestedRoomId, setRequestedRoomId] = useState("");
   const [creatingDraft, setCreatingDraft] = useState(
     !workspace.draft && workspace.access.canEdit,
   );
@@ -841,7 +840,6 @@ export default function VendorResponseWorkspace({
                 questionnaire={questionnaire}
                 response={response}
                 onChange={updateResponse}
-                requestedRoomId={requestedRoomId}
                 sectionNumber={activeIndex + 1}
                 disabled={disabled}
               />
@@ -871,10 +869,6 @@ export default function VendorResponseWorkspace({
                 questionnaire={questionnaire}
                 response={response}
                 onChange={updateResponse}
-                onViewRoom={(roomId) => {
-                  setRequestedRoomId(roomId);
-                  navigate("rooms");
-                }}
                 sectionNumber={activeIndex + 1}
                 disabled={disabled}
               />

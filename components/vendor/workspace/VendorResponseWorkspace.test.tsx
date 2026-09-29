@@ -320,7 +320,17 @@ describe("VendorResponseWorkspace", () => {
             amount: { amountMinor: 2_850_000, currency: "USD" },
           },
         ],
-        laborLines: [],
+        laborLines: [
+          {
+            laborLineId: "labor-room-80",
+            roleId: "td",
+            days: 2,
+            regularHours: 16,
+            overtimeHours: 2,
+            travel: true,
+            notes: "Lead show operations",
+          },
+        ],
         laborSubtotal: { amountMinor: 1_200_000, currency: "USD" },
       },
     ];
@@ -343,12 +353,16 @@ describe("VendorResponseWorkspace", () => {
     expect(within(pricedRoom).getByText("$12,000.00")).toBeInTheDocument();
     expect(within(pricedRoom).getByText("$40,500.00")).toBeInTheDocument();
 
-    fireEvent.click(
-      within(pricedRoom).getByRole("button", {
-        name: "View Room 80 details",
-      }),
-    );
-    expect(screen.getByRole("heading", { name: "Room 80" })).toBeInTheDocument();
+    fireEvent.click(within(pricedRoom).getByRole("button", { name: /View details/i }));
+    expect(screen.getByRole("heading", { name: "Pricing" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Equipment breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Labor plan" })).toBeInTheDocument();
+    expect(screen.getByText("Technical director")).toBeInTheDocument();
+    expect(screen.getByText("2 days · 16h + 2h OT · Travel")).toBeInTheDocument();
+    const hideDetails = screen.getByRole("button", { name: /Hide details/i });
+    expect(hideDetails).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(hideDetails);
+    expect(screen.queryByRole("heading", { name: "Labor plan" })).not.toBeInTheDocument();
   });
 
   it("captures the optional DBA services detail in the company profile", () => {

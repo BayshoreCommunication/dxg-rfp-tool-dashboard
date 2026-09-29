@@ -19,22 +19,17 @@ const emptyRoomResponse = (room: QuestionnaireRoom, questionnaire: VendorRespons
 
 const newId = (prefix: string) => `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
 
-export default function RoomResponseSection({ questionnaire, response, onChange, requestedRoomId, sectionNumber, disabled }: {
+export default function RoomResponseSection({ questionnaire, response, onChange, sectionNumber, disabled }: {
   questionnaire: VendorResponseQuestionnaireV1;
   response: VendorResponseV1;
   onChange: (response: VendorResponseV1) => void;
-  requestedRoomId?: string;
   sectionNumber: number;
   disabled: boolean;
 }) {
   const section = questionnaire.sections.find((entry) => entry.sectionId === "rooms");
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
-  const [activeRoomId, setActiveRoomId] = useState(
-    questionnaire.rooms.some((room) => room.roomId === requestedRoomId)
-      ? requestedRoomId!
-      : questionnaire.rooms[0]?.roomId ?? "",
-  );
+  const [activeRoomId, setActiveRoomId] = useState(questionnaire.rooms[0]?.roomId ?? "");
   const filteredRooms = useMemo(() => questionnaire.rooms.filter((room) =>
     !deferredQuery || [room.name, room.location, room.setup].some((value) => value?.toLowerCase().includes(deferredQuery))), [deferredQuery, questionnaire.rooms]);
   const activeDefinition = questionnaire.rooms.find((room) => room.roomId === activeRoomId) ?? filteredRooms[0] ?? questionnaire.rooms[0];
