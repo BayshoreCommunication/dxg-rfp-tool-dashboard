@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import type { VendorResponseWorkspaceV1 } from "@/contracts/generated/vendor-response-workspace-v1";
 import type { VendorDraftDto } from "@/lib/vendorResponses/workspaceModel";
@@ -304,6 +305,50 @@ describe("VendorResponseWorkspace", () => {
     expect(
       screen.getByRole("button", { name: "Add crew member" }),
     ).toBeInTheDocument();
+  });
+
+  it("summarizes room pricing and opens the selected room details", () => {
+    const pricedWorkspace = workspace();
+    pricedWorkspace.draft!.response.rooms = [
+      {
+        roomId: "room-80",
+        specResponses: [],
+        equipmentLines: [],
+        categoryTotals: [
+          {
+            categoryId: "audio",
+            amount: { amountMinor: 2_850_000, currency: "USD" },
+          },
+        ],
+        laborLines: [],
+        laborSubtotal: { amountMinor: 1_200_000, currency: "USD" },
+      },
+    ];
+
+    render(
+      <VendorResponseWorkspace
+        workspace={pricedWorkspace}
+        accessGrant="grant"
+      />,
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /4\. Pricing/i })[0],
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Room-by-room summary" }),
+    ).toBeInTheDocument();
+    const pricedRoom = screen.getByRole("row", { name: /Room 80/ });
+    expect(within(pricedRoom).getByText("$28,500.00")).toBeInTheDocument();
+    expect(within(pricedRoom).getByText("$12,000.00")).toBeInTheDocument();
+    expect(within(pricedRoom).getByText("$40,500.00")).toBeInTheDocument();
+
+    fireEvent.click(
+      within(pricedRoom).getByRole("button", {
+        name: "View Room 80 details",
+      }),
+    );
+    expect(screen.getByRole("heading", { name: "Room 80" })).toBeInTheDocument();
   });
 
   it("captures the optional DBA services detail in the company profile", () => {
