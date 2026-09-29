@@ -9,6 +9,11 @@ jest.mock("./VendorFactsSection", () => ({
   ),
 }));
 
+jest.mock("./StructuredResponseDetail", () => ({
+  __esModule: true,
+  default: () => <div data-testid="structured-response">Structured response</div>,
+}));
+
 const detail: VendorSubmissionDetail = {
   historyTruncated: false,
   response: {
@@ -137,6 +142,47 @@ it("drops the version sidebar when only one version exists", () => {
   expect(screen.getByText(/RFPilot read this response's files once/)).toBeInTheDocument();
   expect(screen.queryByText(/Version 1/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Version 2/)).not.toBeInTheDocument();
+});
+
+it("removes the document analysis intro from structured responses", () => {
+  const structuredVersion: VendorSubmissionDetail["versions"][number] = {
+    ...detail.versions[0],
+    format: "structured_v1",
+    questionnaire: {} as NonNullable<
+      VendorSubmissionDetail["versions"][number]["questionnaire"]
+    >,
+    structuredResponse: {} as NonNullable<
+      VendorSubmissionDetail["versions"][number]["structuredResponse"]
+    >,
+    calculationSnapshot: {} as NonNullable<
+      VendorSubmissionDetail["versions"][number]["calculationSnapshot"]
+    >,
+  };
+
+  render(
+    <VendorResponseDetailWorkspace
+      detail={{
+        ...detail,
+        submission: {
+          ...detail.submission!,
+          currentVersionId: structuredVersion.versionId,
+          currentVersionNumber: structuredVersion.versionNumber,
+        },
+        versions: [structuredVersion],
+      }}
+    />,
+  );
+
+  expect(screen.getByTestId("structured-response")).toBeInTheDocument();
+  expect(screen.getByTestId("facts")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Document analysis" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(
+      /Vendor-entered fields and frozen server calculations above are authoritative/,
+    ),
+  ).not.toBeInTheDocument();
 });
 
 it("keeps numbered labels once a second version exists", () => {

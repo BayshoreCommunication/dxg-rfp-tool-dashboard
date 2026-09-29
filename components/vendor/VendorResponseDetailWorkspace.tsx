@@ -258,20 +258,27 @@ export default function VendorResponseDetailWorkspace({
               />
               </>}
 
-              <section className="mt-6" aria-labelledby="intelligence-heading">
-                <div className="mb-3">
-                  <h3
-                    id="intelligence-heading"
-                    className="text-base font-extrabold text-slate-900"
-                  >
-                    {selectedVersion.format === "structured_v1" ? "Document analysis" : "Analysis"}
-                  </h3>
-                  <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
-                    {selectedVersion.format === "structured_v1"
-                      ? "Vendor-entered fields and frozen server calculations above are authoritative. Document analysis can enrich or verify those answers, but it never replaces them. Every result is labeled by source."
-                      : `RFPilot read ${singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which requirements the vendor answered and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.`}
-                  </p>
-                </div>
+              <section
+                className="mt-6"
+                aria-labelledby={
+                  selectedVersion.format === "structured_v1"
+                    ? undefined
+                    : "intelligence-heading"
+                }
+              >
+                {selectedVersion.format !== "structured_v1" ? (
+                  <div className="mb-3">
+                    <h3
+                      id="intelligence-heading"
+                      className="text-base font-extrabold text-slate-900"
+                    >
+                      Analysis
+                    </h3>
+                    <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
+                      {`RFPilot read ${singleVersion ? "this response's" : `Version ${selectedVersion.versionNumber}'s`} files once and saved what it found: which requirements the vendor answered and the values it stated. Scores and the ranking live in Proposal Intelligence. Opening anything here never reruns the analysis or changes what the vendor sent.`}
+                    </p>
+                  </div>
+                ) : null}
                 {detail.submission && (
                   <div className="space-y-5">
                     <VendorFactsSection
