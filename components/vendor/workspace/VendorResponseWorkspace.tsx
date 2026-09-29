@@ -85,6 +85,10 @@ const AVAILABLE_SECTIONS = new Set<SectionId>([
   "review",
 ]);
 
+const sectionDisplayTitle = (
+  section: VendorResponseQuestionnaireV1["sections"][number],
+) => (section.sectionId === "crew" ? "Team" : section.title);
+
 const sectionPayload = (sectionId: SectionId, response: VendorResponseV1) => {
   if (sectionId === "compliance")
     return [response.identity, response.acknowledgements];
@@ -791,7 +795,7 @@ export default function VendorResponseWorkspace({
               >
                 {sections.map((section, index) => (
                   <option key={section.sectionId} value={section.sectionId}>
-                    {index + 1}. {section.title}
+                    {index + 1}. {sectionDisplayTitle(section)}
                   </option>
                 ))}
               </select>
@@ -1057,7 +1061,7 @@ function SectionButton({
         <span
           className={`block text-[13px] font-bold ${active ? "text-[#0069a0]" : "text-[#334b60]"}`}
         >
-          {number}. {section.title}
+          {number}. {sectionDisplayTitle(section)}
         </span>
         {!available ? (
           <span className="text-[10px] font-bold text-[#8a9aaa]">

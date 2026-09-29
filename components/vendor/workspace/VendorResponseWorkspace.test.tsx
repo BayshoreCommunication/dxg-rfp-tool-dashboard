@@ -268,6 +268,44 @@ describe("VendorResponseWorkspace", () => {
     expect(screen.getByText("D · Streaming delivery")).toBeInTheDocument();
   });
 
+  it("shows Team in the response navigation and section heading", () => {
+    const withTeamSection = workspace();
+    withTeamSection.questionnaire.sections = [
+      ...withTeamSection.questionnaire.sections.slice(0, 3),
+      {
+        sectionId: "crew",
+        title: "Crew",
+        order: 4,
+        enabled: true,
+        required: true,
+        condition: "always",
+        evaluationMappings: ["staffing"],
+      },
+      ...withTeamSection.questionnaire.sections
+        .slice(3)
+        .map((section) => ({ ...section, order: section.order + 1 })),
+    ];
+
+    render(
+      <VendorResponseWorkspace
+        workspace={withTeamSection}
+        accessGrant="grant"
+      />,
+    );
+
+    const teamNavigation = screen.getAllByRole("button", {
+      name: /4\. Team/i,
+    })[0];
+    expect(teamNavigation).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /4\. Crew/i })).toBeNull();
+
+    fireEvent.click(teamNavigation);
+    expect(screen.getByRole("heading", { name: "Team" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add crew member" }),
+    ).toBeInTheDocument();
+  });
+
   it("captures the optional DBA services detail in the company profile", () => {
     render(
       <VendorResponseWorkspace workspace={workspace()} accessGrant="grant" />,
