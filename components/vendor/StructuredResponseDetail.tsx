@@ -84,7 +84,7 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
               Structured response · questionnaire v{questionnaire.questionnaireVersion}
             </h3>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">
-              Blue labels are answers entered directly by the vendor. Green labels are totals and coverage frozen by the server when this version was received. Document analysis is shown separately below.
+              Blue labels are answers entered directly by the vendor. Green labels are totals and coverage frozen by the server when this version was received.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 print:hidden">
