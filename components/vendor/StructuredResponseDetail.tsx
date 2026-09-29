@@ -133,6 +133,7 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
         <div className="flex items-center justify-between gap-3"><h3 id="company-heading" className="flex items-center gap-2 text-base font-extrabold text-slate-950"><Building2 size={17} className="text-[#008ad2]" aria-hidden="true" />Company profile</h3><Provenance kind="vendor" /></div>
         <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Definition label="Legal name" value={response.companyProfile.legalName} />
+          {response.companyProfile.dba ? <Definition label="DBA" value={response.companyProfile.dba} /> : null}
           <Definition label="Headquarters" value={response.companyProfile.headquarters} />
           <Definition label="Years in business" value={response.companyProfile.yearsInBusiness?.toString()} />
           <Definition label="Staff count" value={response.companyProfile.staffCount?.toString()} />

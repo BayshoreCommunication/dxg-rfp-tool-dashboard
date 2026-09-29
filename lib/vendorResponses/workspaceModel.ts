@@ -551,6 +551,7 @@ export const sectionState = (
     ),
     company_profile: Boolean(
       response.companyProfile.legalName ||
+      response.companyProfile.dba ||
       response.companyProfile.headquarters ||
       response.companyProfile.clientMix.length,
     ),

@@ -14,6 +14,14 @@ export default function CompanyProfileSection({ questionnaire, response, onChang
   const profile = response.companyProfile;
   const update = (patch: Partial<typeof profile>) => onChange({ ...response, companyProfile: { ...profile, ...patch } });
   const mixTotal = profile.clientMix.reduce((sum, entry) => sum + entry.percent, 0);
+  const clientMixCategories = config.clientMix.categories.some(
+    (category) => category.categoryId === "medical",
+  )
+    ? config.clientMix.categories
+    : [
+        ...config.clientMix.categories,
+        { categoryId: "medical", label: "Medical" },
+      ];
 
   return (
     <WorkspaceSection number={sectionNumber} title={section?.title ?? "Company profile"} helperText={section?.helperText} evaluationMappings={section?.evaluationMappings}>
@@ -30,6 +38,21 @@ export default function CompanyProfileSection({ questionnaire, response, onChang
         {config.staffCountEnabled ? <label className={labelClass}>Full-time staff
           <input className={fieldClass} type="number" min="0" value={profile.staffCount ?? ""} disabled={disabled} onChange={(event) => update({ staffCount: event.target.value === "" ? undefined : Number(event.target.value) })} />
         </label> : null}
+        <label className={`${labelClass} sm:col-span-2`}>
+          <span className="flex items-center gap-2">
+            DBA
+            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8ca0b5]">
+              Optional
+            </span>
+          </span>
+          <textarea
+            className={textAreaClass}
+            value={profile.dba ?? ""}
+            disabled={disabled}
+            placeholder="Details of services you provide."
+            onChange={(event) => update({ dba: event.target.value })}
+          />
+        </label>
         {config.largestComparableEventEnabled ? <label className={`${labelClass} sm:col-span-2`}>Largest comparable event <span className="text-rose-600">*</span>
           <textarea className={textAreaClass} value={profile.largestComparableEvent} disabled={disabled} placeholder="Describe scale, scope, and services delivered." onChange={(event) => update({ largestComparableEvent: event.target.value })} />
         </label> : null}
@@ -43,7 +66,7 @@ export default function CompanyProfileSection({ questionnaire, response, onChang
           </div>
           <p className="mt-1 text-sm text-[#718496]">Enter 0 for categories that do not apply. Percentages must total 100%.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {config.clientMix.categories.map((category) => {
+            {clientMixCategories.map((category) => {
               const value = profile.clientMix.find((entry) => entry.categoryId === category.categoryId)?.percent;
               return <label className={labelClass} key={category.categoryId}>{category.label}
                 <span className="relative block"><input className={`${fieldClass} pr-8`} type="number" min="0" max="100" value={value ?? ""} disabled={disabled} onChange={(event) => {

@@ -191,6 +191,7 @@ const workspace = (): StructuredWorkspace => ({
       acknowledgements: [],
       companyProfile: {
         legalName: "",
+        dba: "",
         headquarters: "",
         largestComparableEvent: "",
         clientMix: [],
@@ -242,6 +243,29 @@ describe("VendorResponseWorkspace", () => {
     expect(
       screen.getByRole("heading", { name: "Room 80" }),
     ).toBeInTheDocument();
+  });
+
+  it("captures the optional DBA services detail in the company profile", () => {
+    render(
+      <VendorResponseWorkspace workspace={workspace()} accessGrant="grant" />,
+    );
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /2\. Company profile/i })[0],
+    );
+    const dbaField = screen.getByPlaceholderText(
+      "Details of services you provide.",
+    );
+
+    expect(screen.getByText("DBA")).toBeInTheDocument();
+    expect(screen.getByText("Optional")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Medical/)).toBeInTheDocument();
+    fireEvent.change(dbaField, {
+      target: { value: "Broadcast production and hybrid-event services." },
+    });
+    expect(dbaField).toHaveValue(
+      "Broadcast production and hybrid-event services.",
+    );
   });
 
   it("preserves unsaved values and offers retry when autosave fails", async () => {

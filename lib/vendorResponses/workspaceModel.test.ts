@@ -158,6 +158,7 @@ const response = {
   ],
   companyProfile: {
     legalName: "",
+    dba: "",
     headquarters: "",
     largestComparableEvent: "",
     clientMix: [],
