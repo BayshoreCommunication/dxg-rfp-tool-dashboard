@@ -304,13 +304,14 @@ describe("VendorResponseWorkspace", () => {
     );
 
     const teamNavigation = screen.getAllByRole("button", {
-      name: /4\. Team/i,
+      name: /4\. Core team bios/i,
     })[0];
     expect(teamNavigation).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /4\. Crew/i })).toBeNull();
 
     fireEvent.click(teamNavigation);
-    expect(screen.getByRole("heading", { name: "Team" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Core team bios" })).toBeInTheDocument();
+    expect(screen.getByText("Add each core team member.")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Add crew member" }),
     ).toBeInTheDocument();

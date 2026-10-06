@@ -62,11 +62,8 @@ export default function CrewSection({
   return (
     <WorkspaceSection
       number={sectionNumber}
-      title="Team"
-      helperText={
-        section?.helperText ??
-        `Add each proposed team member, their project role, and a concise bio of no more than ${questionnaire.crew.bioMaxWords} words.`
-      }
+      title="Core team bios"
+      helperText={section?.helperText ?? "Add each core team member."}
       evaluationMappings={section?.evaluationMappings}
     >
       {questionnaire.crew.requiredRoleIds.length ? (

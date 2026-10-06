@@ -88,7 +88,7 @@ const AVAILABLE_SECTIONS = new Set<SectionId>([
 
 const sectionDisplayTitle = (
   section: VendorResponseQuestionnaireV1["sections"][number],
-) => (section.sectionId === "crew" ? "Team" : section.title);
+) => (section.sectionId === "crew" ? "Core team bios" : section.title);
 
 const sectionPayload = (sectionId: SectionId, response: VendorResponseV1) => {
   if (sectionId === "compliance")
