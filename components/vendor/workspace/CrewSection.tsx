@@ -1,7 +1,7 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
 import { wordCount } from "@/lib/vendorResponses/workspaceModel";
-import { Check, ImageUp, Plus, Trash2, X } from "lucide-react";
+import { ImageUp, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { UploadDocuments } from "./documentTypes";
 import WorkspaceSection, {
@@ -39,7 +39,6 @@ export default function CrewSection({
   const [uploadingId, setUploadingId] = useState("");
   const [uploadError, setUploadError] = useState("");
   const uploadForId = useRef("");
-  const covered = new Set(response.crew.map((member) => member.roleId));
 
   const uploadHeadshot = async (files: FileList | null) => {
     const crewMemberId = uploadForId.current;
@@ -66,34 +65,6 @@ export default function CrewSection({
       helperText={section?.helperText ?? "Add each core team member."}
       evaluationMappings={section?.evaluationMappings}
     >
-      {questionnaire.crew.requiredRoleIds.length ? (
-        <div className="mb-5 rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4">
-          <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#42576a]">
-            Required role coverage
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {questionnaire.crew.requiredRoleIds.map((roleId) => {
-              const role = questionnaire.crew.roles.find(
-                (entry) => entry.id === roleId,
-              );
-              const complete = covered.has(roleId);
-              return (
-                <span
-                  key={roleId}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-extrabold ${complete ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}
-                >
-                  {complete ? (
-                    <Check size={12} aria-hidden="true" />
-                  ) : (
-                    <X size={12} aria-hidden="true" />
-                  )}
-                  {role?.label ?? roleId}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
       <div className="space-y-4">
         {response.crew.map((member, index) => {
           const count = wordCount(member.bio);
