@@ -2,7 +2,53 @@ import type {
   SectionId,
   VendorResponseQuestionnaireV1,
 } from "@/contracts/generated/vendor-response-questionnaire-v1";
-import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
+import type { RoomResponse, VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
+
+type QuestionnaireRoom = VendorResponseQuestionnaireV1["rooms"][number];
+
+export const emptyRoomResponse = (
+  room: QuestionnaireRoom,
+  questionnaire: VendorResponseQuestionnaireV1,
+): RoomResponse => ({
+  roomId: room.roomId,
+  specResponses: [],
+  equipmentLines: [],
+  categoryTotals: [],
+  laborLines: [],
+  laborSubtotal: { amountMinor: 0, currency: questionnaire.pricing.currency },
+  ...(room.streamingApplicable
+    ? { hybrid: { feedHandoff: "", redundancy: "", virtualAudienceExperience: "" } }
+    : {}),
+});
+
+/**
+ * Every room specification starts as "comply"; the vendor only changes the
+ * ones they substitute or take exception to. Explicit answers are kept, and
+ * the same object is returned when nothing was missing.
+ */
+export const withDefaultSpecCompliance = (
+  questionnaire: VendorResponseQuestionnaireV1,
+  response: VendorResponseV1,
+): VendorResponseV1 => {
+  let changed = false;
+  const responsesByRoomId = new Map(response.rooms.map((room) => [room.roomId, room]));
+  const rooms = [...response.rooms];
+  for (const room of questionnaire.rooms) {
+    const existing = responsesByRoomId.get(room.roomId);
+    const answered = new Set(existing?.specResponses.map((entry) => entry.specId));
+    const defaults = room.specs
+      .filter((spec) => !answered.has(spec.specId) && spec.allowedResponses.includes("comply"))
+      .map((spec) => ({ specId: spec.specId, status: "comply" as const, note: "" }));
+    if (!defaults.length) continue;
+    changed = true;
+    const base = existing ?? emptyRoomResponse(room, questionnaire);
+    const next = { ...base, specResponses: [...base.specResponses, ...defaults] };
+    const index = rooms.indexOf(existing as RoomResponse);
+    if (index >= 0) rooms[index] = next;
+    else rooms.push(next);
+  }
+  return changed ? { ...response, rooms } : response;
+};
 
 /**
  * Phrase a count requirement without the "between 3 and 3" the naive range

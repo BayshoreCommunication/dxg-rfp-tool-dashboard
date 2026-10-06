@@ -230,20 +230,29 @@ describe("VendorResponseWorkspace", () => {
     fireEvent.click(
       screen.getAllByRole("button", { name: /3\. Room responses/i })[0],
     );
-    expect(screen.getByLabelText("Search 80 rooms")).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Room 1" })).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Room 80" }),
     ).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Search 80 rooms"), {
-      target: { value: "Room 80" },
-    });
     fireEvent.change(screen.getByLabelText("Selected room"), {
       target: { value: "room-80" },
     });
     expect(
       screen.getByRole("heading", { name: "Room 80" }),
     ).toBeInTheDocument();
+  });
+
+  it("starts every unanswered room specification as comply", () => {
+    render(
+      <VendorResponseWorkspace workspace={workspace()} accessGrant="grant" />,
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /3\. Room responses/i })[0],
+    );
+    const verdicts = screen.getByRole("radiogroup", { name: "Audio 1 verdict" });
+    expect(within(verdicts).getByRole("radio", { name: "comply" })).toBeChecked();
+    expect(within(verdicts).getByRole("radio", { name: "exception" })).not.toBeChecked();
   });
 
   it("shows streaming delivery only when the proposal questionnaire requests it", () => {

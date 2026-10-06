@@ -11,6 +11,7 @@ import {
   formatMoney,
   sectionState,
   validateWorkspaceResponse,
+  withDefaultSpecCompliance,
   workspaceTotals,
   type VendorDraftDto,
   type VendorDraftDocumentDto,
@@ -137,15 +138,18 @@ export default function VendorResponseWorkspace({
   const questionnaire = workspace.questionnaire;
   const startingResponse = useRef<VendorResponseV1 | null>(
     workspace.draft
-      ? initialEmail && !workspace.draft.response.identity.email
-        ? {
-            ...workspace.draft.response,
-            identity: {
-              ...workspace.draft.response.identity,
-              email: initialEmail,
-            },
-          }
-        : workspace.draft.response
+      ? withDefaultSpecCompliance(
+          questionnaire,
+          initialEmail && !workspace.draft.response.identity.email
+            ? {
+                ...workspace.draft.response,
+                identity: {
+                  ...workspace.draft.response.identity,
+                  email: initialEmail,
+                },
+              }
+            : workspace.draft.response,
+        )
       : null,
   );
   const [draft, setDraft] = useState<VendorDraftDto | null>(workspace.draft);
@@ -232,13 +236,15 @@ export default function VendorResponseWorkspace({
           json.message || "Your response draft could not be started.",
         );
       const nextDraft = json.data as VendorDraftDto;
-      const nextResponse =
+      const nextResponse = withDefaultSpecCompliance(
+        questionnaire,
         initialEmail && !nextDraft.response.identity.email
           ? {
               ...nextDraft.response,
               identity: { ...nextDraft.response.identity, email: initialEmail },
             }
-          : nextDraft.response;
+          : nextDraft.response,
+      );
       if (revisionSubmissionId && !revisionBaseline.current)
         revisionBaseline.current = cloneResponse(nextDraft.response);
       applyDraft(nextDraft);
@@ -263,6 +269,7 @@ export default function VendorResponseWorkspace({
     applyDraft,
     endpoint,
     initialEmail,
+    questionnaire,
     requestHeaders,
     workspace.currentSubmission,
   ]);

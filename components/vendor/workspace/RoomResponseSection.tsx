@@ -1,21 +1,9 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { RoomResponse, VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
-import { Plus, Search, Trash2 } from "lucide-react";
-import { useDeferredValue, useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import WorkspaceSection, { fieldClass, labelClass, textAreaClass } from "./WorkspaceSection";
-import { moneyFromInput, moneyInput } from "@/lib/vendorResponses/workspaceModel";
-
-type QuestionnaireRoom = VendorResponseQuestionnaireV1["rooms"][number];
-
-const emptyRoomResponse = (room: QuestionnaireRoom, questionnaire: VendorResponseQuestionnaireV1): RoomResponse => ({
-  roomId: room.roomId,
-  specResponses: [],
-  equipmentLines: [],
-  categoryTotals: [],
-  laborLines: [],
-  laborSubtotal: { amountMinor: 0, currency: questionnaire.pricing.currency },
-  ...(room.streamingApplicable ? { hybrid: { feedHandoff: "", redundancy: "", virtualAudienceExperience: "" } } : {}),
-});
+import { emptyRoomResponse, moneyFromInput, moneyInput } from "@/lib/vendorResponses/workspaceModel";
 
 const newId = (prefix: string) => `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
 
@@ -27,12 +15,8 @@ export default function RoomResponseSection({ questionnaire, response, onChange,
   disabled: boolean;
 }) {
   const section = questionnaire.sections.find((entry) => entry.sectionId === "rooms");
-  const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query.trim().toLowerCase());
   const [activeRoomId, setActiveRoomId] = useState(questionnaire.rooms[0]?.roomId ?? "");
-  const filteredRooms = useMemo(() => questionnaire.rooms.filter((room) =>
-    !deferredQuery || [room.name, room.location, room.setup].some((value) => value?.toLowerCase().includes(deferredQuery))), [deferredQuery, questionnaire.rooms]);
-  const activeDefinition = questionnaire.rooms.find((room) => room.roomId === activeRoomId) ?? filteredRooms[0] ?? questionnaire.rooms[0];
+  const activeDefinition = questionnaire.rooms.find((room) => room.roomId === activeRoomId) ?? questionnaire.rooms[0];
   const activeResponse = activeDefinition
     ? response.rooms.find((room) => room.roomId === activeDefinition.roomId) ?? emptyRoomResponse(activeDefinition, questionnaire)
     : null;
@@ -49,20 +33,18 @@ export default function RoomResponseSection({ questionnaire, response, onChange,
         <p className="rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4 text-sm text-[#607487]">This proposal does not include room requirements.</p>
       ) : (
         <>
-          <div className="grid gap-3 rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4 sm:grid-cols-[1fr_1fr]">
-            <label className={labelClass}>Search {questionnaire.rooms.length} room{questionnaire.rooms.length === 1 ? "" : "s"}
-              <span className="relative block"><Search className="pointer-events-none absolute left-3 top-3 text-[#718496]" size={15} aria-hidden="true" /><input className={`${fieldClass} pl-9`} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Room name, location, or setup" /></span>
-            </label>
-            <label className={labelClass}>Selected room
-              <select className={fieldClass} value={activeDefinition?.roomId ?? ""} onChange={(event) => setActiveRoomId(event.target.value)}>
-                {filteredRooms.map((room) => {
-                  const answered = response.rooms.find((entry) => entry.roomId === room.roomId)?.specResponses.length ?? 0;
-                  return <option value={room.roomId} key={room.roomId}>{room.name} · {answered}/{room.specs.length} specs</option>;
-                })}
-              </select>
-            </label>
-          </div>
-          {filteredRooms.length === 0 ? <p className="mt-4 text-sm text-[#607487]">No rooms match “{query}”.</p> : null}
+          {questionnaire.rooms.length > 1 ? (
+            <div className="rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4">
+              <label className={`${labelClass} sm:max-w-md`}>Selected room
+                <select className={fieldClass} value={activeDefinition?.roomId ?? ""} onChange={(event) => setActiveRoomId(event.target.value)}>
+                  {questionnaire.rooms.map((room) => {
+                    const answered = response.rooms.find((entry) => entry.roomId === room.roomId)?.specResponses.length ?? 0;
+                    return <option value={room.roomId} key={room.roomId}>{room.name} · {answered}/{room.specs.length} specs</option>;
+                  })}
+                </select>
+              </label>
+            </div>
+          ) : null}
 
           {activeDefinition && activeResponse ? (
             <div className="mt-6">
