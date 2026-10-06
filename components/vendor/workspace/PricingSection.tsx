@@ -20,7 +20,6 @@ export default function PricingSection({ questionnaire, response, onChange, sect
   const totals = workspaceTotals(questionnaire, response);
   const equipmentMinor = response.rooms.flatMap((room) => room.categoryTotals).reduce((sum, entry) => sum + entry.amount.amountMinor, 0);
   const laborMinor = response.rooms.reduce((sum, room) => sum + room.laborSubtotal.amountMinor, 0);
-  const feesMinor = pricing.fees.reduce((sum, fee) => sum + fee.amount.amountMinor, 0);
   const responsesByRoomId = new Map(response.rooms.map((room) => [room.roomId, room]));
   const roomSummaries = questionnaire.rooms.map((room) => {
     const roomResponse = responsesByRoomId.get(room.roomId);
@@ -172,7 +171,9 @@ export default function PricingSection({ questionnaire, response, onChange, sect
             <div className="border-t border-[#3a506b] pt-3">
               <div className="flex justify-between gap-3"><dt className="text-[#c6d3df]">Travel</dt><dd className="font-bold tabular-nums">{formatMoney(pricing.travelSubtotal.amountMinor, currency, precision)}</dd></div>
             </div>
-            <div className="flex justify-between gap-3"><dt className="text-[#c6d3df]">Fees & tax</dt><dd className="font-bold tabular-nums">{formatMoney(feesMinor, currency, precision)}</dd></div>
+            {questionnaire.pricing.feeLines.map((fee) => (
+              <div className="flex justify-between gap-3" key={fee.feeId}><dt className="text-[#c6d3df]">{fee.label}</dt><dd className="font-bold tabular-nums">{formatMoney(pricing.fees.find((entry) => entry.feeId === fee.feeId)?.amount.amountMinor ?? 0, currency, precision)}</dd></div>
+            ))}
             <div className="flex justify-between gap-3"><dt className="text-[#c6d3df]">Discount</dt><dd className="font-bold tabular-nums">− {formatMoney(pricing.discount.amountMinor, currency, precision)}</dd></div>
           </dl>
           <div className="mt-5 flex items-baseline justify-between gap-3 border-t border-[#3a506b] pt-5"><span className="text-sm font-bold">Grand total</span><strong className="text-2xl tabular-nums">{formatMoney(totals.grandMinor, currency, precision)}</strong></div>
