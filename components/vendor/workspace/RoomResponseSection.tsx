@@ -33,18 +33,16 @@ export default function RoomResponseSection({ questionnaire, response, onChange,
         <p className="rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4 text-sm text-[#607487]">This proposal does not include room requirements.</p>
       ) : (
         <>
-          {questionnaire.rooms.length > 1 ? (
-            <div className="rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4">
-              <label className={`${labelClass} sm:max-w-md`}>Selected room
-                <select className={fieldClass} value={activeDefinition?.roomId ?? ""} onChange={(event) => setActiveRoomId(event.target.value)}>
-                  {questionnaire.rooms.map((room) => {
-                    const answered = response.rooms.find((entry) => entry.roomId === room.roomId)?.specResponses.length ?? 0;
-                    return <option value={room.roomId} key={room.roomId}>{room.name} · {answered}/{room.specs.length} specs</option>;
-                  })}
-                </select>
-              </label>
-            </div>
-          ) : null}
+          <div className="rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4">
+            <label className={`${labelClass} sm:max-w-md`}>Selected room
+              <select className={fieldClass} value={activeDefinition?.roomId ?? ""} onChange={(event) => setActiveRoomId(event.target.value)}>
+                {questionnaire.rooms.map((room) => {
+                  const answered = response.rooms.find((entry) => entry.roomId === room.roomId)?.specResponses.length ?? 0;
+                  return <option value={room.roomId} key={room.roomId}>{room.name} · {answered}/{room.specs.length} specs</option>;
+                })}
+              </select>
+            </label>
+          </div>
 
           {activeDefinition && activeResponse ? (
             <div className="mt-6">
