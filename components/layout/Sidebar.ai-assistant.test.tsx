@@ -19,6 +19,9 @@ jest.mock("@/app/actions/notification", () => ({
 jest.mock("@/app/actions/vendorResponse", () => ({
   getVendorUnreadCountAction: jest.fn().mockResolvedValue(0),
 }));
+jest.mock("@/app/actions/supportDesk", () => ({
+  getSupportUnreadCountAction: jest.fn().mockResolvedValue(0),
+}));
 jest.mock("@/config/navigation", () => ({
   navigationConfig: [
     {

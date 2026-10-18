@@ -9,6 +9,7 @@ describe("Primary navigation", () => {
       "Email",
       "Vendor Responses",
       "Help",
+      "Support",
     ]);
     // Help is a plain route, reachable regardless of the AI Assistant flag.
     expect(navigationConfig).toEqual(

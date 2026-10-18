@@ -47,6 +47,7 @@ describe("HelpCenter", () => {
       "/email",
       "/vendor-responses",
       "/settings",
+      "/support",
     ]);
 
     const glossary = screen.getByRole("region", { name: "What the words mean" });

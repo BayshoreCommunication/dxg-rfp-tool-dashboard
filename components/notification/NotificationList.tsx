@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Clock3,
   Eye,
+  LifeBuoy,
   Siren,
   Sparkles,
   SlidersHorizontal,
@@ -42,6 +43,8 @@ const getNotificationIcon = (type: NotificationItem["type"]) => {
       return <Clock3 size={16} />;
     case "proposal_expired":
       return <TriangleAlert size={16} />;
+    case "support_ticket":
+      return <LifeBuoy size={16} />;
     default:
       return <BellDot size={16} />;
   }
@@ -55,6 +58,8 @@ const getNotificationIconStyle = (type: NotificationItem["type"]) => {
       return "bg-amber-50 text-amber-600";
     case "proposal_expired":
       return "bg-rose-50 text-rose-600";
+    case "support_ticket":
+      return "bg-[#008ad2]/5 text-[#0069a0]";
     default:
       return "bg-slate-100 text-slate-600";
   }
@@ -271,6 +276,16 @@ export default function NotificationList({
                     <p className="mt-1 text-sm leading-6 text-slate-600">
                       {notification.message}
                     </p>
+                    {notification.type === "support_ticket" &&
+                      typeof notification.metadata?.ticketId === "string" && (
+                        <Link
+                          href={`/support/${notification.metadata.ticketId}`}
+                          onClick={(event) => event.stopPropagation()}
+                          className="mt-2 inline-block text-xs font-bold text-[#0069a0] hover:underline"
+                        >
+                          Open the support request
+                        </Link>
+                      )}
                   </div>
 
                   {!notification.isRead && (

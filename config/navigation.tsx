@@ -1,6 +1,7 @@
 import {
   CircleHelp,
   House,
+  LifeBuoy,
   Mail,
   MessageSquareText,
   NotepadTextDashed,
@@ -46,5 +47,12 @@ export const navigationConfig: NavItem[] = [
     title: "Help",
     href: "/help",
     icon: <CircleHelp size={22} />,
+  },
+  // Human support: a ticket inbox DXG answers from the admin app.
+  {
+    id: "support",
+    title: "Support",
+    href: "/support",
+    icon: <LifeBuoy size={22} />,
   },
 ];

@@ -5,6 +5,7 @@ import {
   getNotificationSocketConfigAction,
   getUnreadNotificationCountAction,
 } from "@/app/actions/notification";
+import { getSupportUnreadCountAction } from "@/app/actions/supportDesk";
 import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
@@ -175,6 +176,7 @@ const Sidebar = ({
   const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
   const [vendorUnreadCount, setVendorUnreadCount] = useState(0);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [socketUrl, setSocketUrl] = useState("");
   const [signingOut, setSigningOut] = useState(false);
 
@@ -220,6 +222,18 @@ const Sidebar = ({
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      const count = await getSupportUnreadCountAction();
+      if (mounted) setSupportUnreadCount(count);
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, [pathname]);
 
   useEffect(() => {
     let mounted = true;
@@ -337,7 +351,9 @@ const Sidebar = ({
           const badge =
             item.id === "vendor-responses" && vendorUnreadCount > 0
               ? vendorUnreadCount
-              : null;
+              : item.id === "support" && supportUnreadCount > 0
+                ? supportUnreadCount
+                : null;
 
           return (
             <Link
@@ -537,7 +553,9 @@ const Sidebar = ({
           const badge =
             item.id === "vendor-responses" && vendorUnreadCount > 0
               ? vendorUnreadCount
-              : null;
+              : item.id === "support" && supportUnreadCount > 0
+                ? supportUnreadCount
+                : null;
           const mobileTitle =
             item.id === "vendor-responses" ? "Vendor" : item.title;
 

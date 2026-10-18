@@ -21,7 +21,12 @@ type ApiResponse = {
 export type NotificationItem = {
   _id: string;
   proposalId?: string | null;
-  type: "proposal_view" | "proposal_expiring_soon" | "proposal_expired";
+  type:
+    | "proposal_view"
+    | "proposal_expiring_soon"
+    | "proposal_expired"
+    | "vendor_response"
+    | "support_ticket";
   title: string;
   message: string;
   isRead: boolean;

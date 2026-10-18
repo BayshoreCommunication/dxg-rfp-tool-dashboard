@@ -77,6 +77,11 @@ const PLACES: ReadonlyArray<{ title: string; href: string; body: string }> = [
     href: "/settings",
     body: "Your profile, organization and preferences.",
   },
+  {
+    title: "Support",
+    href: "/support",
+    body: "Send DXG a message when you're stuck and follow the reply here.",
+  },
 ];
 
 export default function HelpCenter() {
