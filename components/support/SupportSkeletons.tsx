@@ -38,7 +38,7 @@ export const SupportListSkeleton = () => (
 
 export const SupportThreadSkeleton = () => (
   <div
-    className="mx-auto flex h-[calc(100dvh-5.5rem)] w-full max-w-4xl flex-col px-4 pb-4 pt-4 sm:px-6 lg:h-[calc(100dvh-2rem)]"
+    className="mx-auto flex h-[calc(100dvh-4rem-4.5rem-2rem)] w-full max-w-4xl flex-col px-4 pb-2 pt-2 sm:px-6 lg:h-[calc(100dvh-2rem)] lg:pb-4 lg:pt-4"
     aria-busy="true"
     aria-label="Loading request"
   >

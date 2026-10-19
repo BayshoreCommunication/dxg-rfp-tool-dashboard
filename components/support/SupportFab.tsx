@@ -1,15 +1,17 @@
 "use client";
 
-import { Headset } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { getSupportUnreadCountAction } from "@/app/actions/supportDesk";
+import SupportAgentIcon from "./SupportAgentIcon";
 
 const STORAGE_KEY = "rfpilot.support-fab.position";
 const DRAG_THRESHOLD_PX = 5;
 const EDGE_PADDING = 8;
 
 type Position = { x: number; y: number };
+type StoredPosition = Position & { viewportWidth: number };
+const VIEWPORT_TOLERANCE_PX = 200;
 
 const clamp = (position: Position, width: number, height: number): Position => ({
   x: Math.min(Math.max(EDGE_PADDING, position.x), Math.max(EDGE_PADDING, window.innerWidth - width - EDGE_PADDING)),
@@ -20,8 +22,14 @@ const readStoredPosition = (): Position | null => {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<Position>;
-    return typeof parsed.x === "number" && typeof parsed.y === "number" ? { x: parsed.x, y: parsed.y } : null;
+    const parsed = JSON.parse(raw) as Partial<StoredPosition>;
+    if (typeof parsed.x !== "number" || typeof parsed.y !== "number") return null;
+    // A spot chosen on a desktop window means nothing on a phone (and vice
+    // versa): fall back to the default corner when the screen is very different.
+    if (typeof parsed.viewportWidth === "number" && Math.abs(parsed.viewportWidth - window.innerWidth) > VIEWPORT_TOLERANCE_PX) {
+      return null;
+    }
+    return { x: parsed.x, y: parsed.y };
   } catch {
     return null;
   }
@@ -114,7 +122,8 @@ export default function SupportFab() {
         setPosition((current) => {
           if (current) {
             try {
-              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+              const stored: StoredPosition = { ...current, viewportWidth: window.innerWidth };
+              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
             } catch {
               // Remembering the spot is a convenience only.
             }
@@ -151,20 +160,20 @@ export default function SupportFab() {
         }
       }}
       style={position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : undefined}
-      className={`support-fab group fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-[60] flex touch-none select-none items-center gap-2 rounded-full bg-[#008ad2] py-2 pl-2 pr-4 text-sm font-bold text-white shadow-[0_12px_32px_-10px_rgba(0,138,210,0.75)] ring-4 ring-white/70 transition-colors hover:bg-[#0076b4] focus-visible:outline-none focus-visible:ring-[#008ad2]/40 sm:bottom-5 sm:right-5 dark:ring-[#07131c]/70 ${
+      className={`support-fab group fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-[60] flex touch-none select-none items-center gap-1.5 rounded-full bg-[#008ad2] p-1.5 text-[13px] font-bold sm:pr-3.5 text-white shadow-[0_12px_32px_-10px_rgba(0,138,210,0.75)] ring-2 ring-white/60 transition-colors hover:bg-[#0076b4] focus-visible:outline-none focus-visible:ring-[#008ad2]/40 sm:bottom-5 sm:right-5 dark:ring-[#07131c]/70 ${
         dragging ? "cursor-grabbing" : "cursor-grab"
       }`}
     >
-      <span className="support-fab-avatar relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#008ad2] shadow-inner">
-        <Headset className="h-5 w-5" aria-hidden="true" />
-        <span className="support-fab-presence absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#008ad2] bg-emerald-400" aria-hidden="true" />
+      <span className="support-fab-avatar relative flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#008ad2]">
+        <SupportAgentIcon className="h-7 w-7" />
+        <span className="support-fab-presence absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#008ad2] bg-emerald-400" aria-hidden="true" />
         {unread > 0 && (
           <span className="absolute -left-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-[#008ad2]">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
       </span>
-      <span>{unread > 0 ? "DXG replied" : "Need support?"}</span>
+      <span className="hidden sm:inline">{unread > 0 ? "DXG replied" : "Need support?"}</span>
     </button>
   );
 }

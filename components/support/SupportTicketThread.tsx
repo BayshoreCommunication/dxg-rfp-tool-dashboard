@@ -167,7 +167,7 @@ export default function SupportTicketThread({
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-5.5rem)] w-full max-w-4xl flex-col px-4 pb-4 pt-4 sm:px-6 lg:h-[calc(100dvh-2rem)]">
+    <div className="mx-auto flex h-[calc(100dvh-4rem-4.5rem-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-4xl flex-col px-4 pb-2 pt-2 sm:px-6 lg:h-[calc(100dvh-2rem)] lg:pb-4 lg:pt-4">
       <Link href="/support" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0069a0] hover:underline">
         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> All requests
       </Link>
