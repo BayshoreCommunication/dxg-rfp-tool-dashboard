@@ -164,7 +164,7 @@ export default function SupportFab() {
         dragging ? "cursor-grabbing" : "cursor-grab"
       }`}
     >
-      <span className="support-fab-avatar relative flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#008ad2]">
+      <span className="support-fab-avatar relative flex h-9 w-9 items-center justify-center rounded-full bg-[#ffffff] text-[#008ad2]">
         <SupportAgentIcon className="h-7 w-7" />
         <span className="support-fab-presence absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#008ad2] bg-emerald-400" aria-hidden="true" />
         {unread > 0 && (
