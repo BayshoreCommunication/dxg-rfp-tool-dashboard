@@ -1,19 +1,45 @@
 "use client";
 
-import { LifeBuoy } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Headset } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { getSupportUnreadCountAction } from "@/app/actions/supportDesk";
 
+const STORAGE_KEY = "rfpilot.support-fab.position";
+const DRAG_THRESHOLD_PX = 5;
+const EDGE_PADDING = 8;
+
+type Position = { x: number; y: number };
+
+const clamp = (position: Position, width: number, height: number): Position => ({
+  x: Math.min(Math.max(EDGE_PADDING, position.x), Math.max(EDGE_PADDING, window.innerWidth - width - EDGE_PADDING)),
+  y: Math.min(Math.max(EDGE_PADDING, position.y), Math.max(EDGE_PADDING, window.innerHeight - height - EDGE_PADDING)),
+});
+
+const readStoredPosition = (): Position | null => {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Position>;
+    return typeof parsed.x === "number" && typeof parsed.y === "number" ? { x: parsed.x, y: parsed.y } : null;
+  } catch {
+    return null;
+  }
+};
+
 /**
- * Always-available entry to human support, bottom-right of every signed-in
- * page except Support itself. It is a plain link, so it works before any
- * script runs; the unread badge is a progressive enhancement.
+ * The always-available way to reach a person at DXG: a support-agent avatar
+ * that sits bottom-right by default, gently floats, and can be dragged
+ * anywhere (the spot is remembered per browser). A tap opens Support.
  */
 export default function SupportFab() {
   const pathname = usePathname();
+  const router = useRouter();
   const [unread, setUnread] = useState(0);
+  const [position, setPosition] = useState<Position | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const elementRef = useRef<HTMLButtonElement>(null);
+  const gesture = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
   const onSupport = pathname === "/support" || pathname.startsWith("/support/");
 
   useEffect(() => {
@@ -27,24 +53,118 @@ export default function SupportFab() {
     };
   }, [onSupport, pathname]);
 
+  useEffect(() => {
+    // Restore after paint so the server-rendered default never mismatches.
+    const frame = window.requestAnimationFrame(() => {
+      const stored = readStoredPosition();
+      if (!stored) return;
+      const element = elementRef.current;
+      setPosition(clamp(stored, element?.offsetWidth ?? 64, element?.offsetHeight ?? 64));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const keepInView = () => {
+      setPosition((current) => {
+        if (!current) return current;
+        const element = elementRef.current;
+        return clamp(current, element?.offsetWidth ?? 64, element?.offsetHeight ?? 64);
+      });
+    };
+    window.addEventListener("resize", keepInView);
+    return () => window.removeEventListener("resize", keepInView);
+  }, []);
+
+  const onPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0 && event.pointerType === "mouse") return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    gesture.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = gesture.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    const dx = event.clientX - active.startX;
+    const dy = event.clientY - active.startY;
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+    if (!active.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    active.moved = true;
+    setDragging(true);
+    const element = event.currentTarget;
+    setPosition(clamp({ x: active.originX + dx, y: active.originY + dy }, element.offsetWidth, element.offsetHeight));
+  }, []);
+
+  const finishGesture = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const active = gesture.current;
+      if (!active || active.pointerId !== event.pointerId) return;
+      gesture.current = null;
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+      if (active.moved) {
+        setDragging(false);
+        setPosition((current) => {
+          if (current) {
+            try {
+              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+            } catch {
+              // Remembering the spot is a convenience only.
+            }
+          }
+          return current;
+        });
+        return;
+      }
+      router.push(unread > 0 ? "/support" : "/support?new=1");
+    },
+    [router, unread],
+  );
+
   if (onSupport) return null;
 
+  const label = unread > 0 ? `Support: ${unread} new repl${unread === 1 ? "y" : "ies"} from DXG` : "Need support? Message DXG";
+
   return (
-    <Link
-      href={unread > 0 ? "/support" : "/support?new=1"}
-      aria-label={unread > 0 ? `Support: ${unread} new repl${unread === 1 ? "y" : "ies"}` : "Need support? Message DXG"}
+    <button
+      ref={elementRef}
+      type="button"
+      aria-label={label}
+      title={`${label}. Drag to move.`}
       data-testid="support-fab"
-      className="group fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-[60] flex items-center gap-2 rounded-full bg-[#008ad2] py-2.5 pl-2.5 pr-4 text-sm font-bold text-white shadow-[0_10px_30px_-10px_rgba(0,138,210,0.7)] ring-4 ring-white/70 transition hover:-translate-y-0.5 hover:bg-[#0076b4] focus-visible:outline-none focus-visible:ring-[#008ad2]/40 sm:bottom-5 sm:right-5 dark:ring-[#07131c]/70"
+      data-dragging={dragging ? "true" : undefined}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={finishGesture}
+      onPointerCancel={finishGesture}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          router.push(unread > 0 ? "/support" : "/support?new=1");
+        }
+      }}
+      style={position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : undefined}
+      className={`support-fab group fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-[60] flex touch-none select-none items-center gap-2 rounded-full bg-[#008ad2] py-2 pl-2 pr-4 text-sm font-bold text-white shadow-[0_12px_32px_-10px_rgba(0,138,210,0.75)] ring-4 ring-white/70 transition-colors hover:bg-[#0076b4] focus-visible:outline-none focus-visible:ring-[#008ad2]/40 sm:bottom-5 sm:right-5 dark:ring-[#07131c]/70 ${
+        dragging ? "cursor-grabbing" : "cursor-grab"
+      }`}
     >
-      <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-        <LifeBuoy className="h-5 w-5 transition group-hover:rotate-12" aria-hidden="true" />
+      <span className="support-fab-avatar relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#008ad2] shadow-inner">
+        <Headset className="h-5 w-5" aria-hidden="true" />
+        <span className="support-fab-presence absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#008ad2] bg-emerald-400" aria-hidden="true" />
         {unread > 0 && (
-          <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black leading-none ring-2 ring-[#008ad2]">
+          <span className="absolute -left-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-[#008ad2]">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
       </span>
       <span>{unread > 0 ? "DXG replied" : "Need support?"}</span>
-    </Link>
+    </button>
   );
 }

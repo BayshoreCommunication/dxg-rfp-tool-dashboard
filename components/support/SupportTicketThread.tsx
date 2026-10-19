@@ -64,8 +64,8 @@ const Bubble = ({
                     className={`block overflow-hidden rounded-lg ${mine ? "bg-white/15" : "bg-slate-100"}`}
                   >
                     {isImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived URL from our own proxy
                       <span className="block h-40 w-[220px] bg-slate-200/40">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- signed, short-lived URL from our own proxy */}
                         <img
                           src={href}
                           alt={attachment.fileName}

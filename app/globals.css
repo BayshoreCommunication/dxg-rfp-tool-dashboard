@@ -2278,3 +2278,26 @@ strong {
     color: #be123c !important;
   }
 }
+
+/* Support avatar: a slow float and a breathing presence dot, both off under reduced motion. */
+@keyframes dxg-support-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes dxg-support-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  70% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+}
+.support-fab:not([data-dragging]) .support-fab-avatar {
+  animation: dxg-support-float 3.2s ease-in-out infinite;
+}
+.support-fab .support-fab-presence {
+  animation: dxg-support-breathe 2.4s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .support-fab .support-fab-avatar,
+  .support-fab .support-fab-presence {
+    animation: none;
+  }
+}
+
