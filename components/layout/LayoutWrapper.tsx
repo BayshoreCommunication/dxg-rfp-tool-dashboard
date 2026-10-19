@@ -10,6 +10,7 @@ import {
 import AssistantPopup from "@/components/ai-assistant/AssistantPopup";
 import { AssistantLauncherProvider } from "@/components/ai-assistant/AssistantLauncherContext";
 import Sidebar, { type SidebarUser } from "@/components/layout/Sidebar";
+import SupportFab from "@/components/support/SupportFab";
 import { completePendingAssistantHandoff } from "@/lib/aiAssistant/analytics";
 import {
   buildAssistantFieldHelpPrompt,
@@ -134,6 +135,7 @@ export default function LayoutWrapper({
             sessionId={assistantSessionId}
           />
         )}
+        <SupportFab />
       </div>
     </AssistantLauncherProvider>
   );

@@ -23,6 +23,11 @@ jest.mock("@/components/layout/Sidebar", () => ({
   ),
 }));
 
+jest.mock("@/components/support/SupportFab", () => ({
+  __esModule: true,
+  default: () => <div data-testid="support-fab" />,
+}));
+
 jest.mock("@/components/ai-assistant/AssistantPopup", () => ({
   __esModule: true,
   default: ({
