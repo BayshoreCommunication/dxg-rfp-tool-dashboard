@@ -38,6 +38,230 @@ final result: blocked
 
 final result: passed
 
+# Design QA — Room-by-room pricing summary
+
+## Evidence
+
+- Selected visual truth:
+  `/Users/bayshorecommunication/.codex/generated_images/019ff998-bf48-70f3-93e8-57c431e74a04/exec-ce0e1b14-a18c-4346-896b-938b7a7d7edd.png`
+- Browser-rendered production capture:
+  `/Users/bayshorecommunication/.codex/visualizations/2026/08/13/019ff998-bf48-70f3-93e8-57c431e74a04/pricing-room-summary-live.png`
+- Route: live vendor response portal, Pricing section
+- Source pixels: 1586 × 992
+- Implementation pixels: 1637 × 986
+- State: two real proposal rooms, one populated labor subtotal, all rollups derived
+  from the current structured response
+
+## Visual comparison
+
+The selected concept and production capture were reviewed together. The implemented
+screen preserves the concept's hierarchy: a dominant room-by-room summary, paired
+equipment and labor metrics, a bordered table with a lightly emphasized room-total
+column, compact outlined detail actions, commercial adjustment fields below, and a
+dark live-rollup card at the right. The production shell is intentionally retained,
+so the content area is denser than the isolated concept while maintaining the same
+relative spacing and grouping.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+- Typography: section, metric, table, and grand-total weights follow the existing
+  RFPilot type scale and preserve the selected concept's visual hierarchy.
+- Layout: the wide content column and 280 px rollup rail align cleanly at desktop
+  width. Below the `xl` breakpoint the rollup moves under the summary, and the table
+  gains contained horizontal scrolling instead of breaking the page boundary.
+- Data integrity: room equipment, labor, room totals, fees, discount, and grand total
+  all use structured response values and the existing currency precision rules.
+- Interaction: production verification confirmed that `View details` opens the Room
+  responses section with the clicked room selected; the focused automated test also
+  validates the exact monetary values and navigation behavior.
+- Accessibility: the summary uses a semantic table with scoped row/column headers,
+  descriptive action labels, tabular numerals, visible focus styling, and a labelled
+  live-rollup region.
+- Asset fidelity: the selected concept contains no required raster asset. The build
+  uses existing product tokens and the existing Lucide icon set; no placeholder or
+  hand-drawn substitute was introduced.
+
+## Verification
+
+- Targeted workspace test: 8/8 passed.
+- Full repository suite: 162 suites and 1,163 tests passed.
+- Contracts, brief freshness, lint, TypeScript, and production build passed locally.
+- GitHub Frontend CI and the Vercel production deployment both completed successfully.
+
+## Follow-up polish
+
+- No P3 polish is required for the selected pricing treatment.
+
+final result: passed
+
+---
+
+# Crew-to-Team label rename — Design QA
+
+## Evidence
+
+- Source visual truth:
+  `/Users/bayshorecommunication/Desktop/Screenshot 2026-09-29 at 2.42.09 PM.png`
+- Browser-rendered implementation screenshot:
+  `/tmp/team-rename-qa.jpg`
+- Route: `/vendor-response/team-rename-qa` (temporary local QA fixture)
+- State: section 4 selected; no crew members added
+- Source pixels: 1519 × 466 desktop capture
+- Implementation pixels: 373 × 744 in-app Browser capture at device pixel ratio 1
+- Density normalization: none. The comparison intentionally checks the same two
+  responsive content surfaces—section navigation and section heading—rather than
+  desktop geometry, because the Codex in-app Browser was available at the mobile
+  breakpoint.
+
+## Full-view comparison evidence
+
+The source and implementation were opened together in one comparison input. The
+implementation keeps the existing RFPilot shell, hierarchy, colors, borders, and
+section content. Its responsive navigation shows `4. Team`, and the selected
+section card shows `Team` as the heading.
+
+## Focused region comparison evidence
+
+The source identifies exactly two requested copy targets: the section-navigation
+label and page heading, both previously `Crew`. The implementation shows `Team` in
+both corresponding surfaces. `Add crew member`, the helper sentence, required-role
+coverage, and all functional data terminology remain unchanged, matching the
+request for a label-only rename.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain for the requested rename.
+- Fonts and typography: existing sizes, weights, wrapping, and hierarchy are
+  unchanged; only the two display labels changed.
+- Spacing and layout rhythm: no layout classes or spacing tokens changed.
+- Colors and visual tokens: no color, border, radius, or elevation tokens changed.
+- Image quality and asset fidelity: this copy-only change adds no images or icons.
+- Copy and content: navigation and heading now read `Team`; underlying crew-member
+  copy and functionality remain intentionally unchanged.
+- Interaction and accessibility: the responsive section selector exposes
+  `4. Team`, selecting it renders the `Team` heading, and `Add crew member` remains
+  keyboard-addressable.
+
+## Comparison history
+
+- Pass 1 verified the two renamed surfaces in the in-app Browser. No visual fix was
+  required after the implementation pass, and no P0/P1/P2 issue was introduced.
+
+## Follow-up polish
+
+- No P3 polish is required for this focused copy change.
+
+final result: passed
+
+---
+
+# Vendor Company Profile DBA and Medical — Design QA
+
+## Source and implementation evidence
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-5bc3e5ac-6fae-41e6-b187-284b7fd294cd.png` at 1615 × 939 px.
+- Implementation evidence: live production Chrome capture at 1638 × 986 px, verified in the Company profile state after the frontend and backend deployments completed.
+- Theme and state: light theme, Company profile active, existing vendor response draft, empty optional DBA and client-mix values.
+
+## Full-view comparison
+
+- Preserved the existing response portal header, left section navigation, form card, two-column company fields, and three-column client-mix grid from the source.
+- Inserted the DBA field after Full-time staff and before Largest comparable event so it remains in the company identity group.
+- Added Medical as the sixth client-mix percentage field, completing the second row beside Nonprofit and Other without changing the established grid rhythm.
+- The sticky footer remains visible, the optional DBA does not add a blocking item, and the verified live draft continues to show 19 blocking items.
+
+## Focused region verification
+
+- DBA uses the exact `DBA` label, an uppercase `OPTIONAL` indicator, and the exact placeholder `Details of services you provide.`
+- DBA spans the full content width and uses the same border, radius, typography, and textarea behavior as Largest comparable event.
+- Medical uses the same numeric stepper, percent suffix, label treatment, and responsive grid behavior as the other client-mix categories.
+- A fresh production load showed the live saved state and both requested fields without a visible runtime error.
+
+## Interaction and data contract
+
+- The frontend includes DBA in draft editing, structured response review, and section-started logic.
+- The backend initializes and validates the optional DBA value, includes it in structured evidence, and exposes the Medical client-mix category in the canonical questionnaire.
+- Existing active drafts whose pinned questionnaires predate Medical remain compatible and can save the built-in `medical` key without allowing arbitrary categories.
+- No production values were entered during QA; verification was read-only.
+
+## Automated and deployment verification
+
+- Frontend: 162 suites, 1160 tests, contracts, lint, TypeScript, and production build passed locally; GitHub Frontend CI run 36537070505 passed; Vercel production deployment completed successfully.
+- Backend: 1001 tests, contracts, lint, TypeScript, migration checks, and build passed locally; GitHub Backend CI and the AWS production deploy with smoke checks passed.
+
+## Comparison history
+
+- Pass 1: the source Company profile did not contain DBA or Medical.
+- Fix: added both fields across the UI and API contract, then added backwards compatibility for active drafts pinned to older questionnaires.
+- Pass 2: production visual verification confirmed matching form styling, alignment, responsive grid placement, saved state, and unchanged blocker count. No P0/P1/P2 issue remains.
+
+final result: passed
+
+---
+
+# Structured Requirement Analysis Card Removal — Design QA
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-8b64de0d-f904-40be-8b3f-892b8ad4b375.png` (1208 × 761 px), identifying the full `How TEST — Harbour Point Staging answered your requirements` card for removal.
+- Browser-rendered implementation: authenticated production Chrome capture emitted during this QA session after deployments `24cbd36` and `7abdfa3`, on `https://av-rfpilot.com/vendor-responses/6aab9f368bdf72568ca119f9`.
+- Viewport and state: 1638 × 986 px Chrome window, light theme, structured response version 2, scrolled to the end of the structured response.
+- Density normalization: both artifacts were reviewed at their native 1× browser/screenshot density. The comparison focused on the same end-of-response region rather than scaling the different browser crops.
+
+## Full-view and focused comparison evidence
+
+- The source shows the unwanted requirement-analysis card beginning after the structured response content.
+- The final production capture shows `Categorized documents` as the last structured response card, followed by the page's normal bottom spacing; the analysis card, its tabs, three status columns, and follow-up actions are absent.
+- A focused text/state check confirmed the removed card heading is absent and that the stale provenance sentence claiming document analysis appears below is also absent.
+
+## Fidelity surfaces
+
+- Fonts and typography: all remaining response headings, metadata, body copy, and badges retain their existing sizes, weights, line heights, and wrapping.
+- Spacing and layout rhythm: the structured response now ends cleanly after `Categorized documents`, without an empty wrapper or oversized gap.
+- Colors and visual tokens: no remaining card, border, background, status, or action tokens changed.
+- Image quality and asset fidelity: the removed section contained no required source imagery; existing Lucide icons and page assets are unchanged.
+- Copy and content: the entire requirement-analysis card is removed only for structured responses, and the now-inaccurate `Document analysis is shown separately below` sentence is removed. Legacy unstructured analysis remains available.
+
+## Verification and comparison history
+
+- Pass 1 removed the full structured analysis card and preserved legacy behavior through regression coverage.
+- Production review found one P2 copy inconsistency in the provenance note, which still said document analysis appeared below.
+- Fix: removed the stale sentence without changing the vendor/server provenance explanation.
+- Pass 2 production evidence shows the card and stale sentence absent, `Categorized documents` intact, and no actionable P0/P1/P2 visual issue remaining.
+- Automated verification: focused Jest passed 6/6 tests; local full CI passed 162/162 suites and 1159/1159 tests; GitHub Frontend CI runs `36532826546` and `36533296895` passed; Vercel reported both production deployments successful.
+
+final result: passed
+
+---
+
+# Structured Document Analysis Intro Removal — Design QA
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-e9349df1-8f3e-4688-a734-c4ee409464a3.png` (1593 × 941 px), with the selected `Document analysis` heading and authority paragraph targeted for removal.
+- Browser-rendered implementation: authenticated production Chrome capture emitted during this QA session after deployment `4be9929`, on `https://av-rfpilot.com/vendor-responses/6aab9f368bdf72568ca119f9`.
+- Viewport and state: 1638 × 986 px Chrome window, light theme, structured response version 2, scrolled to Categorized documents and vendor requirement coverage.
+
+## Fidelity surfaces
+
+- Fonts and typography: no typography tokens changed. The redundant 16 px heading and 12 px explanatory paragraph are absent; the existing requirement-card title and helper text retain their original hierarchy.
+- Spacing and layout rhythm: the requirement coverage card follows Categorized documents with the existing 24 px section gap. No empty wrapper, collapsed margin, or oversized blank band remains.
+- Colors and visual tokens: card borders, white surfaces, slate text, teal action, and existing shadows are unchanged.
+- Image quality and asset fidelity: the removed block contained no image asset or icon. No asset was added, replaced, or altered.
+- Copy and content: only `Document analysis` and the vendor/server authority paragraph are removed for structured responses. The `How TEST — Harbour Point Staging answered your requirements` card and its content remain intact; legacy responses retain their `Analysis` heading and explanatory copy.
+
+## Interaction and browser verification
+
+- A production hard refresh removed both targeted strings from the authenticated accessibility tree.
+- Categorized documents remains visible immediately above the requirement coverage card, and the card continues loading and rendering its existing analysis state.
+- Focused Jest passed 6/6 tests. Full CI passed 162/162 suites and 1159/1159 tests; contract and example-brief checks, ESLint, TypeScript, `git diff --check`, and the Next.js production build passed.
+- GitHub Frontend CI run `36531912580` passed, and Vercel reported the production deployment successful for commit `4be9929`.
+
+## Comparison history
+
+- Pass 1 source evidence showed a redundant heading and authority paragraph between Categorized documents and the actual requirement coverage card.
+- Fix: render the intro only for legacy unstructured responses and keep the structured analysis card as the sole section introduction.
+- Pass 2 production evidence shows a clean transition from Categorized documents to the requirement coverage card with no P0/P1/P2 issue remaining.
+
+final result: passed
+
 ---
 
 # Design QA: Structured response consumption task 7
@@ -1367,6 +1591,112 @@ judge from the full application view.
 ## Follow-up polish
 
 - No P3 polish is required for this focused implementation.
+
+final result: passed
+
+# Design QA — Inline room pricing details
+
+## Evidence
+
+- Source visual truth:
+  `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-2028bde8-b86f-4810-a457-977f0a899f0e.png`
+- Browser-rendered production capture:
+  `/Users/bayshorecommunication/.codex/visualizations/2026/08/13/019ff998-bf48-70f3-93e8-57c431e74a04/pricing-inline-expanded-live.png`
+- Source crop: 768 × 250 px
+- Implementation viewport: 1637 × 986 px at device pixel ratio 1
+- State: live Pricing section with the first room's details expanded inline
+
+## Full-view comparison evidence
+
+The production capture preserves the source table's hierarchy, column alignment,
+light-blue room-total emphasis, border treatment, and compact action sizing. The
+expanded detail row stays inside the same table and keeps the commercial rollup and
+adjustment fields in place; no section navigation occurs.
+
+## Focused region comparison evidence
+
+The source crop and live expanded capture were opened together. The collapsed row
+matches the source's spacing and alignment, while the inserted detail row uses two
+balanced bordered panels for Equipment breakdown and Labor plan. The expanded state
+is visually attached to its parent row and does not obscure adjacent room totals.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+- Fonts and typography: existing RFPilot type sizes, weights, and tabular numerals
+  remain consistent with the source table; detail headings and metadata introduce a
+  clear secondary hierarchy without competing with totals.
+- Spacing and layout rhythm: the expanded row uses a 16 px inset, 16 px panel gap,
+  and compact 8 px item rhythm. The table remains bounded and horizontally scrolls
+  below its minimum width instead of breaking the viewport.
+- Colors and tokens: the expansion uses existing neutral, cyan-focus, and pale-blue
+  pricing tokens; no new gradient or competing accent was introduced.
+- Image quality and assets: there are no raster assets in this component. The only
+  new icon is the existing Lucide chevron, which remains sharp and rotates to expose
+  the open/closed state.
+- Copy and content: detail labels are dynamic and show category totals, equipment
+  quantities, labor roles, days, hours, overtime, travel, notes, and empty states.
+- Interaction and accessibility: live production verification confirmed View details
+  expands in place, changes to Hide details, exposes `aria-expanded`, and collapses
+  again without leaving Pricing. Semantic headings and table structure remain intact.
+
+## Comparison history
+
+- Pass 1 matched the requested inline behavior and preserved the source's table
+  styling. No P0/P1/P2 visual or interaction issue was found, so no corrective visual
+  iteration was required.
+
+## Verification
+
+- Targeted workspace tests: 8/8 passed.
+- Full suite: 162 suites and 1,163 tests passed.
+- Contracts, brief freshness, lint, TypeScript, production build, GitHub Frontend CI,
+  and Vercel deployment passed.
+
+## Follow-up polish
+
+- No P3 polish is required for this focused interaction.
+
+final result: passed
+
+---
+
+# Conditional Streaming Delivery — Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/_y/1bg_zrxs0bb1r1652v_trcbc0000gn/T/codex-clipboard-30c0c042-9429-4b98-a2a7-1ff6eb8f70a2.png` at 1641 × 943 px.
+- Browser-rendered implementation screenshot: Codex in-app browser task capture at 1269 × 714 px from the local application using the real `RoomResponseSection` component.
+- Viewport and density: 1269 × 714 CSS px at 1× density; comparison used the light theme and the same Room responses state.
+- State: one room, no streaming platform or service on the proposal questionnaire, `streamingApplicable=false`, and `platformPlanRequired=false`.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+- The source shows `D · Streaming delivery` immediately after `C · Room labor`; the implementation capture ends the room card after `C · Room labor`, confirming the entire streaming fieldset is absent in the non-streaming state.
+- The event-wide platform integration plan is also absent, so the hidden section does not leave an unrelated required field or extra whitespace behind.
+- Fonts and typography: existing RFPilot headings, labels, weights, capitalization, and line heights are unchanged.
+- Spacing and layout rhythm: removing the conditional fieldset closes the card after the labor subtotal without a broken divider, empty panel, or excess bottom gap.
+- Colors and visual tokens: existing light-theme surface, border, cyan action, and slate text tokens remain unchanged.
+- Image quality and asset fidelity: this section contains no raster imagery or new assets; existing icons remain from the product icon library.
+- Copy and content: no replacement copy was added. Streaming-specific labels disappear only when no streaming service was supplied while creating the proposal.
+- Interaction and accessibility: the conditional content is removed from the DOM, so hidden streaming inputs cannot receive focus or remain required by assistive technology.
+
+## Comparison history
+
+- Pass 1: the source exposed Streaming delivery for a hybrid proposal even though no streaming service had been named.
+- Fix: changed the questionnaire projection to derive streaming applicability from the explicit streaming platform fields and added frontend/backend regression coverage for both absent and present states.
+- Pass 2: the local browser capture showed A, B, and C sections with the card ending cleanly after Room labor; `D · Streaming delivery` and the platform integration plan were absent. No P0/P1/P2 issue remains.
+
+## Verification
+
+- Frontend: 162 suites and 1161 tests passed, followed by lint, TypeScript, contracts, and a production build.
+- Backend: 1002 tests passed, followed by lint, TypeScript, contracts, migration checks, and a production build.
+- Automated coverage confirms the section is absent without a streaming platform and remains present when a service such as Zoom Events is named.
+
+## Follow-up polish
+
+- No P3 polish is required for this conditional visibility change.
 
 final result: passed
 

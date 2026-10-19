@@ -4,7 +4,7 @@ export const CATEGORY_OPTIONS: ReadonlyArray<{ value: SupportTicketCategory; lab
   { value: "how_to", label: "How do I…", hint: "Finding a page or finishing a step" },
   { value: "bug", label: "Something isn't working", hint: "An error, a stuck screen, a wrong result" },
   { value: "vendor_email", label: "Vendors & email", hint: "Invitations, links, replies that never arrived" },
-  { value: "billing", label: "Account & billing", hint: "Access, plan, invoices" },
+  { value: "billing", label: "Account & sign-in", hint: "Password, access, email changes" },
   { value: "other", label: "Something else", hint: "Anything that doesn't fit above" },
 ];
 
