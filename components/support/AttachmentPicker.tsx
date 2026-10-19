@@ -1,7 +1,7 @@
 "use client";
 
 import { Paperclip, X } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   SUPPORT_ATTACHMENT_ACCEPT,
   SUPPORT_ATTACHMENT_MAX_FILES,
@@ -23,6 +23,18 @@ export default function AttachmentPicker({
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
+
+  // Object URLs for image thumbnails; revoked when the selection changes.
+  const previews = useMemo(
+    () =>
+      new Map(
+        files
+          .filter((file) => file.type.startsWith("image/") && typeof URL !== "undefined" && "createObjectURL" in URL)
+          .map((file) => [file, URL.createObjectURL(file)] as const),
+      ),
+    [files],
+  );
+  useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
 
   const add = (incoming: FileList | null) => {
     if (!incoming) return;
@@ -78,6 +90,10 @@ export default function AttachmentPicker({
               key={`${file.name}-${file.size}`}
               className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700"
             >
+              {previews.get(file) && (
+                // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
+                <img src={previews.get(file)} alt="" className="h-8 w-8 rounded object-cover" />
+              )}
               <span className="max-w-[180px] truncate">{file.name}</span>
               <span className="text-slate-400">{formatBytes(file.size)}</span>
               <button

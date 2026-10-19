@@ -66,11 +66,19 @@ describe("SupportTicketThread", () => {
     expect(screen.getByText("It spins forever.")).toBeInTheDocument();
     expect(screen.getByText("Dana · DXG support")).toBeInTheDocument();
     expect(screen.getByText(/set priority to high/)).toBeInTheDocument();
-    expect(screen.getByText(/handled by Dana/)).toBeInTheDocument();
+    expect(screen.getByText(/DXG replied — your turn/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /guide\.pdf/ })).toHaveAttribute(
       "href",
       "/api/support/attachments/t1/22222222-2222-4222-8222-222222222222",
     );
+  });
+
+  test("tells the planner who is on it while the ticket is open", () => {
+    render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={messages} assignee={{ id: "a", name: "Dana" }} />);
+    expect(screen.getByText(/Dana at DXG is on it/)).toBeInTheDocument();
+    const { unmount } = render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={messages} assignee={null} />);
+    expect(screen.getByText(/waiting for a DXG agent/)).toBeInTheDocument();
+    unmount();
   });
 
   test("sends a reply and refreshes", async () => {
