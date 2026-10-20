@@ -32,6 +32,7 @@ describe("NewSupportTicketForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /Send to DXG support/ }));
     expect(screen.getByRole("alert")).toHaveTextContent("Give your request a short subject.");
     fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "Export" } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Send to DXG support/ }));
     expect(screen.getByRole("alert")).toHaveTextContent("Tell us what happened so we can help.");
     expect(createSupportTicketAction).not.toHaveBeenCalled();

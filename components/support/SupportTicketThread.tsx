@@ -11,10 +11,11 @@ import {
   type SupportMessage,
   type SupportTicket,
 } from "@/app/actions/supportDesk";
-import { formatAppDateTime } from "@/lib/dateFormat";
 import { formatBytes, supportAttachmentHref, uploadSupportAttachments } from "@/lib/support/attachments";
 import AttachmentPicker from "./AttachmentPicker";
+import SupportDateTime from "./SupportDateTime";
 import { categoryLabel, isTerminal, statusClass, statusLabel } from "./supportLabels";
+import { useSupportRealtimeRefresh } from "./useSupportRealtimeRefresh";
 
 const BODY_MAX = 5000;
 
@@ -31,7 +32,7 @@ const Bubble = ({
     return (
       <li className="flex justify-center">
         <p className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-500">
-          {message.body} · {formatAppDateTime(message.createdAt)}
+          {message.body} · <SupportDateTime value={message.createdAt} />
         </p>
       </li>
     );
@@ -46,7 +47,7 @@ const Bubble = ({
       >
         <header className={`mb-1 flex items-center gap-2 text-[11px] font-bold ${mine ? "text-white/80" : "text-slate-500"}`}>
           <span>{mine ? "You" : assigneeName ? `${assigneeName} · DXG support` : "DXG support"}</span>
-          <span className="font-medium">{formatAppDateTime(message.createdAt)}</span>
+          <SupportDateTime value={message.createdAt} className="font-medium" />
         </header>
         <p className="whitespace-pre-wrap break-words leading-6">{message.body}</p>
         {message.attachments.length > 0 && (
@@ -112,15 +113,14 @@ export default function SupportTicketThread({
   const [resolving, startResolving] = useTransition();
   const terminal = isTerminal(ticket.status);
   const endOfThread = useRef<HTMLLIElement>(null);
+  useSupportRealtimeRefresh(ticket.id);
 
   // Keep the newest message in view, like a chat: on load and after each change.
   useEffect(() => {
     endOfThread.current?.scrollIntoView?.({ block: "end" });
   }, [messages.length, ticket.status]);
 
-  const situation = terminal
-    ? `${statusLabel(ticket.status)} ${formatAppDateTime(ticket.resolvedAt ?? ticket.closedAt ?? ticket.lastMessageAt)}`
-    : ticket.status === "waiting_on_customer"
+  const situation = ticket.status === "waiting_on_customer"
       ? "DXG replied — your turn"
       : assignee
         ? `${assignee.name} at DXG is on it`
@@ -182,7 +182,15 @@ export default function SupportTicketThread({
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            {categoryLabel(ticket.category)} · opened {formatAppDateTime(ticket.createdAt)} · {situation}
+            {categoryLabel(ticket.category)} · opened <SupportDateTime value={ticket.createdAt} /> ·{" "}
+            {terminal ? (
+              <>
+                {statusLabel(ticket.status)}{" "}
+                <SupportDateTime value={ticket.resolvedAt ?? ticket.closedAt ?? ticket.lastMessageAt} />
+              </>
+            ) : (
+              situation
+            )}
           </p>
         </header>
 

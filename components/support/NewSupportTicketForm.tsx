@@ -72,7 +72,10 @@ export default function NewSupportTicketForm({
         <input
           id="support-subject"
           value={subject}
-          onChange={(event) => setSubject(event.target.value)}
+          onChange={(event) => {
+            setSubject(event.target.value);
+            if (error) setError(null);
+          }}
           maxLength={SUBJECT_MAX}
           placeholder="e.g. Vendors say the response link has expired"
           className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#008ad2] focus:ring-2 focus:ring-[#008ad2]/15"
@@ -96,7 +99,10 @@ export default function NewSupportTicketForm({
                 name="support-category"
                 value={option.value}
                 checked={category === option.value}
-                onChange={() => setCategory(option.value)}
+                onChange={() => {
+                  setCategory(option.value);
+                  if (error) setError(null);
+                }}
                 className="mt-1 h-3.5 w-3.5 accent-[#008ad2]"
               />
               <span>
@@ -115,7 +121,10 @@ export default function NewSupportTicketForm({
         <textarea
           id="support-body"
           value={body}
-          onChange={(event) => setBody(event.target.value)}
+          onChange={(event) => {
+            setBody(event.target.value);
+            if (error) setError(null);
+          }}
           maxLength={BODY_MAX}
           rows={6}
           placeholder="What were you trying to do, what did you expect, and what happened instead? Include the proposal name and any reference ID from an error message."
@@ -126,7 +135,14 @@ export default function NewSupportTicketForm({
         </p>
       </div>
 
-      <AttachmentPicker files={files} onChange={setFiles} disabled={isPending} />
+      <AttachmentPicker
+        files={files}
+        onChange={(nextFiles) => {
+          setFiles(nextFiles);
+          if (error) setError(null);
+        }}
+        disabled={isPending}
+      />
 
       {error && (
         <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm font-semibold text-rose-700">

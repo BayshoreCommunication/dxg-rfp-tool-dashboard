@@ -9,6 +9,7 @@ import { getSupportUnreadCountAction } from "@/app/actions/supportDesk";
 import { getVendorUnreadCountAction } from "@/app/actions/vendorResponse";
 import { navigationConfig, NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { SUPPORT_UPDATED_EVENT } from "@/lib/support/realtime";
 import {
   BellDot,
   Bot,
@@ -28,6 +29,8 @@ type NotificationSocketPayload = {
     title?: string;
     message?: string;
     count?: number;
+    type?: string;
+    metadata?: { ticketId?: unknown };
   };
 };
 
@@ -273,6 +276,15 @@ const Sidebar = ({
           setUnreadCount((current) => current + 1);
           // Refresh vendor response unread count on any new notification
           void getVendorUnreadCountAction().then(setVendorUnreadCount);
+          if (payload.data?.type === "support_ticket") {
+            void getSupportUnreadCountAction().then(setSupportUnreadCount);
+            const ticketId = payload.data.metadata?.ticketId;
+            window.dispatchEvent(
+              new CustomEvent(SUPPORT_UPDATED_EVENT, {
+                detail: { ticketId: typeof ticketId === "string" ? ticketId : undefined },
+              }),
+            );
+          }
           if (pathname !== "/notification") {
             toast.info(
               <div>

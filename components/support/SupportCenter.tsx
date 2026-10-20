@@ -4,9 +4,10 @@ import { LifeBuoy, MessageSquarePlus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { SupportPagination, SupportTicket } from "@/app/actions/supportDesk";
-import { formatAppDateTime } from "@/lib/dateFormat";
 import NewSupportTicketForm from "./NewSupportTicketForm";
+import SupportDateTime from "./SupportDateTime";
 import { categoryLabel, statusClass, statusLabel } from "./supportLabels";
+import { useSupportRealtimeRefresh } from "./useSupportRealtimeRefresh";
 
 type Props = {
   tickets: SupportTicket[];
@@ -19,6 +20,7 @@ type Props = {
 export default function SupportCenter({ tickets, pagination, errorMessage, view, startOpen = false }: Props) {
   const [composing, setComposing] = useState(startOpen || tickets.length === 0);
   const unread = tickets.filter((ticket) => ticket.unreadForRequester > 0).length;
+  useSupportRealtimeRefresh();
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 px-4 pb-16 pt-6 sm:px-6">
@@ -126,7 +128,7 @@ export default function SupportCenter({ tickets, pagination, errorMessage, view,
                       </div>
                       <p className="mt-1 text-xs text-slate-500">
                         {categoryLabel(ticket.category)} · {ticket.messageCount} message{ticket.messageCount === 1 ? "" : "s"} · updated{" "}
-                        {formatAppDateTime(ticket.lastMessageAt)}
+                        <SupportDateTime value={ticket.lastMessageAt} />
                       </p>
                     </div>
                   </Link>
