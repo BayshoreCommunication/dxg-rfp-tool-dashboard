@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowUp, Bot, CheckCircle2, FileText, LoaderCircle } from "lucide-react";
+import { ArrowLeft, ArrowUp, CheckCircle2, FileText, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
@@ -63,16 +63,11 @@ const Attachments = ({ message, ticketId, mine }: { message: SupportMessage; tic
   </ul>
 );
 
-const Avatar = ({ automatic }: { automatic: boolean }) =>
-  automatic ? (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
-      <Bot className="h-4 w-4" aria-hidden="true" />
-    </span>
-  ) : (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-[#0076b4]">
-      <SupportAgentIcon className="h-6 w-6" />
-    </span>
-  );
+const Avatar = () => (
+  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-[#0076b4]">
+    <SupportAgentIcon className="h-6 w-6" />
+  </span>
+);
 
 const MessageRow = ({
   message,
@@ -92,28 +87,25 @@ const MessageRow = ({
   pending?: boolean;
 }) => {
   const mine = message.authorRole === "customer";
-  const automatic = isAutomaticReply(message);
-  const name = automatic ? "DXG support" : assigneeName ? `${assigneeName} · DXG support` : "DXG support";
+  // The automatic acknowledgement reads as an ordinary message from DXG
+  // support: planners should feel they reached people, not a bot. It is only
+  // kept off the assigned agent's name, since that agent did not write it.
+  const name = !isAutomaticReply(message) && assigneeName ? `${assigneeName} · DXG support` : "DXG support";
 
   return (
     <li className={`flex items-end gap-2.5 ${mine ? "justify-end" : "justify-start"} ${startsGroup ? "mt-4 first:mt-0" : "mt-1"}`}>
-      {!mine && (endsGroup ? <Avatar automatic={automatic} /> : <span className="w-8 shrink-0" aria-hidden="true" />)}
+      {!mine && (endsGroup ? <Avatar /> : <span className="w-8 shrink-0" aria-hidden="true" />)}
       <div className={`flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`}>
         {startsGroup && !mine && (
           <p className="mb-1 flex items-center gap-1.5 px-1 text-[11px] font-bold text-slate-500">
             {name}
-            {automatic && (
-              <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-700">Automatic reply</span>
-            )}
           </p>
         )}
         <article
           className={`px-4 py-2.5 text-sm shadow-sm ${
             mine
               ? `bg-[#008ad2] text-white ${endsGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`
-              : automatic
-                ? `border border-violet-100 bg-violet-50/70 text-slate-800 ${endsGroup ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`
-                : `border border-slate-200 bg-white text-slate-800 ${endsGroup ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`
+              : `border border-slate-200 bg-white text-slate-800 ${endsGroup ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`
           } ${pending ? "opacity-70" : ""}`}
         >
           <p className="whitespace-pre-wrap break-words leading-6">{message.body}</p>
