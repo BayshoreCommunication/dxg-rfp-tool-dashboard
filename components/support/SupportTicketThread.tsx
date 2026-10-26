@@ -46,7 +46,15 @@ const Bubble = ({
         }`}
       >
         <header className={`mb-1 flex items-center gap-2 text-[11px] font-bold ${mine ? "text-white/80" : "text-slate-500"}`}>
-          <span>{mine ? "You" : assigneeName ? `${assigneeName} · DXG support` : "DXG support"}</span>
+          <span>
+            {mine
+              ? "You"
+              : message.authorRole === "system"
+                ? "DXG support · Automatic reply"
+                : assigneeName
+                  ? `${assigneeName} · DXG support`
+                  : "DXG support"}
+          </span>
           <SupportDateTime value={message.createdAt} className="font-medium" />
         </header>
         <p className="whitespace-pre-wrap break-words leading-6">{message.body}</p>
