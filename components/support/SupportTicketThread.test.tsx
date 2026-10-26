@@ -109,14 +109,16 @@ describe("SupportTicketThread", () => {
     expect(screen.getByText(/Reply below to reopen it/)).toBeInTheDocument();
   });
 
-  test("labels the automatic acknowledgement and keeps it apart from the agent", () => {
+  test("shows the automatic acknowledgement as a plain DXG support message, never as a bot", () => {
     const withAck = [
       messages[0],
       { id: "ack", authorRole: "system" as const, kind: "message" as const, body: "Hi, thanks for contacting DXG support.", attachments: [], createdAt: "2026-10-18T09:00:00.001Z" },
     ];
     render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={withAck} assignee={{ id: "a", name: "Dana" }} />);
-    expect(screen.getByText("Automatic reply")).toBeInTheDocument();
     expect(screen.getByText("Hi, thanks for contacting DXG support.")).toBeInTheDocument();
+    expect(screen.getByText("DXG support")).toBeInTheDocument();
+    expect(screen.queryByText(/automatic/i)).not.toBeInTheDocument();
+    // The assigned agent did not write it, so it is not attributed to them.
     expect(screen.queryByText("Dana · DXG support")).not.toBeInTheDocument();
   });
 
