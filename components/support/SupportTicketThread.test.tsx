@@ -108,4 +108,41 @@ describe("SupportTicketThread", () => {
     expect(screen.getByRole("button", { name: "Reopen & send" })).toBeInTheDocument();
     expect(screen.getByText(/Reply below to reopen it/)).toBeInTheDocument();
   });
+
+  test("labels the automatic acknowledgement and keeps it apart from the agent", () => {
+    const withAck = [
+      messages[0],
+      { id: "ack", authorRole: "system" as const, kind: "message" as const, body: "Hi, thanks for contacting DXG support.", attachments: [], createdAt: "2026-10-18T09:00:00.001Z" },
+    ];
+    render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={withAck} assignee={{ id: "a", name: "Dana" }} />);
+    expect(screen.getByText("Automatic reply")).toBeInTheDocument();
+    expect(screen.getByText("Hi, thanks for contacting DXG support.")).toBeInTheDocument();
+    expect(screen.queryByText("Dana · DXG support")).not.toBeInTheDocument();
+  });
+
+  test("Enter sends, Shift+Enter does not, and the message shows as sending", async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    replySupportTicketAction.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    render(<SupportTicketThread ticket={ticket} messages={messages} assignee={null} />);
+    const box = screen.getByLabelText("Reply to DXG support");
+    fireEvent.change(box, { target: { value: "Line one" } });
+    fireEvent.keyDown(box, { key: "Enter", shiftKey: true });
+    expect(replySupportTicketAction).not.toHaveBeenCalled();
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(await screen.findByText("Sending…")).toBeInTheDocument();
+    await waitFor(() => expect(replySupportTicketAction).toHaveBeenCalledWith("t1", "Line one", []));
+    finish({ success: true, data: {} });
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  test("a failed send removes the pending bubble and keeps the draft", async () => {
+    replySupportTicketAction.mockResolvedValue({ success: false, message: "Nope" });
+    render(<SupportTicketThread ticket={ticket} messages={messages} assignee={null} />);
+    const box = screen.getByLabelText("Reply to DXG support");
+    fireEvent.change(box, { target: { value: "Keep me" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(replySupportTicketAction).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByText("Sending…")).not.toBeInTheDocument());
+    expect(box).toHaveValue("Keep me");
+  });
 });
