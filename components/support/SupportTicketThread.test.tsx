@@ -64,7 +64,9 @@ describe("SupportTicketThread", () => {
     expect(screen.getByRole("heading", { name: "PDF export hangs" })).toBeInTheDocument();
     expect(screen.getByText("DXG replied")).toBeInTheDocument();
     expect(screen.getByText("It spins forever.")).toBeInTheDocument();
-    expect(screen.getByText("Dana · DXG support")).toBeInTheDocument();
+    // Planners see one "DXG support", never an agent's name or role.
+    expect(screen.getByText("DXG support")).toBeInTheDocument();
+    expect(screen.queryByText(/Dana ·|Dana at DXG/)).not.toBeInTheDocument();
     expect(screen.getByText(/set priority to high/)).toBeInTheDocument();
     expect(screen.getByText(/DXG replied — your turn/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /guide\.pdf/ })).toHaveAttribute(
@@ -75,9 +77,10 @@ describe("SupportTicketThread", () => {
 
   test("tells the planner who is on it while the ticket is open", () => {
     render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={messages} assignee={{ id: "a", name: "Dana" }} />);
-    expect(screen.getByText(/Dana at DXG is on it/)).toBeInTheDocument();
+    expect(screen.getByText(/DXG support is on it/)).toBeInTheDocument();
+    expect(screen.queryByText(/Dana ·|Dana at DXG/)).not.toBeInTheDocument();
     const { unmount } = render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={messages} assignee={null} />);
-    expect(screen.getByText(/waiting for a DXG agent/)).toBeInTheDocument();
+    expect(screen.getByText(/waiting for DXG support/)).toBeInTheDocument();
     unmount();
   });
 
@@ -90,7 +93,7 @@ describe("SupportTicketThread", () => {
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 
-  test("lets the planner mark it solved, and a resolved ticket offers reopen", async () => {
+  test("lets the planner mark it solved, and a resolved ticket can still be reopened by replying", async () => {
     resolveSupportTicketAction.mockResolvedValue({ success: true, data: { ...ticket, status: "resolved" } });
     const { unmount } = render(<SupportTicketThread ticket={ticket} messages={messages} assignee={null} />);
     fireEvent.click(screen.getByRole("button", { name: /This is solved/ }));
@@ -105,8 +108,10 @@ describe("SupportTicketThread", () => {
       />,
     );
     expect(screen.queryByRole("button", { name: /This is solved/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reopen & send" })).toBeInTheDocument();
-    expect(screen.getByText(/Reply below to reopen it/)).toBeInTheDocument();
+    // Resolved is a grace period: the planner can still reply to reopen it.
+    expect(screen.getByLabelText("Reply to DXG support")).toHaveAttribute("placeholder", "Reply to reopen this request…");
+    expect(screen.getByText(/This request is resolved\. Still need help\? Reply below to reopen it/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /new request/i })).not.toBeInTheDocument();
   });
 
   test("shows the automatic acknowledgement as a plain DXG support message, never as a bot", () => {
@@ -146,5 +151,18 @@ describe("SupportTicketThread", () => {
     await waitFor(() => expect(replySupportTicketAction).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByText("Sending…")).not.toBeInTheDocument());
     expect(box).toHaveValue("Keep me");
+  });
+
+  test("a closed ticket is read-only", () => {
+    render(
+      <SupportTicketThread
+        ticket={{ ...ticket, status: "closed", closedAt: "2026-10-21T11:00:00.000Z" }}
+        messages={messages}
+        assignee={null}
+      />,
+    );
+    expect(screen.getByText("This request is closed.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Reply to DXG support")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /This is solved/ })).not.toBeInTheDocument();
   });
 });

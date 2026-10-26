@@ -12,7 +12,7 @@ import {
   type SupportTicket,
 } from "@/app/actions/supportDesk";
 import { formatBytes, supportAttachmentHref, uploadSupportAttachments } from "@/lib/support/attachments";
-import { buildThreadItems, isAutomaticReply, timeLabel } from "@/lib/support/thread";
+import { buildThreadItems, timeLabel } from "@/lib/support/thread";
 import AttachmentPicker from "./AttachmentPicker";
 import SupportAgentIcon from "./SupportAgentIcon";
 import SupportDateTime from "./SupportDateTime";
@@ -20,6 +20,8 @@ import { categoryLabel, isTerminal, statusClass, statusLabel } from "./supportLa
 import { useSupportRealtimeRefresh } from "./useSupportRealtimeRefresh";
 
 const BODY_MAX = 5000;
+// Matches the backend's CLOSE_AFTER_RESOLVED_MS.
+const RESOLVED_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 const COMPOSER_MAX_HEIGHT_PX = 160;
 
 const subscribe = () => () => undefined;
@@ -73,7 +75,6 @@ const MessageRow = ({
   message,
   startsGroup,
   endsGroup,
-  assigneeName,
   ticketId,
   hydrated,
   pending = false,
@@ -81,7 +82,6 @@ const MessageRow = ({
   message: SupportMessage;
   startsGroup: boolean;
   endsGroup: boolean;
-  assigneeName: string | null;
   ticketId: string;
   hydrated: boolean;
   pending?: boolean;
@@ -90,7 +90,9 @@ const MessageRow = ({
   // The automatic acknowledgement reads as an ordinary message from DXG
   // support: planners should feel they reached people, not a bot. It is only
   // kept off the assigned agent's name, since that agent did not write it.
-  const name = !isAutomaticReply(message) && assigneeName ? `${assigneeName} · DXG support` : "DXG support";
+  // Planners always hear from one "DXG support", whoever on the team wrote
+  // the message: agent names and roles stay internal.
+  const name = "DXG support";
 
   return (
     <li className={`flex items-end gap-2.5 ${mine ? "justify-end" : "justify-start"} ${startsGroup ? "mt-4 first:mt-0" : "mt-1"}`}>
@@ -144,6 +146,12 @@ export default function SupportTicketThread({
   const [isPending, startTransition] = useTransition();
   const [resolving, startResolving] = useTransition();
   const terminal = isTerminal(ticket.status);
+  // Resolved is a 3-day grace period (a reply reopens it); closed is final.
+  const closed = ticket.status === "closed";
+  const closesAt =
+    ticket.status === "resolved" && ticket.resolvedAt
+      ? new Date(Date.parse(ticket.resolvedAt) + RESOLVED_GRACE_MS).toISOString()
+      : null;
   const endOfThread = useRef<HTMLLIElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   useSupportRealtimeRefresh(ticket.id);
@@ -168,8 +176,8 @@ export default function SupportTicketThread({
   const situation = ticket.status === "waiting_on_customer"
       ? "DXG replied — your turn"
       : assignee
-        ? `${assignee.name} at DXG is on it`
-        : "waiting for a DXG agent";
+        ? "DXG support is on it"
+        : "waiting for DXG support";
 
   const send = () => {
     const text = body.trim();
@@ -212,7 +220,6 @@ export default function SupportTicketThread({
         return;
       }
       setSending(null);
-      if (terminal) toast.success("Reopened and sent to DXG support.");
       router.refresh();
     });
   };
@@ -297,7 +304,6 @@ export default function SupportTicketThread({
                 message={item.message}
                 startsGroup={item.startsGroup}
                 endsGroup={item.endsGroup}
-                assigneeName={assignee?.name ?? null}
                 ticketId={ticket.id}
                 hydrated={hydrated}
               />
@@ -308,7 +314,6 @@ export default function SupportTicketThread({
               message={sending}
               startsGroup
               endsGroup
-              assigneeName={null}
               ticketId={ticket.id}
               hydrated={hydrated}
               pending
@@ -317,10 +322,19 @@ export default function SupportTicketThread({
           <li ref={endOfThread} aria-hidden="true" className="h-px" />
         </ul>
 
+        {closed ? (
+          // A closed request is read-only for the planner.
+          <footer className="shrink-0 border-t border-slate-100 px-4 py-4 sm:px-5">
+            <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm font-semibold text-slate-600">
+              This request is closed.
+            </p>
+          </footer>
+        ) : (
         <footer className="shrink-0 border-t border-slate-100 px-4 py-3 sm:px-5">
-          {terminal && (
+          {closesAt && (
             <p className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800">
-              This request is {statusLabel(ticket.status).toLowerCase()}. Reply below to reopen it.
+              This request is resolved. Still need help? Reply below to reopen it before it closes on{" "}
+              <SupportDateTime value={closesAt} />.
             </p>
           )}
           <div className="flex flex-wrap items-end gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 transition focus-within:border-[#008ad2] focus-within:ring-2 focus-within:ring-[#008ad2]/15">
@@ -338,27 +352,25 @@ export default function SupportTicketThread({
               rows={1}
               maxLength={BODY_MAX}
               aria-label="Reply to DXG support"
-              placeholder={terminal ? "Write a reply to reopen this request…" : "Write a reply…"}
+              placeholder={closesAt ? "Reply to reopen this request…" : "Write a reply…"}
               className="order-2 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400"
             />
             <button
               type="button"
               onClick={send}
               disabled={isPending}
-              aria-label={terminal ? "Reopen & send" : "Send"}
-              title={terminal ? "Reopen & send" : "Send (Enter)"}
-              className={`order-3 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#008ad2] text-sm font-bold text-white shadow-sm transition hover:bg-[#0076b4] disabled:opacity-60 ${
-                terminal ? "px-3" : "w-9"
-              }`}
+              aria-label="Send"
+              title="Send (Enter)"
+              className={`order-3 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#008ad2] text-sm font-bold text-white shadow-sm transition hover:bg-[#0076b4] disabled:opacity-60 w-9`}
             >
               {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowUp className="h-4 w-4" aria-hidden="true" />}
-              {terminal && <span>Reopen</span>}
             </button>
           </div>
           <p className="mt-1.5 hidden px-1 text-[11px] text-slate-400 sm:block">
             Enter to send · Shift + Enter for a new line · up to 3 screenshots or PDFs, 10 MB each
           </p>
         </footer>
+        )}
       </section>
     </div>
   );
