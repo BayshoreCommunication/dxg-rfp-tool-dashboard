@@ -30,11 +30,11 @@ export default function SupportCenter({ tickets, pagination, errorMessage, view,
           <div>
             <span className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[#008ad2]">
               <Sparkles size={10} className="fill-[#008ad2]" aria-hidden="true" />
-              Talk to a person at DXG
+              Talk to a person at RFPilot
             </span>
             <h1 className="text-[30px] font-black leading-none tracking-tight text-slate-900">Support</h1>
             <p className="mt-2 max-w-xl text-[13px] font-medium text-slate-500">
-              Stuck, or something not working? Send DXG a message and follow the reply here. The AI Assistant stays
+              Stuck, or something not working? Send RFPilot a message and follow the reply here. The AI Assistant stays
               available for quick how-to questions.
             </p>
           </div>
@@ -57,7 +57,7 @@ export default function SupportCenter({ tickets, pagination, errorMessage, view,
             New request
           </h2>
           <p className="mb-4 mt-1 text-sm text-slate-500">
-            A DXG support agent will reply here and you&apos;ll get a notification.
+            An RFPilot support agent will reply here and you&apos;ll get a notification.
           </p>
           <NewSupportTicketForm onCancel={tickets.length > 0 ? () => setComposing(false) : undefined} />
         </section>

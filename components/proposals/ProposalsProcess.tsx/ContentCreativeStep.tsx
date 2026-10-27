@@ -396,7 +396,7 @@ const ContentCreativeStep = ({
                     </div>
                     {safeData.liveDataFeeds.needed === "YES" && (
                       <p className="mt-2 text-xs font-medium text-amber-600">
-                        ⚡ Complex scope — a DXG producer call may be needed to confirm feasibility.
+                        ⚡ Complex scope — an RFPilot producer call may be needed to confirm feasibility.
                       </p>
                     )}
                   </div>

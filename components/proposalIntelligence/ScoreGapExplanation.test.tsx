@@ -13,14 +13,14 @@ const workspace = {
     ranking: [
       { participantId: "inspire", vendorLabel: "Inspire", eligible: true },
       { participantId: "manual", vendorLabel: "Test Manual Vendor", eligible: true },
-      { participantId: "dxg", vendorLabel: "DXG", eligible: true },
+      { participantId: "dxg", vendorLabel: "RFPilot", eligible: true },
     ],
   },
   intelligence: {
     evaluation: [
       { participantId: "inspire", vendorLabel: "Inspire", criteria: [criterion("pricing", "Pricing & Value", 5, 50), criterion("technical", "Technical Approach", 4, 50)] },
       { participantId: "manual", vendorLabel: "Test Manual Vendor", criteria: [criterion("pricing", "Pricing & Value", 5, 50), criterion("technical", "Technical Approach", 2, 50, { automatedCount: 0, humanCount: 1, rationale: "Thin crew plan." })] },
-      { participantId: "dxg", vendorLabel: "DXG", criteria: [criterion("pricing", "Pricing & Value", 3, 50), criterion("technical", "Technical Approach", 4, 50)] },
+      { participantId: "dxg", vendorLabel: "RFPilot", criteria: [criterion("pricing", "Pricing & Value", 3, 50), criterion("technical", "Technical Approach", 4, 50)] },
     ],
   },
 } as unknown as ComparisonWorkspace;
@@ -47,8 +47,8 @@ it("shows no per-cell origin labels when every score has the same origin", () =>
 
 it("lets the reader pick which other vendor to compare against", () => {
   render(<ScoreGapExplanation workspace={workspace} />);
-  fireEvent.click(screen.getByRole("button", { name: "DXG" }));
-  expect(screen.getByText(/Inspire is 20.00 points ahead of DXG/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "RFPilot" }));
+  expect(screen.getByText(/Inspire is 20.00 points ahead of RFPilot/)).toBeInTheDocument();
   expect(screen.getByText(/Inspire gains on Pricing & Value \(\+20.00\)/)).toBeInTheDocument();
 });
 

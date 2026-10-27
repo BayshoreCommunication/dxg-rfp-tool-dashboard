@@ -48,7 +48,7 @@ export const navigationConfig: NavItem[] = [
     href: "/help",
     icon: <CircleHelp size={22} />,
   },
-  // Human support: a ticket inbox DXG answers from the admin app.
+  // Human support: a ticket inbox RFPilot answers from the admin app.
   {
     id: "support",
     title: "Support",

@@ -4,7 +4,7 @@ import SupportCenter from "@/components/support/SupportCenter";
 
 export const metadata: Metadata = {
   title: "Support",
-  description: "Send DXG a message and follow the reply.",
+  description: "Send RFPilot a message and follow the reply.",
 };
 
 const positivePage = (value?: string) => {

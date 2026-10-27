@@ -5,6 +5,7 @@ export const CATEGORY_OPTIONS: ReadonlyArray<{ value: SupportTicketCategory; lab
   { value: "bug", label: "Something isn't working", hint: "An error, a stuck screen, a wrong result" },
   { value: "vendor_email", label: "Vendors & email", hint: "Invitations, links, replies that never arrived" },
   { value: "billing", label: "Account & sign-in", hint: "Password, access, email changes" },
+  { value: "feature_request", label: "Feature request", hint: "An idea or something you'd like RFPilot to do" },
   { value: "other", label: "Something else", hint: "Anything that doesn't fit above" },
 ];
 
@@ -16,7 +17,7 @@ export const statusLabel = (status: SupportTicketStatus): string => {
     case "open":
       return "Open";
     case "waiting_on_customer":
-      return "DXG replied";
+      return "RFPilot replied";
     case "resolved":
       return "Resolved";
     case "closed":

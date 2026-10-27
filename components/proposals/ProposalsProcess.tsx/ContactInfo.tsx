@@ -544,7 +544,7 @@ const ContactInfo = ({
         <div className="mb-6">
           <label className={labelClass}>
             Preferred Contact Method
-            <InfoTooltip text="How would you prefer the DXG team to reach you for questions or updates?" />
+            <InfoTooltip text="How would you prefer the RFPilot team to reach you for questions or updates?" />
           </label>
           <div className="flex flex-wrap gap-3">
             {CONTACT_METHODS.map((opt) => (

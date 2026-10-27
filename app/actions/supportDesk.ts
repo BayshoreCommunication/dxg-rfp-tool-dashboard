@@ -6,7 +6,7 @@ import { BACKEND_URL } from "@/lib/config";
 
 export type SupportTicketStatus = "open" | "waiting_on_customer" | "resolved" | "closed";
 export type SupportTicketPriority = "low" | "normal" | "high" | "urgent";
-export type SupportTicketCategory = "how_to" | "bug" | "billing" | "vendor_email" | "other";
+export type SupportTicketCategory = "how_to" | "bug" | "billing" | "feature_request" | "vendor_email" | "other";
 
 export type SupportTicket = {
   id: string;
@@ -54,7 +54,7 @@ const call = async <T,>(path: string, init?: RequestInit): Promise<SupportResult
     if (!response.ok || !body?.success) {
       return {
         success: false,
-        message: body?.message || "We couldn't reach DXG support right now. Please try again.",
+        message: body?.message || "We couldn't reach RFPilot support right now. Please try again.",
         code: body?.code,
       };
     }

@@ -6,7 +6,7 @@ const legacyProposal = {
   status: "submitted",
   isFavorite: true,
   event: {
-    eventName: "DXG Annual Summit",
+    eventName: "RFPilot Annual Summit",
     startDate: "2026-10-10",
     endDate: "2026-10-12",
     attendees: "500",

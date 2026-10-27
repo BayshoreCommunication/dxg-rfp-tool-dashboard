@@ -1789,10 +1789,10 @@ const AddNewProposal = ({
         ? "Vendor presentation date"
         : "",
       !vendorSelectionDate.trim() ? "Vendor selection date" : "",
-      experienceMode === "advanced" && !callWithDxgProducer.trim() ? "DXG producer call choice" : "",
-      experienceMode === "advanced" && !howDidYouHear.trim() ? "How you heard about DXG" : "",
+      experienceMode === "advanced" && !callWithDxgProducer.trim() ? "RFPilot producer call choice" : "",
+      experienceMode === "advanced" && !howDidYouHear.trim() ? "How you heard about RFPilot" : "",
       experienceMode === "advanced" && howDidYouHear === "Other" && !howDidYouHearOther.trim()
-        ? "How you heard about DXG details"
+        ? "How you heard about RFPilot details"
         : "",
       experienceMode === "advanced" && (!proposalFormatPreferences || proposalFormatPreferences.length === 0)
         ? "Proposal format preference"

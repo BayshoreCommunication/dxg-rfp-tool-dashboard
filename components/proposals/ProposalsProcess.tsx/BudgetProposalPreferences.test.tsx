@@ -135,7 +135,7 @@ describe("producer consultation guidance", () => {
     renderStep(budget());
 
     const fieldLabel = screen.getByText(
-      /Setup a call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement\?/i,
+      /Setup a call with an RFPilot producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement\?/i,
     ).closest("label");
     expect(fieldLabel).not.toBeNull();
     expect(fieldLabel?.closest("[data-assistant-field-key]")).toHaveAttribute(

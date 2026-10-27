@@ -36,7 +36,7 @@ const readStoredPosition = (): Position | null => {
 };
 
 /**
- * The always-available way to reach a person at DXG: a support-agent avatar
+ * The always-available way to reach a person at RFPilot: a support-agent avatar
  * that sits bottom-right by default, gently floats, and can be dragged
  * anywhere (the spot is remembered per browser). A tap opens Support.
  */
@@ -139,7 +139,7 @@ export default function SupportFab() {
 
   if (onSupport) return null;
 
-  const label = unread > 0 ? `Support: ${unread} new repl${unread === 1 ? "y" : "ies"} from DXG` : "Need support? Message DXG";
+  const label = unread > 0 ? `Support: ${unread} new repl${unread === 1 ? "y" : "ies"} from RFPilot` : "Need support? Message RFPilot";
 
   return (
     <button
@@ -173,7 +173,7 @@ export default function SupportFab() {
           </span>
         )}
       </span>
-      <span className="hidden sm:inline">{unread > 0 ? "DXG replied" : "Need support?"}</span>
+      <span className="hidden sm:inline">{unread > 0 ? "RFPilot replied" : "Need support?"}</span>
     </button>
   );
 }

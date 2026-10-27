@@ -229,7 +229,7 @@ const VenueTechnicalRequirements = ({
                 {isUnionVenue === "YES" ? "Union Venue Detected" : "Union Status Not Confirmed"}
               </p>
               <p className="mt-0.5 text-xs text-amber-700">
-                Union venues require certified riggers and IBEW-jurisdictioned electricians for power drops. Labor rates, call times, and crew minimums are set by the local. DXG will flag this in the RFP.
+                Union venues require certified riggers and IBEW-jurisdictioned electricians for power drops. Labor rates, call times, and crew minimums are set by the local. RFPilot will flag this in the RFP.
               </p>
             </div>
           </div>
@@ -284,7 +284,7 @@ const VenueTechnicalRequirements = ({
         <div className="mb-6">
           <label className={labelClass}>
             In-House AV Company Name
-            <InfoTooltip text="The name of the venue's preferred or exclusive in-house AV vendor. Knowing this upfront helps DXG determine whether coordination, a patch-in fee, or an exclusivity fee applies." />
+            <InfoTooltip text="The name of the venue's preferred or exclusive in-house AV vendor. Knowing this upfront helps RFPilot determine whether coordination, a patch-in fee, or an exclusivity fee applies." />
           </label>
           <input
             className={inputClass}
@@ -325,7 +325,7 @@ const VenueTechnicalRequirements = ({
                 <div>
                   <label className={labelClass}>
                     Are Truss and Motors Exclusively Provided by the Venue?
-                    <InfoTooltip text="Some venues require that all flown truss and chain motors be sourced exclusively through their in-house rigging vendor. Knowing this upfront helps DXG scope coordination or exclusivity fees." />
+                    <InfoTooltip text="Some venues require that all flown truss and chain motors be sourced exclusively through their in-house rigging vendor. Knowing this upfront helps RFPilot scope coordination or exclusivity fees." />
                   </label>
                   <YesNo
                     value={data.trussAndMotorsProvidedByVenue}
@@ -446,7 +446,7 @@ const VenueTechnicalRequirements = ({
             <div className={subPanelClass}>
               <p className={subPanelHeader}>Internet Use Cases</p>
               <p className="mb-3 text-xs text-slate-500">
-                Select all that apply — DXG uses this to specify bandwidth requirements per use case.
+                Select all that apply — RFPilot uses this to specify bandwidth requirements per use case.
               </p>
               <div className="flex flex-wrap gap-3">
                 {INTERNET_USE_CASES.map((opt) => (

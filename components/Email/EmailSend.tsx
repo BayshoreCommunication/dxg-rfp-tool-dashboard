@@ -46,7 +46,7 @@ We would like to invite your team to review an upcoming audiovisual production o
 Please review the details and share any questions, assumptions, or recommendations that would help us understand your approach.
 
 Warm regards,
-DXG RFP Team`;
+RFPilot Team`;
 
 const validateEmail = (email: string) =>
   EMAIL_REGEX.test(email.trim().toLowerCase());
@@ -150,7 +150,7 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
             if (fixedMode) setSubject((prev) =>
               prev.trim().length > 0
                 ? prev
-                : `Proposal for ${loaded.event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
+                : `Proposal for ${loaded.event?.eventName || "Untitled Proposal"} - RFPilot`,
             );
           } else {
             setProposals([]);
@@ -181,14 +181,14 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
             setSubject((prev) =>
               prev.trim().length > 0
                 ? prev
-                : `Proposal for ${preferredProposal.event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
+                : `Proposal for ${preferredProposal.event?.eventName || "Untitled Proposal"} - RFPilot`,
             );
           } else if (proposalItems[0]?._id) {
             setProposalId((prev) => prev || proposalItems[0]._id);
             setSubject((prev) =>
               prev.trim().length > 0
                 ? prev
-                : `Proposal for ${proposalItems[0].event?.eventName || "Untitled Proposal"} - DXG RFP Tool`,
+                : `Proposal for ${proposalItems[0].event?.eventName || "Untitled Proposal"} - RFPilot`,
             );
           }
         } else {
@@ -380,7 +380,7 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
     if (!subject.trim()) {
       const proposal = proposals.find((item) => item._id === nextProposalId);
       const proposalTitle = proposal?.event?.eventName || "Untitled Proposal";
-      setSubject(`Proposal for ${proposalTitle} - DXG RFP Tool`);
+      setSubject(`Proposal for ${proposalTitle} - RFPilot`);
     }
   };
 

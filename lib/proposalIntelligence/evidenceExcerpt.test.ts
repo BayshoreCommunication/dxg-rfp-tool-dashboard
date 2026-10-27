@@ -93,7 +93,7 @@ describe("looksUnreadable", () => {
     expect(looksUnreadable("mMnoDid ,Jne u1 5 --\u2010-\u2010\u2011 D9T9 5 u:-\u2010\u2011-\u2010\u2011 39T9 0MMT ..c2nTent5 ptRDno uu sg")).toBe(true);
     expect(looksUnreadable("aJe.oDid ,Jne uF 5 u:B1 39T9 5 :-\u2010\u2011-\u2010\u2011 39T9 leone.oDid ,Jne uq 5 uuB1 D9T9")).toBe(true);
     expect(looksUnreadable("Production Labor 1 $81,275.00 Production Travel & Freight 1 $25,600.00 SUBTOTAL $207,055.00 DISCOUNT AMOUNT $0.00 TOTAL $207,055.00")).toBe(false);
-    expect(looksUnreadable("DXG will provide a Technical Producer that will serve as the main point of contact in developing the technical run of show.")).toBe(false);
+    expect(looksUnreadable("RFPilot will provide a Technical Producer that will serve as the main point of contact in developing the technical run of show.")).toBe(false);
     expect(looksUnreadable("Page 1 of 9")).toBe(false);
     expect(looksUnreadable("")).toBe(false);
   });
