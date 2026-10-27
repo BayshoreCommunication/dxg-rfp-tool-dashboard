@@ -1,8 +1,10 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
+import { groupCrewRoles } from "@/lib/vendorResponses/operatorRoles";
 import { wordCount } from "@/lib/vendorResponses/workspaceModel";
 import { ImageUp, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
+import CrewRoleOptions from "./CrewRoleOptions";
 import type { UploadDocuments } from "./documentTypes";
 import WorkspaceSection, {
   fieldClass,
@@ -120,11 +122,7 @@ export default function CrewSection({
                       })
                     }
                   >
-                    {questionnaire.crew.roles.map((role) => (
-                      <option value={role.id} key={role.id}>
-                        {role.label}
-                      </option>
-                    ))}
+                    <CrewRoleOptions roles={questionnaire.crew.roles} />
                   </select>
                 </label>
                 <button
@@ -240,7 +238,7 @@ export default function CrewSection({
               {
                 crewMemberId: newId(),
                 name: "",
-                roleId: questionnaire.crew.roles[0]?.id ?? "",
+                roleId: groupCrewRoles(questionnaire.crew.roles)[0]?.roles[0]?.id ?? "",
                 bio: "",
               },
             ],
