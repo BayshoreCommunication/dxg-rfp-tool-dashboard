@@ -41,6 +41,11 @@ const remoteFeedPlatformOptions = [
   "Other",
 ];
 
+// "DXG Runs Rehearsal" is the value saved in existing proposals, so it stays;
+// planners see the RFPilot name.
+const techRehearsalOwnerLabel = (value: string) =>
+  value === "DXG Runs Rehearsal" ? "RFPilot Runs Rehearsal" : value;
+
 const techRehearsalOwnerOptions = [
   "DXG Runs Rehearsal",
   "Client Runs Rehearsal",
@@ -205,7 +210,7 @@ const HybridVirtualStep = ({
               <div>
                 <label className={labelClass}>
                   Streaming Platform
-                  <InfoTooltip text="The platform delivering the virtual experience to remote attendees. If unsure, select 'Vendor Recommendation Needed' — DXG will suggest the best fit based on your scope." />
+                  <InfoTooltip text="The platform delivering the virtual experience to remote attendees. If unsure, select 'Vendor Recommendation Needed' — RFPilot will suggest the best fit based on your scope." />
                 </label>
                 <GlobalSelect
                   className={`${inputClass} appearance-none`}
@@ -257,7 +262,7 @@ const HybridVirtualStep = ({
               <div>
                 <label className={labelClass}>
                   Stream Ownership
-                  <InfoTooltip text="Clarifies who operates and manages the live stream. 'AV Vendor Owns Full Stream' means DXG handles everything end-to-end. 'Client Owns Platform' means DXG provides the feed but the client manages delivery." />
+                  <InfoTooltip text="Clarifies who operates and manages the live stream. 'AV Vendor Owns Full Stream' means RFPilot handles everything end-to-end. 'Client Owns Platform' means RFPilot provides the feed but the client manages delivery." />
                 </label>
                 <GlobalSelect
                   className={`${inputClass} appearance-none`}
@@ -376,7 +381,7 @@ const HybridVirtualStep = ({
                         <option value="">Select owner...</option>
                         {techRehearsalOwnerOptions.map((opt) => (
                           <option key={opt} value={opt}>
-                            {opt}
+                            {techRehearsalOwnerLabel(opt)}
                           </option>
                         ))}
                       </GlobalSelect>
@@ -426,7 +431,7 @@ const HybridVirtualStep = ({
               <div>
                 <label className={labelClass}>
                   Dedicated Virtual Producer?
-                  <InfoTooltip text="A DXG producer whose sole focus is managing the virtual side of the show — monitoring stream health, managing remote speaker handoffs, moderating virtual Q&A, and troubleshooting platform issues in real time. Strongly recommended for events with 500+ virtual attendees or multiple remote speakers." />
+                  <InfoTooltip text="An RFPilot producer whose sole focus is managing the virtual side of the show — monitoring stream health, managing remote speaker handoffs, moderating virtual Q&A, and troubleshooting platform issues in real time. Strongly recommended for events with 500+ virtual attendees or multiple remote speakers." />
                 </label>
                 <YesNo
                   name="dedicatedVirtualProducer"

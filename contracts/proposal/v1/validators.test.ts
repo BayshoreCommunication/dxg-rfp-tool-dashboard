@@ -12,7 +12,7 @@ const proposal = {
   version: 1,
   lifecycle: { status: "draft", favorite: false },
   content: {
-    event: { name: "DXG Annual Summit", format: "hybrid" },
+    event: { name: "RFPilot Annual Summit", format: "hybrid" },
     venueSchedule: { roomCount: 1 },
     rooms: [{ id: "room-001", function: "General Session" }],
     contacts: {
@@ -54,7 +54,7 @@ describe("proposal.v1 contracts", () => {
         candidates: [
           {
             path: "/content/event/name",
-            value: "DXG Annual Summit",
+            value: "RFPilot Annual Summit",
             evidence: [],
             confidence: 0.95,
             state: "pending",

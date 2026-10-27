@@ -55,7 +55,7 @@ const workspace = (): StructuredWorkspace => ({
     status: "published",
     context: {
       proposalTitle: "Annual Forum",
-      plannerOrganizationName: "DXG",
+      plannerOrganizationName: "RFPilot",
       venueName: "Convention Center",
       proposalDueDate: "2026-09-30",
       currency: "USD",

@@ -86,7 +86,7 @@ const completedRun: VendorAnalysisResult = {
   ],
   evidence: [
     { fragmentId: "vendor-fragment-0", origin: "message", excerpt: "We are available on those dates." },
-    { fragmentId: "vendor-fragment-1", origin: "DXG/vendor-responses-private/x/rig-notes.pdf", excerpt: "Rigging handled by house crew." },
+    { fragmentId: "vendor-fragment-1", origin: "RFPilot/vendor-responses-private/x/rig-notes.pdf", excerpt: "Rigging handled by house crew." },
   ],
 };
 

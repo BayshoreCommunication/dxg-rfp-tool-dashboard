@@ -36,7 +36,7 @@ it("sets aside form metadata and identifiers without dropping real values", () =
   expect(isSystemEntry(fact({ factKey: "cara_v_james_email", normalizedValue: "cvjames@gih.org", statement: "The contact email is cvjames@gih.org." }))).toBe(true);
   expect(isSystemEntry(fact({ factKey: "proposal_validity_no_data", normalizedValue: "", statement: "No validity period was stated." }))).toBe(true);
   expect(isSystemEntry(fact({ factKey: "total_pricing", normalizedValue: "USD 207055", statement: "The proposal total is $207,055.00." }))).toBe(false);
-  expect(isSystemEntry(fact({ factKey: "company_location", normalizedValue: "Tampa, FL", statement: "DXG's headquarters is in Tampa, FL." }))).toBe(false);
+  expect(isSystemEntry(fact({ factKey: "company_location", normalizedValue: "Tampa, FL", statement: "RFPilot's headquarters is in Tampa, FL." }))).toBe(false);
   expect(isSystemEntry(fact({ factKey: "accessibility_commitment", normalizedValue: "false", statement: "No accessibility commitment is stated." }))).toBe(false);
 });
 

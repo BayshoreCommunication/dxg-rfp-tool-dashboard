@@ -58,7 +58,7 @@ export default function NewSupportTicketForm({
         setError(result.message);
         return;
       }
-      toast.success(`Sent to DXG support as ticket #${result.data.ticket.ticketNumber}.`);
+      toast.success(`Sent to RFPilot support as ticket #${result.data.ticket.ticketNumber}.`);
       router.push(`/support/${result.data.ticket.id}`);
     });
   };
@@ -166,7 +166,7 @@ export default function NewSupportTicketForm({
           className="inline-flex items-center gap-2 rounded-xl bg-[#008ad2] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#0076b4] disabled:opacity-60"
         >
           {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
-          Send to DXG support
+          Send to RFPilot support
         </button>
       </div>
     </form>

@@ -527,7 +527,7 @@ const BudgetProposalPreferences = ({
                 <strong>Budget Reality Check:</strong> Your event includes multiple high-complexity
                 elements that typically exceed the{" "}
                 <strong>{safeData.estimatedAvBudget}</strong> tier. Vendors may decline to bid or
-                submit inflated proposals. Consider selecting a higher tier or contacting your DXG
+                submit inflated proposals. Consider selecting a higher tier or contacting your RFPilot
                 producer.
               </p>
             </div>
@@ -543,7 +543,7 @@ const BudgetProposalPreferences = ({
                 </p>
                 <p className="mt-0.5 text-xs text-violet-700">
                   At the <strong>{safeData.estimatedAvBudget}</strong> tier, a brief discovery call
-                  with your DXG producer helps scope accurately and speeds up your proposal.{" "}
+                  with your RFPilot producer helps scope accurately and speeds up your proposal.{" "}
                   <a href="#" className="font-semibold underline">
                     Schedule a call
                   </a>
@@ -701,7 +701,7 @@ const BudgetProposalPreferences = ({
         {!safeData.evaluationMatrixConfirmed && (
           <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
             <p className="text-sm font-semibold text-amber-900">
-              These are DXG&apos;s suggested weightings — not yet your choice.
+              These are RFPilot&apos;s suggested weightings — not yet your choice.
             </p>
             <p className="mt-1 text-xs text-amber-800">
               Vendors are scored against them, so they stay out of the RFP until you accept or adjust
@@ -1098,7 +1098,7 @@ const BudgetProposalPreferences = ({
           data-assistant-field-key="/content/budgetPreferences/producerCallRequested"
         >
           <label className={labelClass}>
-            Setup a call with a DXG producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement? <span className="text-red-500">*</span>
+            Setup a call with an RFPilot producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement? <span className="text-red-500">*</span>
           </label>
           <YesNo
             value={safeData.callWithDxgProducer}
@@ -1110,7 +1110,7 @@ const BudgetProposalPreferences = ({
                 href="#"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1DBFD3] hover:underline"
               >
-                Schedule a call with your DXG producer
+                Schedule a call with your RFPilot producer
                 <ExternalLink size={13} />
               </a>
             </div>

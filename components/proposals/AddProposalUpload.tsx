@@ -176,7 +176,7 @@ async function downloadSamplePdf() {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
-  doc.text("DXG RFP — Sample Proposal Template", ml, 16);
+  doc.text("RFPilot — Sample Proposal Template", ml, 16);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.text(
@@ -393,7 +393,7 @@ async function downloadSamplePdf() {
       { label: "Decision Date", hint: "MM/DD/YYYY" },
       { label: "Competitive Bid & Number of Proposals", hint: "Yes / No — e.g. 3 vendors" },
       { label: "Evaluation Matrix Weights", hint: "Technical / Crew / Hybrid / Pricing / Creative / Responsiveness / DEI — must total 100%" },
-      { label: "Call with DXG Producer", hint: "Yes / No" },
+      { label: "Call with RFPilot Producer", hint: "Yes / No" },
       { label: "How Did You Hear About Us", hint: "Referral / Venue / Google / Social Media / LinkedIn / Other" },
     ],
   );
@@ -423,11 +423,11 @@ async function downloadSamplePdf() {
     doc.setTextColor(148, 163, 184);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
-    doc.text("DXG RFP Sample Template — goprospero.com", ml, pageH - 4);
+    doc.text("RFPilot Sample Template — goprospero.com", ml, pageH - 4);
     doc.text(`Page ${i} of ${total}`, mr, pageH - 4, { align: "right" });
   }
 
-  doc.save("DXG-RFP-Sample-Template.pdf");
+  doc.save("RFPilot-Sample-Template.pdf");
 }
 
 function GuideModal({ onClose }: { onClose: () => void }) {

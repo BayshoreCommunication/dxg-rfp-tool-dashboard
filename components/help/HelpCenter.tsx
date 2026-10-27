@@ -80,7 +80,7 @@ const PLACES: ReadonlyArray<{ title: string; href: string; body: string }> = [
   {
     title: "Support",
     href: "/support",
-    body: "Send DXG a message when you're stuck and follow the reply here.",
+    body: "Send RFPilot a message when you're stuck and follow the reply here.",
   },
 ];
 

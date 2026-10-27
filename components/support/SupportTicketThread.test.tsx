@@ -47,7 +47,7 @@ const messages = [
     attachments: [{ id: "22222222-2222-4222-8222-222222222222", fileName: "guide.pdf", mimeType: "application/pdf", sizeBytes: 2048 }],
     createdAt: "2026-10-18T10:00:00.000Z",
   },
-  { id: "m3", authorRole: "system" as const, kind: "system" as const, body: "Dana DXG set priority to high.", attachments: [], createdAt: "2026-10-18T10:01:00.000Z" },
+  { id: "m3", authorRole: "system" as const, kind: "system" as const, body: "Dana RFPilot set priority to high.", attachments: [], createdAt: "2026-10-18T10:01:00.000Z" },
 ];
 
 describe("SupportTicketThread", () => {
@@ -62,13 +62,13 @@ describe("SupportTicketThread", () => {
   test("renders the conversation with the agent's name and status", () => {
     render(<SupportTicketThread ticket={ticket} messages={messages} assignee={{ id: "a", name: "Dana" }} />);
     expect(screen.getByRole("heading", { name: "PDF export hangs" })).toBeInTheDocument();
-    expect(screen.getByText("DXG replied")).toBeInTheDocument();
+    expect(screen.getByText("RFPilot replied")).toBeInTheDocument();
     expect(screen.getByText("It spins forever.")).toBeInTheDocument();
-    // Planners see one "DXG support", never an agent's name or role.
-    expect(screen.getByText("DXG support")).toBeInTheDocument();
-    expect(screen.queryByText(/Dana ·|Dana at DXG/)).not.toBeInTheDocument();
+    // Planners see one "RFPilot support", never an agent's name or role.
+    expect(screen.getByText("RFPilot support")).toBeInTheDocument();
+    expect(screen.queryByText(/Dana ·|Dana at RFPilot/)).not.toBeInTheDocument();
     expect(screen.getByText(/set priority to high/)).toBeInTheDocument();
-    expect(screen.getByText(/DXG replied — your turn/)).toBeInTheDocument();
+    expect(screen.getByText(/RFPilot replied — your turn/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /guide\.pdf/ })).toHaveAttribute(
       "href",
       "/api/support/attachments/t1/22222222-2222-4222-8222-222222222222",
@@ -77,17 +77,17 @@ describe("SupportTicketThread", () => {
 
   test("tells the planner who is on it while the ticket is open", () => {
     render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={messages} assignee={{ id: "a", name: "Dana" }} />);
-    expect(screen.getByText(/DXG support is on it/)).toBeInTheDocument();
-    expect(screen.queryByText(/Dana ·|Dana at DXG/)).not.toBeInTheDocument();
+    expect(screen.getByText(/RFPilot support is on it/)).toBeInTheDocument();
+    expect(screen.queryByText(/Dana ·|Dana at RFPilot/)).not.toBeInTheDocument();
     const { unmount } = render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={messages} assignee={null} />);
-    expect(screen.getByText(/waiting for DXG support/)).toBeInTheDocument();
+    expect(screen.getByText(/waiting for RFPilot support/)).toBeInTheDocument();
     unmount();
   });
 
   test("sends a reply and refreshes", async () => {
     replySupportTicketAction.mockResolvedValue({ success: true, data: {} });
     render(<SupportTicketThread ticket={ticket} messages={messages} assignee={null} />);
-    fireEvent.change(screen.getByLabelText("Reply to DXG support"), { target: { value: "  Momentum 2027  " } });
+    fireEvent.change(screen.getByLabelText("Reply to RFPilot support"), { target: { value: "  Momentum 2027  " } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await waitFor(() => expect(replySupportTicketAction).toHaveBeenCalledWith("t1", "Momentum 2027", []));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
@@ -109,29 +109,29 @@ describe("SupportTicketThread", () => {
     );
     expect(screen.queryByRole("button", { name: /This is solved/ })).not.toBeInTheDocument();
     // Resolved is a grace period: the planner can still reply to reopen it.
-    expect(screen.getByLabelText("Reply to DXG support")).toHaveAttribute("placeholder", "Reply to reopen this request…");
+    expect(screen.getByLabelText("Reply to RFPilot support")).toHaveAttribute("placeholder", "Reply to reopen this request…");
     expect(screen.getByText(/This request is resolved\. Still need help\? Reply below to reopen it/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /new request/i })).not.toBeInTheDocument();
   });
 
-  test("shows the automatic acknowledgement as a plain DXG support message, never as a bot", () => {
+  test("shows the automatic acknowledgement as a plain RFPilot support message, never as a bot", () => {
     const withAck = [
       messages[0],
-      { id: "ack", authorRole: "system" as const, kind: "message" as const, body: "Hi, thanks for contacting DXG support.", attachments: [], createdAt: "2026-10-18T09:00:00.001Z" },
+      { id: "ack", authorRole: "system" as const, kind: "message" as const, body: "Hi, thanks for contacting RFPilot support.", attachments: [], createdAt: "2026-10-18T09:00:00.001Z" },
     ];
     render(<SupportTicketThread ticket={{ ...ticket, status: "open" }} messages={withAck} assignee={{ id: "a", name: "Dana" }} />);
-    expect(screen.getByText("Hi, thanks for contacting DXG support.")).toBeInTheDocument();
-    expect(screen.getByText("DXG support")).toBeInTheDocument();
+    expect(screen.getByText("Hi, thanks for contacting RFPilot support.")).toBeInTheDocument();
+    expect(screen.getByText("RFPilot support")).toBeInTheDocument();
     expect(screen.queryByText(/automatic/i)).not.toBeInTheDocument();
     // The assigned agent did not write it, so it is not attributed to them.
-    expect(screen.queryByText("Dana · DXG support")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dana · RFPilot support")).not.toBeInTheDocument();
   });
 
   test("Enter sends, Shift+Enter does not, and the message shows as sending", async () => {
     let finish: (value: unknown) => void = () => undefined;
     replySupportTicketAction.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
     render(<SupportTicketThread ticket={ticket} messages={messages} assignee={null} />);
-    const box = screen.getByLabelText("Reply to DXG support");
+    const box = screen.getByLabelText("Reply to RFPilot support");
     fireEvent.change(box, { target: { value: "Line one" } });
     fireEvent.keyDown(box, { key: "Enter", shiftKey: true });
     expect(replySupportTicketAction).not.toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe("SupportTicketThread", () => {
   test("a failed send removes the pending bubble and keeps the draft", async () => {
     replySupportTicketAction.mockResolvedValue({ success: false, message: "Nope" });
     render(<SupportTicketThread ticket={ticket} messages={messages} assignee={null} />);
-    const box = screen.getByLabelText("Reply to DXG support");
+    const box = screen.getByLabelText("Reply to RFPilot support");
     fireEvent.change(box, { target: { value: "Keep me" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await waitFor(() => expect(replySupportTicketAction).toHaveBeenCalled());
@@ -162,7 +162,7 @@ describe("SupportTicketThread", () => {
       />,
     );
     expect(screen.getByText("This request is closed.")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Reply to DXG support")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Reply to RFPilot support")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /This is solved/ })).not.toBeInTheDocument();
   });
 });

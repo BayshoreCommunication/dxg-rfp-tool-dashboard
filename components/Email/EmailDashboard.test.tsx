@@ -35,7 +35,7 @@ jest.mock('@/app/actions/email', () => ({
 const makeCampaign = (overrides = {}) => ({
   _id: 'camp-001',
   proposalTitle: 'Bayshore Summit',
-  subject: 'Proposal for Bayshore Summit - DXG RFP Tool',
+  subject: 'Proposal for Bayshore Summit - RFPilot',
   message: 'Please review the proposal.',
   sentCount: 5,
   clickedCount: 3,
@@ -111,7 +111,7 @@ describe('EmailDashboard — campaign cards', () => {
   it('renders the campaign subject as the card title', async () => {
     render(<EmailDashboard />)
     await waitFor(() =>
-      expect(screen.getByText('Proposal for Bayshore Summit - DXG RFP Tool')).toBeInTheDocument(),
+      expect(screen.getByText('Proposal for Bayshore Summit - RFPilot')).toBeInTheDocument(),
       LOAD_TIMEOUT
     )
   })

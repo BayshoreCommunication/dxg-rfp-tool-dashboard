@@ -87,12 +87,12 @@ const MessageRow = ({
   pending?: boolean;
 }) => {
   const mine = message.authorRole === "customer";
-  // The automatic acknowledgement reads as an ordinary message from DXG
+  // The automatic acknowledgement reads as an ordinary message from RFPilot
   // support: planners should feel they reached people, not a bot. It is only
   // kept off the assigned agent's name, since that agent did not write it.
-  // Planners always hear from one "DXG support", whoever on the team wrote
+  // Planners always hear from one "RFPilot support", whoever on the team wrote
   // the message: agent names and roles stay internal.
-  const name = "DXG support";
+  const name = "RFPilot support";
 
   return (
     <li className={`flex items-end gap-2.5 ${mine ? "justify-end" : "justify-start"} ${startsGroup ? "mt-4 first:mt-0" : "mt-1"}`}>
@@ -174,10 +174,10 @@ export default function SupportTicketThread({
   }, [body]);
 
   const situation = ticket.status === "waiting_on_customer"
-      ? "DXG replied — your turn"
+      ? "RFPilot replied — your turn"
       : assignee
-        ? "DXG support is on it"
-        : "waiting for DXG support";
+        ? "RFPilot support is on it"
+        : "waiting for RFPilot support";
 
   const send = () => {
     const text = body.trim();
@@ -351,7 +351,7 @@ export default function SupportTicketThread({
               }}
               rows={1}
               maxLength={BODY_MAX}
-              aria-label="Reply to DXG support"
+              aria-label="Reply to RFPilot support"
               placeholder={closesAt ? "Reply to reopen this request…" : "Write a reply…"}
               className="order-2 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400"
             />

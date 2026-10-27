@@ -58,10 +58,10 @@ describe("SupportFab", () => {
     );
   });
 
-  test("turns into an unread indicator when DXG has replied", async () => {
+  test("turns into an unread indicator when RFPilot has replied", async () => {
     getSupportUnreadCountAction.mockResolvedValue(2);
     render(<SupportFab />);
-    await waitFor(() => expect(screen.getByTestId("support-fab")).toHaveTextContent("DXG replied"));
+    await waitFor(() => expect(screen.getByTestId("support-fab")).toHaveTextContent("RFPilot replied"));
     expect(screen.getByText("2")).toBeInTheDocument();
     fireEvent.keyDown(screen.getByTestId("support-fab"), { key: "Enter" });
     expect(push).toHaveBeenCalledWith("/support");

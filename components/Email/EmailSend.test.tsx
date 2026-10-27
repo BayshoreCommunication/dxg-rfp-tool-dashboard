@@ -450,7 +450,7 @@ describe('EmailSend — fixed to a just-published proposal', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     expect(screen.getByText(/Inviting vendors to/)).toHaveTextContent('Bayshore Summit 2026')
     expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe(
-      'Proposal for Bayshore Summit 2026 - DXG RFP Tool',
+      'Proposal for Bayshore Summit 2026 - RFPilot',
     )
 
     const input = screen.getByPlaceholderText(/john@email.com/i)
