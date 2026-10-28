@@ -24,7 +24,7 @@ export default function CompanyProfileSection({ questionnaire, response, onChang
       ];
 
   return (
-    <WorkspaceSection number={sectionNumber} title={section?.title ?? "Company profile"} helperText={section?.helperText} evaluationMappings={section?.evaluationMappings}>
+    <WorkspaceSection number={sectionNumber} title={section?.title ?? "Company profile"} helperText={section?.helperText}>
       <div className="grid gap-5 sm:grid-cols-2">
         <label className={labelClass}>Legal company name {config.legalNameRequired ? <span className="text-rose-600">*</span> : null}
           <input className={fieldClass} value={profile.legalName} disabled={disabled} onChange={(event) => update({ legalName: event.target.value })} />

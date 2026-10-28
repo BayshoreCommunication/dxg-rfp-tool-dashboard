@@ -30,7 +30,7 @@ export default function PricingSection({ questionnaire, response, onChange, sect
   const update = (patch: Partial<typeof pricing>) => onChange({ ...response, pricing: { ...pricing, ...patch } });
 
   return (
-    <WorkspaceSection number={sectionNumber} title={section?.title ?? "All-in pricing summary"} helperText={section?.helperText ?? "Room equipment and labor subtotals roll up live. Final calculations are verified by RFPilot when you submit."} evaluationMappings={section?.evaluationMappings}>
+    <WorkspaceSection number={sectionNumber} title={section?.title ?? "All-in pricing summary"} helperText={section?.helperText ?? "Room equipment and labor subtotals roll up live. Final calculations are verified by RFPilot when you submit."}>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
         <div className="min-w-0">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

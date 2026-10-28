@@ -30,7 +30,7 @@ export default function RoomResponseSection({ questionnaire, response, onChange,
   const precision = questionnaire.pricing.decimalPrecision;
 
   return (
-    <WorkspaceSection number={sectionNumber} title={section?.title ?? "Room-by-room response"} helperText={section?.helperText ?? "Rooms and requirements are defined by the client. Respond to each specification; room names cannot be changed."} evaluationMappings={section?.evaluationMappings}>
+    <WorkspaceSection number={sectionNumber} title={section?.title ?? "Room-by-room response"} helperText={section?.helperText ?? "Rooms and requirements are defined by the client. Respond to each specification; room names cannot be changed."}>
       {questionnaire.rooms.length === 0 ? (
         <p className="rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4 text-sm text-[#607487]">This proposal does not include room requirements.</p>
       ) : (

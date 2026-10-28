@@ -121,7 +121,6 @@ export default function DocumentsSection({
         section?.helperText ??
         "Upload files by the client-defined category. Files are private, scanned, and attached to this response version."
       }
-      evaluationMappings={section?.evaluationMappings}
     >
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4">
         <ShieldCheck size={21} className="text-[#008ad2]" aria-hidden="true" />

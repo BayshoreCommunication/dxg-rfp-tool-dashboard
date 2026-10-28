@@ -39,7 +39,6 @@ export default function AlternatesSection({
         section?.helperText ??
         "Scope each alternate to the whole project or a specific client-defined room. Cost deltas stay separate from the base grand total."
       }
-      evaluationMappings={section?.evaluationMappings}
     >
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4">
         <BadgeDollarSign

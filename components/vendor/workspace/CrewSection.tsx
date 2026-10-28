@@ -65,7 +65,6 @@ export default function CrewSection({
       number={sectionNumber}
       title="Core team bios"
       helperText={section?.helperText ?? "Add each core team member."}
-      evaluationMappings={section?.evaluationMappings}
     >
       <div className="space-y-4">
         {response.crew.map((member, index) => {

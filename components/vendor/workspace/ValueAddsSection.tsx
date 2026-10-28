@@ -32,7 +32,6 @@ export default function ValueAddsSection({
         section?.helperText ??
         "Share useful additions that are not included in the base price or alternates."
       }
-      evaluationMappings={section?.evaluationMappings}
     >
       <div className="mb-5 flex gap-3 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4">
         <Sparkles

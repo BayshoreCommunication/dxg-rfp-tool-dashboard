@@ -70,7 +70,6 @@ export default function ReferencesSection({
         section?.helperText ??
         `${countRequirement("Provide", questionnaire.references.minimumCount, questionnaire.references.maximumCount, "structured reference")} from the last ${questionnaire.references.maxAgeMonths} months. Visuals are optional.`
       }
-      evaluationMappings={section?.evaluationMappings}
     >
       <p className="mb-5 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4 text-sm text-[#52687b]">
         <b className="text-[#16283c]">{response.references.length}</b> reference

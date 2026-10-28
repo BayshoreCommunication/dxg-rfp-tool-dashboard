@@ -14,7 +14,7 @@ export default function ComplianceSection({ questionnaire, response, onChange, s
     onChange({ ...response, identity: { ...response.identity, [key]: value } });
 
   return (
-    <WorkspaceSection number={sectionNumber} title={section?.title ?? "Compliance"} helperText={section?.helperText} evaluationMappings={section?.evaluationMappings}>
+    <WorkspaceSection number={sectionNumber} title={section?.title ?? "Compliance"} helperText={section?.helperText}>
       <div className="grid gap-5 sm:grid-cols-2">
         <label className={labelClass}>
           Vendor / company name {questionnaire.identity.vendorNameRequired ? <span className="text-rose-600">*</span> : null}

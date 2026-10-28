@@ -4,13 +4,11 @@ export default function WorkspaceSection({
   number,
   title,
   helperText,
-  evaluationMappings,
   children,
 }: {
   number: number;
   title: string;
   helperText?: string;
-  evaluationMappings?: string[];
   children: ReactNode;
 }) {
   return (
@@ -25,11 +23,6 @@ export default function WorkspaceSection({
             {helperText ? <p className="mt-0.5 text-sm text-[#607487]">{helperText}</p> : null}
           </div>
         </div>
-        {evaluationMappings?.length ? (
-          <span className="shrink-0 rounded-full border border-[#d8ebf5] bg-[#eef8fd] px-3 py-1 text-[11px] font-bold text-[#0069a0]">
-            Scores into: {evaluationMappings.join(", ")}
-          </span>
-        ) : null}
       </header>
       <div className="px-5 py-6 sm:px-7 sm:py-7">{children}</div>
     </section>
