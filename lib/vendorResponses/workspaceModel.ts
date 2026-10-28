@@ -576,10 +576,16 @@ export const validateWorkspaceResponse = (
   return issues;
 };
 
+/**
+ * A section with nothing missing only counts as complete once the vendor has
+ * filled something in or looked at it (`reviewed`): sections with no required
+ * input, or rooms pre-answered "comply", would otherwise show done on first open.
+ */
 export const sectionState = (
   sectionId: SectionId,
   response: VendorResponseV1,
   issues: VendorWorkspaceIssue[],
+  reviewed: ReadonlySet<SectionId> = new Set(),
 ): SectionState => {
   if (sectionId === "review")
     return issues.length === 0 ? "complete" : "not_started";
@@ -587,7 +593,6 @@ export const sectionState = (
     return "not_started";
   if (sectionId === "value_adds" && !response.valueAdds.trim())
     return "not_started";
-  if (!issues.some((entry) => entry.sectionId === sectionId)) return "complete";
   const started: Partial<Record<SectionId, boolean>> = {
     compliance: Boolean(
       response.identity.vendorName ||
@@ -602,7 +607,20 @@ export const sectionState = (
       response.companyProfile.clientMix.length,
     ),
     rooms:
-      response.rooms.length > 0 || Boolean(response.platformIntegrationPlan),
+      Boolean(response.platformIntegrationPlan) ||
+      response.rooms.some(
+        (room) =>
+          room.equipmentLines.length > 0 ||
+          room.laborLines.length > 0 ||
+          room.specResponses.some(
+            (entry) => entry.status !== "comply" || Boolean(entry.note?.trim()),
+          ) ||
+          Boolean(
+            room.hybrid?.feedHandoff ||
+            room.hybrid?.redundancy ||
+            room.hybrid?.virtualAudienceExperience,
+          ),
+      ),
     crew: response.crew.length > 0,
     travel: response.travel.lodgingRequests.length > 0,
     pricing:
@@ -614,6 +632,9 @@ export const sectionState = (
     value_adds: Boolean(response.valueAdds),
     review: false,
   };
+  const touched = Boolean(started[sectionId]) || reviewed.has(sectionId);
+  if (!issues.some((entry) => entry.sectionId === sectionId))
+    return touched ? "complete" : "not_started";
   return started[sectionId] ? "in_progress" : "not_started";
 };
 

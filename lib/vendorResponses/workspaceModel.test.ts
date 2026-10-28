@@ -196,12 +196,39 @@ const response = {
 describe("vendor workspace model", () => {
   it("uses questionnaire-driven completion and hides conditional travel until flagged", () => {
     expect(validateWorkspaceResponse(questionnaire, response)).toEqual([]);
-    expect(sectionState("rooms", response, [])).toBe("complete");
+    expect(sectionState("rooms", response, [], new Set(["rooms"]))).toBe(
+      "complete",
+    );
     expect(
       applicableSections(questionnaire, response).map(
         (entry) => entry.sectionId,
       ),
     ).toEqual(["compliance", "rooms", "review"]);
+  });
+
+  it("shows a section with nothing missing as done only once the vendor touched it", () => {
+    // Rooms default to "comply" with no lines, so nothing is missing on open.
+    expect(sectionState("rooms", response, [])).toBe("not_started");
+    expect(sectionState("pricing", response, [])).toBe("not_started");
+    expect(sectionState("documents", response, [])).toBe("not_started");
+    expect(sectionState("pricing", response, [], new Set(["pricing"]))).toBe(
+      "complete",
+    );
+
+    const withException = {
+      ...response,
+      rooms: [
+        {
+          ...response.rooms[0],
+          specResponses: [
+            { specId: "spec-1", status: "exception" as const, note: "Swap" },
+          ],
+        },
+      ],
+    };
+    expect(sectionState("rooms", withException, [])).toBe("complete");
+    // Sections the vendor filled in still complete without a visit.
+    expect(sectionState("compliance", response, [])).toBe("complete");
   });
 
   it("reports stable room blockers and live totals", () => {

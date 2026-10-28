@@ -85,7 +85,6 @@ export default function TravelSection({
         section?.helperText ??
         "Traveling room-labor positions appear here automatically. Confirm whether each person needs a client-provided hotel room."
       }
-      evaluationMappings={section?.evaluationMappings}
     >
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4">
         <Hotel size={20} className="text-[#008ad2]" aria-hidden="true" />

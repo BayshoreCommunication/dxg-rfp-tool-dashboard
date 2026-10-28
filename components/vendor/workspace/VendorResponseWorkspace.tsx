@@ -157,6 +157,11 @@ export default function VendorResponseWorkspace({
     startingResponse.current,
   );
   const [activeSection, setActiveSection] = useState<SectionId>("compliance");
+  // Sections the vendor has opened and moved on from, so ones with nothing
+  // required show done only after they've looked. Remembered per draft.
+  const [reviewedSections, setReviewedSections] = useState<Set<SectionId>>(
+    () => new Set(),
+  );
   const [creatingDraft, setCreatingDraft] = useState(
     !workspace.draft && workspace.access.canEdit,
   );
@@ -579,6 +584,36 @@ export default function VendorResponseWorkspace({
       setActiveSection(sections[0].sectionId);
   }, [activeSection, sections]);
 
+  const reviewedKey = draft ? `rfpilot:vendor-reviewed:${draft.draftId}` : null;
+  useEffect(() => {
+    if (!reviewedKey) return;
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(reviewedKey) ?? "[]");
+      if (Array.isArray(stored) && stored.length)
+        setReviewedSections((current) => new Set([...current, ...(stored as SectionId[])]));
+    } catch {
+      // Storage unavailable or corrupt: ticks just reset for this visit.
+    }
+  }, [reviewedKey]);
+  const previousSection = useRef(activeSection);
+  useEffect(() => {
+    const left = previousSection.current;
+    previousSection.current = activeSection;
+    if (left === activeSection) return;
+    setReviewedSections((current) => {
+      if (current.has(left)) return current;
+      const next = new Set(current).add(left);
+      if (reviewedKey) {
+        try {
+          window.localStorage.setItem(reviewedKey, JSON.stringify([...next]));
+        } catch {
+          // Best effort only.
+        }
+      }
+      return next;
+    });
+  }, [activeSection, reviewedKey]);
+
   const localIssues = response
     ? validateWorkspaceResponse(questionnaire, response)
     : [];
@@ -589,7 +624,8 @@ export default function VendorResponseWorkspace({
   const completedSections = response
     ? requiredSections.filter(
         (section) =>
-          sectionState(section.sectionId, response, localIssues) === "complete",
+          sectionState(section.sectionId, response, localIssues, reviewedSections) ===
+          "complete",
       ).length
     : 0;
   const completionPercent = requiredSections.length
@@ -768,7 +804,12 @@ export default function VendorResponseWorkspace({
                   section={section}
                   number={index + 1}
                   active={activeSection === section.sectionId}
-                  state={sectionState(section.sectionId, response, localIssues)}
+                  state={sectionState(
+                    section.sectionId,
+                    response,
+                    localIssues,
+                    reviewedSections,
+                  )}
                   available={AVAILABLE_SECTIONS.has(section.sectionId)}
                   changed={changedSections.has(section.sectionId)}
                   onClick={() => navigate(section.sectionId)}
