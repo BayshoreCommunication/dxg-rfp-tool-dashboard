@@ -22,6 +22,10 @@ const fullyPublicPrefixes = [
   // ORG-205 accept-invite page. Public so the token in the path is never
   // copied into a /sign-in?callbackUrl= redirect.
   "/invite",
+  // Microsoft and company SSO: /api/sso/start sets the bind cookie and leaves
+  // for the backend; /sso/complete finishes the sign-in. Both run signed out.
+  "/api/sso",
+  "/sso",
   "/proposal-view",
   "/vendor-response",
   "/api/vendor-responses",
