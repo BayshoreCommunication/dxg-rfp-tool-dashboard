@@ -21,6 +21,7 @@ import {
   twoFactorErrorRequiresRestart,
 } from "@/lib/auth/twoFactor";
 import { sanitizeHandoff } from "@/lib/auth/sso";
+import { COMPANY_NAMED_UPDATE, readNeedsCompanyName } from "@/lib/auth/companyName";
 import {
   clearPendingTwoFactor,
   readPendingTwoFactor,
@@ -387,10 +388,17 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
     },
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        return { ...token, ...user, authError: undefined };
+        const needsCompanyName = await readNeedsCompanyName(user.accessToken);
+        return { ...token, ...user, needsCompanyName, authError: undefined };
       }
       const nextToken = { ...token };
       delete nextToken[BACKEND_REFRESH_HANDOFF];
+      if (
+        trigger === "update" &&
+        (session as Record<string, unknown> | undefined)?.[COMPANY_NAMED_UPDATE] === true
+      ) {
+        delete nextToken.needsCompanyName;
+      }
       // A rejected refresh token is terminal. Keep the marker until the user
       // signs in again instead of calling the refresh endpoint on every request.
       if (nextToken.authError === SESSION_EXPIRED_ERROR) return nextToken;
@@ -461,6 +469,7 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
           backendAccessExpired:
             typeof token.accessTokenExpiresAt === "number" &&
             Date.now() >= token.accessTokenExpiresAt,
+          needsCompanyName: token.needsCompanyName === true,
         });
         if (token[BACKEND_REFRESH_HANDOFF] === true) {
           Object.assign(session, {
