@@ -125,6 +125,8 @@ export const SSO_ERROR_MESSAGES: Record<string, string> = {
     "Your company's sign-in isn't set up for this email domain. Contact your organization's admin.",
   SSO_IDENTITY_MISMATCH:
     "This RFPilot account is already linked to a different company sign-in. Contact your organization's admin.",
+  COMPANY_EMAIL_UNVERIFIED:
+    "Your company sign-in didn't confirm your email address. Contact your organization's admin.",
   MICROSOFT_EMAIL_UNVERIFIED:
     "Microsoft didn't confirm the email address on this account, so we can't sign you in with it. Ask your IT team to verify the email in Microsoft, or use another sign-in option.",
   EMAIL_IN_ANOTHER_ORGANIZATION:
@@ -141,6 +143,20 @@ export const SSO_ERROR_MESSAGES: Record<string, string> = {
   SSO_PROVIDER_ERROR:
     "Your identity provider didn't complete the sign-in. Please try again.",
   SSO_ACCESS_DENIED: "Sign-in was cancelled at your identity provider.",
+  SSO_CANCELLED: "Sign-in was cancelled at your identity provider.",
+  SSO_PROVIDER_UNAVAILABLE:
+    "We couldn't reach your identity provider. Please try again in a moment.",
+  MICROSOFT_NOT_CONFIGURED:
+    "Microsoft sign-in isn't available right now. Use Google or your company account.",
+  EMAIL_MISSING:
+    "Your identity provider didn't share an email address, so we can't sign you in. Contact your organization's admin.",
+  SSO_IDENTITY_INVALID:
+    "We couldn't verify the sign-in from your identity provider. Please try again, or contact your organization's admin.",
+  SSO_INVITE_ORG_MISMATCH:
+    "This invitation is for a different organization than your company sign-in. Use Google or Microsoft to accept it.",
+  INVITATION_EMAIL_MISMATCH:
+    "This invitation was sent to a different email address. Sign in with the account the invitation was sent to.",
+  SSO_ERROR: "Sign-in failed. Please try again.",
   SSO_TOKEN_INVALID:
     "We couldn't verify the sign-in from your identity provider. Please try again, or contact your organization's admin.",
   // Our own checks before leaving for the backend
