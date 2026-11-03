@@ -11,6 +11,7 @@ import ExcludedVendorsNotice from "@/components/proposalIntelligence/ExcludedVen
 import GlossaryDialog from "@/components/proposalIntelligence/GlossaryDialog";
 import ProposalReweighting from "@/components/proposalIntelligence/ProposalReweighting";
 import ProposalVerdict from "@/components/proposalIntelligence/ProposalVerdict";
+import RfpAccessPanel from "@/components/proposals/sharing/RfpAccessPanel";
 import VendorComparisonPanel from "@/components/vendor/VendorComparisonPanel";
 import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 import { formatIntelligenceTimestamp } from "@/lib/proposalIntelligence/formatTimestamp";
@@ -119,6 +120,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
             </div>
           </div>
         </header>
+        <div className="mt-4"><RfpAccessPanel proposalId={id} /></div>
 
         <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="step-one-title">
           <p className="text-xs font-extrabold uppercase tracking-wide text-[#008ad2]">Step 1 · Approve your requirements</p>
