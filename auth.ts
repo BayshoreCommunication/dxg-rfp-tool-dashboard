@@ -15,6 +15,20 @@ import {
   readJwtExpiresAt,
   SESSION_EXPIRED_ERROR,
 } from "@/lib/authTokenState";
+import {
+  readSecondFactorStep,
+  TWO_FACTOR_REQUIRED_CODE,
+  twoFactorErrorRequiresRestart,
+} from "@/lib/auth/twoFactor";
+import { sanitizeInvitationToken } from "@/lib/auth/invitation";
+import {
+  clearPendingTwoFactor,
+  readPendingTwoFactor,
+  reportSignInOutcome,
+  setPostSignInNotice,
+  storePendingTwoFactor,
+  takeGoogleInvitation,
+} from "@/lib/server/twoFactorPending";
 
 class DashboardCredentialsSignin extends CredentialsSignin {
   constructor(code: string) {
@@ -28,8 +42,10 @@ class DashboardCredentialsSignin extends CredentialsSignin {
 // session.maxAge (30 days). OAuth sign-ins always get the full maxAge.
 const SHORT_SESSION_MS = 24 * 60 * 60 * 1000;
 
+type SignInProvider = "credentials" | "google" | "two-factor" | "invitation";
+
 const logSignInFailure = (
-  provider: "credentials" | "google",
+  provider: SignInProvider,
   email: unknown,
   reason: string,
   detail?: Record<string, unknown>,
@@ -39,6 +55,90 @@ const logSignInFailure = (
     detail ?? "",
   );
 };
+
+type BackendBody = Record<string, unknown> & {
+  user?: { _id?: string; email?: string; name?: string; avatar?: string };
+};
+
+// Login answers with `errorCode`; the 2FA and invitation endpoints with `code`.
+const backendErrorCode = (data: BackendBody, status: number, fallback: string) =>
+  typeof data?.errorCode === "string"
+    ? data.errorCode
+    : typeof data?.code === "string"
+      ? data.code
+      : status === 429
+        ? "RATE_LIMITED"
+        : fallback;
+
+const hasBackendSession = (data: BackendBody) =>
+  Boolean(data?.user?._id) &&
+  Boolean(data?.accessToken) &&
+  typeof data?.refreshToken === "string";
+
+const sessionShapeDetail = (data: BackendBody) => ({
+  hasUserId: Boolean(data?.user?._id),
+  hasAccessToken: Boolean(data?.accessToken),
+  hasRefreshToken: typeof data?.refreshToken === "string",
+});
+
+// The NextAuth user built from any backend response that issued a session
+// (login, google, 2FA challenge/enrolment confirm, invitation accept).
+const sessionUser = (data: BackendBody, rememberMe: boolean) => ({
+  id: data.user!._id,
+  _id: data.user!._id,
+  email: data.user!.email,
+  name: data.user!.name,
+  avatar: data.user!.avatar,
+  accessToken: data.accessToken,
+  accessTokenExpiresAt: data.tokenExpiresAt,
+  refreshToken: data.refreshToken,
+  refreshTokenExpiresAt: data.refreshExpiresAt,
+  sessionId: data.sessionId,
+  ...(rememberMe ? {} : { sessionDeadline: Date.now() + SHORT_SESSION_MS }),
+}) as Record<string, unknown>;
+
+const postToBackend = async (path: string, body: Record<string, unknown>) => {
+  const response = await fetchWithTimeout(`${AUTH_API_ORIGIN}${path}`, {
+    method: "POST",
+    headers: authBffHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = (await response.json().catch(() => ({}))) as BackendBody;
+  return { response, data };
+};
+
+// Park the challenge server-side and stop this sign-in. The server action that
+// called signIn() reads `twoFactor` from the outcome and shows the code step.
+const stopAtSecondFactor = async (
+  data: BackendBody,
+  options: { rememberMe: boolean; welcomeOrganization?: string },
+) => {
+  const step = readSecondFactorStep(data);
+  if (!step) return;
+  await storePendingTwoFactor({ ...step, ...options });
+  reportSignInOutcome({
+    twoFactor: { nextStep: step.nextStep, expiresAt: step.expiresAt },
+  });
+  throw new DashboardCredentialsSignin(TWO_FACTOR_REQUIRED_CODE);
+};
+
+const unreachable = (
+  provider: SignInProvider,
+  email: unknown,
+  path: string,
+  error: unknown,
+): never => {
+  if (error instanceof CredentialsSignin) throw error;
+  logSignInFailure(provider, email, "auth backend unreachable", {
+    url: `${AUTH_API_ORIGIN}${path}`,
+    error: error instanceof Error ? error.message : String(error),
+  });
+  throw new DashboardCredentialsSignin("server_unavailable");
+};
+
+const ORGANIZATION_NAME_LIMIT = 120;
+const cleanOrganizationName = (value: unknown) =>
+  typeof value === "string" ? value.trim().slice(0, ORGANIZATION_NAME_LIMIT) : "";
 
 export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
@@ -88,26 +188,15 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
           );
           return null;
         }
+        const rememberMe = credentials.rememberMe === "true";
 
         try {
-          const response = await fetchWithTimeout(
-            `${AUTH_API_ORIGIN}/api/auth/login`,
-            {
-              method: "POST",
-              headers: authBffHeaders(),
-              body: JSON.stringify({
-                email: credentials.email,
-                password: credentials.password,
-              }),
-            },
-          );
-
-          const data = await response.json().catch(() => ({}));
+          const { response, data } = await postToBackend("/api/auth/login", {
+            email: credentials.email,
+            password: credentials.password,
+          });
           if (!response.ok) {
-            const errorCode =
-              typeof data?.errorCode === "string"
-                ? data.errorCode
-                : "credentials";
+            const errorCode = backendErrorCode(data, response.status, "credentials");
             logSignInFailure(
               "credentials",
               credentials.email,
@@ -120,51 +209,144 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
             );
             throw new DashboardCredentialsSignin(errorCode);
           }
-          if (
-            !data?.user?._id ||
-            !data?.accessToken ||
-            typeof data?.refreshToken !== "string"
-          ) {
+          // ORG-303/304: password accepted, second factor still to come.
+          await stopAtSecondFactor(data, { rememberMe });
+          if (!hasBackendSession(data)) {
             logSignInFailure(
               "credentials",
               credentials.email,
               "backend response missing user/accessToken/refreshToken",
-              {
-                hasUserId: Boolean(data?.user?._id),
-                hasAccessToken: Boolean(data?.accessToken),
-                hasRefreshToken: typeof data?.refreshToken === "string",
-              },
+              sessionShapeDetail(data),
             );
             return null;
           }
-
-          return {
-            id: data.user._id,
-            _id: data.user._id,
-            email: data.user.email,
-            name: data.user.name,
-            avatar: data.user.avatar,
-            accessToken: data.accessToken,
-            accessTokenExpiresAt: data.tokenExpiresAt,
-            refreshToken: data.refreshToken,
-            refreshTokenExpiresAt: data.refreshExpiresAt,
-            sessionId: data.sessionId,
-            ...(credentials.rememberMe === "true"
-              ? {}
-              : { sessionDeadline: Date.now() + SHORT_SESSION_MS }),
-          } as Record<string, unknown>;
+          return sessionUser(data, rememberMe);
         } catch (error) {
-          if (error instanceof CredentialsSignin) throw error;
-          logSignInFailure(
-            "credentials",
-            credentials.email,
-            "auth backend unreachable",
-            {
-              url: `${AUTH_API_ORIGIN}/api/auth/login`,
-              error: error instanceof Error ? error.message : String(error),
-            },
-          );
-          throw new DashboardCredentialsSignin("server_unavailable");
+          return unreachable("credentials", credentials.email, "/api/auth/login", error);
+        }
+      },
+    }),
+    // Second step of a sign-in that stopped at 2FA. The challenge token is
+    // read from the encrypted pending cookie, never from the request.
+    Credentials({
+      id: "two-factor",
+      name: "Two-factor",
+      credentials: {
+        mode: { label: "Mode", type: "text" },
+        code: { label: "Code", type: "text" },
+        recoveryCode: { label: "Recovery code", type: "text" },
+      },
+      async authorize(credentials) {
+        const pending = await readPendingTwoFactor();
+        if (!pending) {
+          throw new DashboardCredentialsSignin("TWO_FACTOR_CHALLENGE_INVALID");
+        }
+        const enrolling = pending.nextStep === "two_factor_enrolment";
+        if ((credentials?.mode === "enrol") !== enrolling) {
+          throw new DashboardCredentialsSignin("TWO_FACTOR_CHALLENGE_INVALID");
+        }
+        const code = typeof credentials?.code === "string" ? credentials.code : "";
+        const recoveryCode =
+          typeof credentials?.recoveryCode === "string" ? credentials.recoveryCode : "";
+        const path = enrolling
+          ? "/api/auth/2fa/enrolment/confirm"
+          : "/api/auth/2fa/challenge";
+        const body: Record<string, unknown> = { challengeToken: pending.challengeToken };
+        if (!enrolling && recoveryCode) body.recoveryCode = recoveryCode;
+        else body.code = code;
+
+        try {
+          const { response, data } = await postToBackend(path, body);
+          if (!response.ok) {
+            const errorCode = backendErrorCode(data, response.status, "TWO_FACTOR_ERROR");
+            logSignInFailure("two-factor", "<pending challenge>", "backend rejected code", {
+              status: response.status,
+              errorCode,
+              step: pending.nextStep,
+            });
+            if (twoFactorErrorRequiresRestart(errorCode)) await clearPendingTwoFactor();
+            throw new DashboardCredentialsSignin(errorCode);
+          }
+          if (!hasBackendSession(data)) {
+            logSignInFailure(
+              "two-factor",
+              "<pending challenge>",
+              "backend response missing user/accessToken/refreshToken",
+              sessionShapeDetail(data),
+            );
+            throw new DashboardCredentialsSignin("TWO_FACTOR_ERROR");
+          }
+          await clearPendingTwoFactor();
+          reportSignInOutcome({
+            recoveryCodes: Array.isArray(data.recoveryCodes)
+              ? data.recoveryCodes.filter((value): value is string => typeof value === "string")
+              : undefined,
+            recoveryCodesRemaining:
+              typeof data.recoveryCodesRemaining === "number"
+                ? data.recoveryCodesRemaining
+                : undefined,
+            welcomeOrganization: pending.welcomeOrganization,
+          });
+          return sessionUser(data, pending.rememberMe);
+        } catch (error) {
+          return unreachable("two-factor", "<pending challenge>", path, error);
+        }
+      },
+    }),
+    // ORG-205: accept an invitation and sign in with the session it returns.
+    // The invitation token is never logged.
+    Credentials({
+      id: "invitation",
+      name: "Invitation",
+      credentials: {
+        token: { label: "Invitation", type: "text" },
+        mode: { label: "Mode", type: "text" },
+        email: { label: "Email", type: "email" },
+        name: { label: "Name", type: "text" },
+        password: { label: "Password", type: "password" },
+        organizationName: { label: "Organization", type: "text" },
+      },
+      async authorize(credentials) {
+        const token = sanitizeInvitationToken(credentials?.token);
+        if (!token) throw new DashboardCredentialsSignin("INVITATION_INVALID");
+        const registering = credentials?.mode === "register";
+        const email = credentials?.email ?? "<invited email>";
+        const welcomeOrganization = cleanOrganizationName(credentials?.organizationName);
+        const path = registering
+          ? "/api/v1/invitations/accept/register"
+          : "/api/v1/invitations/accept";
+        const body = registering
+          ? { token, name: credentials?.name, password: credentials?.password }
+          : { token, email: credentials?.email, password: credentials?.password };
+
+        try {
+          const { response, data } = await postToBackend(path, body);
+          if (!response.ok) {
+            const errorCode = backendErrorCode(data, response.status, "INVITATION_ERROR");
+            logSignInFailure("invitation", email, "backend refused invitation accept", {
+              status: response.status,
+              errorCode,
+              mode: registering ? "register" : "existing",
+            });
+            throw new DashboardCredentialsSignin(errorCode);
+          }
+          await stopAtSecondFactor(data, {
+            rememberMe: false,
+            welcomeOrganization: welcomeOrganization || undefined,
+          });
+          if (!hasBackendSession(data)) {
+            logSignInFailure(
+              "invitation",
+              email,
+              "backend response missing user/accessToken/refreshToken",
+              sessionShapeDetail(data),
+            );
+            throw new DashboardCredentialsSignin("INVITATION_ERROR");
+          }
+          reportSignInOutcome({ welcomeOrganization: welcomeOrganization || undefined });
+          return sessionUser(data, false);
+        } catch (error) {
+          return unreachable("invitation", email, path, error);
         }
       },
     }),
@@ -186,64 +368,76 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
           return false;
         }
 
-        try {
-          const response = await fetchWithTimeout(
-            `${AUTH_API_ORIGIN}/api/auth/google`,
-            {
-              method: "POST",
-              headers: authBffHeaders(),
-              body: JSON.stringify({
-                idToken: account.id_token || "",
-              }),
-            },
-          );
+        // "Continue with Google" on /invite/[token] parks the invitation in an
+        // encrypted cookie before leaving for Google; accept it here instead
+        // of a plain Google sign-in. Failures go back to the invite page,
+        // the same path the invitation email links to.
+        const invitation = await takeGoogleInvitation();
+        const path = invitation
+          ? "/api/v1/invitations/accept/google"
+          : "/api/auth/google";
+        const backToInvite = (code: string) =>
+          `/invite/${encodeURIComponent(invitation!.token)}?error=${encodeURIComponent(code)}`;
 
-          const data = await response.json().catch(() => ({}));
+        try {
+          const { response, data } = await postToBackend(
+            path,
+            invitation
+              ? { token: invitation.token, idToken: account.id_token || "" }
+              : { idToken: account.id_token || "" },
+          );
           if (!response.ok) {
-            logSignInFailure("google", email, "backend rejected google login", {
-              status: response.status,
-              errorCode: data?.errorCode,
-              message: data?.message,
-            });
-            return false;
+            const errorCode = backendErrorCode(data, response.status, "google");
+            logSignInFailure(
+              "google",
+              email,
+              invitation
+                ? "backend refused google invitation accept"
+                : "backend rejected google login",
+              {
+                status: response.status,
+                errorCode,
+                message: data?.message,
+              },
+            );
+            return invitation ? backToInvite(errorCode) : false;
           }
 
-          if (
-            !data?.user?._id ||
-            !data?.accessToken ||
-            typeof data?.refreshToken !== "string"
-          ) {
+          // ORG-303/304: Google proved the identity; the second factor is
+          // still to come. Continue on the sign-in page's code step.
+          const step = readSecondFactorStep(data);
+          if (step) {
+            await storePendingTwoFactor({
+              ...step,
+              rememberMe: true,
+              welcomeOrganization: invitation?.organizationName || undefined,
+            });
+            return "/sign-in?step=two-factor";
+          }
+
+          if (!hasBackendSession(data)) {
             logSignInFailure(
               "google",
               email,
               "backend response missing user/accessToken/refreshToken",
-              {
-                hasUserId: Boolean(data?.user?._id),
-                hasAccessToken: Boolean(data?.accessToken),
-                hasRefreshToken: typeof data?.refreshToken === "string",
-              },
+              sessionShapeDetail(data),
             );
-            return false;
+            return invitation ? backToInvite("INVITATION_ERROR") : false;
           }
 
-          Object.assign(user, {
-            id: data.user._id,
-            _id: data.user._id,
-            name: data.user.name,
-            email: data.user.email,
-            avatar: data.user.avatar,
-            accessToken: data.accessToken,
-            accessTokenExpiresAt: data.tokenExpiresAt,
-            refreshToken: data.refreshToken,
-            refreshTokenExpiresAt: data.refreshExpiresAt,
-            sessionId: data.sessionId,
-          });
+          Object.assign(user, sessionUser(data, true));
+          if (invitation?.organizationName) {
+            await setPostSignInNotice({
+              type: "welcome",
+              organizationName: invitation.organizationName,
+            });
+          }
         } catch (error) {
           logSignInFailure("google", email, "auth backend unreachable", {
-            url: `${AUTH_API_ORIGIN}/api/auth/google`,
+            url: `${AUTH_API_ORIGIN}${path}`,
             error: error instanceof Error ? error.message : String(error),
           });
-          return false;
+          return invitation ? backToInvite("server_unavailable") : false;
         }
       }
 

@@ -1,4 +1,5 @@
 import SigninPage from "@/components/auth/SigninPage";
+import { pendingView, readPendingTwoFactor } from "@/lib/server/twoFactorPending";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -36,14 +37,22 @@ export const metadata: Metadata = {
 const page = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; step?: string }>;
 }) => {
   // Auth.js redirects here with ?error=AccessDenied (etc.) when an OAuth
   // sign-in fails — surface it in the form's error banner.
-  const { error } = await searchParams;
+  const { error, step } = await searchParams;
+  // A Google sign-in that needs a second factor comes back with
+  // ?step=two-factor; the challenge itself is in an httpOnly cookie.
+  const pending = step === "two-factor" ? await readPendingTwoFactor() : null;
   return (
     <div>
-      <SigninPage authError={error} />
+      <SigninPage
+        authError={
+          error ?? (step === "two-factor" && !pending ? "TwoFactorExpired" : undefined)
+        }
+        pendingTwoFactor={pending ? pendingView(pending) : null}
+      />
     </div>
   );
 };
