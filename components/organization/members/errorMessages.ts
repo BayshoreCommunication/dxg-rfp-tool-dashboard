@@ -65,7 +65,7 @@ const MESSAGES: Record<string, string | ((e: ErrorLike) => string)> = {
   ALREADY_MEMBER: "This person is already a member of the organization.",
   MEMBER_DEACTIVATED: "This person is a deactivated member. Reactivate them instead of inviting.",
   EMAIL_IN_ANOTHER_ORGANIZATION: "This email belongs to a member of another organization and can't be invited.",
-  LEGACY_ACCOUNT_PENDING_PLACEMENT: "This account is waiting to be set up by DXG and can't be invited yet.",
+  LEGACY_ACCOUNT_PENDING_PLACEMENT: "This account is waiting to be set up by RFPilot support and can't be invited yet.",
   NO_EMAILS: "Enter at least one email address.",
   TOO_MANY_EMAILS: "Invite at most 500 people at a time.",
   ORGANIZATION_UNAVAILABLE: "Your organization isn't available right now. Try again shortly.",

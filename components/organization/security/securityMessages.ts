@@ -29,7 +29,7 @@ const COMMON: Record<string, string> = {
   TWO_FACTOR_RESET_SELF:
     "You can't reset your own two-factor here. Use \"My two-factor authentication\" above instead.",
   TWO_FACTOR_RESET_SHARED_ACCOUNT:
-    "This person also belongs to another organization, so their two-factor belongs to them, not just to you. Contact DXG support to reset it.",
+    "This person also belongs to another organization, so their two-factor belongs to them, not just to you. Contact RFPilot support to reset it.",
   MEMBER_NOT_FOUND: "That member wasn't found. They may have left the organization.",
   FORBIDDEN: "Only the Owner can reset the Owner's two-factor authentication.",
   DOMAIN_INVALID: "Enter a domain like example.com, without http:// or an email address.",
