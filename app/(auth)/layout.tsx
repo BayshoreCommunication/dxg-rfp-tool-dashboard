@@ -1,6 +1,5 @@
 import { ToastProvider } from "@/components/ui/ToastProvider";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import RedactedAnalytics from "@/components/auth/RedactedAnalytics";
 import "../globals.css";
 
 export const metadata = {
@@ -18,8 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased font-sans">
         <ToastProvider>{children}</ToastProvider>
-        <Analytics />
-        <SpeedInsights />
+        <RedactedAnalytics />
       </body>
     </html>
   );

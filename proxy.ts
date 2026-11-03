@@ -19,6 +19,9 @@ const excludedPrefixes = [
 
 const fullyPublicPrefixes = [
   "/forgot-password",
+  // ORG-205 accept-invite page. Public so the token in the path is never
+  // copied into a /sign-in?callbackUrl= redirect.
+  "/invite",
   "/proposal-view",
   "/vendor-response",
   "/api/vendor-responses",
