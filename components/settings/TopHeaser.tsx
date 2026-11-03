@@ -9,6 +9,7 @@ const SETTINGS_LINKS = [
   { href: "/settings", label: "General" },
   { href: "/settings/users", label: "Users" },
   { href: "/settings/teams", label: "Teams" },
+  { href: "/settings/security", label: "Security" },
 ];
 
 const TopHeader = () => {
