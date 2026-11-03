@@ -7,6 +7,7 @@ import type { NextAuthRequest } from "next-auth";
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
 import { SESSION_EXPIRED_ERROR } from "./lib/authTokenState";
+import { COMPANY_NAME_PATH } from "./lib/auth/companyName";
 
 const excludedPrefixes = [
   "/_next/",
@@ -97,6 +98,18 @@ const handleAuthenticatedRequest = (
     url.searchParams.set("callbackUrl", pathname);
     if (sessionExpired) url.searchParams.set("reason", "session-expired");
     return NextResponse.redirect(url);
+  }
+
+  // --- FIRST SIGN-UP: NAME THE ORGANIZATION ---
+  // Page loads only; server actions and API routes keep working underneath.
+  if (
+    request.auth.needsCompanyName === true &&
+    pathname !== COMPANY_NAME_PATH &&
+    !pathname.startsWith("/api/") &&
+    request.method === "GET" &&
+    !request.headers.has("next-action")
+  ) {
+    return NextResponse.redirect(new URL(COMPANY_NAME_PATH, request.url));
   }
 
   return NextResponse.next();
