@@ -24,6 +24,7 @@ import {
   Share2,
   Trash2,
   TrendingUp,
+  Users,
 } from "lucide-react";
 import SaveCopyModal from "./SaveCopyModal";
 import ProposalDeletionDialog, { type ProposalDeletionMode } from "./ProposalDeletionDialog";
@@ -832,6 +833,11 @@ export default function ProposalTableList({
                             href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`}
                             label="Edit"
                             icon={<Edit3 size={14} />}
+                          />
+                          <ActionLink
+                            href={`/proposals/${encodeURIComponent(proposal._id)}/access`}
+                            label="Team access"
+                            icon={<Users size={14} />}
                           />
                           {!isCopy && (
                             <ActionButton
