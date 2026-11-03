@@ -7,7 +7,8 @@ export type SecurityErrorContext =
   | "recovery"
   | "orgSecurity"
   | "reset"
-  | "domain";
+  | "domain"
+  | "sso";
 
 const COMMON: Record<string, string> = {
   TWO_FACTOR_NOT_CONFIGURED:
@@ -40,6 +41,14 @@ const COMMON: Record<string, string> = {
   DOMAIN_ALREADY_ADDED: "That domain is already on your organization's list.",
   DOMAIN_NOT_FOUND: "That domain was already removed. Refresh to see the current list.",
   VALIDATION_ERROR: "Something in the request wasn't valid. Please try again.",
+  SSO_ISSUER_UNREACHABLE:
+    "We couldn't reach your identity provider at that issuer URL. Check the URL: it must use https and serve /.well-known/openid-configuration.",
+  SSO_DOMAIN_NOT_VERIFIED:
+    "One of the selected domains isn't verified for your organization. Verify it under Verified domains first.",
+  VERSION_CONFLICT:
+    "Someone else changed the single sign-on settings while you were editing. We've loaded the latest version; check it and save again.",
+  SSO_CONNECTION_NOT_ACTIVE:
+    "Turn on company sign-in before requiring it for everyone.",
   RATE_LIMITED: "Too many attempts. Wait a few minutes and try again.",
 };
 
@@ -50,6 +59,7 @@ const FALLBACK: Record<SecurityErrorContext, string> = {
   orgSecurity: "Couldn't update organization security. Please try again.",
   reset: "Couldn't reset this member's two-factor authentication. Please try again.",
   domain: "Couldn't update domains. Please try again.",
+  sso: "Couldn't update single sign-on. Please try again.",
 };
 
 export const securityErrorMessage = (
