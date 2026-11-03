@@ -1,24 +1,13 @@
 "use server";
 
-import { CredentialsSignin } from "next-auth";
-
-import { signIn } from "@/auth";
 import {
   invitationErrorView,
   sanitizeInvitationToken,
   type InvitationDetails,
   type InvitationErrorView,
 } from "@/lib/auth/invitation";
-import {
-  TWO_FACTOR_REQUIRED_CODE,
-  type PendingTwoFactorView,
-} from "@/lib/auth/twoFactor";
 import { AUTH_API_ORIGIN, fetchWithTimeout } from "@/lib/authRefresh";
-import {
-  captureSignInOutcome,
-  setPostSignInNotice,
-  storeGoogleInvitation,
-} from "@/lib/server/twoFactorPending";
+import { storeGoogleInvitation } from "@/lib/server/twoFactorPending";
 
 /* ORG-205 accept-invite page. The invitation token only ever travels in POST
    bodies (and the /invite/<token> path the email already uses); it is never
@@ -36,6 +25,8 @@ const toDetails = (value: Record<string, unknown>): InvitationDetails => ({
   teamName: typeof value.teamName === "string" && value.teamName ? value.teamName : null,
   expiresAt: String(value.expiresAt ?? ""),
   accountExists: value.accountExists === true,
+  // Whether the invited email's domain has an active company-SSO connection.
+  companySso: value.companySso === true,
 });
 
 export async function lookupInvitationAction(rawToken: string): Promise<InvitationLookupResult> {
@@ -74,68 +65,6 @@ export async function lookupInvitationAction(rawToken: string): Promise<Invitati
     const view = invitationErrorView("server_unavailable");
     return { success: false, message: view.message, error: view };
   }
-}
-
-export type AcceptInvitationResult =
-  | { success: true; message: string }
-  | { success: false; message: string; twoFactor: PendingTwoFactorView }
-  | { success: false; message: string; error: InvitationErrorView };
-
-export async function acceptInvitationAction(input: {
-  token: string;
-  mode: "existing" | "register";
-  email: string;
-  name?: string;
-  password: string;
-  organizationName: string;
-}): Promise<AcceptInvitationResult> {
-  const capture = await captureSignInOutcome(() =>
-    signIn("invitation", {
-      token: input.token,
-      mode: input.mode,
-      email: input.email,
-      name: input.name ?? "",
-      password: input.password,
-      organizationName: input.organizationName,
-      redirect: false,
-    }),
-  );
-
-  let code: string | null = null;
-  if (capture.error !== undefined) {
-    if (capture.error instanceof CredentialsSignin) {
-      code = capture.error.code;
-    } else {
-      console.error(
-        "[invitations] unexpected accept failure:",
-        capture.error instanceof Error ? capture.error.name : "unknown",
-      );
-      code = "INVITATION_ERROR";
-    }
-  } else {
-    const url = new URL(String(capture.result), "http://auth.local");
-    if (url.searchParams.has("error")) code = url.searchParams.get("code") || "INVITATION_ERROR";
-  }
-
-  if (code === TWO_FACTOR_REQUIRED_CODE && capture.outcome.twoFactor) {
-    return {
-      success: false,
-      message: "Finish signing in with two-factor authentication.",
-      twoFactor: capture.outcome.twoFactor,
-    };
-  }
-  if (code) {
-    const error = invitationErrorView(code);
-    return { success: false, message: error.message, error };
-  }
-
-  if (capture.outcome.welcomeOrganization) {
-    await setPostSignInNotice({
-      type: "welcome",
-      organizationName: capture.outcome.welcomeOrganization,
-    });
-  }
-  return { success: true, message: "Invitation accepted" };
 }
 
 /* "Continue with Google": park the invitation in an encrypted httpOnly cookie

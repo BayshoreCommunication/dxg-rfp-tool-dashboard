@@ -1,5 +1,7 @@
 /* Accept-invite page (ORG-205): the parts with no I/O. */
 
+import { hasSsoErrorMessage, ssoErrorMessage } from "./sso";
+
 export type InvitationRole =
   | "owner"
   | "organization_admin"
@@ -15,6 +17,9 @@ export type InvitationDetails = {
   teamName: string | null;
   expiresAt: string;
   accountExists: boolean;
+  // The invited email's domain has an active company-SSO connection, so the
+  // page offers "Sign in with your company".
+  companySso: boolean;
 };
 
 const ROLE_LABELS: Record<InvitationRole, string> = {
@@ -69,14 +74,11 @@ export const DEAD_LINK_COPY: Record<DeadLinkCode, { title: string; message: stri
 
 /* Accept errors that leave the link alive: shown above the form. */
 export const ACCEPT_ERROR_MESSAGES: Record<string, string> = {
-  INVALID_INPUT: "Please fill in every field.",
-  WEAK_PASSWORD: "Password must be at least 8 characters.",
-  WRONG_PASSWORD: "Incorrect password. Please try again.",
   USER_BLOCKED: "Your account has been blocked. Please contact support.",
-  ACCOUNT_NOT_FOUND: "There's no account for this email yet. Create one to accept the invitation.",
-  ACCOUNT_EXISTS: "An account with this email already exists. Sign in to accept the invitation.",
   INVITATION_EMAIL_MISMATCH: "This invitation was sent to a different email address. Use the invited email to accept it.",
   INVALID_GOOGLE_IDENTITY: "We couldn't verify your Google sign-in. Please try again.",
+  SSO_REQUIRED:
+    "Your organization requires you to sign in with your company account. Use \"Sign in with your company\".",
   ALREADY_MEMBER: "You're already a member of this organization. Sign in to continue.",
   EMAIL_IN_ANOTHER_ORGANIZATION: "This email already belongs to another organization, so it can't join this one. Contact your organization's admin.",
   LEGACY_ACCOUNT_PENDING_PLACEMENT: "Your account is being moved by our support team. Try again later or contact support.",
@@ -96,23 +98,17 @@ export const invitationErrorView = (code: unknown): InvitationErrorView => {
   if (isDeadLinkCode(code)) {
     return { kind: "dead-link", code, ...DEAD_LINK_COPY[code] };
   }
-  const known = typeof code === "string" ? ACCEPT_ERROR_MESSAGES[code] : undefined;
+  // Microsoft / company SSO and Require SSO refusals come back here too.
+  const known =
+    typeof code === "string"
+      ? ACCEPT_ERROR_MESSAGES[code] ?? (hasSsoErrorMessage(code) ? ssoErrorMessage(code) : undefined)
+      : undefined;
   return {
     kind: "form",
     code: typeof code === "string" ? code : "unknown",
     message: known || "Something went wrong with the invitation. Please try again.",
   };
 };
-
-/* Codes after which the form should switch: an account turned up or didn't. */
-export const switchesAcceptMode = (
-  code: string,
-): "existing" | "register" | null =>
-  code === "ACCOUNT_EXISTS" || code === "ALREADY_MEMBER"
-    ? "existing"
-    : code === "ACCOUNT_NOT_FOUND"
-      ? "register"
-      : null;
 
 /* The token from the path segment. Anything that can't be a token is not sent
    to the backend at all. */
@@ -126,17 +122,6 @@ export const sanitizeInvitationToken = (raw: unknown) => {
   }
   token = token.trim();
   return /^[A-Za-z0-9_-]{16,256}$/.test(token) ? token : null;
-};
-
-export const validateRegisterForm = (input: {
-  name: string;
-  password: string;
-  confirmPassword: string;
-}) => {
-  if (!input.name.trim()) return "Please enter your name.";
-  if (input.password.length < 8) return "Password must be at least 8 characters.";
-  if (input.password !== input.confirmPassword) return "Passwords don't match.";
-  return null;
 };
 
 /* For anything that records URLs (analytics): /invite/<token> → /invite/[token]. */
