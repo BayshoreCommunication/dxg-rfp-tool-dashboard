@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/security";
 import DomainsCard from "./DomainsCard";
 import OrganizationSecurityCard from "./OrganizationSecurityCard";
+import SingleSignOnSection from "./SingleSignOnCard";
 import { securityErrorMessage } from "./securityMessages";
 import TwoFactorCard from "./TwoFactorCard";
 
@@ -63,7 +64,7 @@ const SecuritySettings = () => {
         </h1>
         <p className="mt-2 text-[13px] font-medium text-slate-400">
           Two-factor sign-in for your account
-          {org.state === "ok" ? ", your organization's security rules and verified domains" : ""}.
+          {org.state === "ok" ? ", your organization's security rules, verified domains and single sign-on" : ""}.
         </p>
       </div>
 
@@ -95,6 +96,7 @@ const SecuritySettings = () => {
           Organization security and verified domains are managed by your organization&apos;s Owner and Admins.
         </p>
       ) : null}
+      {org.state === "ok" || org.state === "denied" ? <SingleSignOnSection /> : null}
     </div>
   );
 };

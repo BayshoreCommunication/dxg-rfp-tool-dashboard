@@ -4,8 +4,6 @@ import {
   invitationRoleLabel,
   redactInvitationUrl,
   sanitizeInvitationToken,
-  switchesAcceptMode,
-  validateRegisterForm,
 } from './invitation'
 import {
   parsePostSignInNotice,
@@ -32,11 +30,11 @@ describe('invitationErrorView', () => {
   })
 
   it.each([
-    ['WRONG_PASSWORD', /Incorrect password/],
-    ['WEAK_PASSWORD', /at least 8/],
     ['INVITATION_EMAIL_MISMATCH', /different email/],
-    ['ACCOUNT_EXISTS', /already exists/],
-    ['ACCOUNT_NOT_FOUND', /no account/],
+    ['SSO_REQUIRED', /company account/],
+    ['MICROSOFT_EMAIL_UNVERIFIED', /Microsoft didn't confirm/],
+    ['SSO_NOT_CONFIGURED', /couldn't find company sign-in/],
+    ['PASSWORD_SIGN_IN_DISABLED', /no longer available/],
     ['EMAIL_IN_ANOTHER_ORGANIZATION', /another organization/],
     ['RATE_LIMITED', /Too many attempts/],
     ['server_unavailable', /reach the server/],
@@ -51,21 +49,6 @@ describe('invitationErrorView', () => {
     expect(view.kind).toBe('form')
     expect(view.message).not.toContain('SOME_NEW_BACKEND_CODE')
     expect(invitationErrorView(undefined).message).toBeTruthy()
-  })
-})
-
-describe('switchesAcceptMode', () => {
-  it('moves to sign-in when the account turns out to exist', () => {
-    expect(switchesAcceptMode('ACCOUNT_EXISTS')).toBe('existing')
-    expect(switchesAcceptMode('ALREADY_MEMBER')).toBe('existing')
-  })
-
-  it('moves to sign-up when there is no account', () => {
-    expect(switchesAcceptMode('ACCOUNT_NOT_FOUND')).toBe('register')
-  })
-
-  it('stays put for anything else', () => {
-    expect(switchesAcceptMode('WRONG_PASSWORD')).toBeNull()
   })
 })
 
@@ -87,17 +70,6 @@ describe('invitation helpers', () => {
     expect(sanitizeInvitationToken('../../etc/passwd-aaaaaaaaaaaa')).toBeNull()
     expect(sanitizeInvitationToken('%E0%A4%A')).toBeNull()
     expect(sanitizeInvitationToken(undefined)).toBeNull()
-  })
-
-  it('validates the create-account form', () => {
-    expect(validateRegisterForm({ name: ' ', password: 'longenough', confirmPassword: 'longenough' }))
-      .toMatch(/name/)
-    expect(validateRegisterForm({ name: 'Jo', password: 'short', confirmPassword: 'short' }))
-      .toMatch(/8 characters/)
-    expect(validateRegisterForm({ name: 'Jo', password: 'longenough', confirmPassword: 'different' }))
-      .toMatch(/don't match/)
-    expect(validateRegisterForm({ name: 'Jo', password: 'longenough', confirmPassword: 'longenough' }))
-      .toBeNull()
   })
 
   it('redacts the token from URLs sent to analytics', () => {

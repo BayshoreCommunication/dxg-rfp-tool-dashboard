@@ -20,7 +20,7 @@ import {
   TWO_FACTOR_REQUIRED_CODE,
   twoFactorErrorRequiresRestart,
 } from "@/lib/auth/twoFactor";
-import { sanitizeInvitationToken } from "@/lib/auth/invitation";
+import { sanitizeHandoff } from "@/lib/auth/sso";
 import {
   clearPendingTwoFactor,
   readPendingTwoFactor,
@@ -29,6 +29,7 @@ import {
   storePendingTwoFactor,
   takeGoogleInvitation,
 } from "@/lib/server/twoFactorPending";
+import { takeSsoBind } from "@/lib/server/ssoBind";
 
 class DashboardCredentialsSignin extends CredentialsSignin {
   constructor(code: string) {
@@ -37,12 +38,13 @@ class DashboardCredentialsSignin extends CredentialsSignin {
   }
 }
 
-// Without "Remember me", the credentials session ends this long after sign-in
-// (enforced in the jwt callback). With it, the session runs the full
-// session.maxAge (30 days). OAuth sign-ins always get the full maxAge.
+// A sign-in made with rememberMe false ends this long after sign-in (enforced
+// in the jwt callback). Google, Microsoft and company SSO sign-ins always get
+// the full session.maxAge (30 days); the short form is kept for 2FA steps
+// still pending from before password sign-in was removed.
 const SHORT_SESSION_MS = 24 * 60 * 60 * 1000;
 
-type SignInProvider = "credentials" | "google" | "two-factor" | "invitation";
+type SignInProvider = "google" | "two-factor" | "sso";
 
 const logSignInFailure = (
   provider: SignInProvider,
@@ -136,10 +138,6 @@ const unreachable = (
   throw new DashboardCredentialsSignin("server_unavailable");
 };
 
-const ORGANIZATION_NAME_LIMIT = 120;
-const cleanOrganizationName = (value: unknown) =>
-  typeof value === "string" ? value.trim().slice(0, ORGANIZATION_NAME_LIMIT) : "";
-
 export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   trustHost: true,
@@ -171,59 +169,6 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
           access_type: "offline",
           response_type: "code",
         },
-      },
-    }),
-    Credentials({
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-        rememberMe: { label: "Remember me", type: "text" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) {
-          logSignInFailure(
-            "credentials",
-            credentials?.email ?? "<missing email>",
-            "email or password missing from request",
-          );
-          return null;
-        }
-        const rememberMe = credentials.rememberMe === "true";
-
-        try {
-          const { response, data } = await postToBackend("/api/auth/login", {
-            email: credentials.email,
-            password: credentials.password,
-          });
-          if (!response.ok) {
-            const errorCode = backendErrorCode(data, response.status, "credentials");
-            logSignInFailure(
-              "credentials",
-              credentials.email,
-              "backend rejected login",
-              {
-                status: response.status,
-                errorCode,
-                message: data?.message,
-              },
-            );
-            throw new DashboardCredentialsSignin(errorCode);
-          }
-          // ORG-303/304: password accepted, second factor still to come.
-          await stopAtSecondFactor(data, { rememberMe });
-          if (!hasBackendSession(data)) {
-            logSignInFailure(
-              "credentials",
-              credentials.email,
-              "backend response missing user/accessToken/refreshToken",
-              sessionShapeDetail(data),
-            );
-            return null;
-          }
-          return sessionUser(data, rememberMe);
-        } catch (error) {
-          return unreachable("credentials", credentials.email, "/api/auth/login", error);
-        }
       },
     }),
     // Second step of a sign-in that stopped at 2FA. The challenge token is
@@ -293,60 +238,52 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
         }
       },
     }),
-    // ORG-205: accept an invitation and sign in with the session it returns.
-    // The invitation token is never logged.
+    // Microsoft and company SSO (tasks/2026-11-04-sso D2). The backend's
+    // callback sent the browser to /sso/complete?handoff=…; trade the handoff
+    // plus the bind cookie set by /api/sso/start for a session. The handoff
+    // is single use and short-lived; neither value is logged.
     Credentials({
-      id: "invitation",
-      name: "Invitation",
+      id: "sso",
+      name: "Single sign-on",
       credentials: {
-        token: { label: "Invitation", type: "text" },
-        mode: { label: "Mode", type: "text" },
-        email: { label: "Email", type: "email" },
-        name: { label: "Name", type: "text" },
-        password: { label: "Password", type: "password" },
-        organizationName: { label: "Organization", type: "text" },
+        handoff: { label: "Handoff", type: "text" },
       },
       async authorize(credentials) {
-        const token = sanitizeInvitationToken(credentials?.token);
-        if (!token) throw new DashboardCredentialsSignin("INVITATION_INVALID");
-        const registering = credentials?.mode === "register";
-        const email = credentials?.email ?? "<invited email>";
-        const welcomeOrganization = cleanOrganizationName(credentials?.organizationName);
-        const path = registering
-          ? "/api/v1/invitations/accept/register"
-          : "/api/v1/invitations/accept";
-        const body = registering
-          ? { token, name: credentials?.name, password: credentials?.password }
-          : { token, email: credentials?.email, password: credentials?.password };
+        const handoff = sanitizeHandoff(credentials?.handoff);
+        // Cleared here whatever happens next.
+        const bind = await takeSsoBind();
+        if (!handoff) throw new DashboardCredentialsSignin("SSO_HANDOFF_INVALID");
+        if (!bind) {
+          logSignInFailure("sso", "<sso handoff>", "bind cookie missing or malformed");
+          throw new DashboardCredentialsSignin("SSO_BIND_MISSING");
+        }
+        const path = "/api/auth/sso/exchange";
 
         try {
-          const { response, data } = await postToBackend(path, body);
+          const { response, data } = await postToBackend(path, { handoff, bind });
           if (!response.ok) {
-            const errorCode = backendErrorCode(data, response.status, "INVITATION_ERROR");
-            logSignInFailure("invitation", email, "backend refused invitation accept", {
+            const errorCode = backendErrorCode(data, response.status, "SSO_HANDOFF_INVALID");
+            logSignInFailure("sso", "<sso handoff>", "backend refused sso exchange", {
               status: response.status,
               errorCode,
-              mode: registering ? "register" : "existing",
             });
             throw new DashboardCredentialsSignin(errorCode);
           }
-          await stopAtSecondFactor(data, {
-            rememberMe: false,
-            welcomeOrganization: welcomeOrganization || undefined,
-          });
+          // Microsoft only: company sign-ins never ask for our second factor.
+          // Same as the Google path, OAuth sign-ins always remember.
+          await stopAtSecondFactor(data, { rememberMe: true });
           if (!hasBackendSession(data)) {
             logSignInFailure(
-              "invitation",
-              email,
+              "sso",
+              "<sso handoff>",
               "backend response missing user/accessToken/refreshToken",
               sessionShapeDetail(data),
             );
-            throw new DashboardCredentialsSignin("INVITATION_ERROR");
+            throw new DashboardCredentialsSignin("SSO_HANDOFF_INVALID");
           }
-          reportSignInOutcome({ welcomeOrganization: welcomeOrganization || undefined });
-          return sessionUser(data, false);
+          return sessionUser(data, true);
         } catch (error) {
-          return unreachable("invitation", email, path, error);
+          return unreachable("sso", "<sso handoff>", path, error);
         }
       },
     }),
@@ -376,6 +313,8 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
         const path = invitation
           ? "/api/v1/invitations/accept/google"
           : "/api/auth/google";
+        const backToSignIn = (code: string) =>
+          `/sign-in?error=${encodeURIComponent(code)}`;
         const backToInvite = (code: string) =>
           `/invite/${encodeURIComponent(invitation!.token)}?error=${encodeURIComponent(code)}`;
 
@@ -400,7 +339,8 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
                 message: data?.message,
               },
             );
-            return invitation ? backToInvite(errorCode) : false;
+            // e.g. SSO_REQUIRED: the sign-in page shows a message for it.
+            return invitation ? backToInvite(errorCode) : backToSignIn(errorCode);
           }
 
           // ORG-303/304: Google proved the identity; the second factor is
@@ -437,7 +377,9 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
             url: `${AUTH_API_ORIGIN}${path}`,
             error: error instanceof Error ? error.message : String(error),
           });
-          return invitation ? backToInvite("server_unavailable") : false;
+          return invitation
+            ? backToInvite("server_unavailable")
+            : backToSignIn("server_unavailable");
         }
       }
 

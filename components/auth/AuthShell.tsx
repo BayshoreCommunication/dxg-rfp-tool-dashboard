@@ -149,16 +149,18 @@ export const GoogleButton = ({
   onClick,
   disabled,
   label = "Continue with Google",
+  spacing = "mb-8",
 }: {
   onClick: () => void;
   disabled?: boolean;
   label?: string;
+  spacing?: string;
 }) => (
   <button
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="mb-8 flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-4 text-[15px] font-bold text-gray-700 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:translate-y-0 disabled:opacity-70"
+    className={`${spacing} flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-4 text-[15px] font-bold text-gray-700 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:translate-y-0 disabled:opacity-70`}
   >
     <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
       <path
@@ -180,4 +182,39 @@ export const GoogleButton = ({
     </svg>
     <span>{label}</span>
   </button>
+);
+
+const providerButtonClass =
+  "mb-4 flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-4 text-[15px] font-bold text-gray-700 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:translate-y-0 aria-disabled:pointer-events-none aria-disabled:opacity-70";
+
+const MicrosoftLogo = () => (
+  <svg className="h-5 w-5" viewBox="0 0 21 21" aria-hidden="true">
+    <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+    <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+    <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+    <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+  </svg>
+);
+
+/* "Continue with Microsoft" is a plain link to /api/sso/start?kind=microsoft
+   (not a NextAuth provider): that route sets the bind cookie and leaves for
+   the backend, which talks to Microsoft. */
+export const MicrosoftButton = ({
+  href,
+  disabled,
+  label = "Continue with Microsoft",
+}: {
+  href: string;
+  disabled?: boolean;
+  label?: string;
+}) => (
+  <a
+    href={disabled ? undefined : href}
+    aria-disabled={disabled || undefined}
+    role={disabled ? "link" : undefined}
+    className={providerButtonClass}
+  >
+    <MicrosoftLogo />
+    <span>{label}</span>
+  </a>
 );
