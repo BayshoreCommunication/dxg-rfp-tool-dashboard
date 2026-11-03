@@ -1,8 +1,19 @@
 "use client";
 import { Sparkles } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+// Settings sections, shown as links under the heading. One entry per page.
+const SETTINGS_LINKS = [
+  { href: "/settings", label: "General" },
+  { href: "/settings/users", label: "Users" },
+  { href: "/settings/teams", label: "Teams" },
+  { href: "/settings/security", label: "Security" },
+];
+
 const TopHeader = () => {
+  const pathname = usePathname();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -63,6 +74,22 @@ const TopHeader = () => {
           </p>
         </div>
       </div>
+
+      <nav aria-label="Settings sections" className="relative mt-5 flex gap-1 overflow-x-auto border-b border-[#e4e4e4]">
+        {SETTINGS_LINKS.map((link) => {
+          const active = (pathname ?? "/settings") === link.href;
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={active ? "page" : undefined}
+              className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-[13px] font-semibold transition-colors ${active ? "border-[#008ad2] text-[#008ad2]" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+            >
+              {link.label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 };

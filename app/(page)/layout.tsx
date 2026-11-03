@@ -1,5 +1,6 @@
 import { getAssistantAccessAction } from "@/app/actions/aiAssistant";
 import { auth } from "@/auth";
+import PostSignInNotice from "@/components/auth/PostSignInNotice";
 import DevThemeToggle from "@/components/layout/DevThemeToggle";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { ToastProvider } from "@/components/ui/ToastProvider";
@@ -48,6 +49,7 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <ToastProvider>
+          <PostSignInNotice />
           <LayoutWrapper
             assistantEnabled={assistantEnabled}
             currentUser={
