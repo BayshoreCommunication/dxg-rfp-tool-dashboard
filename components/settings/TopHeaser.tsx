@@ -1,5 +1,6 @@
 "use client";
-import { Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const TopHeader = () => {
@@ -62,6 +63,14 @@ const TopHeader = () => {
             {!mounted && <span className="opacity-0">Loading date...</span>}
           </p>
         </div>
+        {/* ORG-303/304/305 security settings */}
+        <Link
+          href="/settings/security"
+          className="inline-flex items-center gap-2 rounded-md border border-[#e4e4e4] bg-white px-4 py-2 text-[13px] font-semibold text-[#222628] transition hover:border-[#008ad2] hover:text-[#008ad2]"
+        >
+          <ShieldCheck size={15} />
+          Security
+        </Link>
       </div>
     </div>
   );
