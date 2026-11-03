@@ -19,13 +19,16 @@ export type BackendSession = {
 
 export async function getBackendSession() {
   const cookieStore = await cookies();
-  const cookieHeader = cookieStore.getAll()
+  const all = cookieStore.getAll();
+  const cookieHeader = all
     .map(({ name, value }) => `${name}=${value}`)
     .join("; ");
   const token = await getToken({
     req: { headers: { cookie: cookieHeader } },
     secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-    secureCookie: process.env.NODE_ENV === "production",
+    // Read the cookie NextAuth actually set: "__Secure-" over https, plain over
+    // http (a production build on http://localhost). NODE_ENV can't tell them apart.
+    secureCookie: all.some(({ name }) => name.startsWith("__Secure-authjs.session-token")),
   });
   const expired = hasExpiredBackendSession(token);
   if (expired) {
