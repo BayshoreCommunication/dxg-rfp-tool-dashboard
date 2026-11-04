@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Search, UserRound, Users } from "lucide-react";
+import { Lock, Mail, MailPlus, Search, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
@@ -9,17 +9,22 @@ import { listTeamsAction } from "@/app/actions/teams";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import TopHeader from "@/components/settings/TopHeaser";
 import InvitationsSection from "../invitations/InvitationsSection";
+import InviteDialog from "../invitations/InviteDialog";
+import { DELIVERY_LABELS, useInvitations } from "../invitations/useInvitations";
 import { isVersionConflict, orgErrorMessage } from "./errorMessages";
 import MemberActionsMenu, { type MemberMenuAction } from "./MemberActionsMenu";
 import MemberDialog, { type MemberDialogKind } from "./MemberDialogs";
-import { filterMembers, memberDisplayName, memberPermissions, ROLE_LABELS, roleLabel, STATUS_LABELS } from "./orgAccess";
+import { filterInvitations, filterMembers, memberDisplayName, memberPermissions, ROLE_LABELS, roleLabel, STATUS_LABELS } from "./orgAccess";
 import type { CustomerRole, OrgMember, Team } from "./types";
 import {
   Badge,
   EmptyState,
+  formatDate,
   formatRelative,
   InlineError,
   inputClass,
+  primaryButtonClass,
+  primaryButtonStyle,
   ROLE_TONES,
   sectionClass,
   sectionTitleClass,
@@ -44,6 +49,10 @@ export default function UsersSettings() {
   const [statusFilter, setStatusFilter] = useState("");
   const [dialog, setDialog] = useState<{ kind: MemberDialogKind; member: OrgMember } | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // Owners and Admins see pending invitations as "Invited" rows in this table.
+  const pending = useInvitations({ enabled: Boolean(access?.canManageMembers) });
+  const teamNames = useMemo(() => new Map(teams.map((team) => [team.id, team.name])), [teams]);
 
   const refreshMembers = useCallback(async (): Promise<OrgMember[]> => {
     const result = await listMembersAction();
@@ -70,6 +79,11 @@ export default function UsersSettings() {
   }, [access, refreshMembers, refreshTeams]);
 
   const visible = useMemo(() => filterMembers(members ?? [], query, roleFilter, statusFilter), [members, query, roleFilter, statusFilter]);
+  const visibleInvites = useMemo(
+    () => filterInvitations(pending.invitations ?? [], query, roleFilter, statusFilter),
+    [pending.invitations, query, roleFilter, statusFilter],
+  );
+  const invitedCount = pending.invitations?.length ?? 0;
 
   const reactivate = async (member: OrgMember) => {
     const result = await reactivateMemberAction(member.userId, member.version);
@@ -114,9 +128,19 @@ export default function UsersSettings() {
               <h2 id="members-title" className={sectionTitleClass}>Users</h2>
               <p className="mt-2 text-sm text-slate-500">
                 Everyone in your organization, their role and teams.{" "}
-                {members && <span className="font-medium text-slate-600">{members.length} member{members.length === 1 ? "" : "s"}</span>}
+                {members && (
+                  <span className="font-medium text-slate-600">
+                    {members.length} member{members.length === 1 ? "" : "s"}
+                    {invitedCount > 0 && ` · ${invitedCount} invited`}
+                  </span>
+                )}
               </p>
             </div>
+            {access.canInvite && (
+              <button type="button" className={primaryButtonClass} style={primaryButtonStyle} onClick={() => setInviteOpen(true)}>
+                <MailPlus size={15} aria-hidden="true" /> Invite people
+              </button>
+            )}
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_200px_180px]">
@@ -140,20 +164,22 @@ export default function UsersSettings() {
             <GlobalSelect value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status" className={inputClass}>
               <option value="">All statuses</option>
               <option value="active">Active</option>
+              <option value="invited">Invited</option>
               <option value="deactivated">Deactivated</option>
             </GlobalSelect>
           </div>
 
           <div className="mt-5">
+            {pending.loadError && <div className="mb-3"><InlineError>{pending.loadError}</InlineError></div>}
             {loadError ? (
               <InlineError>{loadError}</InlineError>
             ) : members === null ? (
               <TableSkeleton rows={5} />
-            ) : visible.length === 0 ? (
+            ) : visible.length === 0 && visibleInvites.length === 0 ? (
               <EmptyState
                 icon={<UserRound size={20} />}
                 title={members.length === 0 ? "No members yet" : "No members match"}
-                body={members.length === 0 ? "Invite your team below." : "Try a different search or filter."}
+                body={members.length === 0 ? "Use Invite people to add your team." : "Try a different search or filter."}
               />
             ) : (
               <div className="overflow-x-auto rounded-md border border-[#e4e4e4]">
@@ -206,6 +232,40 @@ export default function UsersSettings() {
                         </tr>
                       );
                     })}
+                    {visibleInvites.map((invitation) => {
+                      const delivery = DELIVERY_LABELS[invitation.emailDelivery] ?? DELIVERY_LABELS.queued;
+                      return (
+                        <tr key={`invitation-${invitation.id}`} className="text-slate-700">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-400">
+                                <Mail size={15} aria-hidden="true" />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-slate-400">Not joined yet</p>
+                                <p className="truncate text-xs text-slate-500">{invitation.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3"><Badge tone={ROLE_TONES[invitation.role] ?? "slate"}>{roleLabel(invitation.role)}</Badge></td>
+                          <td className="px-4 py-3">
+                            {invitation.teamId ? (
+                              <Badge>{teamNames.get(invitation.teamId) ?? "Archived team"}</Badge>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              <Badge tone={STATUS_TONES.invited}>{STATUS_LABELS.invited}</Badge>
+                              {invitation.emailDelivery === "failed" && <Badge tone={delivery.tone}>{delivery.label}</Badge>}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-slate-500">Expires {formatDate(invitation.expiresAt)}</td>
+                          <td className="px-4 py-3 text-right">{pending.actionsFor(invitation)}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -231,7 +291,13 @@ export default function UsersSettings() {
         </section>
       )}
 
-      {access.canInvite && <InvitationsSection access={access} teams={teams} />}
+      {/* Team Managers don't see the Users table, so they get their own list. */}
+      {access.canInvite && !access.canManageMembers && <InvitationsSection access={access} teams={teams} />}
+
+      {inviteOpen && (
+        <InviteDialog access={access} teams={teams} onClose={() => setInviteOpen(false)} onInvited={() => void pending.load()} />
+      )}
+      {pending.revokeDialog}
 
       {dialog && members && (
         <MemberDialog

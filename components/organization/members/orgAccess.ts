@@ -1,4 +1,4 @@
-import type { CustomerRole, InvitableRole, OrgAccess, OrgMember } from "./types";
+import type { CustomerRole, Invitation, InvitableRole, OrgAccess, OrgMember } from "./types";
 
 // Role names and what the signed-in user may do. The backend enforces all of this; the UI only
 // hides what would be refused so it stays honest.
@@ -87,6 +87,17 @@ export const memberDisplayName = (member: Pick<OrgMember, "name" | "email"> | un
   member?.name?.trim() || member?.email || "Unknown member";
 
 // Search (name or email), role and status filters for the members table.
+// Pending invitations are the "Invited" rows of the Users table, filtered the same way.
+export const filterInvitations = (invitations: Invitation[], query: string, role: string, status: string): Invitation[] => {
+  const q = query.trim().toLowerCase();
+  return invitations.filter(
+    (invitation) =>
+      (!role || invitation.role === role) &&
+      (!status || status === "invited") &&
+      (!q || invitation.email.toLowerCase().includes(q)),
+  );
+};
+
 export const filterMembers = (members: OrgMember[], query: string, role: string, status: string): OrgMember[] => {
   const q = query.trim().toLowerCase();
   return members.filter(

@@ -1,5 +1,6 @@
 import {
   canBeTeamManager,
+  filterInvitations,
   filterMembers,
   invitableRoles,
   inviteTeamRequired,
@@ -7,7 +8,7 @@ import {
   reassignTargets,
   roleWithArticle,
 } from "./orgAccess";
-import type { OrgAccess, OrgMember } from "./types";
+import type { Invitation, OrgAccess, OrgMember } from "./types";
 
 const member = (overrides: Partial<OrgMember>): OrgMember => ({
   userId: "u",
@@ -107,6 +108,20 @@ describe("team and reassignment rules", () => {
     expect(filterMembers(list, "EAST", "", "").map((m) => m.userId)).toEqual(["2"]);
     expect(filterMembers(list, "", "planner", "").map((m) => m.userId)).toEqual(["1"]);
     expect(filterMembers(list, "", "", "deactivated").map((m) => m.userId)).toEqual(["2"]);
+  });
+
+  it("filters pending invitations as Invited rows", () => {
+    const invite = (id: string, email: string, role: Invitation["role"]): Invitation => ({
+      id, email, role, teamId: null, invitedBy: "o", status: "pending", expiresAt: "", createdAt: "",
+      acceptedAt: null, revokedAt: null, emailDelivery: "sent",
+    });
+    const list = [invite("a", "sam@east.com", "planner"), invite("b", "kim@west.com", "viewer")];
+    expect(filterInvitations(list, "", "", "").map((i) => i.id)).toEqual(["a", "b"]);
+    expect(filterInvitations(list, "", "", "invited").map((i) => i.id)).toEqual(["a", "b"]);
+    expect(filterInvitations(list, "", "", "active")).toEqual([]);
+    expect(filterInvitations(list, "", "", "deactivated")).toEqual([]);
+    expect(filterInvitations(list, "WEST", "", "").map((i) => i.id)).toEqual(["b"]);
+    expect(filterInvitations(list, "", "planner", "").map((i) => i.id)).toEqual(["a"]);
   });
 
   it("uses the right article", () => {
