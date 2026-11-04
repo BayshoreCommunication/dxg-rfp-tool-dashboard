@@ -22,11 +22,12 @@ import { ArrowLeft, Building2, CalendarDays, Check, CheckCircle2, Factory, Spark
 import { useMemo, useState, type ReactNode } from "react";
 import { AuthError, AuthField, AuthHeading, AuthPrimaryButton, AuthShell } from "./AuthShell";
 import {
-  browserTimeZone,
-  countryOptions,
+  COUNTRY_OPTIONS,
+  DEFAULT_COUNTRY,
+  initialTimeZone,
   isPlaceholderName,
   ORGANIZATION_TYPE_OPTIONS,
-  timeZoneOptions,
+  US_TIME_ZONE_OPTIONS,
 } from "./onboardingOptions";
 
 /* Onboarding for a new organization (ORG-301): company details → plan → invite
@@ -156,15 +157,10 @@ const OnboardingWizard = ({
     name: isPlaceholderName(profile.name) ? "" : profile.name,
     type: profile.type ?? "",
     industry: profile.industry ?? "",
-    country: profile.country ?? "",
-    timeZone: profile.timeZone ?? browserTimeZone(),
+    country: DEFAULT_COUNTRY,
+    timeZone: initialTimeZone(profile.timeZone),
     eventsPerYear: profile.eventsPerYear === null ? "" : String(profile.eventsPerYear),
   }));
-  const countries = useMemo(() => countryOptions(), []);
-  const timeZones = useMemo(() => {
-    const zones = timeZoneOptions();
-    return details.timeZone && !zones.includes(details.timeZone) ? [details.timeZone, ...zones] : zones;
-  }, [details.timeZone]);
 
   const [inviteText, setInviteText] = useState("");
   const [inviteRole, setInviteRole] = useState<InvitableRole>("planner");
@@ -312,13 +308,12 @@ const OnboardingWizard = ({
               />
               <SelectField
                 id="onboarding-country"
-                label="Country (optional)"
+                label="Country"
                 value={details.country}
                 disabled={busy}
                 onChange={(value) => setDetail("country", value)}
               >
-                <option value="">Choose a country</option>
-                {countries.map((option) => (
+                {COUNTRY_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -326,15 +321,14 @@ const OnboardingWizard = ({
               </SelectField>
               <SelectField
                 id="onboarding-time-zone"
-                label="Time zone (optional)"
+                label="Time zone"
                 value={details.timeZone}
                 disabled={busy}
                 onChange={(value) => setDetail("timeZone", value)}
               >
-                <option value="">Choose a time zone</option>
-                {timeZones.map((zone) => (
-                  <option key={zone} value={zone}>
-                    {zone.replace(/_/g, " ")}
+                {US_TIME_ZONE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </SelectField>

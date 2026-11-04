@@ -53,7 +53,7 @@ describe('OnboardingWizard', () => {
     expect(screen.getByLabelText('Company name')).toHaveValue('')
     fireEvent.change(screen.getByLabelText('Company name'), { target: { value: '  Acme Events ' } })
     fireEvent.change(screen.getByLabelText('Organization type'), { target: { value: 'agency' } })
-    fireEvent.change(screen.getByLabelText('Country (optional)'), { target: { value: 'GB' } })
+    fireEvent.change(screen.getByLabelText('Time zone'), { target: { value: 'America/Chicago' } })
     fireEvent.change(screen.getByLabelText('Events per year (optional)'), { target: { value: '12' } })
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
@@ -62,8 +62,8 @@ describe('OnboardingWizard', () => {
       name: 'Acme Events',
       type: 'agency',
       industry: '',
-      country: 'GB',
-      timeZone: 'America/New_York',
+      country: 'US',
+      timeZone: 'America/Chicago',
       eventsPerYear: '12',
     })
 
@@ -75,6 +75,18 @@ describe('OnboardingWizard', () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/dashboard'))
     expect(mockComplete).toHaveBeenCalled()
     expect(mockInvite).not.toHaveBeenCalled()
+  })
+
+  it('offers only the United States and US time zones', () => {
+    render(<OnboardingWizard firstName="Pat" profile={profile({ timeZone: 'Asia/Dhaka', country: 'BD' })} navigate={jest.fn()} />)
+    const country = screen.getByLabelText('Country') as HTMLSelectElement
+    expect(Array.from(country.options).map((o) => o.value)).toEqual(['US'])
+    expect(country).toHaveValue('US')
+    const zone = screen.getByLabelText('Time zone') as HTMLSelectElement
+    expect(Array.from(zone.options).every((o) => /^(America|Pacific)\//.test(o.value))).toBe(true)
+    expect(zone.options).toHaveLength(7)
+    // A saved zone outside the US falls back to Eastern.
+    expect(zone).toHaveValue('America/New_York')
   })
 
   it('needs a company name before moving on', () => {
