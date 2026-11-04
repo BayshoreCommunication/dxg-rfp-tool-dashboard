@@ -225,8 +225,8 @@ const SignupPage = ({ navigate = replaceLocation }: { navigate?: Navigate }) => 
             <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <p className="text-[13.5px] font-medium leading-snug text-gray-600">
               Joining a company that already uses RFPilot with its own sign-in?{" "}
-              <Link href="/sign-in#company" className="font-bold text-primary hover:text-blue-500">
-                Sign in with your company
+              <Link href="/sign-in" className="font-bold text-primary hover:text-blue-500">
+                Sign in with your work email
               </Link>
             </p>
           </div>

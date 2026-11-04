@@ -1,6 +1,7 @@
 "use server";
 
 import { CredentialsSignin } from "next-auth";
+import { headers } from "next/headers";
 import QRCode from "qrcode";
 
 import { signIn, signOut } from "@/auth";
@@ -174,6 +175,40 @@ export async function signInAction(
     };
   }
   return { success: true, message: "Login successful" };
+}
+
+/* ─────────────────────────────────────────
+   SIGN IN — email first
+───────────────────────────────────────── */
+export type SignInMethodResult =
+  | { success: true; method: "company" | "password" }
+  | { success: false; message: string };
+
+/* The sign-in page asks for the email, then shows company SSO or the password
+   form. The backend limits this per visitor, so pass the visitor's IP along
+   (it trusts that header only with the BFF key). A backend that can't answer
+   means the password form: the person can still pick company sign-in. */
+export async function discoverSignInMethodAction(email: string): Promise<SignInMethodResult> {
+  const requestHeaders = await headers();
+  const clientIp =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip")?.trim() || "";
+  try {
+    const res = await fetchWithTimeout(`${AUTH_API_ORIGIN}/api/auth/sso/discover`, {
+      method: "POST",
+      headers: { ...authBffHeaders(), ...(clientIp ? { "x-rfpilot-client-ip": clientIp } : {}) },
+      body: JSON.stringify({ email }),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    if (res.status === 400) return { success: false, message: "Enter a valid email address." };
+    if (res.status === 429) return { success: false, message: "Too many attempts. Wait a few minutes and try again." };
+    if (res.ok && (data?.method === "company" || data?.method === "password")) {
+      return { success: true, method: data.method };
+    }
+    return { success: true, method: "password" };
+  } catch {
+    return { success: true, method: "password" };
+  }
 }
 
 /* ─────────────────────────────────────────
