@@ -126,20 +126,25 @@ const AcceptInvitePage = ({
   // Set when a Google, Microsoft or company sign-in came back with a refusal.
   initialErrorCode?: string;
 }) => {
-  const invitation = lookup.success ? lookup.data : undefined;
+  // Signing in sets cookies, which makes Next.js re-render this page on the
+  // server; that second lookup finds the invitation used (410). Keep the one
+  // the page opened with so the form doesn't flash an error before redirecting.
+  const [opened] = useState(lookup);
+  const invitation = opened.success ? opened.data : undefined;
   const [mode, setMode] = useState<Mode>(invitation?.accountExists ? "existing" : "register");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [joined, setJoined] = useState(false);
   const [twoFactor, setTwoFactor] = useState<PendingTwoFactorView | null>(null);
   const [deadLink, setDeadLink] = useState<InvitationErrorView | null>(() => {
-    if (!lookup.success) return lookup.error;
+    if (!opened.success) return opened.error;
     const fromRoundTrip = initialErrorCode ? invitationErrorView(initialErrorCode) : null;
     return fromRoundTrip?.kind === "dead-link" ? fromRoundTrip : null;
   });
   const [error, setError] = useState(() => {
-    if (!lookup.success || !initialErrorCode) return "";
+    if (!opened.success || !initialErrorCode) return "";
     const view = invitationErrorView(initialErrorCode);
     return view.kind === "form" ? view.message : "";
   });
@@ -209,6 +214,7 @@ const AcceptInvitePage = ({
         organizationName: invitation.organizationName,
       });
       if (result.success) {
+        setJoined(true);
         goToDashboard();
         return;
       }
@@ -339,8 +345,10 @@ const AcceptInvitePage = ({
           </div>
         ) : null}
 
-        <AuthPrimaryButton type="submit" disabled={submitting} className="mb-6">
-          {submitting
+        <AuthPrimaryButton type="submit" disabled={submitting || joined} className="mb-6">
+          {joined
+            ? "Opening your dashboard..."
+            : submitting
             ? registering
               ? "Creating account..."
               : "Signing in..."

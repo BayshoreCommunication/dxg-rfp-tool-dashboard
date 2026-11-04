@@ -119,6 +119,20 @@ describe('AcceptInvitePage', () => {
     })
   })
 
+  it('keeps the invitation on screen when the page re-renders after joining', async () => {
+    mockAccept.mockResolvedValue({ success: true, message: 'ok' })
+    const { rerender } = render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat Planner' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
+    expect(await screen.findByRole('button', { name: /Opening your dashboard/ })).toBeDisabled()
+    // Signing in refreshes the server component; its lookup now finds the invitation used.
+    rerender(<AcceptInvitePage token={TOKEN} lookup={dead('INVITATION_ALREADY_USED')} />)
+    expect(screen.queryByText(/couldn't load this invitation/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/already been used/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Opening your dashboard/ })).toBeInTheDocument()
+  })
+
   it('checks the form before calling the server', () => {
     render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat' } })
@@ -176,10 +190,11 @@ describe('AcceptInvitePage', () => {
   })
 
   it('offers company sign-in for the invited email only when the domain has a connection', () => {
-    const { rerender } = render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    const { unmount } = render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
     expect(screen.queryByRole('form', { name: /Sign in with your company/ })).not.toBeInTheDocument()
 
-    rerender(<AcceptInvitePage token={TOKEN} lookup={found(true)} />)
+    unmount()
+    render(<AcceptInvitePage token={TOKEN} lookup={found(true)} />)
     const form = screen.getByRole('form', { name: /Sign in with your company/ })
     expect(form).toHaveAttribute('action', '/api/sso/start')
     const values = Object.fromEntries(new FormData(form as HTMLFormElement).entries())
