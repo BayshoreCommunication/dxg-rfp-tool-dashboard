@@ -61,6 +61,9 @@ describe('SigninPage', () => {
     expect(screen.getByLabelText('Email Address')).toHaveValue('pat@acme.test')
     expect(screen.getByRole('link', { name: /Forgot password/i })).toHaveAttribute('href', '/forgot-password')
     expect(screen.queryByRole('form', { name: /Sign in with your company/ })).not.toBeInTheDocument()
+    // The email chose the password route, so the other providers step aside.
+    expect(screen.queryByRole('button', { name: /Continue with Google/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Continue with Microsoft/ })).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
     fireEvent.click(screen.getByRole('button', { name: /Sign In to Dashboard/ }))
@@ -89,6 +92,7 @@ describe('SigninPage', () => {
     expect(Object.fromEntries(new FormData(form).entries())).toEqual({ kind: 'company', email: 'pat@acme.test' })
     expect(screen.getByRole('button', { name: /Continue with company sign-in/ })).toBeInTheDocument()
     expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Continue with Google/ })).not.toBeInTheDocument()
   })
 
   it('lets a company SSO email use a password instead (the Owner is exempt from Require SSO)', async () => {

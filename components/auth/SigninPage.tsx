@@ -174,16 +174,22 @@ const SigninPage = ({
 
       <AuthError message={error} />
 
-      <GoogleButton
-        onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-        disabled={loading}
-        spacing="mb-4"
-      />
-      <MicrosoftButton href={ssoStartPath({ kind: "microsoft" })} />
+      {/* Google and Microsoft are a choice made instead of typing an email;
+          once the email has picked password or company sign-in, they go. */}
+      {stage === "email" ? (
+        <>
+          <GoogleButton
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            disabled={loading}
+            spacing="mb-4"
+          />
+          <MicrosoftButton href={ssoStartPath({ kind: "microsoft" })} />
 
-      <div className="mt-4">
-        <AuthDivider />
-      </div>
+          <div className="mt-4">
+            <AuthDivider />
+          </div>
+        </>
+      ) : null}
 
       {stage === "email" ? (
         <form onSubmit={handleContinue} noValidate>
@@ -234,7 +240,7 @@ const SigninPage = ({
               icon={<KeyRound className="h-5 w-5" strokeWidth={2} />}
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
-              placeholder="••••••••••"
+              placeholder="Your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
@@ -283,7 +289,7 @@ const SigninPage = ({
               href="/forgot-password"
               className="text-[13.5px] font-bold text-primary transition-colors hover:text-blue-500"
             >
-              Forgot Password?
+              Forgot password?
             </Link>
           </div>
 
