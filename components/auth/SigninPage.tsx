@@ -1,15 +1,18 @@
 "use client";
 
+import { signInAction } from "@/app/actions/auth";
 import type { PendingTwoFactorView } from "@/lib/auth/twoFactor";
 import { ssoErrorMessage, ssoStartPath } from "@/lib/auth/sso";
-import { Quote, ShieldCheck } from "lucide-react";
+import { Check, Eye, EyeOff, KeyRound, Mail, Quote, ShieldCheck } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
 import {
   AuthDivider,
   AuthError,
+  AuthField,
   AuthHeading,
+  AuthPrimaryButton,
   AuthShell,
   GoogleButton,
   MicrosoftButton,
@@ -41,32 +44,68 @@ const SigninAside = () => (
       </div>
       <div>
         <p className="text-[13px] font-bold uppercase tracking-wide text-white/70">
-          No passwords
+          Your way in
         </p>
         <p className="text-[14px] font-medium text-white/90">
-          Sign in with Google, Microsoft or your company&apos;s single sign-on.
+          Email and password, Google, Microsoft or your company&apos;s single sign-on.
         </p>
       </div>
     </div>
   </>
 );
 
+type Navigate = (path: string) => void;
+const replaceLocation: Navigate = (path) => window.location.replace(path);
+
 const SigninPage = ({
   authError,
   pendingTwoFactor,
+  navigate = replaceLocation,
 }: {
   // ?error= from Auth.js, the backend SSO callback or /api/sso/start.
   authError?: string;
   // A Google or Microsoft sign-in that stopped at 2FA lands here with the
   // step pending.
   pendingTwoFactor?: PendingTwoFactorView | null;
+  navigate?: Navigate;
 }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [twoFactor, setTwoFactor] = useState<PendingTwoFactorView | null>(
     pendingTwoFactor ?? null,
   );
   const [error, setError] = useState(() => (authError ? ssoErrorMessage(authError) : ""));
 
-  const goToDashboard = () => window.location.replace("/dashboard");
+  const goToDashboard = () => navigate("/dashboard");
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await signInAction(email, password, rememberMe);
+      if (res.twoFactor) {
+        setPassword("");
+        setTwoFactor(res.twoFactor);
+      } else if (!res.success) {
+        setError(res.message || "Login failed. Please try again.");
+      } else {
+        goToDashboard();
+      }
+    } catch {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const leaveTwoFactor = () => {
     setTwoFactor(null);
@@ -82,6 +121,7 @@ const SigninPage = ({
           pending={twoFactor}
           onCancel={leaveTwoFactor}
           onSignedIn={goToDashboard}
+          accountLabel={email || undefined}
         />
       </AuthShell>
     );
@@ -91,13 +131,14 @@ const SigninPage = ({
     <AuthShell aside={<SigninAside />}>
       <AuthHeading
         title="Welcome Back"
-        subtitle="Sign in with the account you use at work."
+        subtitle="Enter your details to access your account"
       />
 
       <AuthError message={error} />
 
       <GoogleButton
         onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+        disabled={loading}
         spacing="mb-4"
       />
       <MicrosoftButton href={ssoStartPath({ kind: "microsoft" })} />
@@ -106,7 +147,85 @@ const SigninPage = ({
         <AuthDivider />
       </div>
 
-      <CompanySignInForm />
+      <form onSubmit={handleSignIn}>
+        <div className="mb-6 space-y-4">
+          <AuthField
+            id="sign-in-email"
+            label="Email Address"
+            icon={<Mail className="h-5 w-5" strokeWidth={2} />}
+            type="email"
+            autoComplete="email"
+            placeholder="name@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+          />
+          <AuthField
+            id="sign-in-password"
+            label="Password"
+            icon={<KeyRound className="h-5 w-5" strokeWidth={2} />}
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            placeholder="••••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            trailing={
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword(!showPassword)}
+                className="flex items-center justify-center px-4 text-gray-400 transition-colors hover:text-primary focus:outline-none"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" strokeWidth={2} />
+                ) : (
+                  <Eye className="h-5 w-5" strokeWidth={2} />
+                )}
+              </button>
+            }
+          />
+        </div>
+
+        {/* Options Row */}
+        <div className="mb-8 flex items-center justify-between px-2">
+          <label className="group flex cursor-pointer items-center gap-2.5">
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded-[6px] border-[1.5px] transition-all duration-300 ${
+                rememberMe
+                  ? "border-primary bg-primary shadow-[0_2px_8px_rgba(47,198,245,0.3)]"
+                  : "border-gray-200 bg-white group-hover:border-gray-300"
+              }`}
+              onClick={() => setRememberMe(!rememberMe)}
+            >
+              <Check
+                className={`h-3 w-3 text-white transition-transform duration-300 ${
+                  rememberMe ? "scale-100 opacity-100" : "scale-50 opacity-0"
+                }`}
+                strokeWidth={4}
+              />
+            </div>
+            <span className="select-none text-[13.5px] font-bold text-gray-500 transition-colors group-hover:text-gray-700">
+              Remember me
+            </span>
+          </label>
+
+          <Link
+            href="/forgot-password"
+            className="text-[13.5px] font-bold text-primary transition-colors hover:text-blue-500"
+          >
+            Forgot Password?
+          </Link>
+        </div>
+
+        <AuthPrimaryButton type="submit" disabled={loading} className="mb-6">
+          {loading ? "Signing in..." : "Sign In to Dashboard"}
+        </AuthPrimaryButton>
+      </form>
+
+      <AuthDivider />
+
+      <CompanySignInForm disabled={loading} />
 
       <p className="text-center text-[13.5px] font-bold text-gray-400">
         Don&apos;t have an account?{" "}

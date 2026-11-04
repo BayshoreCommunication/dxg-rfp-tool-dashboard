@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { signIn } from 'next-auth/react'
 import SigninPage from './SigninPage'
 import SignupPage from './SignupPage'
@@ -12,16 +12,26 @@ jest.mock('next-auth/react', () => ({
   signIn: jest.fn(),
 }))
 
+const mockSignIn = jest.fn()
+const mockSendOtp = jest.fn()
+const mockVerifyOtp = jest.fn()
+const mockSignUp = jest.fn()
 jest.mock('@/app/actions/auth', () => ({
+  signInAction: (...a: unknown[]) => mockSignIn(...a),
+  sendSignupOtpAction: (...a: unknown[]) => mockSendOtp(...a),
+  verifySignupOtpAction: (...a: unknown[]) => mockVerifyOtp(...a),
+  signUpAction: (...a: unknown[]) => mockSignUp(...a),
   startTwoFactorEnrolmentAction: jest.fn(() => new Promise(() => {})),
   completeTwoFactorAction: jest.fn(),
   cancelTwoFactorAction: jest.fn(),
 }))
 
+const replace = jest.fn()
+
 beforeEach(() => jest.clearAllMocks())
 
 describe('SigninPage', () => {
-  it('offers Google, Microsoft and company sign-in, and no password', () => {
+  it('offers email and password, Google, Microsoft and company sign-in', () => {
     render(<SigninPage />)
     expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Continue with Microsoft/ })).toHaveAttribute(
@@ -29,9 +39,30 @@ describe('SigninPage', () => {
       '/api/sso/start?kind=microsoft',
     )
     expect(screen.getByRole('form', { name: /Sign in with your company/ })).toHaveAttribute('action', '/api/sso/start')
-    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Remember me/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Forgot password/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password')
+    expect(screen.getByText(/Remember me/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Forgot password/i })).toHaveAttribute('href', '/forgot-password')
+  })
+
+  it('signs in with email and password', async () => {
+    mockSignIn.mockResolvedValue({ success: true, message: 'ok' })
+    render(<SigninPage navigate={replace} />)
+    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'pat@acme.test' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: /Sign In to Dashboard/ }))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'))
+    expect(mockSignIn).toHaveBeenCalledWith('pat@acme.test', 'correct-horse', false)
+  })
+
+  it('shows a refused password sign-in as a message', async () => {
+    mockSignIn.mockResolvedValue({ success: false, code: 'WRONG_PASSWORD', message: 'Incorrect password. Please try again.' })
+    render(<SigninPage navigate={replace} />)
+    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'pat@acme.test' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'nope' } })
+    fireEvent.click(screen.getByRole('button', { name: /Sign In to Dashboard/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Incorrect password/)
+    expect(replace).not.toHaveBeenCalled()
   })
 
   it('starts Google through NextAuth', () => {
@@ -83,7 +114,7 @@ describe('SigninPage', () => {
 })
 
 describe('SignupPage', () => {
-  it('signs up with Google or Microsoft and points SSO companies to sign-in', () => {
+  it('offers email sign-up, Google, Microsoft and a pointer to company sign-in', () => {
     render(<SignupPage />)
     fireEvent.click(screen.getByRole('button', { name: /Sign up with Google/ }))
     expect(signIn).toHaveBeenCalledWith('google', { callbackUrl: '/dashboard' })
@@ -92,7 +123,50 @@ describe('SignupPage', () => {
       '/api/sso/start?kind=microsoft',
     )
     expect(screen.getByRole('link', { name: /Sign in with your company/ })).toHaveAttribute('href', '/sign-in#company')
-    expect(screen.getByText(/Company already uses RFPilot SSO/)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/password|email/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Work email')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
+  })
+
+  it('verifies the email with a code, then creates the account and signs in', async () => {
+    mockSendOtp.mockResolvedValue({ success: true, message: 'sent' })
+    mockVerifyOtp.mockResolvedValue({ success: true, message: 'verified' })
+    mockSignUp.mockResolvedValue({ success: true, message: 'created' })
+    mockSignIn.mockResolvedValue({ success: true, message: 'ok' })
+    render(<SignupPage navigate={replace} />)
+
+    fireEvent.change(screen.getByLabelText('Work email'), { target: { value: ' pat@acme.test ' } })
+    fireEvent.click(screen.getByRole('button', { name: /Continue with email/ }))
+    await screen.findByRole('heading', { name: 'Verify your email' })
+    expect(mockSendOtp).toHaveBeenCalledWith('pat@acme.test')
+
+    fireEvent.change(screen.getByLabelText('Verification code'), { target: { value: '12a3456' } })
+    expect(screen.getByLabelText('Verification code')).toHaveValue('123456')
+    fireEvent.click(screen.getByRole('button', { name: /Verify code/ }))
+    await screen.findByRole('heading', { name: 'Almost done' })
+    expect(mockVerifyOtp).toHaveBeenCalledWith('pat@acme.test', '123456')
+
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat Morgan' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse-9' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account/ }))
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard'))
+    expect(mockSignUp).toHaveBeenCalledWith({ name: 'Pat Morgan', email: 'pat@acme.test', password: 'correct-horse-9' })
+    expect(mockSignIn).toHaveBeenCalledWith('pat@acme.test', 'correct-horse-9', false)
+  })
+
+  it('stops an unusable email before the server', () => {
+    render(<SignupPage />)
+    fireEvent.change(screen.getByLabelText('Work email'), { target: { value: 'pat' } })
+    fireEvent.click(screen.getByRole('button', { name: /Continue with email/ }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/work email/)
+    expect(mockSendOtp).not.toHaveBeenCalled()
+  })
+
+  it('shows the server refusal for a taken email', async () => {
+    mockSendOtp.mockResolvedValue({ success: false, message: 'An account with this email already exists' })
+    render(<SignupPage />)
+    fireEvent.change(screen.getByLabelText('Work email'), { target: { value: 'pat@acme.test' } })
+    fireEvent.click(screen.getByRole('button', { name: /Continue with email/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/)
+    expect(screen.queryByLabelText('Verification code')).not.toBeInTheDocument()
   })
 })

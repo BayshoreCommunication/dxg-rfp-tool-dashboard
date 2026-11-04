@@ -17,15 +17,23 @@ jest.mock('next-auth/react', () => ({
   signIn: jest.fn(),
 }))
 
+const mockAccept = jest.fn()
 const mockStartGoogle = jest.fn()
 
 jest.mock('@/app/actions/acceptInvitation', () => ({
+  acceptInvitationAction: (...a: unknown[]) => mockAccept(...a),
   startGoogleInvitationAction: (...a: unknown[]) => mockStartGoogle(...a),
+}))
+
+jest.mock('@/app/actions/auth', () => ({
+  startTwoFactorEnrolmentAction: jest.fn(() => new Promise(() => {})),
+  completeTwoFactorAction: jest.fn(),
+  cancelTwoFactorAction: jest.fn(),
 }))
 
 const TOKEN = 'q3Jf8w_-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789'
 
-const found = (companySso = false): InvitationLookupResult => ({
+const found = (companySso = false, accountExists = false): InvitationLookupResult => ({
   success: true,
   message: 'ok',
   data: {
@@ -35,7 +43,7 @@ const found = (companySso = false): InvitationLookupResult => ({
     inviterName: 'Olivia Owner',
     teamName: 'East Coast',
     expiresAt: '2026-11-10T00:00:00.000Z',
-    accountExists: false,
+    accountExists,
     companySso,
   },
 })
@@ -57,10 +65,10 @@ describe('AcceptInvitePage', () => {
     expect(screen.getAllByText(/new\.planner@acme\.test/).length).toBeGreaterThan(0)
   })
 
-  it('has no password form any more', () => {
+  it('shows the invited email locked in the form', () => {
     render(<AcceptInvitePage token={TOKEN} lookup={found()} />)
-    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /forgot/i })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Email Address')).toHaveValue('new.planner@acme.test')
+    expect(screen.getByLabelText('Email Address')).toBeDisabled()
   })
 
   it.each([
@@ -74,6 +82,68 @@ describe('AcceptInvitePage', () => {
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Go to sign in/ })).toHaveAttribute('href', '/sign-in')
     expect(screen.queryByText(code)).not.toBeInTheDocument()
+  })
+
+  it('creates an account with the invited email', async () => {
+    mockAccept.mockReturnValue(new Promise(() => {}))
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat Planner' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
+    await waitFor(() => expect(mockAccept).toHaveBeenCalled())
+    expect(mockAccept).toHaveBeenCalledWith({
+      token: TOKEN,
+      mode: 'register',
+      email: 'new.planner@acme.test',
+      name: 'Pat Planner',
+      password: 'correct-horse',
+      organizationName: 'Acme Events',
+    })
+  })
+
+  it('checks the form before calling the server', () => {
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'other-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/don't match/)
+    expect(mockAccept).not.toHaveBeenCalled()
+  })
+
+  it('signs an existing account in and switches forms when the account exists', async () => {
+    const error = invitationErrorView('ACCOUNT_EXISTS')
+    mockAccept.mockResolvedValue({ success: false, message: error.message, error })
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/)
+    expect(screen.getByRole('button', { name: /Sign in and join/ })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument()
+  })
+
+  it('turns a dead link found during accept into the dead link page', async () => {
+    const error = invitationErrorView('INVITATION_REVOKED')
+    mockAccept.mockResolvedValue({ success: false, message: error.message, error })
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false, true)} />)
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'pw' } })
+    fireEvent.click(screen.getByRole('button', { name: /Sign in and join/ }))
+    expect(await screen.findByRole('heading', { name: /withdrawn/ })).toBeInTheDocument()
+  })
+
+  it('continues to the two-factor step when the organization requires it', async () => {
+    mockAccept.mockResolvedValue({
+      success: false,
+      message: '2fa',
+      twoFactor: { nextStep: 'two_factor_enrolment', expiresAt: Date.now() + 600_000 },
+    })
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false, true)} />)
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'pw' } })
+    fireEvent.click(screen.getByRole('button', { name: /Sign in and join/ }))
+    expect(await screen.findByRole('heading', { name: /Set up two-factor/ })).toBeInTheDocument()
   })
 
   it('parks the invitation before continuing with Google', async () => {
