@@ -1,6 +1,6 @@
 /* Accept-invite page (ORG-205): the parts with no I/O. */
 
-import { hasSsoErrorMessage, ssoErrorMessage } from "./sso";
+import { hasSsoErrorMessage, ORGANIZATION_SETUP_REQUIRED_MESSAGE, ssoErrorMessage } from "./sso";
 
 export type InvitationRole =
   | "owner"
@@ -86,7 +86,8 @@ export const ACCEPT_ERROR_MESSAGES: Record<string, string> = {
     "Your organization requires you to sign in with your company account. Use \"Sign in with your company\".",
   ALREADY_MEMBER: "You're already a member of this organization. Sign in to continue.",
   EMAIL_IN_ANOTHER_ORGANIZATION: "This email already belongs to another organization, so it can't join this one. Contact your organization's admin.",
-  LEGACY_ACCOUNT_PENDING_PLACEMENT: "Your account is being moved by our support team. Try again later or contact support.",
+  LEGACY_ACCOUNT_PENDING_PLACEMENT: ORGANIZATION_SETUP_REQUIRED_MESSAGE,
+  ORGANIZATION_SETUP_REQUIRED: ORGANIZATION_SETUP_REQUIRED_MESSAGE,
   MEMBER_DEACTIVATED: "Your membership in this organization was deactivated. Ask your organization's admin to reactivate it.",
   RATE_LIMITED: "Too many attempts. Wait a few minutes and try again.",
   MEMBERSHIP_INACTIVE: "Your organization membership isn't active. Contact your organization's admin.",

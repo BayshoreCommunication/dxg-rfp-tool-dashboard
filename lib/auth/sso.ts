@@ -112,6 +112,11 @@ export const hashSsoBind = async (value: string) =>
 
 /* ───────── Messages ───────── */
 
+/* Accounts from before Organization Accounts wait for support to place them in an organization;
+   until then every sign-in path is refused with ORGANIZATION_SETUP_REQUIRED. */
+export const ORGANIZATION_SETUP_REQUIRED_MESSAGE =
+  "Your account isn't part of an organization yet. Contact RFPilot support to create a new organization for you or to add you to your team's organization.";
+
 /* Every code that can come back from the federated flow, through
    /sign-in?error=, /sso/complete or the Google callback. Raw codes never
    reach the screen. */
@@ -163,6 +168,7 @@ export const SSO_ERROR_MESSAGES: Record<string, string> = {
   SSO_EMAIL_INVALID: "Enter your work email address, like name@company.com.",
   SSO_INVALID_REQUEST: "That sign-in link isn't valid. Please start again.",
   // Shared with the other sign-in paths
+  ORGANIZATION_SETUP_REQUIRED: ORGANIZATION_SETUP_REQUIRED_MESSAGE,
   USER_BLOCKED: "Your account has been blocked. Please contact support.",
   MEMBERSHIP_INACTIVE:
     "Your organization membership isn't active. Contact your organization's admin.",

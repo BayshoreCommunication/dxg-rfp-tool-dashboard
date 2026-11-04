@@ -26,6 +26,7 @@ describe('ssoErrorMessage', () => {
     'MICROSOFT_EMAIL_UNVERIFIED',
     'EMAIL_IN_ANOTHER_ORGANIZATION',
     'PASSWORD_SIGN_IN_DISABLED',
+    'ORGANIZATION_SETUP_REQUIRED',
   ]
 
   it.each(Object.keys(SSO_ERROR_MESSAGES))('maps %s to a human message without the raw code', (code) => {
@@ -41,6 +42,7 @@ describe('ssoErrorMessage', () => {
   it('never names the organization for SSO_NOT_CONFIGURED or SSO_REQUIRED', () => {
     expect(ssoErrorMessage('SSO_NOT_CONFIGURED')).not.toMatch(/organization/i)
     expect(ssoErrorMessage('SSO_REQUIRED')).toMatch(/Sign in with your company/)
+    expect(ssoErrorMessage('ORGANIZATION_SETUP_REQUIRED')).toMatch(/isn't part of an organization yet.*Contact RFPilot support/)
   })
 
   it('falls back for unknown and inherited keys', () => {
