@@ -1,6 +1,7 @@
 "use server";
 
 import { CredentialsSignin } from "next-auth";
+import { headers } from "next/headers";
 import QRCode from "qrcode";
 
 import { signIn, signOut } from "@/auth";
@@ -23,7 +24,7 @@ import {
 } from "@/lib/server/twoFactorPending";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 import { revokeCurrentBackendSession } from "@/lib/server/backendLogout";
-import { sanitizeHandoff, ssoErrorMessage } from "@/lib/auth/sso";
+import { hasSsoErrorMessage, sanitizeHandoff, ssoErrorMessage } from "@/lib/auth/sso";
 
 import { BACKEND_URL } from "@/lib/config";
 
@@ -31,8 +32,90 @@ const getErrorMessage = (error: unknown, fallback = "Network error") =>
   error instanceof Error && error.message ? error.message : fallback;
 
 /* ─────────────────────────────────────────
+   SIGNUP — Step 1: Send OTP (spam check)
+───────────────────────────────────────── */
+export async function sendSignupOtpAction(email: string) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "OTP sent" : "Failed to send OTP"),
+    };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+}
+
+/* ─────────────────────────────────────────
+   SIGNUP — Step 2: Verify OTP
+───────────────────────────────────────── */
+export async function verifySignupOtpAction(email: string, otp: string) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message:
+        data.message || (res.ok ? "Email verified" : "Verification failed"),
+    };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+}
+
+/* ─────────────────────────────────────────
+   SIGNUP — Step 3: Register account
+───────────────────────────────────────── */
+export async function signUpAction(payload: {
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  password: string;
+}) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
+      method: "POST",
+      headers: authBffHeaders(),
+      body: JSON.stringify({ ...payload, createSession: false }),
+      cache: "no-store",
+    });
+    const data = await res.json();
+    if (!res.ok)
+      return { success: false, message: data.message || "Registration failed" };
+    return {
+      success: true,
+      user: data.user,
+      message: data.message,
+    };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+}
+
+/* ─────────────────────────────────────────
    SIGN IN
 ───────────────────────────────────────── */
+const SIGN_IN_ERROR_MESSAGES: Record<string, string> = {
+  USER_NOT_FOUND: "No account found with this email.",
+  WRONG_PASSWORD: "Incorrect password. Please try again.",
+  USER_BLOCKED: "Your account has been blocked. Please contact support.",
+  MEMBERSHIP_INACTIVE: "Your organization membership isn't active. Contact your organization's admin.",
+  RATE_LIMITED: "Too many attempts. Wait a few minutes and try again.",
+  server_unavailable: "Could not reach the server. Please try again.",
+};
+
 export type SignInActionResult = {
   success: boolean;
   message: string;
@@ -58,6 +141,75 @@ const signInFailureCode = (
   }
   return null;
 };
+
+export async function signInAction(
+  email: string,
+  password: string,
+  rememberMe = false,
+): Promise<SignInActionResult> {
+  const capture = await captureSignInOutcome(() =>
+    signIn("credentials", {
+      email,
+      password,
+      rememberMe: rememberMe ? "true" : "false",
+      redirect: false,
+    }),
+  );
+  const code = signInFailureCode(capture);
+  if (code === TWO_FACTOR_REQUIRED_CODE && capture.outcome.twoFactor) {
+    return {
+      success: false,
+      code,
+      message: "Enter your verification code to finish signing in.",
+      twoFactor: capture.outcome.twoFactor,
+    };
+  }
+  if (code) {
+    return {
+      success: false,
+      code,
+      // e.g. SSO_REQUIRED when the organization makes members use company sign-in.
+      message:
+        SIGN_IN_ERROR_MESSAGES[code] ??
+        (hasSsoErrorMessage(code) ? ssoErrorMessage(code) : "Login failed. Please try again."),
+    };
+  }
+  return { success: true, message: "Login successful" };
+}
+
+/* ─────────────────────────────────────────
+   SIGN IN — email first
+───────────────────────────────────────── */
+export type SignInMethodResult =
+  | { success: true; method: "company" | "password" }
+  | { success: false; message: string };
+
+/* The sign-in page asks for the email, then shows company SSO or the password
+   form. The backend limits this per visitor, so pass the visitor's IP along
+   (it trusts that header only with the BFF key). A backend that can't answer
+   means the password form: the person can still pick company sign-in. */
+export async function discoverSignInMethodAction(email: string): Promise<SignInMethodResult> {
+  const requestHeaders = await headers();
+  const clientIp =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip")?.trim() || "";
+  try {
+    const res = await fetchWithTimeout(`${AUTH_API_ORIGIN}/api/auth/sso/discover`, {
+      method: "POST",
+      headers: { ...authBffHeaders(), ...(clientIp ? { "x-rfpilot-client-ip": clientIp } : {}) },
+      body: JSON.stringify({ email }),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    if (res.status === 400) return { success: false, message: "Enter a valid email address." };
+    if (res.status === 429) return { success: false, message: "Too many attempts. Wait a few minutes and try again." };
+    if (res.ok && (data?.method === "company" || data?.method === "password")) {
+      return { success: true, method: data.method };
+    }
+    return { success: true, method: "password" };
+  } catch {
+    return { success: true, method: "password" };
+  }
+}
 
 /* ─────────────────────────────────────────
    SIGN IN — Microsoft / company SSO (D3)
@@ -213,6 +365,82 @@ export async function completeTwoFactorAction(input: {
 export async function cancelTwoFactorAction() {
   await clearPendingTwoFactor();
   return { success: true, message: "Cancelled" };
+}
+
+/* ─────────────────────────────────────────
+   FORGOT PASSWORD — Step 1: Send reset OTP
+───────────────────────────────────────── */
+export async function sendForgotPasswordOtpAction(email: string) {
+  try {
+    const res = await fetch(
+      `${BACKEND_URL}/api/auth/forgot-password/send-otp`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        cache: "no-store",
+      },
+    );
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message:
+        data.message ||
+        (res.ok ? "Reset code sent" : "Failed to send reset code"),
+    };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+}
+
+/* ─────────────────────────────────────────
+   FORGOT PASSWORD — Step 2: Verify reset OTP
+───────────────────────────────────────── */
+export async function verifyForgotPasswordOtpAction(
+  email: string,
+  otp: string,
+) {
+  try {
+    const res = await fetch(
+      `${BACKEND_URL}/api/auth/forgot-password/verify-otp`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+        cache: "no-store",
+      },
+    );
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message: data.message || (res.ok ? "OTP verified" : "Invalid OTP"),
+    };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+}
+
+/* ─────────────────────────────────────────
+   FORGOT PASSWORD — Step 3: Reset password
+───────────────────────────────────────── */
+export async function resetPasswordAction(email: string, newPassword: string) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/forgot-password/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, newPassword }),
+      cache: "no-store",
+    });
+    const data = await res.json();
+    return {
+      success: res.ok,
+      message:
+        data.message ||
+        (res.ok ? "Password reset" : "Failed to reset password"),
+    };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
+  }
 }
 
 /* ─────────────────────────────────────────

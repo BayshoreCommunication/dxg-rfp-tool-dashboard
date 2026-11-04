@@ -17,15 +17,23 @@ jest.mock('next-auth/react', () => ({
   signIn: jest.fn(),
 }))
 
+const mockAccept = jest.fn()
 const mockStartGoogle = jest.fn()
 
 jest.mock('@/app/actions/acceptInvitation', () => ({
+  acceptInvitationAction: (...a: unknown[]) => mockAccept(...a),
   startGoogleInvitationAction: (...a: unknown[]) => mockStartGoogle(...a),
+}))
+
+jest.mock('@/app/actions/auth', () => ({
+  startTwoFactorEnrolmentAction: jest.fn(() => new Promise(() => {})),
+  completeTwoFactorAction: jest.fn(),
+  cancelTwoFactorAction: jest.fn(),
 }))
 
 const TOKEN = 'q3Jf8w_-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789'
 
-const found = (companySso = false): InvitationLookupResult => ({
+const found = (companySso = false, accountExists = false): InvitationLookupResult => ({
   success: true,
   message: 'ok',
   data: {
@@ -35,7 +43,7 @@ const found = (companySso = false): InvitationLookupResult => ({
     inviterName: 'Olivia Owner',
     teamName: 'East Coast',
     expiresAt: '2026-11-10T00:00:00.000Z',
-    accountExists: false,
+    accountExists,
     companySso,
   },
 })
@@ -51,16 +59,34 @@ describe('AcceptInvitePage', () => {
   it('shows the organization, inviter, role, team and invited email', () => {
     render(<AcceptInvitePage token={TOKEN} lookup={found()} />)
     expect(screen.getAllByText('Acme Events').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Olivia Owner invited you/)).toBeInTheDocument()
+    expect(
+      screen.getByText((_, el) => el?.tagName === 'P' && /^Olivia Owner invited you to join Acme Events as Planner on the East Coast team\.$/.test(el.textContent ?? '')),
+    ).toBeInTheDocument()
     expect(screen.getAllByText('Planner').length).toBeGreaterThan(0)
     expect(screen.getAllByText('East Coast').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/new\.planner@acme\.test/).length).toBeGreaterThan(0)
   })
 
-  it('has no password form any more', () => {
-    render(<AcceptInvitePage token={TOKEN} lookup={found()} />)
-    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /forgot/i })).not.toBeInTheDocument()
+  it('names the invited email and expiry instead of an email field', () => {
+    const { container } = render(<AcceptInvitePage token={TOKEN} lookup={found()} />)
+    expect(screen.getByText(/expires Nov 10/)).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /email/i })).not.toBeInTheDocument()
+    // Password managers save the new password against the invited email.
+    const username = container.querySelector('input[autocomplete="username"]')
+    expect(username).toHaveValue('new.planner@acme.test')
+    expect(username).not.toBeDisabled()
+  })
+
+  it('follows the lookup and offers no switch between creating and signing in', () => {
+    const { unmount } = render(<AcceptInvitePage token={TOKEN} lookup={found(false, false)} />)
+    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Confirm password')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Sign in instead/ })).not.toBeInTheDocument()
+    unmount()
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false, true)} />)
+    expect(screen.getByRole('heading', { name: 'Sign in to join' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Create an account/ })).not.toBeInTheDocument()
   })
 
   it.each([
@@ -74,6 +100,79 @@ describe('AcceptInvitePage', () => {
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Go to sign in/ })).toHaveAttribute('href', '/sign-in')
     expect(screen.queryByText(code)).not.toBeInTheDocument()
+  })
+
+  it('creates an account with the invited email', async () => {
+    mockAccept.mockReturnValue(new Promise(() => {}))
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat Planner' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
+    await waitFor(() => expect(mockAccept).toHaveBeenCalled())
+    expect(mockAccept).toHaveBeenCalledWith({
+      token: TOKEN,
+      mode: 'register',
+      email: 'new.planner@acme.test',
+      name: 'Pat Planner',
+      password: 'correct-horse',
+      organizationName: 'Acme Events',
+    })
+  })
+
+  it('keeps the invitation on screen when the page re-renders after joining', async () => {
+    mockAccept.mockResolvedValue({ success: true, message: 'ok' })
+    const { rerender } = render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat Planner' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
+    expect(await screen.findByRole('button', { name: /Opening your dashboard/ })).toBeDisabled()
+    // Signing in refreshes the server component; its lookup now finds the invitation used.
+    rerender(<AcceptInvitePage token={TOKEN} lookup={dead('INVITATION_ALREADY_USED')} />)
+    expect(screen.queryByText(/couldn't load this invitation/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/already been used/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Opening your dashboard/ })).toBeInTheDocument()
+  })
+
+  it('checks the form before calling the server', () => {
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/at least 8 characters/)
+    expect(mockAccept).not.toHaveBeenCalled()
+  })
+
+  it('signs an existing account in and switches forms when the account exists', async () => {
+    const error = invitationErrorView('ACCOUNT_EXISTS')
+    mockAccept.mockResolvedValue({ success: false, message: error.message, error })
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/)
+    expect(screen.getByRole('button', { name: /Sign in and join/ })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument()
+  })
+
+  it('turns a dead link found during accept into the dead link page', async () => {
+    const error = invitationErrorView('INVITATION_REVOKED')
+    mockAccept.mockResolvedValue({ success: false, message: error.message, error })
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false, true)} />)
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'pw' } })
+    fireEvent.click(screen.getByRole('button', { name: /Sign in and join/ }))
+    expect(await screen.findByRole('heading', { name: /withdrawn/ })).toBeInTheDocument()
+  })
+
+  it('continues to the two-factor step when the organization requires it', async () => {
+    mockAccept.mockResolvedValue({
+      success: false,
+      message: '2fa',
+      twoFactor: { nextStep: 'two_factor_enrolment', expiresAt: Date.now() + 600_000 },
+    })
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false, true)} />)
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'pw' } })
+    fireEvent.click(screen.getByRole('button', { name: /Sign in and join/ }))
+    expect(await screen.findByRole('heading', { name: /Set up two-factor/ })).toBeInTheDocument()
   })
 
   it('parks the invitation before continuing with Google', async () => {
@@ -91,10 +190,11 @@ describe('AcceptInvitePage', () => {
   })
 
   it('offers company sign-in for the invited email only when the domain has a connection', () => {
-    const { rerender } = render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
+    const { unmount } = render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
     expect(screen.queryByRole('form', { name: /Sign in with your company/ })).not.toBeInTheDocument()
 
-    rerender(<AcceptInvitePage token={TOKEN} lookup={found(true)} />)
+    unmount()
+    render(<AcceptInvitePage token={TOKEN} lookup={found(true)} />)
     const form = screen.getByRole('form', { name: /Sign in with your company/ })
     expect(form).toHaveAttribute('action', '/api/sso/start')
     const values = Object.fromEntries(new FormData(form as HTMLFormElement).entries())

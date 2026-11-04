@@ -9,8 +9,8 @@ declare module "next-auth" {
     };
     authError?: string;
     backendAccessExpired?: boolean;
-    /** The organization still has its sign-up placeholder name and the user may rename it. */
-    needsCompanyName?: boolean;
+    /** The organization hasn't finished onboarding and this user (Owner or Admin) can finish it. */
+    needsOnboarding?: boolean;
   }
 
   interface User {
@@ -34,6 +34,6 @@ declare module "next-auth/jwt" {
     refreshTokenExpiresAt?: number;
     sessionId?: string;
     authError?: string;
-    needsCompanyName?: boolean;
+    needsOnboarding?: boolean;
   }
 }

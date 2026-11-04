@@ -20,8 +20,9 @@ import {
   TWO_FACTOR_REQUIRED_CODE,
   twoFactorErrorRequiresRestart,
 } from "@/lib/auth/twoFactor";
+import { sanitizeInvitationToken } from "@/lib/auth/invitation";
 import { sanitizeHandoff } from "@/lib/auth/sso";
-import { COMPANY_NAMED_UPDATE, readNeedsCompanyName } from "@/lib/auth/companyName";
+import { ONBOARDING_DONE_UPDATE, readNeedsOnboarding } from "@/lib/auth/onboarding";
 import {
   clearPendingTwoFactor,
   readPendingTwoFactor,
@@ -39,13 +40,13 @@ class DashboardCredentialsSignin extends CredentialsSignin {
   }
 }
 
-// A sign-in made with rememberMe false ends this long after sign-in (enforced
-// in the jwt callback). Google, Microsoft and company SSO sign-ins always get
-// the full session.maxAge (30 days); the short form is kept for 2FA steps
-// still pending from before password sign-in was removed.
+// Without "Remember me", a password session ends this long after sign-in
+// (enforced in the jwt callback). With it, the session runs the full
+// session.maxAge (30 days). Google, Microsoft and company SSO sign-ins always
+// get the full maxAge.
 const SHORT_SESSION_MS = 24 * 60 * 60 * 1000;
 
-type SignInProvider = "google" | "two-factor" | "sso";
+type SignInProvider = "credentials" | "google" | "two-factor" | "invitation" | "sso";
 
 const logSignInFailure = (
   provider: SignInProvider,
@@ -139,6 +140,10 @@ const unreachable = (
   throw new DashboardCredentialsSignin("server_unavailable");
 };
 
+const ORGANIZATION_NAME_LIMIT = 120;
+const cleanOrganizationName = (value: unknown) =>
+  typeof value === "string" ? value.trim().slice(0, ORGANIZATION_NAME_LIMIT) : "";
+
 export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   trustHost: true,
@@ -170,6 +175,59 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
           access_type: "offline",
           response_type: "code",
         },
+      },
+    }),
+    Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember me", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) {
+          logSignInFailure(
+            "credentials",
+            credentials?.email ?? "<missing email>",
+            "email or password missing from request",
+          );
+          return null;
+        }
+        const rememberMe = credentials.rememberMe === "true";
+
+        try {
+          const { response, data } = await postToBackend("/api/auth/login", {
+            email: credentials.email,
+            password: credentials.password,
+          });
+          if (!response.ok) {
+            const errorCode = backendErrorCode(data, response.status, "credentials");
+            logSignInFailure(
+              "credentials",
+              credentials.email,
+              "backend rejected login",
+              {
+                status: response.status,
+                errorCode,
+                message: data?.message,
+              },
+            );
+            throw new DashboardCredentialsSignin(errorCode);
+          }
+          // ORG-303/304: password accepted, second factor still to come.
+          await stopAtSecondFactor(data, { rememberMe });
+          if (!hasBackendSession(data)) {
+            logSignInFailure(
+              "credentials",
+              credentials.email,
+              "backend response missing user/accessToken/refreshToken",
+              sessionShapeDetail(data),
+            );
+            return null;
+          }
+          return sessionUser(data, rememberMe);
+        } catch (error) {
+          return unreachable("credentials", credentials.email, "/api/auth/login", error);
+        }
       },
     }),
     // Second step of a sign-in that stopped at 2FA. The challenge token is
@@ -236,6 +294,63 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
           return sessionUser(data, pending.rememberMe);
         } catch (error) {
           return unreachable("two-factor", "<pending challenge>", path, error);
+        }
+      },
+    }),
+    // ORG-205: accept an invitation and sign in with the session it returns.
+    // The invitation token is never logged.
+    Credentials({
+      id: "invitation",
+      name: "Invitation",
+      credentials: {
+        token: { label: "Invitation", type: "text" },
+        mode: { label: "Mode", type: "text" },
+        email: { label: "Email", type: "email" },
+        name: { label: "Name", type: "text" },
+        password: { label: "Password", type: "password" },
+        organizationName: { label: "Organization", type: "text" },
+      },
+      async authorize(credentials) {
+        const token = sanitizeInvitationToken(credentials?.token);
+        if (!token) throw new DashboardCredentialsSignin("INVITATION_INVALID");
+        const registering = credentials?.mode === "register";
+        const email = credentials?.email ?? "<invited email>";
+        const welcomeOrganization = cleanOrganizationName(credentials?.organizationName);
+        const path = registering
+          ? "/api/v1/invitations/accept/register"
+          : "/api/v1/invitations/accept";
+        const body = registering
+          ? { token, name: credentials?.name, password: credentials?.password }
+          : { token, email: credentials?.email, password: credentials?.password };
+
+        try {
+          const { response, data } = await postToBackend(path, body);
+          if (!response.ok) {
+            const errorCode = backendErrorCode(data, response.status, "INVITATION_ERROR");
+            logSignInFailure("invitation", email, "backend refused invitation accept", {
+              status: response.status,
+              errorCode,
+              mode: registering ? "register" : "existing",
+            });
+            throw new DashboardCredentialsSignin(errorCode);
+          }
+          await stopAtSecondFactor(data, {
+            rememberMe: false,
+            welcomeOrganization: welcomeOrganization || undefined,
+          });
+          if (!hasBackendSession(data)) {
+            logSignInFailure(
+              "invitation",
+              email,
+              "backend response missing user/accessToken/refreshToken",
+              sessionShapeDetail(data),
+            );
+            throw new DashboardCredentialsSignin("INVITATION_ERROR");
+          }
+          reportSignInOutcome({ welcomeOrganization: welcomeOrganization || undefined });
+          return sessionUser(data, false);
+        } catch (error) {
+          return unreachable("invitation", email, path, error);
         }
       },
     }),
@@ -388,16 +503,16 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
     },
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        const needsCompanyName = await readNeedsCompanyName(user.accessToken);
-        return { ...token, ...user, needsCompanyName, authError: undefined };
+        const needsOnboarding = await readNeedsOnboarding(user.accessToken);
+        return { ...token, ...user, needsOnboarding, authError: undefined };
       }
       const nextToken = { ...token };
       delete nextToken[BACKEND_REFRESH_HANDOFF];
       if (
         trigger === "update" &&
-        (session as Record<string, unknown> | undefined)?.[COMPANY_NAMED_UPDATE] === true
+        (session as Record<string, unknown> | undefined)?.[ONBOARDING_DONE_UPDATE] === true
       ) {
-        delete nextToken.needsCompanyName;
+        delete nextToken.needsOnboarding;
       }
       // A rejected refresh token is terminal. Keep the marker until the user
       // signs in again instead of calling the refresh endpoint on every request.
@@ -469,7 +584,7 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
           backendAccessExpired:
             typeof token.accessTokenExpiresAt === "number" &&
             Date.now() >= token.accessTokenExpiresAt,
-          needsCompanyName: token.needsCompanyName === true,
+          needsOnboarding: token.needsOnboarding === true,
         });
         if (token[BACKEND_REFRESH_HANDOFF] === true) {
           Object.assign(session, {
