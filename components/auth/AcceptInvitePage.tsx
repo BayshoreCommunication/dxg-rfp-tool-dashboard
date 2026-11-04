@@ -7,6 +7,7 @@ import {
 } from "@/app/actions/acceptInvitation";
 import { PasswordStrengthMeter } from "@/components/auth/passwordStrength";
 import {
+  formatInvitationExpiry,
   invitationErrorView,
   invitationRoleLabel,
   switchesAcceptMode,
@@ -16,18 +17,7 @@ import {
 } from "@/lib/auth/invitation";
 import { ssoStartPath } from "@/lib/auth/sso";
 import type { PendingTwoFactorView } from "@/lib/auth/twoFactor";
-import {
-  Building2,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Link2Off,
-  Lock,
-  Mail,
-  RefreshCw,
-  User,
-  UserPlus,
-} from "lucide-react";
+import { Building2, Eye, EyeOff, KeyRound, Link2Off, Mail, RefreshCw, User } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -57,26 +47,6 @@ const InviteAside = ({ invitation }: { invitation?: InvitationDetails }) => (
       Plan RFPs together, compare vendor responses side by side, and keep every
       decision in one place.
     </p>
-    {invitation ? (
-      <dl className="space-y-3 rounded-2xl bg-white/10 p-6 text-[14px] backdrop-blur-sm">
-        <div className="flex justify-between gap-4">
-          <dt className="font-semibold text-white/60">Role</dt>
-          <dd className="font-bold">{invitationRoleLabel(invitation.role)}</dd>
-        </div>
-        {invitation.teamName ? (
-          <div className="flex justify-between gap-4">
-            <dt className="font-semibold text-white/60">Team</dt>
-            <dd className="font-bold">{invitation.teamName}</dd>
-          </div>
-        ) : null}
-        {invitation.inviterName ? (
-          <div className="flex justify-between gap-4">
-            <dt className="font-semibold text-white/60">Invited by</dt>
-            <dd className="font-bold">{invitation.inviterName}</dd>
-          </div>
-        ) : null}
-      </dl>
-    ) : null}
   </>
 );
 
@@ -96,31 +66,44 @@ const DeadLink = ({ error }: { error: Extract<InvitationErrorView, { kind: "dead
   </AuthShell>
 );
 
-const InvitationSummary = ({ invitation }: { invitation: InvitationDetails }) => (
-  <div className="mb-8 rounded-2xl border border-gray-200 bg-gray-50/60 p-5">
-    <div className="flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-        <Building2 className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-[16px] font-extrabold text-gray-900">
-          {invitation.organizationName}
-        </p>
-        <p className="mt-1 text-[13.5px] font-medium leading-snug text-gray-500">
-          {invitation.inviterName ? `${invitation.inviterName} invited you` : "You're invited"} to
-          join as{" "}
-          <span className="font-bold text-gray-800">{invitationRoleLabel(invitation.role)}</span>
-          {invitation.teamName ? (
-            <>
-              {" "}on the <span className="font-bold text-gray-800">{invitation.teamName}</span> team
-            </>
-          ) : null}
-          .
-        </p>
+/* Who invited whom, to what, and until when: the one place the page says it. */
+const InvitationSummary = ({ invitation }: { invitation: InvitationDetails }) => {
+  const expires = formatInvitationExpiry(invitation.expiresAt);
+  return (
+    <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Building2 className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[14px] font-medium leading-snug text-gray-600">
+            {invitation.inviterName ? (
+              <span className="font-bold text-gray-900">{invitation.inviterName}</span>
+            ) : (
+              "You were"
+            )}{" "}
+            {invitation.inviterName ? "invited you to join" : "invited to join"}{" "}
+            <span className="font-bold text-gray-900">{invitation.organizationName}</span> as{" "}
+            <span className="font-bold text-gray-900">{invitationRoleLabel(invitation.role)}</span>
+            {invitation.teamName ? (
+              <>
+                {" "}on the <span className="font-bold text-gray-900">{invitation.teamName}</span> team
+              </>
+            ) : null}
+            .
+          </p>
+          <p className="mt-1.5 flex items-start gap-1.5 text-[12.5px] font-medium leading-snug text-gray-400">
+            <Mail className="mt-px h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              For <span className="font-semibold text-gray-600">{invitation.email}</span>
+              {expires ? ` · expires ${expires}` : null}
+            </span>
+          </p>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const PasswordToggle = ({ shown, onToggle }: { shown: boolean; onToggle: () => void }) => (
   <button
@@ -147,7 +130,6 @@ const AcceptInvitePage = ({
   const [mode, setMode] = useState<Mode>(invitation?.accountExists ? "existing" : "register");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [twoFactor, setTwoFactor] = useState<PendingTwoFactorView | null>(null);
@@ -202,18 +184,11 @@ const AcceptInvitePage = ({
     );
   }
 
-  const switchMode = (next: Mode) => {
-    setMode(next);
-    setError("");
-    setPassword("");
-    setConfirmPassword("");
-  };
-
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (submitting) return;
     if (mode === "register") {
-      const problem = validateRegisterForm({ name, password, confirmPassword });
+      const problem = validateRegisterForm({ name, password });
       if (problem) {
         setError(problem);
         return;
@@ -247,10 +222,10 @@ const AcceptInvitePage = ({
         return;
       }
       const nextMode = switchesAcceptMode(result.error.code);
+      // The lookup said whether an account exists; if that changed since, follow the backend.
       if (nextMode && nextMode !== mode) {
         setMode(nextMode);
         setPassword("");
-        setConfirmPassword("");
       }
       setError(result.error.message);
     } catch {
@@ -284,14 +259,9 @@ const AcceptInvitePage = ({
 
   return (
     <AuthShell aside={<InviteAside invitation={invitation} />}>
-      <AuthHeading
-        title={registering ? "Create your account" : "Sign in to join"}
-        subtitle={
-          registering
-            ? "Set up your RFPilot account to accept the invitation."
-            : "Sign in with your existing RFPilot account to accept the invitation."
-        }
-      />
+      <div className="mb-6">
+        <AuthHeading title={registering ? "Create your account" : "Sign in to join"} />
+      </div>
 
       <InvitationSummary invitation={invitation} />
 
@@ -309,6 +279,16 @@ const AcceptInvitePage = ({
       ) : null}
 
       <form onSubmit={submit}>
+        {/* The invited email is fixed, so it isn't a field; this hidden one lets
+            password managers save the new password against it. */}
+        <input
+          type="email"
+          name="username"
+          autoComplete="username"
+          value={invitation.email}
+          readOnly
+          hidden
+        />
         <div className="mb-6 space-y-4">
           {registering ? (
             <AuthField
@@ -324,24 +304,6 @@ const AcceptInvitePage = ({
               autoFocus
             />
           ) : null}
-          <AuthField
-            id="invite-email"
-            label="Email Address"
-            icon={<Mail className="h-5 w-5" strokeWidth={2} />}
-            type="email"
-            value={invitation.email}
-            readOnly
-            disabled
-            aria-describedby="invite-email-note"
-            trailing={
-              <span className="px-4 text-gray-400" title="This invitation is for this email">
-                <Lock className="h-4 w-4" />
-              </span>
-            }
-          />
-          <p id="invite-email-note" className="-mt-2 px-1 text-[12px] font-medium text-gray-400">
-            The invitation was sent to this address.
-          </p>
           <div>
             <AuthField
               id="invite-password"
@@ -349,7 +311,7 @@ const AcceptInvitePage = ({
               icon={<KeyRound className="h-5 w-5" strokeWidth={2} />}
               type={showPassword ? "text" : "password"}
               autoComplete={registering ? "new-password" : "current-password"}
-              placeholder="••••••••••"
+              placeholder={registering ? "At least 8 characters" : "Your RFPilot password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               disabled={submitting}
@@ -364,19 +326,6 @@ const AcceptInvitePage = ({
               </div>
             ) : null}
           </div>
-          {registering ? (
-            <AuthField
-              id="invite-confirm-password"
-              label="Confirm password"
-              icon={<KeyRound className="h-5 w-5" strokeWidth={2} />}
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              placeholder="••••••••••"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              disabled={submitting}
-            />
-          ) : null}
         </div>
 
         {!registering ? (
@@ -385,12 +334,12 @@ const AcceptInvitePage = ({
               href="/forgot-password"
               className="text-[13.5px] font-bold text-primary transition-colors hover:text-blue-500"
             >
-              Forgot Password?
+              Forgot password?
             </Link>
           </div>
         ) : null}
 
-        <AuthPrimaryButton type="submit" disabled={submitting} className="mb-8">
+        <AuthPrimaryButton type="submit" disabled={submitting} className="mb-6">
           {submitting
             ? registering
               ? "Creating account..."
@@ -408,23 +357,8 @@ const AcceptInvitePage = ({
         disabled={submitting}
       />
 
-      <p className="mb-6 mt-4 text-center text-[13px] font-medium text-gray-400">
-        With Google or Microsoft, use the account for {invitation.email}.
-      </p>
-
-      <p className="text-center text-[13.5px] font-bold text-gray-400">
-        {registering ? "Already have an account? " : "New to RFPilot? "}
-        <button
-          type="button"
-          onClick={() => switchMode(registering ? "existing" : "register")}
-          className="inline-flex cursor-pointer items-center gap-1 text-primary transition-colors hover:text-blue-500"
-        >
-          {registering ? "Sign in instead" : (
-            <>
-              <UserPlus className="h-3.5 w-3.5" /> Create an account
-            </>
-          )}
-        </button>
+      <p className="mt-4 text-center text-[13px] font-medium text-gray-400">
+        Use the Google or Microsoft account for {invitation.email}.
       </p>
     </AuthShell>
   );

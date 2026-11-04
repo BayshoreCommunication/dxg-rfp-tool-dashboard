@@ -59,16 +59,34 @@ describe('AcceptInvitePage', () => {
   it('shows the organization, inviter, role, team and invited email', () => {
     render(<AcceptInvitePage token={TOKEN} lookup={found()} />)
     expect(screen.getAllByText('Acme Events').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Olivia Owner invited you/)).toBeInTheDocument()
+    expect(
+      screen.getByText((_, el) => el?.tagName === 'P' && /^Olivia Owner invited you to join Acme Events as Planner on the East Coast team\.$/.test(el.textContent ?? '')),
+    ).toBeInTheDocument()
     expect(screen.getAllByText('Planner').length).toBeGreaterThan(0)
     expect(screen.getAllByText('East Coast').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/new\.planner@acme\.test/).length).toBeGreaterThan(0)
   })
 
-  it('shows the invited email locked in the form', () => {
-    render(<AcceptInvitePage token={TOKEN} lookup={found()} />)
-    expect(screen.getByLabelText('Email Address')).toHaveValue('new.planner@acme.test')
-    expect(screen.getByLabelText('Email Address')).toBeDisabled()
+  it('names the invited email and expiry instead of an email field', () => {
+    const { container } = render(<AcceptInvitePage token={TOKEN} lookup={found()} />)
+    expect(screen.getByText(/expires Nov 10/)).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /email/i })).not.toBeInTheDocument()
+    // Password managers save the new password against the invited email.
+    const username = container.querySelector('input[autocomplete="username"]')
+    expect(username).toHaveValue('new.planner@acme.test')
+    expect(username).not.toBeDisabled()
+  })
+
+  it('follows the lookup and offers no switch between creating and signing in', () => {
+    const { unmount } = render(<AcceptInvitePage token={TOKEN} lookup={found(false, false)} />)
+    expect(screen.getByRole('heading', { name: 'Create your account' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Confirm password')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Sign in instead/ })).not.toBeInTheDocument()
+    unmount()
+    render(<AcceptInvitePage token={TOKEN} lookup={found(false, true)} />)
+    expect(screen.getByRole('heading', { name: 'Sign in to join' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Create an account/ })).not.toBeInTheDocument()
   })
 
   it.each([
@@ -89,7 +107,6 @@ describe('AcceptInvitePage', () => {
     render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat Planner' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
-    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'correct-horse' } })
     fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
     await waitFor(() => expect(mockAccept).toHaveBeenCalled())
     expect(mockAccept).toHaveBeenCalledWith({
@@ -105,10 +122,9 @@ describe('AcceptInvitePage', () => {
   it('checks the form before calling the server', () => {
     render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat' } })
-    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
-    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'other-horse' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } })
     fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
-    expect(screen.getByRole('alert')).toHaveTextContent(/don't match/)
+    expect(screen.getByRole('alert')).toHaveTextContent(/at least 8 characters/)
     expect(mockAccept).not.toHaveBeenCalled()
   })
 
@@ -118,7 +134,6 @@ describe('AcceptInvitePage', () => {
     render(<AcceptInvitePage token={TOKEN} lookup={found(false)} />)
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Pat' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
-    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'correct-horse' } })
     fireEvent.click(screen.getByRole('button', { name: /Create account and join/ }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/)
     expect(screen.getByRole('button', { name: /Sign in and join/ })).toBeInTheDocument()

@@ -1,6 +1,6 @@
-// Backend requires a minimum of 6 characters (credentialAuthentication.ts);
-// everything beyond that only feeds the strength meter.
-export const PASSWORD_MIN_LENGTH = 6;
+// New passwords (sign-up, reset, invitation) need 8 characters on the backend
+// (registerAndReset.ts); everything beyond that only feeds the strength meter.
+export const PASSWORD_MIN_LENGTH = 8;
 
 export const passwordStrength = (password: string) => {
   if (password.length < PASSWORD_MIN_LENGTH) return 0;

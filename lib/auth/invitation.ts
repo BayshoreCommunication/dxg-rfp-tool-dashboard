@@ -139,15 +139,18 @@ export const sanitizeInvitationToken = (raw: unknown) => {
   return /^[A-Za-z0-9_-]{16,256}$/.test(token) ? token : null;
 };
 
-export const validateRegisterForm = (input: {
-  name: string;
-  password: string;
-  confirmPassword: string;
-}) => {
+export const validateRegisterForm = (input: { name: string; password: string }) => {
   if (!input.name.trim()) return "Please enter your name.";
   if (input.password.length < 8) return "Password must be at least 8 characters.";
-  if (input.password !== input.confirmPassword) return "Passwords don't match.";
   return null;
+};
+
+/* "Nov 10" for the invitation summary. UTC so the server and browser render
+   the same text; null when the backend sent something unreadable. */
+export const formatInvitationExpiry = (expiresAt: string) => {
+  const date = new Date(expiresAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 };
 
 /* For anything that records URLs (analytics): /invite/<token> → /invite/[token]. */
