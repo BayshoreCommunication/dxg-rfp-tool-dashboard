@@ -147,6 +147,70 @@ export async function takeGoogleInvitation(): Promise<GoogleInvitation | null> {
   }
 }
 
+/* ───────── ORG-306: Google sign-up on a matched work domain ───────── */
+
+/* A first Google sign-in on a domain an organization has verified stops at
+   /sign-up so the person can request access instead. The email and the
+   organization's name ride in an encrypted httpOnly cookie, never the URL.
+   Choosing "create a separate organization" sets a one-shot flag that the
+   next Google callback sends to the backend. */
+const GOOGLE_MATCH_COOKIE = "rfpilot-google-domain-match";
+const GOOGLE_MATCH_SALT = "rfpilot.google-domain-match";
+const GOOGLE_SEPARATE_COOKIE = "rfpilot-google-separate-org";
+const GOOGLE_SEPARATE_SALT = "rfpilot.google-separate-org";
+
+export type GoogleDomainMatch = { email: string; organizationName: string };
+
+export async function storeGoogleDomainMatch(match: GoogleDomainMatch) {
+  const value = await encode({
+    token: { ...match },
+    secret: authSecret(),
+    salt: GOOGLE_MATCH_SALT,
+    maxAge: GOOGLE_INVITE_SECONDS,
+  });
+  (await cookies()).set(GOOGLE_MATCH_COOKIE, value, cookieOptions(GOOGLE_INVITE_SECONDS));
+}
+
+export async function readGoogleDomainMatch(): Promise<GoogleDomainMatch | null> {
+  const raw = (await cookies()).get(GOOGLE_MATCH_COOKIE)?.value;
+  if (!raw) return null;
+  try {
+    const token = await decode({ token: raw, secret: authSecret(), salt: GOOGLE_MATCH_SALT });
+    if (!token || typeof token.email !== "string" || typeof token.organizationName !== "string") return null;
+    return { email: token.email, organizationName: token.organizationName };
+  } catch {
+    return null;
+  }
+}
+
+export async function clearGoogleDomainMatch() {
+  (await cookies()).delete(GOOGLE_MATCH_COOKIE);
+}
+
+export async function storeGoogleSeparateOrganization() {
+  const value = await encode({
+    token: { separateOrganization: true },
+    secret: authSecret(),
+    salt: GOOGLE_SEPARATE_SALT,
+    maxAge: GOOGLE_INVITE_SECONDS,
+  });
+  (await cookies()).set(GOOGLE_SEPARATE_COOKIE, value, cookieOptions(GOOGLE_INVITE_SECONDS));
+}
+
+/* Read once, like the parked invitation. */
+export async function takeGoogleSeparateOrganization(): Promise<boolean> {
+  const jar = await cookies();
+  const raw = jar.get(GOOGLE_SEPARATE_COOKIE)?.value;
+  if (!raw) return false;
+  jar.delete(GOOGLE_SEPARATE_COOKIE);
+  try {
+    const token = await decode({ token: raw, secret: authSecret(), salt: GOOGLE_SEPARATE_SALT });
+    return token?.separateOrganization === true;
+  } catch {
+    return false;
+  }
+}
+
 /* ───────── One-shot notice for the dashboard ───────── */
 
 export async function setPostSignInNotice(notice: PostSignInNotice) {

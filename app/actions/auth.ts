@@ -18,7 +18,10 @@ import {
 import { AUTH_API_ORIGIN, authBffHeaders, fetchWithTimeout } from "@/lib/authRefresh";
 import {
   captureSignInOutcome,
+  clearGoogleDomainMatch,
   clearPendingTwoFactor,
+  readGoogleDomainMatch,
+  storeGoogleSeparateOrganization,
   readPendingTwoFactor,
   setPostSignInNotice,
 } from "@/lib/server/twoFactorPending";
@@ -64,10 +67,14 @@ export async function verifySignupOtpAction(email: string, otp: string) {
       cache: "no-store",
     });
     const data = await res.json();
+    const match = data?.organizationMatch;
     return {
       success: res.ok,
       message:
         data.message || (res.ok ? "Email verified" : "Verification failed"),
+      // ORG-306: an organization verified this email's domain.
+      organizationMatch:
+        res.ok && match && typeof match.name === "string" ? { name: match.name as string } : null,
     };
   } catch (error: unknown) {
     return { success: false, message: getErrorMessage(error) };
@@ -83,6 +90,8 @@ export async function signUpAction(payload: {
   phone?: string;
   company?: string;
   password: string;
+  // ORG-306: the person chose their own organization over requesting access.
+  separateOrganization?: boolean;
 }) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
@@ -92,8 +101,17 @@ export async function signUpAction(payload: {
       cache: "no-store",
     });
     const data = await res.json();
-    if (!res.ok)
+    if (!res.ok) {
+      if (data?.code === "ORGANIZATION_DOMAIN_MATCH" && typeof data.organizationName === "string") {
+        return {
+          success: false,
+          message: data.message || "Your organization may already use RFPilot.",
+          code: "ORGANIZATION_DOMAIN_MATCH" as const,
+          organizationName: data.organizationName as string,
+        };
+      }
       return { success: false, message: data.message || "Registration failed" };
+    }
     return {
       success: true,
       user: data.user,
@@ -102,6 +120,63 @@ export async function signUpAction(payload: {
   } catch (error: unknown) {
     return { success: false, message: getErrorMessage(error) };
   }
+}
+
+/* ─────────────────────────────────────────
+   SIGNUP — ORG-306: ask to join the organization that verified the domain
+───────────────────────────────────────── */
+export type AccessRequestResult =
+  | { success: true; status: "pending" | "invited"; organizationName: string }
+  | { success: false; message: string; code?: string };
+
+const ACCESS_REQUEST_MESSAGES: Record<string, string> = {
+  EMAIL_NOT_VERIFIED: "Your code has expired. Start again to get a new one.",
+  ACCOUNT_EXISTS: "An account with this email already exists. Please sign in.",
+  NO_ORGANIZATION_MATCH: "We couldn't find an organization for your email domain.",
+  INVALID_NAME: "Enter your name.",
+  RATE_LIMITED: "Too many attempts. Wait a few minutes and try again.",
+};
+
+export async function requestOrganizationAccessAction(email: string, name: string): Promise<AccessRequestResult> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/access-requests`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, name }),
+      cache: "no-store",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && (data.status === "pending" || data.status === "invited")) {
+      return { success: true, status: data.status, organizationName: String(data.organizationName ?? "") };
+    }
+    const code = typeof data?.code === "string" ? data.code : res.status === 429 ? "RATE_LIMITED" : undefined;
+    return {
+      success: false,
+      code,
+      message: (code && ACCESS_REQUEST_MESSAGES[code]) || data?.message || "Couldn't send your request. Please try again.",
+    };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+}
+
+/* Google sign-up stopped on a matched domain: the page shows the choice. */
+export async function readGoogleDomainMatchAction() {
+  return readGoogleDomainMatch();
+}
+
+/* "Create a separate organization" after Google: the next Google callback
+   tells the backend so. */
+export async function startGoogleSeparateOrganizationAction() {
+  await clearGoogleDomainMatch();
+  await storeGoogleSeparateOrganization();
+  return { success: true };
+}
+
+/* "Request access" after Google: it needs the emailed signup code. */
+export async function forgetGoogleDomainMatchAction() {
+  await clearGoogleDomainMatch();
+  return { success: true };
 }
 
 /* ─────────────────────────────────────────
