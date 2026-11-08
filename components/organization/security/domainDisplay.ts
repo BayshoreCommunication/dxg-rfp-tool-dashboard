@@ -46,3 +46,19 @@ export const normalizeDomainInput = (input: string): string =>
     .replace(/^.*@/, "")
     .replace(/\/.*$/, "")
     .replace(/\.$/, "");
+
+// Country second-level suffixes where the registrable domain has three labels (acme.co.uk).
+const SECOND_LEVEL_SUFFIXES = new Set([
+  "co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp", "co.in",
+  "com.br", "com.mx", "co.za", "com.sg", "com.cn", "com.hk", "co.kr", "com.tr",
+]);
+
+/** What to type in the provider's Host field. Most providers (Namecheap, GoDaddy, Cloudflare)
+ *  append the domain themselves, so typing the full name there creates
+ *  "acme.com.acme.com". For a main domain that's "@"; for a subdomain the full name is shown,
+ *  because which part to type depends on where its DNS is hosted. */
+export const txtRecordHost = (name: string): { host: string; isApex: boolean } => {
+  const labels = name.toLowerCase().split(".").filter(Boolean);
+  const isApex = labels.length === 2 || (labels.length === 3 && SECOND_LEVEL_SUFFIXES.has(labels.slice(1).join(".")));
+  return { host: isApex ? "@" : name, isApex };
+};
