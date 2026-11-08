@@ -8,6 +8,7 @@ import { listMembersAction, reactivateMemberAction } from "@/app/actions/organiz
 import { listTeamsAction } from "@/app/actions/teams";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import TopHeader from "@/components/settings/TopHeaser";
+import AccessRequestsSection from "../accessRequests/AccessRequestsSection";
 import InvitationsSection from "../invitations/InvitationsSection";
 import InviteDialog from "../invitations/InviteDialog";
 import { DELIVERY_LABELS, useInvitations } from "../invitations/useInvitations";
@@ -120,6 +121,9 @@ export default function UsersSettings() {
   return (
     <div className="space-y-6 px-6 pb-8">
       {header}
+
+      {/* ORG-306: sign-ups on the organization's verified domain asking to join. */}
+      {access.canManageMembers && <AccessRequestsSection teams={teams} onInvited={() => void pending.load()} />}
 
       {access.canManageMembers ? (
         <section className={sectionClass} aria-labelledby="members-title">

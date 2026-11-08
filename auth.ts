@@ -29,7 +29,9 @@ import {
   reportSignInOutcome,
   setPostSignInNotice,
   storePendingTwoFactor,
+  storeGoogleDomainMatch,
   takeGoogleInvitation,
+  takeGoogleSeparateOrganization,
 } from "@/lib/server/twoFactorPending";
 import { takeSsoBind } from "@/lib/server/ssoBind";
 
@@ -426,6 +428,8 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
         // of a plain Google sign-in. Failures go back to the invite page,
         // the same path the invitation email links to.
         const invitation = await takeGoogleInvitation();
+        // ORG-306: set when the person chose a separate organization on /sign-up.
+        const separateOrganization = invitation ? false : await takeGoogleSeparateOrganization();
         const path = invitation
           ? "/api/v1/invitations/accept/google"
           : "/api/auth/google";
@@ -439,7 +443,7 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
             path,
             invitation
               ? { token: invitation.token, idToken: account.id_token || "" }
-              : { idToken: account.id_token || "" },
+              : { idToken: account.id_token || "", ...(separateOrganization ? { separateOrganization: true } : {}) },
           );
           if (!response.ok) {
             const errorCode = backendErrorCode(data, response.status, "google");
@@ -455,6 +459,12 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
                 message: data?.message,
               },
             );
+            // ORG-306: a new account on a verified organization domain.
+            // Offer "Request access" on /sign-up before creating anything.
+            if (!invitation && errorCode === "ORGANIZATION_DOMAIN_MATCH" && typeof data?.organizationName === "string") {
+              await storeGoogleDomainMatch({ email, organizationName: data.organizationName });
+              return "/sign-up?step=organization-match";
+            }
             // e.g. SSO_REQUIRED: the sign-in page shows a message for it.
             return invitation ? backToInvite(errorCode) : backToSignIn(errorCode);
           }

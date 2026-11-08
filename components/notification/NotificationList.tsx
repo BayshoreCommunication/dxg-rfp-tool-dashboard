@@ -17,6 +17,7 @@ import {
   Sparkles,
   SlidersHorizontal,
   TriangleAlert,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -45,6 +46,8 @@ const getNotificationIcon = (type: NotificationItem["type"]) => {
       return <TriangleAlert size={16} />;
     case "support_ticket":
       return <LifeBuoy size={16} />;
+    case "access_request":
+      return <UserPlus size={16} />;
     default:
       return <BellDot size={16} />;
   }
@@ -59,6 +62,7 @@ const getNotificationIconStyle = (type: NotificationItem["type"]) => {
     case "proposal_expired":
       return "bg-rose-50 text-rose-600";
     case "support_ticket":
+    case "access_request":
       return "bg-[#008ad2]/5 text-[#0069a0]";
     default:
       return "bg-slate-100 text-slate-600";
@@ -286,6 +290,15 @@ export default function NotificationList({
                           Open the support request
                         </Link>
                       )}
+                    {notification.type === "access_request" && (
+                      <Link
+                        href="/settings/users"
+                        onClick={(event) => event.stopPropagation()}
+                        className="mt-2 inline-block text-xs font-bold text-[#0069a0] hover:underline"
+                      >
+                        Review the request
+                      </Link>
+                    )}
                   </div>
 
                   {!notification.isRead && (

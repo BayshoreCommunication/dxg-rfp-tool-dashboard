@@ -122,6 +122,8 @@ export const ORGANIZATION_SETUP_REQUIRED_MESSAGE =
    reach the screen. */
 export const SSO_ERROR_MESSAGES: Record<string, string> = {
   // Account rules (backend)
+  ORGANIZATION_DOMAIN_MATCH:
+    "Your organization already uses RFPilot. Create an account with your work email to request access, or ask your admin for an invitation.",
   SSO_REQUIRED:
     "Your organization requires you to sign in with your company account. Use \"Sign in with your company\".",
   SSO_NOT_CONFIGURED:

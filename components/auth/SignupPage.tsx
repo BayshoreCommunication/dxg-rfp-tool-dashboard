@@ -1,14 +1,17 @@
 "use client";
 
 import {
+  forgetGoogleDomainMatchAction,
+  requestOrganizationAccessAction,
   sendSignupOtpAction,
   signInAction,
   signUpAction,
+  startGoogleSeparateOrganizationAction,
   verifySignupOtpAction,
 } from "@/app/actions/auth";
 import { PASSWORD_MIN_LENGTH, PasswordStrengthMeter } from "@/components/auth/passwordStrength";
 import { ssoStartPath } from "@/lib/auth/sso";
-import { ArrowLeft, Building2, CheckCircle2, Eye, EyeOff, KeyRound, Mail, User } from "lucide-react";
+import { ArrowLeft, Building2, CheckCircle2, Eye, EyeOff, KeyRound, Mail, MailCheck, User, Users } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -27,9 +30,16 @@ import {
    Google and Microsoft sign-up skip the code: the provider has verified the
    email. Either way the new person is the Owner of a new organization and
    goes through onboarding (/welcome) before the dashboard. People whose
-   company already set up RFPilot SSO sign in with their company instead. */
+   company already set up RFPilot SSO sign in with their company instead.
 
-type Step = "email" | "code" | "account";
+   ORG-306: when an organization has verified the email's domain, the person
+   is asked first: request access (its Owners and Admins approve, and an
+   invitation follows) or create a separate organization anyway. */
+
+type Step = "email" | "code" | "match" | "account" | "requested";
+
+export type GoogleDomainMatch = { email: string; organizationName: string };
+type Match = { organizationName: string; via: "email" | "google" };
 
 const SignupAside = () => (
   <>
@@ -59,15 +69,34 @@ const HEADINGS: Record<Step, { title: string; subtitle: string }> = {
     subtitle: "You'll be the Owner of your organization's RFPilot workspace.",
   },
   code: { title: "Verify your email", subtitle: "Enter the 6-digit code we sent you." },
+  match: {
+    title: "Your organization may already use RFPilot",
+    subtitle: "Ask to join your team's workspace, or set up your own.",
+  },
   account: { title: "Almost done", subtitle: "Tell us your name and choose a password." },
+  requested: { title: "Request sent", subtitle: "We'll be in touch by email." },
 };
+
+const domainOf = (address: string) => address.slice(address.lastIndexOf("@") + 1);
 
 type Navigate = (path: string) => void;
 const replaceLocation: Navigate = (path) => window.location.replace(path);
 
-const SignupPage = ({ navigate = replaceLocation }: { navigate?: Navigate }) => {
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
+const SignupPage = ({
+  navigate = replaceLocation,
+  googleMatch = null,
+}: {
+  navigate?: Navigate;
+  // Google sign-up stopped on a verified organization domain (from the server).
+  googleMatch?: GoogleDomainMatch | null;
+}) => {
+  const [step, setStep] = useState<Step>(googleMatch ? "match" : "email");
+  const [email, setEmail] = useState(googleMatch?.email ?? "");
+  const [match, setMatch] = useState<Match | null>(
+    googleMatch ? { organizationName: googleMatch.organizationName, via: "google" } : null,
+  );
+  const [separateOrganization, setSeparateOrganization] = useState(false);
+  const [requestOutcome, setRequestOutcome] = useState<"pending" | "invited">("pending");
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -111,6 +140,8 @@ const SignupPage = ({ navigate = replaceLocation }: { navigate?: Navigate }) => 
       }
       setEmail(address);
       setCode("");
+      setMatch(null);
+      setSeparateOrganization(false);
       setResendCooldown(60);
       setStep("code");
     });
@@ -140,8 +171,58 @@ const SignupPage = ({ navigate = replaceLocation }: { navigate?: Navigate }) => 
         setError(res.message);
         return;
       }
+      if (res.organizationMatch) {
+        setMatch({ organizationName: res.organizationMatch.name, via: "email" });
+        setStep("match");
+        return;
+      }
       setStep("account");
     });
+  };
+
+  const requestAccess = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Enter your name.");
+      return;
+    }
+    void run(async () => {
+      const res = await requestOrganizationAccessAction(email, name.trim());
+      if (!res.success) {
+        setError(res.message);
+        return;
+      }
+      setRequestOutcome(res.status);
+      if (res.organizationName) setMatch((current) => current && { ...current, organizationName: res.organizationName });
+      setStep("requested");
+    });
+  };
+
+  // After Google, the request still needs the emailed code to prove the address.
+  const verifyThenRequest = () =>
+    run(async () => {
+      await forgetGoogleDomainMatchAction();
+      const res = await sendSignupOtpAction(email);
+      if (!res.success) {
+        setError(res.message);
+        return;
+      }
+      setCode("");
+      setResendCooldown(60);
+      setStep("code");
+    });
+
+  const createSeparateOrganization = () => {
+    if (match?.via === "google") {
+      void run(async () => {
+        await startGoogleSeparateOrganizationAction();
+        await signIn("google", { callbackUrl: "/dashboard" });
+      });
+      return;
+    }
+    setSeparateOrganization(true);
+    setError("");
+    setStep("account");
   };
 
   const createAccount = (e: React.FormEvent) => {
@@ -155,8 +236,18 @@ const SignupPage = ({ navigate = replaceLocation }: { navigate?: Navigate }) => 
       return;
     }
     void run(async () => {
-      const res = await signUpAction({ name: name.trim(), email, password });
+      const res = await signUpAction({
+        name: name.trim(),
+        email,
+        password,
+        ...(separateOrganization ? { separateOrganization: true } : {}),
+      });
       if (!res.success) {
+        if ("code" in res && res.code === "ORGANIZATION_DOMAIN_MATCH") {
+          setMatch({ organizationName: res.organizationName, via: "email" });
+          setStep("match");
+          return;
+        }
         setError(res.message);
         return;
       }
@@ -168,6 +259,8 @@ const SignupPage = ({ navigate = replaceLocation }: { navigate?: Navigate }) => 
 
   const back = () => {
     setStep("email");
+    setMatch(null);
+    setSeparateOrganization(false);
     setError("");
     setNotice("");
   };
@@ -275,6 +368,83 @@ const SignupPage = ({ navigate = replaceLocation }: { navigate?: Navigate }) => 
             </button>
           </p>
         </form>
+      ) : null}
+
+      {step === "match" && match ? (
+        <div>
+          <button
+            type="button"
+            onClick={back}
+            className="mb-6 flex items-center text-sm font-medium text-gray-500 hover:text-black"
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Use a different email
+          </button>
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+            <Users className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <p className="text-[14px] leading-snug text-gray-700">
+              <span className="font-bold text-gray-900">{match.organizationName}</span> uses RFPilot with{" "}
+              <span className="font-semibold">@{domainOf(email)}</span> email addresses. Request access and
+              their admins will review it.
+            </p>
+          </div>
+
+          {match.via === "email" ? (
+            <form onSubmit={requestAccess} noValidate>
+              <div className="mb-6">
+                <AuthField
+                  id="sign-up-request-name"
+                  label="Full name"
+                  icon={<User className="h-5 w-5" strokeWidth={2} />}
+                  autoComplete="name"
+                  placeholder="Pat Morgan"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <AuthPrimaryButton type="submit" disabled={loading} className="mb-4">
+                {loading ? "Sending request..." : "Request access"}
+              </AuthPrimaryButton>
+            </form>
+          ) : (
+            <>
+              <AuthPrimaryButton type="button" onClick={verifyThenRequest} disabled={loading} className="mb-2">
+                {loading ? "Sending code..." : "Request access"}
+              </AuthPrimaryButton>
+              <p className="mb-4 text-center text-[13px] text-gray-500">
+                We&apos;ll email a code to <span className="font-semibold text-gray-800">{email}</span> to confirm it&apos;s you.
+              </p>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={createSeparateOrganization}
+            disabled={loading}
+            className="mb-8 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+          >
+            Create a separate organization instead
+          </button>
+        </div>
+      ) : null}
+
+      {step === "requested" && match ? (
+        <div role="status" className="mb-8 rounded-2xl border border-green-100 bg-green-50 p-5">
+          <MailCheck className="mb-3 h-6 w-6 text-green-700" />
+          {requestOutcome === "invited" ? (
+            <p className="text-[14px] leading-relaxed text-green-800">
+              <span className="font-bold">{match.organizationName}</span> lets people from your email domain join
+              directly. We&apos;ve emailed an invitation to <span className="font-semibold">{email}</span>. Open it to
+              finish setting up your account.
+            </p>
+          ) : (
+            <p className="text-[14px] leading-relaxed text-green-800">
+              We&apos;ve asked the admins at <span className="font-bold">{match.organizationName}</span> to let you in.
+              When they approve, you&apos;ll get an invitation at <span className="font-semibold">{email}</span>.
+            </p>
+          )}
+        </div>
       ) : null}
 
       {step === "account" ? (
