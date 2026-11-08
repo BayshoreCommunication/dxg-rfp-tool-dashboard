@@ -28,8 +28,8 @@ import {
   Spinner,
 } from "../members/ui";
 
-/* ORG-306. People who signed up with an email on one of the organization's
-   verified domains and asked to join. Approving sends them an invitation (it
+/* ORG-306. People who signed up with an email on the organization's company
+   domain (verified, or one a member already uses) and asked to join. Approving sends them an invitation (it
    then shows as "Invited" in the Users table); denying lets them know. Owners
    and Admins can let their verified domain join without review. */
 
@@ -99,7 +99,7 @@ export default function AccessRequestsSection({ teams, onInvited }: Props) {
 
   const domains = settings?.verifiedDomains ?? [];
   const pendingCount = requests?.length ?? 0;
-  // Nothing to review and no verified domain: the feature can't apply yet, so stay out of the way.
+  // Nothing to review and no verified domain: stay out of the way (the dashboard prompts to verify).
   if (requests && pendingCount === 0 && settings && domains.length === 0) return null;
 
   return (
@@ -110,7 +110,7 @@ export default function AccessRequestsSection({ teams, onInvited }: Props) {
             Access requests{pendingCount > 0 ? ` (${pendingCount})` : ""}
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-500">
-            People who signed up with {domains.length ? domains.map((d) => `@${d}`).join(", ") : "your verified domain"} and
+            People who signed up with {domains.length ? domains.map((d) => `@${d}`).join(", ") : "your company's email domain"} and
             asked to join. Approving sends them an invitation.
           </p>
         </div>
