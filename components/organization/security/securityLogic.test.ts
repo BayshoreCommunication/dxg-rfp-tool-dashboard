@@ -6,7 +6,7 @@ import {
   recoveryCodesFileText,
   type EnrolmentState,
 } from './enrolmentState'
-import { domainOutcomeText, formatCheckTime, normalizeDomainInput } from './domainDisplay'
+import { domainOutcomeText, formatCheckTime, normalizeDomainInput, txtRecordHost } from './domainDisplay'
 import { resetBlockReason, roleLabel } from './memberReset'
 import { isSixDigitCode, secondFactorPayload, securityErrorMessage } from './securityMessages'
 
@@ -164,3 +164,13 @@ describe('domain display', () => {
     expect(formatCheckTime('2026-11-03T11:50:00Z', now)).toBe('10 min ago')
   })
 })
+
+describe("txtRecordHost", () => {
+  it("uses @ for a main domain so providers don't double it", () => {
+    expect(txtRecordHost("bayshorecommunication.com")).toEqual({ host: "@", isApex: true });
+    expect(txtRecordHost("acme.co.uk")).toEqual({ host: "@", isApex: true });
+  });
+  it("shows the full name for a subdomain", () => {
+    expect(txtRecordHost("eu.acme.com")).toEqual({ host: "eu.acme.com", isApex: false });
+  });
+});

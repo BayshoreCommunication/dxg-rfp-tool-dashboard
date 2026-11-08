@@ -16,6 +16,7 @@ import {
   domainOutcomeText,
   formatCheckTime,
   normalizeDomainInput,
+  txtRecordHost,
 } from "./domainDisplay";
 import { securityErrorMessage } from "./securityMessages";
 import {
@@ -31,34 +32,50 @@ import {
 } from "./ui";
 
 const TxtRecord = ({ domain }: { domain: OrganizationDomain }) => {
-  const rows: Array<[string, string, boolean]> = [
-    ["Type", domain.verification.type, false],
-    ["Name / Host", domain.verification.name, true],
-    ["Value", domain.verification.value, true],
+  const name = domain.verification.name;
+  const { host, isApex } = txtRecordHost(name);
+  const rows: Array<[string, string, string | null]> = [
+    ["Type", domain.verification.type, null],
+    ["Host", host, "Copy host"],
+    ["Value", domain.verification.value, "Copy value"],
   ];
   return (
     <div className="rounded-md border border-sky-100 bg-sky-50/50 p-4">
       <p className="text-sm font-semibold text-[#222628]">Add this TXT record at your DNS provider</p>
       <dl className="mt-3 divide-y divide-sky-100 rounded-md border border-sky-100 bg-white">
-        {rows.map(([label, value, copy]) => (
+        {rows.map(([label, value, copyLabel]) => (
           <div key={label} className="flex flex-wrap items-center gap-3 px-3 py-2">
             <dt className="w-28 shrink-0 text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt>
-            <dd className="min-w-0 flex-1 break-all font-mono text-sm text-[#222628]">{value}</dd>
-            {copy ? <CopyButton value={value} label={`Copy ${label.split(" ")[0].toLowerCase()}`} /> : null}
+            <dd className="min-w-0 flex-1 break-all font-mono text-sm text-[#222628]">
+              {value}
+              {label === "Host" && isApex ? (
+                <span className="ml-2 font-sans text-xs text-slate-500">(means {name} itself)</span>
+              ) : null}
+            </dd>
+            {copyLabel ? <CopyButton value={value} label={copyLabel} /> : null}
           </div>
         ))}
       </dl>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-[#4b5563]">
-        <li>Sign in to wherever your domain&apos;s DNS is managed (GoDaddy, Cloudflare, Route 53, Google Domains...).</li>
-        <li>
-          Create a new <strong>TXT</strong> record. For the name, use <strong>@</strong> or the domain itself, as your
-          provider expects; paste the value exactly.
-        </li>
+        <li>Sign in to wherever your domain&apos;s DNS is managed (Namecheap, GoDaddy, Cloudflare, Route 53...).</li>
+        {isApex ? (
+          <li>
+            Create a new <strong>TXT</strong> record. In the Host (or Name) field enter <strong>@</strong>, not{" "}
+            {name}: most providers add the domain for you, and typing it creates {name}.{name}. Only if your provider
+            asks for the full name (Route 53 does), enter {name}. Paste the value exactly.
+          </li>
+        ) : (
+          <li>
+            Create a new <strong>TXT</strong> record for <strong>{name}</strong>. Most providers want only the part
+            before your main domain in the Host field (they add the rest); Route 53 wants the full name. Paste the
+            value exactly.
+          </li>
+        )}
         <li>Save it, then come back and press &quot;Check now&quot;.</li>
       </ol>
       <p className="mt-2 text-xs text-slate-500">
-        DNS changes can take up to a day to show up. We check automatically, and re-check verified domains every week,
-        so leave the record in place.
+        DNS changes usually show up within minutes, occasionally up to a day. We check automatically, and re-check
+        verified domains every week, so leave the record in place.
       </p>
     </div>
   );
@@ -204,20 +221,23 @@ const DomainsCard = () => {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {/* A verified domain has nothing left to do: the record and Check now are only for getting there. */}
                       {d.status !== "verified" ? (
-                        <button type="button" className={secondaryButtonClass + " px-3 py-1.5 text-xs"} onClick={() => setExpanded(open ? null : d.id)}>
-                          {open ? "Hide record" : "Show TXT record"}
-                        </button>
+                        <>
+                          <button type="button" className={secondaryButtonClass + " px-3 py-1.5 text-xs"} onClick={() => setExpanded(open ? null : d.id)}>
+                            {open ? "Hide record" : "Show TXT record"}
+                          </button>
+                          <button
+                            type="button"
+                            className={secondaryButtonClass + " px-3 py-1.5 text-xs"}
+                            disabled={checking === d.id}
+                            onClick={() => check(d)}
+                          >
+                            <RefreshCw size={13} className={checking === d.id ? "animate-spin" : ""} />
+                            {checking === d.id ? "Checking..." : "Check now"}
+                          </button>
+                        </>
                       ) : null}
-                      <button
-                        type="button"
-                        className={secondaryButtonClass + " px-3 py-1.5 text-xs"}
-                        disabled={checking === d.id}
-                        onClick={() => check(d)}
-                      >
-                        <RefreshCw size={13} className={checking === d.id ? "animate-spin" : ""} />
-                        {checking === d.id ? "Checking..." : "Check now"}
-                      </button>
                       <button
                         type="button"
                         aria-label={`Remove ${d.domain}`}
