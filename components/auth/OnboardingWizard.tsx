@@ -26,6 +26,7 @@ import {
   DEFAULT_COUNTRY,
   initialTimeZone,
   isPlaceholderName,
+  ORGANIZATION_FIELD_ERRORS,
   ORGANIZATION_TYPE_OPTIONS,
   US_TIME_ZONE_OPTIONS,
 } from "./onboardingOptions";
@@ -46,18 +47,9 @@ const STEPS: { step: WizardStep; label: string }[] = [
 
 const INVITE_ROLES: InvitableRole[] = ["planner", "organization_admin", "viewer"];
 
-const FIELD_ERRORS: Record<string, string> = {
-  name: "Enter a company name of up to 200 characters.",
-  type: "Choose an organization type from the list.",
-  industry: "Keep the industry to 120 characters.",
-  country: "Choose a country from the list.",
-  timeZone: "Choose a time zone from the list.",
-  eventsPerYear: "Enter a whole number of events between 0 and 100,000.",
-};
-
 const errorFor = (result: OrgActionResult<unknown>, fallback: string) => {
   const field = result.details?.field;
-  if (result.code === "VALIDATION_ERROR" && typeof field === "string" && FIELD_ERRORS[field]) return FIELD_ERRORS[field];
+  if (result.code === "VALIDATION_ERROR" && typeof field === "string" && ORGANIZATION_FIELD_ERRORS[field]) return ORGANIZATION_FIELD_ERRORS[field];
   if (result.status === 403) return "Only the organization's Owner or an Admin can set it up.";
   if (result.status === 429) return "Too many attempts. Wait a few minutes and try again.";
   return fallback;
@@ -197,7 +189,7 @@ const OnboardingWizard = ({
     }
     const events = details.eventsPerYear.trim();
     if (events && !/^\d+$/.test(events)) {
-      setError(FIELD_ERRORS.eventsPerYear);
+      setError(ORGANIZATION_FIELD_ERRORS.eventsPerYear);
       return;
     }
     void run(async () => {

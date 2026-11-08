@@ -48,3 +48,15 @@ export const initialTimeZone = (saved: string | null): string => {
 /* "Pat's organization" from sign-up stands in for a company name nobody gave;
    the form starts empty rather than asking the Owner to edit it. */
 export const isPlaceholderName = (name: string) => /'s organization$/.test(name);
+
+/* What each refused field means, for the onboarding form and Settings. */
+export const ORGANIZATION_FIELD_ERRORS: Record<string, string> = {
+  name: "Enter a company name of up to 200 characters.",
+  type: "Choose an organization type from the list.",
+  industry: "Keep the industry to 120 characters.",
+  country: "Choose a country from the list.",
+  timeZone: "Choose a time zone from the list.",
+  eventsPerYear: "Enter a whole number of events between 0 and 100,000.",
+};
+
+export const PLAN_LABELS: Record<string, string> = { free_trial: "Free trial" };

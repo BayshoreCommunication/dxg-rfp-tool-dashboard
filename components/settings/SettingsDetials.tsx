@@ -6,6 +6,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import BrandingSettings from "./BrandingSettings";
+import OrganizationDetailsSettings from "./OrganizationDetailsSettings";
 import ProposalsSettings from "./ProposalsSettings";
 import SignaturesSettings from "./SignaturesSettings";
 import TopHeader from "./TopHeaser";
@@ -150,6 +151,8 @@ const SettingsDetials = () => {
   return (
     <div className="space-y-6 px-6">
       <TopHeader />
+
+      <OrganizationDetailsSettings />
 
       {loading ? (
         <SettingsSectionSkeleton />

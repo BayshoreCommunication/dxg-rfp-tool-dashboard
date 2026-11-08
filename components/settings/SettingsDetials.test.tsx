@@ -4,6 +4,7 @@ import SettingsDetials from './SettingsDetials'
 
 // ─── Module mocks ──────────────────────────────────────────────────────────────
 
+jest.mock('./OrganizationDetailsSettings', () => ({ __esModule: true, default: () => null }))
 jest.mock('react-toastify', () => ({
   toast: { success: jest.fn(), error: jest.fn() },
 }))
