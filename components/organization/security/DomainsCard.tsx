@@ -221,20 +221,23 @@ const DomainsCard = () => {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {/* A verified domain has nothing left to do: the record and Check now are only for getting there. */}
                       {d.status !== "verified" ? (
-                        <button type="button" className={secondaryButtonClass + " px-3 py-1.5 text-xs"} onClick={() => setExpanded(open ? null : d.id)}>
-                          {open ? "Hide record" : "Show TXT record"}
-                        </button>
+                        <>
+                          <button type="button" className={secondaryButtonClass + " px-3 py-1.5 text-xs"} onClick={() => setExpanded(open ? null : d.id)}>
+                            {open ? "Hide record" : "Show TXT record"}
+                          </button>
+                          <button
+                            type="button"
+                            className={secondaryButtonClass + " px-3 py-1.5 text-xs"}
+                            disabled={checking === d.id}
+                            onClick={() => check(d)}
+                          >
+                            <RefreshCw size={13} className={checking === d.id ? "animate-spin" : ""} />
+                            {checking === d.id ? "Checking..." : "Check now"}
+                          </button>
+                        </>
                       ) : null}
-                      <button
-                        type="button"
-                        className={secondaryButtonClass + " px-3 py-1.5 text-xs"}
-                        disabled={checking === d.id}
-                        onClick={() => check(d)}
-                      >
-                        <RefreshCw size={13} className={checking === d.id ? "animate-spin" : ""} />
-                        {checking === d.id ? "Checking..." : "Check now"}
-                      </button>
                       <button
                         type="button"
                         aria-label={`Remove ${d.domain}`}
