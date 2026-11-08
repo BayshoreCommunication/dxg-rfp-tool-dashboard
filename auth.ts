@@ -29,10 +29,9 @@ import {
   reportSignInOutcome,
   setPostSignInNotice,
   storePendingTwoFactor,
-  storeGoogleDomainMatch,
   takeGoogleInvitation,
-  takeGoogleSeparateOrganization,
 } from "@/lib/server/twoFactorPending";
+import { googleDomainMatchRedirect, googleSignInExtras } from "@/lib/server/googleSignup";
 import { takeSsoBind } from "@/lib/server/ssoBind";
 
 class DashboardCredentialsSignin extends CredentialsSignin {
@@ -429,7 +428,7 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
         // the same path the invitation email links to.
         const invitation = await takeGoogleInvitation();
         // ORG-306: set when the person chose a separate organization on /sign-up.
-        const separateOrganization = invitation ? false : await takeGoogleSeparateOrganization();
+        const extras = await googleSignInExtras(Boolean(invitation));
         const path = invitation
           ? "/api/v1/invitations/accept/google"
           : "/api/auth/google";
@@ -443,7 +442,7 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
             path,
             invitation
               ? { token: invitation.token, idToken: account.id_token || "" }
-              : { idToken: account.id_token || "", ...(separateOrganization ? { separateOrganization: true } : {}) },
+              : { idToken: account.id_token || "", ...extras },
           );
           if (!response.ok) {
             const errorCode = backendErrorCode(data, response.status, "google");
@@ -461,10 +460,8 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
             );
             // ORG-306: a new account on a verified organization domain.
             // Offer "Request access" on /sign-up before creating anything.
-            if (!invitation && errorCode === "ORGANIZATION_DOMAIN_MATCH" && typeof data?.organizationName === "string") {
-              await storeGoogleDomainMatch({ email, organizationName: data.organizationName });
-              return "/sign-up?step=organization-match";
-            }
+            const matchRedirect = await googleDomainMatchRedirect({ invited: Boolean(invitation), errorCode, data, email });
+            if (matchRedirect) return matchRedirect;
             // e.g. SSO_REQUIRED: the sign-in page shows a message for it.
             return invitation ? backToInvite(errorCode) : backToSignIn(errorCode);
           }
