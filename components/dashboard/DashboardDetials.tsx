@@ -4,6 +4,7 @@ import FirstRunDashboard from "./FirstRunDashboard";
 import DashboardTableList from "./DashboardTableList";
 import TopCardItem from "./TopCardItem";
 import TopHeader from "./TopHeader";
+import VerifyDomainPrompt from "./VerifyDomainPrompt";
 
 type DashboardOverviewPayload = {
   totals?: {
@@ -65,6 +66,7 @@ const DashboardDetials = async () => {
 
       <div className="space-y-5 pb-6 sm:space-y-7 sm:pb-10 lg:space-y-8 lg:pb-12">
         <TopHeader />
+        <VerifyDomainPrompt />
         {totals.totalProposals === 0 ? (
           // No proposals yet: five zero-value metrics tell a new planner
           // nothing, so show what the product is and how to start instead.

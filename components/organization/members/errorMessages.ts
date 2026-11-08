@@ -15,6 +15,7 @@ export const formatWait = (seconds: number): string => {
 const MESSAGES: Record<string, string | ((e: ErrorLike) => string)> = {
   ACCESS_REQUEST_NOT_FOUND: "That request is no longer available.",
   ACCESS_REQUEST_NOT_PENDING: "Someone already decided this request.",
+  NO_VERIFIED_DOMAIN: "Verify a domain in Security before turning on auto-approve.",
   // Members
   STALE_VERSION: "Someone else changed this member a moment ago. We've loaded the latest details, so try again.",
   VERSION_REQUIRED: "Reload the page and try again.",
