@@ -59,10 +59,16 @@ Fix and re-run until they are right.
 
 The stub proves layout and wiring, not the backend contract. When the change is a workflow that
 writes data (invitations, sharing, publishing, vendor responses), also check it against the real
-API: if the backend is already running on :8000 and the dashboard on :3000 (`../run-all.sh`),
-drive the same click path there with Playwright and the user's test account. Do not start or
-reconfigure those servers yourself, and do not read `.env*` files; if they are not running, say
-the real-backend check was not done.
+API on the **local stack** (backend `deploy/local/README.md`):
+
+- If it is running (dashboard on http://localhost:3100), drive the same click path there with
+  Playwright, signing in as each relevant seeded role (`owner.northwind@example.com`,
+  `admin.`, `manager.`, `planner.`, `viewer.northwind@example.com`; password `Rfpilot-local-1`).
+  Also sign in as `owner.contoso@example.com` and confirm none of Northwind's data appears.
+- Emails the flow sends (codes, invitations) are in Mailpit at http://127.0.0.1:48025.
+- If the stack is not running, ask before starting it (`npm run stack:up` then `stack:dev` in the
+  backend; it needs Docker). Never point this check at `run-all.sh` servers, which use the
+  developer's own `.env.local`, and never read `.env*` files. If it was not run, say so.
 
 ## 7. Report
 
