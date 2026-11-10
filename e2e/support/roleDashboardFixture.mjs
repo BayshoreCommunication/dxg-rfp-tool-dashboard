@@ -132,7 +132,11 @@ const json = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 
-const publicRow = ({ sharedWith: _sharedWith, ...row }) => row;
+const publicRow = (row) => {
+  const copy = { ...row };
+  delete copy.sharedWith;
+  return copy;
+};
 
 export function handleRoleDashboard(request, response, url) {
   if (request.method !== "GET") return false;
