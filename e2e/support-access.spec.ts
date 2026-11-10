@@ -154,6 +154,9 @@ test("Owner: grants one picked RFP with an expiry, grants the whole organization
   await dialog.getByRole("button", { name: "Grant access" }).click();
   await expect(dialog.getByRole("alert")).toHaveText("Choose the RFP that Support may open.");
   await dialog.getByLabel("RFP", { exact: true }).fill("leadership");
+  // Enter in the search box only searches.
+  await dialog.getByLabel("RFP", { exact: true }).press("Enter");
+  await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("radio", { name: /Autumn Partner Gala/ })).toHaveCount(0);
   await dialog.getByRole("radio", { name: /Regional Leadership Summit/ }).check();
   await dialog.getByLabel("Access ends after").selectOption("14");
@@ -163,7 +166,7 @@ test("Owner: grants one picked RFP with an expiry, grants the whole organization
   await expect(dialog).toHaveCount(0);
   const granted = activeList(page).getByRole("listitem").filter({ hasText: "Regional Leadership Summit" });
   await expect(granted).toContainText("One RFP");
-  await expect(granted).toContainText(/Expires in 1[34] days/);
+  await expect(granted).toContainText("Expires in 14 days");
   await expect(granted).toContainText("Reason: Support ticket 5120");
   await expect(granted).toContainText("Not used");
 
@@ -182,7 +185,7 @@ test("Owner: grants one picked RFP with an expiry, grants the whole organization
   await expect(dialog).toHaveCount(0);
   const wide = activeList(page).getByRole("listitem").filter({ hasText: "Whole organization" });
   await expect(wide).toContainText("Every RFP");
-  await expect(wide).toContainText(/Expires in (1 day|2 days)/);
+  await expect(wide).toContainText("Expires in 2 days");
   await expect(activeList(page).getByRole("listitem")).toHaveCount(3);
   await check(page, testInfo, "owner-after-granting");
 
@@ -215,7 +218,7 @@ test("Admin: can grant and revoke as well", async ({ page }, testInfo) => {
   await expect(dialog).toHaveCount(0);
   const granted = activeList(page).getByRole("listitem").filter({ hasText: "Autumn Partner Gala" });
   await expect(granted).toContainText("Granted by Adam Admin");
-  await expect(granted).toContainText(/Expires in [67] days/);
+  await expect(granted).toContainText("Expires in 7 days");
 
   await page.getByRole("button", { name: "Revoke access to Spring Sales Kickoff 2027" }).click();
   await dialog.getByRole("button", { name: "Revoke access" }).click();
@@ -290,7 +293,7 @@ test("a grant that is no longer in the organization reads as not found and the l
   await expect(page.getByText("Spring Sales Kickoff 2027")).toHaveCount(0);
 });
 
-test("load failure and paging", async ({ page, request }, testInfo) => {
+test("load failure, then every page that could hold live access", async ({ page, request }, testInfo) => {
   await signInAs(page, "owner");
 
   await request.post(STUB, { data: { failList: true } });
@@ -301,10 +304,9 @@ test("load failure and paging", async ({ page, request }, testInfo) => {
   await request.post(STUB, { data: { failList: false, perPage: 2 } });
   await page.getByRole("button", { name: "Try again" }).click();
 
-  // Two grants a page: the third arrives with "Show older access".
+  // Two grants a page, all recent enough that an older page could hold live access: the
+  // screen fetches the second page by itself.
   await expect(activeList(page).getByRole("listitem")).toHaveCount(1);
-  await expect(pastList(page).getByRole("listitem")).toHaveCount(1);
-  await page.getByRole("button", { name: "Show older access" }).click();
   await expect(pastList(page).getByRole("listitem")).toHaveCount(2);
   await expect(page.getByRole("button", { name: "Show older access" })).toHaveCount(0);
   await check(page, testInfo, "owner-all-pages");

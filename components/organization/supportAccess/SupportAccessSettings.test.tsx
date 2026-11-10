@@ -147,6 +147,11 @@ describe("SupportAccessSettings (ORG-405)", () => {
     expect(await dialog.findByRole("alert")).toHaveTextContent("Choose the RFP that Support may open.");
     expect(mockCreate).not.toHaveBeenCalled();
 
+    // Enter in the search box searches; it never grants the RFP picked earlier.
+    fireEvent.click(dialog.getByRole("radio", { name: /Spring Sales Kickoff/ }));
+    expect(fireEvent.keyDown(dialog.getByLabelText("RFP"), { key: "Enter" })).toBe(false);
+    expect(mockCreate).not.toHaveBeenCalled();
+
     mockSearch.mockResolvedValue(ok([{ id: "p2", title: "Autumn Gala", ownerName: null }]));
     fireEvent.change(dialog.getByLabelText("RFP"), { target: { value: "gala" } });
     await waitFor(() => expect(mockSearch).toHaveBeenLastCalledWith("gala"));
@@ -266,15 +271,37 @@ describe("SupportAccessSettings (ORG-405)", () => {
     expect(await screen.findByText("No past access yet.")).toBeInTheDocument();
   });
 
-  it("loads older access a page at a time", async () => {
-    await renderPage([grant()], 2);
-    mockList.mockResolvedValue(ok(pageOf([expired, grant()], 2, 2)));
+  it("fetches older pages by itself while they could still hold live access", async () => {
+    // Page 1 ends with a grant made yesterday, so page 2 may hold access that hasn't run out.
+    const older = grant({ id: "g-older", rfp: { id: "p2", title: "Autumn Gala" }, createdAt: ago(3 * DAY), expiresAt: ahead(4 * DAY) });
+    mockList.mockResolvedValue(ok(pageOf([older, expired, grant()], 2, 2)));
+    render(<SupportAccessSettings initialPage={pageOf([grant()], 1, 2)} />);
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith(2));
+    const active = within(await screen.findByRole("list", { name: "Active access" }));
+    expect(await active.findByText("Autumn Gala")).toBeInTheDocument();
+    // The repeated row is not listed twice, and there is nothing older left.
+    expect(active.getAllByRole("listitem")).toHaveLength(2);
+    expect(mockList).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Show older access" })).not.toBeInTheDocument();
+  });
+
+  it("offers access older than 30 days a page at a time", async () => {
+    // Nothing older than the oldest row here can still be live, so the rest waits for a click.
+    await renderPage([grant(), grant({ id: "g-old", status: "expired", createdAt: ago(40 * DAY), expiresAt: ago(33 * DAY) })], 2);
+    expect(mockList).not.toHaveBeenCalled();
+    mockList.mockResolvedValue(ok(pageOf([grant({ id: "g-older", scope: "organization", rfp: null, status: "expired", createdAt: ago(60 * DAY), expiresAt: ago(53 * DAY) })], 2, 2)));
     fireEvent.click(screen.getByRole("button", { name: "Show older access" }));
     await waitFor(() => expect(mockList).toHaveBeenCalledWith(2));
-    expect(await within(await screen.findByRole("list", { name: "Past access" })).findByText("Whole organization")).toBeInTheDocument();
-    // The repeated row is not listed twice, and there is nothing older left.
-    expect(within(screen.getByRole("list", { name: "Active access" })).getAllByRole("listitem")).toHaveLength(1);
+    expect(await within(screen.getByRole("list", { name: "Past access" })).findByText("Whole organization")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Show older access" })).not.toBeInTheDocument();
+  });
+
+  it("judges expiry by the server's clock, so a device clock that runs ahead can't hide live access", async () => {
+    // The device believes it is 10 days later than the server does.
+    render(<SupportAccessSettings initialPage={pageOf([grant()])} serverNow={Date.now() - 10 * DAY} />);
+    const active = within(await screen.findByRole("list", { name: "Active access" }));
+    expect(active.getByRole("button", { name: "Revoke access to Spring Sales Kickoff" })).toBeInTheDocument();
+    expect(screen.queryByText("RFPilot Support has no access")).not.toBeInTheDocument();
   });
 
   it("shows a load failure with a way to try again", async () => {

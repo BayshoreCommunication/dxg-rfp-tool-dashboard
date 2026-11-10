@@ -156,6 +156,10 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
                 type="search"
                 value={term}
                 onChange={(event) => setTerm(event.target.value)}
+                // Enter here is a search, never "grant access to whatever was picked before".
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.preventDefault();
+                }}
                 placeholder="Search by event name"
                 maxLength={120}
                 autoComplete="off"

@@ -127,8 +127,10 @@ export const parseGrantDetail = (value: unknown, now = Date.now()): SupportGrant
   return { ...grant, events };
 };
 
-export const parseGrantableRfps = (value: unknown): GrantableRfp[] => {
-  const items = isRecord(value) && Array.isArray(value.items) ? value.items : Array.isArray(value) ? value : [];
+// null when the answer isn't a list at all, so a broken answer is not shown as "no RFPs".
+export const parseGrantableRfps = (value: unknown): GrantableRfp[] | null => {
+  const items = isRecord(value) && Array.isArray(value.items) ? value.items : Array.isArray(value) ? value : null;
+  if (!items) return null;
   return items.flatMap((item): GrantableRfp[] => {
     if (!isRecord(item)) return [];
     const id = text(item.id) ?? text(item._id);
@@ -152,13 +154,29 @@ export const grantScopeLabel = (grant: Pick<SupportGrant, "scope">): string => (
 
 const plural = (value: number, word: string) => `${value} ${word}${value === 1 ? "" : "s"}`;
 
+// Rounded to the nearest unit, so a grant made for 7 days reads "7 days", not "6 days".
 export const timeLeft = (expiresAt: string | null, now = Date.now()): string => {
   const remaining = expiresAt ? new Date(expiresAt).getTime() - now : 0;
   if (!(remaining > 0)) return "Expired";
   if (remaining < 60_000) return "Expires in less than a minute";
-  if (remaining < 60 * 60_000) return `Expires in ${plural(Math.floor(remaining / 60_000), "minute")}`;
-  if (remaining < DAY_MS) return `Expires in ${plural(Math.floor(remaining / (60 * 60_000)), "hour")}`;
-  return `Expires in ${plural(Math.floor(remaining / DAY_MS), "day")}`;
+  if (remaining < 59.5 * 60_000) return `Expires in ${plural(Math.round(remaining / 60_000), "minute")}`;
+  if (remaining < 23.5 * 60 * 60_000) return `Expires in ${plural(Math.round(remaining / (60 * 60_000)), "hour")}`;
+  return `Expires in ${plural(Math.round(remaining / DAY_MS), "day")}`;
+};
+
+// "last used 2 h ago", or "last used on Oct 3, 2026" once it is more than a month back.
+export const lastUsedLabel = (lastUsedAt: string | null, now = Date.now()): string | null => {
+  if (!lastUsedAt) return null;
+  const time = new Date(lastUsedAt).getTime();
+  if (Number.isNaN(time)) return null;
+  const minutes = Math.round((now - time) / 60_000);
+  if (minutes < 1) return "last used just now";
+  if (minutes < 60) return `last used ${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `last used ${hours} h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `last used ${plural(days, "day")} ago`;
+  return `last used on ${new Date(time).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 };
 
 export const formatDateTime = (value: string | null): string => {
@@ -198,6 +216,9 @@ const MESSAGES: Record<string, string> = {
   SUPPORT_GRANT_EXPIRED: "This support access has already expired, so there is nothing to revoke.",
   SUPPORT_GRANT_FORBIDDEN: `Only an Owner or Admin can manage ${SUPPORT_LABEL} access.`,
   SUPPORT_ACCESS_INTERNAL_ERROR: "The request couldn't be completed. Try again.",
+  // The RFP picker's list (ORG-401); its own wording is about the dashboard.
+  DASHBOARD_INTERNAL_ERROR: "Your RFPs couldn't be loaded. Try again.",
+  DASHBOARD_FILTER_INVALID: "Your RFPs couldn't be loaded. Try again.",
   INVALID_RESPONSE: "We couldn't read the server's answer. Reload the page.",
 };
 

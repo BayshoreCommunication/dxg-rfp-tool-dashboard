@@ -61,5 +61,5 @@ export async function searchGrantableRfpsAction(search: string): Promise<OrgActi
   const query = new URLSearchParams({ limit: "20", sortBy: "updatedAt", sortOrder: "desc", stage: ALL_STAGES });
   const term = search.trim().slice(0, 120);
   if (term) query.set("search", term);
-  return orgRequest(`/api/v1/rfps?${query.toString()}`, {}, (payload) => parseGrantableRfps(payload.data));
+  return readable(await orgRequest(`/api/v1/rfps?${query.toString()}`, {}, (payload) => parseGrantableRfps(payload.data)));
 }

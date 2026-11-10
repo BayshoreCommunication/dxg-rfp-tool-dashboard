@@ -114,5 +114,9 @@ describe("support grant actions (ORG-405)", () => {
     mockedFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { items: [] } }));
     await searchGrantableRfpsAction("");
     expect(new URL(lastCall().url).searchParams.has("search")).toBe(false);
+
+    // A 200 that isn't a list is a failure, not "no RFPs".
+    mockedFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { rows: [] } }));
+    expect(await searchGrantableRfpsAction("")).toMatchObject({ success: false, code: "INVALID_RESPONSE" });
   });
 });

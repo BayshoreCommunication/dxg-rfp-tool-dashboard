@@ -2,6 +2,7 @@ import {
   agentReference,
   currentStatus,
   grantTarget,
+  lastUsedLabel,
   operationLabel,
   parseExpiryDays,
   parseGrant,
@@ -95,11 +96,14 @@ describe("support grant parsing", () => {
       { id: "p1", title: "Gala", ownerName: "Paul Planner" },
       { id: "p2", title: "Untitled RFP", ownerName: null },
     ]);
-    expect(parseGrantableRfps(undefined)).toEqual([]);
+    // Not a list at all: unreadable, which is not the same as "no RFPs".
+    expect(parseGrantableRfps(undefined)).toBeNull();
+    expect(parseGrantableRfps({ rows: [] })).toBeNull();
+    expect(parseGrantableRfps({ items: [] })).toEqual([]);
   });
 
   it("shows the backend's placeholder name for an unnamed RFP as an untitled RFP", () => {
-    expect(parseGrantableRfps({ items: [{ id: "p3", eventName: "Untitled proposal" }] })[0].title).toBe("Untitled RFP");
+    expect(parseGrantableRfps({ items: [{ id: "p3", eventName: "Untitled proposal" }] })?.[0].title).toBe("Untitled RFP");
     expect(parseGrant(apiGrant({ rfp: { id: "p3", title: "Untitled Proposal" } }), NOW)?.rfp?.title).toBe("Untitled RFP");
     expect(parseGrant(apiGrant({ rfp: { id: "p4", title: "Proposal writing workshop" } }), NOW)?.rfp?.title).toBe("Proposal writing workshop");
   });
@@ -116,13 +120,24 @@ describe("support grant display", () => {
     expect(grantTarget({ scope: "organization", rfp: null })).toBe("Whole organization");
     expect(grantTarget({ scope: "rfp", rfp: { id: "p1", title: "Gala" } })).toBe("Gala");
     expect(grantTarget({ scope: "rfp", rfp: { id: "p1", title: null } })).toBe("An RFP that was deleted");
+    // Nearest unit: a grant just made for 7 days reads 7 days.
+    expect(timeLeft(iso(7 * DAY - 5000), NOW)).toBe("Expires in 7 days");
     expect(timeLeft(iso(6 * DAY + HOUR), NOW)).toBe("Expires in 6 days");
-    expect(timeLeft(iso(DAY), NOW)).toBe("Expires in 1 day");
+    expect(timeLeft(iso(DAY - 5000), NOW)).toBe("Expires in 1 day");
     expect(timeLeft(iso(5 * HOUR), NOW)).toBe("Expires in 5 hours");
-    expect(timeLeft(iso(90_000), NOW)).toBe("Expires in 1 minute");
+    expect(timeLeft(iso(HOUR - 5000), NOW)).toBe("Expires in 1 hour");
+    expect(timeLeft(iso(90_000), NOW)).toBe("Expires in 2 minutes");
     expect(timeLeft(iso(10_000), NOW)).toBe("Expires in less than a minute");
     expect(timeLeft(iso(-1), NOW)).toBe("Expired");
     expect(timeLeft(null, NOW)).toBe("Expired");
+  });
+
+  it("says when Support last used a grant, with a date once it is over a month back", () => {
+    expect(lastUsedLabel(null, NOW)).toBeNull();
+    expect(lastUsedLabel(iso(-10_000), NOW)).toBe("last used just now");
+    expect(lastUsedLabel(iso(-2 * HOUR), NOW)).toBe("last used 2 h ago");
+    expect(lastUsedLabel(iso(-6 * DAY), NOW)).toBe("last used 6 days ago");
+    expect(lastUsedLabel("2026-08-03T12:00:00.000Z", NOW)).toBe("last used on Aug 3, 2026");
   });
 
   it("accepts whole days from 1 to 30 only", () => {
@@ -155,5 +170,6 @@ describe("support grant display", () => {
     expect(supportGrantErrorMessage({ status: 429, details: { retryAfterSeconds: 120 } })).toMatch(/Try again in 2 minutes/);
     expect(supportGrantErrorMessage({ code: "NETWORK_ERROR" })).toMatch(/couldn't reach the server/);
     expect(supportGrantErrorMessage({ code: "SOMETHING_NEW", message: "Proposal store unavailable." }, "Try again.")).toBe("Try again.");
+    expect(supportGrantErrorMessage({ code: "DASHBOARD_INTERNAL_ERROR", message: "The dashboard could not be loaded.", status: 500 })).toBe("Your RFPs couldn't be loaded. Try again.");
   });
 });

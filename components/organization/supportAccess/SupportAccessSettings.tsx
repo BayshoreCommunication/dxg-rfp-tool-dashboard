@@ -2,14 +2,13 @@
 
 import { ArrowLeft, Building2, FileText, LifeBuoy, Plus, ShieldOff } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { listSupportGrantsAction, revokeSupportGrantAction } from "@/app/actions/supportGrants";
 import {
   Badge,
   dangerButtonClass,
   EmptyState,
-  formatRelative,
   InlineError,
   OrgDialog,
   primaryButtonClass,
@@ -26,8 +25,10 @@ import GrantSupportDialog from "./GrantSupportDialog";
 import {
   currentStatus,
   formatDateTime,
+  GRANT_MAX_DAYS,
   grantScopeLabel,
   grantTarget,
+  lastUsedLabel,
   STATUS_LABELS,
   SUPPORT_LABEL,
   supportGrantErrorMessage,
@@ -44,6 +45,9 @@ type Props = {
   // The first page, loaded by the route (which is also what proves the member may be here).
   initialPage: SupportGrantPage | null;
   initialError?: string | null;
+  // The server's clock when it loaded the page. Expiry is judged against it, not the reader's
+  // device, so a wrong device clock can't show live access as expired (and hide Revoke).
+  serverNow?: number;
 };
 
 // The shared link button's brand blue is too faint on white for small text (3.7:1).
@@ -61,7 +65,7 @@ const mergeGrants = (current: SupportGrant[], incoming: SupportGrant[]): Support
 // ORG-405 (PRD P0-9): an Owner or Admin lets RFPilot Support read one RFP or the whole
 // organization for a limited time, ends that access, and sees every grant with what Support did
 // under it. The backend refuses every other role; the route answers 404 for them.
-export default function SupportAccessSettings({ initialPage, initialError = null }: Props) {
+export default function SupportAccessSettings({ initialPage, initialError = null, serverNow }: Props) {
   const [grants, setGrants] = useState<SupportGrant[]>(initialPage?.grants ?? []);
   const [page, setPage] = useState(initialPage?.page ?? 1);
   const [totalPages, setTotalPages] = useState(initialPage?.totalPages ?? 1);
@@ -74,12 +78,14 @@ export default function SupportAccessSettings({ initialPage, initialError = null
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
+    // How far the server's clock is from this device's (0 when the page didn't say).
+    const skew = typeof serverNow === "number" ? serverNow - Date.now() : 0;
     // Hydration guard: the reader's clock is only known in the browser.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    setNow(Date.now() + skew);
+    const timer = setInterval(() => setNow(Date.now() + skew), 30_000);
     return () => clearInterval(timer);
-  }, []);
+  }, [serverNow]);
 
   const reload = useCallback(async () => {
     const result = await listSupportGrantsAction(1);
@@ -107,6 +113,35 @@ export default function SupportAccessSettings({ initialPage, initialError = null
       toast.error(supportGrantErrorMessage(result, "Older access couldn't be loaded. Try again."));
     }
   };
+
+  // Grants come newest first, 50 a page, and none lasts past 30 days. While the oldest one
+  // loaded is younger than that, an older page could still hold live access: fetch it, so
+  // "Active access" never understates what Support can read.
+  const oldestLoaded = grants.reduce<number | null>((oldest, grant) => {
+    const created = grant.createdAt ? new Date(grant.createdAt).getTime() : null;
+    return created !== null && (oldest === null || created < oldest) ? created : oldest;
+  }, null);
+  const olderMayBeActive = now !== null && page < totalPages && (oldestLoaded === null || now - oldestLoaded < GRANT_MAX_DAYS * 24 * 60 * 60_000);
+  const autoLoadFailed = useRef(false);
+  useEffect(() => {
+    if (!olderMayBeActive || autoLoadFailed.current) return;
+    let current = true;
+    void listSupportGrantsAction(page + 1).then((result) => {
+      if (!current) return;
+      if (result.success && result.data) {
+        const next = result.data;
+        setGrants((existing) => mergeGrants(existing, next.grants));
+        setPage(next.page > page ? next.page : page + 1);
+        setTotalPages(next.totalPages);
+      } else {
+        // Stop here; "Show older access" stays for a manual retry.
+        autoLoadFailed.current = true;
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [olderMayBeActive, page]);
 
   const replaceGrant = (grant: SupportGrant) => setGrants((current) => current.map((item) => (item.id === grant.id ? grant : item)));
 
@@ -174,7 +209,7 @@ export default function SupportAccessSettings({ initialPage, initialError = null
             <dt className="sr-only">Support activity</dt>
             <dd>
               {accessUseLabel(grant.activity.useCount)}
-              {grant.activity.lastUsedAt ? ` · last used ${formatRelative(grant.activity.lastUsedAt, clock).toLowerCase()}` : ""}
+              {lastUsedLabel(grant.activity.lastUsedAt, clock) ? ` · ${lastUsedLabel(grant.activity.lastUsedAt, clock)}` : ""}
             </dd>
           </div>
           {grant.reason && (
@@ -191,7 +226,7 @@ export default function SupportAccessSettings({ initialPage, initialError = null
   return (
     <div className="space-y-6 px-6 pb-10" data-testid="support-access">
       <div>
-        <Link href="/settings/security" className="inline-flex items-center gap-1 rounded text-xs font-semibold text-slate-600 hover:text-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+        <Link href="/settings/security" className="inline-flex items-center gap-1 rounded text-xs font-semibold text-slate-600 hover:text-[#008ad2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
           <ArrowLeft size={12} aria-hidden="true" /> Security
         </Link>
         <h1 className="mt-2 flex items-center gap-2 text-[30px] font-black leading-none tracking-tight text-slate-900">
