@@ -193,7 +193,7 @@ it('is read-only for a Planner', async () => {
 it('shows a plain message when the list cannot be loaded', async () => {
   mockList.mockResolvedValue({ success: false, status: 403, message: "You don't have permission to perform this action" })
   render(<VendorListSettings canEdit={false} />)
-  expect(await screen.findByRole('alert')).toHaveTextContent("Your role doesn't allow this.")
+  expect(await screen.findByRole('alert')).toHaveTextContent("Your role can't see the organization's vendor list.")
 })
 
 it('offers the first vendor on an empty list', async () => {
@@ -201,4 +201,38 @@ it('offers the first vendor on an empty list', async () => {
   render(<VendorListSettings canEdit />)
   expect(await screen.findByText('No vendors yet')).toBeInTheDocument()
   expect(screen.getAllByRole('button', { name: 'Add vendor' })).toHaveLength(2)
+})
+
+it('keeps the loaded vendors when the next page fails', async () => {
+  mockList.mockResolvedValueOnce(page([vendor()], 2))
+  render(<VendorListSettings canEdit />)
+  expect(await screen.findByText('Showing 1 of 2 vendors')).toBeInTheDocument()
+  mockList.mockResolvedValueOnce({ success: false, status: 500, message: 'boom' })
+  fireEvent.click(screen.getByRole('button', { name: 'Show more vendors' }))
+  await waitFor(() => expect(toast.error).toHaveBeenCalledWith("More vendors couldn't be loaded. Try again."))
+  expect(screen.getByText('Brightline AV')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Show more vendors' })).toBeEnabled()
+})
+
+it('drops the edit controls once the backend refuses a write for the role', async () => {
+  mockArchive.mockResolvedValue({ success: false, status: 403, message: "You don't have permission to perform this action" })
+  render(<VendorListSettings canEdit />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Archive Brightline AV' }))
+  const dialog = screen.getByRole('dialog', { name: 'Archive Brightline AV?' })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Archive vendor' }))
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Only Owners, Admins and Team Managers can edit the vendor list.')
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+  expect(screen.queryByRole('button', { name: 'Add vendor' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^(Edit|Archive) / })).not.toBeInTheDocument()
+})
+
+it('reloads the list when the vendor being edited was archived by someone else', async () => {
+  mockUpdate.mockResolvedValue({ success: false, status: 409, code: 'VENDOR_ARCHIVED', message: 'archived' })
+  render(<VendorListSettings canEdit />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit Brightline AV' }))
+  const dialog = screen.getByRole('dialog', { name: 'Edit Brightline AV' })
+  fireEvent.change(within(dialog).getByLabelText('Company'), { target: { value: 'Brightline' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('This vendor is archived. Restore it before editing it.')
+  expect(mockList).toHaveBeenCalledTimes(2)
 })

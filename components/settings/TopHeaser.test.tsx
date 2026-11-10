@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import TopHeader from './TopHeaser'
 
 // ORG-607: the Vendors tab depends on the member's access to the vendor list.
@@ -49,6 +49,8 @@ describe('TopHeader', () => {
   it('hides the Vendors section from a Viewer', async () => {
     render(<TopHeader />)
     await waitFor(() => expect(mockVendorAccess).toHaveBeenCalled())
+    // Let the access answer settle: the tab would appear only after it.
+    await act(async () => { await mockVendorAccess.mock.results[0].value })
     expect(screen.getByRole('link', { name: 'Security' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument()
   })

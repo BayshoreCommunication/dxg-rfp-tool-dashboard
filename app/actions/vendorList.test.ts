@@ -132,6 +132,6 @@ describe("vendor list actions", () => {
     mockedFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: vendor }));
     const result = await addContactsToVendorAction("v1", [{ name: "", email: "jane@brightline.test" }]);
     expect(mockedFetch).toHaveBeenCalledTimes(1);
-    expect(result).toMatchObject({ success: true, data: vendor });
+    expect(result).toMatchObject({ success: true, data: vendor, details: { unchanged: true } });
   });
 });

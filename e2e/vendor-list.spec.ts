@@ -164,6 +164,9 @@ test("viewer: the vendor list does not exist", async ({ page }, testInfo) => {
   await signInAs(page, "viewer");
   await page.goto("/settings");
   await expect(page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Security" })).toBeVisible();
+  // The tab only ever appears after the access answer: let the page settle before saying it is absent.
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(1_500);
   await expect(page.getByRole("link", { name: "Vendors" })).toHaveCount(0);
   const response = await page.goto("/settings/vendors");
   expect(response?.status()).toBe(404);

@@ -87,7 +87,8 @@ export async function addContactsToVendorAction(vendorId: string, contacts: Vend
   const current = await getVendorAction(vendorId);
   if (!current.success || !current.data) return current;
   const merged = mergeContacts(current.data.contacts, contacts);
-  if (merged.length === current.data.contacts.length) return current;
+  // Nothing new: say so, so the screen does not claim it added contacts.
+  if (merged.length === current.data.contacts.length) return { ...current, details: { unchanged: true } };
   return updateVendorAction(vendorId, { contacts: merged });
 }
 

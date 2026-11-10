@@ -139,3 +139,39 @@ it('points an editor at Settings when the list is empty', async () => {
   render(<Harness />)
   expect(await screen.findByRole('link', { name: 'Add vendors in Settings' })).toHaveAttribute('href', '/settings/vendors')
 })
+
+it('does not call an address new before the list has answered, or when it failed to load', async () => {
+  mockList.mockResolvedValue({ success: false, status: 500, message: 'boom' })
+  render(<Harness initial={['jane@brightline.test']} />)
+  expect(await screen.findByRole('alert')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Save new vendor to the list' })).not.toBeInTheDocument()
+})
+
+it('says so when the contacts were already on the existing vendor', async () => {
+  mockCreate.mockResolvedValue({ success: false, status: 409, code: 'VENDOR_COMPANY_TAKEN', message: 'taken' })
+  mockFind.mockResolvedValue({ success: true, message: 'OK', data: vendor() })
+  mockAddContacts.mockResolvedValue({ success: true, message: 'OK', data: vendor(), details: { unchanged: true } })
+  render(<Harness initial={['new@brightline.test']} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Save new vendor to the list' }))
+  const dialog = screen.getByRole('dialog', { name: 'Add vendor' })
+  fireEvent.change(within(dialog).getByLabelText('Company'), { target: { value: 'Brightline AV' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Add vendor' }))
+  fireEvent.click(await within(dialog).findByRole('button', { name: 'Add to Brightline AV' }))
+  await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Brightline AV already has these contacts.'))
+})
+
+it('keeps the search box while a search that found nothing is cleared', async () => {
+  render(<Harness />)
+  const search = await screen.findByRole('searchbox', { name: 'Search your vendor list' })
+  mockList.mockResolvedValue(page([]))
+  fireEvent.change(search, { target: { value: 'zzz' } })
+  expect(await screen.findByText('No vendors match “zzz”.')).toBeInTheDocument()
+  let release: (value: unknown) => void = () => undefined
+  mockList.mockReturnValue(new Promise((resolve) => { release = resolve }))
+  fireEvent.change(search, { target: { value: '' } })
+  await waitFor(() => expect(mockList).toHaveBeenLastCalledWith({ search: '', status: 'active', limit: 200 }))
+  expect(screen.getByRole('searchbox', { name: 'Search your vendor list' })).toBe(search)
+  expect(screen.queryByText(/vendor list is empty/)).not.toBeInTheDocument()
+  release(page([vendor()]))
+  expect(await screen.findByRole('checkbox', { name: 'Brightline AV: all contacts' })).toBeInTheDocument()
+})

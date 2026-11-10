@@ -19,12 +19,13 @@ import {
   Spinner,
   TableSkeleton,
 } from "../members/ui";
-import { ArchiveVendorDialog, VendorFormDialog, type VendorSaveOutcome } from "./VendorDialogs";
+import { ArchiveVendorDialog, VendorFormDialog, type VendorFailure, type VendorSaveOutcome } from "./VendorDialogs";
 import {
   contactSummary,
   isCompanyTaken,
   isRoleRefusal,
   isVendorGone,
+  VENDOR_LIST_HIDDEN_MESSAGE,
   vendorErrorMessage,
   type Vendor,
 } from "./vendorListModel";
@@ -53,6 +54,8 @@ export default function VendorListSettings({ canEdit: initialCanEdit }: Props) {
   const [vendors, setVendors] = useState<Vendor[] | null>(null);
   const [total, setTotal] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // The filters the rows on screen were loaded for; while they differ the rows are stale.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -74,9 +77,15 @@ export default function VendorListSettings({ canEdit: initialCanEdit }: Props) {
       setVendors((previous) => (offset === 0 || !previous ? page.items : [...previous, ...page.items.filter((item) => !previous.some((p) => p.id === item.id))]));
       setTotal(page.total);
       setLoadError(null);
+      setLoadedFor(JSON.stringify([search, category, status]));
+    } else if (offset > 0) {
+      // The rows already on screen stay; only the next page is missing.
+      toast.error(vendorErrorMessage(result, "More vendors couldn't be loaded. Try again."));
     } else {
-      if (offset === 0) setVendors(null);
-      setLoadError(vendorErrorMessage(result, "The vendor list couldn't be loaded. Reload the page to try again."));
+      setVendors(null);
+      setLoadError(
+        isRoleRefusal(result) ? VENDOR_LIST_HIDDEN_MESSAGE : vendorErrorMessage(result, "The vendor list couldn't be loaded. Reload the page to try again."),
+      );
     }
   }, [search, category, status]);
 
@@ -105,6 +114,13 @@ export default function VendorListSettings({ canEdit: initialCanEdit }: Props) {
     if (isRoleRefusal(error)) setCanEdit(false);
   };
 
+  // A dialog was refused: drop the edit controls for a role refusal, and reload when the vendor
+  // it was opened for is gone or archived, so the row behind the dialog is not stale.
+  const onDialogFailure = (failure: VendorFailure) => {
+    noteRefusal(failure);
+    if (isVendorGone(failure) || failure.code === "VENDOR_ARCHIVED") refresh();
+  };
+
   const restore = async (vendor: Vendor) => {
     setRestoringId(vendor.id);
     const result = await restoreVendorAction(vendor.id);
@@ -127,6 +143,7 @@ export default function VendorListSettings({ canEdit: initialCanEdit }: Props) {
     toast.success(
       outcome === "created" ? `${vendor.company} added to the vendor list.`
         : outcome === "contacts-added" ? `Contacts added to ${vendor.company}.`
+        : outcome === "contacts-already-listed" ? `${vendor.company} already has these contacts.`
         : `${vendor.company} updated.`,
     );
     refresh();
@@ -141,7 +158,8 @@ export default function VendorListSettings({ canEdit: initialCanEdit }: Props) {
     });
 
   const filtered = search !== "" || category !== "";
-  const loading = vendors === null && !loadError;
+  const stale = loadedFor !== JSON.stringify([search, category, status]);
+  const loading = !loadError && (vendors === null || (stale && vendors.length === 0));
   const shown = vendors ?? [];
   const addButton = canEdit ? (
     <button type="button" className={primaryButtonClass} style={primaryButtonStyle} onClick={() => setDialog({ kind: "add" })}>
@@ -313,14 +331,15 @@ export default function VendorListSettings({ canEdit: initialCanEdit }: Props) {
         )}
       </section>
 
-      {dialog?.kind === "add" && <VendorFormDialog categories={categories} onClose={() => setDialog(null)} onSaved={onSaved} />}
+      {dialog?.kind === "add" && <VendorFormDialog categories={categories} onClose={() => setDialog(null)} onSaved={onSaved} onFailure={onDialogFailure} />}
       {dialog?.kind === "edit" && (
-        <VendorFormDialog vendor={dialog.vendor} categories={categories} onClose={() => setDialog(null)} onSaved={onSaved} />
+        <VendorFormDialog vendor={dialog.vendor} categories={categories} onClose={() => setDialog(null)} onSaved={onSaved} onFailure={onDialogFailure} />
       )}
       {dialog?.kind === "archive" && (
         <ArchiveVendorDialog
           vendor={dialog.vendor}
           onClose={() => setDialog(null)}
+          onFailure={onDialogFailure}
           onArchived={(vendor) => {
             setDialog(null);
             toast.success(`${vendor.company} archived.`);

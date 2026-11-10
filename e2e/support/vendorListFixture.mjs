@@ -12,7 +12,7 @@ const ROLES = {
   "vendor-list-viewer@example.com": { userId: "a5a5a5a5a5a5a5a5a5a5a5a5", name: "Vera Viewer", roles: ["viewer"] },
 };
 const EDIT_ROLES = ["owner", "organization_admin", "team_manager"];
-const READ_ROLES = [...EDIT_ROLES, "planner"];
+const READ_ROLES = [...EDIT_ROLES, "planner", "dxg_producer"];
 // A vendor that belongs to a different organization: every route answers 404 for it.
 const FOREIGN_VENDOR_ID = "ffffffffffffffffffffffff";
 

@@ -98,10 +98,10 @@ export const parseVendorPage = (value: unknown): VendorPage => {
 export const parseCategories = (value: unknown): string[] =>
   Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === "string" && item.trim() !== "").map((item) => item.trim()))] : [];
 
-// Role names in the backend access token (authorizationPolicy.ts): these three hold
-// `vendor-list:write`; a Planner (and the legacy producer role) holds `vendor-list:read` only;
+// Role names in the backend access token (authorizationPolicy.ts): Owner, Admin, Team Manager
+// and the two platform roles hold `vendor-list:write`; a Planner (and the legacy producer role) holds `vendor-list:read` only;
 // a Viewer holds neither.
-const EDIT_ROLES = ["owner", "organization_admin", "team_manager"];
+const EDIT_ROLES = ["owner", "organization_admin", "team_manager", "dxg_admin", "super_admin"];
 const READ_ROLES = [...EDIT_ROLES, "planner", "dxg_producer"];
 
 export const vendorListAccessForRoles = (roles: readonly string[]): VendorListAccess => ({
@@ -176,20 +176,51 @@ export type PastedContacts = {
   duplicates: string[];
 };
 
-const ANY_EMAIL = /[^\s<>(),;:"']+@[^\s<>(),;:"']+\.[^\s<>(),;:"']+/g;
+// An address inside free text. Brackets, quotes, separators and URL punctuation end it; an
+// apostrophe may be part of it (o'brien@…), so wrapping apostrophes are trimmed afterwards.
+const ANY_EMAIL = /[^\s<>(),;:"/?=&]+@[^\s<>(),;:"'/?=&]+\.[^\s<>(),;:"'/?=&]+/g;
+const LABEL = /^(e-?mail|mailto|to|cc|bcc|contact|name)$/i;
 
-const nameFrom = (text: string): string =>
-  tidy(text.replace(/[<>()"']/g, " ").replace(/^[\s,;:|\-–—]+|[\s,;:|\-–—]+$/g, ""));
+const emailsIn = (text: string): string[] => [
+  ...new Set((text.match(ANY_EMAIL) ?? []).map((match) => match.replace(/^'+|'+$/g, "").replace(/[.,;]+$/, ""))),
+];
+
+// The name is what stands before the address: the cell before it in a spreadsheet row, or the
+// text before it on a plain line. Labels ("Email:") and a repeat of the address are not names.
+const nameBefore = (line: string, email: string): string => {
+  const before = line.slice(0, Math.max(line.indexOf(email), 0));
+  const source = line.includes("\t") ? before.split("\t").map((cell) => cell.trim()).filter(Boolean).pop() ?? "" : before;
+  const name = tidy(source.replace(/[<>()"]/g, " ").replace(/^[\s,;:|\-–—']+|[\s,;:|\-–—']+$/g, ""));
+  return !name || LABEL.test(name) || name.includes("@") ? "" : name;
+};
+
+// Commas inside double quotes ("Doe, Jane") do not separate people.
+const splitOutsideQuotes = (line: string): string[] => {
+  const parts: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (const char of line) {
+    if (char === '"') quoted = !quoted;
+    if (char === "," && !quoted) {
+      parts.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  parts.push(current);
+  return parts.map((part) => part.trim()).filter(Boolean);
+};
 
 // Reads contacts pasted from an email "To" line, a spreadsheet or a plain list. One line (or one
 // semicolon-separated entry) is one person: `Jane Doe <jane@acme.com>`, `Jane Doe, jane@acme.com`,
-// `Jane Doe<TAB>jane@acme.com` or just `jane@acme.com`. A line holding several addresses and
-// nothing else adds each of them without a name.
+// `Jane Doe<TAB>jane@acme.com` or just `jane@acme.com`. A line holding several addresses adds
+// each of them, with names when it reads as `Name <a@x>, Name <b@x>`.
 export const parsePastedContacts = (text: string, existing: readonly VendorContact[] = []): PastedContacts => {
   const seen = new Set(existing.map((contact) => normalizeEmail(contact.email)).filter(Boolean));
   const result: PastedContacts = { contacts: [], skipped: [], duplicates: [] };
   const add = (name: string, rawEmail: string) => {
-    const email = normalizeEmail(rawEmail.replace(/[.,;]+$/, ""));
+    const email = normalizeEmail(rawEmail);
     if (!isValidEmail(email)) return false;
     if (seen.has(email)) {
       if (!result.duplicates.includes(email)) result.duplicates.push(email);
@@ -203,22 +234,22 @@ export const parsePastedContacts = (text: string, existing: readonly VendorConta
   for (const rawLine of text.split(/[\r\n;]+/)) {
     const line = rawLine.trim();
     if (!line) continue;
-    const emails = line.match(ANY_EMAIL) ?? [];
+    const emails = emailsIn(line);
     if (emails.length === 0) {
       result.skipped.push(line);
       continue;
     }
     if (emails.length === 1) {
-      if (!add(nameFrom(line.replace(emails[0], " ").replace(/\t/g, " ")), emails[0])) result.skipped.push(line);
+      if (!add(nameBefore(line, emails[0]), emails[0])) result.skipped.push(line);
       continue;
     }
     // Several addresses on one line: `Name <a@x>, Name <b@x>` keeps the names, a bare list does not.
-    const parts = line.split(/[,\t]+/).map((part) => part.trim()).filter(Boolean);
-    const namedParts = parts.every((part) => (part.match(ANY_EMAIL) ?? []).length === 1);
+    const parts = splitOutsideQuotes(line);
+    const namedParts = parts.every((part) => emailsIn(part).length === 1);
     if (namedParts) {
       for (const part of parts) {
-        const [email] = part.match(ANY_EMAIL) ?? [];
-        if (!email || !add(nameFrom(part.replace(email, " ")), email)) result.skipped.push(part);
+        const [email] = emailsIn(part);
+        if (!add(nameBefore(part, email), email)) result.skipped.push(part);
       }
     } else {
       for (const email of emails) if (!add("", email)) result.skipped.push(email);
@@ -288,6 +319,9 @@ export const vendorErrorMessage = (error: ErrorLike, fallback = "Something went 
   if (error.status === 429) return "Too many requests. Try again in a few minutes.";
   return fallback;
 };
+
+// A refused read (the member's role changed since they signed in).
+export const VENDOR_LIST_HIDDEN_MESSAGE = MESSAGES.VENDOR_LIST_ACCESS_DENIED;
 
 export const isRoleRefusal = (error: ErrorLike): boolean => error.status === 403;
 export const isCompanyTaken = (error: ErrorLike): boolean => error.code === "VENDOR_COMPANY_TAKEN";

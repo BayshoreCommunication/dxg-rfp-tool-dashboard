@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { getVendorListAccessAction, listVendorCategoriesAction, listVendorsAction } from "@/app/actions/vendorList";
 import { VendorFormDialog } from "@/components/organization/vendors/VendorDialogs";
 import {
+  MAX_CONTACTS,
   contactSummary,
   emailsNotOnList,
   isRoleRefusal,
@@ -36,6 +37,8 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
   const [vendors, setVendors] = useState<Vendor[] | null>(null);
   const [total, setTotal] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // From the last unfiltered load: how many vendors the list holds (null until one has answered).
+  const [listSize, setListSize] = useState<number | null>(null);
   // Every vendor seen so far, so an address picked earlier still counts as "on the list".
   const [known, setKnown] = useState<Record<string, Vendor>>({});
   const [categories, setCategories] = useState<string[]>([]);
@@ -74,6 +77,7 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
         setVendors(page.items);
         setTotal(page.total);
         setLoadError(null);
+        if (search === "") setListSize(page.total);
         setKnown((previous) => ({ ...previous, ...Object.fromEntries(page.items.map((vendor) => [vendor.id, vendor])) }));
       } else if (isRoleRefusal(result)) {
         // The member's role can no longer read the list: the picker goes away, typing still works.
@@ -93,7 +97,10 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
   const loading = vendors === null && !loadError;
   const shown = vendors ?? [];
   // The first load decides whether there is a list at all; a search that finds nothing is different.
-  const listIsEmpty = !loading && !loadError && shown.length === 0 && search === "";
+  const listIsEmpty = listSize === 0 && searchInput.trim() === "" && !loadError;
+  // "Not on the list" can only be said once the list has answered; past the picker's limit it is a guess.
+  const canJudgeNew = listSize !== null && !loadError;
+  const listTruncated = listSize !== null && listSize > PICKER_LIMIT;
 
   const toggle = (emails: string[], checked: boolean) => (checked ? onAdd(emails) : onRemove(emails));
 
@@ -139,7 +146,7 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
             ) : loading ? (
               <p role="status" className="text-[12px] text-slate-500">Loading your vendor list…</p>
             ) : shown.length === 0 ? (
-              <p className="text-[12px] text-slate-500">No vendors match “{search}”.</p>
+              <p className="text-[12px] text-slate-500">{search ? `No vendors match “${search}”.` : "Loading your vendor list…"}</p>
             ) : (
               <ul className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
                 {shown.map((vendor) => {
@@ -199,10 +206,12 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
         </>
       )}
 
-      {access.canEdit && newEmails.length > 0 && (
+      {access.canEdit && canJudgeNew && newEmails.length > 0 && (
         <div className="mt-3 flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="min-w-0 break-words text-[12px] leading-5 text-slate-600">
-            {newEmails.length === 1 ? `${newEmails[0]} isn't on your vendor list.` : `${newEmails.length} recipients aren't on your vendor list.`}
+            {listTruncated
+              ? `${newEmails.length === 1 ? newEmails[0] : `${newEmails.length} recipients`} may not be on your vendor list yet.`
+              : newEmails.length === 1 ? `${newEmails[0]} isn't on your vendor list.` : `${newEmails.length} recipients aren't on your vendor list.`}
           </p>
           <button
             type="button"
@@ -216,14 +225,18 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
 
       {saving && (
         <VendorFormDialog
-          initialContacts={newEmails.map((email) => ({ name: "", email }))}
+          initialContacts={newEmails.slice(0, MAX_CONTACTS).map((email) => ({ name: "", email }))}
           categories={categories}
           onClose={() => setSaving(false)}
           onSaved={(vendor, outcome) => {
             setSaving(false);
             setKnown((previous) => ({ ...previous, [vendor.id]: vendor }));
             setVersion((value) => value + 1);
-            toast.success(outcome === "contacts-added" ? `Contacts added to ${vendor.company}.` : `${vendor.company} saved to the vendor list.`);
+            toast.success(
+              outcome === "contacts-added" ? `Contacts added to ${vendor.company}.`
+                : outcome === "contacts-already-listed" ? `${vendor.company} already has these contacts.`
+                : `${vendor.company} saved to the vendor list.`,
+            );
           }}
         />
       )}

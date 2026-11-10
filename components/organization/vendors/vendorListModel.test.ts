@@ -168,3 +168,42 @@ describe("error codes become plain messages", () => {
     expect(vendorErrorMessage({ code: "SOMETHING_NEW", message: "SOMETHING_NEW", status: 500 })).toBe("Something went wrong. Try again.");
   });
 });
+
+describe("paste-import edge cases", () => {
+  const one = (text: string) => parsePastedContacts(text).contacts;
+
+  test("an apostrophe stays part of the address", () => {
+    expect(one("Pat <o'brien@acme.test>")).toEqual([{ name: "Pat", email: "o'brien@acme.test" }]);
+    expect(one("'quoted@acme.test'")).toEqual([{ name: "", email: "quoted@acme.test" }]);
+  });
+
+  test("a spreadsheet row takes the name from the cell before the address", () => {
+    expect(one("Acme Corp\tJane Doe\tjane@acme.test\t+1 555 1234")).toEqual([{ name: "Jane Doe", email: "jane@acme.test" }]);
+    expect(one("Jane Doe, jane@acme.test, 555-1234")).toEqual([{ name: "Jane Doe", email: "jane@acme.test" }]);
+  });
+
+  test("labels and a repeated address are not names", () => {
+    expect(one("Email: jane@acme.test")).toEqual([{ name: "", email: "jane@acme.test" }]);
+    expect(one("mailto:jane@acme.test")).toEqual([{ name: "", email: "jane@acme.test" }]);
+    const repeated = parsePastedContacts('"jane@acme.test" <jane@acme.test>');
+    expect(repeated).toEqual({ contacts: [{ name: "", email: "jane@acme.test" }], skipped: [], duplicates: [] });
+  });
+
+  test("quoted Last, First names survive a comma-separated line", () => {
+    expect(one('"Doe, Jane" <jane@acme.test>, "Roe, Bob" <bob@acme.test>')).toEqual([
+      { name: "Doe, Jane", email: "jane@acme.test" },
+      { name: "Roe, Bob", email: "bob@acme.test" },
+    ]);
+  });
+
+  test("a web address is not read as an email host", () => {
+    expect(one("see https://acme.test/team").length).toBe(0);
+    expect(one("jane@acme.test/bob@acme.test").map((c) => c.email)).toEqual(["jane@acme.test", "bob@acme.test"]);
+  });
+});
+
+test("platform roles may edit, like the backend policy", () => {
+  expect(vendorListAccessForRoles(["dxg_admin"])).toEqual({ canRead: true, canEdit: true });
+  expect(vendorListAccessForRoles(["super_admin"])).toEqual({ canRead: true, canEdit: true });
+  expect(vendorListAccessForRoles(["dxg_producer"])).toEqual({ canRead: true, canEdit: false });
+});

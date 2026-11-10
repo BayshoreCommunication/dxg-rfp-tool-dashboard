@@ -36,7 +36,10 @@ import {
   type VendorInput,
 } from "./vendorListModel";
 
-export type VendorSaveOutcome = "created" | "updated" | "contacts-added";
+export type VendorSaveOutcome = "created" | "updated" | "contacts-added" | "contacts-already-listed";
+
+// A refusal the page behind the dialog may want to react to (role changed, vendor gone or archived).
+export type VendorFailure = { code?: string; status?: number };
 
 type FormProps = {
   // Edit this vendor; without it the dialog adds a new one.
@@ -46,17 +49,23 @@ type FormProps = {
   categories?: string[];
   onClose: () => void;
   onSaved: (vendor: Vendor, outcome: VendorSaveOutcome) => void;
+  onFailure?: (failure: VendorFailure) => void;
 };
 
 const EMPTY_CONTACT: VendorContact = { name: "", email: "" };
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
+
+// The message sits at the end of a scrolling form, under a fixed footer: bring it into view.
+const intoView = (element: HTMLElement | null) => {
+  element?.scrollIntoView?.({ block: "nearest" });
+};
 
 const sameContactList = (a: readonly VendorContact[], b: readonly VendorContact[]) =>
   a.length === b.length && a.every((contact, index) => contact.name === b[index].name && contact.email === b[index].email);
 
 // Add a vendor, or edit one when `vendor` is given. Contacts can be typed row by row or pasted
 // in bulk. A new vendor whose company is already on the list offers to add its contacts there.
-export function VendorFormDialog({ vendor, initialContacts, categories = [], onClose, onSaved }: FormProps) {
+export function VendorFormDialog({ vendor, initialContacts, categories = [], onClose, onSaved, onFailure }: FormProps) {
   const formId = useId();
   const categoryListId = useId();
   const [company, setCompany] = useState(vendor?.company ?? "");
@@ -72,6 +81,11 @@ export function VendorFormDialog({ vendor, initialContacts, categories = [], onC
   const [error, setError] = useState<string | null>(null);
   // Set when a new vendor's company is already on the list: the vendor that holds the name.
   const [existing, setExisting] = useState<Vendor | null>(null);
+
+  const fail = (result: VendorFailure & { message?: string }, message = vendorErrorMessage(result)) => {
+    setError(message);
+    onFailure?.(result);
+  };
 
   const changeContact = (index: number, field: keyof VendorContact, value: string) => {
     setContacts((rows) => rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
@@ -117,7 +131,7 @@ export function VendorFormDialog({ vendor, initialContacts, categories = [], onC
       const result = await updateVendorAction(vendor.id, changes);
       setBusy(false);
       if (result.success && result.data) return onSaved(result.data, "updated");
-      return setError(isCompanyTaken(result) ? "Another vendor on the list already has this company name." : vendorErrorMessage(result));
+      return fail(result, isCompanyTaken(result) ? "Another vendor on the list already has this company name." : vendorErrorMessage(result));
     }
 
     const result = await createVendorAction(input);
@@ -130,10 +144,10 @@ export function VendorFormDialog({ vendor, initialContacts, categories = [], onC
       const found = await findVendorByCompanyAction(input.company);
       setBusy(false);
       if (found.success && found.data) return setExisting(found.data);
-      return setError(vendorErrorMessage(result));
+      return fail(result);
     }
     setBusy(false);
-    setError(vendorErrorMessage(result));
+    fail(result);
   };
 
   const addToExisting = async () => {
@@ -142,8 +156,8 @@ export function VendorFormDialog({ vendor, initialContacts, categories = [], onC
     setError(null);
     const result = await addContactsToVendorAction(existing.id, cleanContacts(contacts));
     setBusy(false);
-    if (result.success && result.data) onSaved(result.data, "contacts-added");
-    else setError(vendorErrorMessage(result));
+    if (result.success && result.data) onSaved(result.data, result.details?.unchanged ? "contacts-already-listed" : "contacts-added");
+    else fail(result);
   };
 
   const filledCount = cleanContacts(contacts).length;
@@ -286,7 +300,7 @@ export function VendorFormDialog({ vendor, initialContacts, categories = [], onC
       </form>
 
       {existing && (
-        <div role="alert" className="mt-5 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm leading-6 text-amber-900">
+        <div role="alert" ref={intoView} className="mt-5 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm leading-6 text-amber-900">
           <p>
             <span className="font-semibold">{existing.company}</span> is already on your vendor list. Add {filledCount === 1 ? "this contact" : "these contacts"} to it instead?
           </p>
@@ -295,12 +309,14 @@ export function VendorFormDialog({ vendor, initialContacts, categories = [], onC
           </button>
         </div>
       )}
-      {error && <div className="mt-5"><InlineError>{error}</InlineError></div>}
+      {error && <div ref={intoView} className="mt-5"><InlineError>{error}</InlineError></div>}
     </OrgDialog>
   );
 }
 
-export function ArchiveVendorDialog({ vendor, onClose, onArchived }: { vendor: Vendor; onClose: () => void; onArchived: (vendor: Vendor) => void }) {
+type ArchiveProps = { vendor: Vendor; onClose: () => void; onArchived: (vendor: Vendor) => void; onFailure?: (failure: VendorFailure) => void };
+
+export function ArchiveVendorDialog({ vendor, onClose, onArchived, onFailure }: ArchiveProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -309,8 +325,9 @@ export function ArchiveVendorDialog({ vendor, onClose, onArchived }: { vendor: V
     setError(null);
     const result = await archiveVendorAction(vendor.id);
     setBusy(false);
-    if (result.success && result.data) onArchived(result.data);
-    else setError(vendorErrorMessage(result));
+    if (result.success && result.data) return onArchived(result.data);
+    setError(vendorErrorMessage(result));
+    onFailure?.(result);
   };
 
   return (
