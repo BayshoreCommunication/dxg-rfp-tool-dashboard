@@ -3,7 +3,8 @@ import { Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const TopHeader = () => {
+// `canCreate` is false for Viewers, who are read-only (ORG-402).
+const TopHeader = ({ canCreate = true }: { canCreate?: boolean }) => {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -79,6 +80,7 @@ const TopHeader = () => {
           </Link> */}
 
           {/* CTA Button */}
+          {canCreate && (
           <Link
             href="/proposals/add-new-proposal"
             className="group relative flex min-h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[12px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.5)] active:translate-y-0 sm:w-auto sm:text-[13px]"
@@ -90,8 +92,9 @@ const TopHeader = () => {
             {/* Shine sweep */}
             <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
             <Plus size={15} strokeWidth={3} className="shrink-0" />
-            New Proposal
+            New RFP
           </Link>
+          )}
         </div>
       </div>
     </div>

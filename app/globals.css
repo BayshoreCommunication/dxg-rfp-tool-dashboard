@@ -1114,17 +1114,6 @@ strong {
   color: #effeff;
 }
 
-.dark [data-dashboard-stat-card] {
-  border: 1px solid #283c4a;
-  background: #0d1d28 !important;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.24);
-}
-
-.dark [data-dashboard-stat-card]:hover {
-  border-color: #3b5261;
-  box-shadow: 0 14px 32px rgb(0 0 0 / 0.24);
-}
-
 .dark :is(.bg-white, [class~="bg-white/95"], [class~="bg-white/90"]) {
   background-color: #0d1d28;
 }
