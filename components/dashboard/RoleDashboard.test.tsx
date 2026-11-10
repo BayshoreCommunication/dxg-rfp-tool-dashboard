@@ -117,7 +117,7 @@ describe("RoleDashboard", () => {
     // Viewers can't own RFPs and archived teams aren't offered.
     expect(within(screen.getByLabelText("Planner")).getAllByRole("option").map((option) => option.textContent)).toEqual(["All planners", "Priya Planner"]);
     expect(within(screen.getByLabelText("Team", { selector: "select" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["All teams", "Corporate Events"]);
-    expect(within(screen.getByRole("region", { name: "Summary" })).getByText("Responses received").nextElementSibling).toHaveTextContent("3");
+    expect(within(screen.getByRole("region", { name: "Summary" })).getByTestId("summary-responses")).toHaveTextContent("3");
   });
 
   test("Owner: My RFPs narrows to the Owner's own RFPs", async () => {

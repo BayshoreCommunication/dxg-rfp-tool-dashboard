@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import http from "node:http";
 import { handleProposalOnboarding } from './proposalOnboardingFixture.mjs';
+import { DASHBOARD_ACCOUNTS, dashboardAccessToken, handleRoleDashboard } from './roleDashboardFixture.mjs';
 
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
 const threads = new Map();
@@ -165,6 +166,7 @@ const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
   const pathname = url.pathname;
   if (await handleProposalOnboarding(request, response, url)) return;
+  if (handleRoleDashboard(request, response, url)) return;
 
   if (request.method === "GET" && pathname === "/health") {
     json(response, 200, { status: "ok" });
@@ -195,14 +197,18 @@ const server = http.createServer(async (request, response) => {
 
   if (request.method === "POST" && pathname === "/api/auth/login") {
     const expiresAt = Date.now() + 60 * 60_000;
+    // Role dashboards (ORG-402): one synthetic account per role, with the role in the token
+    // the way the backend's access token carries it.
+    const { email } = await readJson(request);
+    const roleAccount = DASHBOARD_ACCOUNTS[String(email || "").toLowerCase()];
     json(response, 200, {
       user: {
-        _id: "bbbbbbbbbbbbbbbbbbbbbbbb",
-        email: "assistant-e2e@example.com",
-        name: "Assistant E2E",
+        _id: roleAccount?.userId ?? "bbbbbbbbbbbbbbbbbbbbbbbb",
+        email: roleAccount ? String(email).toLowerCase() : "assistant-e2e@example.com",
+        name: roleAccount?.name ?? "Assistant E2E",
         avatar: "",
       },
-      accessToken: "assistant-e2e-access-token",
+      accessToken: roleAccount ? dashboardAccessToken(roleAccount) : "assistant-e2e-access-token",
       tokenExpiresAt: expiresAt,
       refreshToken: "assistant-e2e-refresh-token",
       refreshExpiresAt: expiresAt + 24 * 60 * 60_000,

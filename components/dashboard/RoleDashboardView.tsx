@@ -88,7 +88,7 @@ const ViewTabs = ({ views, state }: { views: DashboardView[]; state: DashboardSt
           href={dashboardHref({ ...state, owner: "", team: "", eventFrom: "", eventTo: "", venueCity: "", search: "", stage: null, page: 1 }, { view }, views[0])}
           aria-current={selected ? "page" : undefined}
           className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${focusRing} ${
-            selected ? "border-sky-600 bg-sky-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            selected ? "border-sky-700 bg-sky-700 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
           }`}
         >
           {VIEW_LABELS[view]}
@@ -98,24 +98,24 @@ const ViewTabs = ({ views, state }: { views: DashboardView[]; state: DashboardSt
   </nav>
 );
 
-const SummaryCard = ({ icon, label, value, hint }: { icon: ReactNode; label: string; value: number; hint: string }) => (
-  <div className={`${cardClass} flex items-center gap-4 px-5 py-4`}>
+const SummaryCard = ({ id, icon, label, value, hint }: { id: string; icon: ReactNode; label: string; value: number; hint: string }) => (
+  <li className={`${cardClass} flex items-center gap-4 px-5 py-4`}>
     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700" aria-hidden="true">{icon}</div>
-    <div className="min-w-0">
-      <dt className="text-xs font-semibold text-slate-600">{label}</dt>
-      <dd className="text-2xl font-extrabold leading-tight tracking-tight text-slate-900">{value.toLocaleString("en-US")}</dd>
-      <p className="text-xs text-slate-500">{hint}</p>
-    </div>
-  </div>
+    <p className="min-w-0">
+      <span className="block text-xs font-semibold text-slate-600">{label}</span>
+      <span data-testid={`summary-${id}`} className="block text-2xl font-extrabold leading-tight tracking-tight text-slate-900">{value.toLocaleString("en-US")}</span>
+      <span className="block text-xs text-slate-500">{hint}</span>
+    </p>
+  </li>
 );
 
 const SummaryRow = ({ summary }: { summary: RfpSummary }) => (
   <section aria-label="Summary">
-    <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <SummaryCard icon={<FileText size={20} />} label="Active RFPs" value={summary.activeRfps} hint="Sent, receiving responses or under review" />
-      <SummaryCard icon={<Inbox size={20} />} label="Responses received" value={summary.responsesReceived} hint="Vendor responses on the RFPs listed below" />
-      <SummaryCard icon={<Trophy size={20} />} label="Awarded this quarter" value={summary.awardedThisQuarter} hint={`Awarded in ${quarterLabel(summary.quarter)}`} />
-    </dl>
+    <ul className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <SummaryCard id="active" icon={<FileText size={20} />} label="Active RFPs" value={summary.activeRfps} hint="Sent, receiving responses or under review" />
+      <SummaryCard id="responses" icon={<Inbox size={20} />} label="Responses received" value={summary.responsesReceived} hint="Vendor responses on the RFPs listed below" />
+      <SummaryCard id="awarded" icon={<Trophy size={20} />} label="Awarded this quarter" value={summary.awardedThisQuarter} hint={`Awarded in ${quarterLabel(summary.quarter)}`} />
+    </ul>
   </section>
 );
 
@@ -197,7 +197,7 @@ const StageTabs = ({ state, counts, defaultView }: { state: DashboardState; coun
             href={dashboardHref(state, { stage: tab.stage, page: 1 }, defaultView)}
             aria-current={selected ? "true" : undefined}
             className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 text-[13px] font-semibold transition-colors ${focusRing} ${
-              selected ? "border-sky-600 bg-sky-50 text-sky-800" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+              selected ? "border-sky-700 bg-sky-50 text-sky-800" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
             }`}
           >
             {tab.label}

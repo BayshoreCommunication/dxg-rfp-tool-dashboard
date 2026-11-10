@@ -120,9 +120,9 @@ describe("RoleDashboardView", () => {
     expect(screen.getByText("Every RFP in your organization, drafts included.")).toBeInTheDocument();
 
     const summaryRow = screen.getByRole("region", { name: "Summary" });
-    expect(within(summaryRow).getByText("Active RFPs").nextElementSibling).toHaveTextContent("2");
-    expect(within(summaryRow).getByText("Responses received").nextElementSibling).toHaveTextContent("4");
-    expect(within(summaryRow).getByText("Awarded this quarter").nextElementSibling).toHaveTextContent("1");
+    expect(within(summaryRow).getByTestId("summary-active")).toHaveTextContent("2");
+    expect(within(summaryRow).getByTestId("summary-responses")).toHaveTextContent("4");
+    expect(within(summaryRow).getByTestId("summary-awarded")).toHaveTextContent("1");
     expect(within(summaryRow).getByText("Awarded in Q4 2026")).toBeInTheDocument();
 
     for (const label of ["Event name", "Planner", "Team", "Venue city", "Event starts on or after", "Event starts on or before", "Sort by"]) {

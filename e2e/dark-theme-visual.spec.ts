@@ -10,7 +10,7 @@ const signIn = async (page: import("@playwright/test").Page) => {
   await page.getByRole("button", { name: "Sign In to Dashboard" }).click();
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
   await expect(
-    page.getByRole("textbox", { name: "Search proposals..." }),
+    page.getByTestId("role-dashboard"),
   ).toBeVisible({ timeout: 20_000 });
 };
 
