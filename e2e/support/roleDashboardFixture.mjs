@@ -55,7 +55,8 @@ const rfp = (n, eventName, stage, owner, team, city, startOffset, invited, respo
 });
 
 const A = DASHBOARD_ACCOUNTS;
-const RFPS = [
+// Built per request so "today" never drifts from the test's clock.
+const rfps = () => [
   rfp(1, "Annual Sales Kickoff", "receiving_responses", A["planner-e2e@example.com"], CORPORATE, "Chicago", 45, 5, 3, { sharedWith: [id("5")] }),
   rfp(2, "Leadership Summit", "sent", A["planner-e2e@example.com"], CORPORATE, "Austin", 20, 4, 0),
   rfp(3, "Product Launch Evening", "draft", A["planner-e2e@example.com"], CORPORATE, null, null, 0, 0),
@@ -115,7 +116,7 @@ const filtered = (actor, params) => {
   if ([eventFrom, eventTo].some((value) => value && !DATE.test(value))) return { error: "dates must be YYYY-MM-DD" };
   const city = (params.get("venueCity") || "").trim().toLowerCase();
   const search = (params.get("search") || "").trim().toLowerCase();
-  const rows = RFPS.filter(visibleTo(actor)).filter((row) =>
+  const rows = rfps().filter(visibleTo(actor)).filter((row) =>
     (stages.length ? stages.includes(row.stage) : row.stage !== "archived")
     && (!owner || row.ownerUserId === owner)
     && (!team || row.teamId === team)

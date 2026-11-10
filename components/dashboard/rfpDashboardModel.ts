@@ -67,10 +67,10 @@ export const VIEW_LABELS: Record<DashboardView, string> = {
 
 const ROLE_ORDER: CustomerRole[] = ["owner", "organization_admin", "team_manager", "planner", "viewer"];
 
-// The member's highest role. A session whose roles can't be read gets the Planner dashboard:
-// the backend still returns only what that member may see.
+// The member's highest role. A session whose roles can't be read gets the Viewer dashboard: it
+// offers nothing a member might not be allowed to do, and the backend scopes the list anyway.
 export const dashboardRoleOf = (roles: readonly string[] | null | undefined): CustomerRole =>
-  ROLE_ORDER.find((role) => roles?.includes(role)) ?? "planner";
+  ROLE_ORDER.find((role) => roles?.includes(role)) ?? "viewer";
 
 // First entry is the role's default view.
 export const viewsFor = (role: CustomerRole): DashboardView[] => {
@@ -211,6 +211,13 @@ export const dashboardHref = (state: DashboardState, changes: Partial<DashboardS
 
 const slugOf = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
+export const rfpEditHref = (item: Pick<RfpListItem, "id">): string =>
+  `/proposals/proposal-edit?proposalId=${encodeURIComponent(item.id)}`;
+
+// Where a row leads: the member's own draft opens for editing, everything else read-only.
+export const rfpRowHref = (item: Pick<RfpListItem, "id" | "eventName" | "stage">, view: DashboardView): string =>
+  view === "mine" && item.stage === "draft" ? rfpEditHref(item) : rfpViewHref(item);
+
 // The read-only RFP page (same link the RFP list uses).
 export const rfpViewHref = (item: Pick<RfpListItem, "id" | "eventName">): string =>
   `/proposal/${slugOf(item.eventName) || "rfp"}-${item.id}`;
@@ -226,6 +233,13 @@ export const formatDay = (value: string | null | undefined): string => {
   if (!match) return "No date";
   const month = MONTHS[Number(match[2]) - 1];
   return month ? `${month} ${Number(match[3])}, ${match[1]}` : "No date";
+};
+
+// A moment (ISO timestamp) as a date in the organization's time zone.
+export const formatInstant = (value: string | null | undefined, timeZone: string | null | undefined): string => {
+  const instant = value ? new Date(value) : null;
+  if (!instant || Number.isNaN(instant.getTime())) return "No date";
+  return formatDay(todayIn(timeZone, instant));
 };
 
 export const formatEventDates = (item: Pick<RfpListItem, "eventStartDate" | "eventEndDate">): string => {
@@ -295,7 +309,7 @@ export const quarterLabel = (quarter: RfpSummary["quarter"]): string => {
 // Backend refusals as plain sentences; codes are never shown.
 export const dashboardErrorMessage = (code: string | undefined, status: number | undefined): string => {
   if (code === "DASHBOARD_FILTER_INVALID" || status === 400) return "One of the filters isn't valid. Clear the filters and try again.";
-  if (status === 401) return "Your session has ended. Sign in again to see your RFPs.";
+  if (status === 401) return "Your session has ended. Reload the page and sign in again to see your RFPs.";
   if (status === 403) return "Your role doesn't include viewing RFPs. Ask an Owner or Admin of your organization for access.";
   if (status === 404) return "We couldn't find those RFPs. They may have been moved or belong to another organization.";
   if (code === "NETWORK_ERROR") return "We couldn't reach RFPilot. Check your connection and try again.";

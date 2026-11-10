@@ -62,8 +62,8 @@ test("Planner: My RFPs by status, deadlines, new submissions and the Admin-visib
   await expect(page.getByRole("link", { name: "New RFP" })).toBeVisible();
 
   // Own RFPs only: five open ones, none of Peter's or Fiona's.
-  await expect(statusTab(page, /^All open/)).toHaveText("All open5");
-  await expect(statusTab(page, /^Archived/)).toHaveText("Archived1");
+  await expect(statusTab(page, /^All open/)).toHaveText("All open: 5 RFPs");
+  await expect(statusTab(page, /^Archived/)).toHaveText("Archived: 1 RFP");
   await expect(rows(page)).toHaveCount(5);
   await expect(page.getByRole("table")).not.toContainText("Engineering Offsite");
   await expect(dashboard.getByLabel("Planner", { exact: true })).toHaveCount(0);
@@ -129,7 +129,7 @@ test("Team Manager: My RFPs plus a Team tab with a planner filter", async ({ pag
   await expect(rows(page)).toHaveCount(2);
   await expect(page.getByRole("table")).toContainText("Engineering Offsite");
   await expect(page.getByRole("table")).toContainText("Investor Day");
-  await expect(statusTab(page, /^All open/)).toHaveText("All open2");
+  await expect(statusTab(page, /^All open/)).toHaveText("All open: 2 RFPs");
   await expect(page.getByRole("region", { name: "Summary" }).getByTestId("summary-responses")).toHaveText("1");
   await check(page, testInfo, "team-manager-planner-filter");
 
@@ -146,7 +146,7 @@ for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const
     await expect(page.getByTestId("admin-visibility-note")).toHaveCount(0);
 
     // Everything in the organization, drafts included: 32 open RFPs over two pages.
-    await expect(statusTab(page, /^All open/)).toHaveText("All open32");
+    await expect(statusTab(page, /^All open/)).toHaveText("All open: 32 RFPs");
     await expect(rows(page)).toHaveCount(25);
     await expect(page.getByText("Showing 1–25 of 32 RFPs")).toBeVisible();
     const summary = page.getByRole("region", { name: "Summary" });

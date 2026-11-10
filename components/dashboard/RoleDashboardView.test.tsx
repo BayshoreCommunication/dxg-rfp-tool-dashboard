@@ -41,6 +41,7 @@ const propsFor = (role: CustomerRole, params: Record<string, string> = {}, overr
     role,
     state,
     today: "2026-11-10",
+    timeZone: "UTC",
     list: { items, pagination: { total: items.length, page: 1, limit: 25, totalPages: 1 } },
     summary: role === "viewer" ? null : summary,
     stageCounts: summary.byStage,
@@ -68,7 +69,7 @@ describe("RoleDashboardView", () => {
 
     const status = screen.getByRole("navigation", { name: "RFP status" });
     expect(within(status).getAllByRole("link").map((link) => link.textContent)).toEqual([
-      "All open5", "Draft1", "Sent1", "Receiving responses1", "Under review0", "Awarded2", "Archived5",
+      "All open: 5 RFPs", "Draft: 1 RFP", "Sent: 1 RFP", "Receiving responses: 1 RFP", "Under review: 0 RFPs", "Awarded: 2 RFPs", "Archived: 5 RFPs",
     ]);
     expect(within(status).getByRole("link", { name: /Draft/ })).toHaveAttribute("href", "/dashboard?stage=draft");
 

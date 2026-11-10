@@ -66,6 +66,20 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
   const showPanels = !isViewer && state.view !== "organization";
   const scope = scopeQuery(state, userId);
 
+  // "My RFPs" without knowing who is asking would list everyone's RFPs under that title.
+  if (state.view === "mine" && !userId) {
+    return (
+      <div className="relative mx-auto min-h-full w-full max-w-[1800px] space-y-5 pb-6">
+        <TopHeader canCreate={false} />
+        <RoleDashboardView
+          role={role} state={state} today={todayIn("UTC")} timeZone={null}
+          list={null} summary={null} stageCounts={null} deadlines={null} submissions={null} owners={[]} teams={[]}
+          error={dashboardErrorMessage(undefined, 401)}
+        />
+      </div>
+    );
+  }
+
   const [list, summary, stageCounts, deadlineSource, submissions, options] = await Promise.all([
     listDashboardRfpsAction(listQuery(state, userId)),
     isViewer ? null : getDashboardRfpSummaryAction(filterQuery(state, userId)),
@@ -80,11 +94,13 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
   ]);
 
   // A page past the end (a stale link, or RFPs archived since): go to the last page.
-  if (list.success && list.data && list.data.items.length === 0 && list.data.pagination.total > 0 && state.page > 1) {
-    redirect(dashboardHref(state, { page: Math.max(1, list.data.pagination.totalPages) }, defaultView));
+  const lastPage = list.data ? Math.max(1, list.data.pagination.totalPages) : 1;
+  if (list.success && list.data && list.data.items.length === 0 && list.data.pagination.total > 0 && state.page > lastPage) {
+    redirect(dashboardHref(state, { page: lastPage }, defaultView));
   }
 
-  const today = todayIn(stageCounts.data?.quarter?.timeZone ?? summary?.data?.quarter?.timeZone);
+  const timeZone = stageCounts.data?.quarter?.timeZone ?? summary?.data?.quarter?.timeZone ?? null;
+  const today = todayIn(timeZone);
   const deadlines = deadlineSource?.success ? upcomingDeadlines(deadlineSource.data?.items ?? [], today, PANEL_SIZE) : null;
 
   return (
@@ -97,6 +113,7 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
           role={role}
           state={state}
           today={today}
+          timeZone={timeZone}
           list={list.success ? list.data ?? null : null}
           summary={summary?.success ? summary.data ?? null : null}
           stageCounts={stageCounts.success ? stageCounts.data?.byStage ?? null : null}

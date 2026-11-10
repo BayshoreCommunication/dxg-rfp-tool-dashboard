@@ -11,6 +11,8 @@ import {
   filtersFor,
   formatDay,
   formatEventDates,
+  formatInstant,
+  rfpRowHref,
   listQuery,
   optionsFromItems,
   parseDashboardState,
@@ -31,13 +33,14 @@ const OTHER = "b".repeat(24);
 const TEAM = "c".repeat(24);
 
 describe("role dashboards: which views and filters a role gets", () => {
-  test("the member's highest role picks the dashboard; an unreadable session gets the Planner one", () => {
+  test("the member's highest role picks the dashboard; an unreadable session gets the read-only Viewer one", () => {
     expect(dashboardRoleOf(["planner", "owner"])).toBe("owner");
     expect(dashboardRoleOf(["organization_admin"])).toBe("organization_admin");
     expect(dashboardRoleOf(["team_manager", "planner"])).toBe("team_manager");
     expect(dashboardRoleOf(["viewer"])).toBe("viewer");
-    expect(dashboardRoleOf([])).toBe("planner");
-    expect(dashboardRoleOf(null)).toBe("planner");
+    expect(dashboardRoleOf([])).toBe("viewer");
+    expect(dashboardRoleOf(["something_new"])).toBe("viewer");
+    expect(dashboardRoleOf(null)).toBe("viewer");
   });
 
   test("Planner: My RFPs only. Team Manager: adds Team. Admin and Owner: Organization first. Viewer: Shared with me only", () => {
@@ -136,6 +139,21 @@ describe("role dashboards: links and labels", () => {
   test("an RFP links to its read-only page", () => {
     expect(rfpViewHref({ id: USER, eventName: "Annual Sales Kickoff 2027!" })).toBe(`/proposal/annual-sales-kickoff-2027-${USER}`);
     expect(rfpViewHref({ id: USER, eventName: "—" })).toBe(`/proposal/rfp-${USER}`);
+  });
+
+  test("the member's own draft opens for editing; everything else opens read-only", () => {
+    const draft = { id: USER, eventName: "Gala", stage: "draft" as const };
+    expect(rfpRowHref(draft, "mine")).toBe(`/proposals/proposal-edit?proposalId=${USER}`);
+    expect(rfpRowHref(draft, "organization")).toBe(`/proposal/gala-${USER}`);
+    expect(rfpRowHref(draft, "shared")).toBe(`/proposal/gala-${USER}`);
+    expect(rfpRowHref({ ...draft, stage: "sent" }, "mine")).toBe(`/proposal/gala-${USER}`);
+  });
+
+  test("timestamps show the date in the organization's time zone", () => {
+    expect(formatInstant("2026-11-10T01:30:00.000Z", "America/New_York")).toBe("Nov 9, 2026");
+    expect(formatInstant("2026-11-10T01:30:00.000Z", null)).toBe("Nov 10, 2026");
+    expect(formatInstant("not a date", "UTC")).toBe("No date");
+    expect(formatInstant(null, "UTC")).toBe("No date");
   });
 
   test("dates read as written", () => {

@@ -15,6 +15,7 @@ jest.mock("next/navigation", () => ({
   }),
 }));
 
+import { auth } from "@/auth";
 import { listMembersAction } from "@/app/actions/organizationMembers";
 import { getDashboardRfpSummaryAction, listDashboardRfpsAction } from "@/app/actions/rfpDashboard";
 import { listTeamsAction } from "@/app/actions/teams";
@@ -155,11 +156,32 @@ describe("RoleDashboard", () => {
     signInAs(["planner"]);
     mockedList.mockResolvedValue({ success: true, message: "OK", data: listOf(0, 30, 9) });
     await expect(renderDashboard({ page: "9", stage: "sent" })).rejects.toThrow("REDIRECT:/dashboard?stage=sent&page=2");
+    // The last page itself never redirects to itself.
+    mockedList.mockResolvedValue({ success: true, message: "OK", data: listOf(0, 30, 2) });
+    await renderDashboard({ page: "2", stage: "sent" });
+    expect(screen.getByText("No RFPs match these filters")).toBeInTheDocument();
   });
 
   test("a session whose token has no user id falls back to the session's id", async () => {
     signInAs(["planner"], null);
     await renderDashboard();
     expect(mainListQuery().owner).toBe("session-user");
+  });
+
+  test("My RFPs is never asked without knowing who is asking", async () => {
+    jest.mocked(auth).mockResolvedValueOnce(null as never);
+    signInAs(["planner"], null);
+    await renderDashboard();
+    expect(mockedList).not.toHaveBeenCalled();
+    expect(mockedSummary).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Your session has ended.");
+    expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();
+  });
+
+  test("a session whose roles can't be read gets the read-only dashboard", async () => {
+    signInAs([]);
+    await renderDashboard();
+    expect(screen.getByTestId("role-dashboard")).toHaveAttribute("data-dashboard-role", "viewer");
+    expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();
   });
 });

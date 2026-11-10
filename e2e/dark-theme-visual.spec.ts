@@ -33,8 +33,8 @@ test("authenticated dashboard uses the admin dark palette", async ({
     "rgb(13, 29, 40)",
   );
 
-  // This account has no RFPs yet, so the dashboard shows the first-run card.
-  await expect(page.getByTestId("first-run-dashboard")).toHaveCSS(
+  // The dashboard's list card follows the dark palette.
+  await expect(page.getByTestId("role-dashboard").locator("section.bg-white").first()).toHaveCSS(
     "background-color",
     "rgb(13, 29, 40)",
   );

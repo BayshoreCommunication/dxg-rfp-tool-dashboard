@@ -16,9 +16,11 @@ import {
   filtersFor,
   formatDay,
   formatEventDates,
+  formatInstant,
   hasActiveFilters,
   quarterLabel,
   rfpResponsesHref,
+  rfpRowHref,
   rfpViewHref,
   viewsFor,
   type DashboardState,
@@ -37,8 +39,9 @@ import {
 export type RoleDashboardViewProps = {
   role: CustomerRole;
   state: DashboardState;
-  // Today's date (YYYY-MM-DD) in the organization's time zone.
+  // Today's date (YYYY-MM-DD) in the organization's time zone, and that zone.
   today: string;
+  timeZone: string | null;
   list: RfpList | null;
   summary: RfpSummary | null;
   stageCounts: Record<RfpStage, number> | null;
@@ -73,7 +76,7 @@ const StageBadge = ({ stage }: { stage: RfpStage }) => (
 
 const VIEW_INTRO: Record<DashboardView, string> = {
   mine: "RFPs you own, by status.",
-  team: "RFPs owned by the planners on the teams you manage.",
+  team: "RFPs from the teams you manage, plus your own and any shared with you.",
   organization: "Every RFP in your organization, drafts included.",
   shared: "RFPs your organization has shared with you. You can read them; you can't edit or send them.",
 };
@@ -132,9 +135,9 @@ const PanelEmpty = ({ children }: { children: ReactNode }) => (
 );
 
 const DeadlinesPanel = ({ items, today }: { items: RfpListItem[]; today: string }) => (
-  <PanelShell id="dashboard-deadlines" title="Upcoming deadlines" hint="The next dates on your active RFPs.">
+  <PanelShell id="dashboard-deadlines" title="Upcoming deadlines" hint="The next dates on active RFPs.">
     {items.length === 0 ? (
-      <PanelEmpty>No upcoming dates on your active RFPs.</PanelEmpty>
+      <PanelEmpty>No upcoming dates on active RFPs.</PanelEmpty>
     ) : (
       <ul className="divide-y divide-slate-100">
         {items.map((item) => {
@@ -157,8 +160,8 @@ const DeadlinesPanel = ({ items, today }: { items: RfpListItem[]; today: string 
   </PanelShell>
 );
 
-const SubmissionsPanel = ({ items }: { items: RfpListItem[] }) => (
-  <PanelShell id="dashboard-submissions" title="New submissions" hint="RFPs with vendor responses you haven't started reviewing.">
+const SubmissionsPanel = ({ items, timeZone }: { items: RfpListItem[]; timeZone: string | null }) => (
+  <PanelShell id="dashboard-submissions" title="New submissions" hint="RFPs with vendor responses that nobody has started reviewing.">
     {items.length === 0 ? (
       <PanelEmpty>No new vendor responses to review.</PanelEmpty>
     ) : (
@@ -169,7 +172,7 @@ const SubmissionsPanel = ({ items }: { items: RfpListItem[] }) => (
               <Link href={rfpResponsesHref(item)} className={`block truncate text-sm font-semibold text-slate-900 hover:underline ${focusRing}`}>
                 {item.eventName}
               </Link>
-              <p className="text-xs text-slate-500">Updated {formatDay(item.updatedAt)}</p>
+              <p className="text-xs text-slate-500">Updated {formatInstant(item.updatedAt, timeZone)}</p>
             </div>
             <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-600">
               {item.vendorsResponded} of {Math.max(item.vendorsInvited, item.vendorsResponded)} responded
@@ -201,7 +204,13 @@ const StageTabs = ({ state, counts, defaultView }: { state: DashboardState; coun
             }`}
           >
             {tab.label}
-            {tab.count !== null && <span className="text-xs font-bold text-slate-500">{tab.count}</span>}
+            {tab.count !== null && (
+              <>
+                <span className="sr-only">: </span>
+                <span className="text-xs font-bold text-slate-500">{tab.count}</span>
+                <span className="sr-only"> {tab.count === 1 ? "RFP" : "RFPs"}</span>
+              </>
+            )}
           </Link>
         );
       })}
@@ -286,7 +295,7 @@ const FilterForm = ({ state, owners, teams, defaultView }: { state: DashboardSta
 const headClass = "px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500";
 const cellClass = "px-4 py-3 align-middle text-sm text-slate-600";
 
-const RfpTable = ({ items, state }: { items: RfpListItem[]; state: DashboardState }) => {
+const RfpTable = ({ items, state, timeZone }: { items: RfpListItem[]; state: DashboardState; timeZone: string | null }) => {
   // On "My RFPs" every row is the member's own, so the planner column would repeat one name.
   const showOwner = state.view !== "mine";
   const showTeam = state.view === "organization" || state.view === "team";
@@ -309,7 +318,7 @@ const RfpTable = ({ items, state }: { items: RfpListItem[]; state: DashboardStat
           {items.map((item) => (
             <tr key={item.id}>
               <th scope="row" className="max-w-[18rem] px-4 py-3 text-left align-middle font-normal">
-                <Link href={rfpViewHref(item)} className={`block break-words text-sm font-semibold text-slate-900 hover:underline ${focusRing}`}>
+                <Link href={rfpRowHref(item, state.view)} className={`block break-words text-sm font-semibold text-slate-900 hover:underline ${focusRing}`}>
                   {item.eventName}
                 </Link>
                 <span className="block text-xs text-slate-500">
@@ -326,7 +335,7 @@ const RfpTable = ({ items, state }: { items: RfpListItem[]; state: DashboardStat
                   ? "None invited"
                   : `${item.vendorsResponded} of ${Math.max(item.vendorsInvited, item.vendorsResponded)}`}
               </td>
-              <td className={`${cellClass} hidden whitespace-nowrap lg:table-cell`}>{formatDay(item.updatedAt)}</td>
+              <td className={`${cellClass} hidden whitespace-nowrap lg:table-cell`}>{formatInstant(item.updatedAt, timeZone)}</td>
             </tr>
           ))}
         </tbody>
@@ -432,7 +441,7 @@ export default function RoleDashboardView(props: RoleDashboardViewProps) {
           {!isViewer && state.view !== "organization" && (deadlines || submissions) && (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {deadlines && <DeadlinesPanel items={deadlines} today={props.today} />}
-              {submissions && <SubmissionsPanel items={submissions} />}
+              {submissions && <SubmissionsPanel items={submissions} timeZone={props.timeZone} />}
             </div>
           )}
 
@@ -456,7 +465,7 @@ export default function RoleDashboardView(props: RoleDashboardViewProps) {
               </div>
             ) : list && list.items.length > 0 ? (
               <>
-                <RfpTable items={list.items} state={state} />
+                <RfpTable items={list.items} state={state} timeZone={props.timeZone} />
                 <Pagination list={list} state={state} defaultView={defaultView} />
               </>
             ) : (
