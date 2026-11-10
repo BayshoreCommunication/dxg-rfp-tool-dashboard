@@ -6,6 +6,7 @@ const signIn = async (page: import("@playwright/test").Page) => {
   await page
     .getByPlaceholder("name@company.com")
     .fill("assistant-e2e@example.com");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.locator('input[type="password"]').fill("assistant-e2e-password");
   await page.getByRole("button", { name: "Sign In to Dashboard" }).click();
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
@@ -32,20 +33,8 @@ test("authenticated dashboard uses the admin dark palette", async ({
     "rgb(13, 29, 40)",
   );
 
-  const firstMetric = page.getByRole("link", {
-    name: /Total Proposals:/,
-  });
-  await expect(firstMetric).toHaveCSS(
-    "background-color",
-    "rgb(13, 29, 40)",
-  );
-
-  const latestProposals = page
-    .getByRole("heading", { name: "Latest Proposals" })
-    .locator(
-      "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' bg-white ')][1]",
-    );
-  await expect(latestProposals).toHaveCSS(
+  // This account has no RFPs yet, so the dashboard shows the first-run card.
+  await expect(page.getByTestId("first-run-dashboard")).toHaveCSS(
     "background-color",
     "rgb(13, 29, 40)",
   );

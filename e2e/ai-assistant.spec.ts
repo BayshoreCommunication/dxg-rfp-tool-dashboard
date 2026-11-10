@@ -21,6 +21,7 @@ const signIn = async (page: Page) => {
   await page.getByPlaceholder("name@company.com").fill(
     "assistant-e2e@example.com",
   );
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.locator('input[type="password"]').fill("assistant-e2e-password");
   await page
     .getByRole("button", { name: "Sign In to Dashboard" })
