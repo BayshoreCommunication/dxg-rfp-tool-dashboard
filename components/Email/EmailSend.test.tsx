@@ -29,6 +29,21 @@ jest.mock('@/app/actions/email', () => ({
   sendProposalEmailAction: (...a: unknown[]) => mockSendEmail(...a),
 }))
 
+// ORG-607: the organization's vendor list, picked from beside the recipients.
+const mockVendorAccess = jest.fn()
+const mockListVendors = jest.fn()
+
+jest.mock('@/app/actions/vendorList', () => ({
+  getVendorListAccessAction: (...a: unknown[]) => mockVendorAccess(...a),
+  listVendorsAction: (...a: unknown[]) => mockListVendors(...a),
+  listVendorCategoriesAction: jest.fn(),
+  createVendorAction: jest.fn(),
+  updateVendorAction: jest.fn(),
+  archiveVendorAction: jest.fn(),
+  findVendorByCompanyAction: jest.fn(),
+  addContactsToVendorAction: jest.fn(),
+}))
+
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const mockProposal = {
@@ -73,6 +88,8 @@ beforeEach(() => {
   mockSearchParamsGet.mockReturnValue(null)
   mockGetProposals.mockResolvedValue({ success: true, data: [mockProposal] })
   mockGetProposalById.mockResolvedValue({ success: true, data: mockProposal })
+  // No vendor-list access by default, so the suites below see the composer on its own.
+  mockVendorAccess.mockResolvedValue({ canRead: false, canEdit: false })
 })
 
 // Wait until the Send Campaign button is enabled (loading=false)
@@ -470,5 +487,57 @@ describe('EmailSend — fixed to a just-published proposal', () => {
     mockGetProposalById.mockResolvedValue({ success: false, message: 'Proposal not found.' })
     render(<EmailSend proposalId="prop-404" onSent={jest.fn()} />)
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Proposal not found.'), LOAD_TIMEOUT)
+  })
+})
+
+// ─── ORG-607: picking vendors from the organization's list ────────────────────
+
+describe('EmailSend — vendor list', () => {
+  const listedVendor = {
+    id: 'v1', company: 'Brightline AV', category: 'Lighting',
+    contacts: [{ name: 'Jane Doe', email: 'jane@brightline.test' }, { name: '', email: 'bids@brightline.test' }],
+    addedBy: 'u1', archived: false, archivedAt: null, createdAt: null, updatedAt: null,
+  }
+
+  beforeEach(() => {
+    mockVendorAccess.mockResolvedValue({ canRead: true, canEdit: false })
+    mockListVendors.mockResolvedValue({ success: true, message: 'OK', data: { items: [listedVendor], total: 1, limit: 200, offset: 0 } })
+    mockSendEmail.mockResolvedValue({ success: true, message: 'Email campaign sent.' })
+  })
+
+  it('sends to contacts picked from the list together with typed addresses', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Brightline AV: all contacts' }))
+    expect(screen.getByRole('button', { name: 'Remove jane@brightline.test' })).toBeInTheDocument()
+    const input = screen.getByRole('textbox', { name: 'Add recipient email addresses' })
+    fireEvent.change(input, { target: { value: 'new@vendor.test' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('checkbox', { name: /I reviewed the recipients/ }))
+    fireEvent.click(screen.getByRole('button', { name: /send campaign/i }))
+    await waitFor(() => expect(mockSendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      recipientEmails: ['jane@brightline.test', 'bids@brightline.test', 'new@vendor.test'],
+      kind: 'invitation',
+    })))
+  })
+
+  it('unticking a contact removes the recipient and withdraws the send approval', async () => {
+    render(<EmailSend />)
+    await waitForLoad()
+    fireEvent.click(await screen.findByRole('checkbox', { name: /Jane Doe/ }))
+    const approval = screen.getByRole('checkbox', { name: /I reviewed the recipients/ })
+    fireEvent.click(approval)
+    expect(approval).toBeChecked()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Jane Doe/ }))
+    expect(screen.queryByRole('button', { name: 'Remove jane@brightline.test' })).not.toBeInTheDocument()
+    expect(approval).not.toBeChecked()
+  })
+
+  it('has no vendor list when asking one vendor a question', async () => {
+    mockSearchParamsGet.mockImplementation((key: string) => ({ mode: 'question', proposalId: 'prop-001', vendor: 'Acme AV', to: 'rep@acme.test' } as Record<string, string>)[key] ?? null)
+    render(<EmailSend />)
+    await waitFor(() => expect(screen.getByRole('button', { name: /send question/i })).not.toBeDisabled(), LOAD_TIMEOUT)
+    expect(screen.queryByText('Pick from your vendor list')).not.toBeInTheDocument()
+    expect(mockVendorAccess).not.toHaveBeenCalled()
   })
 })
