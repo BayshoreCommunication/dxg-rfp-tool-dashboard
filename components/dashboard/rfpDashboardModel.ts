@@ -332,6 +332,12 @@ export const toRfpSummary = (value: unknown): RfpSummary => {
   };
 };
 
+// A draft nobody has named yet is stored as "Untitled proposal"; the product calls it an RFP.
+const rfpName = (value: unknown): string => {
+  const name = textOrNull(value)?.trim();
+  return !name || /^untitled proposal$/i.test(name) ? "Untitled RFP" : name;
+};
+
 export const toRfpList = (value: unknown): RfpList => {
   const data = isRecord(value) ? value : {};
   const items = (Array.isArray(data.items) ? data.items : []).filter(isRecord).flatMap((item): RfpListItem[] => {
@@ -340,7 +346,7 @@ export const toRfpList = (value: unknown): RfpList => {
     const stage = RFP_STAGES.includes(item.stage as RfpStage) ? (item.stage as RfpStage) : "draft";
     return [{
       id,
-      eventName: textOrNull(item.eventName) ?? "Untitled RFP",
+      eventName: rfpName(item.eventName),
       stage,
       status: textOrNull(item.status),
       isDraft: item.isDraft === true,

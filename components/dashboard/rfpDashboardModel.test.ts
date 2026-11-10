@@ -218,6 +218,7 @@ describe("role dashboards: reading backend payloads", () => {
     });
     expect(list.items).toHaveLength(1);
     expect(list.items[0]).toMatchObject({ id: USER, eventName: "Untitled RFP", stage: "draft", vendorsInvited: 3, vendorsResponded: 0, ownerName: null });
+    expect(toRfpList({ items: [{ id: USER, eventName: "Untitled proposal" }, { id: OTHER, eventName: " Gala " }] }).items.map((item) => item.eventName)).toEqual(["Untitled RFP", "Gala"]);
     expect(toRfpList(undefined)).toEqual({ items: [], pagination: { total: 0, page: 1, limit: 25, totalPages: 0 } });
   });
 
