@@ -57,10 +57,17 @@ const parsePerson = (value: unknown): GrantPerson | null => {
   return id ? { id, name: text(value.name) } : null;
 };
 
+// An RFP nobody has named yet is stored under the backend's placeholder name, which still
+// says "proposal"; on screen it is an untitled RFP.
+const rfpTitle = (value: unknown): string | null => {
+  const title = text(value);
+  return title && /^untitled proposal$/i.test(title) ? "Untitled RFP" : title;
+};
+
 const parseRfp = (value: unknown): GrantRfp | null => {
   if (!isRecord(value)) return null;
   const id = text(value.id);
-  return id ? { id, title: text(value.title) } : null;
+  return id ? { id, title: rfpTitle(value.title) } : null;
 };
 
 export const parseGrant = (value: unknown, now = Date.now()): SupportGrant | null => {
@@ -125,7 +132,7 @@ export const parseGrantableRfps = (value: unknown): GrantableRfp[] => {
   return items.flatMap((item): GrantableRfp[] => {
     if (!isRecord(item)) return [];
     const id = text(item.id) ?? text(item._id);
-    return id ? [{ id, title: text(item.eventName) ?? "Untitled RFP", ownerName: text(item.ownerName) }] : [];
+    return id ? [{ id, title: rfpTitle(item.eventName) ?? "Untitled RFP", ownerName: text(item.ownerName) }] : [];
   });
 };
 

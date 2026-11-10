@@ -97,6 +97,12 @@ describe("support grant parsing", () => {
     ]);
     expect(parseGrantableRfps(undefined)).toEqual([]);
   });
+
+  it("shows the backend's placeholder name for an unnamed RFP as an untitled RFP", () => {
+    expect(parseGrantableRfps({ items: [{ id: "p3", eventName: "Untitled proposal" }] })[0].title).toBe("Untitled RFP");
+    expect(parseGrant(apiGrant({ rfp: { id: "p3", title: "Untitled Proposal" } }), NOW)?.rfp?.title).toBe("Untitled RFP");
+    expect(parseGrant(apiGrant({ rfp: { id: "p4", title: "Proposal writing workshop" } }), NOW)?.rfp?.title).toBe("Proposal writing workshop");
+  });
 });
 
 describe("support grant display", () => {
