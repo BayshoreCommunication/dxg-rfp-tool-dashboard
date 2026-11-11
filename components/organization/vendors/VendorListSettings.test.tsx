@@ -27,6 +27,11 @@ jest.mock('@/app/actions/vendorList', () => ({
   addContactsToVendorAction: (...a: unknown[]) => mockAddContacts(...a),
 }))
 
+// ORG-605: the settings header also asks whether to show the Templates tab.
+jest.mock('@/app/actions/proposalTemplates', () => ({
+  getTemplateAccessAction: jest.fn().mockResolvedValue({ canUse: false, canManage: false }),
+}))
+
 const vendor = (over: Partial<Vendor> = {}): Vendor => ({
   id: 'v1', company: 'Brightline AV', category: 'Lighting',
   contacts: [{ name: 'Jane Doe', email: 'jane@brightline.test' }],
