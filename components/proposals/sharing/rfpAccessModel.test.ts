@@ -44,11 +44,11 @@ describe("deriveCapabilities", () => {
     expect(deriveCapabilities(snapshot())).toEqual({ canShare: true, canBrowseMembers: true, canChangeTeam: true, canReassign: true });
   });
 
-  test("an RFP owner or team manager may share and change the team but not reassign (no member API for them)", () => {
+  test("a proposal owner or team manager may share and change the team but not reassign (no member API for them)", () => {
     expect(deriveCapabilities(snapshot({ directory: null }))).toEqual({ canShare: true, canBrowseMembers: false, canChangeTeam: true, canReassign: false });
   });
 
-  test("someone the RFP was only shared with gets no actions", () => {
+  test("someone the proposal was only shared with gets no actions", () => {
     expect(deriveCapabilities(snapshot({ shares: null, directory: null }))).toEqual({ canShare: false, canBrowseMembers: false, canChangeTeam: false, canReassign: false });
   });
 
@@ -70,7 +70,7 @@ describe("member choices", () => {
     expect(permissionOptions(undefined)).toEqual(["view", "edit"]);
   });
 
-  test("reassignment targets are active members who can own RFPs, other than the owner", () => {
+  test("reassignment targets are active members who can own proposals, other than the owner", () => {
     expect(reassignCandidates(snapshot()).map((item) => item.userId)).toEqual([PLANNER, ADMIN]);
   });
 
@@ -101,10 +101,10 @@ describe("teams", () => {
 describe("accessErrorMessage", () => {
   test.each([
     ["VIEWER_VIEW_ONLY", "Viewers can only be given View access."],
-    ["TEAM_NOT_ASSIGNABLE", "That team can't be used for this RFP. Pick an active team, or No team."],
-    ["SHARE_NOT_ALLOWED", "Only the RFP's owner, a manager of its team, or an Owner or Admin can share it."],
+    ["TEAM_NOT_ASSIGNABLE", "That team can't be used for this proposal. Pick an active team, or No team."],
+    ["SHARE_NOT_ALLOWED", "Only the proposal's owner, a manager of its team, or an Owner or Admin can share it."],
     ["MEMBER_INACTIVE", "That member is deactivated, so they can't be given access."],
-    ["REASSIGN_TARGET_INELIGIBLE", "RFPs can only go to an active member who isn't a Viewer."],
+    ["REASSIGN_TARGET_INELIGIBLE", "Proposals can only go to an active member who isn't a Viewer."],
   ])("maps %s to a sentence", (code, message) => {
     expect(accessErrorMessage(code, 422)).toBe(message);
   });

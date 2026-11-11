@@ -140,24 +140,24 @@ export const teamChoices = (teamId: string | null, teams: TeamOption[]): Array<{
 
 const MESSAGES: Record<string, string> = {
   // Sharing (ORG-208)
-  PROPOSAL_NOT_FOUND: "This RFP no longer exists, or it isn't available to you.",
-  SHARE_NOT_ALLOWED: "Only the RFP's owner, a manager of its team, or an Owner or Admin can share it.",
+  PROPOSAL_NOT_FOUND: "This proposal no longer exists, or it isn't available to you.",
+  SHARE_NOT_ALLOWED: "Only the proposal's owner, a manager of its team, or an Owner or Admin can share it.",
   MEMBER_NOT_FOUND: "That person isn't a member of your organization.",
   MEMBER_INACTIVE: "That member is deactivated, so they can't be given access.",
   VIEWER_VIEW_ONLY: "Viewers can only be given View access.",
-  SHARE_TARGET_IS_OWNER: "That member already owns this RFP.",
-  SHARE_NOT_FOUND: "This RFP is no longer shared with that member.",
+  SHARE_TARGET_IS_OWNER: "That member already owns this proposal.",
+  SHARE_NOT_FOUND: "This proposal is no longer shared with that member.",
   INVALID_SHARE_PERMISSION: "Choose View or Edit.",
   // Team (ORG-202)
-  TEAM_NOT_ASSIGNABLE: "That team can't be used for this RFP. Pick an active team, or No team.",
-  PROPOSAL_ACCESS_DENIED: "You don't have permission to change this RFP.",
+  TEAM_NOT_ASSIGNABLE: "That team can't be used for this proposal. Pick an active team, or No team.",
+  PROPOSAL_ACCESS_DENIED: "You don't have permission to change this proposal.",
   // Reassignment (ORG-207)
-  REASSIGN_TARGET_REQUIRED: "Choose the member who should own this RFP.",
+  REASSIGN_TARGET_REQUIRED: "Choose the member who should own this proposal.",
   REASSIGN_TARGET_NOT_FOUND: "The member you picked is no longer in your organization.",
-  REASSIGN_TO_SELF: "That member already owns this RFP. Choose someone else.",
-  REASSIGN_TARGET_INELIGIBLE: "RFPs can only go to an active member who isn't a Viewer.",
-  RFPS_NOT_OWNED_BY_MEMBER: "This RFP's owner changed in the meantime. Refresh and try again.",
-  INVALID_RFP_SELECTION: "This RFP couldn't be selected for reassignment.",
+  REASSIGN_TO_SELF: "That member already owns this proposal. Choose someone else.",
+  REASSIGN_TARGET_INELIGIBLE: "Proposals can only go to an active member who isn't a Viewer.",
+  RFPS_NOT_OWNED_BY_MEMBER: "This proposal's owner changed in the meantime. Refresh and try again.",
+  INVALID_RFP_SELECTION: "This proposal couldn't be selected for reassignment.",
   MEMBER_REMOVED: "That member has been removed from your organization.",
   FORBIDDEN: "Only Owners and Admins can do that.",
   // Shared

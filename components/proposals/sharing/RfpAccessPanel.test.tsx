@@ -45,10 +45,10 @@ describe("RfpAccessPanel", () => {
     expect(screen.getByRole("button", { name: /^Share$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Reassign owner/ })).toBeInTheDocument();
     expect(screen.getByText("Olive Owner")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "RFP team" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Proposal team" })).toBeInTheDocument();
   });
 
-  test("a member the RFP was only shared with sees the team read-only and no actions", async () => {
+  test("a member the proposal was only shared with sees the team read-only and no actions", async () => {
     jest.mocked(getRfpAccessAction).mockResolvedValue({
       success: true,
       data: adminSnapshot({ shares: null, directory: null, teamId: "f".repeat(24) }),
@@ -57,11 +57,11 @@ describe("RfpAccessPanel", () => {
     expect(await screen.findByText("East")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Share$/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Reassign owner/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "RFP team" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Proposal team" })).not.toBeInTheDocument();
     expect(screen.getByText("Shared with you")).toBeInTheDocument();
   });
 
-  test("an RFP owner without the member directory can share but not reassign", () => {
+  test("a proposal owner without the member directory can share but not reassign", () => {
     render(<RfpAccessPanel proposalId={RFP} initial={adminSnapshot({ directory: null, ownerUserId: ME })} />);
     expect(screen.getByRole("button", { name: /^Share$/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Reassign owner/ })).not.toBeInTheDocument();
@@ -104,11 +104,11 @@ describe("RfpAccessPanel", () => {
   });
 
   test("shows the mapped message when a team can't be assigned", async () => {
-    jest.mocked(setRfpTeamAction).mockResolvedValue({ success: false, status: 422, code: "TEAM_NOT_ASSIGNABLE", message: "That team can't be used for this RFP. Pick an active team, or No team." });
+    jest.mocked(setRfpTeamAction).mockResolvedValue({ success: false, status: 422, code: "TEAM_NOT_ASSIGNABLE", message: "That team can't be used for this proposal. Pick an active team, or No team." });
     render(<RfpAccessPanel proposalId={RFP} initial={adminSnapshot()} />);
-    fireEvent.click(screen.getByRole("combobox", { name: "RFP team" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Proposal team" }));
     fireEvent.click(screen.getByRole("option", { name: "East" }));
     await waitFor(() => expect(setRfpTeamAction).toHaveBeenCalledWith(RFP, "f".repeat(24)));
-    expect(await screen.findByRole("alert")).toHaveTextContent("That team can't be used for this RFP.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("That team can't be used for this proposal.");
   });
 });

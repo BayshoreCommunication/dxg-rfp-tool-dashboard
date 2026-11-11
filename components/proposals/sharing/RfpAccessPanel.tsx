@@ -108,7 +108,7 @@ export default function RfpAccessPanel({ proposalId, initial = null }: Props) {
             <dd className="mt-1.5">
               {capabilities.canChangeTeam ? (
                 <div className="flex items-center gap-2">
-                  <GlobalSelect aria-label="RFP team" value={snapshot.teamId ?? NO_TEAM} onChange={(event) => void changeTeam(event.target.value)} className={selectClass} disabled={savingTeam}>
+                  <GlobalSelect aria-label="Proposal team" value={snapshot.teamId ?? NO_TEAM} onChange={(event) => void changeTeam(event.target.value)} className={selectClass} disabled={savingTeam}>
                     <option value={NO_TEAM}>No team</option>
                     {teamChoices(snapshot.teamId, snapshot.teams).map((team) => (
                       <option key={team.id} value={team.id}>{team.label}</option>

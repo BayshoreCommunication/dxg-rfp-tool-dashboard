@@ -115,7 +115,7 @@ export async function getRfpAccessAction(proposalId: string): Promise<RfpAccessR
     success: true,
     data: {
       proposalId,
-      title: text(event.eventName)?.trim() || "Untitled RFP",
+      title: text(event.eventName)?.trim() || "Untitled proposal",
       viewerUserId: user?._id ?? user?.id ?? null,
       ownerUserId: idOf(data.userId),
       teamId: idOf(data.teamId),

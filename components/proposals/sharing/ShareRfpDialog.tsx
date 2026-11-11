@@ -75,7 +75,7 @@ export default function ShareRfpDialog({ snapshot, onSharesChange, onClose }: Pr
   return (
     <AccessDialog
       title={`Share “${snapshot.title}”`}
-      description="People you add see this RFP in their list. Edit lets them change it too."
+      description="People you add see this proposal in their list. Edit lets them change it too."
       busy={busy}
       onClose={onClose}
       footer={(
@@ -141,7 +141,7 @@ export default function ShareRfpDialog({ snapshot, onSharesChange, onClose }: Pr
                 <p className="truncate text-xs text-slate-500">{memberEmail(snapshot.ownerUserId, snapshot)}</p>
               )}
             </div>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">RFP owner</span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">Proposal owner</span>
           </li>
           {shares.length === 0 && (
             <li className="px-4 py-4 text-sm text-slate-500">Not shared with anyone yet.</li>
