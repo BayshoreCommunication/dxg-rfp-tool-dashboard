@@ -5,6 +5,7 @@ import { DASHBOARD_ACCOUNTS, dashboardAccessToken, handleRoleDashboard } from '.
 import { handleAuditLog } from './auditLogFixture.mjs';
 import { handleVendorList } from './vendorListFixture.mjs';
 import { handleSupportGrants } from './supportGrantsFixture.mjs';
+import { handlePlanEntitlements } from './planEntitlementsFixture.mjs';
 import { handleProposalTemplates } from './proposalTemplatesFixture.mjs';
 
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
@@ -178,6 +179,7 @@ const server = http.createServer(async (request, response) => {
   if (handleRoleDashboard(request, response, url)) return;
   // ORG-607: vendor list, its role accounts and the send step (vendorListFixture.mjs).
   if (await handleVendorList(request, response, url)) return;
+  if (await handlePlanEntitlements(request, response, url)) return;
   // ORG-605: RFP templates and the plan limit on starting an RFP from one (proposalTemplatesFixture.mjs).
   if (await handleProposalTemplates(request, response, url)) return;
 

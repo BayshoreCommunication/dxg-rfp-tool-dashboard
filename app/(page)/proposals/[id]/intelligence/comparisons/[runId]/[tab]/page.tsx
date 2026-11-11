@@ -1,5 +1,6 @@
 import { getComparisonWorkspaceAction, listComparisonsAction } from "@/app/actions/comparisonOrchestration";
 import { getProposalByIdAction } from "@/app/actions/proposals";
+import { planLockedRefusal, planLockedScreen } from "@/components/entitlements/planGate";
 import ProposalIntelligenceWorkspace, { type IntelligenceTab } from "@/components/proposalIntelligence/ProposalIntelligenceWorkspace";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,11 +14,15 @@ const record = (value: unknown): value is Record<string, unknown> => typeof valu
 export default async function ComparisonViewPage({ params }: { params: Promise<{ id: string; runId: string; tab: string }> }) {
   const { id, runId, tab } = await params;
   if (!/^[0-9a-f]{24}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(runId) || !intelligenceTabs.includes(tab as IntelligenceTab)) notFound();
+  const locked = await planLockedScreen("proposalIntelligence", { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  if (locked) return locked;
   const [proposal, workspace, runs] = await Promise.all([
     getProposalByIdAction(id),
     getComparisonWorkspaceAction(id, runId),
     listComparisonsAction(id),
   ]);
+  const refused = await planLockedRefusal("proposalIntelligence", [workspace, runs], { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  if (refused) return refused;
   if (!proposal.success || !record(proposal.data)) notFound();
   if (!workspace.success) {
     if (workspace.code === "COMPARISON_NOT_FOUND") notFound();

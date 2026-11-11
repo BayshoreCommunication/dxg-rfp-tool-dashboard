@@ -1,6 +1,13 @@
 import { render, screen } from "@testing-library/react";
 
 const getDetail = jest.fn();
+// ORG-602: the plan includes everything in these tests; the locked states are covered in
+// components/entitlements/planGate.test.tsx and e2e/plan-locked-states.spec.ts.
+jest.mock("@/components/entitlements/planGate", () => ({
+  planLockedScreen: jest.fn(async () => null),
+  planLockedRefusal: jest.fn(async () => null),
+  loadRfpUsage: jest.fn(async () => null),
+}));
 jest.mock("@/app/actions/vendorResponse", () => ({
   getVendorSubmissionDetailAction: (...args: unknown[]) => getDetail(...args),
 }));

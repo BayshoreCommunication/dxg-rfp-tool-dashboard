@@ -59,4 +59,4 @@ export const ORGANIZATION_FIELD_ERRORS: Record<string, string> = {
   eventsPerYear: "Enter a whole number of events between 0 and 100,000.",
 };
 
-export const PLAN_LABELS: Record<string, string> = { free_trial: "Free trial" };
+export const PLAN_LABELS: Record<string, string> = { free_trial: "Free trial", full_access: "Full access" };

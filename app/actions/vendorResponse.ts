@@ -508,7 +508,7 @@ export const getVendorResponseProposalsAction = async ({
   search?: string;
 } = {}): Promise<
   | { success: true; data: VendorResponseProposalList }
-  | { success: false; message: string }
+  | { success: false; message: string; code?: string }
 > => {
   try {
     const params = new URLSearchParams({
@@ -524,6 +524,8 @@ export const getVendorResponseProposalsAction = async ({
     if (!res.ok || !isRecord(json) || json.success !== true) {
       return {
         success: false,
+        // PLAN_FEATURE_LOCKED when the plan doesn't include vendor responses (ORG-601).
+        code: isRecord(json) && isString(json.code) ? json.code : undefined,
         message:
           isRecord(json) && isString(json.message)
             ? json.message
@@ -622,6 +624,7 @@ export const getVendorSubmissionDetailAction = async (id: string) => {
     if (!res.ok || !json?.success || !json?.data) {
       return {
         success: false as const,
+        code: typeof json?.code === "string" ? (json.code as string) : undefined,
         message: String(json?.message || "Vendor response was not found."),
       };
     }

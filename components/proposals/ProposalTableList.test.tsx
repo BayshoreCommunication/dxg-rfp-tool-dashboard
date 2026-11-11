@@ -12,7 +12,7 @@ jest.mock('next/link', () => ({
 }))
 
 jest.mock('react-toastify', () => ({
-  toast: { success: jest.fn(), error: jest.fn(), warning: jest.fn() },
+  toast: { success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn() },
 }))
 
 const mockGetProposals = jest.fn()
@@ -160,6 +160,22 @@ describe('ProposalTableList — proposal cards', () => {
   it('renders the view count', async () => {
     render(<ProposalTableList searchValue="" activeFilter="all" />)
     await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument(), LOAD_TIMEOUT)
+  })
+
+  // ORG-602: a copy is a new RFP, so at the plan's limit the copy form never opens.
+  it('at the plan limit, "Save a copy" explains the limit instead of opening the copy form', async () => {
+    const usage = { used: 2, limit: 2, atLimit: true, planName: 'Free trial', onPlan: 'on the free trial' }
+    render(<ProposalTableList searchValue="" activeFilter="all" rfpUsage={usage} />)
+    await waitFor(() => screen.getByText('Bayshore Summit 2026'), LOAD_TIMEOUT)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save a copy' }))
+
+    expect(toast.info).toHaveBeenCalledWith(
+      "2 of 2 RFPs used. Your plan includes 2 RFPs and your organization has used both. Deleting an RFP doesn't free one up. Contact us to upgrade."
+    )
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(mockCopyProposal).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('exposes every proposal action with a mobile-friendly accessible label', async () => {

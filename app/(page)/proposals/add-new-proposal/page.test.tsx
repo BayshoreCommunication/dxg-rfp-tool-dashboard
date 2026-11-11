@@ -1,5 +1,12 @@
 import { render, screen } from "@testing-library/react";
 
+// ORG-602: the plan includes everything in these tests; the locked states are covered in
+// components/entitlements/planGate.test.tsx and e2e/plan-locked-states.spec.ts.
+jest.mock("@/components/entitlements/planGate", () => ({
+  planLockedScreen: jest.fn(async () => null),
+  planLockedRefusal: jest.fn(async () => null),
+  loadRfpUsage: jest.fn(async () => null),
+}));
 jest.mock("@/components/proposals/AssistantWorkspacePage", () => ({
   __esModule: true,
   default: ({ initialProposalId, extraStarter }: { initialProposalId?: string; extraStarter?: React.ReactNode }) => (

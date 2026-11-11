@@ -11,6 +11,7 @@ import ExcludedVendorsNotice from "@/components/proposalIntelligence/ExcludedVen
 import GlossaryDialog from "@/components/proposalIntelligence/GlossaryDialog";
 import ProposalReweighting from "@/components/proposalIntelligence/ProposalReweighting";
 import ProposalVerdict from "@/components/proposalIntelligence/ProposalVerdict";
+import { planLockedRefusal, planLockedScreen } from "@/components/entitlements/planGate";
 import RfpAccessPanel from "@/components/proposals/sharing/RfpAccessPanel";
 import VendorComparisonPanel from "@/components/vendor/VendorComparisonPanel";
 import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
@@ -33,12 +34,16 @@ const hasComparableEvidence = (response: VendorResponseItem) =>
 export default async function ProposalIntelligencePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f]{24}$/i.test(id)) notFound();
+  const locked = await planLockedScreen("proposalIntelligence", { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  if (locked) return locked;
   const [proposalResult, responsesResult, setsResult, comparisonsResult] = await Promise.all([
     getProposalByIdAction(id),
     getVendorResponsesAction({ proposalId: id, page: 1, limit: 100 }),
     listRequirementSetsAction(id),
     listComparisonsAction(id),
   ]);
+  const refused = await planLockedRefusal("proposalIntelligence", [responsesResult, setsResult, comparisonsResult], { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  if (refused) return refused;
   if (!proposalResult.success || !record(proposalResult.data)) notFound();
   const proposal = proposalResult.data;
   const event = record(proposal.event) ? proposal.event : {};
