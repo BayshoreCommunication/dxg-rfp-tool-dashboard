@@ -129,8 +129,11 @@ describe("display", () => {
   });
 
   it('says "RFP", never "proposal"', () => {
-    expect(detailLines({ details: { proposalId: "0123456789abcdef01234567", proposalsMoved: 3 }, reason: null, decision: "allowed" }).join(" ")).not.toMatch(/proposal/i);
+    expect(detailLines({ details: { proposalId: "0123456789abcdef01234567", proposalsMoved: 3 }, reason: null, decision: "allowed" })).toEqual(["RFP ID: …234567", "RFPs moved: 3"]);
     expect(targetLabel({ type: "proposal", id: "0123456789abcdef01234567", name: null })).toBe("RFP …234567");
+    // Recorded values are shown as stored: a domain or a team name is never reworded.
+    expect(detailLines({ details: { domain: "proposals.acme.example", placedInTeam: "Proposal Desk" }, reason: null, decision: "allowed" }))
+      .toEqual(["Domain: proposals.acme.example", "Placed in team: Proposal Desk"]);
   });
 
   it("labels targets", () => {
@@ -145,7 +148,7 @@ describe("display", () => {
     expect(decisionOf("mystery").label).toBe("Recorded");
     expect(auditErrorMessage({ code: "AUDIT_FILTER_INVALID", status: 400 }, "x")).toMatch(/filters/);
     expect(auditErrorMessage({ status: 403 }, "x")).toMatch(/Owner or Admin/);
-    expect(auditErrorMessage({ status: 429 }, "x")).toMatch(/Too many exports/);
+    expect(auditErrorMessage({ status: 429 }, "x")).toMatch(/Too many requests/);
     expect(auditErrorMessage({ code: "SOMETHING_NEW", status: 500 }, "Fallback.")).toBe("Fallback.");
   });
 

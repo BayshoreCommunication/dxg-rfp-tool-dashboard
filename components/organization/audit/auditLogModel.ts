@@ -260,7 +260,8 @@ export const detailLines = (event: Pick<AuditEvent, "details" | "reason" | "deci
   }
   for (const [key, value] of Object.entries(details)) {
     if (["operation", "scope", "setting", "from", "to", "value"].includes(key)) continue;
-    const label = DETAIL_LABELS[key] ?? sentence(key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase());
+    // Only a label made from a key is reworded; recorded values (a domain, a team) are shown as stored.
+    const label = DETAIL_LABELS[key] ?? sentence(key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()).replace(/proposal/gi, "RFP");
     if (ROLE_KEYS.has(key)) {
       const role = roleLabel(String(value));
       lines.push(`${label}: ${role === "No role" ? sentence(String(value)) : role}`);
@@ -271,7 +272,7 @@ export const detailLines = (event: Pick<AuditEvent, "details" | "reason" | "deci
     else lines.push(`${label}: ${scalar(value)}`);
   }
   if (event.reason && (event.decision === "denied" || event.decision === "detected")) lines.push(`Reason: ${REASONS[event.reason] ?? sentence(event.reason)}`);
-  return lines.map((line) => line.replace(/proposal/gi, "RFP"));
+  return lines;
 };
 
 // Fixed format so the server render and the browser agree until the browser's zone is known.
@@ -281,14 +282,16 @@ export const formatAuditTime = (iso: string, timeZone?: string): string => {
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit",
     ...(timeZone ? { timeZone } : {}),
-  }).format(instant);
+    // Some engines put a narrow no-break space before AM/PM and some a plain one; use one form so
+    // the server render and every browser agree.
+  }).format(instant).replace(/[\u202f\u00a0]/g, " ");
 };
 
 type ErrorLike = { code?: string; status?: number };
 export const auditErrorMessage = (error: ErrorLike, fallback: string): string => {
   if (error.code === "AUDIT_FILTER_INVALID") return "Those filters aren't valid. Check the dates and try again.";
   if (error.status === 403 || error.code === "AUDIT_LOG_FORBIDDEN") return "Only an Owner or Admin can read the audit log.";
-  if (error.status === 429) return "Too many exports in a short time. Wait a few minutes and try again.";
+  if (error.status === 429) return "Too many requests in a short time. Wait a few minutes and try again.";
   if (error.status === 401) return "Your session has ended. Sign in again.";
   if (error.code === "NETWORK_ERROR") return "We couldn't reach RFPilot. Check your connection and try again.";
   return fallback;

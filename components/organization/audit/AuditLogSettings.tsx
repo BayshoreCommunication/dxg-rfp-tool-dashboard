@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, ScrollText } from "lucide-react";
+import { ArrowLeft, Download, ScrollText } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "react-toastify";
 import { exportAuditLogAction, listAuditEventsAction } from "@/app/actions/auditLog";
@@ -62,7 +63,8 @@ const ActorCell = ({ event }: { event: AuditEvent }) => (
   </div>
 );
 
-const cellLabel = "text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden";
+// Visible on a phone; on wider screens the column header shows it, and screen readers still get it.
+const cellLabel = "text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:sr-only";
 const rowGrid = "grid grid-cols-1 gap-x-4 gap-y-2 md:grid-cols-[170px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.5fr)_90px] md:items-start";
 
 export default function AuditLogSettings({ initialPage, initialError, options, members }: Props) {
@@ -144,6 +146,9 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
   return (
     <div className="space-y-6 px-6 pb-8" data-testid="audit-log">
       <TopHeader />
+      <Link href="/settings/security" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+        <ArrowLeft size={12} aria-hidden="true" /> Security
+      </Link>
       <section className={sectionClass} aria-labelledby="audit-log-title">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -200,12 +205,20 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
           <span>Dates use your time zone. The export follows the same filters.</span>
         </div>
 
-        <div className="mt-5" aria-live="polite" aria-busy={loading}>
+        <div className="mt-5" aria-busy={loading}>
           {problem ? (
             <InlineError>{problem}</InlineError>
+          ) : loading ? (
+            <>
+              <p className="sr-only" role="status">Loading activity…</p>
+              <TableSkeleton rows={6} />
+            </>
           ) : error ? (
-            <InlineError>{error}</InlineError>
-          ) : events === null || loading ? (
+            <div className="space-y-3">
+              <InlineError>{error}</InlineError>
+              <button type="button" className={secondaryButtonClass} onClick={() => void load(filters)}>Try again</button>
+            </div>
+          ) : events === null ? (
             <TableSkeleton rows={6} />
           ) : events.length === 0 ? (
             <EmptyState
@@ -258,7 +271,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
                 })}
               </ol>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500" role="status">
                   Showing {events.length.toLocaleString("en-US")} event{events.length === 1 ? "" : "s"}{nextCursor ? ", newest first" : ""}.
                 </p>
                 {nextCursor ? (

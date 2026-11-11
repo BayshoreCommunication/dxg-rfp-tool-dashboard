@@ -8,6 +8,10 @@ jest.mock("@/app/actions/auditLog", () => ({
   listAuditEventsAction: (...args: unknown[]) => mockList(...args),
   exportAuditLogAction: (...args: unknown[]) => mockExport(...args),
 }));
+jest.mock("next/link", () => ({
+  __esModule: true,
+  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a>,
+}));
 jest.mock("@/components/settings/TopHeaser", () => ({ __esModule: true, default: () => <div>settings header</div> }));
 const mockToast = { error: jest.fn(), success: jest.fn(), warn: jest.fn() };
 jest.mock("react-toastify", () => ({ toast: { error: (...a: unknown[]) => mockToast.error(...a), success: (...a: unknown[]) => mockToast.success(...a), warn: (...a: unknown[]) => mockToast.warn(...a) } }));
@@ -122,6 +126,16 @@ describe("AuditLogSettings", () => {
     expect(screen.getByTestId("audit-log").textContent).not.toMatch(/AUDIT_FILTER_INVALID/);
   });
 
+  it("offers Try again after a failed load, and recovers", async () => {
+    renderLog(null, "The audit log couldn't be loaded. Try again.");
+    mockList.mockResolvedValue(ok(page([event("e1")])));
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+    expect(mockList).toHaveBeenCalledWith({});
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Security/ })).toHaveAttribute("href", "/settings/security");
+  });
+
   it("loads the next page with the same filters and appends it once", async () => {
     renderLog(page([event("e1")], "cursor-1"));
     mockList.mockResolvedValue(ok(page([event("e1"), event("e3", { label: "Team created" })], null)));
@@ -167,7 +181,7 @@ describe("AuditLogSettings", () => {
 
     mockExport.mockResolvedValue({ success: false, status: 429, message: "Too many requests" });
     fireEvent.click(screen.getByRole("button", { name: /Export CSV/ }));
-    await waitFor(() => expect(mockToast.error).toHaveBeenCalledWith(expect.stringMatching(/Too many exports/)));
+    await waitFor(() => expect(mockToast.error).toHaveBeenCalledWith(expect.stringMatching(/Too many requests/)));
     expect(click).toHaveBeenCalledTimes(2);
     click.mockRestore();
   });
