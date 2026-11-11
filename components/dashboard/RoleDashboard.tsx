@@ -4,6 +4,7 @@ import { listMembersAction } from "@/app/actions/organizationMembers";
 import { getDashboardRfpSummaryAction, listDashboardRfpsAction } from "@/app/actions/rfpDashboard";
 import { listTeamsAction } from "@/app/actions/teams";
 import { memberDisplayName } from "@/components/organization/members/orgAccess";
+import { loadRfpUsage } from "@/components/entitlements/planGate";
 import { getMemberIdentity } from "@/lib/server/memberIdentity";
 import RoleDashboardView from "./RoleDashboardView";
 import TopHeader from "./TopHeader";
@@ -80,7 +81,8 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
     );
   }
 
-  const [list, summary, stageCounts, deadlineSource, submissions, options] = await Promise.all([
+  const canCreate = canCreateRfps(role);
+  const [list, summary, stageCounts, deadlineSource, submissions, options, rfpUsage] = await Promise.all([
     listDashboardRfpsAction(listQuery(state, userId)),
     isViewer ? null : getDashboardRfpSummaryAction(filterQuery(state, userId)),
     getDashboardRfpSummaryAction(stageCountQuery(state, userId)),
@@ -91,6 +93,8 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
       ? listDashboardRfpsAction({ ...scope, stage: "receiving_responses", sortBy: "updatedAt", sortOrder: "desc", limit: String(PANEL_SIZE) })
       : null,
     loadFilterOptions(state.view),
+    // The plan's RFP counter sits with the create button, which Viewers don't have (ORG-602).
+    canCreate ? loadRfpUsage() : null,
   ]);
 
   // A page past the end (a stale link, or RFPs archived since): go to the last page.
@@ -107,7 +111,7 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
     <div className="relative mx-auto min-h-full w-full max-w-[1800px]">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(0,138,210,0.07),transparent)]" />
       <div className="space-y-5 pb-6 sm:space-y-7 sm:pb-10 lg:space-y-8 lg:pb-12">
-        <TopHeader canCreate={canCreateRfps(role)} />
+        <TopHeader canCreate={canCreate} rfpUsage={rfpUsage} />
         <VerifyDomainPrompt />
         <RoleDashboardView
           role={role}

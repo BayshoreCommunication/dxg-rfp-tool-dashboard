@@ -5,6 +5,7 @@ import {
   getVendorResponsesAction,
   type VendorResponseItem,
 } from "@/app/actions/vendorResponse";
+import { planLockedScreen } from "@/components/entitlements/planGate";
 import ProposalResponseCards from "@/components/vendor/ProposalResponseCards";
 import { deriveResponseCardSummary } from "@/lib/vendorResponses/responseCardSummary";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
@@ -67,6 +68,8 @@ export default async function ProposalVendorResponsesPage({
   searchParams?: Promise<{ add?: string }>;
 }) {
   const { proposalId } = await params;
+  const locked = await planLockedScreen("vendorResponses", { rfpId: proposalId, backHref: "/dashboard", backLabel: "Back to the dashboard" });
+  if (locked) return locked;
   const openManualResponse = (await searchParams)?.add === "manual";
   const [responseResult, proposalResult] = await Promise.all([
     loadAllProposalResponses(proposalId),

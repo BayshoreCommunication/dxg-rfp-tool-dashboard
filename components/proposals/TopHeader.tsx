@@ -1,9 +1,11 @@
 ﻿"use client";
-import { Plus, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
+import NewRfpAction from "@/components/entitlements/NewRfpAction";
+import type { RfpUsage } from "@/lib/entitlements/entitlements";
 
-const TopHeader = () => {
+// `rfpUsage` is the plan's RFP counter (ORG-602); null on a plan with no limit.
+const TopHeader = ({ rfpUsage = null }: { rfpUsage?: RfpUsage | null }) => {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -70,7 +72,7 @@ const TopHeader = () => {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-3 sm:justify-end">
+        <div className="flex items-start gap-3 sm:justify-end">
           {/* Notification bell */}
           {/* <Link
             href={"/settings"}
@@ -84,19 +86,7 @@ const TopHeader = () => {
           </Link> */}
 
           {/* CTA Button */}
-          <Link
-            href="/proposals/add-new-proposal"
-            className="group relative flex min-h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[12px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.5)] active:translate-y-0 sm:w-auto sm:text-[13px]"
-            style={{
-              background:
-                "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)",
-            }}
-          >
-            {/* Shine sweep */}
-            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-            <Plus size={15} strokeWidth={3} className="shrink-0" />
-            New Proposal
-          </Link>
+          <NewRfpAction usage={rfpUsage} />
         </div>
       </div>
     </div>

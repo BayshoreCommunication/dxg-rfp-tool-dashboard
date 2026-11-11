@@ -5,6 +5,10 @@ jest.mock("@/app/actions/vendorResponse", () => ({
   getVendorResponseProposalsAction: (...args: unknown[]) =>
     getProposalSummaries(...args),
 }));
+const planLockedScreen = jest.fn();
+jest.mock("@/components/entitlements/planGate", () => ({
+  planLockedScreen: (...args: unknown[]) => planLockedScreen(...args),
+}));
 jest.mock("@/components/vendor/VendorResponseProposalList", () => ({
   __esModule: true,
   default: ({ search }: { search: string }) => (
@@ -12,7 +16,21 @@ jest.mock("@/components/vendor/VendorResponseProposalList", () => ({
   ),
 }));
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  planLockedScreen.mockResolvedValue(null);
+});
+
+it("shows the locked state and never asks for responses when the plan doesn't include them", async () => {
+  planLockedScreen.mockResolvedValue(<div data-testid="plan-locked" />);
+  const Page = (await import("./page")).default;
+  render(await Page({ searchParams: Promise.resolve({}) }));
+
+  expect(planLockedScreen).toHaveBeenCalledWith("vendorResponses", expect.objectContaining({ backHref: "/dashboard" }));
+  expect(screen.getByTestId("plan-locked")).toBeInTheDocument();
+  expect(screen.queryByTestId("proposal-list")).not.toBeInTheDocument();
+  expect(getProposalSummaries).not.toHaveBeenCalled();
+});
 
 it("loads proposal summaries rather than a flat page of responses", async () => {
   getProposalSummaries.mockResolvedValue({

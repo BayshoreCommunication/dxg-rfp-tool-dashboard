@@ -30,6 +30,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import { PLAN_LIMIT_REACHED } from "@/lib/entitlements/entitlements";
 import SaveCopyModal from "./SaveCopyModal";
 import ProposalDeletionDialog, { type ProposalDeletionMode } from "./ProposalDeletionDialog";
 import Link from "next/link";
@@ -463,6 +464,10 @@ export default function ProposalTableList({
         setCopyModalProposal(null);
         setRefreshTick((prev) => prev + 1);
         onRefreshCounts?.();
+      } else if (result.code === PLAN_LIMIT_REACHED) {
+        // The plan's RFP limit is a plan state, not a failure (ORG-602): a copy counts as a new RFP.
+        toast.info(result.message || "Your plan's RFP limit is reached. Contact us to upgrade.");
+        setCopyModalProposal(null);
       } else {
         toast.error(result.message || "Failed to save copy.");
       }

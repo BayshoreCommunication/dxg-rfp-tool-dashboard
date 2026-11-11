@@ -5,6 +5,12 @@ const listSets = jest.fn();
 const getSet = jest.fn();
 const notFound = jest.fn(() => { throw new Error("NEXT_NOT_FOUND"); });
 const workspaceProps = jest.fn();
+// ORG-602: the plan includes everything in these tests; the locked states are covered in
+// components/entitlements/planGate.test.tsx and e2e/plan-locked-states.spec.ts.
+jest.mock("@/components/entitlements/planGate", () => ({
+  planLockedScreen: jest.fn(async () => null),
+  loadRfpUsage: jest.fn(async () => null),
+}));
 jest.mock("@/app/actions/proposals", () => ({ getProposalByIdAction: (...args: unknown[]) => getProposal(...args) }));
 jest.mock("@/app/actions/requirementRegistry", () => ({
   listRequirementSetsAction: (...args: unknown[]) => listSets(...args),

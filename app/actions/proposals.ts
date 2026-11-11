@@ -385,6 +385,9 @@ export async function copyProposalAction(
     if (res.ok) revalidatePath("/proposals");
     return {
       success: res.ok,
+      status: res.status,
+      // PLAN_LIMIT_REACHED when the organization's plan has no RFP left (ORG-601).
+      code: typeof data.code === "string" ? data.code : undefined,
       message: data.message || (res.ok ? "Proposal copied" : "Copy failed"),
       data: withProposalMeta(data.data),
     };

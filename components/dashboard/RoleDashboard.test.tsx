@@ -8,6 +8,7 @@ jest.mock("@/app/actions/rfpDashboard", () => ({
 }));
 jest.mock("@/app/actions/organizationMembers", () => ({ listMembersAction: jest.fn() }));
 jest.mock("@/app/actions/teams", () => ({ listTeamsAction: jest.fn() }));
+jest.mock("@/components/entitlements/planGate", () => ({ loadRfpUsage: jest.fn() }));
 jest.mock("./VerifyDomainPrompt", () => ({ __esModule: true, default: () => null }));
 jest.mock("next/navigation", () => ({
   redirect: jest.fn((url: string) => {
@@ -19,6 +20,7 @@ import { auth } from "@/auth";
 import { listMembersAction } from "@/app/actions/organizationMembers";
 import { getDashboardRfpSummaryAction, listDashboardRfpsAction } from "@/app/actions/rfpDashboard";
 import { listTeamsAction } from "@/app/actions/teams";
+import { loadRfpUsage } from "@/components/entitlements/planGate";
 import { getMemberIdentity } from "@/lib/server/memberIdentity";
 import RoleDashboard from "./RoleDashboard";
 import { toRfpList, toRfpSummary } from "./rfpDashboardModel";
@@ -32,6 +34,7 @@ const mockedList = jest.mocked(listDashboardRfpsAction);
 const mockedSummary = jest.mocked(getDashboardRfpSummaryAction);
 const mockedMembers = jest.mocked(listMembersAction);
 const mockedTeams = jest.mocked(listTeamsAction);
+const mockedUsage = jest.mocked(loadRfpUsage);
 
 const listOf = (count: number, total = count, page = 1) =>
   toRfpList({
@@ -59,6 +62,7 @@ beforeEach(() => {
   mockedSummary.mockResolvedValue({ success: true, message: "OK", data: summaryData });
   mockedMembers.mockResolvedValue({ success: true, message: "OK", data: [] });
   mockedTeams.mockResolvedValue({ success: true, message: "OK", data: [] });
+  mockedUsage.mockResolvedValue(null);
 });
 
 describe("RoleDashboard", () => {
@@ -183,5 +187,43 @@ describe("RoleDashboard", () => {
     await renderDashboard();
     expect(screen.getByTestId("role-dashboard")).toHaveAttribute("data-dashboard-role", "viewer");
     expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();
+  });
+
+  // ORG-602: the plan's RFP counter and the create button at the limit.
+  test("free trial: the counter sits with the New RFP button", async () => {
+    signInAs(["planner"]);
+    mockedUsage.mockResolvedValue({ used: 1, limit: 2, atLimit: false, planName: "Free trial" });
+    await renderDashboard();
+
+    expect(screen.getByRole("link", { name: /New RFP/ })).toHaveAttribute("href", "/proposals/add-new-proposal");
+    expect(screen.getByTestId("rfp-usage")).toHaveTextContent("1 of 2 RFPs used on the free trial");
+    expect(screen.queryByTestId("rfp-limit")).not.toBeInTheDocument();
+  });
+
+  test("at the limit: the button is off and says why, with a way to ask for an upgrade", async () => {
+    signInAs(["owner"]);
+    mockedUsage.mockResolvedValue({ used: 2, limit: 2, atLimit: true, planName: "Free trial" });
+    await renderDashboard();
+
+    expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /New RFP/ });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(/2 of 2 RFPs used\. Your plan includes 2 RFPs and your organization has used both\./);
+    const limit = within(screen.getByTestId("rfp-limit"));
+    expect(limit.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/support");
+    expect(screen.getByTestId("rfp-limit")).not.toHaveTextContent(/proposal/i);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("no counter on a plan with no limit, and none asked for a Viewer", async () => {
+    signInAs(["planner"]);
+    await renderDashboard();
+    expect(screen.getByRole("link", { name: /New RFP/ })).toBeInTheDocument();
+    expect(screen.queryByTestId("rfp-usage")).not.toBeInTheDocument();
+
+    mockedUsage.mockClear();
+    signInAs(["viewer"]);
+    await renderDashboard();
+    expect(mockedUsage).not.toHaveBeenCalled();
   });
 });

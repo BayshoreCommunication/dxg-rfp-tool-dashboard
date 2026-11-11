@@ -1,5 +1,7 @@
 import AssistantWorkspacePage from "@/components/proposals/AssistantWorkspacePage";
 import ProposalsCreateProcess from "@/components/proposals/ProposalsCreateProcess";
+import RfpLimitReached from "@/components/entitlements/RfpLimitReached";
+import { loadRfpUsage } from "@/components/entitlements/planGate";
 import { redirect } from "next/navigation";
 import { getTemplateAccessAction } from "@/app/actions/proposalTemplates";
 import StartFromTemplate from "@/components/organization/templates/StartFromTemplate";
@@ -22,6 +24,13 @@ const Page = async ({
   // starter already chosen; anything else is ignored.
   const initialStarter =
     start === "example" || start === "scratch" ? start : undefined;
+
+  // Starting a new RFP at the plan's limit: say so here instead of letting someone fill one in
+  // that the backend would refuse to save (ORG-602). An existing RFP (?proposalId=) is not a new one.
+  if (!proposalId) {
+    const rfpUsage = await loadRfpUsage();
+    if (rfpUsage?.atLimit) return <RfpLimitReached usage={rfpUsage} />;
+  }
 
   // ORG-605: members who can use RFP templates (not Viewers) get "Start from a template" here.
   const { canUse: templates } = await getTemplateAccessAction();

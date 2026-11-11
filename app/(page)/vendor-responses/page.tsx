@@ -1,4 +1,5 @@
 import { getVendorResponseProposalsAction } from "@/app/actions/vendorResponse";
+import { planLockedScreen } from "@/components/entitlements/planGate";
 import VendorResponseProposalList from "@/components/vendor/VendorResponseProposalList";
 
 const positivePage = (value?: string) => {
@@ -11,6 +12,8 @@ export default async function VendorResponsesPage({
 }: {
   searchParams: Promise<{ page?: string; search?: string }>;
 }) {
+  const locked = await planLockedScreen("vendorResponses", { backHref: "/dashboard", backLabel: "Back to the dashboard" });
+  if (locked) return locked;
   const { page: pageParam, search: searchParam } = await searchParams;
   const page = positivePage(pageParam);
   const search = searchParam?.trim() ?? "";
