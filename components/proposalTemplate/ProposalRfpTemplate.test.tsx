@@ -53,7 +53,7 @@ test("renders every room on its own page so detailed specifications cannot colli
   expect(html).toContain("Room 5 of 5");
 });
 
-test("does not render retired standalone recording data in the vendor RFP", () => {
+test("does not render retired standalone recording data in the vendor proposal", () => {
   const html = renderToStaticMarkup(
     <ProposalRfpTemplate
       proposal={{

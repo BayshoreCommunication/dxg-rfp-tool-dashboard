@@ -42,7 +42,7 @@ const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
 const DEFAULT_MESSAGE = `Hello,
 
-We would like to invite your team to review an upcoming audiovisual production opportunity. The complete RFP includes the project scope, schedule, technical requirements, and evaluation criteria.
+We would like to invite your team to review an upcoming audiovisual production opportunity. The complete proposal includes the project scope, schedule, technical requirements, and evaluation criteria.
 
 Please review the details and share any questions, assumptions, or recommendations that would help us understand your approach.
 
@@ -289,7 +289,7 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
       // The list record still provides a safe title-only fallback draft.
     }
     const draft = buildPersonalizedInvitation({
-      eventName: proposal.event?.eventName || "AV production RFP",
+      eventName: proposal.event?.eventName || "AV production proposal",
       eventFormat: proposal.event?.eventFormat,
       eventType:
         typeof proposal.event?.eventType === "string"

@@ -403,7 +403,7 @@ export default function VendorResponsesView({
                       href={requirementRegistryHref(selected.proposalId, "/vendor-responses")}
                       className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#008ad2]/25 bg-[#eaf7fd] px-3 text-xs font-extrabold text-[#0076b4] transition hover:border-[#008ad2]/40 hover:bg-[#dff3fc]"
                     >
-                      <ClipboardList size={14} /> Review RFP requirements
+                      <ClipboardList size={14} /> Review proposal requirements
                     </Link>
                     <Link
                       href={`/vendor-responses/${selected._id}`}

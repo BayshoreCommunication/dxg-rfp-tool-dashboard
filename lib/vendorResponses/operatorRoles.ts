@@ -28,7 +28,7 @@ const position = new Map(
   ),
 );
 
-export const REQUESTED_ROLES_GROUP = "Requested in this RFP";
+export const REQUESTED_ROLES_GROUP = "Requested in this proposal";
 
 /**
  * Splits a questionnaire's roles into dropdown groups: roles the client

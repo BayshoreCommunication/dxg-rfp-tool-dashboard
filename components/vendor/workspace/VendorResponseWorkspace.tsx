@@ -819,7 +819,7 @@ export default function VendorResponseWorkspace({
           </div>
           <p className="mt-3 px-1 text-[11px] leading-4 text-[#718496]">
             Rooms and specifications come directly from the client’s published
-            RFP. Your draft saves securely as you work.
+            proposal. Your draft saves securely as you work.
           </p>
         </aside>
 

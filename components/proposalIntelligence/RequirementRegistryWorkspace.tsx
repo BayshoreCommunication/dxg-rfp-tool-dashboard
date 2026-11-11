@@ -53,7 +53,7 @@ const freshnessDetail = (reasons: string[]) => reasons.includes("requirement_pol
   : "The proposal version or content has changed since this registry was generated.";
 const sourceLabel = (requirement: RegistryRequirement) => {
   if (requirement.source_kind === "rendered_rfp") {
-    return `Rendered RFP · ${String(requirement.source_locator.sectionKey ?? "section").replaceAll("_", " ")}`;
+    return `Rendered proposal · ${String(requirement.source_locator.sectionKey ?? "section").replaceAll("_", " ")}`;
   }
   return String(requirement.source_locator.path ?? "Canonical proposal").replace(/^\/content\//, "Proposal · ").replaceAll("/", " › ");
 };
@@ -337,7 +337,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
           <section className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
             <FileSearch className="mx-auto text-[#008ad2]" size={34} />
             <h2 className="mt-4 text-xl font-extrabold text-slate-900">Build the first requirement registry</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">This reads the current proposal and accepted RFP narrative. It does not analyze vendor responses or change the proposal.</p>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">This reads the current proposal and its accepted narrative. It does not analyze vendor responses or change the proposal.</p>
             <button disabled={working} onClick={() => void generate()} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#008ad2] px-5 text-sm font-extrabold text-white disabled:opacity-50"><Sparkles size={16} />{working ? "Building registry…" : "Generate requirement registry"}</button>
           </section>
         ) : (
@@ -363,7 +363,7 @@ export default function RequirementRegistryWorkspace({ proposalId, initialRegist
 
             <details open={showRequirementReview} onToggle={(event) => setShowRequirementReview(event.currentTarget.open)} className="mt-5 rounded-2xl border border-slate-200 bg-white">
               <summary className="cursor-pointer list-none p-5 marker:hidden">
-                <div className="flex items-center justify-between gap-4"><div><h2 className="font-extrabold text-slate-900">Your requirement checklist</h2><p className="mt-1 text-sm text-slate-500">Everything RFPilot found in the RFP, grouped by type. Open an item to see where it came from or to change whether it counts.</p></div><span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-600">{unresolvedCount} need attention</span></div>
+                <div className="flex items-center justify-between gap-4"><div><h2 className="font-extrabold text-slate-900">Your requirement checklist</h2><p className="mt-1 text-sm text-slate-500">Everything RFPilot found in the proposal, grouped by type. Open an item to see where it came from or to change whether it counts.</p></div><span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-600">{unresolvedCount} need attention</span></div>
               </summary>
               {showRequirementReview && <div className="border-t border-slate-100 p-4 sm:p-5">
                 <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">
