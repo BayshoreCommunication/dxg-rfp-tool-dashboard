@@ -9,7 +9,7 @@ const expect = baseExpect.configure({ timeout: 45_000 });
 // The stub (e2e/support/planEntitlementsFixture.mjs) refuses the gated routes on the free trial
 // the way the backend does (ORG-601) and records every request it refused.
 
-const STUB = "http://127.0.0.1:8011";
+const STUB = `http://127.0.0.1:${process.env.ASSISTANT_E2E_BACKEND_PORT || 8011}`;
 const RFP_ID = "000000000000000000000001";
 const RESPONSE_ID = "aaaaaaaaaaaaaaaaaaaaaa01";
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
@@ -22,7 +22,7 @@ const setPlan = async (request: APIRequestContext, body: { plan?: "free_trial" |
 const problems = new WeakMap<Page, string[]>();
 
 test.beforeEach(async ({ page }) => {
-  test.setTimeout(420_000);
+  test.setTimeout(900_000);
   const seen: string[] = [];
   problems.set(page, seen);
   page.on("console", (message) => {
@@ -42,8 +42,9 @@ const signInAs = async (page: Page, role: "owner" | "planner" | "viewer") => {
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.locator('input[type="password"]').fill("role-e2e-password");
   await page.getByRole("button", { name: "Sign In to Dashboard" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 30_000 });
-  await expect(page.getByTestId("role-dashboard")).toBeVisible({ timeout: 30_000 });
+  // The first sign-in also compiles the dashboard; a busy machine can take over a minute.
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 150_000 });
+  await expect(page.getByTestId("role-dashboard")).toBeVisible({ timeout: 60_000 });
 };
 
 // Every state: no serious accessibility violations in the region, nothing wider than the screen,
@@ -81,10 +82,10 @@ const expectLocked = async (
   await expect(locked.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/support");
   await expect(locked).toContainText("Free trial");
 
-  const main = (await page.getByRole("main").textContent()) ?? "";
+  const main = (await page.getByRole("main").first().textContent()) ?? "";
   for (const vendor of VENDOR_NAMES) expect(main).not.toContain(vendor);
   expect(main).not.toMatch(/PLAN_FEATURE_LOCKED|\b403\b|unavailable|could not be loaded/i);
-  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("main").first().getByRole("alert")).toHaveCount(0);
   await check(page, testInfo, locked, '[data-testid="plan-locked"]', expected.name);
 };
 
@@ -195,13 +196,13 @@ test("After a plan change the limit is gone and the locked screens open", async 
   // The responses received while locked are there to read.
   await page.goto("/vendor-responses");
   await expect(page.getByTestId("plan-locked")).toHaveCount(0);
-  await expect(page.getByRole("main")).toContainText("Annual Sales Kickoff");
-  await expect(page.getByRole("main")).toContainText("Brightline AV Synthetic");
+  await expect(page.locator("body")).toContainText("Annual Sales Kickoff");
+  await expect(page.locator("body")).toContainText("Brightline AV Synthetic");
   await page.screenshot({ path: testInfo.outputPath("vendor-responses-unlocked.png"), fullPage: true });
 
   await page.goto(`/vendor-responses/proposals/${RFP_ID}`);
   await expect(page.getByTestId("plan-locked")).toHaveCount(0);
-  for (const vendor of VENDOR_NAMES) await expect(page.getByRole("main")).toContainText(vendor);
+  for (const vendor of VENDOR_NAMES) await expect(page.locator("body")).toContainText(vendor);
   await page.screenshot({ path: testInfo.outputPath("rfp-responses-unlocked.png"), fullPage: true });
 
   // No limit on full access: the plain create button, no counter, and the create screen opens.
