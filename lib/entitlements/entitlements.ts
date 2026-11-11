@@ -1,4 +1,4 @@
-// Plan entitlements as the dashboard reads them (ORG-602, DXG decision Q2). The backend owns the
+// Plan entitlements as the dashboard reads them (ORG-602, plan decision Q2). The backend owns the
 // rules and enforces them on every route (ORG-601, GET /api/organization/entitlements); this
 // module only turns its answer into what a screen shows. There is no generated contract for the
 // endpoint, so the answer is parsed defensively: anything unreadable is "unknown", and an unknown

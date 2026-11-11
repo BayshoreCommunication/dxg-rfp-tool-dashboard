@@ -2,7 +2,7 @@
 // for the locked states (ORG-602). Synthetic data only.
 //
 // The organization starts on full access with no limit, so the other specs see no counter and
-// nothing locked. A spec puts it on the free trial, or changes the plan back (what DXG staff do
+// nothing locked. A spec puts it on the free trial, or changes the plan back (what staff do
 // from the admin app), with POST /__e2e/plan { plan, created }. Like the real backend, a locked
 // feature is refused with 403 PLAN_FEATURE_LOCKED before anything is read, and that refusal
 // carries no vendor data.

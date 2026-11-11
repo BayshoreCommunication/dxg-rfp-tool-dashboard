@@ -190,7 +190,7 @@ test("After a plan change the limit is gone and the locked screens open", async 
   await page.goto(`/proposals/${RFP_ID}/intelligence`);
   await expect(page.getByTestId("plan-locked")).toBeVisible();
 
-  // DXG staff move the organization to full access (ORG-603). Nothing to do in the dashboard
+  // Staff move the organization to full access (ORG-603). Nothing to do in the dashboard
   // but load the page again.
   await setPlan(request, { plan: "full_access" });
 

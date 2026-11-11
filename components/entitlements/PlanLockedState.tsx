@@ -21,7 +21,7 @@ export type PlanLockedStateProps = {
 };
 
 // What a screen shows in place of a feature the organization's plan doesn't include (ORG-602,
-// DXG decision Q2): what the feature is, how many responses are waiting, and how to upgrade.
+// plan decision Q2): what the feature is, how many responses are waiting, and how to upgrade.
 // A designed state, not an error.
 export default function PlanLockedState({ feature, planName, responseCount, countScope, rfpTitle, backHref, backLabel }: PlanLockedStateProps) {
   const copy = LOCKED_FEATURE_COPY[feature];
