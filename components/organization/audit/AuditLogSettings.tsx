@@ -193,7 +193,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
         </form>
         <div className="mt-3 flex min-h-[20px] flex-wrap items-center gap-3 text-xs text-slate-500">
           {filtered ? (
-            <button type="button" className="rounded font-semibold text-[#006fa8] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500" onClick={() => change(EMPTY_FILTERS)}>
+            <button type="button" className="rounded text-xs font-semibold text-slate-600 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500" onClick={() => change(EMPTY_FILTERS)}>
               Clear filters
             </button>
           ) : null}

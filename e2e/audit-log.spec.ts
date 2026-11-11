@@ -88,14 +88,14 @@ test("owner: filters by user, action and date, sees the empty state, and exports
   await signInAs(page, "owner");
   await openAuditLog(page);
 
-  await page.getByLabel("User").selectOption({ label: "RFPilot Support" });
+  await screen(page).getByLabel("User", { exact: true }).selectOption({ label: "RFPilot Support" });
   await expect(rows(page)).toHaveCount(2);
   for (const row of await rows(page).all()) await expect(row).toContainText("RFPilot Support");
   await check(page, testInfo, "owner-filter-support");
 
-  await page.getByLabel("User").selectOption({ label: "Priya Planner" });
+  await screen(page).getByLabel("User", { exact: true }).selectOption({ label: "Priya Planner" });
   await expect(rows(page)).toHaveCount(3);
-  await page.getByLabel("Action").selectOption({ label: "Sign-in failed" });
+  await screen(page).getByLabel("Action", { exact: true }).selectOption({ label: "Sign-in failed" });
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Reason: Wrong password");
   await check(page, testInfo, "owner-filter-user-action");
@@ -116,16 +116,16 @@ test("owner: filters by user, action and date, sees the empty state, and exports
   await expect(rows(page)).toHaveCount(50);
 
   // A category, then a date range with nothing in it.
-  await page.getByLabel("Action").selectOption({ label: "All: RFPilot Support access" });
+  await screen(page).getByLabel("Action", { exact: true }).selectOption({ label: "All: RFPilot Support access" });
   await expect(rows(page)).toHaveCount(3);
-  await page.getByLabel("From").fill("2020-01-01");
-  await page.getByLabel("To").fill("2020-01-31");
+  await screen(page).getByLabel("From", { exact: true }).fill("2020-01-01");
+  await screen(page).getByLabel("To", { exact: true }).fill("2020-01-31");
   await expect(page.getByText("No activity matches these filters")).toBeVisible();
   await check(page, testInfo, "owner-empty");
 
   // A start after the end is refused on the screen, and the export is not offered.
-  await page.getByLabel("To").fill("2019-12-01");
-  await expect(page.getByRole("alert")).toContainText("start date must be on or before the end date");
+  await screen(page).getByLabel("To", { exact: true }).fill("2019-12-01");
+  await expect(screen(page).getByRole("alert")).toContainText("start date must be on or before the end date");
   await expect(page.getByRole("button", { name: "Export CSV" })).toBeDisabled();
   await check(page, testInfo, "owner-invalid-dates");
 });
