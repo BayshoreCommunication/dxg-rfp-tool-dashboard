@@ -7,7 +7,8 @@ import { expect as baseExpect, test, type Locator, type Page, type TestInfo } fr
 
 // `next dev` compiles each route on first visit; a busy machine needs more than the default.
 const expect = baseExpect.configure({ timeout: 45_000 });
-const STUB = "http://127.0.0.1:8011/__e2e/support-grants";
+// The stub's port can be moved (ASSISTANT_E2E_BACKEND_PORT) when 8011 is taken by another run.
+const STUB = `http://127.0.0.1:${process.env.ASSISTANT_E2E_BACKEND_PORT || 8011}/__e2e/support-grants`;
 
 type Role = "owner" | "admin" | "manager" | "planner" | "viewer" | "other-owner";
 
