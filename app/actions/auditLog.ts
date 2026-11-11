@@ -44,7 +44,9 @@ export async function exportAuditLogAction(query: AuditQuery = {}): Promise<OrgA
       };
     }
     const csv = neutralizeCsv(await res.text());
-    const rows = Number(res.headers?.get?.("X-Audit-Export-Rows"));
+    const rowsHeader = res.headers?.get?.("X-Audit-Export-Rows");
+    // A missing header is not zero rows: count them from the file instead.
+    const rows = rowsHeader ? Number(rowsHeader) : Number.NaN;
     return {
       success: true,
       status: res.status,
