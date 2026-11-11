@@ -131,11 +131,11 @@ export function SaveAsTemplateDialog({ proposalId, defaultTitle, access, onClose
                 ["personal", "Only me", "A personal template. Nobody else sees it."],
                 ["organization", "Everyone in my organization", "Published now. Every member who can create RFPs can start from it."],
               ] as const).map(([value, label, hint]) => (
-                <label key={value} className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 ${scope === value ? "border-[#008ad2] bg-sky-50/60" : "border-[#e4e4e4]"}`}>
+                <label key={value} className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 ${scope === value ? "border-[#008ad2] bg-sky-50" : "border-[#e4e4e4]"}`}>
                   <input type="radio" name={`${formId}-scope`} className="mt-1" checked={scope === value} onChange={() => setScope(value)} />
                   <span>
                     <span className="block text-sm font-semibold text-slate-800">{label}</span>
-                    <span className="block text-xs text-slate-500">{hint}</span>
+                    <span className="block text-xs text-slate-600">{hint}</span>
                   </span>
                 </label>
               ))}

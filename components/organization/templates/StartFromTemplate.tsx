@@ -122,7 +122,7 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
         <ul className="space-y-2">
           {items.map((template) => (
             <li key={template.id}>
-              <label className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 ${selectedId === template.id ? "border-[#008ad2] bg-sky-50/60" : "border-[#e4e4e4] hover:border-slate-300"}`}>
+              <label className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 ${selectedId === template.id ? "border-[#008ad2] bg-sky-50" : "border-[#e4e4e4] hover:border-slate-300"}`}>
                 <input
                   type="radio"
                   name={groupName}
@@ -138,7 +138,7 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
                     <span className="min-w-0 break-words text-sm font-semibold text-slate-800">{template.title}</span>
                     {template.presentationLayout && <Badge tone="sky">{LAYOUT_LABELS[template.presentationLayout]} layout</Badge>}
                   </span>
-                  {template.description && <span className="mt-0.5 block break-words text-xs text-slate-500">{template.description}</span>}
+                  {template.description && <span className="mt-0.5 block break-words text-xs text-slate-600">{template.description}</span>}
                 </span>
               </label>
             </li>
