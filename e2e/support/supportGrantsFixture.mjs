@@ -174,7 +174,13 @@ export async function handleSupportGrants(request, response, url) {
   if (request.method === "GET" && path === "/api/v1/rfps") {
     const search = (url.searchParams.get("search") || "").trim().toLowerCase();
     const items = RFPS.filter((rfp) => rfp.organizationId === organizationId && rfp.eventName.toLowerCase().includes(search))
-      .map((rfp) => ({ id: rfp.id, eventName: rfp.eventName, ownerName: rfp.ownerName, stage: "sent" }));
+      // Every field of the documented list item: the role dashboard (ORG-402) reads this list too.
+      .map((rfp) => ({
+        id: rfp.id, eventName: rfp.eventName, stage: "sent", status: "submitted", isDraft: false,
+        ownerUserId: ACCOUNTS["support-grants-owner@example.com"].userId, ownerName: rfp.ownerName, teamId: null, teamName: null,
+        eventStartDate: null, eventEndDate: null, venueCity: null, vendorsInvited: 0, vendorsResponded: 0,
+        reviewStartedAt: null, awardedAt: null, createdAt: iso(-30 * DAY), updatedAt: iso(-DAY),
+      }));
     json(response, 200, { success: true, data: { items, pagination: { total: items.length, page: 1, limit: 20, totalPages: 1 } } });
     return true;
   }
