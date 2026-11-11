@@ -3,6 +3,7 @@ import http from "node:http";
 import { handleProposalOnboarding } from './proposalOnboardingFixture.mjs';
 import { DASHBOARD_ACCOUNTS, dashboardAccessToken, handleRoleDashboard } from './roleDashboardFixture.mjs';
 import { handleVendorList } from './vendorListFixture.mjs';
+import { handleSupportGrants } from './supportGrantsFixture.mjs';
 
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
 const threads = new Map();
@@ -167,6 +168,9 @@ const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
   const pathname = url.pathname;
   if (await handleProposalOnboarding(request, response, url)) return;
+  // ORG-405: support access grants and their role accounts (supportGrantsFixture.mjs). First,
+  // so its accounts get its own RFP list; it leaves every other account to the handlers below.
+  if (await handleSupportGrants(request, response, url)) return;
   if (handleRoleDashboard(request, response, url)) return;
   // ORG-607: vendor list, its role accounts and the send step (vendorListFixture.mjs).
   if (await handleVendorList(request, response, url)) return;
