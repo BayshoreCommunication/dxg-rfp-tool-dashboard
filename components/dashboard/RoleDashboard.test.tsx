@@ -83,7 +83,7 @@ describe("RoleDashboard", () => {
     expect(listQueries()).toContainEqual(expect.objectContaining({ stage: "receiving_responses", limit: "5" }));
     expect(listQueries()).toContainEqual(expect.objectContaining({ stage: "sent,receiving_responses,under_review", sortBy: "eventStartDate", sortOrder: "asc" }));
     expect(mockedMembers).not.toHaveBeenCalled();
-    expect(screen.getByRole("link", { name: /New RFP/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /New Proposal/ })).toBeInTheDocument();
     expect(screen.getByTestId("admin-visibility-note")).toBeInTheDocument();
   });
 
@@ -142,7 +142,7 @@ describe("RoleDashboard", () => {
     expect([page, limit, sortBy, sortOrder]).toEqual(["1", "25", "updatedAt", "desc"]);
     // Only the status-tab counts are asked of the summary endpoint.
     expect(summaryQueries()).toEqual([{ stage: "draft,sent,receiving_responses,under_review,awarded,archived" }]);
-    expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /New Proposal/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Summary" })).not.toBeInTheDocument();
     expect(mockedMembers).not.toHaveBeenCalled();
   });
@@ -179,14 +179,14 @@ describe("RoleDashboard", () => {
     expect(mockedList).not.toHaveBeenCalled();
     expect(mockedSummary).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("Your session has ended.");
-    expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /New Proposal/ })).not.toBeInTheDocument();
   });
 
   test("a session whose roles can't be read gets the read-only dashboard", async () => {
     signInAs([]);
     await renderDashboard();
     expect(screen.getByTestId("role-dashboard")).toHaveAttribute("data-dashboard-role", "viewer");
-    expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /New Proposal/ })).not.toBeInTheDocument();
   });
 
   // ORG-602: the plan's RFP counter and the create button at the limit.
@@ -195,8 +195,8 @@ describe("RoleDashboard", () => {
     mockedUsage.mockResolvedValue({ used: 1, limit: 2, atLimit: false, planName: "Free trial", onPlan: "on the free trial" });
     await renderDashboard();
 
-    expect(screen.getByRole("link", { name: /New RFP/ })).toHaveAttribute("href", "/proposals/add-new-proposal");
-    expect(screen.getByTestId("rfp-usage")).toHaveTextContent("1 of 2 RFPs used on the free trial");
+    expect(screen.getByRole("link", { name: /New Proposal/ })).toHaveAttribute("href", "/proposals/add-new-proposal");
+    expect(screen.getByTestId("rfp-usage")).toHaveTextContent("1 of 2 proposals used on the free trial");
     expect(screen.queryByTestId("rfp-limit")).not.toBeInTheDocument();
   });
 
@@ -205,20 +205,20 @@ describe("RoleDashboard", () => {
     mockedUsage.mockResolvedValue({ used: 2, limit: 2, atLimit: true, planName: "Free trial", onPlan: "on the free trial" });
     await renderDashboard();
 
-    expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();
-    const button = screen.getByRole("button", { name: /New RFP/ });
+    expect(screen.queryByRole("link", { name: /New Proposal/ })).not.toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /New Proposal/ });
     expect(button).toBeDisabled();
-    expect(button).toHaveAccessibleDescription(/2 of 2 RFPs used\. Your plan includes 2 RFPs and your organization has used both\./);
+    expect(button).toHaveAccessibleDescription(/2 of 2 proposals used\. Your plan includes 2 proposals and your organization has used both\./);
     const limit = within(screen.getByTestId("rfp-limit"));
     expect(limit.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/support");
-    expect(screen.getByTestId("rfp-limit")).not.toHaveTextContent(/proposal/i);
+    expect(screen.getByTestId("rfp-limit")).not.toHaveTextContent(/\bRFPs?\b/);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   test("no counter on a plan with no limit, and none asked for a Viewer", async () => {
     signInAs(["planner"]);
     await renderDashboard();
-    expect(screen.getByRole("link", { name: /New RFP/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /New Proposal/ })).toBeInTheDocument();
     expect(screen.queryByTestId("rfp-usage")).not.toBeInTheDocument();
 
     mockedUsage.mockClear();

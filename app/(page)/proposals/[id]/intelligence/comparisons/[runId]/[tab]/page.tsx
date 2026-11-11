@@ -14,14 +14,14 @@ const record = (value: unknown): value is Record<string, unknown> => typeof valu
 export default async function ComparisonViewPage({ params }: { params: Promise<{ id: string; runId: string; tab: string }> }) {
   const { id, runId, tab } = await params;
   if (!/^[0-9a-f]{24}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(runId) || !intelligenceTabs.includes(tab as IntelligenceTab)) notFound();
-  const locked = await planLockedScreen("proposalIntelligence", { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  const locked = await planLockedScreen("proposalIntelligence", { rfpId: id, backHref: "/proposals", backLabel: "Back to proposals" });
   if (locked) return locked;
   const [proposal, workspace, runs] = await Promise.all([
     getProposalByIdAction(id),
     getComparisonWorkspaceAction(id, runId),
     listComparisonsAction(id),
   ]);
-  const refused = await planLockedRefusal("proposalIntelligence", [workspace, runs], { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  const refused = await planLockedRefusal("proposalIntelligence", [workspace, runs], { rfpId: id, backHref: "/proposals", backLabel: "Back to proposals" });
   if (refused) return refused;
   if (!proposal.success || !record(proposal.data)) notFound();
   if (!workspace.success) {

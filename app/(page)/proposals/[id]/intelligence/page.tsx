@@ -34,7 +34,7 @@ const hasComparableEvidence = (response: VendorResponseItem) =>
 export default async function ProposalIntelligencePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f]{24}$/i.test(id)) notFound();
-  const locked = await planLockedScreen("proposalIntelligence", { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  const locked = await planLockedScreen("proposalIntelligence", { rfpId: id, backHref: "/proposals", backLabel: "Back to proposals" });
   if (locked) return locked;
   const [proposalResult, responsesResult, setsResult, comparisonsResult] = await Promise.all([
     getProposalByIdAction(id),
@@ -42,7 +42,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
     listRequirementSetsAction(id),
     listComparisonsAction(id),
   ]);
-  const refused = await planLockedRefusal("proposalIntelligence", [responsesResult, setsResult, comparisonsResult], { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  const refused = await planLockedRefusal("proposalIntelligence", [responsesResult, setsResult, comparisonsResult], { rfpId: id, backHref: "/proposals", backLabel: "Back to proposals" });
   if (refused) return refused;
   if (!proposalResult.success || !record(proposalResult.data)) notFound();
   const proposal = proposalResult.data;
