@@ -38,5 +38,13 @@ and screenshot evidence. Contract and ticket skills live in the backend repo.
 
 ## Rules
 
+- User-facing copy calls the document a planner writes and sends to vendors a **proposal**, never
+  an "RFP" ("New Proposal", "Untitled proposal", "Proposal intelligence"). **RFPilot** is the
+  product name and stays. "RFP" is kept only where the term is being defined ("requests for
+  proposal (RFPs)" on the Proposals page, "Request for Proposal" on the document cover and
+  sign-in metadata); `lib/wording.test.ts` lists the exceptions and fails on a new one, and
+  e2e specs use `expectProposalWording` from `e2e/support/wording.ts`. Identifiers, routes,
+  test ids and backend fields keep `rfp`.
+
 - Never commit `.env*` files or real proposal content.
 - Publication is always a human action. Never add a path where AI output publishes on its own.

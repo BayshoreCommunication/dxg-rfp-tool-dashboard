@@ -52,7 +52,7 @@ run `npx playwright install chromium` (ask first; it downloads a browser).
 ## 5. Look at the result
 
 Open the saved screenshots with the Read tool and check them yourself: spacing, truncation,
-dark theme (the app defaults to dark), empty and error states, and copy ("RFP", not "proposal").
+dark theme (the app defaults to dark), empty and error states, and copy ("proposal", not "RFP").
 Fix and re-run until they are right.
 
 ## 6. Real backend, for workflow changes
