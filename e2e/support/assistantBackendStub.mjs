@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import http from "node:http";
 import { handleProposalOnboarding } from './proposalOnboardingFixture.mjs';
 import { DASHBOARD_ACCOUNTS, dashboardAccessToken, handleRoleDashboard } from './roleDashboardFixture.mjs';
+import { handleVendorList } from './vendorListFixture.mjs';
 
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
 const threads = new Map();
@@ -167,6 +168,8 @@ const server = http.createServer(async (request, response) => {
   const pathname = url.pathname;
   if (await handleProposalOnboarding(request, response, url)) return;
   if (handleRoleDashboard(request, response, url)) return;
+  // ORG-607: vendor list, its role accounts and the send step (vendorListFixture.mjs).
+  if (await handleVendorList(request, response, url)) return;
 
   if (request.method === "GET" && pathname === "/health") {
     json(response, 200, { status: "ok" });

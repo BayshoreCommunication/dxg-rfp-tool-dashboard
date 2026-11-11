@@ -1,5 +1,16 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import TopHeader from './TopHeaser'
+
+// ORG-607: the Vendors tab depends on the member's access to the vendor list.
+const mockVendorAccess = jest.fn()
+jest.mock('@/app/actions/vendorList', () => ({
+  getVendorListAccessAction: (...a: unknown[]) => mockVendorAccess(...a),
+}))
+jest.mock('next/navigation', () => ({ usePathname: () => '/settings' }))
+
+beforeEach(() => {
+  mockVendorAccess.mockResolvedValue({ canRead: false, canEdit: false })
+})
 
 describe('TopHeader', () => {
   it('renders the Settings heading', () => {
@@ -27,5 +38,20 @@ describe('TopHeader', () => {
       const text = screen.getByText(/good (morning|afternoon|evening)/i).textContent ?? ''
       expect(text).toMatch(/·/)
     })
+  })
+
+  it('shows the Vendors section to a member who can read the vendor list', async () => {
+    mockVendorAccess.mockResolvedValue({ canRead: true, canEdit: false })
+    render(<TopHeader />)
+    expect(await screen.findByRole('link', { name: 'Vendors' })).toHaveAttribute('href', '/settings/vendors')
+  })
+
+  it('hides the Vendors section from a Viewer', async () => {
+    render(<TopHeader />)
+    await waitFor(() => expect(mockVendorAccess).toHaveBeenCalled())
+    // Let the access answer settle: the tab would appear only after it.
+    await act(async () => { await mockVendorAccess.mock.results[0].value })
+    expect(screen.getByRole('link', { name: 'Security' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument()
   })
 })

@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { KeyboardEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import VendorListPicker from "./VendorListPicker";
 
 
 type ProposalOption = {
@@ -250,6 +251,16 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
     if (recipientInput.trim()) {
       addEmailsFromInput();
     }
+  };
+
+  // ORG-607: recipients ticked or unticked in the organization's vendor list.
+  const addListedRecipients = (emails: string[]) => {
+    setRecipientEmails((prev) => [...new Set([...prev, ...emails])]);
+    setSendApproved(false);
+  };
+  const removeListedRecipients = (emails: string[]) => {
+    setRecipientEmails((prev) => prev.filter((entry) => !emails.includes(entry)));
+    setSendApproved(false);
   };
 
   const removeRecipient = (email: string) => {
@@ -528,6 +539,7 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
                 onChange={(event) => setRecipientInput(event.target.value)}
                 onKeyDown={handleInputKeyDown}
                 onBlur={handleBlur}
+                aria-label="Add recipient email addresses"
                 placeholder={
                   recipientEmails.length === 0
                     ? "john@email.com, anna@email.com"
@@ -543,6 +555,11 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
                 <Users size={12} />
                 Teammate automatically included: {autoTeammateEmail}
               </p>
+            )}
+
+            {/* ORG-607: pick from the shared vendor list (an invitation, not a one-to-one question) */}
+            {!questionMode && (
+              <VendorListPicker recipients={recipientEmails} onAdd={addListedRecipients} onRemove={removeListedRecipients} />
             )}
           </div>
         </div>
