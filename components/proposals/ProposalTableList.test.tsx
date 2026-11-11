@@ -33,6 +33,16 @@ jest.mock('@/app/actions/proposals', () => ({
   createProposalViewAccessGrantAction: (...a: unknown[]) => mockCreateViewGrant(...a),
 }))
 
+// ORG-605: "Save as template" depends on the member's access to RFP templates.
+const mockTemplateAccess = jest.fn()
+const mockSaveTemplate = jest.fn()
+jest.mock('@/app/actions/proposalTemplates', () => ({
+  getTemplateAccessAction: (...a: unknown[]) => mockTemplateAccess(...a),
+  saveTemplateAction: (...a: unknown[]) => mockSaveTemplate(...a),
+  renameTemplateAction: jest.fn(),
+  archiveTemplateAction: jest.fn(),
+}))
+
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const makeProposal = (overrides = {}) => ({
@@ -65,6 +75,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockGetProposals.mockResolvedValue(successPage())
   mockCreateViewGrant.mockResolvedValue({ success: true, token: 'secure-grant' })
+  mockTemplateAccess.mockResolvedValue({ canUse: false, canManage: false })
   window.confirm = jest.fn(() => true)
   Object.assign(navigator, { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } })
 })
@@ -715,5 +726,45 @@ describe('ProposalTableList — infinite scroll', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Load more proposals' }))
     expect(await screen.findByText('Proposal c', {}, LOAD_TIMEOUT)).toBeInTheDocument()
+  })
+})
+
+// ─── ORG-605: Save as template ────────────────────────────────────────────────
+
+describe('ProposalTableList — save as template', () => {
+  it('offers Save as template to a member who can use RFP templates and saves a personal one', async () => {
+    mockTemplateAccess.mockResolvedValue({ canUse: true, canManage: false })
+    mockSaveTemplate.mockResolvedValue({ success: true, message: 'OK', data: { id: 't1', title: 'Bayshore Summit 2026', scope: 'personal' } })
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Save as template' }))
+    const dialog = screen.getByRole('dialog', { name: 'Save as template' })
+    expect(within(dialog).getByLabelText('Template name')).toHaveValue('Bayshore Summit 2026')
+    expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save template' }))
+    await waitFor(() => expect(mockSaveTemplate).toHaveBeenCalledWith({
+      proposalId: 'prop-001', title: 'Bayshore Summit 2026', description: '', scope: 'personal', presentationLayout: null,
+    }))
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Bayshore Summit 2026 saved to your templates.'))
+    expect(screen.queryByRole('dialog', { name: 'Save as template' })).not.toBeInTheDocument()
+  })
+
+  it('lets an Owner share the template with the organization', async () => {
+    mockTemplateAccess.mockResolvedValue({ canUse: true, canManage: true })
+    mockSaveTemplate.mockResolvedValue({ success: true, message: 'OK', data: { id: 't1', title: 'Bayshore Summit 2026', scope: 'organization' } })
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Save as template' }))
+    const dialog = screen.getByRole('dialog', { name: 'Save as template' })
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Everyone in my organization/ }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save template' }))
+    await waitFor(() => expect(mockSaveTemplate).toHaveBeenCalledWith(expect.objectContaining({ scope: 'organization' })))
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Bayshore Summit 2026 saved and shared with your organization.'))
+  })
+
+  it('does not offer Save as template to a Viewer', async () => {
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    await screen.findByRole('button', { name: 'Save a copy' })
+    await waitFor(() => expect(mockTemplateAccess).toHaveBeenCalled())
+    await act(async () => { await mockTemplateAccess.mock.results[0].value })
+    expect(screen.queryByRole('button', { name: 'Save as template' })).not.toBeInTheDocument()
   })
 })

@@ -9,9 +9,13 @@ import {
   restoreProposalAction,
   updateProposalMetaAction,
 } from "@/app/actions/proposals";
+import { getTemplateAccessAction } from "@/app/actions/proposalTemplates";
+import { SaveAsTemplateDialog } from "@/components/organization/templates/TemplateDialogs";
+import { NO_TEMPLATE_ACCESS } from "@/components/organization/templates/templateModel";
 import {
   Archive,
   ArchiveRestore,
+  BookmarkPlus,
   Clock,
   Copy,
   CopyPlus,
@@ -127,6 +131,20 @@ export default function ProposalTableList({
   const [favoritingId, setFavoritingId] = useState<string | null>(null);
   const [copyModalProposal, setCopyModalProposal] = useState<ProposalListItem | null>(null);
   const [copyingSaving, setCopyingSaving] = useState(false);
+  // ORG-605: "Save as template" is offered to members who can use RFP templates (not Viewers).
+  const [templateAccess, setTemplateAccess] = useState(NO_TEMPLATE_ACCESS);
+  const [templateProposal, setTemplateProposal] = useState<ProposalListItem | null>(null);
+  useEffect(() => {
+    let active = true;
+    getTemplateAccessAction()
+      .then((access) => {
+        if (active) setTemplateAccess(access);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
   const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [pagination, setPagination] = useState<ProposalPagination>({
@@ -846,6 +864,13 @@ export default function ProposalTableList({
                               onClick={() => setCopyModalProposal(proposal)}
                             />
                           )}
+                          {templateAccess.canUse && (
+                            <ActionButton
+                              icon={<BookmarkPlus size={14} />}
+                              label="Save as template"
+                              onClick={() => setTemplateProposal(proposal)}
+                            />
+                          )}
                           <ActionButton
                             icon={<Archive size={14} />}
                             label={deletingId === proposal._id ? "Archiving..." : "Archive"}
@@ -953,6 +978,27 @@ export default function ProposalTableList({
       saving={copyingSaving}
       defaultEventName={copyModalProposal?.event?.eventName ?? ""}
     />
+    {templateProposal?._id && (
+      <SaveAsTemplateDialog
+        proposalId={templateProposal._id}
+        defaultTitle={templateProposal.event?.eventName ?? ""}
+        access={templateAccess}
+        onClose={() => setTemplateProposal(null)}
+        onFailure={(failure) => {
+          // The role changed since sign-in: stop offering what the backend refused.
+          if (failure.code === "TEMPLATE_PUBLISH_DENIED") setTemplateAccess((current) => ({ ...current, canManage: false }));
+          else if (failure.status === 403 && (!failure.code || failure.code === "TEMPLATE_USE_DENIED")) setTemplateAccess(NO_TEMPLATE_ACCESS);
+        }}
+        onSaved={(template) => {
+          setTemplateProposal(null);
+          toast.success(
+            template.scope === "organization"
+              ? `${template.title} saved and shared with your organization.`
+              : `${template.title} saved to your templates.`,
+          );
+        }}
+      />
+    )}
     </>
   );
 }

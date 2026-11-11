@@ -6,10 +6,16 @@ const mockVendorAccess = jest.fn()
 jest.mock('@/app/actions/vendorList', () => ({
   getVendorListAccessAction: (...a: unknown[]) => mockVendorAccess(...a),
 }))
+// ORG-605: the Templates tab depends on the member's access to RFP templates.
+const mockTemplateAccess = jest.fn()
+jest.mock('@/app/actions/proposalTemplates', () => ({
+  getTemplateAccessAction: (...a: unknown[]) => mockTemplateAccess(...a),
+}))
 jest.mock('next/navigation', () => ({ usePathname: () => '/settings' }))
 
 beforeEach(() => {
   mockVendorAccess.mockResolvedValue({ canRead: false, canEdit: false })
+  mockTemplateAccess.mockResolvedValue({ canUse: false, canManage: false })
 })
 
 describe('TopHeader', () => {
@@ -53,5 +59,25 @@ describe('TopHeader', () => {
     await act(async () => { await mockVendorAccess.mock.results[0].value })
     expect(screen.getByRole('link', { name: 'Security' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument()
+  })
+
+  it('shows the Templates section to a member who can use RFP templates', async () => {
+    mockTemplateAccess.mockResolvedValue({ canUse: true, canManage: false })
+    render(<TopHeader />)
+    expect(await screen.findByRole('link', { name: 'Templates' })).toHaveAttribute('href', '/settings/templates')
+  })
+
+  it('hides the Templates section from a Viewer', async () => {
+    render(<TopHeader />)
+    await waitFor(() => expect(mockTemplateAccess).toHaveBeenCalled())
+    await act(async () => { await mockTemplateAccess.mock.results[0].value })
+    expect(screen.getByRole('link', { name: 'Security' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Templates' })).not.toBeInTheDocument()
+  })
+
+  it('shows the Templates section at once on a page that already knows the member can use them', () => {
+    render(<TopHeader templatesLink />)
+    expect(screen.getByRole('link', { name: 'Templates' })).toBeInTheDocument()
+    expect(mockTemplateAccess).not.toHaveBeenCalled()
   })
 })

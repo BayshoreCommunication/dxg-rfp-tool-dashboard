@@ -2806,6 +2806,7 @@ export default function AssistantWorkspacePage({
   initialProposalId,
   autoTask,
   initialStarter,
+  extraStarter,
   voiceInputEnabled = true,
 }: {
   initialProposalId?: string;
@@ -2816,6 +2817,9 @@ export default function AssistantWorkspacePage({
       proposals list link (?start=example|scratch). Fires once, only while
       the workspace is still empty, then the param is stripped. */
   initialStarter?: 'example' | 'scratch';
+  /** One more way to start, shown after the built-in starters (ORG-605:
+      "Start from a template"). */
+  extraStarter?: ReactNode;
   /** Allows a parent surface to hide voice input when needed. */
   voiceInputEnabled?: boolean;
 }) {
@@ -5151,6 +5155,7 @@ export default function AssistantWorkspacePage({
                       />
                       Describe it from scratch
                     </button>
+                    {extraStarter}
                   </div>
                   {starterError && (
                     <p
