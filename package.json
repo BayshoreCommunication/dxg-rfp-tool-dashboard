@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@floating-ui/react": "0.27.19",
+    "@internationalized/date": "^3.12.4",
     "@sparticuz/chromium": "^149.0.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
@@ -39,6 +40,7 @@
     "puppeteer-core": "^25.6.0",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
+    "react-aria-components": "^1.22.1",
     "react-datepicker": "^9.1.0",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",

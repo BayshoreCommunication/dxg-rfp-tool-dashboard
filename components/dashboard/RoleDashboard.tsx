@@ -33,7 +33,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 const PANEL_SIZE = 5;
 
 // Planner and team choices. Owners and Admins read them from the member and team lists; a Team
-// Manager can't read those, so theirs come from the RFPs they can see (the latest 100).
+// Manager can't read those, so theirs come from the proposals they can see (the latest 100).
 const loadFilterOptions = async (view: string): Promise<{ owners: FilterOption[]; teams: FilterOption[] }> => {
   if (view === "organization") {
     const [members, teams] = await Promise.all([listMembersAction({ status: "active" }), listTeamsAction()]);
@@ -67,13 +67,13 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
   const showPanels = !isViewer && state.view !== "organization";
   const scope = scopeQuery(state, userId);
 
-  // "My RFPs" without knowing who is asking would list everyone's RFPs under that title.
+  // "My Proposals" without knowing who is asking would list everyone's proposals under that title.
   if (state.view === "mine" && !userId) {
     return (
       <div className="relative mx-auto min-h-full w-full max-w-[1800px] space-y-5 pb-6">
         <TopHeader canCreate={false} />
         <RoleDashboardView
-          role={role} state={state} today={todayIn("UTC")} timeZone={null}
+          role={role} userId={null} state={state} today={todayIn("UTC")} timeZone={null}
           list={null} summary={null} stageCounts={null} deadlines={null} submissions={null} owners={[]} teams={[]}
           error={dashboardErrorMessage(undefined, 401)}
         />
@@ -93,11 +93,11 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
       ? listDashboardRfpsAction({ ...scope, stage: "receiving_responses", sortBy: "updatedAt", sortOrder: "desc", limit: String(PANEL_SIZE) })
       : null,
     loadFilterOptions(state.view),
-    // The plan's RFP counter sits with the create button, which Viewers don't have (ORG-602).
+    // The plan's proposal counter sits with the create button, which Viewers don't have (ORG-602).
     canCreate ? loadRfpUsage() : null,
   ]);
 
-  // A page past the end (a stale link, or RFPs archived since): go to the last page.
+  // A page past the end (a stale link, or proposals archived since): go to the last page.
   const lastPage = list.data ? Math.max(1, list.data.pagination.totalPages) : 1;
   if (list.success && list.data && list.data.items.length === 0 && list.data.pagination.total > 0 && state.page > lastPage) {
     redirect(dashboardHref(state, { page: lastPage }, defaultView));
@@ -115,6 +115,8 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
         <VerifyDomainPrompt />
         <RoleDashboardView
           role={role}
+          userId={userId}
+          rfpUsage={rfpUsage}
           state={state}
           today={today}
           timeZone={timeZone}

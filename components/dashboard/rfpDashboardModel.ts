@@ -1,4 +1,5 @@
-// Pure rules for the role dashboards (ORG-402, PRD P0-8). The backend decides what each member
+// Pure rules for the role dashboards (ORG-402, PRD P0-8). The product calls these "proposals";
+// the code and the API keep their older name. The backend decides what each member
 // may read (GET /api/v1/rfps and /api/v1/rfps/summary go through rfpListScope); this module only
 // picks which views and filters a role is offered and builds the query both endpoints share, so
 // the counts always describe the list under them.
@@ -17,7 +18,7 @@ export const STAGE_LABELS: Record<RfpStage, string> = {
   archived: "Archived",
 };
 
-// Stages an RFP is still moving through (the backend's "active" set).
+// Stages a proposal is still moving through (the backend's "active" set).
 export const ACTIVE_STAGES: readonly RfpStage[] = ["sent", "receiving_responses", "under_review"];
 
 export type RfpListItem = {
@@ -59,7 +60,7 @@ export type RfpSummary = {
 export type DashboardView = "mine" | "team" | "organization" | "shared";
 
 export const VIEW_LABELS: Record<DashboardView, string> = {
-  mine: "My RFPs",
+  mine: "My Proposals",
   team: "Team",
   organization: "Organization",
   shared: "Shared with me",
@@ -92,15 +93,22 @@ export const filtersFor = (view: DashboardView): DashboardFilterKey[] => {
   return ["search"];
 };
 
-export const SORT_OPTIONS = [
-  { value: "updatedAt", label: "Recently updated" },
-  { value: "eventStartDate", label: "Event date" },
-  { value: "eventName", label: "Event name" },
-  { value: "createdAt", label: "Newest" },
-] as const;
-export type SortField = (typeof SORT_OPTIONS)[number]["value"];
+// The sorts GET /api/v1/rfps accepts (backend rfpDashboard/domain.ts SORT_FIELDS). A column is
+// only offered as sortable when its field is in this list: the backend sorts the whole set, the
+// dashboard never sorts one page of it.
+export const SORT_FIELDS = ["updatedAt", "createdAt", "eventStartDate", "eventName"] as const;
+export type SortField = (typeof SORT_FIELDS)[number];
+export type SortOrder = "asc" | "desc";
 
-export const PAGE_SIZE = 25;
+// Dates and names read best ascending; activity newest first.
+export const DEFAULT_SORT_ORDER: Record<SortField, SortOrder> = {
+  updatedAt: "desc",
+  createdAt: "desc",
+  eventStartDate: "asc",
+  eventName: "asc",
+};
+
+export const PAGE_SIZE = 10;
 
 export type DashboardState = {
   view: DashboardView;
@@ -113,6 +121,7 @@ export type DashboardState = {
   venueCity: string;
   search: string;
   sortBy: SortField;
+  sortOrder: SortOrder;
   page: number;
 };
 
@@ -134,7 +143,9 @@ export const parseDashboardState = (params: RawParams, role: CustomerRole): Dash
   const view = views.includes(requestedView) ? requestedView : views[0];
   const offered = filtersFor(view);
   const stage = first(params.stage) as RfpStage;
-  const sortBy = first(params.sortBy) as SortField;
+  const requestedSort = first(params.sortBy) as SortField;
+  const sortBy: SortField = SORT_FIELDS.includes(requestedSort) ? requestedSort : "updatedAt";
+  const requestedOrder = first(params.sortOrder);
   const page = Number.parseInt(first(params.page), 10);
   const eventFrom = offered.includes("eventDates") && DATE.test(first(params.eventFrom)) ? first(params.eventFrom) : "";
   const eventTo = offered.includes("eventDates") && DATE.test(first(params.eventTo)) ? first(params.eventTo) : "";
@@ -148,7 +159,8 @@ export const parseDashboardState = (params: RawParams, role: CustomerRole): Dash
     eventTo: eventFrom && eventTo && eventTo < eventFrom ? eventFrom : eventTo,
     venueCity: offered.includes("venueCity") ? first(params.venueCity).slice(0, 120) : "",
     search: first(params.search).slice(0, 120),
-    sortBy: SORT_OPTIONS.some((option) => option.value === sortBy) ? sortBy : "updatedAt",
+    sortBy,
+    sortOrder: requestedOrder === "asc" || requestedOrder === "desc" ? requestedOrder : DEFAULT_SORT_ORDER[sortBy],
     page: Number.isFinite(page) && page > 0 ? Math.min(page, 10_000) : 1,
   };
 };
@@ -156,8 +168,8 @@ export const parseDashboardState = (params: RawParams, role: CustomerRole): Dash
 export const hasActiveFilters = (state: DashboardState): boolean =>
   Boolean(state.owner || state.team || state.eventFrom || state.eventTo || state.venueCity || state.search);
 
-// The filter both endpoints receive (no stage, paging or sorting). "My RFPs" is the member's own
-// RFPs; the other views are everything the backend lets the member see.
+// The filter both endpoints receive (no stage, paging or sorting). "My Proposals" is the member's
+// own proposals; the other views are everything the backend lets the member see.
 export const scopeQuery = (state: DashboardState, userId: string | null): Record<string, string> => {
   const query: Record<string, string> = {};
   const owner = state.view === "mine" ? userId ?? "" : state.owner;
@@ -181,8 +193,7 @@ export const listQuery = (state: DashboardState, userId: string | null): Record<
   page: String(state.page),
   limit: String(PAGE_SIZE),
   sortBy: state.sortBy,
-  // Dates and names read best ascending; activity newest first.
-  sortOrder: state.sortBy === "eventStartDate" || state.sortBy === "eventName" ? "asc" : "desc",
+  sortOrder: state.sortOrder,
 });
 
 // Per-stage counts for the status tabs: the same scope across every stage, archived included.
@@ -204,21 +215,87 @@ export const dashboardHref = (state: DashboardState, changes: Partial<DashboardS
   if (next.venueCity) params.set("venueCity", next.venueCity);
   if (next.search) params.set("search", next.search);
   if (next.sortBy !== "updatedAt") params.set("sortBy", next.sortBy);
+  if (next.sortOrder !== DEFAULT_SORT_ORDER[next.sortBy]) params.set("sortOrder", next.sortOrder);
   if (next.page > 1) params.set("page", String(next.page));
   const query = params.toString();
   return query ? `/dashboard?${query}` : "/dashboard";
 };
+
+// The state with every filter a member can set cleared. The status tab, the sort and the view
+// stay; the page goes back to the first.
+export const withoutFilters = (state: DashboardState): DashboardState => ({
+  ...state, owner: "", team: "", eventFrom: "", eventTo: "", venueCity: "", search: "", page: 1,
+});
+
+// Where a column header leads: sorting by a new field starts in that field's usual direction,
+// sorting by the current one flips it. Either way the list goes back to its first page.
+export const sortHref = (state: DashboardState, field: SortField, defaultView?: DashboardView): string =>
+  dashboardHref(
+    state,
+    {
+      sortBy: field,
+      sortOrder: state.sortBy === field ? (state.sortOrder === "asc" ? "desc" : "asc") : DEFAULT_SORT_ORDER[field],
+      page: 1,
+    },
+    defaultView,
+  );
+
+export const sortDirectionOf = (state: DashboardState, field: SortField): SortOrder | null =>
+  state.sortBy === field ? state.sortOrder : null;
 
 const slugOf = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 export const rfpEditHref = (item: Pick<RfpListItem, "id">): string =>
   `/proposals/proposal-edit?proposalId=${encodeURIComponent(item.id)}`;
 
-// Where a row leads: the member's own draft opens for editing, everything else read-only.
-export const rfpRowHref = (item: Pick<RfpListItem, "id" | "eventName" | "stage">, view: DashboardView): string =>
-  view === "mine" && item.stage === "draft" ? rfpEditHref(item) : rfpViewHref(item);
+export type RowActions = { canEdit: boolean; canDuplicate: boolean; canArchive: boolean };
 
-// The read-only RFP page (same link the RFP list uses).
+const NO_ROW_ACTIONS: RowActions = { canEdit: false, canDuplicate: false, canArchive: false };
+
+// What a row offers the member. The backend decides for real (rfpAccessPolicy): this only keeps
+// the dashboard from offering what it would refuse. Owners and Admins may change any proposal in
+// the organization and every other creator role their own; a Viewer changes nothing. A Team
+// Manager's rights over a team's proposals and an edit share aren't in the list response, so
+// those rows stay read-only here (see the PR's follow-ups). An archived proposal is restored
+// from the proposal list before anything else.
+export const rowActionsFor = (
+  item: Pick<RfpListItem, "stage" | "ownerUserId">,
+  role: CustomerRole,
+  userId: string | null,
+): RowActions => {
+  if (role === "viewer" || item.stage === "archived") return NO_ROW_ACTIONS;
+  const organizationWide = role === "owner" || role === "organization_admin";
+  const own = Boolean(userId) && item.ownerUserId === userId;
+  if (!organizationWide && !own) return NO_ROW_ACTIONS;
+  return { canEdit: true, canDuplicate: true, canArchive: true };
+};
+
+// Where a row's name leads: the edit page for a proposal the member may edit (the same place as
+// Edit in the row menu), the read-only page for everything else.
+export const rfpRowHref = (item: Pick<RfpListItem, "id" | "eventName">, actions: Pick<RowActions, "canEdit">): string =>
+  actions.canEdit ? rfpEditHref(item) : rfpViewHref(item);
+
+// A short, readable form of the proposal's id: the end of it, which is the part that differs
+// between proposals created close together.
+export const shortId = (id: string): string => id.slice(-6).toUpperCase();
+
+// The line under each row's name: the event dates when the proposal has them, otherwise its
+// short ID. Two rows on the page with the same name and the same line also get their ID, so
+// same-named proposals can always be told apart.
+export const rowIdentifiers = (items: Pick<RfpListItem, "id" | "eventName" | "eventStartDate" | "eventEndDate">[]): Map<string, string> => {
+  const primary = (item: (typeof items)[number]) => (item.eventStartDate ? formatEventDates(item) : `ID ${shortId(item.id)}`);
+  const seen = new Map<string, number>();
+  const keyOf = (item: (typeof items)[number]) => `${item.eventName.trim().toLowerCase()}|${primary(item)}`;
+  for (const item of items) seen.set(keyOf(item), (seen.get(keyOf(item)) ?? 0) + 1);
+  return new Map(
+    items.map((item) => [
+      item.id,
+      item.eventStartDate && (seen.get(keyOf(item)) ?? 0) > 1 ? `${primary(item)} · ID ${shortId(item.id)}` : primary(item),
+    ]),
+  );
+};
+
+// The read-only proposal page (same link the proposal list uses).
 export const rfpViewHref = (item: Pick<RfpListItem, "id" | "eventName">): string =>
   `/proposal/${slugOf(item.eventName) || "rfp"}-${item.id}`;
 
@@ -269,7 +346,7 @@ export const dueLabel = (days: number | null): string => {
 
 export type Deadline = { kind: "response_due" | "event_start"; label: string; day: string };
 
-// The next date that matters for an RFP: when vendor responses are due, or, until the dashboard
+// The next date that matters for a proposal: when vendor responses are due, or, until the dashboard
 // API returns that, the day the event starts.
 export const deadlineOf = (item: Pick<RfpListItem, "responseDueDate" | "eventStartDate">): Deadline | null => {
   if (item.responseDueDate) return { kind: "response_due", label: "Responses due", day: item.responseDueDate };
@@ -292,7 +369,7 @@ export const todayIn = (timeZone: string | null | undefined, now: Date = new Dat
 // because the organization's zone is only known once the summary answers.
 export const earliestToday = (now: Date = new Date()): string => todayIn("UTC", new Date(now.getTime() - 86_400_000));
 
-// The next few dated RFPs from `today` on, soonest first.
+// The next few dated proposals from `today` on, soonest first.
 export const upcomingDeadlines = <T extends Pick<RfpListItem, "responseDueDate" | "eventStartDate">>(items: T[], today: string, size: number): T[] => {
   const day = (item: T) => deadlineOf(item)?.day ?? "";
   return items
@@ -309,11 +386,11 @@ export const quarterLabel = (quarter: RfpSummary["quarter"]): string => {
 // Backend refusals as plain sentences; codes are never shown.
 export const dashboardErrorMessage = (code: string | undefined, status: number | undefined): string => {
   if (code === "DASHBOARD_FILTER_INVALID" || status === 400) return "One of the filters isn't valid. Clear the filters and try again.";
-  if (status === 401) return "Your session has ended. Reload the page and sign in again to see your RFPs.";
-  if (status === 403) return "Your role doesn't include viewing RFPs. Ask an Owner or Admin of your organization for access.";
-  if (status === 404) return "We couldn't find those RFPs. They may have been moved or belong to another organization.";
+  if (status === 401) return "Your session has ended. Reload the page and sign in again to see your proposals.";
+  if (status === 403) return "Your role doesn't include viewing proposals. Ask an Owner or Admin of your organization for access.";
+  if (status === 404) return "We couldn't find those proposals. They may have been moved or belong to another organization.";
   if (code === "NETWORK_ERROR") return "We couldn't reach RFPilot. Check your connection and try again.";
-  return "We couldn't load your RFPs. Try again in a moment.";
+  return "We couldn't load your proposals. Try again in a moment.";
 };
 
 const emptyByStage = (): Record<RfpStage, number> =>
@@ -346,11 +423,8 @@ export const toRfpSummary = (value: unknown): RfpSummary => {
   };
 };
 
-// A draft nobody has named yet is stored as "Untitled proposal"; the product calls it an RFP.
-const rfpName = (value: unknown): string => {
-  const name = textOrNull(value)?.trim();
-  return !name || /^untitled proposal$/i.test(name) ? "Untitled RFP" : name;
-};
+// A draft nobody has named yet.
+const rfpName = (value: unknown): string => textOrNull(value)?.trim() || "Untitled proposal";
 
 export const toRfpList = (value: unknown): RfpList => {
   const data = isRecord(value) ? value : {};
@@ -395,7 +469,7 @@ export const toRfpList = (value: unknown): RfpList => {
 export type FilterOption = { id: string; name: string };
 
 // Planner and team choices for a member who can't read the member directory (a Team Manager):
-// the owners and teams of the RFPs they can see.
+// the owners and teams of the proposals they can see.
 export const optionsFromItems = (items: RfpListItem[]): { owners: FilterOption[]; teams: FilterOption[] } => {
   const owners = new Map<string, string>();
   const teams = new Map<string, string>();

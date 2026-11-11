@@ -1,11 +1,16 @@
-import { ChevronLeft, ChevronRight, Eye, FileText, Inbox, Trophy, UsersRound } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, Eye, FileText, Inbox, Plus, Trophy, UsersRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CustomerRole } from "@/components/organization/members/types";
 import { roleLabel } from "@/components/organization/members/orgAccess";
+import Badge, { type BadgeTone } from "@/components/ui/Badge";
+import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import FilterChip from "@/components/ui/FilterChip";
+import type { RfpUsage } from "@/lib/entitlements/entitlements";
+import DashboardFilters from "./DashboardFilters";
 import FirstRunDashboard from "./FirstRunDashboard";
+import ProposalRowActions from "./ProposalRowActions";
 import {
-  SORT_OPTIONS,
   RFP_STAGES,
   STAGE_LABELS,
   VIEW_LABELS,
@@ -19,10 +24,16 @@ import {
   formatInstant,
   hasActiveFilters,
   quarterLabel,
+  rfpEditHref,
   rfpResponsesHref,
   rfpRowHref,
   rfpViewHref,
+  rowActionsFor,
+  rowIdentifiers,
+  sortDirectionOf,
+  sortHref,
   viewsFor,
+  withoutFilters,
   type DashboardState,
   type DashboardView,
   type FilterOption,
@@ -33,11 +44,16 @@ import {
 } from "./rfpDashboardModel";
 
 // The role dashboards (ORG-402): what a Planner, Team Manager, Admin/Owner or Viewer sees on
-// /dashboard. Server-rendered from the page's query string; every filter is a plain link or a
-// GET form, so a filtered dashboard can be bookmarked and shared inside the organization.
+// /dashboard. Server-rendered from the page's query string, so a filtered, sorted dashboard can
+// be bookmarked and shared inside the organization. Status tabs, column sorts, filter chips and
+// paging are plain links. Only the filter controls (DashboardFilters) and a row's action menu
+// (ProposalRowActions) run in the browser, and both only change the URL or call an action: the
+// list itself is always rendered here from what the backend answered.
 
 export type RoleDashboardViewProps = {
   role: CustomerRole;
+  // The signed-in member, to tell their own proposals from other people's.
+  userId: string | null;
   state: DashboardState;
   // Today's date (YYYY-MM-DD) in the organization's time zone, and that zone.
   today: string;
@@ -49,6 +65,8 @@ export type RoleDashboardViewProps = {
   submissions: RfpListItem[] | null;
   owners: FilterOption[];
   teams: FilterOption[];
+  // The plan's proposal counter (null on a plan with no limit, and for Viewers).
+  rfpUsage?: RfpUsage | null;
   // A plain sentence when the list could not be loaded.
   error: string | null;
 };
@@ -59,26 +77,23 @@ const fieldClass =
   "h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30";
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2";
 
-const STAGE_TONES: Record<RfpStage, string> = {
-  draft: "border-slate-200 bg-slate-50 text-slate-600",
-  sent: "border-sky-100 bg-sky-50 text-sky-700",
-  receiving_responses: "border-amber-100 bg-amber-50 text-amber-800",
-  under_review: "border-violet-100 bg-violet-50 text-violet-700",
-  awarded: "border-emerald-100 bg-emerald-50 text-emerald-700",
-  archived: "border-slate-200 bg-slate-50 text-slate-600",
+// Draft gray, Sent blue, Receiving amber, Under review purple, Awarded green, Archived muted.
+export const STAGE_TONES: Record<RfpStage, BadgeTone> = {
+  draft: "gray",
+  sent: "blue",
+  receiving_responses: "amber",
+  under_review: "purple",
+  awarded: "green",
+  archived: "muted",
 };
 
-const StageBadge = ({ stage }: { stage: RfpStage }) => (
-  <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${STAGE_TONES[stage]}`}>
-    {STAGE_LABELS[stage]}
-  </span>
-);
+const StageBadge = ({ stage }: { stage: RfpStage }) => <Badge tone={STAGE_TONES[stage]}>{STAGE_LABELS[stage]}</Badge>;
 
 const VIEW_INTRO: Record<DashboardView, string> = {
-  mine: "RFPs you own, by status.",
-  team: "RFPs from the teams you manage, plus your own and any shared with you.",
-  organization: "Every RFP in your organization, drafts included.",
-  shared: "RFPs your organization has shared with you. You can read them; you can't edit or send them.",
+  mine: "Proposals you own, by status.",
+  team: "Proposals from the teams you manage, plus your own and any shared with you.",
+  organization: "Every proposal in your organization, drafts included.",
+  shared: "Proposals your organization has shared with you. You can read them; you can't edit or send them.",
 };
 
 const ViewTabs = ({ views, state }: { views: DashboardView[]; state: DashboardState }) => (
@@ -88,7 +103,7 @@ const ViewTabs = ({ views, state }: { views: DashboardView[]; state: DashboardSt
       return (
         <Link
           key={view}
-          href={dashboardHref({ ...state, owner: "", team: "", eventFrom: "", eventTo: "", venueCity: "", search: "", stage: null, page: 1 }, { view }, views[0])}
+          href={dashboardHref({ ...withoutFilters(state), stage: null }, { view }, views[0])}
           aria-current={selected ? "page" : undefined}
           className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${focusRing} ${
             selected ? "border-sky-700 bg-sky-700 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -112,11 +127,45 @@ const SummaryCard = ({ id, icon, label, value, hint }: { id: string; icon: React
   </li>
 );
 
+const summaryIsEmpty = (summary: RfpSummary): boolean =>
+  summary.activeRfps === 0 && summary.responsesReceived === 0 && summary.awardedThisQuarter === 0;
+
+// Three zeros say nothing: one card says what will show up here and offers the way to start.
+const SummaryEmpty = ({ narrowed, canCreate }: { narrowed: boolean; canCreate: boolean }) => (
+  <section aria-label="Summary">
+    <div data-testid="summary-empty" className={`${cardClass} flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between`}>
+      <div className="flex items-start gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700" aria-hidden="true">
+          <BarChart3 size={20} />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold text-slate-900">
+            {narrowed ? "No activity for these filters yet" : "No proposal activity yet"}
+          </h2>
+          <p className="mt-0.5 max-w-xl text-sm text-slate-600">
+            Active proposals, vendor responses and awards are counted here once a proposal has been sent to vendors.
+          </p>
+        </div>
+      </div>
+      {canCreate && (
+        <Link
+          href="/proposals/add-new-proposal"
+          data-testid="summary-empty-create"
+          className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-sky-700 px-5 text-sm font-bold text-white hover:bg-sky-800 ${focusRing}`}
+        >
+          <Plus size={16} aria-hidden="true" />
+          New Proposal
+        </Link>
+      )}
+    </div>
+  </section>
+);
+
 const SummaryRow = ({ summary }: { summary: RfpSummary }) => (
   <section aria-label="Summary">
     <ul className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <SummaryCard id="active" icon={<FileText size={20} />} label="Active RFPs" value={summary.activeRfps} hint="Sent, receiving responses or under review" />
-      <SummaryCard id="responses" icon={<Inbox size={20} />} label="Responses received" value={summary.responsesReceived} hint="Vendor responses on the RFPs listed below" />
+      <SummaryCard id="active" icon={<FileText size={20} />} label="Active proposals" value={summary.activeRfps} hint="Sent, receiving responses or under review" />
+      <SummaryCard id="responses" icon={<Inbox size={20} />} label="Responses received" value={summary.responsesReceived} hint="Vendor responses on the proposals listed below" />
       <SummaryCard id="awarded" icon={<Trophy size={20} />} label="Awarded this quarter" value={summary.awardedThisQuarter} hint={`Awarded in ${quarterLabel(summary.quarter)}`} />
     </ul>
   </section>
@@ -135,9 +184,9 @@ const PanelEmpty = ({ children }: { children: ReactNode }) => (
 );
 
 const DeadlinesPanel = ({ items, today }: { items: RfpListItem[]; today: string }) => (
-  <PanelShell id="dashboard-deadlines" title="Upcoming deadlines" hint="The next dates on active RFPs.">
+  <PanelShell id="dashboard-deadlines" title="Upcoming deadlines" hint="The next dates on active proposals.">
     {items.length === 0 ? (
-      <PanelEmpty>No upcoming dates on active RFPs.</PanelEmpty>
+      <PanelEmpty>No upcoming dates on active proposals.</PanelEmpty>
     ) : (
       <ul className="divide-y divide-slate-100">
         {items.map((item) => {
@@ -161,7 +210,7 @@ const DeadlinesPanel = ({ items, today }: { items: RfpListItem[]; today: string 
 );
 
 const SubmissionsPanel = ({ items, timeZone }: { items: RfpListItem[]; timeZone: string | null }) => (
-  <PanelShell id="dashboard-submissions" title="New submissions" hint="RFPs with vendor responses that nobody has started reviewing.">
+  <PanelShell id="dashboard-submissions" title="New submissions" hint="Proposals with vendor responses that nobody has started reviewing.">
     {items.length === 0 ? (
       <PanelEmpty>No new vendor responses to review.</PanelEmpty>
     ) : (
@@ -191,7 +240,7 @@ const StageTabs = ({ state, counts, defaultView }: { state: DashboardState; coun
     ...RFP_STAGES.map((stage) => ({ stage, label: STAGE_LABELS[stage], count: counts ? counts[stage] : null })),
   ];
   return (
-    <nav aria-label="RFP status" className="flex flex-wrap gap-1.5">
+    <nav aria-label="Proposal status" className="flex flex-wrap gap-1.5">
       {tabs.map((tab) => {
         const selected = tab.stage === state.stage;
         return (
@@ -208,7 +257,7 @@ const StageTabs = ({ state, counts, defaultView }: { state: DashboardState; coun
               <>
                 <span className="sr-only">: </span>
                 <span className="text-xs font-bold text-slate-500">{tab.count}</span>
-                <span className="sr-only"> {tab.count === 1 ? "RFP" : "RFPs"}</span>
+                <span className="sr-only"> {tab.count === 1 ? "proposal" : "proposals"}</span>
               </>
             )}
           </Link>
@@ -218,130 +267,123 @@ const StageTabs = ({ state, counts, defaultView }: { state: DashboardState; coun
   );
 };
 
-const FilterForm = ({ state, owners, teams, defaultView }: { state: DashboardState; owners: FilterOption[]; teams: FilterOption[]; defaultView: DashboardView }) => {
-  const offered = filtersFor(state.view);
-  // A value picked earlier stays selectable even when it is no longer among the choices.
-  const withSelected = (options: FilterOption[], selected: string, fallback: string) =>
-    selected && !options.some((option) => option.id === selected) ? [...options, { id: selected, name: fallback }] : options;
-  const ownerOptions = withSelected(owners, state.owner, "Selected planner");
-  const teamOptions = withSelected(teams, state.team, "Selected team");
+// The filters in force, each removable on its own, and one link that clears them all.
+const FilterChips = ({ state, owners, teams, defaultView }: { state: DashboardState; owners: FilterOption[]; teams: FilterOption[]; defaultView: DashboardView }) => {
+  if (!hasActiveFilters(state)) return null;
+  const nameOf = (options: FilterOption[], id: string, fallback: string) => options.find((option) => option.id === id)?.name ?? fallback;
+  const without = (changes: Partial<DashboardState>) => dashboardHref(state, { ...changes, page: 1 }, defaultView);
+  const dates =
+    state.eventFrom && state.eventTo
+      ? state.eventFrom === state.eventTo ? formatDay(state.eventFrom) : `${formatDay(state.eventFrom)} – ${formatDay(state.eventTo)}`
+      : state.eventFrom ? `From ${formatDay(state.eventFrom)}` : state.eventTo ? `Until ${formatDay(state.eventTo)}` : "";
   return (
-    <form action="/dashboard" method="get" role="search" aria-label="Filter RFPs" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {state.view !== defaultView && <input type="hidden" name="view" value={state.view} />}
-      {state.stage && <input type="hidden" name="stage" value={state.stage} />}
-      <div>
-        <label htmlFor="dashboard-search" className={fieldLabelClass}>Event name</label>
-        <input id="dashboard-search" name="search" type="search" defaultValue={state.search} maxLength={120} placeholder="Search RFPs" className={fieldClass} />
-      </div>
-      {offered.includes("owner") && (
-        <div>
-          <label htmlFor="dashboard-owner" className={fieldLabelClass}>Planner</label>
-          <select id="dashboard-owner" name="owner" defaultValue={state.owner} className={fieldClass}>
-            <option value="">All planners</option>
-            {ownerOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-          </select>
-        </div>
-      )}
-      {offered.includes("team") && (
-        <div>
-          <label htmlFor="dashboard-team" className={fieldLabelClass}>Team</label>
-          <select id="dashboard-team" name="team" defaultValue={state.team} className={fieldClass}>
-            <option value="">All teams</option>
-            {teamOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-          </select>
-        </div>
-      )}
-      {offered.includes("venueCity") && (
-        <div>
-          <label htmlFor="dashboard-city" className={fieldLabelClass}>Venue city</label>
-          <input id="dashboard-city" name="venueCity" type="text" defaultValue={state.venueCity} maxLength={120} placeholder="For example, Chicago" className={fieldClass} />
-        </div>
-      )}
-      {offered.includes("eventDates") && (
-        <>
-          <div>
-            <label htmlFor="dashboard-event-from" className={fieldLabelClass}>Event starts on or after</label>
-            <input id="dashboard-event-from" name="eventFrom" type="date" defaultValue={state.eventFrom} className={fieldClass} />
-          </div>
-          <div>
-            <label htmlFor="dashboard-event-to" className={fieldLabelClass}>Event starts on or before</label>
-            <input id="dashboard-event-to" name="eventTo" type="date" defaultValue={state.eventTo} className={fieldClass} />
-          </div>
-        </>
-      )}
-      <div>
-        <label htmlFor="dashboard-sort" className={fieldLabelClass}>Sort by</label>
-        <select id="dashboard-sort" name="sortBy" defaultValue={state.sortBy} className={fieldClass}>
-          {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-      </div>
-      <div className="flex items-end gap-2">
-        <button type="submit" className={`inline-flex h-10 items-center justify-center rounded-md bg-sky-700 px-4 text-sm font-bold text-white transition-colors hover:bg-sky-800 ${focusRing}`}>
-          Apply
-        </button>
-        {hasActiveFilters(state) && (
-          <Link
-            href={dashboardHref({ ...state, owner: "", team: "", eventFrom: "", eventTo: "", venueCity: "", search: "", page: 1 }, {}, defaultView)}
-            className={`inline-flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 ${focusRing}`}
-          >
-            Clear filters
-          </Link>
-        )}
-      </div>
-    </form>
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Applied filters" data-testid="filter-chips">
+      {state.search && <FilterChip label="Search" value={state.search} removeHref={without({ search: "" })} />}
+      {state.owner && <FilterChip label="Planner" value={nameOf(owners, state.owner, "Selected planner")} removeHref={without({ owner: "" })} />}
+      {state.team && <FilterChip label="Team" value={nameOf(teams, state.team, "Selected team")} removeHref={without({ team: "" })} />}
+      {state.venueCity && <FilterChip label="Venue city" value={state.venueCity} removeHref={without({ venueCity: "" })} />}
+      {dates && <FilterChip label="Event dates" value={dates} removeHref={without({ eventFrom: "", eventTo: "" })} />}
+      <Link
+        href={dashboardHref(withoutFilters(state), {}, defaultView)}
+        className={`inline-flex min-h-7 items-center rounded-md px-2 text-xs font-semibold text-sky-800 underline underline-offset-2 hover:text-sky-900 ${focusRing}`}
+      >
+        Clear all
+      </Link>
+    </div>
   );
 };
 
-const headClass = "px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500";
-const cellClass = "px-4 py-3 align-middle text-sm text-slate-600";
+type RowContext = {
+  role: CustomerRole;
+  userId: string | null;
+  state: DashboardState;
+  timeZone: string | null;
+  defaultView: DashboardView;
+  rfpUsage: RfpUsage | null;
+};
 
-const RfpTable = ({ items, state, timeZone }: { items: RfpListItem[]; state: DashboardState; timeZone: string | null }) => {
-  // On "My RFPs" every row is the member's own, so the planner column would repeat one name.
+const ProposalTable = ({ items, context }: { items: RfpListItem[]; context: RowContext }) => {
+  const { role, userId, state, timeZone, defaultView, rfpUsage } = context;
+  // On "My Proposals" every row is the member's own, so the planner column would repeat one name.
   const showOwner = state.view !== "mine";
   const showTeam = state.view === "organization" || state.view === "team";
-  return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200">
-      <table className="w-full min-w-full border-collapse">
-        <caption className="sr-only">{VIEW_LABELS[state.view]}: RFPs</caption>
-        <thead className="bg-slate-50">
-          <tr>
-            <th scope="col" className={headClass}>RFP</th>
-            <th scope="col" className={headClass}>Status</th>
-            {showOwner && <th scope="col" className={`${headClass} hidden md:table-cell`}>Planner</th>}
-            {showTeam && <th scope="col" className={`${headClass} hidden lg:table-cell`}>Team</th>}
-            <th scope="col" className={`${headClass} hidden sm:table-cell`}>Event date</th>
-            <th scope="col" className={`${headClass} hidden sm:table-cell`}>Responses</th>
-            <th scope="col" className={`${headClass} hidden lg:table-cell`}>Updated</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
-          {items.map((item) => (
-            <tr key={item.id}>
-              <th scope="row" className="max-w-[18rem] px-4 py-3 text-left align-middle font-normal">
-                <Link href={rfpRowHref(item, state.view)} className={`block break-words text-sm font-semibold text-slate-900 hover:underline ${focusRing}`}>
-                  {item.eventName}
-                </Link>
-                <span className="block text-xs text-slate-500">
-                  {item.venueCity ?? "No venue city"}
-                  <span className="sm:hidden"> · {formatEventDates(item)}</span>
-                </span>
-              </th>
-              <td className={cellClass}><StageBadge stage={item.stage} /></td>
-              {showOwner && <td className={`${cellClass} hidden md:table-cell`}>{item.ownerName ?? "No planner"}</td>}
-              {showTeam && <td className={`${cellClass} hidden lg:table-cell`}>{item.teamName ?? "No team"}</td>}
-              <td className={`${cellClass} hidden whitespace-nowrap sm:table-cell`}>{formatEventDates(item)}</td>
-              <td className={`${cellClass} hidden whitespace-nowrap sm:table-cell`}>
-                {item.vendorsInvited === 0 && item.vendorsResponded === 0
-                  ? "None invited"
-                  : `${item.vendorsResponded} of ${Math.max(item.vendorsInvited, item.vendorsResponded)}`}
-              </td>
-              <td className={`${cellClass} hidden whitespace-nowrap lg:table-cell`}>{formatInstant(item.updatedAt, timeZone)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  const identifiers = rowIdentifiers(items);
+  const actionsOf = (item: RfpListItem) => rowActionsFor(item, role, userId);
+  // A Viewer changes nothing, so their table has no actions column at all.
+  const showActions = role !== "viewer" && items.some((item) => actionsOf(item).canEdit);
+  const sort = (label: string, field: Parameters<typeof sortHref>[1]) => ({
+    label,
+    href: sortHref(state, field, defaultView),
+    direction: sortDirectionOf(state, field),
+  });
+
+  const columns: DataTableColumn<RfpListItem>[] = [
+    {
+      id: "proposal",
+      header: "Proposal",
+      // The cell shows the name and the event dates, so the header sorts by either.
+      sorts: [sort("Proposal", "eventName"), sort("Event date", "eventStartDate")],
+      rowHeader: true,
+      className: "max-w-[20rem]",
+      cell: (item) => (
+        <>
+          <Link href={rfpRowHref(item, actionsOf(item))} className={`block break-words text-sm font-semibold text-slate-900 hover:underline ${focusRing}`}>
+            {item.eventName}
+          </Link>
+          <span className="block text-xs text-slate-600" data-testid="row-identifier">
+            {identifiers.get(item.id)}
+            {item.venueCity && <> · {item.venueCity}</>}
+          </span>
+        </>
+      ),
+    },
+    { id: "status", header: "Status", cell: (item) => <StageBadge stage={item.stage} /> },
+    ...(showOwner ? [{ id: "planner", header: "Planner", className: "hidden md:table-cell", cell: (item: RfpListItem) => item.ownerName ?? "No planner" }] : []),
+    ...(showTeam ? [{ id: "team", header: "Team", className: "hidden lg:table-cell", cell: (item: RfpListItem) => item.teamName ?? "No team" }] : []),
+    {
+      id: "responses",
+      header: "Responses",
+      className: "hidden whitespace-nowrap sm:table-cell",
+      cell: (item) =>
+        item.vendorsInvited === 0 && item.vendorsResponded === 0
+          ? "None invited"
+          : `${item.vendorsResponded} of ${Math.max(item.vendorsInvited, item.vendorsResponded)}`,
+    },
+    {
+      id: "updated",
+      header: "Updated",
+      sorts: [sort("Updated", "updatedAt")],
+      className: "hidden whitespace-nowrap lg:table-cell",
+      cell: (item) => formatInstant(item.updatedAt, timeZone),
+    },
+    ...(showActions
+      ? [{
+          id: "actions",
+          header: "Actions",
+          headerHidden: true,
+          align: "right" as const,
+          className: "w-12 !px-2",
+          cell: (item: RfpListItem) => (
+            <ProposalRowActions
+              proposal={{ id: item.id, eventName: item.eventName, eventStartDate: item.eventStartDate, eventEndDate: item.eventEndDate }}
+              actions={actionsOf(item)}
+              editHref={rfpEditHref(item)}
+              viewHref={rfpViewHref(item)}
+              usage={rfpUsage}
+            />
+          ),
+        }]
+      : []),
+  ];
+
+  return <DataTable caption={`${VIEW_LABELS[state.view]}: proposals`} columns={columns} rows={items} rowKey={(item) => item.id} />;
+};
+
+// The pages worth a link: the first, the last and the ones around the current page.
+const pageNumbers = (page: number, totalPages: number): (number | "gap")[] => {
+  const wanted = new Set([1, totalPages, page - 1, page, page + 1].filter((value) => value >= 1 && value <= totalPages));
+  const sorted = [...wanted].sort((a, b) => a - b);
+  return sorted.flatMap((value, index) => (index > 0 && value - sorted[index - 1] > 1 ? ["gap" as const, value] : [value]));
 };
 
 const Pagination = ({ list, state, defaultView }: { list: RfpList; state: DashboardState; defaultView: DashboardView }) => {
@@ -349,42 +391,67 @@ const Pagination = ({ list, state, defaultView }: { list: RfpList; state: Dashbo
   if (total === 0) return null;
   const from = (page - 1) * limit + 1;
   const to = Math.min(total, (page - 1) * limit + list.items.length);
-  const linkClass = `inline-flex h-9 items-center gap-1 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 ${focusRing}`;
+  const linkClass = `inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 ${focusRing}`;
+  const offClass = "inline-flex h-9 items-center justify-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500";
   return (
     <nav aria-label="Pages" className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-slate-600">
-        Showing {from.toLocaleString("en-US")}–{to.toLocaleString("en-US")} of {total.toLocaleString("en-US")} {total === 1 ? "RFP" : "RFPs"}
+      <p className="text-sm text-slate-600" data-testid="pagination-summary">
+        Showing {from.toLocaleString("en-US")}–{to.toLocaleString("en-US")} of {total.toLocaleString("en-US")} {total === 1 ? "proposal" : "proposals"}
       </p>
       {totalPages > 1 && (
-        <div className="flex items-center gap-2">
-          {page > 1 && (
-            <Link href={dashboardHref(state, { page: page - 1 }, defaultView)} className={linkClass}>
-              <ChevronLeft size={14} aria-hidden="true" /> Previous
-            </Link>
+        <ul className="flex flex-wrap items-center gap-1.5">
+          <li>
+            {page > 1 ? (
+              <Link href={dashboardHref(state, { page: page - 1 }, defaultView)} className={linkClass}>
+                <ChevronLeft size={14} aria-hidden="true" /> Previous
+              </Link>
+            ) : (
+              <span aria-disabled="true" className={offClass}><ChevronLeft size={14} aria-hidden="true" /> Previous</span>
+            )}
+          </li>
+          {pageNumbers(page, totalPages).map((entry, index) =>
+            entry === "gap" ? (
+              <li key={`gap-${index}`} aria-hidden="true" className="hidden px-1 text-sm text-slate-500 sm:block">…</li>
+            ) : (
+              <li key={entry} className="hidden sm:block">
+                <Link
+                  href={dashboardHref(state, { page: entry }, defaultView)}
+                  aria-label={`Page ${entry}`}
+                  aria-current={entry === page ? "page" : undefined}
+                  className={entry === page ? `inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-sm font-bold text-white ${focusRing}` : linkClass}
+                >
+                  {entry}
+                </Link>
+              </li>
+            ),
           )}
-          <span className="text-sm text-slate-600">Page {page} of {totalPages}</span>
-          {page < totalPages && (
-            <Link href={dashboardHref(state, { page: page + 1 }, defaultView)} className={linkClass}>
-              Next <ChevronRight size={14} aria-hidden="true" />
-            </Link>
-          )}
-        </div>
+          <li className="px-1 text-sm text-slate-600 sm:sr-only">Page {page} of {totalPages}</li>
+          <li>
+            {page < totalPages ? (
+              <Link href={dashboardHref(state, { page: page + 1 }, defaultView)} className={linkClass}>
+                Next <ChevronRight size={14} aria-hidden="true" />
+              </Link>
+            ) : (
+              <span aria-disabled="true" className={offClass}>Next <ChevronRight size={14} aria-hidden="true" /></span>
+            )}
+          </li>
+        </ul>
       )}
     </nav>
   );
 };
 
 const EMPTY_COPY: Record<DashboardView, { title: string; body: string }> = {
-  mine: { title: "No RFPs here yet", body: "RFPs you create show up here as they move from draft to awarded." },
-  team: { title: "No team RFPs yet", body: "RFPs owned by planners on the teams you manage show up here." },
-  organization: { title: "No RFPs in your organization yet", body: "RFPs created by anyone in your organization show up here." },
-  shared: { title: "Nothing has been shared with you yet", body: "When someone in your organization shares an RFP with you, it shows up here." },
+  mine: { title: "No proposals here yet", body: "Proposals you create show up here as they move from draft to awarded." },
+  team: { title: "No team proposals yet", body: "Proposals owned by planners on the teams you manage show up here." },
+  organization: { title: "No proposals in your organization yet", body: "Proposals created by anyone in your organization show up here." },
+  shared: { title: "Nothing has been shared with you yet", body: "When someone in your organization shares a proposal with you, it shows up here." },
 };
 
 const EmptyList = ({ state, defaultView }: { state: DashboardState; defaultView: DashboardView }) => {
   const narrowed = hasActiveFilters(state) || state.stage !== null;
   const copy = narrowed
-    ? { title: "No RFPs match these filters", body: "Try a different status or clear the filters." }
+    ? { title: "No proposals match these filters", body: "Try a different status or clear the filters." }
     : EMPTY_COPY[state.view];
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
@@ -395,7 +462,7 @@ const EmptyList = ({ state, defaultView }: { state: DashboardState; defaultView:
       <p className="mt-1 max-w-md text-sm text-slate-600">{copy.body}</p>
       {narrowed && (
         <Link
-          href={dashboardHref({ ...state, owner: "", team: "", eventFrom: "", eventTo: "", venueCity: "", search: "", stage: null, page: 1 }, {}, defaultView)}
+          href={dashboardHref({ ...withoutFilters(state), stage: null }, {}, defaultView)}
           className={`mt-4 inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 ${focusRing}`}
         >
           Clear filters
@@ -407,12 +474,13 @@ const EmptyList = ({ state, defaultView }: { state: DashboardState; defaultView:
 
 export default function RoleDashboardView(props: RoleDashboardViewProps) {
   const { role, state, list, summary, stageCounts, deadlines, submissions, error } = props;
+  const rfpUsage = props.rfpUsage ?? null;
   const views = viewsFor(role);
   const defaultView = views[0];
   const isViewer = role === "viewer";
   const headingId = "dashboard-list-title";
 
-  // A member who can create RFPs and has none at all gets the three ways to start instead of
+  // A member who can create proposals and has none at all gets the three ways to start instead of
   // an empty table.
   const everything = stageCounts ? RFP_STAGES.reduce((sum, stage) => sum + stageCounts[stage], 0) : null;
   const firstRun = !isViewer && !error && state.view === defaultView && !hasActiveFilters(state) && state.stage === null && everything === 0;
@@ -428,7 +496,7 @@ export default function RoleDashboardView(props: RoleDashboardViewProps) {
 
       {(role === "planner" || role === "team_manager") && state.view === "mine" && (
         <p className="rounded-md border border-sky-100 bg-sky-50 px-4 py-2.5 text-sm text-sky-900" data-testid="admin-visibility-note">
-          Your organization&apos;s Admins can see your RFPs, including drafts.
+          Your organization&apos;s Admins can see your proposals, including drafts.
         </p>
       )}
 
@@ -436,7 +504,11 @@ export default function RoleDashboardView(props: RoleDashboardViewProps) {
         <FirstRunDashboard />
       ) : (
         <>
-          {!isViewer && summary && <SummaryRow summary={summary} />}
+          {!isViewer && summary && (
+            summaryIsEmpty(summary)
+              ? <SummaryEmpty narrowed={hasActiveFilters(state) || state.stage !== null} canCreate={!rfpUsage?.atLimit} />
+              : <SummaryRow summary={summary} />
+          )}
 
           {!isViewer && state.view !== "organization" && (deadlines || submissions) && (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -451,8 +523,21 @@ export default function RoleDashboardView(props: RoleDashboardViewProps) {
               <p className="mt-0.5 text-sm text-slate-600">{VIEW_INTRO[state.view]}</p>
             </div>
 
-            <StageTabs state={state} counts={stageCounts} defaultView={defaultView} />
-            <FilterForm state={state} owners={props.owners} teams={props.teams} defaultView={defaultView} />
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+              <StageTabs state={state} counts={stageCounts} defaultView={defaultView} />
+              <DashboardFilters
+                search={state.search}
+                owner={state.owner}
+                team={state.team}
+                venueCity={state.venueCity}
+                eventFrom={state.eventFrom}
+                eventTo={state.eventTo}
+                offered={filtersFor(state.view)}
+                owners={props.owners}
+                teams={props.teams}
+              />
+            </div>
+            <FilterChips state={state} owners={props.owners} teams={props.teams} defaultView={defaultView} />
 
             {error ? (
               <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -465,7 +550,10 @@ export default function RoleDashboardView(props: RoleDashboardViewProps) {
               </div>
             ) : list && list.items.length > 0 ? (
               <>
-                <RfpTable items={list.items} state={state} timeZone={props.timeZone} />
+                <ProposalTable
+                  items={list.items}
+                  context={{ role, userId: props.userId, state, timeZone: props.timeZone, defaultView, rfpUsage }}
+                />
                 <Pagination list={list} state={state} defaultView={defaultView} />
               </>
             ) : (
