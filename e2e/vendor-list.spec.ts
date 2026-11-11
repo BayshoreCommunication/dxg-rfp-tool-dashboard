@@ -1,12 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect as baseExpect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expectProposalWording } from "./support/wording";
 
 // ORG-607: the organization vendor list under Settings, and picking vendors when sending an RFP,
 // as each role, against the stub backend (e2e/support/vendorListFixture.mjs), which applies the
 // backend's role rules. `next dev` compiles on demand, so waits are longer than the suite default.
 const expect = baseExpect.configure({ timeout: 45_000 });
 
-const STUB = "http://127.0.0.1:8011";
+// The stub's port can be moved (ASSISTANT_E2E_BACKEND_PORT) when 8011 is taken by another run.
+const STUB = `http://127.0.0.1:${process.env.ASSISTANT_E2E_BACKEND_PORT || 8011}`;
 type Role = "owner" | "admin" | "manager" | "planner" | "viewer";
 
 const problems = new WeakMap<Page, string[]>();
@@ -36,7 +38,7 @@ const signInAs = async (page: Page, role: Role) => {
 };
 
 // Every state: no serious accessibility violations, nothing wider than the screen, the copy says
-// "RFP", no console errors, and a screenshot as evidence.
+// "proposal" not "RFP", no console errors, and a screenshot as evidence.
 const check = async (page: Page, testInfo: TestInfo, name: string, region: Locator) => {
   await expect(region).toBeVisible();
   const handle = await region.elementHandle();
@@ -53,7 +55,7 @@ const check = async (page: Page, testInfo: TestInfo, name: string, region: Locat
   ).toEqual([]);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
-  expect(await region.textContent()).not.toMatch(/proposal/i);
+  await expectProposalWording(region);
   await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
   expect(problems.get(page)).toEqual([]);
 };

@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect as baseExpect, test, type APIRequestContext, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expectProposalWording } from "./support/wording";
 
 // `next dev` compiles each route on first visit; give navigations room on a busy machine.
 const expect = baseExpect.configure({ timeout: 45_000 });
@@ -48,8 +49,8 @@ const signInAs = async (page: Page, role: "owner" | "planner" | "viewer") => {
 };
 
 // Every state: no serious accessibility violations in the region, nothing wider than the screen,
-// "RFP" not "proposal", no console errors, and a screenshot as evidence.
-const check = async (page: Page, testInfo: TestInfo, region: Locator, selector: string, name: string) => {
+// "proposal" not "RFP", no console errors, and a screenshot as evidence.
+const check = async (page: Page, testInfo: TestInfo, region: Locator, selector: string, name: string, wording: Locator = region) => {
   await expect(region).toBeVisible();
   const accessibility = await new AxeBuilder({ page }).include(selector).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(
@@ -58,7 +59,7 @@ const check = async (page: Page, testInfo: TestInfo, region: Locator, selector: 
       .map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(" | ")}`),
   ).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-  expect(await region.textContent()).not.toMatch(/proposal/i);
+  await expectProposalWording(wording);
   await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
   expect(problems.get(page)).toEqual([]);
 };
@@ -74,7 +75,7 @@ const expectLocked = async (
   await expect(locked).toBeVisible();
   await expect(locked).toHaveAttribute("data-feature", expected.feature);
   await expect(locked.getByRole("heading", { level: 1 })).toHaveText(
-    expected.feature === "vendorResponses" ? "Vendor responses aren't included in your plan" : "RFP intelligence isn't included in your plan",
+    expected.feature === "vendorResponses" ? "Vendor responses aren't included in your plan" : "Proposal intelligence isn't included in your plan",
   );
   if (expected.count === null) await expect(locked.getByTestId("plan-locked-count")).toHaveCount(0);
   else await expect(locked.getByTestId("plan-locked-count")).toHaveText(expected.count);
@@ -89,65 +90,68 @@ const expectLocked = async (
   await check(page, testInfo, locked, '[data-testid="plan-locked"]', expected.name);
 };
 
-test("Free trial: the RFP counter, and the create button at the limit", async ({ page, request }, testInfo) => {
+test("Free trial: the proposal counter, and the create button at the limit", async ({ page, request }, testInfo) => {
   await setPlan(request, { plan: "free_trial", created: 1 });
   await signInAs(page, "planner");
 
-  // One of two used: the counter sits with a working "New RFP" button.
+  // One of two used: the counter sits with a working "New Proposal" button.
   const dashboard = page.getByTestId("role-dashboard");
-  await expect(page.getByTestId("rfp-usage")).toHaveText("1 of 2 RFPs used on the free trial");
-  await expect(page.getByRole("main").getByRole("link", { name: "New RFP" })).toHaveAttribute("href", "/proposals/add-new-proposal");
+  await expect(page.getByTestId("rfp-usage")).toHaveText("1 of 2 proposals used on the free trial");
+  await expect(page.getByRole("main").getByRole("link", { name: "New Proposal" })).toHaveAttribute("href", "/proposals/add-new-proposal");
   await expect(page.getByTestId("rfp-limit")).toHaveCount(0);
-  await check(page, testInfo, dashboard, '[data-testid="role-dashboard"]', "dashboard-1-of-2");
+  // The dashboard's own copy is reworded in its own pull request (feat/dashboard-list-refactor);
+  // until that merges, the wording check here covers the counter this test is about. Drop the
+  // last argument then.
+  await check(page, testInfo, dashboard, '[data-testid="role-dashboard"]', "dashboard-1-of-2", page.getByTestId("rfp-usage"));
 
   // The organization creates its second RFP: the button is off and says why.
   await setPlan(request, { created: 2 });
   await page.reload();
   const limit = page.getByTestId("rfp-limit");
   await expect(limit).toBeVisible();
-  await expect(limit.getByTestId("rfp-usage")).toHaveText("2 of 2 RFPs used.");
-  await expect(limit).toContainText("Your plan includes 2 RFPs and your organization has used both. Deleting an RFP doesn't free one up. Contact us to upgrade.");
-  const button = limit.getByRole("button", { name: "New RFP" });
+  await expect(limit.getByTestId("rfp-usage")).toHaveText("2 of 2 proposals used.");
+  await expect(limit).toContainText("Your plan includes 2 proposals and your organization has used both. Deleting a proposal doesn't free one up. Contact us to upgrade.");
+  const button = limit.getByRole("button", { name: "New Proposal" });
   await expect(button).toBeDisabled();
-  await expect(button).toHaveAccessibleDescription(/2 of 2 RFPs used/);
-  await expect(page.getByRole("main").getByRole("link", { name: "New RFP" })).toHaveCount(0);
+  await expect(button).toHaveAccessibleDescription(/2 of 2 proposals used/);
+  await expect(page.getByRole("main").getByRole("link", { name: "New Proposal" })).toHaveCount(0);
   await expect(limit.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/support");
   await check(page, testInfo, limit, '[data-testid="rfp-limit"]', "dashboard-at-limit");
 
   // The RFP list page carries the same button and message.
   await page.goto("/proposals");
-  await expect(page.getByTestId("rfp-limit").getByRole("button", { name: "New RFP" })).toBeDisabled();
+  await expect(page.getByTestId("rfp-limit").getByRole("button", { name: "New Proposal" })).toBeDisabled();
   await check(page, testInfo, page.getByTestId("rfp-limit"), '[data-testid="rfp-limit"]', "rfp-list-at-limit");
 
-  // Any other way into "create an RFP" explains the limit instead of opening the form.
+  // Any other way into "create a proposal" explains the limit instead of opening the form.
   await page.goto("/proposals/add-new-proposal");
   const reached = page.getByTestId("rfp-limit-reached");
-  await expect(reached.getByRole("heading", { level: 1 })).toHaveText("You’ve reached your plan’s RFP limit");
-  await expect(reached.getByTestId("rfp-usage")).toHaveText("2 of 2 RFPs used");
+  await expect(reached.getByRole("heading", { level: 1 })).toHaveText("You’ve reached your plan’s proposal limit");
+  await expect(reached.getByTestId("rfp-usage")).toHaveText("2 of 2 proposals used");
   await expect(reached.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/support");
   await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
   await check(page, testInfo, reached, '[data-testid="rfp-limit-reached"]', "create-at-limit");
 });
 
-test("Free trial: vendor responses and RFP intelligence show a locked state with the response count", async ({ page, request }, testInfo) => {
+test("Free trial: vendor responses and proposal intelligence show a locked state with the response count", async ({ page, request }, testInfo) => {
   await setPlan(request, { plan: "free_trial", created: 1 });
   await signInAs(page, "planner");
   await setPlan(request, { clearRequests: true });
 
   // The vendor responses tab: the count across the planner's own RFPs (3 + 0 + 0 + 6 + 3).
   await page.goto("/vendor-responses");
-  await expectLocked(page, testInfo, { feature: "vendorResponses", count: "12 vendor responses received on your RFPs", name: "vendor-responses-locked" });
+  await expectLocked(page, testInfo, { feature: "vendorResponses", count: "12 vendor responses received on your proposals", name: "vendor-responses-locked" });
 
   // One RFP's responses: that RFP's own count.
   await page.goto(`/vendor-responses/proposals/${RFP_ID}`);
-  await expectLocked(page, testInfo, { feature: "vendorResponses", count: "3 vendor responses received on this RFP", rfpTitle: "Annual Sales Kickoff", name: "rfp-responses-locked" });
+  await expectLocked(page, testInfo, { feature: "vendorResponses", count: "3 vendor responses received on this proposal", rfpTitle: "Annual Sales Kickoff", name: "rfp-responses-locked" });
 
   // A single response (where a notification or an old link lands).
   await page.goto(`/vendor-responses/${RESPONSE_ID}`);
-  await expectLocked(page, testInfo, { feature: "vendorResponses", count: "12 vendor responses received on your RFPs", name: "response-detail-locked" });
+  await expectLocked(page, testInfo, { feature: "vendorResponses", count: "12 vendor responses received on your proposals", name: "response-detail-locked" });
 
   // RFP intelligence: home, requirement checklist, submission versions and a comparison tab.
-  const intelligence = { feature: "proposalIntelligence" as const, count: "3 vendor responses received on this RFP", rfpTitle: "Annual Sales Kickoff" };
+  const intelligence = { feature: "proposalIntelligence" as const, count: "3 vendor responses received on this proposal", rfpTitle: "Annual Sales Kickoff" };
   await page.goto(`/proposals/${RFP_ID}/intelligence`);
   await expectLocked(page, testInfo, { ...intelligence, name: "intelligence-locked" });
   await page.goto(`/proposals/${RFP_ID}/intelligence/requirements`);
@@ -163,7 +167,7 @@ test("Free trial: vendor responses and RFP intelligence show a locked state with
   expect([...new Set(lockedRequests)]).toEqual(["GET /api/vendor-responses"]);
 });
 
-test("Free trial: a Viewer sees the same locked state, counted over the RFPs shared with them", async ({ page, request }, testInfo) => {
+test("Free trial: a Viewer sees the same locked state, counted over the proposals shared with them", async ({ page, request }, testInfo) => {
   await setPlan(request, { plan: "free_trial", created: 2 });
   await signInAs(page, "viewer");
 
@@ -178,13 +182,13 @@ test("Free trial: a Viewer sees the same locked state, counted over the RFPs sha
   await expect(page.getByTestId("rfp-limit")).toHaveCount(0);
 
   await page.goto("/vendor-responses");
-  await expectLocked(page, testInfo, { feature: "vendorResponses", count: "5 vendor responses received on your RFPs", name: "viewer-vendor-responses-locked" });
+  await expectLocked(page, testInfo, { feature: "vendorResponses", count: "5 vendor responses received on your proposals", name: "viewer-vendor-responses-locked" });
 });
 
 test("After a plan change the limit is gone and the locked screens open", async ({ page, request }, testInfo) => {
   await setPlan(request, { plan: "free_trial", created: 2 });
   await signInAs(page, "owner");
-  await expect(page.getByTestId("rfp-limit").getByRole("button", { name: "New RFP" })).toBeDisabled();
+  await expect(page.getByTestId("rfp-limit").getByRole("button", { name: "New Proposal" })).toBeDisabled();
   await page.goto("/vendor-responses");
   await expect(page.getByTestId("plan-locked")).toBeVisible();
   await page.goto(`/proposals/${RFP_ID}/intelligence`);
@@ -214,7 +218,7 @@ test("After a plan change the limit is gone and the locked screens open", async 
   // No limit on full access: the plain create button, no counter, and the create screen opens.
   await page.goto("/dashboard");
   await expect(page.getByTestId("role-dashboard")).toBeVisible();
-  await expect(page.getByRole("main").getByRole("link", { name: "New RFP" })).toHaveAttribute("href", "/proposals/add-new-proposal");
+  await expect(page.getByRole("main").getByRole("link", { name: "New Proposal" })).toHaveAttribute("href", "/proposals/add-new-proposal");
   await expect(page.getByTestId("rfp-usage")).toHaveCount(0);
   await expect(page.getByTestId("rfp-limit")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("dashboard-unlocked.png"), fullPage: true });

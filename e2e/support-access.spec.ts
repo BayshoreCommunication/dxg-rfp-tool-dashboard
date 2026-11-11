@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect as baseExpect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expectProposalWording } from "./support/wording";
 
 // ORG-405: the support access screen for each role, against the stub backend
 // (e2e/support/supportGrantsFixture.mjs), which applies the backend's rules: Owner and Admin
@@ -49,7 +50,7 @@ const openSupportAccess = async (page: Page) => {
 };
 
 // Every state: no serious accessibility violations, nothing wider than the screen, the word
-// "proposal" nowhere, no console errors, and a screenshot as evidence.
+// "proposal" not "RFP", no console errors, and a screenshot as evidence.
 const check = async (page: Page, testInfo: TestInfo, name: string, scope: Locator = screen(page), selector = '[data-testid="support-access"]') => {
   await expect(scope).toBeVisible();
   const accessibility = await new AxeBuilder({ page }).include(selector).withTags(["wcag2a", "wcag2aa"]).analyze();
@@ -59,7 +60,7 @@ const check = async (page: Page, testInfo: TestInfo, name: string, scope: Locato
       .map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(" | ")}`),
   ).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-  expect(await scope.textContent()).not.toMatch(/proposal/i);
+  await expectProposalWording(scope);
   // A grant's name keeps a readable width (it once wrapped a letter per line beside the buttons).
   const titleWidths = await page.locator("[data-grant-title]").evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
   expect(titleWidths.filter((width) => width < 120)).toEqual([]);
@@ -77,7 +78,7 @@ test("Owner: sees active and past access, with Support's activity under each gra
   await expect(active).toHaveCount(1);
   await expect(active.first()).toContainText("Spring Sales Kickoff 2027");
   await expect(active.first()).toContainText("Active");
-  await expect(active.first()).toContainText("One RFP");
+  await expect(active.first()).toContainText("One proposal");
   await expect(active.first()).toContainText("Granted by Olivia Owner");
   await expect(active.first()).toContainText("Expires in 6 days");
   await expect(active.first()).toContainText("Used 3 times");
@@ -96,10 +97,10 @@ test("Owner: sees active and past access, with Support's activity under each gra
   await page.getByRole("button", { name: "View activity for Autumn Partner Gala" }).click();
   const events = page.getByRole("list", { name: "Support activity" }).getByRole("listitem");
   await expect(events).toHaveCount(2);
-  await expect(events.nth(0)).toContainText("Opened an RFP");
+  await expect(events.nth(0)).toContainText("Opened a proposal");
   await expect(events.nth(0)).toContainText("Autumn Partner Gala");
   await expect(events.nth(0)).toContainText("RFPilot Support (agent 00AB12)");
-  await expect(events.nth(1)).toContainText("Listed the RFPs covered by this access");
+  await expect(events.nth(1)).toContainText("Listed the proposals covered by this access");
   await expect(events.nth(1)).toContainText("RFPilot Support (agent 00CD34)");
   await checkDialog(page, testInfo, "owner-activity-dialog");
   await page.getByRole("dialog").getByText("Close", { exact: true }).click();
@@ -143,7 +144,7 @@ test("Owner: every state in the light theme", async ({ page }, testInfo) => {
   await check(page, testInfo, "light-empty-active");
 });
 
-test("Owner: grants one picked RFP with an expiry, grants the whole organization, and revokes", async ({ page }, testInfo) => {
+test("Owner: grants one picked proposal with an expiry, grants the whole organization, and revokes", async ({ page }, testInfo) => {
   await signInAs(page, "owner");
   await openSupportAccess(page);
 
@@ -153,10 +154,10 @@ test("Owner: grants one picked RFP with an expiry, grants the whole organization
   await expect(dialog.getByRole("radio", { name: /Autumn Partner Gala/ })).toBeVisible();
   await expect(dialog.getByRole("radio", { name: /Contoso/ })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Grant access" }).click();
-  await expect(dialog.getByRole("alert")).toHaveText("Choose the RFP that Support may open.");
-  await dialog.getByLabel("RFP", { exact: true }).fill("leadership");
+  await expect(dialog.getByRole("alert")).toHaveText("Choose the proposal that Support may open.");
+  await dialog.getByLabel("Proposal", { exact: true }).fill("leadership");
   // Enter in the search box only searches.
-  await dialog.getByLabel("RFP", { exact: true }).press("Enter");
+  await dialog.getByLabel("Proposal", { exact: true }).press("Enter");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("radio", { name: /Autumn Partner Gala/ })).toHaveCount(0);
   await dialog.getByRole("radio", { name: /Regional Leadership Summit/ }).check();
@@ -166,7 +167,7 @@ test("Owner: grants one picked RFP with an expiry, grants the whole organization
   await dialog.getByRole("button", { name: "Grant access" }).click();
   await expect(dialog).toHaveCount(0);
   const granted = activeList(page).getByRole("listitem").filter({ hasText: "Regional Leadership Summit" });
-  await expect(granted).toContainText("One RFP");
+  await expect(granted).toContainText("One proposal");
   await expect(granted).toContainText("Expires in 14 days");
   await expect(granted).toContainText("Reason: Support ticket 5120");
   await expect(granted).toContainText("Not used");
@@ -174,7 +175,7 @@ test("Owner: grants one picked RFP with an expiry, grants the whole organization
   // The whole organization, for a custom number of days; more than 30 is refused first.
   await page.getByRole("button", { name: "Grant access" }).click();
   await dialog.getByRole("radio", { name: /Whole organization/ }).check();
-  await expect(dialog.getByLabel("RFP", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByLabel("Proposal", { exact: true })).toHaveCount(0);
   await expect(dialog.getByLabel("Access ends after")).toHaveValue("7");
   await dialog.getByLabel("Access ends after").selectOption("custom");
   await dialog.getByLabel("Days (1 to 30)").fill("45");
@@ -185,7 +186,7 @@ test("Owner: grants one picked RFP with an expiry, grants the whole organization
   await dialog.getByRole("button", { name: "Grant access" }).click();
   await expect(dialog).toHaveCount(0);
   const wide = activeList(page).getByRole("listitem").filter({ hasText: "Whole organization" });
-  await expect(wide).toContainText("Every RFP");
+  await expect(wide).toContainText("Every proposal");
   await expect(wide).toContainText("Expires in 2 days");
   await expect(activeList(page).getByRole("listitem")).toHaveCount(3);
   await check(page, testInfo, "owner-after-granting");
@@ -264,7 +265,7 @@ for (const [role, label] of [["manager", "Team Manager"], ["planner", "Planner"]
   });
 }
 
-test("another organization's Owner sees none of these grants or RFPs", async ({ page }, testInfo) => {
+test("another organization's Owner sees none of these grants or proposals", async ({ page }, testInfo) => {
   await signInAs(page, "other-owner");
   await openSupportAccess(page);
   await expect(page.getByText("RFPilot Support has no access")).toBeVisible();
