@@ -44,7 +44,7 @@ const InviteAside = ({ invitation }: { invitation?: InvitationDetails }) => (
         : "Your team works on RFPilot."}
     </h2>
     <p className="text-[15px] font-medium leading-relaxed text-white/85">
-      Plan RFPs together, compare vendor responses side by side, and keep every
+      Plan proposals together, compare vendor responses side by side, and keep every
       decision in one place.
     </p>
   </>

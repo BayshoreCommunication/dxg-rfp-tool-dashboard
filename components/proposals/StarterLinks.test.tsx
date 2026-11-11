@@ -10,7 +10,7 @@ describe("StarterLinks", () => {
     expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
       ["Try an example brief", "/proposals/add-new-proposal?start=example"],
       // Upload carries no param: the picker needs a click on the page itself.
-      ["Upload my brief or old RFP", "/proposals/add-new-proposal"],
+      ["Upload my brief or old proposal", "/proposals/add-new-proposal"],
       ["Describe it from scratch", "/proposals/add-new-proposal?start=scratch"],
     ]);
     expect(links[1]).toHaveAttribute("title", "PDF, DOCX, XLSX, CSV or TXT");

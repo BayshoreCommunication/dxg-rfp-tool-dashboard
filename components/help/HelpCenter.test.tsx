@@ -7,7 +7,7 @@ describe("HelpCenter", () => {
     render(<HelpCenter />);
     expect(screen.getByRole("heading", { level: 1, name: "How RFPilot works" })).toBeInTheDocument();
     expect(
-      screen.getByText(/RFPilot turns your event details into an AV production RFP/),
+      screen.getByText(/RFPilot turns your event details into an AV production proposal/),
     ).toBeInTheDocument();
 
     const flow = screen.getByRole("region", { name: "From event to decision" });

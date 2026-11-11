@@ -296,16 +296,16 @@ describe("AssistantWorkspacePage", () => {
   test("empty state greets the signed-in user by first name", async () => {
     render(<AssistantWorkspacePage />);
     expect(await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/)).toBeInTheDocument();
-    expect(screen.getByText("Let’s build your event RFP")).toBeInTheDocument();
+    expect(screen.getByText("Let’s build your event proposal")).toBeInTheDocument();
     // First-run definition: one sentence naming the product, defining the
     // RFP, and promising nothing goes out without the planner. It sits right
     // under the tagline; there is no step strip, so the next thing after it
     // is the starter row.
     const definition = screen.getByTestId("assistant-product-definition");
     expect(definition).toHaveTextContent(
-      "RFPilot turns your event details into an AV production RFP, the request you send to vendors so they can quote. Nothing goes out until you pick vendors.",
+      "RFPilot turns your event details into an AV production proposal, the request you send to vendors so they can quote. Nothing goes out until you pick vendors.",
     );
-    expect(definition.compareDocumentPosition(screen.getByText("Let’s build your event RFP")) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(definition.compareDocumentPosition(screen.getByText("Let’s build your event proposal")) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(definition.compareDocumentPosition(screen.getByRole("group", { name: "Ways to start" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // The former instruction, hint, and "How it works" step strip are gone:
     // the starters and the placeholder carry that guidance now.
@@ -350,7 +350,7 @@ describe("AssistantWorkspacePage", () => {
     // stayed live and prefilled text into a composer that could not send.
     expect(screen.getByRole("button", { name: "Attach a file" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Start voice input" })).toBeEnabled();
-    for (const starter of ["Try an example brief", "Upload my brief or old RFP", "Describe it from scratch"])
+    for (const starter of ["Try an example brief", "Upload my brief or old proposal", "Describe it from scratch"])
       expect(screen.getByRole("button", { name: starter })).toBeEnabled();
   });
 
@@ -402,12 +402,12 @@ describe("AssistantWorkspacePage", () => {
       expect(starters).not.toHaveTextContent("Or start with");
       // Compact chips: the label is the whole visible text, and the
       // explanation lives in the tooltip so the row stays one line.
-      expect(within(starters).getByRole("button", { name: /Upload my brief or old RFP/ })).toHaveAttribute(
+      expect(within(starters).getByRole("button", { name: /Upload my brief or old proposal/ })).toHaveAttribute(
         "title",
         "PDF, DOCX, XLSX, CSV or TXT",
       );
       expect(within(starters).getByRole("button", { name: /Try an example brief/ })).toBeEnabled();
-      expect(within(starters).getByRole("button", { name: /Upload my brief or old RFP/ })).toBeEnabled();
+      expect(within(starters).getByRole("button", { name: /Upload my brief or old proposal/ })).toBeEnabled();
       expect(within(starters).getByRole("button", { name: /Describe it from scratch/ })).toBeEnabled();
       // The starters sit between the definition and the composer.
       const definition = screen.getByTestId("assistant-product-definition");
@@ -481,7 +481,7 @@ describe("AssistantWorkspacePage", () => {
       try {
         render(<AssistantWorkspacePage />);
         await screen.findByText(/Good (Morning|Afternoon|Evening), Travis/);
-        fireEvent.click(screen.getByRole("button", { name: /Upload my brief or old RFP/ }));
+        fireEvent.click(screen.getByRole("button", { name: /Upload my brief or old proposal/ }));
         expect(clickSpy).toHaveBeenCalledTimes(1);
         expect(clickSpy.mock.instances[0]).toBe(document.querySelector('input[type="file"]'));
       } finally {

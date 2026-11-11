@@ -202,7 +202,7 @@ describe("ProposalDraftPanel section review", () => {
     mockedLatestDraft.mockResolvedValue(draftFixture);
     render(<ProposalDraftPanel proposalId={proposalId} />);
 
-    const link = await screen.findByText("Download RFP");
+    const link = await screen.findByText("Download proposal");
     // The fixture has one accepted, one rejected and one undecided section, so
     // the planner is told what will actually be in the file before downloading.
     expect(link).toHaveAttribute(
@@ -231,13 +231,13 @@ describe("ProposalDraftPanel section review", () => {
     });
     render(<ProposalDraftPanel proposalId={proposalId} />);
 
-    const link = await screen.findByText("Download RFP");
+    const link = await screen.findByText("Download proposal");
     // No href: the backend would answer 409, and making the planner click to
     // find that out is worse than saying it up front.
     expect(link).not.toHaveAttribute("href");
     expect(link.getAttribute("aria-disabled")).toBe("true");
     expect(
-      screen.getByText("Accept at least one section to download the RFP."),
+      screen.getByText("Accept at least one section to download the proposal."),
     ).toBeInTheDocument();
   });
 });

@@ -21,7 +21,7 @@ const FLOW: ReadonlyArray<{
 }> = [
   {
     title: "Describe your event",
-    body: "Type what you're planning in plain language, or attach a brief, agenda or old RFP. RFPilot reads the document and fills in what it can find, and every filled value stays editable.",
+    body: "Type what you're planning in plain language, or attach a brief, agenda or old proposal. RFPilot reads the document and fills in what it can find, and every filled value stays editable.",
     where: "Proposals → New Proposal",
   },
   {
@@ -31,17 +31,17 @@ const FLOW: ReadonlyArray<{
   },
   {
     title: "Review the draft",
-    body: "Ask for a draft and you get a cited RFP, a readiness check that lists what is still thin, and an investment range based on national baseline pricing. Open the full editor to change anything.",
+    body: "Ask for a draft and you get a cited proposal, a readiness check that lists what is still thin, and an investment range based on national baseline pricing. Open the full editor to change anything.",
     where: "Same page, or Edit all details",
   },
   {
     title: "Publish",
-    body: "Publishing turns the draft into the shareable RFP vendors will read. It does not email anyone. You can keep editing and republish.",
+    body: "Publishing turns the draft into the shareable proposal vendors will read. It does not email anyone. You can keep editing and republish.",
     where: "Proposal editor → Publish",
   },
   {
     title: "Email vendors",
-    body: "Choose which vendors receive the RFP and send it from the Email page. Each vendor gets a private link to respond. If a vendor replies by email or courier instead, add their response manually.",
+    body: "Choose which vendors receive the proposal and send it from the Email page. Each vendor gets a private link to respond. If a vendor replies by email or courier instead, add their response manually.",
     where: "Email → Send email",
   },
   {
@@ -60,12 +60,12 @@ const PLACES: ReadonlyArray<{ title: string; href: string; body: string }> = [
   {
     title: "Proposals",
     href: "/proposals",
-    body: "Every RFP you've started: drafts, live, favourites, expired and archived. Start a new one here.",
+    body: "Every proposal you've started: drafts, live, favourites, expired and archived. Start a new one here.",
   },
   {
     title: "Email",
     href: "/email",
-    body: "Send a published RFP to vendors and see what was sent and opened.",
+    body: "Send a published proposal to vendors and see what was sent and opened.",
   },
   {
     title: "Vendor Responses",
@@ -95,7 +95,7 @@ export default function HelpCenter() {
           How RFPilot works
         </h1>
         <p className="mt-3 text-base leading-7 text-slate-600">
-          RFPilot turns your event details into an AV production RFP, the
+          RFPilot turns your event details into an AV production proposal, the
           request you send to vendors so they can quote, then helps you compare
           what they send back. A two-minute read from first message to vendor
           decision.

@@ -170,7 +170,7 @@ const AdditionalContactCard = ({
           </div>
 
           <div className="mt-4">
-            <label className={labelClass}>Role in RFP Process</label>
+            <label className={labelClass}>Role in Proposal Process</label>
             <GlobalSelect
               value={contact.role}
               onChange={(e) => up({ role: e.target.value })}
@@ -353,7 +353,7 @@ const ContactInfo = ({
           {mode === "advanced" && <div>
             <label htmlFor="contactTitle" className={labelClass}>
               Job Title <span className="text-red-500">*</span>
-              <InfoTooltip text="Your professional title as it should appear on the RFP. Appears in the Primary Contact box on the cover page alongside your organization." />
+              <InfoTooltip text="Your professional title as it should appear on the proposal. Appears in the Primary Contact box on the cover page alongside your organization." />
             </label>
             <input
               id="contactTitle"
@@ -472,7 +472,7 @@ const ContactInfo = ({
         <div className="mb-6">
           <label htmlFor="organizationLegalName" className={labelClass}>
             Organization / Company Legal Name <span className="text-red-500">*</span>
-            <InfoTooltip text="Full legal name of your organization as it should appear on all official documents including vendor contracts, NDAs, and the RFP header. May differ from the display name — e.g. 'Apex Dynamics Corporation' vs 'Apex Dynamics'." />
+            <InfoTooltip text="Full legal name of your organization as it should appear on all official documents including vendor contracts, NDAs, and the proposal header. May differ from the display name — e.g. 'Apex Dynamics Corporation' vs 'Apex Dynamics'." />
           </label>
           <input
             id="organizationLegalName"
@@ -668,7 +668,7 @@ const ContactInfo = ({
         {/* ── Submit banner ── */}
         <div className="rounded-xl border border-[#1DBFD3]/30 bg-[#f0fbff] p-5">
           <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
-            {isEditMode ? "Ready to publish your changes?" : "Ready to publish your RFP?"}
+            {isEditMode ? "Ready to publish your changes?" : "Ready to publish your proposal?"}
           </p>
           <p className="text-sm text-[#4a5a8a]">
             <strong>{isEditMode ? "Publish updated proposal" : "Publish Proposal"}</strong> saves this

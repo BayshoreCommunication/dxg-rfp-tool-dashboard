@@ -141,7 +141,7 @@ const EventForm = ({
         <p className="mt-1.5 max-w-4xl text-[13px] leading-5 text-[#566a78]">
           {mode === "basic"
             ? "Capture the event, format, dates, and attendance. You can add narrative and audience strategy in Advanced production."
-            : "These fields power the auto-generated narrative on your RFP cover page and set the tone for every section that follows."}
+            : "These fields power the auto-generated narrative on your proposal cover page and set the tone for every section that follows."}
         </p>
       </div>
 
@@ -199,7 +199,7 @@ const EventForm = ({
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
               </label>
               <p className="mb-1.5 text-[13px] leading-5 text-[#566a78] normal-case">
-                Provide a short summary of the event goals, audience, and key outcomes. This narrative will appear on your RFP cover page.
+                Provide a short summary of the event goals, audience, and key outcomes. This narrative will appear on your proposal cover page.
               </p>
               <textarea
                 rows={3}
@@ -654,7 +654,7 @@ const EventForm = ({
             {/* RFP Timeline */}
             <div data-assistant-field-key="/content/event/rfpTimelineNotes">
               <label className={labelClass}>
-                RFP Timeline
+                Proposal Timeline
                 <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/rfpTimelineNotes")} />
               </label>
@@ -662,7 +662,7 @@ const EventForm = ({
                 rows={3}
                 maxLength={1000}
                 className={textareaClass}
-                placeholder="e.g. RFP issued July 1, questions due July 10, proposals due July 24, vendor selected August 5."
+                placeholder="e.g. Proposal issued July 1, questions due July 10, vendor responses due July 24, vendor selected August 5."
                 value={data.rfpTimeline ?? ""}
                 onChange={(e) => onChange({ rfpTimeline: e.target.value })}
               />

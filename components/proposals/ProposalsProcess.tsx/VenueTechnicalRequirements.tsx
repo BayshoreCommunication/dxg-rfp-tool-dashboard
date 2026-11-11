@@ -229,7 +229,7 @@ const VenueTechnicalRequirements = ({
                 {isUnionVenue === "YES" ? "Union Venue Detected" : "Union Status Not Confirmed"}
               </p>
               <p className="mt-0.5 text-xs text-amber-700">
-                Union venues require certified riggers and IBEW-jurisdictioned electricians for power drops. Labor rates, call times, and crew minimums are set by the local. RFPilot will flag this in the RFP.
+                Union venues require certified riggers and IBEW-jurisdictioned electricians for power drops. Labor rates, call times, and crew minimums are set by the local. RFPilot will flag this in the proposal.
               </p>
             </div>
           </div>
@@ -495,7 +495,7 @@ const VenueTechnicalRequirements = ({
         <div className="mb-6">
           <label className={labelClass}>
             Venue Access Requirements
-            <InfoTooltip text="Any venue-specific restrictions on load-in times, freight elevator reservations, dock scheduling, security badge requirements, or areas requiring escort. This goes directly into the venue logistics section of the RFP." />
+            <InfoTooltip text="Any venue-specific restrictions on load-in times, freight elevator reservations, dock scheduling, security badge requirements, or areas requiring escort. This goes directly into the venue logistics section of the proposal." />
           </label>
           <textarea
             rows={3}

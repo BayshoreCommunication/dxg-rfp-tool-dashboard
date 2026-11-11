@@ -221,7 +221,7 @@ const VideoRecordingStep = ({
             <GatewayCard
               isSelected={safeData.videoRecordingRequired === "NO"}
               title="No — No recording needed"
-              description="The AV vendor will only execute the live show. Section 5 will be omitted from your RFP."
+              description="The AV vendor will only execute the live show. Section 5 will be omitted from your proposal."
               onClick={() => onChange({
                 videoRecordingRequired: "NO",
                 recordingCodec: "",
@@ -234,7 +234,7 @@ const VideoRecordingStep = ({
         {/* NO state info panel */}
         {safeData.videoRecordingRequired === "NO" && (
           <div className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] px-6 py-5">
-            <p className="text-sm font-semibold text-[#222628]">Section 5 will be omitted from your RFP</p>
+            <p className="text-sm font-semibold text-[#222628]">Section 5 will be omitted from your proposal</p>
             <p className="mt-1 text-xs text-[#969798]">
               The AV vendor will execute the live show only. No cameras or recording equipment will be scoped.
             </p>

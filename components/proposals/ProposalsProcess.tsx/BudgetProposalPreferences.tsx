@@ -246,7 +246,7 @@ const MATRIX_CRITERIA: {
   {
     key: "responsiveness",
     label: "Responsiveness & Communication",
-    guide: "RFP quality, questions asked, proposal clarity",
+    guide: "Response quality, questions asked, proposal clarity",
   },
   {
     key: "sustainabilityDei",
@@ -704,7 +704,7 @@ const BudgetProposalPreferences = ({
               These are RFPilot&apos;s suggested weightings — not yet your choice.
             </p>
             <p className="mt-1 text-xs text-amber-800">
-              Vendors are scored against them, so they stay out of the RFP until you accept or adjust
+              Vendors are scored against them, so they stay out of the proposal until you accept or adjust
               them. Change any weight to make it yours, or confirm the suggestion as it stands.
             </p>
             <button
@@ -813,7 +813,7 @@ const BudgetProposalPreferences = ({
           )}
           {showErrors && !matrixOk && (
             <p className="w-full text-xs text-red-500">
-              Weights must total exactly 100% before your RFP can be generated. Current total:{" "}
+              Weights must total exactly 100% before your proposal can be generated. Current total:{" "}
               {activeSum}%.
             </p>
           )}
@@ -863,7 +863,7 @@ const BudgetProposalPreferences = ({
           <div>
             <label className={labelClass}>
               Vendor Questions Due <span className="text-red-500">*</span>
-              <InfoTooltip text="The deadline for vendors to submit clarifying questions about the RFP." />
+              <InfoTooltip text="The deadline for vendors to submit clarifying questions about the proposal." />
             </label>
             <GlobalDateInput
               id="vendorQuestionsDueDate"
@@ -1060,7 +1060,7 @@ const BudgetProposalPreferences = ({
         <div className="mb-6">
           <label className={labelClass}>
             Competitive Bid?
-            <InfoTooltip text="Are multiple vendors being solicited for this RFP? Helps us understand the competitive context and tailor our response strategy." />
+            <InfoTooltip text="Are multiple vendors being solicited for this proposal? Helps us understand the competitive context and tailor our response strategy." />
           </label>
           <YesNo
             value={safeData.competitiveBid}

@@ -987,7 +987,7 @@ const UploadsReferenceMaterials = ({
           <div>
             <p className="text-sm font-bold text-slate-800">Coordinate every production partner in one place</p>
             <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-              These details populate Section 7 of the RFP. Add only the partners involved in this event; vendors marked Not Applicable are left out of the PDF.
+              These details populate Section 7 of the proposal. Add only the partners involved in this event; vendors marked Not Applicable are left out of the PDF.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -1170,8 +1170,8 @@ const UploadsReferenceMaterials = ({
 
         <div className="mb-6">
           <label className={labelClass}>
-            NDA Required Before Sharing RFP? <span className="text-red-500">*</span>
-            <InfoTooltip text="If Yes, vendors must execute a Non-Disclosure Agreement through the RFPilot portal before accessing the full RFP document and attachments. Required when the RFP contains proprietary event concepts, confidential attendee data, or brand materials not yet publicly released." />
+            NDA Required Before Sharing Proposal? <span className="text-red-500">*</span>
+            <InfoTooltip text="If Yes, vendors must execute a Non-Disclosure Agreement through the RFPilot portal before accessing the full proposal document and attachments. Required when the proposal contains proprietary event concepts, confidential attendee data, or brand materials not yet publicly released." />
           </label>
           <YesNo
             value={safeData.ndaRequired}
@@ -1198,7 +1198,7 @@ const UploadsReferenceMaterials = ({
                   <li>1. Vendor receives invitation email</li>
                   <li>2. Vendor clicks portal link</li>
                   <li>3. Portal shows NDA for electronic signature</li>
-                  <li>4. After signing → full RFP + attachments unlocked</li>
+                  <li>4. After signing → full proposal + attachments unlocked</li>
                 </ol>
               </div>
 
@@ -1211,7 +1211,7 @@ const UploadsReferenceMaterials = ({
                   {
                     value: "one_way",
                     label: "One-Way NDA",
-                    desc: "Vendor agrees to keep client information confidential. Most common for event RFPs.",
+                    desc: "Vendor agrees to keep client information confidential. Most common for event proposals.",
                   },
                   {
                     value: "mutual",

@@ -4896,7 +4896,7 @@ export default function AssistantWorkspacePage({
                   ? 'Sending message'
                   : started
                     ? 'Send message'
-                    : 'Send your details to start building your RFP'
+                    : 'Send your details to start building your proposal'
             }
             onClick={() => void handleSend()}
             disabled={
@@ -5071,7 +5071,7 @@ export default function AssistantWorkspacePage({
                     className="mt-2 text-base font-semibold md:text-xl"
                     style={{ color: ACCENT }}
                   >
-                    Let’s build your event RFP
+                    Let’s build your event proposal
                   </p>
                   {/* First-run definition: the one sentence that says what
                       the product does, what an RFP is, and that nothing goes
@@ -5082,7 +5082,7 @@ export default function AssistantWorkspacePage({
                     data-testid="assistant-product-definition"
                     className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600"
                   >
-                    RFPilot turns your event details into an AV production RFP,
+                    RFPilot turns your event details into an AV production proposal,
                     the request you send to vendors so they can quote. Nothing
                     goes out until you pick vendors.
                   </p>
@@ -5140,7 +5140,7 @@ export default function AssistantWorkspacePage({
                         aria-hidden
                         className="shrink-0 text-[#00aeb5]"
                       />
-                      Upload my brief or old RFP
+                      Upload my brief or old proposal
                     </button>
                     <button
                       type="button"
