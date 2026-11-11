@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import http from "node:http";
 import { handleProposalOnboarding } from './proposalOnboardingFixture.mjs';
 import { DASHBOARD_ACCOUNTS, dashboardAccessToken, handleRoleDashboard } from './roleDashboardFixture.mjs';
+import { handleAuditLog } from './auditLogFixture.mjs';
 import { handleVendorList } from './vendorListFixture.mjs';
 import { handleSupportGrants } from './supportGrantsFixture.mjs';
 
@@ -171,6 +172,8 @@ const server = http.createServer(async (request, response) => {
   // ORG-405: support access grants and their role accounts (supportGrantsFixture.mjs). First,
   // so its accounts get its own RFP list; it leaves every other account to the handlers below.
   if (await handleSupportGrants(request, response, url)) return;
+  // ORG-407: the organization audit log for the role accounts (auditLogFixture.mjs).
+  if (handleAuditLog(request, response, url)) return;
   if (handleRoleDashboard(request, response, url)) return;
   // ORG-607: vendor list, its role accounts and the send step (vendorListFixture.mjs).
   if (await handleVendorList(request, response, url)) return;
