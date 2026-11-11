@@ -55,6 +55,8 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
   const router = useRouter();
   const [templates, setTemplates] = useState<RfpTemplate[] | null>(null);
   const [total, setTotal] = useState(0);
+  // Templates the member sees but can't start from (an Owner's unpublished organization ones).
+  const [unusable, setUnusable] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
       const usable = result.data.items.filter((template) => template.usable);
       setTemplates(usable);
       setTotal(result.data.total);
+      setUnusable(result.data.items.length - usable.length);
       setLoadError(null);
       setSelectedId((current) => (current && usable.some((template) => template.id === current) ? current : null));
     } else {
@@ -180,8 +183,10 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
         ) : templates.length === 0 ? (
           <EmptyState
             icon={<LayoutTemplate size={20} />}
-            title="No templates yet"
-            body="Open your RFP list and choose Save as template on an RFP you want to reuse."
+            title={unusable > 0 ? "No published templates" : "No templates yet"}
+            body={unusable > 0
+              ? "Publish a template under Settings, Templates to start RFPs from it."
+              : "Open your RFP list and choose Save as template on an RFP you want to reuse."}
           />
         ) : (
           <>

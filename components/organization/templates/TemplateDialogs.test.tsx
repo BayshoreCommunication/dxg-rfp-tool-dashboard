@@ -42,7 +42,7 @@ it('an Owner can save straight to the organization, with a layout and descriptio
   expect(within(dialog).getByRole('radio', { name: /Only me/ })).toBeChecked()
   fireEvent.click(within(dialog).getByRole('radio', { name: /Everyone in my organization/ }))
   fireEvent.change(within(dialog).getByLabelText('Description (optional)'), { target: { value: ' For sales kickoffs ' } })
-  fireEvent.change(within(dialog).getByLabelText('Presentation layout'), { target: { value: 'template-two' } })
+  fireEvent.change(within(dialog).getByLabelText('Presentation layout (optional)'), { target: { value: 'template-two' } })
   fireEvent.click(within(dialog).getByRole('button', { name: 'Save template' }))
   await waitFor(() => expect(mockSave).toHaveBeenCalledWith({
     proposalId: 'p1', title: 'Annual Sales Kickoff', description: 'For sales kickoffs', scope: 'organization', presentationLayout: 'template-two',

@@ -76,6 +76,7 @@ describe('TopHeader', () => {
   })
 
   it('shows the Templates section at once on a page that already knows the member can use them', () => {
+    mockTemplateAccess.mockClear()
     render(<TopHeader templatesLink />)
     expect(screen.getByRole('link', { name: 'Templates' })).toBeInTheDocument()
     expect(mockTemplateAccess).not.toHaveBeenCalled()

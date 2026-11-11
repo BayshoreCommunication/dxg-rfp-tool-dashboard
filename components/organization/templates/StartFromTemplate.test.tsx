@@ -121,3 +121,9 @@ it('the wizard variant offers the same picker', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Start from a template' }))
   expect(screen.getByRole('dialog', { name: 'Start from a template' })).toBeInTheDocument()
 })
+
+it('tells an Owner whose templates are all unpublished to publish one', async () => {
+  mockList.mockResolvedValue(page([template({ id: 't3', title: 'Draft gala', published: false, usable: false })]))
+  const dialog = await openPicker()
+  expect(await within(dialog).findByText('No published templates')).toBeInTheDocument()
+})

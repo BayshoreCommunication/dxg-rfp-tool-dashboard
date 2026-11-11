@@ -198,8 +198,8 @@ export default function TemplateListSettings({ access: initialAccess }: Props) {
           <h2 id="template-list-title" className={sectionTitleClass}>RFP templates</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-500">
             {access.canManage
-              ? "Templates hold an RFP's content and layout to start new RFPs from. Publish one to share it with everyone in your organization who creates RFPs."
-              : "Templates hold an RFP's content and layout to start new RFPs from. Your personal templates are visible only to you."}
+              ? "Templates hold an RFP's content to start new RFPs from. Publish one to share it with everyone in your organization who creates RFPs."
+              : "Templates hold an RFP's content to start new RFPs from. Your personal templates are visible only to you."}
             {" "}To add one, choose Save as template on an RFP in your RFP list.
           </p>
         </div>
@@ -253,7 +253,8 @@ export default function TemplateListSettings({ access: initialAccess }: Props) {
                 {shown.length < total ? `Showing ${shown.length} of ${plural(total, "template")}` : plural(total, "template")}
               </p>
               <ul className="rounded-md border border-[#e4e4e4]">{shown.map(row)}</ul>
-              {shown.length < total && (
+              {/* Not while a filter change is loading: the next page would join the old rows. */}
+              {shown.length < total && !stale && (
                 <div className="mt-4 flex justify-center">
                   <button
                     type="button"

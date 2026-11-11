@@ -74,7 +74,7 @@ export function SaveAsTemplateDialog({ proposalId, defaultTitle, access, onClose
   return (
     <OrgDialog
       title="Save as template"
-      description="Keeps this RFP's content and layout to start new RFPs from. Vendors, responses, dates, contacts and uploaded files are not copied."
+      description="Keeps this RFP's content to start new RFPs from. Vendors, responses, dates, contacts and uploaded files are not copied."
       busy={busy}
       onClose={onClose}
       footer={
@@ -115,7 +115,7 @@ export function SaveAsTemplateDialog({ proposalId, defaultTitle, access, onClose
           {showErrors && descriptionProblem && <p className={fieldErrorClass}>{descriptionProblem}</p>}
         </div>
         <div>
-          <label htmlFor={layoutId} className={labelClass}>Presentation layout</label>
+          <label htmlFor={layoutId} className={labelClass}>Presentation layout (optional)</label>
           <select id={layoutId} className={inputClass} value={layout} onChange={(event) => setLayout(event.target.value as PresentationLayout | "")}>
             <option value="">No layout</option>
             {(Object.keys(LAYOUT_LABELS) as PresentationLayout[]).map((value) => (

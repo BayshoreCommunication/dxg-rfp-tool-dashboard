@@ -86,7 +86,7 @@ for (const role of ["planner", "manager"] as const) {
     await expect(dialog.getByText("Vendors, responses, dates, contacts and uploaded files are not copied.")).toBeVisible();
     await check(page, testInfo, `${role}-save-dialog`, dialog);
     await dialog.getByLabel("Template name").fill("Leadership summit starter");
-    await dialog.getByLabel("Presentation layout").selectOption({ label: "Classic" });
+    await dialog.getByLabel("Presentation layout (optional)").selectOption({ label: "Classic" });
     await dialog.getByRole("button", { name: "Save template" }).click();
     await expect(dialog).toBeHidden();
     await expect(page.getByText("Leadership summit starter saved to your templates.")).toBeVisible();

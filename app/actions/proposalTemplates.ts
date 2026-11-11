@@ -70,7 +70,12 @@ export async function saveTemplateAction(input: SaveTemplateInput): Promise<OrgA
 }
 
 export async function renameTemplateAction(templateId: string, changes: { title?: string; description?: string }): Promise<OrgActionResult<RfpTemplate>> {
-  return templateResult(await orgRequest(`${BASE}/${segment(templateId)}`, { method: "PATCH", body: changes }, pickTemplate));
+  // Only the two fields a rename may carry, whatever the caller sent.
+  const body = {
+    ...(changes.title !== undefined ? { title: changes.title } : {}),
+    ...(changes.description !== undefined ? { description: changes.description } : {}),
+  };
+  return templateResult(await orgRequest(`${BASE}/${segment(templateId)}`, { method: "PATCH", body }, pickTemplate));
 }
 
 export async function publishTemplateAction(templateId: string): Promise<OrgActionResult<RfpTemplate>> {
