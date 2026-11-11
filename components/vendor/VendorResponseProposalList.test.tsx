@@ -57,6 +57,11 @@ it("presents vendor responses under their proposals with accurate status", () =>
   expect(
     screen.getByRole("link", { name: "View 4 responses for Annual Summit" }),
   ).toHaveAttribute("href", "/vendor-responses/proposals/proposal%2Fone");
+  // The title goes where the row's own link goes.
+  expect(screen.getByRole("link", { name: "Annual Summit" })).toHaveAttribute(
+    "href",
+    "/vendor-responses/proposals/proposal%2Fone",
+  );
   expect(screen.queryByRole("button", { name: /Delete all responses/ })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Select responses" })).toBeInTheDocument();
 });

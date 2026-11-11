@@ -21,7 +21,7 @@ const MESSAGES: Record<string, string | ((e: ErrorLike) => string)> = {
   VERSION_REQUIRED: "Reload the page and try again.",
   OWNER_HAS_RFPS: (e) => {
     const count = Number(e.details?.ownedRfpCount ?? 0);
-    return count > 0 ? `This member still owns ${plural(count, "RFP")}. Reassign them first.` : "This member still owns RFPs. Reassign them first.";
+    return count > 0 ? `This member still owns ${plural(count, "proposal")}. Reassign them first.` : "This member still owns proposals. Reassign them first.";
   },
   LAST_OWNER: "The Owner can't be demoted or deactivated. Transfer ownership to another member first.",
   OWNER_ONLY: "Only the Owner can do this.",
@@ -37,12 +37,12 @@ const MESSAGES: Record<string, string | ((e: ErrorLike) => string)> = {
   TEAMS_UNAVAILABLE: "Teams aren't available yet. Try again shortly.",
   ALREADY_OWNER: "You're already the Owner.",
   MEMBER_REQUIRED: "Choose the member who becomes the Owner.",
-  REASSIGN_TARGET_REQUIRED: "Choose who receives the RFPs.",
-  REASSIGN_TARGET_NOT_FOUND: "The member receiving the RFPs wasn't found.",
-  REASSIGN_TO_SELF: "Choose a different member to receive the RFPs.",
-  REASSIGN_TARGET_INELIGIBLE: "RFPs can only go to an active member who isn't a Viewer.",
-  RFPS_NOT_OWNED_BY_MEMBER: "Some RFPs changed owner meanwhile. Nothing was reassigned; try again.",
-  INVALID_RFP_SELECTION: "Select the RFPs to reassign.",
+  REASSIGN_TARGET_REQUIRED: "Choose who receives the proposals.",
+  REASSIGN_TARGET_NOT_FOUND: "The member receiving the proposals wasn't found.",
+  REASSIGN_TO_SELF: "Choose a different member to receive the proposals.",
+  REASSIGN_TARGET_INELIGIBLE: "Proposals can only go to an active member who isn't a Viewer.",
+  RFPS_NOT_OWNED_BY_MEMBER: "Some proposals changed owner meanwhile. Nothing was reassigned; try again.",
+  INVALID_RFP_SELECTION: "Select the proposals to reassign.",
   MEMBERS_INTERNAL_ERROR: "The member change couldn't be completed. Try again.",
   // Teams
   TEAM_NAME_TAKEN: "An active team already has this name.",

@@ -16,6 +16,7 @@ import { isVersionConflict, orgErrorMessage } from "./errorMessages";
 import MemberActionsMenu, { type MemberMenuAction } from "./MemberActionsMenu";
 import MemberDialog, { type MemberDialogKind } from "./MemberDialogs";
 import { filterInvitations, filterMembers, memberDisplayName, memberPermissions, ROLE_LABELS, roleLabel, STATUS_LABELS } from "./orgAccess";
+import RoleAccessGuide from "./RoleAccessGuide";
 import type { CustomerRole, OrgMember, Team } from "./types";
 import {
   Badge,
@@ -40,7 +41,13 @@ const STATUS_TONES: Record<string, "emerald" | "slate" | "amber" | "rose"> = {
   removed: "slate",
 };
 
-export default function UsersSettings() {
+type Props = {
+  // The signed-in member's role, read from their session by the page. The members list is the
+  // fresher source for an Owner or Admin, so it wins when it answers.
+  sessionRole?: CustomerRole | null;
+};
+
+export default function UsersSettings({ sessionRole = null }: Props) {
   const { access, error: accessError, reload: reloadAccess } = useOrgAccess();
   const [members, setMembers] = useState<OrgMember[] | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -297,6 +304,9 @@ export default function UsersSettings() {
 
       {/* Team Managers don't see the Users table, so they get their own list. */}
       {access.canInvite && !access.canManageMembers && <InvitationsSection access={access} teams={teams} />}
+
+      {/* Every member who can open this page sees what each role can do, and their own role. */}
+      <RoleAccessGuide role={(access.canManageMembers ? access.role : null) ?? sessionRole ?? access.role} />
 
       {inviteOpen && (
         <InviteDialog access={access} teams={teams} onClose={() => setInviteOpen(false)} onInvited={() => void pending.load()} />
