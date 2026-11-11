@@ -7,7 +7,6 @@ import {
   parsePastedContacts,
   parseVendor,
   parseVendorPage,
-  rolesFromAccessToken,
   toVendorInput,
   vendorErrorMessage,
   vendorInputError,
@@ -19,8 +18,6 @@ const vendor = (over: Partial<Vendor> = {}): Vendor => ({
   id: "v1", company: "Brightline AV", category: "Lighting", contacts: [{ name: "Jane Doe", email: "jane@brightline.test" }],
   addedBy: "u1", archived: false, archivedAt: null, createdAt: "2026-11-10T00:00:00.000Z", updatedAt: "2026-11-10T00:00:00.000Z", ...over,
 });
-
-const token = (claims: unknown) => `h.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.s`;
 
 describe("reading the backend's answers defensively", () => {
   test("a vendor keeps its fields and lower-cases contact emails", () => {
@@ -63,17 +60,6 @@ describe("who may see and edit the list", () => {
 
   test("no role means no access", () => {
     expect(vendorListAccessForRoles([])).toEqual({ canRead: false, canEdit: false });
-  });
-
-  test("roles come from the access token's claims", () => {
-    expect(rolesFromAccessToken(token({ userId: "u1", roles: ["team_manager", 7] }))).toEqual(["team_manager"]);
-  });
-
-  test("an unreadable token has no roles", () => {
-    expect(rolesFromAccessToken(null)).toEqual([]);
-    expect(rolesFromAccessToken("opaque-token")).toEqual([]);
-    expect(rolesFromAccessToken("a.%%%.c")).toEqual([]);
-    expect(rolesFromAccessToken(token({ roles: "owner" }))).toEqual([]);
   });
 });
 

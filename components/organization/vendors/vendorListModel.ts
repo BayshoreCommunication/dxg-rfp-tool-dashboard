@@ -109,22 +109,6 @@ export const vendorListAccessForRoles = (roles: readonly string[]): VendorListAc
   canEdit: roles.some((role) => EDIT_ROLES.includes(role)),
 });
 
-// The `roles` claim of the backend access token. Not verified here: it only decides what the UI
-// offers, and the backend checks the member's current role on every vendor-list request.
-export const rolesFromAccessToken = (accessToken: unknown): string[] => {
-  if (typeof accessToken !== "string") return [];
-  try {
-    const payload = accessToken.split(".")[1];
-    if (!payload) return [];
-    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
-    const claims: unknown = JSON.parse(globalThis.atob(base64));
-    const roles = isRecord(claims) ? claims.roles : null;
-    return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === "string") : [];
-  } catch {
-    return [];
-  }
-};
-
 // --- Form checks (same rules as the backend, so most refusals never leave the browser) ---
 
 export const companyError = (company: string): string | null => {

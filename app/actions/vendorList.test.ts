@@ -3,12 +3,12 @@
 jest.mock("@/lib/server/backendClient", () => ({
   authenticatedBackendFetch: jest.fn(),
 }));
-jest.mock("@/lib/server/backendSession", () => ({
-  getBackendSession: jest.fn(),
+jest.mock("@/lib/server/memberIdentity", () => ({
+  getMemberIdentity: jest.fn(),
 }));
 
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
-import { getBackendSession } from "@/lib/server/backendSession";
+import { getMemberIdentity } from "@/lib/server/memberIdentity";
 import {
   addContactsToVendorAction,
   archiveVendorAction,
@@ -22,7 +22,7 @@ import {
 } from "./vendorList";
 
 const mockedFetch = jest.mocked(authenticatedBackendFetch);
-const mockedSession = jest.mocked(getBackendSession);
+const mockedIdentity = jest.mocked(getMemberIdentity);
 
 const jsonResponse = (status: number, body: unknown) =>
   ({ ok: status >= 200 && status < 300, status, headers: new Headers(), json: async () => body }) as unknown as Response;
@@ -31,7 +31,6 @@ const vendor = {
   id: "v1", company: "Brightline AV", category: "Lighting", contacts: [{ name: "Jane Doe", email: "jane@brightline.test" }],
   addedBy: "u1", archived: false, archivedAt: null, createdAt: "2026-11-10T00:00:00.000Z", updatedAt: "2026-11-10T00:00:00.000Z",
 };
-const token = (roles: string[]) => `h.${Buffer.from(JSON.stringify({ userId: "u1", roles })).toString("base64url")}.s`;
 const lastCall = () => {
   const [url, init] = mockedFetch.mock.calls[mockedFetch.mock.calls.length - 1];
   return { path: new URL(String(url)).pathname + new URL(String(url)).search, method: init?.method, body: init?.body ? JSON.parse(String(init.body)) : undefined };
@@ -40,20 +39,20 @@ const lastCall = () => {
 describe("vendor list actions", () => {
   beforeEach(() => {
     mockedFetch.mockReset();
-    mockedSession.mockReset();
+    mockedIdentity.mockReset();
   });
 
   test.each([
     [["owner"], { canRead: true, canEdit: true }],
     [["planner"], { canRead: true, canEdit: false }],
     [["viewer"], { canRead: false, canEdit: false }],
-  ])("access for %j comes from the session's access token", async (roles, expected) => {
-    mockedSession.mockResolvedValue({ accessToken: token(roles) } as Awaited<ReturnType<typeof getBackendSession>>);
+  ])("access for %j comes from the signed-in member's roles", async (roles, expected) => {
+    mockedIdentity.mockResolvedValue({ userId: "u1", roles });
     await expect(getVendorListAccessAction()).resolves.toEqual(expected);
   });
 
   test("no session means no access", async () => {
-    mockedSession.mockRejectedValue(new Error("no cookies"));
+    mockedIdentity.mockResolvedValue({ userId: null, roles: [] });
     await expect(getVendorListAccessAction()).resolves.toEqual({ canRead: false, canEdit: false });
   });
 

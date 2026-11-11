@@ -5,7 +5,6 @@ import {
   parseCategories,
   parseVendor,
   parseVendorPage,
-  rolesFromAccessToken,
   sameCompany,
   vendorListAccessForRoles,
   type Vendor,
@@ -15,7 +14,7 @@ import {
   type VendorListQuery,
   type VendorPage,
 } from "@/components/organization/vendors/vendorListModel";
-import { getBackendSession } from "@/lib/server/backendSession";
+import { getMemberIdentity } from "@/lib/server/memberIdentity";
 import { orgRequest, segment, type OrgActionResult } from "./organizationApi";
 
 // ORG-607: the organization's shared vendor list (backend routes/organizationVendorsRoute.ts,
@@ -34,15 +33,12 @@ const vendorResult = (result: OrgActionResult<Vendor | undefined>): OrgActionRes
   return result as OrgActionResult<Vendor>;
 };
 
-// What the signed-in member may do with the list, from the roles in their backend access token.
-// It only decides what the screen offers; the backend checks the role again on every request.
+// What the signed-in member may do with the list, from the roles in their backend access token
+// (lib/server/memberIdentity, shared with the role dashboards). It only decides what the screen
+// offers; the backend checks the role again on every request.
 export async function getVendorListAccessAction(): Promise<VendorListAccess> {
-  try {
-    const session = await getBackendSession();
-    return vendorListAccessForRoles(rolesFromAccessToken(session.accessToken));
-  } catch {
-    return { canRead: false, canEdit: false };
-  }
+  const { roles } = await getMemberIdentity();
+  return vendorListAccessForRoles(roles);
 }
 
 export async function listVendorsAction(query: VendorListQuery = {}): Promise<OrgActionResult<VendorPage>> {
