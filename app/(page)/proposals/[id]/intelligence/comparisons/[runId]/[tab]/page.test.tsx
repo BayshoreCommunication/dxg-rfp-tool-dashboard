@@ -9,6 +9,7 @@ const notFound = jest.fn(() => { throw new Error("NEXT_NOT_FOUND"); });
 // components/entitlements/planGate.test.tsx and e2e/plan-locked-states.spec.ts.
 jest.mock("@/components/entitlements/planGate", () => ({
   planLockedScreen: jest.fn(async () => null),
+  planLockedRefusal: jest.fn(async () => null),
   loadRfpUsage: jest.fn(async () => null),
 }));
 jest.mock("@/app/actions/proposals", () => ({ getProposalByIdAction: (...args: unknown[]) => getProposal(...args) }));

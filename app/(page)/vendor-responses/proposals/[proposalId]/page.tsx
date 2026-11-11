@@ -5,7 +5,7 @@ import {
   getVendorResponsesAction,
   type VendorResponseItem,
 } from "@/app/actions/vendorResponse";
-import { planLockedScreen } from "@/components/entitlements/planGate";
+import { planLockedRefusal, planLockedScreen } from "@/components/entitlements/planGate";
 import ProposalResponseCards from "@/components/vendor/ProposalResponseCards";
 import { deriveResponseCardSummary } from "@/lib/vendorResponses/responseCardSummary";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
@@ -75,6 +75,9 @@ export default async function ProposalVendorResponsesPage({
     loadAllProposalResponses(proposalId),
     getProposalByIdAction(proposalId),
   ]);
+
+  const refused = await planLockedRefusal("vendorResponses", [responseResult], { rfpId: proposalId, backHref: "/dashboard", backLabel: "Back to the dashboard" });
+  if (refused) return refused;
 
   if (!responseResult.success) {
     return (

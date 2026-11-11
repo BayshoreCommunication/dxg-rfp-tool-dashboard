@@ -30,7 +30,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { PLAN_LIMIT_REACHED } from "@/lib/entitlements/entitlements";
+import { PLAN_LIMIT_REACHED, rfpLimitMessage, rfpUsageLabel, type RfpUsage } from "@/lib/entitlements/entitlements";
 import SaveCopyModal from "./SaveCopyModal";
 import ProposalDeletionDialog, { type ProposalDeletionMode } from "./ProposalDeletionDialog";
 import Link from "next/link";
@@ -86,6 +86,8 @@ type ProposalTableListProps = {
   searchValue: string;
   activeFilter: ProposalFilterType;
   onRefreshCounts?: () => void;
+  // The plan's RFP counter (ORG-602); null on a plan with no limit.
+  rfpUsage?: RfpUsage | null;
 };
 
 type ProposalPagination = {
@@ -119,6 +121,7 @@ export default function ProposalTableList({
   searchValue,
   activeFilter,
   onRefreshCounts,
+  rfpUsage = null,
 }: ProposalTableListProps) {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -866,7 +869,11 @@ export default function ProposalTableList({
                             <ActionButton
                               icon={<CopyPlus size={14} />}
                               label="Save a copy"
-                              onClick={() => setCopyModalProposal(proposal)}
+                              onClick={() => {
+                                // A copy is a new RFP: at the plan's limit say so before anyone fills in the copy (ORG-602).
+                                if (rfpUsage?.atLimit) toast.info(`${rfpUsageLabel(rfpUsage)}. ${rfpLimitMessage(rfpUsage)}`);
+                                else setCopyModalProposal(proposal);
+                              }}
                             />
                           )}
                           {templateAccess.canUse && (

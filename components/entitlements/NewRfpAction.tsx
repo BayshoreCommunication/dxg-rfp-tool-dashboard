@@ -51,7 +51,7 @@ export default function NewRfpAction({ usage, label = "New RFP" }: { usage: RfpU
       </Link>
       {usage && (
         <p data-testid="rfp-usage" className="text-center text-xs font-semibold text-slate-600 sm:text-right">
-          {rfpUsageLabel(usage)} on the {usage.planName.toLowerCase()}
+          {rfpUsageLabel(usage)} {usage.onPlan}
         </p>
       )}
     </div>

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { getEntitlementsAction } from "@/app/actions/entitlements";
 import { getProposalByIdAction } from "@/app/actions/proposals";
 import { getDashboardRfpSummaryAction } from "@/app/actions/rfpDashboard";
-import { isFeatureLocked, planName, rfpUsageOf, type PlanFeature, type RfpUsage } from "@/lib/entitlements/entitlements";
+import { PLAN_FEATURE_LOCKED, isFeatureLocked, planName, rfpUsageOf, type PlanFeature, type RfpUsage } from "@/lib/entitlements/entitlements";
 import PlanLockedState from "./PlanLockedState";
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
@@ -46,15 +46,12 @@ type LockedScreenOptions = {
  * so the page never asks the backend for data it would refuse. This is presentation only; the
  * backend refuses the routes whatever the dashboard renders (ORG-601).
  */
-export async function planLockedScreen(feature: PlanFeature, options: LockedScreenOptions): Promise<ReactNode | null> {
-  const entitlements = await getEntitlementsAction();
-  const plan = entitlements.success ? entitlements.data ?? null : null;
-  if (!isFeatureLocked(plan, feature)) return null;
+const lockedState = async (feature: PlanFeature, plan: string, options: LockedScreenOptions): Promise<ReactNode> => {
   const facts = options.rfpId ? await rfpFacts(options.rfpId) : { responseCount: await allResponsesCount(), title: null };
   return (
     <PlanLockedState
       feature={feature}
-      planName={planName(plan?.plan ?? "")}
+      planName={planName(plan)}
       responseCount={facts.responseCount}
       countScope={options.rfpId ? "rfp" : "all"}
       rfpTitle={facts.title}
@@ -62,6 +59,27 @@ export async function planLockedScreen(feature: PlanFeature, options: LockedScre
       backLabel={options.backLabel}
     />
   );
+};
+
+export async function planLockedScreen(feature: PlanFeature, options: LockedScreenOptions): Promise<ReactNode | null> {
+  const entitlements = await getEntitlementsAction();
+  const plan = entitlements.success ? entitlements.data ?? null : null;
+  if (!isFeatureLocked(plan, feature)) return null;
+  return lockedState(feature, plan?.plan ?? "", options);
+}
+
+/**
+ * The same locked state when the backend itself refused a read with PLAN_FEATURE_LOCKED: the
+ * plan couldn't be read first, or it changed between the two requests. null for any other
+ * result, which the page handles as before.
+ */
+export async function planLockedRefusal(
+  feature: PlanFeature,
+  results: ReadonlyArray<unknown>,
+  options: LockedScreenOptions,
+): Promise<ReactNode | null> {
+  const refused = results.some((result) => isRecord(result) && result.success === false && result.code === PLAN_FEATURE_LOCKED);
+  return refused ? lockedState(feature, "", options) : null;
 }
 
 // The plan's RFP counter for the "New RFP" button; null when the plan has no limit.

@@ -8,6 +8,7 @@ jest.mock("@/app/actions/vendorResponse", () => ({
 const planLockedScreen = jest.fn();
 jest.mock("@/components/entitlements/planGate", () => ({
   planLockedScreen: (...args: unknown[]) => planLockedScreen(...args),
+  planLockedRefusal: jest.fn(async () => null),
 }));
 jest.mock("@/components/vendor/VendorResponseProposalList", () => ({
   __esModule: true,

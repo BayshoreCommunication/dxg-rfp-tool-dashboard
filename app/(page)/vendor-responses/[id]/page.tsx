@@ -1,5 +1,5 @@
 import { getVendorSubmissionDetailAction } from "@/app/actions/vendorResponse";
-import { planLockedScreen } from "@/components/entitlements/planGate";
+import { planLockedRefusal, planLockedScreen } from "@/components/entitlements/planGate";
 import VendorResponseDetailWorkspace from "@/components/vendor/VendorResponseDetailWorkspace";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +13,8 @@ export default async function VendorResponseDetailPage({
   if (locked) return locked;
   const { id } = await params;
   const result = await getVendorSubmissionDetailAction(id);
+  const refused = await planLockedRefusal("vendorResponses", [result], { backHref: "/dashboard", backLabel: "Back to the dashboard" });
+  if (refused) return refused;
   if (!result.success) {
     return (
       <section

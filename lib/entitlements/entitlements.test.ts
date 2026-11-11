@@ -27,7 +27,7 @@ describe("plan entitlements (ORG-602)", () => {
     expect(isFeatureLocked(plan, "vendorResponses")).toBe(true);
     expect(isFeatureLocked(plan, "proposalIntelligence")).toBe(true);
     const usage = rfpUsageOf(plan);
-    expect(usage).toEqual({ used: 1, limit: 2, atLimit: false, planName: "Free trial" });
+    expect(usage).toEqual({ used: 1, limit: 2, atLimit: false, planName: "Free trial", onPlan: "on the free trial" });
     expect(rfpUsageLabel(usage!)).toBe("1 of 2 RFPs used");
   });
 
@@ -67,11 +67,16 @@ describe("plan entitlements (ORG-602)", () => {
     expect(isFeatureLocked(plan, "proposalIntelligence")).toBe(false);
   });
 
+  it("names a plan it doesn't know as your plan", () => {
+    const usage = rfpUsageOf(toEntitlements({ plan: "team_2027", proposals: { created: 1, limit: 10 } }));
+    expect(usage).toMatchObject({ planName: "Your plan", onPlan: "on your plan" });
+  });
+
   it("says RFP, never proposal, and counts responses in plain words", () => {
     expect(responseCountLabel(0, "all")).toBe("No vendor responses received on your RFPs yet");
     expect(responseCountLabel(1, "rfp")).toBe("1 vendor response received on this RFP");
     expect(responseCountLabel(1200, "all")).toBe("1,200 vendor responses received on your RFPs");
-    const single = { used: 1, limit: 1, atLimit: true, planName: "Free trial" };
+    const single = { used: 1, limit: 1, atLimit: true, planName: "Free trial", onPlan: "on the free trial" };
     expect(rfpUsageLabel(single)).toBe("1 of 1 RFP used");
     expect(`${rfpLimitMessage(single)} ${rfpUsageLabel(single)}`).not.toMatch(/proposal/i);
   });

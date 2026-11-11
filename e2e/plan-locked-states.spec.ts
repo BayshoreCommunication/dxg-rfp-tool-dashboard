@@ -22,7 +22,7 @@ const setPlan = async (request: APIRequestContext, body: { plan?: "free_trial" |
 const problems = new WeakMap<Page, string[]>();
 
 test.beforeEach(async ({ page }) => {
-  test.setTimeout(900_000);
+  test.setTimeout(600_000);
   const seen: string[] = [];
   problems.set(page, seen);
   page.on("console", (message) => {
@@ -168,6 +168,12 @@ test("Free trial: a Viewer sees the same locked state, counted over the RFPs sha
   await signInAs(page, "viewer");
 
   // Viewers have no create button, so no counter and no limit message.
+  await expect(page.getByTestId("rfp-usage")).toHaveCount(0);
+  await expect(page.getByTestId("rfp-limit")).toHaveCount(0);
+
+  // The RFP list page too.
+  await page.goto("/proposals");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByTestId("rfp-usage")).toHaveCount(0);
   await expect(page.getByTestId("rfp-limit")).toHaveCount(0);
 

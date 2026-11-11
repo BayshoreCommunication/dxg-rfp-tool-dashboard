@@ -35,6 +35,9 @@ const PLAN_NAMES: Record<string, string> = {
 
 export const planName = (plan: string): string => PLAN_NAMES[plan] ?? "Your plan";
 
+// "1 of 2 RFPs used on the free trial"; a plan this build doesn't know by name is "your plan".
+const onPlan = (plan: string): string => (PLAN_NAMES[plan] ? `on the ${PLAN_NAMES[plan].toLowerCase()}` : "on your plan");
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -74,12 +77,14 @@ export type RfpUsage = {
   limit: number;
   atLimit: boolean;
   planName: string;
+  // "on the free trial"
+  onPlan: string;
 };
 
 export const rfpUsageOf = (entitlements: Entitlements | null): RfpUsage | null => {
   if (!entitlements || entitlements.rfps.limit === null) return null;
   const { created, limit, canCreate } = entitlements.rfps;
-  return { used: Math.min(created, limit), limit, atLimit: !canCreate, planName: planName(entitlements.plan) };
+  return { used: Math.min(created, limit), limit, atLimit: !canCreate, planName: planName(entitlements.plan), onPlan: onPlan(entitlements.plan) };
 };
 
 const rfpWord = (count: number) => (count === 1 ? "RFP" : "RFPs");

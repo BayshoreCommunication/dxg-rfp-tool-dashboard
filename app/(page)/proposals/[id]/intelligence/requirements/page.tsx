@@ -1,6 +1,6 @@
 import { getRequirementSetAction, listRequirementSetsAction } from "@/app/actions/requirementRegistry";
 import { getProposalByIdAction } from "@/app/actions/proposals";
-import { planLockedScreen } from "@/components/entitlements/planGate";
+import { planLockedRefusal, planLockedScreen } from "@/components/entitlements/planGate";
 import RequirementRegistryWorkspace from "@/components/proposalIntelligence/RequirementRegistryWorkspace";
 import { safeRequirementRegistryReturnTo } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
 import { notFound } from "next/navigation";
@@ -17,6 +17,8 @@ export default async function RequirementRegistryPage({ params, searchParams }: 
   const proposal = await getProposalByIdAction(id);
   if (!proposal.success) notFound();
   const list = await listRequirementSetsAction(id);
+  const refused = await planLockedRefusal("proposalIntelligence", [list], { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  if (refused) return refused;
   const sets = list.success ? list.data : [];
   const detail = sets[0] ? await getRequirementSetAction(id, sets[0].id) : null;
   const query = searchParams ? await searchParams : {};

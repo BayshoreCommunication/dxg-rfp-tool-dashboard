@@ -11,7 +11,7 @@ import ExcludedVendorsNotice from "@/components/proposalIntelligence/ExcludedVen
 import GlossaryDialog from "@/components/proposalIntelligence/GlossaryDialog";
 import ProposalReweighting from "@/components/proposalIntelligence/ProposalReweighting";
 import ProposalVerdict from "@/components/proposalIntelligence/ProposalVerdict";
-import { planLockedScreen } from "@/components/entitlements/planGate";
+import { planLockedRefusal, planLockedScreen } from "@/components/entitlements/planGate";
 import RfpAccessPanel from "@/components/proposals/sharing/RfpAccessPanel";
 import VendorComparisonPanel from "@/components/vendor/VendorComparisonPanel";
 import { requirementRegistryHref } from "@/lib/proposalIntelligence/requirementRegistryNavigation";
@@ -42,6 +42,8 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
     listRequirementSetsAction(id),
     listComparisonsAction(id),
   ]);
+  const refused = await planLockedRefusal("proposalIntelligence", [responsesResult, setsResult, comparisonsResult], { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  if (refused) return refused;
   if (!proposalResult.success || !record(proposalResult.data)) notFound();
   const proposal = proposalResult.data;
   const event = record(proposal.event) ? proposal.event : {};

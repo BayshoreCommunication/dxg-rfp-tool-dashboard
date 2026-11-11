@@ -192,7 +192,7 @@ describe("RoleDashboard", () => {
   // ORG-602: the plan's RFP counter and the create button at the limit.
   test("free trial: the counter sits with the New RFP button", async () => {
     signInAs(["planner"]);
-    mockedUsage.mockResolvedValue({ used: 1, limit: 2, atLimit: false, planName: "Free trial" });
+    mockedUsage.mockResolvedValue({ used: 1, limit: 2, atLimit: false, planName: "Free trial", onPlan: "on the free trial" });
     await renderDashboard();
 
     expect(screen.getByRole("link", { name: /New RFP/ })).toHaveAttribute("href", "/proposals/add-new-proposal");
@@ -202,7 +202,7 @@ describe("RoleDashboard", () => {
 
   test("at the limit: the button is off and says why, with a way to ask for an upgrade", async () => {
     signInAs(["owner"]);
-    mockedUsage.mockResolvedValue({ used: 2, limit: 2, atLimit: true, planName: "Free trial" });
+    mockedUsage.mockResolvedValue({ used: 2, limit: 2, atLimit: true, planName: "Free trial", onPlan: "on the free trial" });
     await renderDashboard();
 
     expect(screen.queryByRole("link", { name: /New RFP/ })).not.toBeInTheDocument();

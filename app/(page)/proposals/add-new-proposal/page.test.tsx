@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 // components/entitlements/planGate.test.tsx and e2e/plan-locked-states.spec.ts.
 jest.mock("@/components/entitlements/planGate", () => ({
   planLockedScreen: jest.fn(async () => null),
+  planLockedRefusal: jest.fn(async () => null),
   loadRfpUsage: jest.fn(async () => null),
 }));
 jest.mock("@/components/proposals/AssistantWorkspacePage", () => ({

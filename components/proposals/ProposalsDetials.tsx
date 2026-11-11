@@ -11,7 +11,7 @@ import type { RfpUsage } from "@/lib/entitlements/entitlements";
 
 const EMPTY_COUNTS: ProposalCounts = { all: 0, draft: 0, live: 0, favorite: 0, expired: 0, archive: 0, saved: 0 };
 
-const ProposalsDetials = ({ rfpUsage = null }: { rfpUsage?: RfpUsage | null }) => {
+const ProposalsDetials = ({ canCreate = true, rfpUsage = null }: { canCreate?: boolean; rfpUsage?: RfpUsage | null }) => {
   const [searchValue, setSearchValue] = useState("");
   const [activeFilter, setActiveFilter] = useState<ProposalFilterType>("all");
   const [counts, setCounts] = useState<ProposalCounts>(EMPTY_COUNTS);
@@ -38,7 +38,7 @@ const ProposalsDetials = ({ rfpUsage = null }: { rfpUsage?: RfpUsage | null }) =
 
   return (
     <div className="space-y-5 pb-4 sm:space-y-8 sm:pb-6">
-      <TopHeader rfpUsage={rfpUsage} />
+      <TopHeader canCreate={canCreate} rfpUsage={rfpUsage} />
 
       <ProposalFilters
         searchValue={searchValue}
@@ -52,6 +52,7 @@ const ProposalsDetials = ({ rfpUsage = null }: { rfpUsage?: RfpUsage | null }) =
         searchValue={searchValue}
         activeFilter={activeFilter}
         onRefreshCounts={refreshCounts}
+        rfpUsage={rfpUsage}
       />
     </div>
   );

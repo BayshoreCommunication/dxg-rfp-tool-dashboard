@@ -9,7 +9,7 @@ import { getEntitlementsAction } from "@/app/actions/entitlements";
 import { getProposalByIdAction } from "@/app/actions/proposals";
 import { getDashboardRfpSummaryAction } from "@/app/actions/rfpDashboard";
 import { toEntitlements } from "@/lib/entitlements/entitlements";
-import { loadRfpUsage, planLockedScreen } from "./planGate";
+import { loadRfpUsage, planLockedRefusal, planLockedScreen } from "./planGate";
 
 const mockedPlan = jest.mocked(getEntitlementsAction);
 const mockedRfp = jest.mocked(getProposalByIdAction);
@@ -90,10 +90,22 @@ describe("planLockedScreen (ORG-602)", () => {
   });
 });
 
+describe("planLockedRefusal", () => {
+  it("is the locked state when the backend refused a read for the plan, and null otherwise", async () => {
+    expect(await planLockedRefusal("vendorResponses", [{ success: true, data: [] }, { success: false, code: "NOT_FOUND", message: "x" }, null], back)).toBeNull();
+
+    const refusal = { success: false, code: "PLAN_FEATURE_LOCKED", message: "Vendor responses aren't included in your plan. Contact us to upgrade." };
+    render(<>{await planLockedRefusal("vendorResponses", [{ success: true }, refusal], back)}</>);
+    expect(screen.getByTestId("plan-locked")).toHaveTextContent("Vendor responses · Your plan");
+    expect(screen.getByTestId("plan-locked-count")).toHaveTextContent("4 vendor responses received on your RFPs");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
 describe("loadRfpUsage", () => {
   it("is the counter on a limited plan and null otherwise", async () => {
     plan(false, 2, 2);
-    expect(await loadRfpUsage()).toEqual({ used: 2, limit: 2, atLimit: true, planName: "Free trial" });
+    expect(await loadRfpUsage()).toEqual({ used: 2, limit: 2, atLimit: true, planName: "Free trial", onPlan: "on the free trial" });
     plan(true, 9, null);
     expect(await loadRfpUsage()).toBeNull();
     mockedPlan.mockResolvedValue({ success: false, message: "Network error", code: "NETWORK_ERROR" });

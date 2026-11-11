@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import NewRfpAction from "@/components/entitlements/NewRfpAction";
 import type { RfpUsage } from "@/lib/entitlements/entitlements";
 
-// `rfpUsage` is the plan's RFP counter (ORG-602); null on a plan with no limit.
-const TopHeader = ({ rfpUsage = null }: { rfpUsage?: RfpUsage | null }) => {
+// `canCreate` is false for Viewers, who are read-only. `rfpUsage` is the plan's RFP counter
+// (ORG-602); null on a plan with no limit.
+const TopHeader = ({ canCreate = true, rfpUsage = null }: { canCreate?: boolean; rfpUsage?: RfpUsage | null }) => {
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -86,7 +87,7 @@ const TopHeader = ({ rfpUsage = null }: { rfpUsage?: RfpUsage | null }) => {
           </Link> */}
 
           {/* CTA Button */}
-          <NewRfpAction usage={rfpUsage} />
+          {canCreate && <NewRfpAction usage={rfpUsage} />}
         </div>
       </div>
     </div>
