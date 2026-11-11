@@ -235,7 +235,10 @@ const DETAIL_LABELS: Record<string, string> = {
   proposalId: "RFP ID",
   contactCount: "Contacts",
   secretChanged: "Client secret changed",
+  fromPlan: "Previous plan",
+  toPlan: "New plan",
 };
+const PLAN_KEYS = new Set(["fromPlan", "toPlan"]);
 const ROLE_KEYS = new Set(["role", "previousRole", "newOwnerPreviousRole", "previousOwnerNewRole"]);
 const ID_KEYS = new Set(["teamId", "grantId", "ticketId", "proposalId"]);
 
@@ -262,6 +265,7 @@ export const detailLines = (event: Pick<AuditEvent, "details" | "reason" | "deci
       const role = roleLabel(String(value));
       lines.push(`${label}: ${role === "No role" ? sentence(String(value)) : role}`);
     }
+    else if (PLAN_KEYS.has(key)) lines.push(`${label}: ${sentence(String(value))}`);
     else if (key === "expiresAt" && typeof value === "string" && !Number.isNaN(Date.parse(value))) lines.push(`${label}: ${formatAuditTime(value, "UTC")} UTC`);
     else if (ID_KEYS.has(key)) lines.push(`${label}: ${shortId(String(value))}`);
     else lines.push(`${label}: ${scalar(value)}`);
