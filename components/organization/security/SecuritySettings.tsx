@@ -15,6 +15,7 @@ import OrganizationSecurityCard from "./OrganizationSecurityCard";
 import SingleSignOnSection from "./SingleSignOnCard";
 import { securityErrorMessage } from "./securityMessages";
 import TwoFactorCard from "./TwoFactorCard";
+import AuditLogLink from "../audit/AuditLogLink";
 
 type OrgAccess = { state: "loading" } | { state: "denied" } | { state: "error"; message: string } | { state: "ok"; settings: OrganizationSecurity };
 
@@ -83,6 +84,7 @@ const SecuritySettings = () => {
       ) : null}
       {org.state === "ok" ? (
         <>
+          <AuditLogLink />
           <OrganizationSecurityCard
             settings={org.settings}
             myTwoFactorEnabled={Boolean(status?.enabled)}
