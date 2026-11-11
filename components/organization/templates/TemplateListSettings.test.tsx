@@ -1,3 +1,4 @@
+import { RFP_NOUN } from '@/test/wording'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { toast } from 'react-toastify'
 import TemplateListSettings from './TemplateListSettings'
@@ -36,7 +37,7 @@ const page = (items: RfpTemplate[], total = items.length) => ({ success: true, m
 const ok = (data: RfpTemplate) => ({ success: true, message: 'OK', data })
 const OWNER = { canUse: true, canManage: true }
 const PLANNER = { canUse: true, canManage: false }
-const section = () => screen.getByRole('region', { name: 'RFP templates' })
+const section = () => screen.getByRole('region', { name: 'Proposal templates' })
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -52,7 +53,7 @@ it('lists templates with their scope and state, under the Templates tab', async 
   expect(within(section()).getByText('Not published')).toBeInTheDocument()
   expect(within(section()).getByText('Personal')).toBeInTheDocument()
   expect(within(section()).getByText('3 templates')).toBeInTheDocument()
-  expect(section().textContent).not.toMatch(/proposal/i)
+  expect(section().textContent).not.toMatch(RFP_NOUN)
 })
 
 it('an Owner unpublishes and publishes organization templates', async () => {
@@ -147,7 +148,7 @@ it('a template that is gone is explained and the list reloads', async () => {
 it('a refused list says why and shows no rows', async () => {
   mockList.mockResolvedValue({ success: false, status: 403, message: "You don't have permission to perform this action" })
   render(<TemplateListSettings access={PLANNER} />)
-  expect(await screen.findByRole('alert')).toHaveTextContent("Your role can't use RFP templates.")
+  expect(await screen.findByRole('alert')).toHaveTextContent("Your role can't use proposal templates.")
   expect(screen.queryByText('Annual kickoff')).not.toBeInTheDocument()
 })
 

@@ -1,3 +1,4 @@
+import { RFP_NOUN } from "@/test/wording";
 import {
   canChangeTemplate,
   canPublishTemplate,
@@ -62,7 +63,7 @@ describe("reading templates from the backend", () => {
     expect(parseTemplatePage(null)).toEqual({ items: [], total: 0, limit: 50, offset: 0 });
   });
 
-  test("the RFP created from a template is read with its id and the template's layout", () => {
+  test("the proposal created from a template is read with its id and the template's layout", () => {
     expect(parseTemplateRfp({ proposal: { _id: "p1", event: { eventName: "Kickoff" } }, presentationLayout: "template-two" }))
       .toEqual({ proposalId: "p1", eventName: "Kickoff", presentationLayout: "template-two" });
     expect(parseTemplateRfp({ proposal: { id: "p2" }, presentationLayout: null })).toEqual({ proposalId: "p2", eventName: "", presentationLayout: null });
@@ -134,10 +135,10 @@ describe("form checks", () => {
 });
 
 describe("refusals", () => {
-  test("codes become messages that say RFP and never show the code", () => {
+  test("codes become messages that say proposal and never show the code", () => {
     for (const code of ["TEMPLATE_NOT_FOUND", "TEMPLATE_ACCESS_DENIED", "TEMPLATE_PUBLISH_DENIED", "TEMPLATE_ARCHIVED", "TEMPLATE_NOT_PUBLISHED", "TEMPLATE_SOURCE_NOT_FOUND", "PROPOSAL_ACCESS_DENIED", "TEMPLATE_TOO_LARGE", "INVALID_TEMPLATE_TITLE", "PLAN_LIMIT_REACHED", "NETWORK_ERROR"]) {
-      const message = templateErrorMessage({ code, status: 400, message: "raw proposal text" });
-      expect(message).not.toMatch(/proposal/i);
+      const message = templateErrorMessage({ code, status: 400, message: "raw RFP text" });
+      expect(message).not.toMatch(RFP_NOUN);
       expect(message).not.toContain(code);
     }
   });
@@ -171,9 +172,9 @@ describe("refusals", () => {
     expect(planLimitOf({ status: 403 })).toBeNull();
   });
 
-  test("the at-limit summary counts RFPs", () => {
-    expect(planLimitSummary({ plan: "free_trial", limit: 2, created: 2 })).toBe("Your organization has created 2 of the 2 RFPs its plan includes.");
-    expect(planLimitSummary({ plan: "free_trial", limit: 1, created: 1 })).toBe("Your organization has created 1 of the 1 RFP its plan includes.");
-    expect(planLimitSummary({ plan: "", limit: null, created: null })).toBe("Your organization has created every RFP its plan includes.");
+  test("the at-limit summary counts proposals", () => {
+    expect(planLimitSummary({ plan: "free_trial", limit: 2, created: 2 })).toBe("Your organization has created 2 of the 2 proposals its plan includes.");
+    expect(planLimitSummary({ plan: "free_trial", limit: 1, created: 1 })).toBe("Your organization has created 1 of the 1 proposal its plan includes.");
+    expect(planLimitSummary({ plan: "", limit: null, created: null })).toBe("Your organization has created every proposal its plan includes.");
   });
 });

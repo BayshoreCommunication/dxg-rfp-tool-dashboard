@@ -1,3 +1,4 @@
+import { RFP_NOUN } from '@/test/wording'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { toast } from 'react-toastify'
 import StartFromTemplate from './StartFromTemplate'
@@ -50,19 +51,19 @@ it('lists the templates the member can start from, grouped, and nothing that is 
   expect(within(dialog).queryByText('Draft gala')).not.toBeInTheDocument()
   expect(within(dialog).getByText('Modern layout')).toBeInTheDocument()
   expect(mockList).toHaveBeenCalledWith({ scope: 'all', status: 'active', limit: 200 })
-  expect(within(dialog).getByRole('button', { name: 'Create RFP' })).toBeDisabled()
-  expect(dialog.textContent).not.toMatch(/proposal/i)
+  expect(within(dialog).getByRole('button', { name: 'Create proposal' })).toBeDisabled()
+  expect(dialog.textContent).not.toMatch(RFP_NOUN)
 })
 
-it('creates an RFP from the chosen template and opens it', async () => {
+it('creates a proposal from the chosen template and opens it', async () => {
   mockCreate.mockResolvedValue({ success: true, message: 'OK', data: { proposalId: 'p9', eventName: 'Spring summit', presentationLayout: 'template-one' } })
   const dialog = await openPicker()
   fireEvent.click(await within(dialog).findByRole('radio', { name: /Annual kickoff/ }))
   fireEvent.change(within(dialog).getByLabelText('Event name (optional)'), { target: { value: 'Spring summit' } })
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Create RFP' }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Create proposal' }))
   await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/proposals/proposal-edit?proposalId=p9'))
   expect(mockCreate).toHaveBeenCalledWith('t1', 'Spring summit')
-  expect(toast.success).toHaveBeenCalledWith('RFP started from Annual kickoff.')
+  expect(toast.success).toHaveBeenCalledWith('Proposal started from Annual kickoff.')
 })
 
 it('filters the list as the member types', async () => {
@@ -79,13 +80,13 @@ it('at the plan limit shows the upgrade prompt, not an error', async () => {
   mockCreate.mockResolvedValue({ success: false, status: 403, code: 'PLAN_LIMIT_REACHED', message: 'Plan limit reached', details: { plan: 'free_trial', limit: 2, created: 2 } })
   const dialog = await openPicker()
   fireEvent.click(await within(dialog).findByRole('radio', { name: /My roadshow/ }))
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Create RFP' }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Create proposal' }))
   const limit = await screen.findByRole('status')
-  expect(limit).toHaveTextContent("You've reached your plan's RFP limit")
-  expect(limit).toHaveTextContent('Your organization has created 2 of the 2 RFPs its plan includes.')
+  expect(limit).toHaveTextContent("You've reached your plan's proposal limit")
+  expect(limit).toHaveTextContent('Your organization has created 2 of the 2 proposals its plan includes.')
   expect(within(limit).getByRole('link', { name: 'Contact us' })).toHaveAttribute('href', '/support')
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Create RFP' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Create proposal' })).not.toBeInTheDocument()
   expect(mockPush).not.toHaveBeenCalled()
   expect(toast.error).not.toHaveBeenCalled()
 })
@@ -95,24 +96,24 @@ it('a template that was archived or removed meanwhile is explained and the list 
   const dialog = await openPicker()
   fireEvent.click(await within(dialog).findByRole('radio', { name: /Annual kickoff/ }))
   mockList.mockResolvedValue(page([template({ id: 't2', title: 'My roadshow', scope: 'personal', published: false })]))
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Create RFP' }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Create proposal' }))
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('That template is no longer available.')
   await waitFor(() => expect(within(dialog).queryByRole('radio', { name: /Annual kickoff/ })).not.toBeInTheDocument())
   expect(mockList).toHaveBeenCalledTimes(2)
-  expect(within(dialog).getByRole('button', { name: 'Create RFP' })).toBeDisabled()
+  expect(within(dialog).getByRole('button', { name: 'Create proposal' })).toBeDisabled()
 })
 
 it('says how to make a template when there are none', async () => {
   mockList.mockResolvedValue(page([]))
   const dialog = await openPicker()
   expect(await within(dialog).findByText('No templates yet')).toBeInTheDocument()
-  expect(within(dialog).getByText(/choose Save as template on an RFP/)).toBeInTheDocument()
+  expect(within(dialog).getByText(/choose Save as template on a proposal/)).toBeInTheDocument()
 })
 
 it('a role refused by the backend sees why, and no templates', async () => {
   mockList.mockResolvedValue({ success: false, status: 403, message: "You don't have permission to perform this action" })
   const dialog = await openPicker()
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent("Your role can't use RFP templates.")
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent("Your role can't use proposal templates.")
   expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument()
 })
 

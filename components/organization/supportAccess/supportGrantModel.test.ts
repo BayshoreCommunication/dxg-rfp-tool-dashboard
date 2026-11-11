@@ -1,3 +1,4 @@
+import { RFP_NOUN } from "@/test/wording";
 import {
   agentReference,
   currentStatus,
@@ -91,20 +92,20 @@ describe("support grant parsing", () => {
     expect(agentReference(null)).toBeNull();
   });
 
-  it("reads the RFP picker's rows from the dashboard list", () => {
+  it("reads the proposal picker's rows from the dashboard list", () => {
     expect(parseGrantableRfps({ items: [{ id: "p1", eventName: "Gala", ownerName: "Paul Planner" }, { id: "p2" }, { eventName: "no id" }] })).toEqual([
       { id: "p1", title: "Gala", ownerName: "Paul Planner" },
-      { id: "p2", title: "Untitled RFP", ownerName: null },
+      { id: "p2", title: "Untitled proposal", ownerName: null },
     ]);
-    // Not a list at all: unreadable, which is not the same as "no RFPs".
+    // Not a list at all: unreadable, which is not the same as "no proposals".
     expect(parseGrantableRfps(undefined)).toBeNull();
     expect(parseGrantableRfps({ rows: [] })).toBeNull();
     expect(parseGrantableRfps({ items: [] })).toEqual([]);
   });
 
-  it("shows the backend's placeholder name for an unnamed RFP as an untitled RFP", () => {
-    expect(parseGrantableRfps({ items: [{ id: "p3", eventName: "Untitled proposal" }] })?.[0].title).toBe("Untitled RFP");
-    expect(parseGrant(apiGrant({ rfp: { id: "p3", title: "Untitled Proposal" } }), NOW)?.rfp?.title).toBe("Untitled RFP");
+  it("shows the backend's placeholder name for an unnamed proposal as an untitled proposal", () => {
+    expect(parseGrantableRfps({ items: [{ id: "p3", eventName: "Untitled proposal" }] })?.[0].title).toBe("Untitled proposal");
+    expect(parseGrant(apiGrant({ rfp: { id: "p3", title: "Untitled Proposal" } }), NOW)?.rfp?.title).toBe("Untitled proposal");
     expect(parseGrant(apiGrant({ rfp: { id: "p4", title: "Proposal writing workshop" } }), NOW)?.rfp?.title).toBe("Proposal writing workshop");
   });
 });
@@ -119,7 +120,7 @@ describe("support grant display", () => {
   it("describes what is covered and how long is left", () => {
     expect(grantTarget({ scope: "organization", rfp: null })).toBe("Whole organization");
     expect(grantTarget({ scope: "rfp", rfp: { id: "p1", title: "Gala" } })).toBe("Gala");
-    expect(grantTarget({ scope: "rfp", rfp: { id: "p1", title: null } })).toBe("An RFP that was deleted");
+    expect(grantTarget({ scope: "rfp", rfp: { id: "p1", title: null } })).toBe("A proposal that was deleted");
     // Nearest unit: a grant just made for 7 days reads 7 days.
     expect(timeLeft(iso(7 * DAY - 5000), NOW)).toBe("Expires in 7 days");
     expect(timeLeft(iso(6 * DAY + HOUR), NOW)).toBe("Expires in 6 days");
@@ -149,19 +150,20 @@ describe("support grant display", () => {
   });
 
   it("names operations in words and never shows an internal name", () => {
-    expect(operationLabel("rfp.read")).toBe("Opened an RFP");
-    expect(operationLabel("vendor_responses.list")).toBe("Viewed an RFP's vendor responses");
-    expect(operationLabel("something.new")).toBe("Read RFP data");
+    expect(operationLabel("rfp.read")).toBe("Opened a proposal");
+    expect(operationLabel("vendor_responses.list")).toBe("Viewed a proposal's vendor responses");
+    expect(operationLabel("something.new")).toBe("Read proposal data");
   });
 
-  it("turns every documented error code into a sentence that says RFP, not proposal", () => {
+  it("turns every documented error code into a sentence that says proposal, not RFP", () => {
     const codes = ["INVALID_GRANT_EXPIRY", "INVALID_GRANT_REASON", "PROPOSAL_NOT_FOUND", "SUPPORT_GRANT_NOT_FOUND", "SUPPORT_GRANT_EXPIRED", "SUPPORT_GRANT_FORBIDDEN"];
     for (const code of codes) {
       const message = supportGrantErrorMessage({ code, message: code, status: 400 });
-      expect(message).not.toMatch(/proposal|[A-Z]{3,}_/);
+      expect(message).not.toMatch(RFP_NOUN);
+      expect(message).not.toMatch(/[A-Z]{3,}_/);
       expect(message.length).toBeGreaterThan(10);
     }
-    expect(supportGrantErrorMessage({ code: "PROPOSAL_NOT_FOUND" })).toMatch(/RFP wasn't found/);
+    expect(supportGrantErrorMessage({ code: "PROPOSAL_NOT_FOUND" })).toMatch(/proposal wasn't found/);
     expect(supportGrantErrorMessage({ code: "SUPPORT_GRANT_EXPIRED" })).toMatch(/already expired/);
   });
 
@@ -170,6 +172,6 @@ describe("support grant display", () => {
     expect(supportGrantErrorMessage({ status: 429, details: { retryAfterSeconds: 120 } })).toMatch(/Try again in 2 minutes/);
     expect(supportGrantErrorMessage({ code: "NETWORK_ERROR" })).toMatch(/couldn't reach the server/);
     expect(supportGrantErrorMessage({ code: "SOMETHING_NEW", message: "Proposal store unavailable." }, "Try again.")).toBe("Try again.");
-    expect(supportGrantErrorMessage({ code: "DASHBOARD_INTERNAL_ERROR", message: "The dashboard could not be loaded.", status: 500 })).toBe("Your RFPs couldn't be loaded. Try again.");
+    expect(supportGrantErrorMessage({ code: "DASHBOARD_INTERNAL_ERROR", message: "The dashboard could not be loaded.", status: 500 })).toBe("Your proposals couldn't be loaded. Try again.");
   });
 });

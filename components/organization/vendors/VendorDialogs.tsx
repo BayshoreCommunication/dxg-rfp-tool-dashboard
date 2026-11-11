@@ -166,7 +166,7 @@ export function VendorFormDialog({ vendor, initialContacts, categories = [], onC
     <OrgDialog
       wide
       title={vendor ? `Edit ${vendor.company}` : "Add vendor"}
-      description={vendor ? undefined : "Vendors on this list can be picked by anyone in your organization who sends an RFP."}
+      description={vendor ? undefined : "Vendors on this list can be picked by anyone in your organization who sends a proposal."}
       busy={busy}
       onClose={onClose}
       footer={
@@ -333,7 +333,7 @@ export function ArchiveVendorDialog({ vendor, onClose, onArchived, onFailure }: 
   return (
     <OrgDialog
       title={`Archive ${vendor.company}?`}
-      description="The vendor leaves the list people pick from when sending an RFP. RFPs already sent are not affected, and you can restore the vendor later."
+      description="The vendor leaves the list people pick from when sending a proposal. Proposals already sent are not affected, and you can restore the vendor later."
       busy={busy}
       onClose={onClose}
       footer={

@@ -1,3 +1,4 @@
+import { RFP_NOUN } from '@/test/wording'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { SaveAsTemplateDialog } from './TemplateDialogs'
 
@@ -49,10 +50,10 @@ it('an Owner can save straight to the organization, with a layout and descriptio
   }))
 })
 
-it('says what is and is not copied, in RFP words', () => {
+it('says what is and is not copied, in proposal words', () => {
   const dialog = open()
   expect(dialog).toHaveTextContent('Vendors, responses, dates, contacts and uploaded files are not copied.')
-  expect(dialog.textContent).not.toMatch(/proposal/i)
+  expect(dialog.textContent).not.toMatch(RFP_NOUN)
 })
 
 it('needs a name before it asks the backend', () => {
@@ -68,6 +69,6 @@ it('explains a refusal in plain words and reports it', async () => {
   const onFailure = jest.fn()
   const dialog = open(PLANNER, { onFailure })
   fireEvent.click(within(dialog).getByRole('button', { name: 'Save template' }))
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent("You don't have access to this RFP.")
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent("You don't have access to this proposal.")
   expect(onFailure).toHaveBeenCalledWith(expect.objectContaining({ code: 'PROPOSAL_ACCESS_DENIED' }))
 })

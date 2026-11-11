@@ -59,14 +59,14 @@ describe("support grant actions (ORG-405)", () => {
     expect(await listSupportGrantsAction()).toMatchObject({ success: false, code: "INVALID_RESPONSE" });
   });
 
-  test("grants the whole organization when no RFP is given, with the chosen expiry", async () => {
+  test("grants the whole organization when no proposal is given, with the chosen expiry", async () => {
     mockedFetch.mockResolvedValueOnce(jsonResponse(201, { success: true, data: grant }));
     const result = await createSupportGrantAction({ proposalId: null, expiresInDays: 7, reason: "   " });
     expect(lastCall()).toEqual({ url: expect.stringMatching(/\/api\/v1\/organization\/support-grants$/), method: "POST", body: { expiresInDays: 7 } });
     expect(result).toMatchObject({ success: true, data: { id: "g1", scope: "organization" } });
   });
 
-  test("grants one RFP with a reason, and surfaces the backend's refusals", async () => {
+  test("grants one proposal with a reason, and surfaces the backend's refusals", async () => {
     mockedFetch.mockResolvedValueOnce(jsonResponse(201, { success: true, data: { ...grant, scope: "rfp", rfp: { id: "p1", title: "Gala" } } }));
     const created = await createSupportGrantAction({ proposalId: "p1", expiresInDays: 30, reason: " Ticket 4821 " });
     expect(lastCall().body).toEqual({ proposalId: "p1", expiresInDays: 30, reason: "Ticket 4821" });
@@ -101,7 +101,7 @@ describe("support grant actions (ORG-405)", () => {
     expect(await revokeSupportGrantAction("g1")).toMatchObject({ success: false, status: 409, code: "SUPPORT_GRANT_EXPIRED" });
   });
 
-  test("the RFP picker searches the scoped dashboard list across every stage", async () => {
+  test("the proposal picker searches the scoped dashboard list across every stage", async () => {
     mockedFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { items: [{ id: "p1", eventName: "Gala", ownerName: "Paul Planner" }], pagination: {} } }));
     const result = await searchGrantableRfpsAction("  gala ");
     const url = new URL(lastCall().url);
@@ -115,7 +115,7 @@ describe("support grant actions (ORG-405)", () => {
     await searchGrantableRfpsAction("");
     expect(new URL(lastCall().url).searchParams.has("search")).toBe(false);
 
-    // A 200 that isn't a list is a failure, not "no RFPs".
+    // A 200 that isn't a list is a failure, not "no proposals".
     mockedFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { rows: [] } }));
     expect(await searchGrantableRfpsAction("")).toMatchObject({ success: false, code: "INVALID_RESPONSE" });
   });

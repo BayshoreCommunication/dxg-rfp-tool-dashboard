@@ -36,9 +36,9 @@ export const rfpHref = (proposalId: string): string =>
 export function TemplatePlanLimit({ limit }: { limit: PlanLimit }) {
   return (
     <div role="status" className="rounded-md border border-amber-200 bg-amber-50 px-4 py-4">
-      <p className="text-sm font-semibold text-amber-900">You&apos;ve reached your plan&apos;s RFP limit</p>
+      <p className="text-sm font-semibold text-amber-900">You&apos;ve reached your plan&apos;s proposal limit</p>
       <p className="mt-1 text-sm leading-6 text-amber-900">
-        {planLimitSummary(limit)} Starting an RFP from a template counts as a new RFP, and deleting an RFP doesn&apos;t free one up.
+        {planLimitSummary(limit)} Starting a proposal from a template counts as a new proposal, and deleting a proposal doesn&apos;t free one up.
       </p>
       <p className="mt-3 text-sm text-amber-900">
         <Link href={CONTACT_HREF} className="font-semibold underline underline-offset-2 hover:text-amber-950">Contact us</Link> to upgrade your plan.
@@ -103,14 +103,14 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
     setError(null);
     const result = await createRfpFromTemplateAction(selected.id, eventName);
     if (result.success && result.data) {
-      toast.success(`RFP started from ${selected.title}.`);
+      toast.success(`Proposal started from ${selected.title}.`);
       router.push(rfpHref(result.data.proposalId));
       return;
     }
     setBusy(false);
     const limit = planLimitOf(result);
     if (limit) return setPlanLimit(limit);
-    setError(templateErrorMessage(result, "The RFP couldn't be started. Try again."));
+    setError(templateErrorMessage(result, "The proposal couldn't be started. Try again."));
     // The template was archived, unpublished or removed while the picker was open.
     if (isStaleTemplate(result)) void load();
   };
@@ -162,7 +162,7 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
   return (
     <OrgDialog
       title="Start from a template"
-      description="Creates a new draft RFP with the template's content. Dates, contacts, vendors and files start empty."
+      description="Creates a new draft proposal with the template's content. Dates, contacts, vendors and files start empty."
       busy={busy}
       onClose={onClose}
       wide
@@ -170,7 +170,7 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
         <>
           <button type="button" className={secondaryButtonClass} onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className={primaryButtonClass} style={primaryButtonStyle} onClick={() => void create()} disabled={busy || !selected || !!eventNameProblem}>
-            {busy ? <Spinner /> : <FileStack size={15} aria-hidden="true" />} Create RFP
+            {busy ? <Spinner /> : <FileStack size={15} aria-hidden="true" />} Create proposal
           </button>
         </>
       }
@@ -185,8 +185,8 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
             icon={<LayoutTemplate size={20} />}
             title={unusable > 0 ? "No published templates" : "No templates yet"}
             body={unusable > 0
-              ? "Publish a template under Settings, Templates to start RFPs from it."
-              : "Open your RFP list and choose Save as template on an RFP you want to reuse."}
+              ? "Publish a template under Settings, Templates to start proposals from it."
+              : "Open your proposal list and choose Save as template on a proposal you want to reuse."}
           />
         ) : (
           <>
@@ -248,7 +248,7 @@ export default function StartFromTemplate({ variant = "chip" }: StartProps) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#e4e4e4] bg-white px-5 py-4">
         <div>
           <p className="text-sm font-semibold text-slate-800">Have a template for this kind of event?</p>
-          <p className="text-xs text-slate-500">Start with the content of a saved RFP instead of an empty one.</p>
+          <p className="text-xs text-slate-500">Start with the content of a saved proposal instead of an empty one.</p>
         </div>
         <button type="button" className={secondaryButtonClass} onClick={() => setOpen(true)}>
           <LayoutTemplate size={15} aria-hidden="true" /> Start from a template
@@ -263,7 +263,7 @@ export default function StartFromTemplate({ variant = "chip" }: StartProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Use the content of an RFP you or your organization saved as a template"
+        title="Use the content of a proposal you or your organization saved as a template"
         className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50/60 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
       >
         <LayoutTemplate size={15} aria-hidden className="shrink-0 text-[#00aeb5]" />

@@ -237,8 +237,8 @@ export default function VendorListSettings({ canEdit: initialCanEdit }: Props) {
             <h2 id="vendor-list-title" className={sectionTitleClass}>Vendor list</h2>
             <p className="mt-2 max-w-2xl text-sm text-slate-500">
               {canEdit
-                ? "One shared list of vendor companies and contacts. Anyone in your organization who sends an RFP can pick recipients from it."
-                : "Your organization's shared vendors. Pick from this list when you send an RFP."}
+                ? "One shared list of vendor companies and contacts. Anyone in your organization who sends a proposal can pick recipients from it."
+                : "Your organization's shared vendors. Pick from this list when you send a proposal."}
             </p>
           </div>
           {addButton}
@@ -293,7 +293,7 @@ export default function VendorListSettings({ canEdit: initialCanEdit }: Props) {
                 icon={<Building2 size={20} />}
                 title="No vendors yet"
                 body={canEdit
-                  ? "Add the companies you send RFPs to, with the people to contact at each one."
+                  ? "Add the companies you send proposals to, with the people to contact at each one."
                   : "An Owner, Admin or Team Manager can add vendors here."}
                 action={addButton}
               />

@@ -63,7 +63,7 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
         void searchGrantableRfpsAction(term).then((result) => {
           if (!current) return;
           if (result.success) setSearch({ state: "ready", rfps: result.data ?? [] });
-          else setSearch({ state: "error", message: supportGrantErrorMessage(result, "Your RFPs couldn't be loaded. Try again.") });
+          else setSearch({ state: "error", message: supportGrantErrorMessage(result, "Your proposals couldn't be loaded. Try again.") });
         });
       },
       term ? 250 : 0,
@@ -77,7 +77,7 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
   const days = expiry === CUSTOM ? parseExpiryDays(customDays) : parseExpiryDays(expiry);
 
   const submit = async () => {
-    if (scope === "rfp" && !selected) return setError("Choose the RFP that Support may open.");
+    if (scope === "rfp" && !selected) return setError("Choose the proposal that Support may open.");
     if (days === null) return setError(`Enter a whole number of days from 1 to ${GRANT_MAX_DAYS}.`);
     setBusy(true);
     setError(null);
@@ -141,14 +141,14 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
         <fieldset>
           <legend className={labelClass}>What Support can see</legend>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {scopeOption("rfp", "One RFP", "The RFP you pick and its vendor responses.")}
-            {scopeOption("organization", "Whole organization", "Every RFP and vendor response in your organization.")}
+            {scopeOption("rfp", "One proposal", "The proposal you pick and its vendor responses.")}
+            {scopeOption("organization", "Whole organization", "Every proposal and vendor response in your organization.")}
           </div>
         </fieldset>
 
         {scope === "rfp" && (
           <div>
-            <label htmlFor="support-grant-rfp-search" className={labelClass}>RFP</label>
+            <label htmlFor="support-grant-rfp-search" className={labelClass}>Proposal</label>
             <div className="relative">
               <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
               <input
@@ -166,13 +166,13 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
                 className={`${inputClass} pl-9`}
               />
             </div>
-            <div className="mt-2 max-h-52 overflow-y-auto rounded-md border border-[#e4e4e4]" role="radiogroup" aria-label="RFPs">
+            <div className="mt-2 max-h-52 overflow-y-auto rounded-md border border-[#e4e4e4]" role="radiogroup" aria-label="Proposals">
               {search.state === "loading" && (
-                <p className="flex items-center gap-2 px-3 py-3 text-sm text-slate-500" role="status"><Spinner /> Loading RFPs…</p>
+                <p className="flex items-center gap-2 px-3 py-3 text-sm text-slate-500" role="status"><Spinner /> Loading proposals…</p>
               )}
               {search.state === "error" && <p role="alert" className="px-3 py-3 text-sm text-red-700">{search.message}</p>}
               {search.state === "ready" && search.rfps.length === 0 && (
-                <p className="px-3 py-3 text-sm text-slate-500">{term.trim() ? "No RFPs match that search." : "Your organization has no RFPs yet."}</p>
+                <p className="px-3 py-3 text-sm text-slate-500">{term.trim() ? "No proposals match that search." : "Your organization has no proposals yet."}</p>
               )}
               {search.state === "ready" &&
                 search.rfps.map((rfp) => (

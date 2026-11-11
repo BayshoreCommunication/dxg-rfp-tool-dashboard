@@ -61,7 +61,7 @@ describe('TopHeader', () => {
     expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument()
   })
 
-  it('shows the Templates section to a member who can use RFP templates', async () => {
+  it('shows the Templates section to a member who can use proposal templates', async () => {
     mockTemplateAccess.mockResolvedValue({ canUse: true, canManage: false })
     render(<TopHeader />)
     expect(await screen.findByRole('link', { name: 'Templates' })).toHaveAttribute('href', '/settings/templates')
