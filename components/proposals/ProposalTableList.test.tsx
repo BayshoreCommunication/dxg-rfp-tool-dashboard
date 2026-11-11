@@ -6,8 +6,8 @@ import { toast } from 'react-toastify'
 
 jest.mock('next/link', () => ({
   __esModule: true,
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+  default: ({ children, href, ...rest }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...rest}>{children}</a>
   ),
 }))
 
@@ -33,7 +33,7 @@ jest.mock('@/app/actions/proposals', () => ({
   createProposalViewAccessGrantAction: (...a: unknown[]) => mockCreateViewGrant(...a),
 }))
 
-// ORG-605: "Save as template" depends on the member's access to RFP templates.
+// ORG-605: "Save as template" depends on the member's access to proposal templates.
 const mockTemplateAccess = jest.fn()
 const mockSaveTemplate = jest.fn()
 jest.mock('@/app/actions/proposalTemplates', () => ({
@@ -99,12 +99,13 @@ describe('ProposalTableList — loading state', () => {
 })
 
 describe('ProposalTableList — empty state', () => {
-  it('with no proposals at all, invites the planner to create the first RFP instead of blaming a filter', async () => {
+  it('with no proposals at all, invites the planner to create the first proposal instead of blaming a filter', async () => {
     mockGetProposals.mockResolvedValue(emptyPage())
     render(<ProposalTableList searchValue="" activeFilter="all" />)
     const card = await screen.findByTestId('proposals-first-run', {}, LOAD_TIMEOUT)
-    expect(card).toHaveTextContent('Create your first RFP')
-    expect(card).toHaveTextContent('RFPilot turns your event details into an AV production RFP')
+    expect(card).toHaveTextContent('Create your first proposal')
+    expect(card).toHaveTextContent('RFPilot turns your event details into an AV production proposal')
+    expect(card).not.toHaveTextContent(/\bRFPs?\b/)
     expect(card).not.toHaveTextContent(/filter/i)
     const starters = within(card).getByRole('group', { name: 'Ways to start' })
     expect(within(starters).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
@@ -162,7 +163,7 @@ describe('ProposalTableList — proposal cards', () => {
     await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument(), LOAD_TIMEOUT)
   })
 
-  // ORG-602: a copy is a new RFP, so at the plan's limit the copy form never opens.
+  // ORG-602: a copy is a new proposal, so at the plan's limit the copy form never opens.
   it('at the plan limit, "Save a copy" explains the limit instead of opening the copy form', async () => {
     const usage = { used: 2, limit: 2, atLimit: true, planName: 'Free trial', onPlan: 'on the free trial' }
     render(<ProposalTableList searchValue="" activeFilter="all" rfpUsage={usage} />)
@@ -283,6 +284,74 @@ describe('ProposalTableList — proposal cards', () => {
     render(<ProposalTableList searchValue="" activeFilter="saved" />)
     await waitFor(() => screen.getByText('Saved Copy'), LOAD_TIMEOUT)
     expect(screen.queryByTitle(/favorite/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('ProposalTableList — title link', () => {
+  const EDIT_HREF = '/proposals/proposal-edit?proposalId=prop-001'
+  const PREVIEW_HREF = '/proposal/bayshore-summit-2026-prop-001'
+
+  it('opens the edit page from the title on a row that offers Edit, in the same tab', async () => {
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026' }, LOAD_TIMEOUT)
+    expect(title).toHaveAttribute('href', EDIT_HREF)
+    expect(title).toHaveAttribute('href', screen.getByRole('link', { name: 'Edit' }).getAttribute('href'))
+    expect(title).not.toHaveAttribute('target')
+    // A real link inside the heading, with a visible focus style and a hover affordance.
+    expect(title.tagName).toBe('A')
+    expect(title.closest('h3')).not.toBeNull()
+    expect(title.className).toMatch(/focus-visible:ring-2/)
+    expect(title.className).toMatch(/hover:underline/)
+  })
+
+  it('encodes the proposal id the same way the Edit action does', async () => {
+    mockGetProposals.mockResolvedValue(successPage([makeProposal({ _id: 'a/b c' })]))
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026' }, LOAD_TIMEOUT)
+    expect(title).toHaveAttribute('href', '/proposals/proposal-edit?proposalId=a%2Fb%20c')
+  })
+
+  it('links an untitled proposal by its fallback name', async () => {
+    mockGetProposals.mockResolvedValue(successPage([makeProposal({ event: {} })]))
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    expect(await screen.findByRole('link', { name: 'Untitled Proposal' }, LOAD_TIMEOUT)).toHaveAttribute('href', EDIT_HREF)
+  })
+
+  it('for a member who cannot edit, drops Edit and sends the title to the preview', async () => {
+    render(<ProposalTableList searchValue="" activeFilter="all" readOnly />)
+    const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026' }, LOAD_TIMEOUT)
+    expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(title).toHaveAttribute('href', PREVIEW_HREF)
+    expect(title).toHaveAttribute('href', screen.getByRole('link', { name: 'Preview' }).getAttribute('href'))
+    // The preview lives outside the app shell, so it opens the way the Preview action does.
+    expect(title).toHaveAttribute('target', '_blank')
+    expect(title).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(document.querySelector('a[href*="proposal-edit"]')).toBeNull()
+  })
+
+  it('leaves the title as plain text on an archived row, which offers neither Edit nor Preview', async () => {
+    mockGetProposals.mockResolvedValue(
+      successPage([makeProposal({ isArchived: true, archivedAt: '2026-09-01T00:00:00.000Z' })])
+    )
+    render(<ProposalTableList searchValue="" activeFilter="archive" />)
+    expect(await screen.findByText('Bayshore Summit 2026', {}, LOAD_TIMEOUT)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Bayshore Summit 2026' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('keeps the title link clear of the row\'s other controls', async () => {
+    mockDeleteProposal.mockResolvedValue({ success: true })
+    render(<ProposalTableList searchValue="" activeFilter="all" />)
+    const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026' }, LOAD_TIMEOUT)
+    const card = screen.getByTestId('proposal-card')
+    // Nothing interactive sits inside the link, and it is not stretched over the card.
+    expect(within(title).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(title).queryByRole('link')).not.toBeInTheDocument()
+    expect(title.className).not.toMatch(/absolute|inset-0/)
+    expect(within(card).getAllByRole('link', { name: 'Bayshore Summit 2026' })).toHaveLength(1)
+    // The row's own buttons still do their job.
+    fireEvent.click(within(card).getByRole('button', { name: 'Archive' }))
+    expect(screen.getByRole('alertdialog', { name: 'Archive this proposal?' })).toBeInTheDocument()
   })
 })
 
@@ -748,7 +817,7 @@ describe('ProposalTableList — infinite scroll', () => {
 // ─── ORG-605: Save as template ────────────────────────────────────────────────
 
 describe('ProposalTableList — save as template', () => {
-  it('offers Save as template to a member who can use RFP templates and saves a personal one', async () => {
+  it('offers Save as template to a member who can use proposal templates and saves a personal one', async () => {
     mockTemplateAccess.mockResolvedValue({ canUse: true, canManage: false })
     mockSaveTemplate.mockResolvedValue({ success: true, message: 'OK', data: { id: 't1', title: 'Bayshore Summit 2026', scope: 'personal' } })
     render(<ProposalTableList searchValue="" activeFilter="all" />)
