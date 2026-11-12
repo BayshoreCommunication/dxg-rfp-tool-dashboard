@@ -307,9 +307,15 @@ for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const
     await expect(page.getByRole("columnheader", { name: /Proposal/ })).toHaveAttribute("aria-sort", "descending");
     await header("Event date").click();
     await expect(page).toHaveURL(/\/dashboard\?sortBy=eventStartDate$/);
-    await expect(rows(page).first()).toContainText("All-Hands Broadcast");
+    // Soonest first; proposals with no event date yet come before the dated ones.
+    await expect(rows(page).first()).toContainText("Product Launch Evening");
+    await expect(rows(page).nth(2)).toContainText("All-Hands Broadcast");
     if (!isMobile(testInfo)) {
       // "Updated" is hidden on a phone, with the other secondary columns.
+      // Back to the usual order (most recently updated first), then flipped.
+      await header("Updated").click();
+      await expect(page).toHaveURL(/\/dashboard$/);
+      await expect(rows(page).first()).toContainText("Annual Sales Kickoff");
       await header("Updated").click();
       await expect(page).toHaveURL(/\/dashboard\?sortOrder=asc$/);
       await expect(rows(page).first()).toContainText("Regional Meetup 20");
@@ -326,7 +332,7 @@ for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const
     await filtersPanel(page).getByLabel("Team", { exact: true }).selectOption({ label: "Corporate Events" });
     // Changing a filter goes back to the first page.
     await expect(page).toHaveURL(/\/dashboard\?team=a{24}$/);
-    await expect(rows(page)).toHaveCount(9);
+    await expect(rows(page)).toHaveCount(8);
     await filtersPanel(page).getByLabel("Venue city").fill("chicago");
     await expect(page).toHaveURL(/team=a{24}&venueCity=chicago$/);
     await expect(rows(page)).toHaveCount(3);
