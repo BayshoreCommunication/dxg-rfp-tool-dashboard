@@ -112,16 +112,16 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
   };
 
   return (
-    <section aria-labelledby={headingId} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-      <h4 id={headingId} className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700">
-        <BookUser size={14} className="text-[#008ad2]" aria-hidden="true" /> Pick from your vendor list
+    <section aria-labelledby={headingId} className="min-w-0">
+      <h4 id={headingId} className="flex items-center gap-2 text-[13px] !font-semibold text-slate-800">
+        <BookUser size={14} className="shrink-0 text-teal-800 dark:text-teal-300" aria-hidden="true" /> Pick from your vendor list
       </h4>
 
       {listIsEmpty ? (
-        <p className="mt-2 text-[12px] leading-5 text-slate-500">
+        <p className="mt-0.5 text-xs leading-5 text-slate-600">
           Your organization&apos;s vendor list is empty.{" "}
           {access.canEdit ? (
-            <Link href="/settings/vendors" className="font-semibold text-[#0076b4] underline">Add vendors in Settings</Link>
+            <Link href="/settings/vendors" className="!font-semibold text-teal-800 underline dark:text-teal-200">Add vendors in Settings</Link>
           ) : (
             "An Owner, Admin or Team Manager can add vendors in Settings."
           )}

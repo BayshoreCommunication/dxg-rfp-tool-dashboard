@@ -6,6 +6,7 @@ import {
   getProposalsAction,
 } from "@/app/actions/proposals";
 import { buildPersonalizedInvitation } from "@/lib/proposals/proposalExperience";
+import { cn } from "@/lib/utils";
 import { ArrowLeft, Mail, MessageCircleQuestion, Send, ShieldCheck, Sparkles, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,6 +40,11 @@ type ProposalOption = {
 };
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
+
+const invitationRow = "grid min-w-0 gap-x-3.5 gap-y-2 @2xl/invite:grid-cols-[170px_minmax(0,1fr)]";
+const invitationLabel = "text-[13px] !font-semibold text-slate-800";
+const invitationField = "min-h-10 w-full min-w-0 rounded-lg border border-[var(--invite-border)] bg-white px-3 py-2.5 text-[13px] text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:focus-visible:outline-teal-300";
+const questionField = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]";
 
 const DEFAULT_MESSAGE = `Hello,
 
@@ -395,9 +401,19 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
     }
   };
 
+  const fieldClass = questionMode ? questionField : invitationField;
+  const labelClass = questionMode ? "text-[12px] font-semibold text-slate-600" : invitationLabel;
+
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section
+      className={cn(
+        "rounded-2xl border bg-white shadow-sm",
+        questionMode
+          ? "border-slate-200 p-5"
+          : "@container/invite border-[var(--invite-border)] [--invite-border:#d1e1e2] [--invite-surface:#f1f7f7] [--invite-tint:#e7f2f2] dark:[--invite-border:#34505a] dark:[--invite-surface:#132931] dark:[--invite-tint:#15343b]",
+      )}
+    >
+      <div className={questionMode ? undefined : "px-4 pt-4 sm:px-6 sm:pt-5"}>
         {questionMode ? (
           <div className="mb-5">
             {returnTo && (
@@ -416,136 +432,142 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
             {loading && <p role="status" className="mt-2 text-[12px] text-slate-500">Loading the proposal…</p>}
             {!loading && loadError && <p role="alert" className="mt-2 text-[12px] text-red-600">{loadError}</p>}
           </div>
-        ) : fixedMode ? (
-          <div className="mb-4">
-            <div className="flex items-center gap-2 text-slate-800">
-              <Mail size={16} className="text-[#008ad2]" aria-hidden="true" />
-              <h3 className="text-[14px] font-black tracking-wide uppercase">Invite vendors</h3>
-            </div>
-            {loading && <p role="status" className="mt-2 text-[12px] text-slate-500">Loading the proposal…</p>}
-            {!loading && loadError && <p role="alert" className="mt-2 text-[12px] text-red-600">{loadError}</p>}
-            {selectedProposal && (
-              <p className="mt-2 rounded-lg border border-[#008ad2]/20 bg-[#008ad2]/5 px-3 py-2 text-[12px] text-brand-dark">
-                Inviting vendors to <span className="font-semibold">{selectedProposal.event?.eventName || "Untitled Proposal"}</span>.
-                {previewProposalLink && (
-                  <>
-                    {" "}
-                    <a href={previewProposalLink} target="_blank" rel="noreferrer" className="font-semibold underline">Open proposal</a>
-                  </>
-                )}
-                <span className="mt-1 block text-slate-600">
-                  Each vendor gets their own secure access link when the invitation is sent, and vendors cannot see the other recipients.
-                </span>
-              </p>
-            )}
-          </div>
         ) : (
-          <div className="mb-4 flex items-center gap-2 text-slate-800">
-            <Mail size={16} className="text-[#008ad2]" />
-            <h3 className="text-[14px] font-black tracking-wide uppercase">
-              Compose & Send
-            </h3>
+          <div className="mb-3">
+            <div className="flex items-center gap-3 text-slate-800">
+              <Mail size={16} className="shrink-0 text-teal-800 dark:text-teal-300" aria-hidden="true" />
+              <h3 className="text-[23px] leading-tight !font-extrabold tracking-tight">
+                {fixedMode ? "Invite vendors" : "Compose & Send"}
+              </h3>
+            </div>
+            {fixedMode && loading && <p role="status" className="mt-2 text-xs text-slate-500">Loading the proposal…</p>}
+            {fixedMode && !loading && loadError && <p role="alert" className="mt-2 text-xs text-red-600">{loadError}</p>}
           </div>
         )}
 
-        <div className={questionMode || fixedMode ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 lg:grid-cols-2"}>
-          {/* Select Proposal Section */}
-          {!questionMode && !fixedMode && <div className="space-y-2">
-            <label className="text-[12px] font-semibold text-slate-600">
+        {!questionMode && !fixedMode && (
+          <div className={cn(invitationRow, "mb-3 items-center")}>
+            <label htmlFor="invitation-proposal" className={invitationLabel}>
               Select Proposal
             </label>
-            <select
-              value={proposalId}
-              onChange={(event) => handleProposalChange(event.target.value)}
-              disabled={loading || Boolean(loadError)}
-              aria-describedby="proposal-load-status"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]"
-            >
-              {loading && <option value="">Loading submitted proposals…</option>}
-              {!loading && loadError && (
-                <option value="">Submitted proposals could not be loaded</option>
-              )}
-              {!loading && !loadError && proposals.length === 0 && (
-                <option value="">No submitted proposals ready to send</option>
-              )}
-              {proposals.map((proposal) => (
-                <option key={proposal._id} value={proposal._id}>
-                  {proposal.event?.eventName || "Untitled Proposal"}
-                </option>
-              ))}
-            </select>
-            <div id="proposal-load-status" aria-live="polite">
-              {loading && (
-                <p role="status" className="text-[12px] text-slate-500">
-                  Loading submitted proposals…
-                </p>
-              )}
-              {!loading && loadError && (
-                <p role="alert" className="text-[12px] text-red-600">
-                  {loadError} Refresh the page to try again.
-                </p>
-              )}
-            </div>
-            {selectedProposalLink ? (
-              <div className="rounded-lg border border-[#008ad2]/20 bg-[#008ad2]/5 px-3 py-2 text-[12px] text-brand-dark">
-                Proposal:{" "}
-                <a
-                  href={previewProposalLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-semibold underline"
-                >
-                  Open proposal
-                </a>
-                <p className="mt-1 text-slate-600">
-                  A secure, recipient-specific access link is added when the
-                  campaign is sent.
-                </p>
+            <div className="min-w-0">
+              <select
+                id="invitation-proposal"
+                value={proposalId}
+                onChange={(event) => handleProposalChange(event.target.value)}
+                disabled={loading || Boolean(loadError)}
+                aria-describedby="proposal-load-status"
+                className={fieldClass}
+              >
+                {loading && <option value="">Loading submitted proposals…</option>}
+                {!loading && loadError && (
+                  <option value="">Submitted proposals could not be loaded</option>
+                )}
+                {!loading && !loadError && proposals.length === 0 && (
+                  <option value="">No submitted proposals ready to send</option>
+                )}
+                {proposals.map((proposal) => (
+                  <option key={proposal._id} value={proposal._id}>
+                    {proposal.event?.eventName || "Untitled Proposal"}
+                  </option>
+                ))}
+              </select>
+              <div id="proposal-load-status" aria-live="polite">
+                {loading && <p role="status" className="mt-1 text-xs text-slate-500">Loading submitted proposals…</p>}
+                {!loading && loadError && <p role="alert" className="mt-1 text-xs text-red-600">{loadError} Refresh the page to try again.</p>}
               </div>
-            ) : null}
-          </div>}
+            </div>
+          </div>
+        )}
 
-          {/* New Gmail-Style Recipient Section */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-600">
-              {questionMode ? "To" : "Recipients"}
-              <span className="text-[10px] font-normal text-slate-400">
-                (Press Enter, Space, or Comma)
-              </span>
-            </label>
+        {!questionMode && selectedProposal && (fixedMode || selectedProposalLink) && (
+          <div className="rounded-lg bg-[var(--invite-tint)] px-3.5 py-2 text-xs leading-5 text-slate-600">
+            <p>
+              {fixedMode ? (
+                <>Inviting vendors to <strong className="!font-semibold text-slate-800">{selectedProposal.event?.eventName || "Untitled Proposal"}.</strong></>
+              ) : "Proposal:"}
+              {previewProposalLink && (
+                <>
+                  {" "}
+                  <a
+                    href={previewProposalLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block !font-semibold text-teal-800 underline underline-offset-2 dark:text-teal-200"
+                  >
+                    Open proposal
+                  </a>
+                </>
+              )}
+            </p>
+            <p>
+              {fixedMode
+                ? "Each vendor gets their own secure access link when the invitation is sent, and vendors cannot see the other recipients."
+                : "A secure, recipient-specific access link is added when the campaign is sent."}
+            </p>
+          </div>
+        )}
 
-            <div className="flex w-full min-h-[46px] flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] transition-colors focus-within:border-[#008ad2] focus-within:ring-1 focus-within:ring-[#008ad2]/30">
-              {/* Chips */}
+        <div className={questionMode ? "space-y-2" : cn(invitationRow, "border-b border-[var(--invite-border)] py-3")}>
+          <div className={questionMode ? "flex items-center gap-1.5" : "@2xl/invite:pt-2"}>
+            <label htmlFor="invitation-recipients" className={labelClass}>{questionMode ? "To" : "Recipients"}</label>
+            <span id="invitation-recipient-hint" className={questionMode ? "text-[10px] text-slate-400" : "ml-1 text-[11px] text-slate-600 @2xl/invite:ml-0 @2xl/invite:block"}>
+              (Press Enter, Space, or Comma)
+            </span>
+          </div>
+
+          <div className="min-w-0 space-y-2">
+            <div className={cn(
+              "flex w-full flex-wrap items-center gap-2 border bg-white text-[13px] transition-colors focus-within:ring-1",
+              questionMode
+                ? "min-h-[46px] rounded-xl border-slate-200 px-3 py-2 focus-within:border-[#008ad2] focus-within:ring-[#008ad2]/30"
+                : "min-h-10 rounded-lg border-[var(--invite-border)] px-2 py-1.5 focus-within:border-teal-700 focus-within:ring-teal-700 dark:focus-within:border-teal-300 dark:focus-within:ring-teal-300",
+            )}>
               {recipientEmails.map((email) => (
                 <span
                   key={email}
-                  className="flex items-center gap-1.5 rounded-md border border-[#008ad2]/30 bg-[#008ad2]/5 px-2.5 py-1 text-[12px] font-medium text-brand-dark"
+                  className={cn(
+                    "flex min-w-0 max-w-full items-center gap-1.5 rounded-md text-xs font-medium",
+                    questionMode
+                      ? "border border-[#008ad2]/30 bg-[#008ad2]/5 px-2.5 py-1 text-brand-dark"
+                      : "bg-[var(--invite-tint)] py-0.5 pr-1 pl-2 text-teal-800 dark:text-teal-200",
+                  )}
                 >
-                  {email}
+                  <span className="wrap-anywhere">{email}</span>
                   <button
                     type="button"
                     onClick={() => removeRecipient(email)}
-                    className="flex h-4 w-4 items-center justify-center rounded-full text-[#008ad2] hover:bg-[#008ad2]/20 hover:text-brand-dark"
+                    className={cn(
+                      "flex shrink-0 items-center justify-center",
+                      questionMode
+                        ? "h-4 w-4 rounded-full text-[#008ad2] hover:bg-[#008ad2]/20 hover:text-brand-dark"
+                        : "size-5 rounded hover:bg-teal-200/50 focus-visible:outline-2 dark:hover:bg-teal-800",
+                    )}
                     aria-label={`Remove ${email}`}
                   >
-                    <X size={12} strokeWidth={3} />
+                    <X size={12} aria-hidden="true" />
                   </button>
                 </span>
               ))}
 
-              {/* Seamless Input */}
               <input
+                id="invitation-recipients"
                 value={recipientInput}
                 onChange={(event) => setRecipientInput(event.target.value)}
                 onKeyDown={handleInputKeyDown}
                 onBlur={handleBlur}
                 aria-label="Add recipient email addresses"
+                aria-describedby="invitation-recipient-hint"
                 placeholder={
                   recipientEmails.length === 0
                     ? "john@email.com, anna@email.com"
                     : ""
                 }
-                className="flex-1 min-w-[150px] bg-transparent text-slate-700 outline-none placeholder:text-slate-400"
+                className={cn(
+                  "min-w-0 flex-1 bg-transparent text-slate-700 outline-none placeholder:text-slate-500",
+                  recipientEmails.length === 0 ? "basis-40" : "basis-16",
+                  !questionMode && "dark:!bg-transparent",
+                )}
               />
             </div>
 
@@ -564,34 +586,34 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
           </div>
         </div>
 
-        {!questionMode && <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="flex items-center gap-2 text-sm font-extrabold text-violet-950">
-                <Sparkles size={16} aria-hidden="true" /> Personalized invitation
-              </p>
-              <p className="mt-1 text-xs leading-5 text-violet-800">
+        {!questionMode && <div className={cn(invitationRow, "items-start border-b border-[var(--invite-border)] py-3 text-violet-800 dark:text-violet-200")}>
+          <p className="flex items-start gap-2 text-[13px] !font-semibold">
+            <Sparkles size={15} className="mt-0.5 shrink-0" aria-hidden="true" /> Personalized invitation
+          </p>
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2 @3xl/invite:flex-nowrap">
+            <div className="min-w-0">
+              <p className="text-xs leading-5">
                 Draft event-specific subject and message copy, then keep you in control of the final send.
               </p>
+              {draftSource === "ai" && (
+                <p role="status" className="mt-1.5 inline-block rounded-md border border-violet-200 px-2 py-0.5 text-[11px] dark:border-violet-700">
+                  AI-generated · 86% confidence · Based on proposal details
+                </p>
+              )}
             </div>
             <button
               type="button"
               onClick={() => void personalizeInvitation()}
               disabled={!selectedProposal || drafting}
-              className="min-h-10 shrink-0 rounded-xl bg-violet-600 px-4 text-xs font-extrabold text-white hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-9 max-w-full shrink-0 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs !font-semibold hover:bg-violet-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-violet-700 dark:hover:bg-violet-950 dark:focus-visible:outline-violet-300"
             >
               {drafting ? "Drafting invitation…" : "Generate personalized draft"}
             </button>
           </div>
-          {draftSource === "ai" && (
-            <p role="status" className="mt-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1 text-[11px] font-bold text-violet-800">
-              AI-generated · 86% confidence · Based on proposal details
-            </p>
-          )}
         </div>}
 
-        <div className="mt-4 space-y-2">
-          <label htmlFor="invitation-subject" className="text-[12px] font-semibold text-slate-600">
+        <div className={questionMode ? "mt-4 space-y-2" : cn(invitationRow, "items-center border-b border-[var(--invite-border)] py-3")}>
+          <label htmlFor="invitation-subject" className={labelClass}>
             Subject
           </label>
           <input
@@ -602,12 +624,12 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
               setDraftSource("user");
               setSendApproved(false);
             }}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]"
+            className={fieldClass}
           />
         </div>
 
-        <div className="mt-4 space-y-2">
-          <label htmlFor="invitation-message" className="text-[12px] font-semibold text-slate-600">
+        <div className={questionMode ? "mt-4 space-y-2" : cn(invitationRow, "items-start pt-3 pb-5")}>
+          <label htmlFor="invitation-message" className={cn(labelClass, !questionMode && "@2xl/invite:pt-2")}>
             Message
           </label>
           <textarea
@@ -619,35 +641,48 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
               setSendApproved(false);
             }}
             rows={6}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]"
+            className={cn(fieldClass, !questionMode && "min-h-39 resize-y bg-[var(--invite-surface)] leading-5 dark:!bg-[var(--invite-surface)]")}
           />
         </div>
+      </div>
 
-        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold text-slate-700 focus-within:ring-2 focus-within:ring-[#008ad2]">
-            <input
-              type="checkbox"
-              checked={sendApproved}
-              onChange={(event) => setSendApproved(event.target.checked)}
-              className="h-5 w-5 accent-[#008ad2]"
-            />
-            <span className="inline-flex items-center gap-2">
-              <ShieldCheck size={16} className="text-[#008ad2]" aria-hidden="true" />
-              {questionMode ? "I reviewed this message." : "I reviewed the recipients and invitation text."}
-            </span>
-          </label>
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={sending || loading}
-            className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[12px] font-bold uppercase tracking-wider text-white shadow-sm transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
-          >
-            <Send size={14} />
-            {sending ? "Sending..." : questionMode ? "Send question" : fixedMode ? "Send invitations" : "Send Campaign"}
-          </button>
-        </div>
-      </section>
-    </div>
+      <div className={cn(
+        "flex flex-col sm:flex-row sm:items-center sm:justify-between",
+        questionMode
+          ? "mt-4 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+          : "gap-2 rounded-b-2xl border-t border-[var(--invite-border)] bg-[var(--invite-surface)] px-4 py-2.5 sm:px-6",
+      )}>
+        <label className={cn(
+          "flex min-h-11 cursor-pointer items-center text-slate-700 focus-within:ring-2",
+          questionMode ? "gap-3 text-sm font-bold focus-within:ring-[#008ad2]" : "gap-2 text-[13px] focus-within:ring-teal-700 dark:focus-within:ring-teal-300",
+        )}>
+          <input
+            type="checkbox"
+            checked={sendApproved}
+            onChange={(event) => setSendApproved(event.target.checked)}
+            className={questionMode ? "size-5 shrink-0 accent-[#008ad2]" : "size-4 shrink-0 accent-teal-800 dark:accent-teal-300"}
+          />
+          <span className="inline-flex items-center gap-2">
+            <ShieldCheck size={15} className={cn("shrink-0", questionMode ? "text-[#008ad2]" : "text-teal-800 dark:text-teal-300")} aria-hidden="true" />
+            {questionMode ? "I reviewed this message." : "I reviewed the recipients and invitation text."}
+          </span>
+        </label>
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={sending || loading}
+          className={cn(
+            "inline-flex shrink-0 items-center justify-center gap-2 text-xs uppercase shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+            questionMode
+              ? "rounded-xl px-5 py-2.5 font-bold tracking-wider text-white transition-opacity hover:opacity-95 focus-visible:outline-[#008ad2]"
+              : "min-h-10 self-end rounded-lg bg-[#175e66] px-3.5 !font-semibold tracking-wide text-white hover:bg-[#104c54] focus-visible:outline-teal-800 dark:bg-teal-300 dark:text-teal-950 dark:hover:bg-teal-200 dark:focus-visible:outline-teal-300",
+          )}
+          style={questionMode ? { background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" } : undefined}
+        >
+          <Send size={14} aria-hidden="true" />
+          {sending ? "Sending..." : questionMode ? "Send question" : fixedMode ? "Send invitations" : "Send Campaign"}
+        </button>
+      </div>
+    </section>
   );
 }
