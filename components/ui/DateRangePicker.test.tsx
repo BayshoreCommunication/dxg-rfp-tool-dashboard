@@ -14,11 +14,13 @@ describe("DateRangePicker", () => {
     const { rerender } = render(<DateRangePicker label="Event dates" value={null} onChange={jest.fn()} description="Events that start in this range." />);
     const field = screen.getByRole("button", { name: /Event dates/ });
     expect(field).toHaveTextContent("Any dates");
-    expect(screen.getByText("Events that start in this range.")).toBeInTheDocument();
+    expect(field).toHaveAccessibleName("Event dates Any dates");
+    expect(field).toHaveAccessibleDescription("Events that start in this range.");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     rerender(<DateRangePicker label="Event dates" value={{ from: "2026-11-11", to: "2026-11-14" }} onChange={jest.fn()} />);
-    expect(screen.getByRole("button", { name: /Event dates/ })).toHaveTextContent("Nov 11, 2026 – Nov 14, 2026");
+    // The field's name carries its value, and the hint describes it.
+    expect(screen.getByRole("button", { name: "Event dates Nov 11, 2026 – Nov 14, 2026" })).toBeInTheDocument();
   });
 
   test("opens a calendar on the selected range; picking two days reports the range, Clear reports none", () => {

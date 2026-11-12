@@ -63,22 +63,48 @@ describe("DashboardFilters", () => {
     expect(replace).toHaveBeenCalledTimes(1);
   });
 
+  // What the server sends after a navigation lands: the new query string and the filter read from it.
+  const land = (rerender: (ui: React.ReactElement) => void, search: string, extra = "") => {
+    query = [search ? `search=${search}` : "", extra].filter(Boolean).join("&");
+    rerender(<DashboardFilters {...base} search={search} />);
+  };
+
   test("the box follows the URL when it changes elsewhere, but never undoes what is being typed", () => {
     const { rerender } = render(<DashboardFilters {...base} />);
     type(searchBox(), "ab");
     pause();
     type(searchBox(), "abc");
     // The server answers the first request while the person has typed on.
-    rerender(<DashboardFilters {...base} search="ab" />);
+    land(rerender, "ab");
     expect(searchBox()).toHaveValue("abc");
     pause();
-    rerender(<DashboardFilters {...base} search="abc" />);
+    land(rerender, "abc");
     expect(searchBox()).toHaveValue("abc");
     // Back, a removed chip or Clear all: the URL's value wins.
-    rerender(<DashboardFilters {...base} search="" />);
+    land(rerender, "");
     expect(searchBox()).toHaveValue("");
-    rerender(<DashboardFilters {...base} search="gala" />);
+    land(rerender, "gala");
     expect(searchBox()).toHaveValue("gala");
+  });
+
+  test("a link followed before the search lands wins: the box goes back to what the list shows", () => {
+    const { rerender } = render(<DashboardFilters {...base} />);
+    type(searchBox(), "gala");
+    pause();
+    expect(replace).toHaveBeenCalledWith("/dashboard?search=gala", { scroll: false });
+    // A status tab rendered before the search was typed: its link has no search.
+    land(rerender, "", "stage=sent");
+    expect(searchBox()).toHaveValue("");
+  });
+
+  test("a pause that ends after another navigation landed builds on the new URL", () => {
+    const { rerender } = render(<DashboardFilters {...base} />);
+    type(searchBox(), "gala");
+    land(rerender, "", "stage=sent");
+    // Still typing: the box keeps the word.
+    expect(searchBox()).toHaveValue("gala");
+    pause();
+    expect(replace).toHaveBeenLastCalledWith("/dashboard?stage=sent&search=gala", { scroll: false });
   });
 
   test("a view that offers only search has no Filters button", () => {
@@ -136,9 +162,14 @@ describe("DashboardFilters", () => {
   });
 
   test("one end of a date range from a link is shown as such", () => {
+    query = "eventFrom=2026-11-11";
     render(<DashboardFilters {...base} eventFrom="2026-11-11" />);
     openFilters();
     expect(screen.getByRole("button", { name: /Event dates/ })).toHaveTextContent("From Nov 11, 2026");
+    // The one-ended range can be cleared from the calendar too.
+    fireEvent.click(screen.getByRole("button", { name: /Event dates/ }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Event dates" })).getByRole("button", { name: "Clear dates" }));
+    expect(push).toHaveBeenLastCalledWith("/dashboard", { scroll: false });
   });
 
   test("Escape and the close button shut the popover and return focus to its button; a press outside shuts it", () => {
@@ -153,6 +184,11 @@ describe("DashboardFilters", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close filters" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(button).toHaveFocus();
+
+    // Escape still closes it after Tab has taken focus out of the panel.
+    openFilters();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     openFilters();
     fireEvent.pointerDown(screen.getByLabelText("Planner"));

@@ -11,7 +11,7 @@
 
 import { type CalendarDate, getLocalTimeZone, isToday, parseDate } from "@internationalized/date";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useContext, useSyncExternalStore } from "react";
+import { useCallback, useContext, useId, useSyncExternalStore } from "react";
 import {
   Button as AriaButton,
   CalendarCell as AriaCalendarCell,
@@ -38,6 +38,9 @@ export type DateRangePickerProps = {
   onChange: (range: DateRange | null) => void;
   onOpenChange?: (open: boolean) => void;
   placeholder?: string;
+  // Whether "Clear dates" is offered. Defaults to having a range; set it when the placeholder
+  // stands for a filter of its own (one end of a range).
+  canClear?: boolean;
   // A sentence under the field saying what the range is matched against.
   description?: string;
   className?: string;
@@ -141,8 +144,9 @@ const MonthGrid = ({ offset }: { offset: number }) => (
 );
 
 export default function DateRangePicker({
-  label, value, onChange, onOpenChange, placeholder = "Any dates", description, className = "",
+  label, value, onChange, onOpenChange, placeholder = "Any dates", canClear, description, className = "",
 }: DateRangePickerProps) {
+  const id = useId();
   const isDesktop = useIsDesktop();
   const start = value ? toCalendarDate(value.from) : null;
   const end = value ? toCalendarDate(value.to) : null;
@@ -156,16 +160,19 @@ export default function DateRangePicker({
       onOpenChange={onOpenChange}
       className={`flex flex-col ${className}`.trim()}
     >
-      <AriaLabel className="mb-1.5 block text-xs font-semibold text-slate-600">{label}</AriaLabel>
+      <AriaLabel id={`${id}-label`} className="mb-1.5 block text-xs font-semibold text-slate-600">{label}</AriaLabel>
       <AriaGroup className="flex">
         <AriaButton
+          // Named by the label and the value it shows ("Event dates Nov 11, 2026 – Nov 14, 2026").
+          aria-labelledby={`${id}-label ${id}-value`}
+          aria-describedby={description ? `${id}-description` : undefined}
           className={`flex h-10 w-full items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-left text-sm hover:border-slate-300 ${focusRing}`}
         >
           <CalendarIcon size={15} aria-hidden="true" className="shrink-0 text-slate-500" />
-          <span className={`min-w-0 truncate ${value ? "text-slate-900" : "text-slate-500"}`}>{value ? formatRange(value) : placeholder}</span>
+          <span id={`${id}-value`} className={`min-w-0 truncate ${value ? "text-slate-900" : "text-slate-500"}`}>{value ? formatRange(value) : placeholder}</span>
         </AriaButton>
       </AriaGroup>
-      {description && <p className="mt-1 text-xs text-slate-500">{description}</p>}
+      {description && <p id={`${id}-description`} className="mt-1 text-xs text-slate-500">{description}</p>}
       <AriaPopover placement="bottom end" offset={8} className="z-50 max-w-[calc(100vw-1rem)] outline-none">
         <AriaDialog aria-label={label} className="rounded-2xl border border-slate-200 bg-white shadow-xl outline-none">
           {({ close }) => (
@@ -191,7 +198,7 @@ export default function DateRangePicker({
               <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
                 <p className="text-xs text-slate-500">Pick the first day, then the last.</p>
                 <AriaButton
-                  isDisabled={!value}
+                  isDisabled={!(canClear ?? Boolean(value))}
                   onPress={() => {
                     onChange(null);
                     close();

@@ -3,6 +3,7 @@
 import { Archive, CopyPlus, Eye, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
 import { copyProposalAction, deleteProposalAction } from "@/app/actions/proposals";
 import ProposalDeletionDialog from "@/components/proposals/ProposalDeletionDialog";
@@ -136,15 +137,19 @@ export default function ProposalRowActions({ proposal, actions, editHref, viewHr
         </Dropdown.Popover>
       </Dropdown.Root>
 
-      <SaveCopyModal
-        isOpen={copying}
-        onClose={() => setCopying(false)}
-        onConfirm={(overrides) => void saveCopy(overrides)}
-        saving={savingCopy}
-        defaultEventName={proposal.eventName}
-        defaultStartDate={dayOf(proposal.eventStartDate)}
-        defaultEndDate={dayOf(proposal.eventEndDate)}
-      />
+      {/* Outside the table, so the dialog doesn't take on the cell's alignment and text colour. */}
+      {copying && createPortal(
+        <SaveCopyModal
+          isOpen={copying}
+          onClose={() => setCopying(false)}
+          onConfirm={(overrides) => void saveCopy(overrides)}
+          saving={savingCopy}
+          defaultEventName={proposal.eventName}
+          defaultStartDate={dayOf(proposal.eventStartDate)}
+          defaultEndDate={dayOf(proposal.eventEndDate)}
+        />,
+        document.body,
+      )}
 
       {archiving && (
         <ProposalDeletionDialog

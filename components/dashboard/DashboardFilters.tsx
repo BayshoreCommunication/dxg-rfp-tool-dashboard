@@ -38,16 +38,20 @@ type Navigate = (changes: Record<string, string>, mode: "push" | "replace") => v
 // A text filter that follows the URL but never fights the person typing: the box shows what
 // they typed, the URL catches up after a pause, and a value arriving from the URL replaces the
 // text only when it isn't one this box sent (Back, a removed chip, Clear all).
-const useTypedFilter = (name: string, urlValue: string, navigate: Navigate) => {
+const useTypedFilter = (name: string, urlValue: string, query: string, navigate: Navigate) => {
   const [value, setValue] = useState(urlValue);
-  const [seen, setSeen] = useState(urlValue);
+  const [seenQuery, setSeenQuery] = useState(query);
   const [sent, setSent] = useState<string[]>([]);
+  // True between a keystroke and the moment its pause ends.
+  const [typing, setTyping] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  if (urlValue !== seen) {
-    setSeen(urlValue);
+  // A navigation has landed (this box's own, or a link, Back, a removed chip, Clear all).
+  if (query !== seenQuery) {
+    setSeenQuery(query);
     if (!sent.includes(urlValue)) {
-      setValue(urlValue);
+      // Not a value this box asked for: the URL wins, unless the person is mid-word.
+      if (!typing) setValue(urlValue);
       setSent([]);
     } else if (urlValue === value.trim()) {
       setSent([]);
@@ -67,14 +71,15 @@ const useTypedFilter = (name: string, urlValue: string, navigate: Navigate) => {
 
   const commit = (text: string) => {
     cancel();
+    setTyping(false);
     const next = text.trim();
-    if (next === urlValue && sent.length === 0) return;
     setSent((previous) => [...previous, next]);
     navigate({ [name]: next }, "replace");
   };
 
   const change = (text: string) => {
     setValue(text);
+    setTyping(true);
     cancel();
     timer.current = setTimeout(() => commit(text), SEARCH_DEBOUNCE_MS);
   };
@@ -97,13 +102,17 @@ export default function DashboardFilters({ search, owner, team, venueCity, event
   // the old one, and a second change must build on the first instead of undoing it.
   const requested = useRef<string | null>(null);
   const current = searchParams.toString();
+  // The query string as of the latest render, for handlers that fire later (the typing pause).
+  const latest = useRef(current);
   useEffect(() => {
+    latest.current = current;
     requested.current = null;
   }, [current]);
 
   const navigate = useCallback<Navigate>(
     (changes, mode) => {
-      const params = new URLSearchParams(requested.current ?? current);
+      const base = requested.current ?? latest.current;
+      const params = new URLSearchParams(base);
       for (const [name, value] of Object.entries(changes)) {
         if (value) params.set(name, value);
         else params.delete(name);
@@ -111,7 +120,7 @@ export default function DashboardFilters({ search, owner, team, venueCity, event
       // A different set of proposals: start again from its first page.
       params.delete("page");
       const query = params.toString();
-      if (query === (requested.current ?? current)) return;
+      if (query === base) return;
       requested.current = query;
       const href = query ? `${pathname}?${query}` : pathname;
       startTransition(() => {
@@ -119,11 +128,11 @@ export default function DashboardFilters({ search, owner, team, venueCity, event
         else router.push(href, { scroll: false });
       });
     },
-    [current, pathname, router],
+    [pathname, router],
   );
 
-  const searchBox = useTypedFilter("search", search, navigate);
-  const cityBox = useTypedFilter("venueCity", venueCity, navigate);
+  const searchBox = useTypedFilter("search", search, current, navigate);
+  const cityBox = useTypedFilter("venueCity", venueCity, current, navigate);
 
   const popoverFilters = offered.filter((key) => key !== "search");
   const activeCount = [owner, team, venueCity, eventFrom || eventTo].filter(Boolean).length;
@@ -140,8 +149,16 @@ export default function DashboardFilters({ search, owner, team, venueCity, event
     const onPointerDown = (event: PointerEvent) => {
       if (event.target instanceof Node && !wrapperRef.current?.contains(event.target)) close(false);
     };
+    // Escape closes it wherever focus has gone (Tab can leave the panel).
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close(true);
+    };
     document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open, dateOpen, close]);
 
   // Opening moves focus to the first control in the panel.
@@ -284,6 +301,7 @@ export default function DashboardFilters({ search, owner, team, venueCity, event
                   // A link can carry one end of a range only; say which.
                   placeholder={eventFrom ? `From ${formatRangeDay(eventFrom)}` : eventTo ? `Until ${formatRangeDay(eventTo)}` : "Any dates"}
                   onChange={(range) => navigate({ eventFrom: range?.from ?? "", eventTo: range?.to ?? "" }, "push")}
+                  canClear={Boolean(eventFrom || eventTo)}
                   onOpenChange={setDateOpen}
                 />
               )}
