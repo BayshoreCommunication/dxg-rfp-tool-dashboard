@@ -68,6 +68,7 @@ const DESKTOP_QUERY = "(min-width: 768px)";
 // Two months side by side from tablet width up, one below it. The server renders one month.
 const useIsDesktop = () => {
   const subscribe = useCallback((onChange: () => void) => {
+    if (typeof window.matchMedia !== "function") return () => {};
     const query = window.matchMedia(DESKTOP_QUERY);
     query.addEventListener("change", onChange);
     return () => query.removeEventListener("change", onChange);

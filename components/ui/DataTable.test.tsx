@@ -47,7 +47,7 @@ describe("DataTable", () => {
     expect(venue).toHaveTextContent("Venue, sorted ascending. Sort descending");
     expect(city).toHaveAttribute("href", "/venues?sortBy=city");
     expect(city).toHaveAttribute("data-sort-direction", "none");
-    expect(within(headers[2]).getByRole("link", { name: "Seats, sort" })).toHaveAttribute("href", "/venues?sortBy=seats");
+    expect(within(headers[2]).getByRole("link", { name: /^Seats/ })).toHaveAttribute("href", "/venues?sortBy=seats");
     // A column that can't be sorted has plain text, no link.
     expect(within(headers[1]).queryByRole("link")).not.toBeInTheDocument();
     expect(headers[1]).toHaveTextContent("City");

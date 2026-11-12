@@ -362,7 +362,7 @@ const ProposalTable = ({ items, context }: { items: RfpListItem[]; context: RowC
           header: "Actions",
           headerHidden: true,
           align: "right" as const,
-          className: "w-12 !px-2",
+          className: "w-12 px-2!",
           cell: (item: RfpListItem) => (
             <ProposalRowActions
               proposal={{ id: item.id, eventName: item.eventName, eventStartDate: item.eventStartDate, eventEndDate: item.eventEndDate }}

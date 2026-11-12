@@ -170,14 +170,14 @@ describe("RoleDashboard", () => {
     signInAs(["owner"]);
     const { unmount } = await renderDashboard();
     expect(screen.getAllByRole("button", { name: /^Actions for/ })).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Event 1" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${"1".padStart(24, "0")}`);
+    expect(within(screen.getByRole("table")).getByRole("link", { name: "Event 1" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${"1".padStart(24, "0")}`);
     unmount();
 
     // Priya's proposals, seen by another planner through a share: read-only.
     signInAs(["planner"]);
     const second = await renderDashboard();
     expect(screen.queryByRole("button", { name: /^Actions for/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Event 1" })).toHaveAttribute("href", `/proposal/event-1-${"1".padStart(24, "0")}`);
+    expect(within(screen.getByRole("table")).getByRole("link", { name: "Event 1" })).toHaveAttribute("href", `/proposal/event-1-${"1".padStart(24, "0")}`);
     second.unmount();
 
     signInAs(["planner"], PRIYA);

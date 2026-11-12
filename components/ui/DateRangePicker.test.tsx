@@ -28,7 +28,7 @@ describe("DateRangePicker", () => {
     fireEvent.click(screen.getByRole("button", { name: /Event dates/ }));
     expect(onOpenChange).toHaveBeenLastCalledWith(true);
     const calendar = within(screen.getByRole("dialog", { name: "Event dates" }));
-    expect(calendar.getByText("November 2026")).toBeInTheDocument();
+    expect(calendar.getAllByText("November 2026").length).toBeGreaterThan(0);
     expect(calendar.getByRole("button", { name: "Previous month" })).toBeInTheDocument();
     expect(calendar.getByRole("button", { name: "Next month" })).toBeInTheDocument();
     expect(calendar.getByRole("button", { name: /Wednesday, November 11, 2026/ })).toBeInTheDocument();

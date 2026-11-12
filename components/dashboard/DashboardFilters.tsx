@@ -146,7 +146,9 @@ export default function DashboardFilters({ search, owner, team, venueCity, event
 
   // Opening moves focus to the first control in the panel.
   useEffect(() => {
-    if (open) panelRef.current?.querySelector<HTMLElement>("select, input, button")?.focus();
+    if (!open) return;
+    const panel = panelRef.current;
+    (panel?.querySelector<HTMLElement>("select, input") ?? panel?.querySelector<HTMLElement>("button"))?.focus();
   }, [open]);
 
   // A value picked earlier stays selectable even when it is no longer among the choices.
