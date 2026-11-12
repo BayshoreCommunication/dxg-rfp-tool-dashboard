@@ -17,6 +17,7 @@ import MemberActionsMenu, { type MemberMenuAction } from "./MemberActionsMenu";
 import MemberDialog, { type MemberDialogKind } from "./MemberDialogs";
 import { filterInvitations, filterMembers, memberDisplayName, memberPermissions, ROLE_LABELS, roleLabel, STATUS_LABELS } from "./orgAccess";
 import RoleAccessGuide from "./RoleAccessGuide";
+import { shownRole } from "./roleAccess";
 import type { CustomerRole, OrgMember, Team } from "./types";
 import {
   Badge,
@@ -306,7 +307,7 @@ export default function UsersSettings({ sessionRole = null }: Props) {
       {access.canInvite && !access.canManageMembers && <InvitationsSection access={access} teams={teams} />}
 
       {/* Every member who can open this page sees what each role can do, and their own role. */}
-      <RoleAccessGuide role={(access.canManageMembers ? access.role : null) ?? sessionRole ?? access.role} />
+      <RoleAccessGuide role={shownRole(access, sessionRole)} />
 
       {inviteOpen && (
         <InviteDialog access={access} teams={teams} onClose={() => setInviteOpen(false)} onInvited={() => void pending.load()} />

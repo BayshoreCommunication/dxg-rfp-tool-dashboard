@@ -6,6 +6,7 @@ import {
   ROLE_SUMMARIES,
   accessCellText,
   customerRoleOf,
+  shownRole,
   type RoleAccessRow,
 } from "./roleAccess";
 import type { CustomerRole } from "./types";
@@ -112,6 +113,15 @@ describe("role access guide data", () => {
     expect(note).toMatch(/Planners and Viewers/);
     expect(note).toMatch(/teams they manage/);
     expect(note).toMatch(/turned on for the organization/);
+  });
+
+  it("prints the role the backend just showed over a session that may be behind", () => {
+    const none = { role: null, canManageMembers: false, canInvite: false };
+    expect(shownRole({ role: "owner", canManageMembers: true, canInvite: true }, "organization_admin")).toBe("owner");
+    expect(shownRole({ role: "team_manager", canManageMembers: false, canInvite: true }, "planner")).toBe("team_manager");
+    expect(shownRole(none, "viewer")).toBe("viewer");
+    expect(shownRole(none, "team_manager")).toBe("team_manager");
+    expect(shownRole(none, null)).toBeNull();
   });
 
   it("reads a member's role from their session roles, and names none when unsure", () => {

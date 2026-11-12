@@ -688,7 +688,7 @@ export default function ProposalTableList({
                 ? null
                 : editOffered
                 ? { href: editHref, hint: "Edit proposal" }
-                : { href: previewHref, hint: "Preview proposal (opens in a new tab)", newTab: true };
+                : { href: previewHref, hint: "Preview proposal", newTab: true };
               const archivedDate = proposal?.archivedAt ? new Date(proposal.archivedAt) : null;
               const daysUntilPurge = archivedDate
                 ? Math.max(0, Math.ceil((archivedDate.getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -771,6 +771,7 @@ export default function ProposalTableList({
                             className="min-w-0 break-words rounded-sm underline-offset-2 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 sm:truncate"
                           >
                             {title}
+                            {titleLink.newTab && <span className="sr-only"> (opens in a new tab)</span>}
                           </Link>
                         ) : (
                           <span className="min-w-0 break-words sm:truncate">{title}</span>

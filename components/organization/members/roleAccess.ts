@@ -285,6 +285,18 @@ export const ROLE_ACCESS_GROUPS: readonly RoleAccessGroup[] = [
 export const accessCellText = (cell: RoleAccessCell): string =>
   cell.note ? `${ACCESS_LEVEL_LABELS[cell.level]}: ${cell.note}` : ACCESS_LEVEL_LABELS[cell.level];
 
+// The role to print as "Your role". What the page just read from the backend wins over the
+// session, which can be behind after a role change: an Owner or Admin is read from the members
+// list, and a member the invitations API answers is a Team Manager. Otherwise the session's role.
+export const shownRole = (
+  access: { role: CustomerRole | null; canManageMembers: boolean; canInvite: boolean },
+  sessionRole: CustomerRole | null,
+): CustomerRole | null => {
+  if (access.canManageMembers) return access.role ?? sessionRole;
+  if (access.canInvite) return "team_manager";
+  return sessionRole;
+};
+
 // The member's customer role from their session roles; null when none is readable, so the page
 // never names a role it isn't sure of.
 export const customerRoleOf = (roles: readonly string[] | null | undefined): CustomerRole | null =>

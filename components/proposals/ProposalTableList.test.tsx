@@ -319,7 +319,8 @@ describe('ProposalTableList — title link', () => {
 
   it('for a member who cannot edit, drops Edit and sends the title to the preview', async () => {
     render(<ProposalTableList searchValue="" activeFilter="all" readOnly />)
-    const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026' }, LOAD_TIMEOUT)
+    // The new tab is announced, not only hinted at in a tooltip.
+    const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026 (opens in a new tab)' }, LOAD_TIMEOUT)
     expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument()
     expect(title).toHaveAttribute('href', PREVIEW_HREF)
     expect(title).toHaveAttribute('href', screen.getByRole('link', { name: 'Preview' }).getAttribute('href'))
