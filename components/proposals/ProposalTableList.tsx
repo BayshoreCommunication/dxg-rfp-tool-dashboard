@@ -768,7 +768,7 @@ export default function ProposalTableList({
                             rel={titleLink.newTab ? "noopener noreferrer" : undefined}
                             title={titleLink.hint}
                             data-testid="proposal-title-link"
-                            className="min-w-0 break-words rounded-sm underline-offset-2 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:truncate"
+                            className="min-w-0 break-words rounded-sm underline-offset-2 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 sm:truncate"
                           >
                             {title}
                           </Link>

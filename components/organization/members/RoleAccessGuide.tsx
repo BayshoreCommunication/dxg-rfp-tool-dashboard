@@ -81,7 +81,7 @@ export default function RoleAccessGuide({ role }: Props) {
       </dl>
 
       <details className="group mt-5" data-testid="role-comparison">
-        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded px-1 py-1 text-sm font-semibold text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded px-1 py-1 text-sm font-semibold text-sky-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
           <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180" />
           Compare roles in detail
         </summary>

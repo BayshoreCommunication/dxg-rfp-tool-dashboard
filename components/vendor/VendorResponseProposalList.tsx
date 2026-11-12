@@ -52,7 +52,7 @@ function ProposalCard({ proposal }: { proposal: VendorResponseProposalSummary })
             {/* Same destination as "View responses", the row's only link. */}
             <Link
               href={`/vendor-responses/proposals/${encodeURIComponent(proposal.proposalId)}`}
-              className="min-w-0 truncate rounded-sm underline-offset-4 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+              className="min-w-0 truncate rounded-sm underline-offset-4 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
               {proposal.proposalTitle}
             </Link>
