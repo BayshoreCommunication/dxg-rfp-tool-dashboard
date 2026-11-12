@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 jest.mock("@/auth", () => ({ auth: jest.fn(async () => ({ user: { _id: "session-user" } })) }));
 jest.mock("@/lib/server/memberIdentity", () => ({ getMemberIdentity: jest.fn() }));
@@ -14,7 +14,12 @@ jest.mock("next/navigation", () => ({
   redirect: jest.fn((url: string) => {
     throw new Error(`REDIRECT:${url}`);
   }),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), refresh: jest.fn() }),
+  usePathname: () => "/dashboard",
+  useSearchParams: () => new URLSearchParams(),
 }));
+// The row menu's server actions are exercised in ProposalRowActions.test.tsx.
+jest.mock("@/app/actions/proposals", () => ({ copyProposalAction: jest.fn(), deleteProposalAction: jest.fn() }));
 
 import { auth } from "@/auth";
 import { listMembersAction } from "@/app/actions/organizationMembers";
@@ -55,6 +60,8 @@ const renderDashboard = async (searchParams: Record<string, string> = {}) => ren
 const listQueries = () => mockedList.mock.calls.map(([query]) => query ?? {});
 const summaryQueries = () => mockedSummary.mock.calls.map(([query]) => query ?? {});
 const mainListQuery = () => listQueries().find((query) => query.page !== undefined)!;
+// Planner, team, city and dates sit in the Filters popover.
+const openFilters = () => fireEvent.click(screen.getByRole("button", { name: /^Filters/ }));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -66,7 +73,7 @@ beforeEach(() => {
 });
 
 describe("RoleDashboard", () => {
-  test("Planner: everything is asked for the planner's own RFPs, and the summary uses the list's filters", async () => {
+  test("Planner: everything is asked for the planner's own proposals, and the summary uses the list's filters", async () => {
     signInAs(["planner"]);
     await renderDashboard({ stage: "sent", search: "gala", owner: PRIYA, view: "organization" });
 
@@ -74,7 +81,7 @@ describe("RoleDashboard", () => {
     expect(screen.getByTestId("role-dashboard")).toHaveAttribute("data-dashboard-view", "mine");
     const { page, limit, sortBy, sortOrder, ...listFilters } = mainListQuery();
     expect(listFilters).toEqual({ owner: ME, search: "gala", stage: "sent" });
-    expect({ page, limit, sortBy, sortOrder }).toEqual({ page: "1", limit: "25", sortBy: "updatedAt", sortOrder: "desc" });
+    expect({ page, limit, sortBy, sortOrder }).toEqual({ page: "1", limit: "10", sortBy: "updatedAt", sortOrder: "desc" });
     // PRD P0-8: the counts come from the same scoped query as the list.
     expect(summaryQueries()).toContainEqual(listFilters);
     expect(summaryQueries()).toContainEqual({ owner: ME, search: "gala", stage: "draft,sent,receiving_responses,under_review,awarded,archived" });
@@ -95,6 +102,7 @@ describe("RoleDashboard", () => {
     expect({ owner, page }).toEqual({ owner: PRIYA, page: "1" });
     expect(summaryQueries()).toContainEqual({ owner: PRIYA });
     expect(mockedMembers).not.toHaveBeenCalled();
+    openFilters();
     const planner = screen.getByLabelText("Planner");
     expect(within(planner).getAllByRole("option").map((option) => option.textContent)).toEqual(["All planners", "Priya Planner"]);
     expect(within(screen.getByLabelText("Team", { selector: "select" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["All teams", "Corporate Events"]);
@@ -115,17 +123,18 @@ describe("RoleDashboard", () => {
     expect(screen.getByTestId("role-dashboard")).toHaveAttribute("data-dashboard-view", "organization");
     const { page, limit, sortBy, sortOrder, ...listFilters } = mainListQuery();
     expect(listFilters).toEqual({ team: TEAM, venueCity: "Chicago", eventFrom: "2027-01-01", eventTo: "2027-03-31" });
-    expect([page, limit, sortBy, sortOrder]).toEqual(["1", "25", "updatedAt", "desc"]);
+    expect([page, limit, sortBy, sortOrder]).toEqual(["1", "10", "updatedAt", "desc"]);
     expect(summaryQueries()).toContainEqual(listFilters);
     // No personal panels on the organization view: one list call only.
     expect(mockedList).toHaveBeenCalledTimes(1);
-    // Viewers can't own RFPs and archived teams aren't offered.
+    // Viewers can't own proposals and archived teams aren't offered.
+    openFilters();
     expect(within(screen.getByLabelText("Planner")).getAllByRole("option").map((option) => option.textContent)).toEqual(["All planners", "Priya Planner"]);
     expect(within(screen.getByLabelText("Team", { selector: "select" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["All teams", "Corporate Events"]);
     expect(within(screen.getByRole("region", { name: "Summary" })).getByTestId("summary-responses")).toHaveTextContent("3");
   });
 
-  test("Owner: My RFPs narrows to the Owner's own RFPs", async () => {
+  test("Owner: My Proposals narrows to the Owner's own proposals", async () => {
     signInAs(["owner"]);
     await renderDashboard({ view: "mine", owner: PRIYA });
     expect(mainListQuery().owner).toBe(ME);
@@ -139,7 +148,7 @@ describe("RoleDashboard", () => {
     expect(mockedList).toHaveBeenCalledTimes(1);
     const { page, limit, sortBy, sortOrder, ...listFilters } = mainListQuery();
     expect(listFilters).toEqual({});
-    expect([page, limit, sortBy, sortOrder]).toEqual(["1", "25", "updatedAt", "desc"]);
+    expect([page, limit, sortBy, sortOrder]).toEqual(["1", "10", "updatedAt", "desc"]);
     // Only the status-tab counts are asked of the summary endpoint.
     expect(summaryQueries()).toEqual([{ stage: "draft,sent,receiving_responses,under_review,awarded,archived" }]);
     expect(screen.queryByRole("link", { name: /New Proposal/ })).not.toBeInTheDocument();
@@ -147,12 +156,63 @@ describe("RoleDashboard", () => {
     expect(mockedMembers).not.toHaveBeenCalled();
   });
 
+  test("the URL's filters, sort and page reach both loaders and nothing else does", async () => {
+    signInAs(["owner"]);
+    await renderDashboard({ search: " summit ", sortBy: "eventName", sortOrder: "desc", page: "3", stage: "draft", owner: "nope", bogus: "1" });
+    const { page, limit, sortBy, sortOrder, ...listFilters } = mainListQuery();
+    expect(listFilters).toEqual({ search: "summit", stage: "draft" });
+    expect([page, limit, sortBy, sortOrder]).toEqual(["3", "10", "eventName", "desc"]);
+    expect(summaryQueries()).toContainEqual(listFilters);
+    expect(screen.getByRole("searchbox")).toHaveValue("summit");
+  });
+
+  test("row menus follow the role: an Owner gets one on every row, a Planner only on their own, a Viewer none", async () => {
+    signInAs(["owner"]);
+    const { unmount } = await renderDashboard();
+    expect(screen.getAllByRole("button", { name: /^Actions for/ })).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Event 1" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${"1".padStart(24, "0")}`);
+    unmount();
+
+    // Priya's proposals, seen by another planner through a share: read-only.
+    signInAs(["planner"]);
+    const second = await renderDashboard();
+    expect(screen.queryByRole("button", { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Event 1" })).toHaveAttribute("href", `/proposal/event-1-${"1".padStart(24, "0")}`);
+    second.unmount();
+
+    signInAs(["planner"], PRIYA);
+    const third = await renderDashboard();
+    expect(screen.getAllByRole("button", { name: /^Actions for/ })).toHaveLength(2);
+    third.unmount();
+
+    signInAs(["viewer"], PRIYA);
+    await renderDashboard();
+    expect(screen.queryByRole("button", { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
+  });
+
+  test("when every stat is zero one card replaces them, with a create button unless the plan is at its limit", async () => {
+    signInAs(["planner"]);
+    mockedSummary.mockResolvedValue({ success: true, message: "OK", data: toRfpSummary({ total: 2, byStage: { draft: 2 } }) });
+    const { unmount } = await renderDashboard();
+    const summary = screen.getByRole("region", { name: "Summary" });
+    expect(within(summary).getByTestId("summary-empty")).toHaveTextContent("No proposal activity yet");
+    expect(within(summary).queryByTestId("summary-active")).not.toBeInTheDocument();
+    expect(within(summary).getByRole("link", { name: "New Proposal" })).toHaveAttribute("href", "/proposals/add-new-proposal");
+    unmount();
+
+    mockedUsage.mockResolvedValue({ used: 2, limit: 2, atLimit: true, planName: "Free trial", onPlan: "on the free trial" });
+    await renderDashboard();
+    expect(screen.getByTestId("summary-empty")).toBeInTheDocument();
+    expect(screen.queryByTestId("summary-empty-create")).not.toBeInTheDocument();
+  });
+
   test("a refused load (404 for another organization's data) renders a message instead of throwing", async () => {
     signInAs(["organization_admin"]);
     mockedList.mockResolvedValue({ success: false, message: "Not found", status: 404, code: "NOT_FOUND" });
     mockedSummary.mockResolvedValue({ success: false, message: "Not found", status: 404, code: "NOT_FOUND" });
     await renderDashboard({ team: TEAM });
-    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't find those RFPs. They may have been moved or belong to another organization.");
+    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't find those proposals. They may have been moved or belong to another organization.");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
@@ -163,7 +223,7 @@ describe("RoleDashboard", () => {
     // The last page itself never redirects to itself.
     mockedList.mockResolvedValue({ success: true, message: "OK", data: listOf(0, 30, 2) });
     await renderDashboard({ page: "2", stage: "sent" });
-    expect(screen.getByText("No RFPs match these filters")).toBeInTheDocument();
+    expect(screen.getByText("No proposals match these filters")).toBeInTheDocument();
   });
 
   test("a session whose token has no user id falls back to the session's id", async () => {
@@ -172,7 +232,7 @@ describe("RoleDashboard", () => {
     expect(mainListQuery().owner).toBe("session-user");
   });
 
-  test("My RFPs is never asked without knowing who is asking", async () => {
+  test("My Proposals is never asked without knowing who is asking", async () => {
     jest.mocked(auth).mockResolvedValueOnce(null as never);
     signInAs(["planner"], null);
     await renderDashboard();
@@ -189,8 +249,8 @@ describe("RoleDashboard", () => {
     expect(screen.queryByRole("link", { name: /New Proposal/ })).not.toBeInTheDocument();
   });
 
-  // ORG-602: the plan's RFP counter and the create button at the limit.
-  test("free trial: the counter sits with the New RFP button", async () => {
+  // ORG-602: the plan's proposal counter and the create button at the limit.
+  test("free trial: the counter sits with the New Proposal button", async () => {
     signInAs(["planner"]);
     mockedUsage.mockResolvedValue({ used: 1, limit: 2, atLimit: false, planName: "Free trial", onPlan: "on the free trial" });
     await renderDashboard();
