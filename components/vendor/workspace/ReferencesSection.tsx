@@ -39,9 +39,24 @@ export default function ReferencesSection({
   const uploadForId = useRef("");
   const [uploadingId, setUploadingId] = useState("");
   const [error, setError] = useState("");
+  const blankReference = (): VendorResponseV1["references"][number] => ({
+    referenceId: newId(),
+    clientName: "",
+    contact: { name: "", email: "", phone: "" },
+    eventName: "",
+    servicesProvided: "",
+    currentStatus: "",
+    comparable: false,
+    visualDocumentIds: [],
+  });
+  // An empty section shows one open, unsaved reference; it joins the response
+  // on the first edit. Visual uploads wait for that, since they need a saved reference.
+  const [placeholder] = useState(blankReference);
+  const showPlaceholder = response.references.length === 0 && !disabled;
+  const references = showPlaceholder ? [placeholder] : response.references;
   const uploadVisual = async (files: FileList | null) => {
     const referenceId = uploadForId.current;
-    const reference = response.references.find(
+    const reference = references.find(
       (entry) => entry.referenceId === referenceId,
     );
     if (!files?.length || !reference || !imageCategory) return;
@@ -79,7 +94,7 @@ export default function ReferencesSection({
         maximum per reference.
       </p>
       <div className="space-y-4">
-        {response.references.map((reference, index) => {
+        {references.map((reference, index) => {
           const hasLinkedDocuments =
             reference.visualDocumentIds.length > 0 ||
             response.documents.some(
@@ -105,7 +120,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? { ...entry, clientName: event.target.value }
                             : entry,
@@ -123,7 +138,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? { ...entry, eventName: event.target.value }
                             : entry,
@@ -141,7 +156,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? {
                                 ...entry,
@@ -166,7 +181,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? {
                                 ...entry,
@@ -191,7 +206,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? {
                                 ...entry,
@@ -217,7 +232,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? {
                                 ...entry,
@@ -241,7 +256,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? {
                                 ...entry,
@@ -263,7 +278,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? {
                                 ...entry,
@@ -285,7 +300,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? { ...entry, currentStatus: event.target.value }
                             : entry,
@@ -303,7 +318,7 @@ export default function ReferencesSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        references: response.references.map((entry) =>
+                        references: references.map((entry) =>
                           entry.referenceId === reference.referenceId
                             ? { ...entry, comparable: event.target.checked }
                             : entry,
@@ -323,7 +338,7 @@ export default function ReferencesSection({
                   onChange={(event) =>
                     onChange({
                       ...response,
-                      references: response.references.map((entry) =>
+                      references: references.map((entry) =>
                         entry.referenceId === reference.referenceId
                           ? { ...entry, servicesProvided: event.target.value }
                           : entry,
@@ -341,6 +356,7 @@ export default function ReferencesSection({
                   accept={imageCategory?.allowedMimeTypes.join(",")}
                   disabled={
                     disabled ||
+                    showPlaceholder ||
                     !canUpload ||
                     !imageCategory ||
                     reference.visualDocumentIds.length >=
@@ -353,7 +369,7 @@ export default function ReferencesSection({
                   onClick={() => {
                     uploadForId.current = reference.referenceId;
                   }}
-                  className={`inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-3 py-2 text-xs font-extrabold text-[#0075b4] ${disabled || !canUpload || !imageCategory ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#eef8fd]"}`}
+                  className={`inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-3 py-2 text-xs font-extrabold text-[#0075b4] ${disabled || showPlaceholder || !canUpload || !imageCategory ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#eef8fd]"}`}
                 >
                   <ImageUp size={14} aria-hidden="true" />
                   {uploadingId === reference.referenceId
@@ -366,7 +382,7 @@ export default function ReferencesSection({
                 </span>
                 <button
                   type="button"
-                  disabled={disabled || hasLinkedDocuments}
+                  disabled={disabled || hasLinkedDocuments || showPlaceholder}
                   title={
                     hasLinkedDocuments
                       ? "Retire this reference’s visuals in Document uploads first."
@@ -376,7 +392,7 @@ export default function ReferencesSection({
                   onClick={() =>
                     onChange({
                       ...response,
-                      references: response.references.filter(
+                      references: references.filter(
                         (entry) => entry.referenceId !== reference.referenceId,
                       ),
                     })
@@ -402,19 +418,7 @@ export default function ReferencesSection({
           onClick={() =>
             onChange({
               ...response,
-              references: [
-                ...response.references,
-                {
-                  referenceId: newId(),
-                  clientName: "",
-                  contact: { name: "", email: "", phone: "" },
-                  eventName: "",
-                  servicesProvided: "",
-                  currentStatus: "",
-                  comparable: false,
-                  visualDocumentIds: [],
-                },
-              ],
+              references: [...references, blankReference()],
             })
           }
         >

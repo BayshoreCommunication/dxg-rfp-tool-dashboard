@@ -9,6 +9,9 @@ import {
 import type { VendorResponseWorkspaceV1 } from "@/contracts/generated/vendor-response-workspace-v1";
 import type { VendorDraftDto } from "@/lib/vendorResponses/workspaceModel";
 import VendorResponseWorkspace from "./VendorResponseWorkspace";
+import AlternatesSection from "./AlternatesSection";
+import CrewSection from "./CrewSection";
+import ReferencesSection from "./ReferencesSection";
 
 const room = (index: number) => ({
   roomId: `room-${index}`,
@@ -592,5 +595,48 @@ describe("VendorResponseWorkspace", () => {
     expect(screen.getByText("current-insurance.pdf")).toBeInTheDocument();
     expect(screen.getByText("inherited")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Replace" })).toBeInTheDocument();
+  });
+});
+
+/* Empty list sections open one blank entry so vendors see the form, but the
+   entry stays out of the response until they type: an untouched optional
+   section (alternates) must not turn into a blocking, half-filled row. */
+describe("empty list sections", () => {
+  const props = (disabled = false) => {
+    const ws = workspace();
+    return {
+      questionnaire: ws.questionnaire,
+      response: ws.draft!.response,
+      onChange: jest.fn(),
+      sectionNumber: 1,
+      disabled,
+    };
+  };
+  const upload = { canUpload: true, onUpload: jest.fn() };
+
+  it.each([
+    ["alternates", "Alternate 1", "Title *", (p: ReturnType<typeof props>) => <AlternatesSection {...p} />],
+    ["crew", "Crew member 1", "Full name *", (p: ReturnType<typeof props>) => <CrewSection {...p} {...upload} />],
+    ["references", "Reference 1", "Client name *", (p: ReturnType<typeof props>) => <ReferencesSection {...p} {...upload} />],
+  ] as const)("%s shows one open entry that joins the response on first edit", (key, legend, label, view) => {
+    const p = props();
+    render(view(p));
+    expect(screen.getByText(legend)).toBeInTheDocument();
+    expect(p.onChange).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(label), { target: { value: "Typed" } });
+    const next = p.onChange.mock.calls[0][0];
+    expect(next[key]).toHaveLength(1);
+  });
+
+  it("adding with the open entry visible keeps it and appends a second", () => {
+    const p = props();
+    render(<AlternatesSection {...p} />);
+    fireEvent.click(screen.getByRole("button", { name: /Add alternate/ }));
+    expect(p.onChange.mock.calls[0][0].alternates).toHaveLength(2);
+  });
+
+  it("read-only sections show no blank entry", () => {
+    render(<AlternatesSection {...props(true)} />);
+    expect(screen.queryByText("Alternate 1")).not.toBeInTheDocument();
   });
 });

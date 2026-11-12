@@ -5,6 +5,7 @@ import {
   signedMoneyFromInput,
 } from "@/lib/vendorResponses/workspaceModel";
 import { BadgeDollarSign, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import WorkspaceSection, {
   fieldClass,
   labelClass,
@@ -31,6 +32,19 @@ export default function AlternatesSection({
     (entry) => entry.sectionId === "alternates",
   );
   const precision = questionnaire.pricing.decimalPrecision;
+  const blankAlternate = (): VendorResponseV1["alternates"][number] => ({
+    alternateId: newId(),
+    scope: { type: "project" },
+    title: "",
+    tradeoff: "",
+    costDelta: { amountMinor: 0, currency: questionnaire.pricing.currency },
+    recommended: false,
+  });
+  // An empty section shows one open, unsaved alternate; it joins the response
+  // on the first edit, so an untouched optional section never blocks submit.
+  const [placeholder] = useState(blankAlternate);
+  const showPlaceholder = response.alternates.length === 0 && !disabled;
+  const alternates = showPlaceholder ? [placeholder] : response.alternates;
   return (
     <WorkspaceSection
       number={sectionNumber}
@@ -58,7 +72,7 @@ export default function AlternatesSection({
         ) : null}
       </div>
       <div className="space-y-4">
-        {response.alternates.map((alternate, index) => (
+        {alternates.map((alternate, index) => (
           <fieldset
             key={alternate.alternateId}
             className="rounded-md border border-[#dce4eb] p-4 sm:p-5"
@@ -80,7 +94,7 @@ export default function AlternatesSection({
                   onChange={(event) =>
                     onChange({
                       ...response,
-                      alternates: response.alternates.map((entry) =>
+                      alternates: alternates.map((entry) =>
                         entry.alternateId === alternate.alternateId
                           ? {
                               ...entry,
@@ -115,7 +129,7 @@ export default function AlternatesSection({
                   onChange={(event) =>
                     onChange({
                       ...response,
-                      alternates: response.alternates.map((entry) =>
+                      alternates: alternates.map((entry) =>
                         entry.alternateId === alternate.alternateId
                           ? { ...entry, title: event.target.value }
                           : entry,
@@ -134,7 +148,7 @@ export default function AlternatesSection({
                   onChange={(event) =>
                     onChange({
                       ...response,
-                      alternates: response.alternates.map((entry) =>
+                      alternates: alternates.map((entry) =>
                         entry.alternateId === alternate.alternateId
                           ? {
                               ...entry,
@@ -154,13 +168,13 @@ export default function AlternatesSection({
               </label>
               <button
                 type="button"
-                disabled={disabled}
+                disabled={disabled || showPlaceholder}
                 aria-label={`Remove alternate ${index + 1}`}
                 className="grid h-10 w-10 place-items-center rounded-md text-[#718496] hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
                 onClick={() =>
                   onChange({
                     ...response,
-                    alternates: response.alternates.filter(
+                    alternates: alternates.filter(
                       (entry) => entry.alternateId !== alternate.alternateId,
                     ),
                   })
@@ -179,7 +193,7 @@ export default function AlternatesSection({
                 onChange={(event) =>
                   onChange({
                     ...response,
-                    alternates: response.alternates.map((entry) =>
+                    alternates: alternates.map((entry) =>
                       entry.alternateId === alternate.alternateId
                         ? { ...entry, tradeoff: event.target.value }
                         : entry,
@@ -197,7 +211,7 @@ export default function AlternatesSection({
                 onChange={(event) =>
                   onChange({
                     ...response,
-                    alternates: response.alternates.map((entry) =>
+                    alternates: alternates.map((entry) =>
                       entry.alternateId === alternate.alternateId
                         ? { ...entry, recommended: event.target.checked }
                         : entry,
@@ -218,20 +232,7 @@ export default function AlternatesSection({
           onClick={() =>
             onChange({
               ...response,
-              alternates: [
-                ...response.alternates,
-                {
-                  alternateId: newId(),
-                  scope: { type: "project" },
-                  title: "",
-                  tradeoff: "",
-                  costDelta: {
-                    amountMinor: 0,
-                    currency: questionnaire.pricing.currency,
-                  },
-                  recommended: false,
-                },
-              ],
+              alternates: [...alternates, blankAlternate()],
             })
           }
         >

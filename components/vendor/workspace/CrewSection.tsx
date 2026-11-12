@@ -41,10 +41,22 @@ export default function CrewSection({
   const [uploadingId, setUploadingId] = useState("");
   const [uploadError, setUploadError] = useState("");
   const uploadForId = useRef("");
+  const blankMember = (): VendorResponseV1["crew"][number] => ({
+    crewMemberId: newId(),
+    name: "",
+    roleId: groupCrewRoles(questionnaire.crew.roles)[0]?.roles[0]?.id ?? "",
+    bio: "",
+  });
+  // An empty section shows one open, unsaved member; it joins the response on
+  // the first edit. Uploads wait for that, since they need a saved member.
+  const [placeholder] = useState(blankMember);
+  const showPlaceholder =
+    response.crew.length === 0 && !disabled && questionnaire.crew.roles.length > 0;
+  const crew = showPlaceholder ? [placeholder] : response.crew;
 
   const uploadHeadshot = async (files: FileList | null) => {
     const crewMemberId = uploadForId.current;
-    const member = response.crew.find(
+    const member = crew.find(
       (entry) => entry.crewMemberId === crewMemberId,
     );
     if (!files?.length || !member || !imageCategory) return;
@@ -67,7 +79,7 @@ export default function CrewSection({
       helperText={section?.helperText ?? "Add each core team member."}
     >
       <div className="space-y-4">
-        {response.crew.map((member, index) => {
+        {crew.map((member, index) => {
           const count = wordCount(member.bio);
           const hasLinkedDocuments =
             Boolean(member.headshotDocumentId) ||
@@ -95,7 +107,7 @@ export default function CrewSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        crew: response.crew.map((entry) =>
+                        crew: crew.map((entry) =>
                           entry.crewMemberId === member.crewMemberId
                             ? { ...entry, name: event.target.value }
                             : entry,
@@ -113,7 +125,7 @@ export default function CrewSection({
                     onChange={(event) =>
                       onChange({
                         ...response,
-                        crew: response.crew.map((entry) =>
+                        crew: crew.map((entry) =>
                           entry.crewMemberId === member.crewMemberId
                             ? { ...entry, roleId: event.target.value }
                             : entry,
@@ -126,7 +138,7 @@ export default function CrewSection({
                 </label>
                 <button
                   type="button"
-                  disabled={disabled || hasLinkedDocuments}
+                  disabled={disabled || hasLinkedDocuments || showPlaceholder}
                   title={
                     hasLinkedDocuments
                       ? "Retire this crew member’s attachments in Document uploads first."
@@ -137,7 +149,7 @@ export default function CrewSection({
                   onClick={() =>
                     onChange({
                       ...response,
-                      crew: response.crew.filter(
+                      crew: crew.filter(
                         (entry) => entry.crewMemberId !== member.crewMemberId,
                       ),
                     })
@@ -156,7 +168,7 @@ export default function CrewSection({
                   onChange={(event) =>
                     onChange({
                       ...response,
-                      crew: response.crew.map((entry) =>
+                      crew: crew.map((entry) =>
                         entry.crewMemberId === member.crewMemberId
                           ? { ...entry, bio: event.target.value }
                           : entry,
@@ -179,6 +191,7 @@ export default function CrewSection({
                     accept={imageCategory?.allowedMimeTypes.join(",")}
                     disabled={
                       disabled ||
+                      showPlaceholder ||
                       !canUpload ||
                       !imageCategory ||
                       uploadingId === member.crewMemberId
@@ -192,7 +205,7 @@ export default function CrewSection({
                     onClick={() => {
                       uploadForId.current = member.crewMemberId;
                     }}
-                    className={`inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-3 py-2 text-xs font-extrabold text-[#0075b4] ${disabled || !canUpload || !imageCategory ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#eef8fd]"}`}
+                    className={`inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-3 py-2 text-xs font-extrabold text-[#0075b4] ${disabled || showPlaceholder || !canUpload || !imageCategory ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#eef8fd]"}`}
                   >
                     <ImageUp size={14} aria-hidden="true" />
                     {uploadingId === member.crewMemberId
@@ -232,15 +245,7 @@ export default function CrewSection({
         onClick={() =>
           onChange({
             ...response,
-            crew: [
-              ...response.crew,
-              {
-                crewMemberId: newId(),
-                name: "",
-                roleId: groupCrewRoles(questionnaire.crew.roles)[0]?.roles[0]?.id ?? "",
-                bio: "",
-              },
-            ],
+            crew: [...crew, blankMember()],
           })
         }
       >
