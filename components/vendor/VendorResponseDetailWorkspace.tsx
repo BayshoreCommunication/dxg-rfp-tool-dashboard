@@ -72,19 +72,19 @@ export default function VendorResponseDetailWorkspace({
       className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_18px_55px_-34px_rgba(15,23,42,0.35)]"
       aria-labelledby="vendor-response-title"
     >
-      <header className="border-b border-slate-200 bg-white px-5 py-5 sm:px-7 lg:px-9">
+      <header className="border-b border-slate-200 bg-white px-5 py-5 sm:px-7 lg:px-9 print:px-9">
         <Link
           href={proposalResponsesHref}
-          className="inline-flex min-h-9 items-center gap-2 rounded-lg text-xs font-bold text-slate-600 hover:text-[#0076b4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/20"
+          className="inline-flex min-h-9 items-center gap-2 rounded-lg text-xs font-bold text-slate-600 print:hidden hover:text-[#0076b4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/20"
         >
           <ArrowLeft size={15} aria-hidden="true" /> Back to proposal responses
         </Link>
-        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between print:flex-row print:items-end print:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1
                 id="vendor-response-title"
-                className="text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl"
+                className="text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl print:text-3xl"
               >
                 {vendorName}
               </h1>
@@ -103,10 +103,10 @@ export default function VendorResponseDetailWorkspace({
       {detail.versions.length === 0 ? (
         <LegacyResponse detail={detail} />
       ) : (
-        <div className={`grid min-h-0 ${singleVersion ? "" : "lg:grid-cols-[310px_minmax(0,1fr)]"}`}>
+        <div className={`grid min-h-0 ${singleVersion ? "" : "lg:grid-cols-[310px_minmax(0,1fr)] print:grid-cols-1"}`}>
           {!singleVersion && (
           <nav
-            className="border-b border-slate-200 bg-slate-50/80 p-4 lg:border-b-0 lg:border-r lg:p-5"
+            className="border-b border-slate-200 bg-slate-50/80 p-4 lg:border-b-0 lg:border-r lg:p-5 print:hidden"
             aria-label="Immutable response versions"
           >
             <div className="flex items-center justify-between gap-3">
@@ -172,7 +172,7 @@ export default function VendorResponseDetailWorkspace({
           )}
 
           {selectedVersion && (
-            <main className="min-w-0 p-5 sm:p-7 lg:p-9" aria-live="polite">
+            <main className="min-w-0 p-5 sm:p-7 lg:p-9 print:p-9" aria-live="polite">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -208,7 +208,7 @@ export default function VendorResponseDetailWorkspace({
                 </div>
               )}
 
-              <dl className="mt-5 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-3">
+              <dl className="mt-5 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-3 print:grid-cols-3">
                 <Fact
                   icon={<UserRound size={15} />}
                   label="Submitted by"
@@ -383,7 +383,7 @@ function SourceReadiness({
             return (
               <li
                 key={document.documentId || `${document.name}-${index}`}
-                className="flex flex-wrap items-center gap-3 p-4 sm:flex-nowrap"
+                className="flex flex-wrap items-center gap-3 p-4 sm:flex-nowrap print:flex-nowrap"
               >
                 <span
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}
@@ -426,7 +426,7 @@ function SourceReadiness({
 
 function LegacyResponse({ detail }: { detail: VendorSubmissionDetail }) {
   return (
-    <div className="p-6 sm:p-8 lg:p-10">
+    <div className="p-6 sm:p-8 lg:p-10 print:p-10">
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
         <div className="flex items-start gap-3">
           <AlertTriangle

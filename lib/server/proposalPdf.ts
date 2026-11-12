@@ -46,6 +46,31 @@ const launchBrowser = async (): Promise<Browser> => {
   });
 };
 
+/** Prints a self-contained HTML document (inline styles, no external assets)
+ *  to an A4 PDF. Scripts and every network request are blocked: the HTML
+ *  carries vendor-entered text, and the export never needs either. */
+export const renderHtmlToPdf = async (html: string) => {
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage();
+    await page.setJavaScriptEnabled(false);
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      if (request.url().startsWith("data:")) void request.continue();
+      else void request.abort();
+    });
+    await page.setContent(html, { waitUntil: "load", timeout: 30_000 });
+    await page.emulateMediaType("print");
+    return await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "12mm", right: "10mm", bottom: "12mm", left: "10mm" },
+    });
+  } finally {
+    await browser.close();
+  }
+};
+
 export const generateProposalPdf = async ({
   url,
   cookie,
