@@ -218,10 +218,13 @@ test.describe("proposal list title", () => {
     await card.getByRole("button", { name: "Archive", exact: true }).click();
     await page.getByRole("alertdialog", { name: "Archive this proposal?" }).getByRole("button", { name: "Cancel" }).click();
 
+    // The edit page is the heaviest route to compile in `next dev` (minutes on a cold cache), and
+    // the URL only changes once it has. Compile it first so the keyboard step tests the link.
+    test.setTimeout(480_000);
+    await page.request.get(editHref as string, { timeout: 360_000 });
     await title.focus();
     await page.keyboard.press("Enter");
-    // The edit page is the heaviest route to compile in `next dev`.
-    await expect(page).toHaveURL(/\/proposals\/proposal-edit\?proposalId=/, { timeout: 150_000 });
+    await expect(page).toHaveURL(/\/proposals\/proposal-edit\?proposalId=/, { timeout: 60_000 });
   });
 
   test("a Viewer gets no Edit action and the title opens the preview", async ({ page }) => {
