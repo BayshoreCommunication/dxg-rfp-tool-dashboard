@@ -10,10 +10,10 @@ const record = (value: unknown): value is Record<string, unknown> => typeof valu
 export default async function IntelligenceSubmissionsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f]{24}$/i.test(id)) notFound();
-  const locked = await planLockedScreen("proposalIntelligence", { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  const locked = await planLockedScreen("proposalIntelligence", { rfpId: id, backHref: "/proposals", backLabel: "Back to proposals" });
   if (locked) return locked;
   const [proposal, responseResult] = await Promise.all([getProposalByIdAction(id), getVendorResponsesAction({ proposalId: id, page: 1, limit: 100 })]);
-  const refused = await planLockedRefusal("proposalIntelligence", [responseResult], { rfpId: id, backHref: "/proposals", backLabel: "Back to RFPs" });
+  const refused = await planLockedRefusal("proposalIntelligence", [responseResult], { rfpId: id, backHref: "/proposals", backLabel: "Back to proposals" });
   if (refused) return refused;
   if (!proposal.success || !record(proposal.data)) notFound();
   const responses = Array.isArray(responseResult?.data) ? responseResult.data as VendorResponseItem[] : [];

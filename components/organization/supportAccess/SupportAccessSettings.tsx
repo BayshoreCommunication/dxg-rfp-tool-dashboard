@@ -234,7 +234,7 @@ export default function SupportAccessSettings({ initialPage, initialError = null
           Support access
         </h1>
         <p className="mt-2 max-w-3xl text-[13px] font-medium text-slate-600">
-          {SUPPORT_LABEL} can&apos;t read your RFPs unless an Owner or Admin allows it. Grant access to one RFP or your whole
+          {SUPPORT_LABEL} can&apos;t read your proposals unless an Owner or Admin allows it. Grant access to one proposal or your whole
           organization for up to 30 days, and end it whenever you like. Everything Support opens is recorded here.
         </p>
       </div>
@@ -263,7 +263,7 @@ export default function SupportAccessSettings({ initialPage, initialError = null
                 <EmptyState
                   icon={<ShieldOff size={20} />}
                   title={`${SUPPORT_LABEL} has no access`}
-                  body="Nobody at RFPilot can read your RFPs. Grant access when you want Support to look at something with you."
+                  body="Nobody at RFPilot can read your proposals. Grant access when you want Support to look at something with you."
                 />
               ) : (
                 <ul className="space-y-3" aria-label="Active access">{active.map(grantRow)}</ul>
@@ -300,7 +300,7 @@ export default function SupportAccessSettings({ initialPage, initialError = null
           onGranted={(grant) => {
             setGrants((current) => [grant, ...current.filter((item) => item.id !== grant.id)]);
             setDialog(null);
-            toast.success(`${SUPPORT_LABEL} can now read ${grant.scope === "organization" ? "your organization's RFPs" : "that RFP"}.`);
+            toast.success(`${SUPPORT_LABEL} can now read ${grant.scope === "organization" ? "your organization's proposals" : "that proposal"}.`);
           }}
         />
       )}

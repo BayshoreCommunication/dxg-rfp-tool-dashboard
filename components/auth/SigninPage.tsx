@@ -30,7 +30,7 @@ const SigninAside = () => (
     <figure className="rounded-2xl bg-white/10 p-6 backdrop-blur-sm">
       <Quote className="mb-3 h-5 w-5 text-white/60" />
       <blockquote className="text-[15px] font-medium leading-relaxed text-white/90">
-        RFPilot cut our RFP turnaround from days to hours — and clients
+        RFPilot cut our proposal turnaround from days to hours — and clients
         notice the difference.
       </blockquote>
       <figcaption className="mt-3 text-[13px] font-semibold text-white/60">

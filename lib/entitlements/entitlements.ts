@@ -35,7 +35,7 @@ const PLAN_NAMES: Record<string, string> = {
 
 export const planName = (plan: string): string => PLAN_NAMES[plan] ?? "Your plan";
 
-// "1 of 2 RFPs used on the free trial"; a plan this build doesn't know by name is "your plan".
+// "1 of 2 proposals used on the free trial"; a plan this build doesn't know by name is "your plan".
 const onPlan = (plan: string): string => (PLAN_NAMES[plan] ? `on the ${PLAN_NAMES[plan].toLowerCase()}` : "on your plan");
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -70,7 +70,7 @@ export const toEntitlements = (value: unknown): Entitlements | null => {
 export const isFeatureLocked = (entitlements: Entitlements | null, feature: PlanFeature): boolean =>
   entitlements !== null && !entitlements.features[feature];
 
-// What the "New RFP" button shows beside it. null on a plan with no limit (or an unknown plan):
+// What the "New Proposal" button shows beside it. null on a plan with no limit (or an unknown plan):
 // nothing to count.
 export type RfpUsage = {
   used: number;
@@ -87,32 +87,32 @@ export const rfpUsageOf = (entitlements: Entitlements | null): RfpUsage | null =
   return { used: Math.min(created, limit), limit, atLimit: !canCreate, planName: planName(entitlements.plan), onPlan: onPlan(entitlements.plan) };
 };
 
-const rfpWord = (count: number) => (count === 1 ? "RFP" : "RFPs");
+const rfpWord = (count: number) => (count === 1 ? "proposal" : "proposals");
 
-// "1 of 2 RFPs used"
+// "1 of 2 proposals used"
 export const rfpUsageLabel = (usage: RfpUsage): string => `${usage.used} of ${usage.limit} ${rfpWord(usage.limit)} used`;
 
 export const rfpLimitMessage = (usage: RfpUsage): string =>
   usage.limit === 0
-    ? "Your plan doesn't include creating RFPs. Contact us to upgrade."
-    : `Your plan includes ${usage.limit} ${rfpWord(usage.limit)} and your organization has used ${usage.limit === 1 ? "it" : usage.limit === 2 ? "both" : `all ${usage.limit}`}. Deleting an RFP doesn't free one up. Contact us to upgrade.`;
+    ? "Your plan doesn't include creating proposals. Contact us to upgrade."
+    : `Your plan includes ${usage.limit} ${rfpWord(usage.limit)} and your organization has used ${usage.limit === 1 ? "it" : usage.limit === 2 ? "both" : `all ${usage.limit}`}. Deleting a proposal doesn't free one up. Contact us to upgrade.`;
 
 export const LOCKED_FEATURE_COPY: Record<PlanFeature, { name: string; title: string; body: string }> = {
   vendorResponses: {
     name: "Vendor responses",
     title: "Vendor responses aren't included in your plan",
-    body: "Vendors can still respond to your RFPs. Every response is saved, and you can read, compare and export them as soon as your plan is upgraded.",
+    body: "Vendors can still respond to your proposals. Every response is saved, and you can read, compare and export them as soon as your plan is upgraded.",
   },
   proposalIntelligence: {
-    name: "RFP intelligence",
-    title: "RFP intelligence isn't included in your plan",
-    body: "RFP intelligence reads every vendor response, checks it against your requirements and lines the vendors up side by side. Vendors can still respond, and their responses are saved for when your plan is upgraded.",
+    name: "Proposal intelligence",
+    title: "Proposal intelligence isn't included in your plan",
+    body: "Proposal intelligence reads every vendor response, checks it against your requirements and lines the vendors up side by side. Vendors can still respond, and their responses are saved for when your plan is upgraded.",
   },
 };
 
 // "3 vendor responses received" for the locked state. `scope` says what was counted.
 export const responseCountLabel = (count: number, scope: "rfp" | "all"): string => {
-  const where = scope === "rfp" ? "on this RFP" : "on your RFPs";
+  const where = scope === "rfp" ? "on this proposal" : "on your proposals";
   if (count === 0) return `No vendor responses received ${where} yet`;
   return `${count.toLocaleString("en-US")} vendor ${count === 1 ? "response" : "responses"} received ${where}`;
 };

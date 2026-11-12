@@ -57,11 +57,11 @@ const parsePerson = (value: unknown): GrantPerson | null => {
   return id ? { id, name: text(value.name) } : null;
 };
 
-// An RFP nobody has named yet is stored under the backend's placeholder name, which still
-// says "proposal"; on screen it is an untitled RFP.
+// A proposal nobody has named yet is stored under the backend's placeholder name, in whichever
+// capitals it was saved with; on screen it is always "Untitled proposal".
 const rfpTitle = (value: unknown): string | null => {
   const title = text(value);
-  return title && /^untitled proposal$/i.test(title) ? "Untitled RFP" : title;
+  return title && /^untitled proposal$/i.test(title) ? "Untitled proposal" : title;
 };
 
 const parseRfp = (value: unknown): GrantRfp | null => {
@@ -134,7 +134,7 @@ export const parseGrantableRfps = (value: unknown): GrantableRfp[] | null => {
   return items.flatMap((item): GrantableRfp[] => {
     if (!isRecord(item)) return [];
     const id = text(item.id) ?? text(item._id);
-    return id ? [{ id, title: rfpTitle(item.eventName) ?? "Untitled RFP", ownerName: text(item.ownerName) }] : [];
+    return id ? [{ id, title: rfpTitle(item.eventName) ?? "Untitled proposal", ownerName: text(item.ownerName) }] : [];
   });
 };
 
@@ -148,9 +148,9 @@ export const currentStatus = (grant: Pick<SupportGrant, "status" | "expiresAt">,
 export const STATUS_LABELS: Record<SupportGrantStatus, string> = { active: "Active", expired: "Expired", revoked: "Revoked" };
 
 export const grantTarget = (grant: Pick<SupportGrant, "scope" | "rfp">): string =>
-  grant.scope === "organization" ? "Whole organization" : grant.rfp?.title ?? "An RFP that was deleted";
+  grant.scope === "organization" ? "Whole organization" : grant.rfp?.title ?? "A proposal that was deleted";
 
-export const grantScopeLabel = (grant: Pick<SupportGrant, "scope">): string => (grant.scope === "organization" ? "Every RFP" : "One RFP");
+export const grantScopeLabel = (grant: Pick<SupportGrant, "scope">): string => (grant.scope === "organization" ? "Every proposal" : "One proposal");
 
 const plural = (value: number, word: string) => `${value} ${word}${value === 1 ? "" : "s"}`;
 
@@ -197,28 +197,28 @@ export const parseExpiryDays = (value: string | number): number | null => {
 export const expiryFromNow = (days: number, now = Date.now()): string => new Date(now + days * DAY_MS).toISOString();
 
 const OPERATIONS: Record<string, string> = {
-  "rfp.list": "Listed the RFPs covered by this access",
-  "rfp.read": "Opened an RFP",
-  "vendor_responses.list": "Viewed an RFP's vendor responses",
-  "ticket.rfp.list": "Listed RFPs from a support ticket",
+  "rfp.list": "Listed the proposals covered by this access",
+  "rfp.read": "Opened a proposal",
+  "vendor_responses.list": "Viewed a proposal's vendor responses",
+  "ticket.rfp.list": "Listed proposals from a support ticket",
 };
 
 // Internal operation names never reach the screen.
-export const operationLabel = (operation: string): string => OPERATIONS[operation] ?? "Read RFP data";
+export const operationLabel = (operation: string): string => OPERATIONS[operation] ?? "Read proposal data";
 
 type ErrorLike = { code?: string; message?: string; status?: number; details?: Record<string, unknown> };
 
 const MESSAGES: Record<string, string> = {
   INVALID_GRANT_EXPIRY: `Choose an expiry between 1 and ${GRANT_MAX_DAYS} days.`,
   INVALID_GRANT_REASON: `Keep the reason to ${GRANT_REASON_MAX} characters or fewer.`,
-  PROPOSAL_NOT_FOUND: "That RFP wasn't found. It may have been deleted, so choose another.",
+  PROPOSAL_NOT_FOUND: "That proposal wasn't found. It may have been deleted, so choose another.",
   SUPPORT_GRANT_NOT_FOUND: "That support access wasn't found. Reload the page.",
   SUPPORT_GRANT_EXPIRED: "This support access has already expired, so there is nothing to revoke.",
   SUPPORT_GRANT_FORBIDDEN: `Only an Owner or Admin can manage ${SUPPORT_LABEL} access.`,
   SUPPORT_ACCESS_INTERNAL_ERROR: "The request couldn't be completed. Try again.",
   // The RFP picker's list (ORG-401); its own wording is about the dashboard.
-  DASHBOARD_INTERNAL_ERROR: "Your RFPs couldn't be loaded. Try again.",
-  DASHBOARD_FILTER_INVALID: "Your RFPs couldn't be loaded. Try again.",
+  DASHBOARD_INTERNAL_ERROR: "Your proposals couldn't be loaded. Try again.",
+  DASHBOARD_FILTER_INVALID: "Your proposals couldn't be loaded. Try again.",
   INVALID_RESPONSE: "We couldn't read the server's answer. Reload the page.",
 };
 

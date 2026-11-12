@@ -1,3 +1,4 @@
+import { RFP_NOUN } from "@/test/wording";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import AuditLogSettings from "./AuditLogSettings";
 import type { AuditEvent, AuditFilterOptions, AuditPage } from "./auditLogModel";
@@ -58,7 +59,7 @@ describe("AuditLogSettings", () => {
     for (const mock of [mockList, mockExport, mockToast.error, mockToast.success, mockToast.warn]) mock.mockReset();
   });
 
-  it("shows events with role labels, RFP wording and RFPilot Support, without asking the backend again", () => {
+  it("shows events with role labels, proposal wording and RFPilot Support, without asking the backend again", () => {
     renderLog();
     expect(screen.getByRole("heading", { name: "Audit log" })).toBeInTheDocument();
     expect(rows()).toHaveLength(2);
@@ -67,8 +68,9 @@ describe("AuditLogSettings", () => {
     expect(rows()[0]).toHaveTextContent("Role: Admin");
     expect(rows()[0]).toHaveTextContent("Allowed");
     expect(rows()[1]).toHaveTextContent("RFPilot Support");
-    expect(rows()[1]).toHaveTextContent("Opened an RFP");
-    expect(screen.getByTestId("audit-log").textContent).not.toMatch(/proposal|organization_admin/i);
+    expect(rows()[1]).toHaveTextContent("Opened a proposal");
+    expect(screen.getByTestId("audit-log").textContent).not.toMatch(RFP_NOUN);
+    expect(screen.getByTestId("audit-log").textContent).not.toMatch(/organization_admin/i);
     expect(mockList).not.toHaveBeenCalled();
   });
 

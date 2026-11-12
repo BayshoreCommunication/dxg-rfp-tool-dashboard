@@ -36,7 +36,7 @@ test('new proposal first attachment uses one compact timed loader and never flas
   test.setTimeout(90_000);
   await page.request.post(fixture, { data: { delays: { create: 500, upload: 1500, chat: 1200 } } });
   await page.goto('/proposals/add-new-proposal');
-  await expect(page.getByText('Let’s build your event RFP', {exact:true})).toBeVisible();
+  await expect(page.getByText('Let’s build your event proposal', {exact:true})).toBeVisible();
   await page.locator('input[type="file"]').setInputFiles({ name: 'first-brief.txt', mimeType: 'text/plain', buffer: Buffer.from('Northstar Leadership Summit, September 14–16, 2027.') });
   await page.evaluate(() => {
     const observed: string[] = [];

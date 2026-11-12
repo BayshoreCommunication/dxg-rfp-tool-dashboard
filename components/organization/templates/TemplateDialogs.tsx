@@ -74,7 +74,7 @@ export function SaveAsTemplateDialog({ proposalId, defaultTitle, access, onClose
   return (
     <OrgDialog
       title="Save as template"
-      description="Keeps this RFP's content to start new RFPs from. Vendors, responses, dates, contacts and uploaded files are not copied."
+      description="Keeps this proposal's content to start new proposals from. Vendors, responses, dates, contacts and uploaded files are not copied."
       busy={busy}
       onClose={onClose}
       footer={
@@ -129,7 +129,7 @@ export function SaveAsTemplateDialog({ proposalId, defaultTitle, access, onClose
             <div className="space-y-2">
               {([
                 ["personal", "Only me", "A personal template. Nobody else sees it."],
-                ["organization", "Everyone in my organization", "Published now. Every member who can create RFPs can start from it."],
+                ["organization", "Everyone in my organization", "Published now. Every member who can create proposals can start from it."],
               ] as const).map(([value, label, hint]) => (
                 <label key={value} className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 ${scope === value ? "border-[#008ad2] bg-sky-50" : "border-[#e4e4e4]"}`}>
                   <input type="radio" name={`${formId}-scope`} className="mt-1" checked={scope === value} onChange={() => setScope(value)} />
@@ -187,7 +187,7 @@ export function RenameTemplateDialog({ template, onClose, onSaved, onFailure }: 
   return (
     <OrgDialog
       title="Edit template details"
-      description="Changes the name and description. The RFP content saved in the template stays as it is."
+      description="Changes the name and description. The proposal content saved in the template stays as it is."
       busy={busy}
       onClose={onClose}
       footer={
@@ -258,8 +258,8 @@ export function ArchiveTemplateDialog({ template, onClose, onArchived, onFailure
       title={`Archive ${template.title}?`}
       description={
         template.scope === "organization"
-          ? "The template leaves the list people start RFPs from. RFPs already created from it are not affected. If you restore it later, it stays unpublished until an Owner or Admin publishes it again."
-          : "The template leaves the list you start RFPs from. RFPs already created from it are not affected, and you can restore it later."
+          ? "The template leaves the list people start proposals from. Proposals already created from it are not affected. If you restore it later, it stays unpublished until an Owner or Admin publishes it again."
+          : "The template leaves the list you start proposals from. Proposals already created from it are not affected, and you can restore it later."
       }
       busy={busy}
       onClose={onClose}

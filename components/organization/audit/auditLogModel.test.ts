@@ -113,8 +113,8 @@ describe("display", () => {
 
   it("describes support activity, settings changes and plan changes in words", () => {
     expect(detailLines({ details: { operation: "rfp.read", grantId: "0123456789abcdef01234567" }, reason: "rfp.read", decision: "allowed" }))
-      .toEqual(["Opened an RFP", "Support access ID: …234567"]);
-    expect(detailLines({ details: { scope: "rfp" }, reason: null, decision: "created" })).toEqual(["Scope: One RFP"]);
+      .toEqual(["Opened a proposal", "Support access ID: …234567"]);
+    expect(detailLines({ details: { scope: "rfp" }, reason: null, decision: "created" })).toEqual(["Scope: One proposal"]);
     expect(detailLines({ details: { setting: "requireTwoFactor", from: false, to: true, signedOutMembers: 2 }, reason: null, decision: "allowed" }))
       .toEqual(["Require two-factor: Off → On", "Members signed out: 2"]);
     expect(detailLines({ details: { setting: "autoApproveDomain", value: true }, reason: null, decision: "allowed" })).toEqual(["Auto-approve access requests: On"]);
@@ -128,9 +128,9 @@ describe("display", () => {
     expect(detailLines({ details: {}, reason: "role_changed", decision: "allowed" })).toEqual([]);
   });
 
-  it('says "RFP", never "proposal"', () => {
-    expect(detailLines({ details: { proposalId: "0123456789abcdef01234567", proposalsMoved: 3 }, reason: null, decision: "allowed" })).toEqual(["RFP ID: …234567", "RFPs moved: 3"]);
-    expect(targetLabel({ type: "proposal", id: "0123456789abcdef01234567", name: null })).toBe("RFP …234567");
+  it('says "proposal", never "RFP"', () => {
+    expect(detailLines({ details: { proposalId: "0123456789abcdef01234567", proposalsMoved: 3 }, reason: null, decision: "allowed" })).toEqual(["Proposal ID: …234567", "Proposals moved: 3"]);
+    expect(targetLabel({ type: "proposal", id: "0123456789abcdef01234567", name: null })).toBe("Proposal …234567");
     // Recorded values are shown as stored: a domain or a team name is never reworded.
     expect(detailLines({ details: { domain: "proposals.acme.example", placedInTeam: "Proposal Desk" }, reason: null, decision: "allowed" }))
       .toEqual(["Domain: proposals.acme.example", "Placed in team: Proposal Desk"]);

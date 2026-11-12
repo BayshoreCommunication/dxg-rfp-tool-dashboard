@@ -97,7 +97,7 @@ export default function TeamsSettings() {
           <div>
             <h2 id="teams-title" className={sectionTitleClass}>Teams</h2>
             <p className="mt-2 text-sm text-slate-500">
-              {admin ? "Group planners by region or client. Team Managers see and manage their team's RFPs." : "Teams in your organization."}
+              {admin ? "Group planners by region or client. Team Managers see and manage their team's proposals." : "Teams in your organization."}
             </p>
           </div>
           {admin && (

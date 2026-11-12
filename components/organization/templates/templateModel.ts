@@ -181,23 +181,23 @@ const GONE = "That template is no longer available. It may have been archived or
 const MESSAGES: Record<string, string> = {
   TEMPLATE_NOT_FOUND: GONE,
   TEMPLATE_ACCESS_DENIED: GONE,
-  TEMPLATE_USE_DENIED: "Your role can't use RFP templates.",
+  TEMPLATE_USE_DENIED: "Your role can't use proposal templates.",
   TEMPLATE_PUBLISH_DENIED: "Only Owners and Admins can manage organization templates.",
   TEMPLATE_ARCHIVED: "This template is archived. Restore it first.",
-  TEMPLATE_NOT_PUBLISHED: "This template isn't published. Publish it before starting an RFP from it.",
-  TEMPLATE_SOURCE_NOT_FOUND: "That RFP is no longer available, so it can't be saved as a template.",
-  PROPOSAL_ACCESS_DENIED: "You don't have access to this RFP.",
-  TEMPLATE_TOO_LARGE: "This RFP is too large to save as a template.",
+  TEMPLATE_NOT_PUBLISHED: "This template isn't published. Publish it before starting a proposal from it.",
+  TEMPLATE_SOURCE_NOT_FOUND: "That proposal is no longer available, so it can't be saved as a template.",
+  PROPOSAL_ACCESS_DENIED: "You don't have access to this proposal.",
+  TEMPLATE_TOO_LARGE: "This proposal is too large to save as a template.",
   INVALID_TEMPLATE_TITLE: `Template names must be 1 to ${MAX_TEMPLATE_TITLE_LENGTH} characters.`,
   INVALID_TEMPLATE_DESCRIPTION: `Descriptions can be at most ${MAX_TEMPLATE_DESCRIPTION_LENGTH} characters.`,
   INVALID_TEMPLATE_SCOPE: "That option isn't available. Reload the page and try again.",
   INVALID_TEMPLATE_STATUS: "That filter isn't available. Reload the page and try again.",
   INVALID_TEMPLATE_LAYOUT: "That layout isn't available. Choose Modern or Classic.",
-  INVALID_TEMPLATE_SOURCE: "Choose the RFP to save as a template.",
+  INVALID_TEMPLATE_SOURCE: "Choose the proposal to save as a template.",
   INVALID_TEMPLATE_EVENT_NAME: `Event names can be at most ${MAX_EVENT_NAME_LENGTH} characters.`,
   TEMPLATE_VALIDATION_FAILED: "The template couldn't be saved. Check the details and try again.",
   TEMPLATE_INTERNAL_ERROR: "The template request couldn't be completed. Try again.",
-  PLAN_LIMIT_REACHED: "Your organization has reached its plan's RFP limit.",
+  PLAN_LIMIT_REACHED: "Your organization has reached its plan's proposal limit.",
   AUTHENTICATION_REQUIRED: "Your session has ended. Sign in again.",
   NETWORK_ERROR: "We couldn't reach the server. Check your connection and try again.",
 };
@@ -235,7 +235,7 @@ export const planLimitOf = (error: ErrorLike): PlanLimit | null => {
 };
 
 export const planLimitSummary = (limit: PlanLimit): string => {
-  if (limit.limit === null) return "Your organization has created every RFP its plan includes.";
+  if (limit.limit === null) return "Your organization has created every proposal its plan includes.";
   const used = limit.created ?? limit.limit;
-  return `Your organization has created ${used} of the ${limit.limit} RFP${limit.limit === 1 ? "" : "s"} its plan includes.`;
+  return `Your organization has created ${used} of the ${limit.limit} proposal${limit.limit === 1 ? "" : "s"} its plan includes.`;
 };

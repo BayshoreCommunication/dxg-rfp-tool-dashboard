@@ -126,11 +126,11 @@ describe("team and owner", () => {
   test("maps 422 TEAM_NOT_ASSIGNABLE", async () => {
     mockedFetch.mockResolvedValue(jsonResponse(422, { success: false, code: "TEAM_NOT_ASSIGNABLE", message: "raw" }));
     await expect(setRfpTeamAction(RFP, TEAM)).resolves.toMatchObject({
-      success: false, code: "TEAM_NOT_ASSIGNABLE", message: "That team can't be used for this RFP. Pick an active team, or No team.",
+      success: false, code: "TEAM_NOT_ASSIGNABLE", message: "That team can't be used for this proposal. Pick an active team, or No team.",
     });
   });
 
-  test("reassigns one RFP through the members route with rfpIds", async () => {
+  test("reassigns one proposal through the members route with rfpIds", async () => {
     mockedFetch.mockResolvedValue(jsonResponse(200, { success: true, data: { reassignedCount: 1, rfpIds: [RFP] } }));
     await expect(reassignRfpOwnerAction({ proposalId: RFP, fromUserId: OWNER, toUserId: MEMBER })).resolves.toEqual({ success: true, data: { reassignedCount: 1 } });
     expect(String(mockedFetch.mock.calls[0][0])).toMatch(new RegExp(`/api/organization/members/${OWNER}/reassign-rfps$`));
@@ -143,7 +143,7 @@ describe("team and owner", () => {
 
     mockedFetch.mockResolvedValue(jsonResponse(409, { success: false, code: "REASSIGN_TARGET_INELIGIBLE", message: "raw" }));
     await expect(reassignRfpOwnerAction({ proposalId: RFP, fromUserId: OWNER, toUserId: MEMBER })).resolves.toMatchObject({
-      success: false, message: "RFPs can only go to an active member who isn't a Viewer.",
+      success: false, message: "Proposals can only go to an active member who isn't a Viewer.",
     });
   });
 });

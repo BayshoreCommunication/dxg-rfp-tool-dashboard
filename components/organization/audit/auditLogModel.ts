@@ -175,7 +175,7 @@ const TARGET_LABELS: Record<string, string> = {
   user: "Member",
   organization_membership: "Member",
   organization: "Organization",
-  proposal: "RFP",
+  proposal: "Proposal",
   team: "Team",
   invitation: "Invitation",
   access_request: "Access request",
@@ -198,12 +198,12 @@ export const targetLabel = (target: AuditEvent["target"]): string => {
 export const shortId = (id: string): string => (id.length > 10 ? `…${id.slice(-6)}` : id);
 
 const OPERATIONS: Record<string, string> = {
-  "rfp.list": "Listed RFPs",
-  "rfp.read": "Opened an RFP",
+  "rfp.list": "Listed proposals",
+  "rfp.read": "Opened a proposal",
   "vendor_responses.list": "Listed vendor responses",
-  "ticket.rfp.list": "Listed RFPs from a support ticket",
+  "ticket.rfp.list": "Listed proposals from a support ticket",
 };
-const SCOPES: Record<string, string> = { rfp: "One RFP", organization: "Whole organization" };
+const SCOPES: Record<string, string> = { rfp: "One proposal", organization: "Whole organization" };
 const SETTINGS: Record<string, string> = {
   requireTwoFactor: "Require two-factor",
   requireSso: "Require company sign-in",
@@ -232,7 +232,7 @@ const DETAIL_LABELS: Record<string, string> = {
   teamId: "Team ID",
   grantId: "Support access ID",
   ticketId: "Support ticket ID",
-  proposalId: "RFP ID",
+  proposalId: "Proposal ID",
   contactCount: "Contacts",
   secretChanged: "Client secret changed",
   fromPlan: "Previous plan",
@@ -261,7 +261,7 @@ export const detailLines = (event: Pick<AuditEvent, "details" | "reason" | "deci
   for (const [key, value] of Object.entries(details)) {
     if (["operation", "scope", "setting", "from", "to", "value"].includes(key)) continue;
     // Only a label made from a key is reworded; recorded values (a domain, a team) are shown as stored.
-    const label = DETAIL_LABELS[key] ?? sentence(key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()).replace(/proposal/gi, "RFP");
+    const label = DETAIL_LABELS[key] ?? sentence(key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase());
     if (ROLE_KEYS.has(key)) {
       const role = roleLabel(String(value));
       lines.push(`${label}: ${role === "No role" ? sentence(String(value)) : role}`);

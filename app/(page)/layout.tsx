@@ -12,7 +12,7 @@ import "../globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://dxg-rfp-tool-dashboard.vercel.app"),
   title: "Dashboard",
-  description: "RFP Dashboard",
+  description: "Proposal Dashboard",
 };
 
 export default async function RootLayout({

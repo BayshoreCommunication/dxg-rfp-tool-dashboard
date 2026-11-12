@@ -1,3 +1,4 @@
+import { RFP_NOUN } from "@/test/wording";
 import {
   isFeatureLocked,
   responseCountLabel,
@@ -28,20 +29,20 @@ describe("plan entitlements (ORG-602)", () => {
     expect(isFeatureLocked(plan, "proposalIntelligence")).toBe(true);
     const usage = rfpUsageOf(plan);
     expect(usage).toEqual({ used: 1, limit: 2, atLimit: false, planName: "Free trial", onPlan: "on the free trial" });
-    expect(rfpUsageLabel(usage!)).toBe("1 of 2 RFPs used");
+    expect(rfpUsageLabel(usage!)).toBe("1 of 2 proposals used");
   });
 
   it("is at the limit when the backend says no more can be created", () => {
     const usage = rfpUsageOf(toEntitlements(freeTrial(2)));
     expect(usage?.atLimit).toBe(true);
-    expect(rfpUsageLabel(usage!)).toBe("2 of 2 RFPs used");
+    expect(rfpUsageLabel(usage!)).toBe("2 of 2 proposals used");
     expect(rfpLimitMessage(usage!)).toBe(
-      "Your plan includes 2 RFPs and your organization has used both. Deleting an RFP doesn't free one up. Contact us to upgrade.",
+      "Your plan includes 2 proposals and your organization has used both. Deleting a proposal doesn't free one up. Contact us to upgrade.",
     );
   });
 
   it("never shows more used than the limit", () => {
-    expect(rfpUsageLabel(rfpUsageOf(toEntitlements(freeTrial(5)))!)).toBe("2 of 2 RFPs used");
+    expect(rfpUsageLabel(rfpUsageOf(toEntitlements(freeTrial(5)))!)).toBe("2 of 2 proposals used");
   });
 
   it("has no counter and nothing locked on a plan with no limit", () => {
@@ -72,12 +73,12 @@ describe("plan entitlements (ORG-602)", () => {
     expect(usage).toMatchObject({ planName: "Your plan", onPlan: "on your plan" });
   });
 
-  it("says RFP, never proposal, and counts responses in plain words", () => {
-    expect(responseCountLabel(0, "all")).toBe("No vendor responses received on your RFPs yet");
-    expect(responseCountLabel(1, "rfp")).toBe("1 vendor response received on this RFP");
-    expect(responseCountLabel(1200, "all")).toBe("1,200 vendor responses received on your RFPs");
+  it("says proposal, never RFP, and counts responses in plain words", () => {
+    expect(responseCountLabel(0, "all")).toBe("No vendor responses received on your proposals yet");
+    expect(responseCountLabel(1, "rfp")).toBe("1 vendor response received on this proposal");
+    expect(responseCountLabel(1200, "all")).toBe("1,200 vendor responses received on your proposals");
     const single = { used: 1, limit: 1, atLimit: true, planName: "Free trial", onPlan: "on the free trial" };
-    expect(rfpUsageLabel(single)).toBe("1 of 1 RFP used");
-    expect(`${rfpLimitMessage(single)} ${rfpUsageLabel(single)}`).not.toMatch(/proposal/i);
+    expect(rfpUsageLabel(single)).toBe("1 of 1 proposal used");
+    expect(`${rfpLimitMessage(single)} ${rfpUsageLabel(single)}`).not.toMatch(RFP_NOUN);
   });
 });

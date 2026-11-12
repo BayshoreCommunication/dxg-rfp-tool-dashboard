@@ -84,7 +84,7 @@ describe("categorized reference materials", () => {
     expect(screen.getByText("legacy-support.pdf")).toBeInTheDocument();
   });
 
-  it("includes categorized filenames in generated RFP output", () => {
+  it("includes categorized filenames in generated proposal output", () => {
     const html = renderToStaticMarkup(<ProposalRfpTemplate proposal={{
       uploads,
       event: { eventName: "Categorized Files Test" },

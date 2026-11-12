@@ -7,10 +7,10 @@ import {
   type RfpUsage,
 } from "@/lib/entitlements/entitlements";
 
-// The "New RFP" button with the plan's RFP counter beside it (ORG-602). At the limit the button
+// The "New Proposal" button with the plan's proposal counter beside it (ORG-602). At the limit the button
 // is switched off and says why, with a way to ask for an upgrade; the backend refuses the create
 // either way (ORG-601). `usage` is null on a plan with no limit: the plain button.
-export default function NewRfpAction({ usage, label = "New RFP" }: { usage: RfpUsage | null; label?: string }) {
+export default function NewRfpAction({ usage, label = "New Proposal" }: { usage: RfpUsage | null; label?: string }) {
   const buttonShape =
     "relative flex min-h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[12px] font-bold uppercase tracking-widest sm:w-auto sm:text-[13px]";
 

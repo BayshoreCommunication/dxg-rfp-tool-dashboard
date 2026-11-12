@@ -154,7 +154,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
           <div className="min-w-0">
             <h2 id="audit-log-title" className={sectionTitleClass}>Audit log</h2>
             <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              Sign-ins, security changes, invitations, role and team changes, RFP sharing and RFPilot Support access in your organization. Entries can&apos;t be edited or deleted.
+              Sign-ins, security changes, invitations, role and team changes, proposal sharing and RFPilot Support access in your organization. Entries can&apos;t be edited or deleted.
             </p>
           </div>
           <button type="button" className={secondaryButtonClass} onClick={() => void exportCsv()} disabled={exporting || Boolean(problem)}>

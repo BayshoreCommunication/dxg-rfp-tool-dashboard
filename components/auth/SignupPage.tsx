@@ -44,11 +44,11 @@ type Match = { organizationName: string; via: "email" | "google" };
 const SignupAside = () => (
   <>
     <h2 className="text-[32px] font-extrabold leading-tight tracking-tight">
-      Start running better RFPs today.
+      Start running better proposals today.
     </h2>
     <div className="space-y-5">
       {[
-        "Plan RFPs together with your team",
+        "Plan proposals together with your team",
         "Compare vendor responses side by side",
         "Keep every decision in one place",
       ].map((benefit) => (

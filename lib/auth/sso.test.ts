@@ -1,5 +1,6 @@
 /** @jest-environment node */
 
+import { RFP_NOUN } from '@/test/wording'
 import { createHash } from 'node:crypto'
 import {
   backendSsoStartUrl,
@@ -51,8 +52,8 @@ describe('ssoErrorMessage', () => {
     expect(ssoErrorMessage(undefined)).toBe(SSO_FALLBACK_MESSAGE)
   })
 
-  it('says RFP, not proposal', () => {
-    for (const message of Object.values(SSO_ERROR_MESSAGES)) expect(message).not.toMatch(/proposal/i)
+  it('says proposal, not RFP', () => {
+    for (const message of Object.values(SSO_ERROR_MESSAGES)) expect(message).not.toMatch(RFP_NOUN)
   })
 })
 

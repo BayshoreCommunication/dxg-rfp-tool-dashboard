@@ -47,7 +47,7 @@ describe("ContactInfo final review placement", () => {
 
     const notes = document.getElementById("anythingElse");
     const finalReview = screen.getByTestId("final-review");
-    const publishBanner = screen.getByText(/Ready to publish your RFP/i);
+    const publishBanner = screen.getByText(/Ready to publish your proposal/i);
 
     expect(notes).not.toBeNull();
     expect(notes!.compareDocumentPosition(finalReview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

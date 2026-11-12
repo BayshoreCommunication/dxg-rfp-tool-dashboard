@@ -334,7 +334,7 @@ export default function ProposalDraftPanel({
       <h2 className="text-lg font-semibold">Review AI draft</h2>
       <p className="mt-1 text-sm text-slate-600">
         RFPilot turns your approved proposal details into a draft. Review each
-        section before it is included in your downloadable RFP.
+        section before it is included in your downloadable proposal.
       </p>
       <div className="mt-3 flex gap-3">
         <button
@@ -377,12 +377,12 @@ export default function ProposalDraftPanel({
                   aria-disabled={acceptedCount === 0}
                   className={`rounded px-4 py-2 text-sm font-semibold ${acceptedCount ? "bg-[#087f69] text-white" : "pointer-events-none bg-slate-200 text-slate-500"}`}
                 >
-                  Download RFP
+                  Download proposal
                 </a>
                 <p className="text-xs text-slate-600">
                   {acceptedCount
                     ? `${acceptedCount} accepted section${acceptedCount === 1 ? "" : "s"} will be included. Rejected and undecided sections are left out.`
-                    : "Accept at least one section to download the RFP."}
+                    : "Accept at least one section to download the proposal."}
                 </p>
               </div>
             );

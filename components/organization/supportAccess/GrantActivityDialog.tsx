@@ -85,7 +85,7 @@ export default function GrantActivityDialog({ grant, onClose, onGone }: Props) {
             {load.detail.events.map((event, index) => (
               <li key={`${event.at}-${index}`} className="px-4 py-3 text-sm">
                 <p className="font-medium text-slate-800">{operationLabel(event.operation)}</p>
-                {event.rfp && <p className="mt-0.5 break-words text-slate-600">{event.rfp.title ?? "An RFP that was deleted"}</p>}
+                {event.rfp && <p className="mt-0.5 break-words text-slate-600">{event.rfp.title ?? "A proposal that was deleted"}</p>}
                 <p className="mt-1 text-xs text-slate-500">
                   {SUPPORT_LABEL}
                   {event.agentReference ? ` (agent ${event.agentReference})` : ""} · {formatDateTime(event.at)}

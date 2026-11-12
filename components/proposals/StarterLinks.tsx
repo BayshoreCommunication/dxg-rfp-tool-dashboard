@@ -19,7 +19,7 @@ export const STARTER_LINKS = [
   },
   {
     id: "upload",
-    label: "Upload my brief or old RFP",
+    label: "Upload my brief or old proposal",
     title: "PDF, DOCX, XLSX, CSV or TXT",
     href: "/proposals/add-new-proposal",
     icon: Upload,

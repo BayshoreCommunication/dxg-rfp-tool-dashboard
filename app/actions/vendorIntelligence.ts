@@ -69,7 +69,7 @@ const parseResult = (value: unknown): VendorIntelligenceResult | null => {
 const base = (proposalId: string, submissionId: string, versionId: string) => `/api/v1/proposals/${encodeURIComponent(proposalId)}/intelligence/submissions/${encodeURIComponent(submissionId)}/versions/${encodeURIComponent(versionId)}`;
 const messages: Record<string, string> = {
   INTELLIGENCE_RUN_NOT_FOUND: "Proposal intelligence has not been generated for this response version.",
-  REQUIREMENT_SET_NOT_APPROVED: "Approve the RFP requirements before generating proposal intelligence.",
+  REQUIREMENT_SET_NOT_APPROVED: "Approve the proposal requirements before generating proposal intelligence.",
   SOURCE_NOT_READY: "Extract this response’s evidence before generating proposal intelligence.",
   CITATION_VALIDATION_FAILED: "The generated claims could not be tied safely to this vendor’s evidence.",
   CITATION_GROUNDING_FAILED: "A generated numeric claim did not appear in its cited vendor text, so the run was rejected.",

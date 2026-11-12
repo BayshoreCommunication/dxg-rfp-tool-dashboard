@@ -105,7 +105,7 @@ export function ArchiveTeamDialog({ team, onClose, onArchived }: { team: Team; o
   return (
     <OrgDialog
       title={`Archive ${team.name}?`}
-      description="The team disappears from team pickers and can't be changed afterwards. Its RFPs and history stay, and members keep their other teams."
+      description="The team disappears from team pickers and can't be changed afterwards. Its proposals and history stay, and members keep their other teams."
       busy={busy}
       onClose={onClose}
       footer={

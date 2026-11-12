@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { expect as baseExpect, test, type Page, type TestInfo } from "@playwright/test";
+import { expectProposalWording } from "./support/wording";
 
 // ORG-407: the organization audit log for each role, against the stub backend
 // (e2e/support/auditLogFixture.mjs), which applies the backend's rule: an Owner or Admin reads
@@ -43,8 +44,12 @@ const openAuditLog = async (page: Page) => {
   await expect(rows(page).first()).toBeVisible();
 };
 
-// Every state: no serious accessibility violations, nothing wider than the screen, the word
-// "proposal" nowhere, no console errors, and a screenshot as evidence.
+// Every state: no serious accessibility violations, nothing wider than the screen, "proposal"
+// not "RFP", no console errors, and a screenshot as evidence.
+// Category and action names come from the backend's audit catalog (stubbed in
+// e2e/support/auditLogFixture.mjs as the backend sends them), so they still say "RFP" until the
+// backend is reworded.
+const BACKEND_LABELS = ["RFP sharing", "RFP shared"];
 const check = async (page: Page, testInfo: TestInfo, name: string) => {
   await expect(screen(page)).toBeVisible();
   const accessibility = await new AxeBuilder({ page }).include('[data-testid="audit-log"]').withTags(["wcag2a", "wcag2aa"]).analyze();
@@ -54,7 +59,7 @@ const check = async (page: Page, testInfo: TestInfo, name: string) => {
       .map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(" | ")}`),
   ).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-  expect(await screen(page).textContent()).not.toMatch(/proposal/i);
+  await expectProposalWording(screen(page), BACKEND_LABELS);
   await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
   expect(problems.get(page)).toEqual([]);
 };
@@ -68,7 +73,7 @@ for (const role of ["owner", "admin"] as const) {
     const first = rows(page).first();
     await expect(first).toContainText("Support access used");
     await expect(first).toContainText("RFPilot Support");
-    await expect(first).toContainText("Opened an RFP");
+    await expect(first).toContainText("Opened a proposal");
     await expect(rows(page).nth(1)).toContainText("Refused");
     await expect(rows(page).nth(1)).toContainText("Reason: No active support access");
     await expect(rows(page).nth(5)).toContainText("Previous role: Viewer");

@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect as baseExpect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expectProposalWording } from "./support/wording";
 
 // ORG-605: RFP templates as each role, against the stub backend
 // (e2e/support/proposalTemplatesFixture.mjs), which applies the backend's role, visibility and
@@ -44,7 +45,7 @@ const signInAs = async (page: Page, role: Role) => {
 };
 
 // Every state: no serious accessibility violations, nothing wider than the screen, the copy says
-// "RFP", no console errors, and a screenshot as evidence.
+// "proposal" not "RFP", no console errors, and a screenshot as evidence.
 const check = async (page: Page, testInfo: TestInfo, name: string, region: Locator) => {
   await expect(region).toBeVisible();
   const handle = await region.elementHandle();
@@ -61,12 +62,12 @@ const check = async (page: Page, testInfo: TestInfo, name: string, region: Locat
   ).toEqual([]);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
-  expect(await region.textContent()).not.toMatch(/proposal/i);
+  await expectProposalWording(region);
   await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
   expect(problems.get(page)).toEqual([]);
 };
 
-const templateSection = (page: Page) => page.getByRole("region", { name: "RFP templates" });
+const templateSection = (page: Page) => page.getByRole("region", { name: "Proposal templates" });
 const row = (page: Page, title: string) => templateSection(page).getByRole("listitem").filter({ hasText: title });
 
 const openSaveDialog = async (page: Page) => {
@@ -78,7 +79,7 @@ const openSaveDialog = async (page: Page) => {
 };
 
 for (const role of ["planner", "manager"] as const) {
-  test(`${role}: saves an RFP as a personal template and is not offered the organization`, async ({ page }, testInfo) => {
+  test(`${role}: saves a proposal as a personal template and is not offered the organization`, async ({ page }, testInfo) => {
     await signInAs(page, role);
     const dialog = await openSaveDialog(page);
     await expect(dialog.getByRole("radio")).toHaveCount(0);
@@ -104,7 +105,7 @@ for (const role of ["planner", "manager"] as const) {
 }
 
 for (const role of ["owner", "admin"] as const) {
-  test(`${role}: saves an RFP as an organization template`, async ({ page }, testInfo) => {
+  test(`${role}: saves a proposal as an organization template`, async ({ page }, testInfo) => {
     await signInAs(page, role);
     const dialog = await openSaveDialog(page);
     await expect(dialog.getByRole("radio", { name: /Only me/ })).toBeChecked();
@@ -125,7 +126,7 @@ for (const role of ["owner", "admin"] as const) {
   });
 }
 
-test("planner: starts an RFP from a template, and sees only templates that are theirs to use", async ({ page }, testInfo) => {
+test("planner: starts a proposal from a template, and sees only templates that are theirs to use", async ({ page }, testInfo) => {
   await signInAs(page, "planner");
   await page.goto("/proposals/add-new-proposal");
   await page.getByRole("button", { name: "Start from a template" }).click();
@@ -136,11 +137,11 @@ test("planner: starts an RFP from a template, and sees only templates that are t
   for (const hidden of ["Peter's private template", "Owner's own checklist", "Draft gala", "Old expo booth"]) {
     await expect(picker.getByText(hidden)).toHaveCount(0);
   }
-  await expect(picker.getByRole("button", { name: "Create RFP" })).toBeDisabled();
+  await expect(picker.getByRole("button", { name: "Create proposal" })).toBeDisabled();
   await picker.getByRole("radio", { name: /Annual kickoff/ }).check();
   await picker.getByLabel("Event name (optional)").fill("Spring Partner Summit");
   await check(page, testInfo, "planner-template-picker", picker);
-  await picker.getByRole("button", { name: "Create RFP" }).click();
+  await picker.getByRole("button", { name: "Create proposal" }).click();
   await expect(page).toHaveURL(/\/proposals\/proposal-edit\?proposalId=[a-f0-9]{24}$/, { timeout: 60_000 });
 
   const { createdRfps } = await stubState(page);
@@ -159,13 +160,13 @@ test("planner: at the plan limit, starting from a template shows the upgrade pro
   await picker.getByRole("radio", { name: /My roadshow/ }).check();
   // The browser logs the refused request itself; only what the page does with it counts here.
   problems.get(page)!.length = 0;
-  await picker.getByRole("button", { name: "Create RFP" }).click();
+  await picker.getByRole("button", { name: "Create proposal" }).click();
   const limit = picker.getByRole("status");
-  await expect(limit).toContainText("You've reached your plan's RFP limit");
-  await expect(limit).toContainText("Your organization has created 2 of the 2 RFPs its plan includes.");
+  await expect(limit).toContainText("You've reached your plan's proposal limit");
+  await expect(limit).toContainText("Your organization has created 2 of the 2 proposals its plan includes.");
   await expect(limit.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/support");
   await expect(picker.getByRole("alert")).toHaveCount(0);
-  await expect(picker.getByRole("button", { name: "Create RFP" })).toHaveCount(0);
+  await expect(picker.getByRole("button", { name: "Create proposal" })).toHaveCount(0);
   await check(page, testInfo, "planner-template-plan-limit", picker);
   await expect(page).toHaveURL(/\/proposals\/add-new-proposal$/);
   expect((await stubState(page)).createdRfps).toHaveLength(0);
@@ -267,5 +268,5 @@ test("viewer: is offered no templates anywhere", async ({ page }) => {
 
   const response = await page.goto("/settings/templates");
   expect(response?.status()).toBe(404);
-  await expect(page.getByRole("region", { name: "RFP templates" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Proposal templates" })).toHaveCount(0);
 });

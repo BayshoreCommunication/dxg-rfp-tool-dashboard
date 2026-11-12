@@ -238,7 +238,7 @@ const ContentCreativeStep = ({
             <GatewayCard
               isSelected={safeData.contentServicesNeeded === "NO"}
               title="No — Content is handled separately by my agency or in-house team"
-              description="The AV vendor will only execute the live show. Section 4 will be omitted from your RFP."
+              description="The AV vendor will only execute the live show. Section 4 will be omitted from your proposal."
               onClick={() => onChange({ contentServicesNeeded: "NO" })}
             />
           </div>
@@ -248,7 +248,7 @@ const ContentCreativeStep = ({
         {safeData.contentServicesNeeded === "NO" && (
           <div className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] px-6 py-5">
             <p className="text-sm font-semibold text-[#222628]">
-              Section 4 will be omitted from your RFP
+              Section 4 will be omitted from your proposal
             </p>
             <p className="mt-1 text-xs text-[#969798]">
               The AV vendor will execute the live show only. All content is being handled by your agency or in-house team.
@@ -262,7 +262,7 @@ const ContentCreativeStep = ({
             <div>
               <p className={groupLabelClass}>Content Responsibility Matrix</p>
               <p className="mb-1 text-xs text-slate-500 italic">
-                Select an owner for each content element. This table appears verbatim in Section 4 of your RFP.
+                Select an owner for each content element. This table appears verbatim in Section 4 of your proposal.
               </p>
               <p className="mb-5 text-[11px] text-[#969798] italic">
                 &quot;The table below defines content ownership responsibilities. Vendors must confirm their ability to deliver all items marked as AV Vendor responsibility and flag any items requiring clarification. TBD items should be addressed in the vendor&apos;s questions.&quot;

@@ -37,7 +37,7 @@ const lastCall = () => {
   return { path: new URL(String(url)).pathname + new URL(String(url)).search, method: init?.method, body: init?.body ? JSON.parse(String(init.body)) : undefined };
 };
 
-describe("RFP template actions", () => {
+describe("Proposal template actions", () => {
   beforeEach(() => {
     mockedFetch.mockReset();
     mockedIdentity.mockReset();
@@ -74,7 +74,7 @@ describe("RFP template actions", () => {
     expect(JSON.stringify(result.data)).not.toContain("Secret");
   });
 
-  test("save as template posts the RFP, name, scope and layout", async () => {
+  test("save as template posts the proposal, name, scope and layout", async () => {
     mockedFetch.mockResolvedValue(jsonResponse(201, { success: true, data: { ...template, scope: "organization", published: true, presentationLayout: "template-two" } }));
     const result = await saveTemplateAction({ proposalId: "p1", title: "Annual kickoff", description: "For kickoffs", scope: "organization", presentationLayout: "template-two" });
     expect(lastCall()).toEqual({
@@ -136,7 +136,7 @@ describe("RFP template actions", () => {
     expect(await archiveTemplateAction("t1")).toMatchObject({ success: false });
   });
 
-  test("starting an RFP posts to the template and returns the new RFP's id and the layout", async () => {
+  test("starting a proposal posts to the template and returns the new proposal's id and the layout", async () => {
     mockedFetch.mockResolvedValue(jsonResponse(201, { success: true, data: { proposal: { _id: "p9", event: { eventName: "Spring summit" } }, presentationLayout: "template-one" } }));
     const result = await createRfpFromTemplateAction("t1", "  Spring summit ");
     expect(lastCall()).toEqual({ path: "/api/v1/proposal-templates/t1/proposals", method: "POST", body: { eventName: "Spring summit" } });
@@ -158,7 +158,7 @@ describe("RFP template actions", () => {
     });
   });
 
-  test("a created RFP the action can't read is a failure, not a silent success", async () => {
+  test("a created proposal the action can't read is a failure, not a silent success", async () => {
     mockedFetch.mockResolvedValue(jsonResponse(201, { success: true, data: { proposal: {} } }));
     expect(await createRfpFromTemplateAction("t1")).toMatchObject({ success: false });
   });

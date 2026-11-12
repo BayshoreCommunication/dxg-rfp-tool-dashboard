@@ -20,7 +20,7 @@ full and the components it renders. Only report problems this change introduces.
    publish, send to vendors or overwrite a value the planner entered without a human action.
 4. **Contracts.** Types come from `contracts/generated/`; nothing there is hand-edited.
 5. **Errors and copy.** Backend error codes become human messages (no raw codes, no stack traces).
-   Product copy says "RFP", not "proposal". Empty, loading and error states exist.
+   Product copy says "proposal", not "RFP" ("RFPilot" is the product name; see `CLAUDE.md`). Empty, loading and error states exist.
 6. **Accessibility.** Inputs have labels, buttons have names, dialogs trap focus and close on
    Escape, colour is not the only signal, and dark theme contrast is kept.
 7. **Layout.** Nothing assumes a desktop width; check for fixed widths that overflow at 390px.

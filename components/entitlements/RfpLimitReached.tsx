@@ -22,13 +22,13 @@ export default function RfpLimitReached({ usage }: { usage: RfpUsage }) {
         </div>
         <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-600">{usage.planName}</p>
         <h1 id="rfp-limit-title" className="mt-2 text-balance text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          You&rsquo;ve reached your plan&rsquo;s RFP limit
+          You&rsquo;ve reached your plan&rsquo;s proposal limit
         </h1>
         <p data-testid="rfp-usage" className="mx-auto mt-5 max-w-md rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">
           {rfpUsageLabel(usage)}
         </p>
         <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600">
-          {rfpLimitMessage(usage)} Your existing RFPs stay as they are: you can still edit, send and share them.
+          {rfpLimitMessage(usage)} Your existing proposals stay as they are: you can still edit, send and share them.
         </p>
         <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <Link

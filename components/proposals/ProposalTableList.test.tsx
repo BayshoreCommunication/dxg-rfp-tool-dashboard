@@ -171,7 +171,7 @@ describe('ProposalTableList — proposal cards', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save a copy' }))
 
     expect(toast.info).toHaveBeenCalledWith(
-      "2 of 2 RFPs used. Your plan includes 2 RFPs and your organization has used both. Deleting an RFP doesn't free one up. Contact us to upgrade."
+      "2 of 2 proposals used. Your plan includes 2 proposals and your organization has used both. Deleting a proposal doesn't free one up. Contact us to upgrade."
     )
     expect(toast.error).not.toHaveBeenCalled()
     expect(mockCopyProposal).not.toHaveBeenCalled()

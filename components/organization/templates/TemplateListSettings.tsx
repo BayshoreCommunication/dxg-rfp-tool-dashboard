@@ -195,12 +195,12 @@ export default function TemplateListSettings({ access: initialAccess }: Props) {
       <TopHeader templatesLink />
       <section className={sectionClass} aria-labelledby="template-list-title">
         <div>
-          <h2 id="template-list-title" className={sectionTitleClass}>RFP templates</h2>
+          <h2 id="template-list-title" className={sectionTitleClass}>Proposal templates</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-500">
             {access.canManage
-              ? "Templates hold an RFP's content to start new RFPs from. Publish one to share it with everyone in your organization who creates RFPs."
-              : "Templates hold an RFP's content to start new RFPs from. Your personal templates are visible only to you."}
-            {" "}To add one, choose Save as template on an RFP in your RFP list.
+              ? "Templates hold a proposal's content to start new proposals from. Publish one to share it with everyone in your organization who creates proposals."
+              : "Templates hold a proposal's content to start new proposals from. Your personal templates are visible only to you."}
+            {" "}To add one, choose Save as template on a proposal in your proposal list.
           </p>
         </div>
 
@@ -244,7 +244,7 @@ export default function TemplateListSettings({ access: initialAccess }: Props) {
               <EmptyState
                 icon={<LayoutTemplate size={20} />}
                 title={scope === "organization" ? "No organization templates yet" : "No templates yet"}
-                body="Open your RFP list and choose Save as template on an RFP you want to reuse."
+                body="Open your proposal list and choose Save as template on a proposal you want to reuse."
               />
             )
           ) : (
@@ -308,7 +308,7 @@ export default function TemplateListSettings({ access: initialAccess }: Props) {
       {dialog?.kind === "share" && (
         <OrgDialog
           title={`Share ${dialog.template.title} with your organization?`}
-          description="It becomes an organization template that every member who can create RFPs can start from. It won't return to your personal templates; you can unpublish or archive it later."
+          description="It becomes an organization template that every member who can create proposals can start from. It won't return to your personal templates; you can unpublish or archive it later."
           onClose={() => setDialog(null)}
           footer={
             <>

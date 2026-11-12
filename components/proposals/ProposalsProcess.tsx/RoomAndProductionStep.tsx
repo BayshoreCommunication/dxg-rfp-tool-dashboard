@@ -2557,7 +2557,7 @@ const RoomAndProductionStep = ({
       <div className="px-8 py-6 border-b border-[#e4e4e4]">
         <h2 className="text-[22px] font-bold text-[#222628]">Room Specifications &amp; Schedule</h2>
         <p className="mt-1 text-sm text-[#969798]">
-          One module per room — each room generates its own section in the RFP.
+          One module per room — each room generates its own section in the proposal.
         </p>
       </div>
 

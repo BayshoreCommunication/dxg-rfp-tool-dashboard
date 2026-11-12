@@ -353,7 +353,7 @@ const OnboardingWizard = ({
               <p className="text-[16px] font-extrabold text-gray-900">Free trial</p>
             </div>
             <ul className="space-y-1.5 text-[13.5px] font-medium text-gray-600">
-              <li>Create up to 2 RFPs with your team.</li>
+              <li>Create up to 2 proposals with your team.</li>
               <li>Vendor responses and proposal intelligence unlock on a paid plan.</li>
             </ul>
           </div>

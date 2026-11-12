@@ -1,3 +1,4 @@
+import { RFP_NOUN } from "@/test/wording";
 import { render, screen } from "@testing-library/react";
 
 jest.mock("server-only", () => ({}), { virtual: true });
@@ -51,33 +52,33 @@ describe("planLockedScreen (ORG-602)", () => {
     expect(await planLockedScreen("vendorResponses", back)).toBeNull();
   });
 
-  it("locked vendor responses: the count across the member's RFPs and a way to upgrade", async () => {
+  it("locked vendor responses: the count across the member's proposals and a way to upgrade", async () => {
     plan(false);
     render(<>{await planLockedScreen("vendorResponses", back)}</>);
 
     const locked = screen.getByTestId("plan-locked");
     expect(locked).toHaveAttribute("data-feature", "vendorResponses");
     expect(screen.getByRole("heading", { level: 1, name: "Vendor responses aren't included in your plan" })).toBeInTheDocument();
-    expect(screen.getByTestId("plan-locked-count")).toHaveTextContent("4 vendor responses received on your RFPs");
+    expect(screen.getByTestId("plan-locked-count")).toHaveTextContent("4 vendor responses received on your proposals");
     expect(screen.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/support");
     expect(screen.getByRole("link", { name: "Back to the dashboard" })).toHaveAttribute("href", "/dashboard");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(locked).not.toHaveTextContent(/proposal/i);
+    expect(locked.textContent).not.toMatch(RFP_NOUN);
     expect(mockedRfp).not.toHaveBeenCalled();
   });
 
-  it("locked RFP intelligence on one RFP: that RFP's own count and title", async () => {
+  it("locked proposal intelligence on one proposal: that proposal's own count and title", async () => {
     plan(false);
-    render(<>{await planLockedScreen("proposalIntelligence", { rfpId: RFP, backHref: "/proposals", backLabel: "Back to RFPs" })}</>);
+    render(<>{await planLockedScreen("proposalIntelligence", { rfpId: RFP, backHref: "/proposals", backLabel: "Back to proposals" })}</>);
 
-    expect(screen.getByRole("heading", { level: 1, name: "RFP intelligence isn't included in your plan" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Proposal intelligence isn't included in your plan" })).toBeInTheDocument();
     expect(screen.getByText("Annual Sales Kickoff")).toBeInTheDocument();
-    expect(screen.getByTestId("plan-locked-count")).toHaveTextContent("3 vendor responses received on this RFP");
+    expect(screen.getByTestId("plan-locked-count")).toHaveTextContent("3 vendor responses received on this proposal");
     expect(mockedRfp).toHaveBeenCalledWith(RFP);
     expect(mockedSummary).not.toHaveBeenCalled();
   });
 
-  it("leaves the count out when the member can't read that RFP", async () => {
+  it("leaves the count out when the member can't read that proposal", async () => {
     plan(false);
     mockedRfp.mockResolvedValue({ success: false, status: 404, message: "Not found" });
     render(<>{await planLockedScreen("vendorResponses", { ...back, rfpId: RFP })}</>);
@@ -97,7 +98,7 @@ describe("planLockedRefusal", () => {
     const refusal = { success: false, code: "PLAN_FEATURE_LOCKED", message: "Vendor responses aren't included in your plan. Contact us to upgrade." };
     render(<>{await planLockedRefusal("vendorResponses", [{ success: true }, refusal], back)}</>);
     expect(screen.getByTestId("plan-locked")).toHaveTextContent("Vendor responses · Your plan");
-    expect(screen.getByTestId("plan-locked-count")).toHaveTextContent("4 vendor responses received on your RFPs");
+    expect(screen.getByTestId("plan-locked-count")).toHaveTextContent("4 vendor responses received on your proposals");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

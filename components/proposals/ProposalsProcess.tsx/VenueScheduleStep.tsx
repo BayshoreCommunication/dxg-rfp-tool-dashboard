@@ -697,7 +697,7 @@ const VenueScheduleStep = ({
             )}
             {safeData.isUnionVenue === "NOT_SURE" && (
               <p className="mt-2 text-xs text-amber-700 normal-case">
-                Contact your venue&apos;s event services team — they will confirm jurisdiction before your RFP is sent.
+                Contact your venue&apos;s event services team — they will confirm jurisdiction before your proposal is sent.
               </p>
             )}
 

@@ -1,3 +1,4 @@
+import { RFP_NOUN } from "@/test/wording";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import SupportAccessSettings from "./SupportAccessSettings";
 import type { SupportGrant, SupportGrantPage } from "./supportGrantModel";
@@ -70,7 +71,7 @@ describe("SupportAccessSettings (ORG-405)", () => {
     const active = within(screen.getByRole("list", { name: "Active access" }));
     expect(active.getByText("Spring Sales Kickoff")).toBeInTheDocument();
     expect(active.getByText("Active")).toBeInTheDocument();
-    expect(active.getByText("One RFP")).toBeInTheDocument();
+    expect(active.getByText("One proposal")).toBeInTheDocument();
     expect(active.getByText(/Granted by Olivia Owner on/)).toBeInTheDocument();
     expect(active.getByText(/Expires in 6 days/)).toBeInTheDocument();
     expect(active.getByText(/Used 3 times · last used 2 h ago/)).toBeInTheDocument();
@@ -79,7 +80,7 @@ describe("SupportAccessSettings (ORG-405)", () => {
 
     const past = within(screen.getByRole("list", { name: "Past access" }));
     expect(past.getByText("Whole organization")).toBeInTheDocument();
-    expect(past.getByText("Every RFP")).toBeInTheDocument();
+    expect(past.getByText("Every proposal")).toBeInTheDocument();
     expect(past.getByText(/Expired on/)).toBeInTheDocument();
     expect(past.getByText(/Revoked by Adam Admin on/)).toBeInTheDocument();
     expect(past.getByText("Not used")).toBeInTheDocument();
@@ -88,12 +89,12 @@ describe("SupportAccessSettings (ORG-405)", () => {
     expect(past.getAllByRole("button", { name: /View activity/ })).toHaveLength(2);
   });
 
-  it("says RFP everywhere and never proposal", async () => {
+  it("says proposal everywhere and never RFP", async () => {
     const { container } = await renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Grant access" }));
     await screen.findByText("Autumn Gala", { selector: "span" });
-    expect(container.textContent).not.toMatch(/proposal/i);
-    expect(document.body.textContent).not.toMatch(/proposal/i);
+    expect(container.textContent).not.toMatch(RFP_NOUN);
+    expect(document.body.textContent).not.toMatch(RFP_NOUN);
   });
 
   it("tells an organization with no grants that Support has no access", async () => {
@@ -125,7 +126,7 @@ describe("SupportAccessSettings (ORG-405)", () => {
     await renderPage([]);
     fireEvent.click(screen.getByRole("button", { name: "Grant access" }));
     fireEvent.click(screen.getByRole("radio", { name: /Whole organization/ }));
-    expect(screen.queryByLabelText("RFP")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Proposal")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Access ends after")).toHaveValue("7");
     mockCreate.mockResolvedValue(ok(grant({ id: "g-new", scope: "organization", rfp: null, reason: null, activity: { useCount: 0, lastUsedAt: null } })));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Grant access" }));
@@ -135,7 +136,7 @@ describe("SupportAccessSettings (ORG-405)", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("grants one picked RFP, found by search, with a chosen expiry and a reason", async () => {
+  it("grants one picked proposal, found by search, with a chosen expiry and a reason", async () => {
     await renderPage([]);
     fireEvent.click(screen.getByRole("button", { name: "Grant access" }));
     const dialog = within(screen.getByRole("dialog"));
@@ -144,16 +145,16 @@ describe("SupportAccessSettings (ORG-405)", () => {
 
     // Nothing is sent until an RFP is chosen.
     fireEvent.click(dialog.getByRole("button", { name: "Grant access" }));
-    expect(await dialog.findByRole("alert")).toHaveTextContent("Choose the RFP that Support may open.");
+    expect(await dialog.findByRole("alert")).toHaveTextContent("Choose the proposal that Support may open.");
     expect(mockCreate).not.toHaveBeenCalled();
 
     // Enter in the search box searches; it never grants the RFP picked earlier.
     fireEvent.click(dialog.getByRole("radio", { name: /Spring Sales Kickoff/ }));
-    expect(fireEvent.keyDown(dialog.getByLabelText("RFP"), { key: "Enter" })).toBe(false);
+    expect(fireEvent.keyDown(dialog.getByLabelText("Proposal"), { key: "Enter" })).toBe(false);
     expect(mockCreate).not.toHaveBeenCalled();
 
     mockSearch.mockResolvedValue(ok([{ id: "p2", title: "Autumn Gala", ownerName: null }]));
-    fireEvent.change(dialog.getByLabelText("RFP"), { target: { value: "gala" } });
+    fireEvent.change(dialog.getByLabelText("Proposal"), { target: { value: "gala" } });
     await waitFor(() => expect(mockSearch).toHaveBeenLastCalledWith("gala"));
     await waitFor(() => expect(dialog.queryByRole("radio", { name: /Spring Sales Kickoff/ })).not.toBeInTheDocument());
     fireEvent.click(dialog.getByRole("radio", { name: /Autumn Gala/ }));
@@ -196,7 +197,7 @@ describe("SupportAccessSettings (ORG-405)", () => {
     // The RFP was deleted, or belongs to another organization: both read as not found.
     mockCreate.mockResolvedValue({ success: false, status: 404, code: "PROPOSAL_NOT_FOUND", message: "RFP not found." });
     fireEvent.click(dialog.getByRole("button", { name: "Grant access" }));
-    expect(await dialog.findByRole("alert")).toHaveTextContent("That RFP wasn't found. It may have been deleted, so choose another.");
+    expect(await dialog.findByRole("alert")).toHaveTextContent("That proposal wasn't found. It may have been deleted, so choose another.");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("RFPilot Support has no access")).toBeInTheDocument();
   });
@@ -246,11 +247,11 @@ describe("SupportAccessSettings (ORG-405)", () => {
     const events = within(await dialog.findByRole("list", { name: "Support activity" })).getAllByRole("listitem");
     expect(mockGet).toHaveBeenCalledWith("g-revoked");
     expect(events).toHaveLength(3);
-    expect(events[0]).toHaveTextContent("Opened an RFP");
+    expect(events[0]).toHaveTextContent("Opened a proposal");
     expect(events[0]).toHaveTextContent("Autumn Gala");
     expect(events[0]).toHaveTextContent("RFPilot Support (agent 00AB12)");
-    expect(events[1]).toHaveTextContent("Viewed an RFP's vendor responses");
-    expect(events[2]).toHaveTextContent("Read RFP data");
+    expect(events[1]).toHaveTextContent("Viewed a proposal's vendor responses");
+    expect(events[2]).toHaveTextContent("Read proposal data");
     expect(events[2]).not.toHaveTextContent("brand.new.operation");
   });
 

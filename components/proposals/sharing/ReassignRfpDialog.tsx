@@ -24,7 +24,7 @@ export default function ReassignRfpDialog({ snapshot, onReassigned, onClose }: P
 
   const confirm = async () => {
     if (!target || !snapshot.ownerUserId) {
-      setError("Choose the member who should own this RFP.");
+      setError("Choose the member who should own this proposal.");
       return;
     }
     setBusy(true);
@@ -39,14 +39,14 @@ export default function ReassignRfpDialog({ snapshot, onReassigned, onClose }: P
       setError(result.message);
       return;
     }
-    toast.success(`${memberName(target.userId, snapshot)} now owns this RFP.`);
+    toast.success(`${memberName(target.userId, snapshot)} now owns this proposal.`);
     onReassigned();
   };
 
   return (
     <AccessDialog
-      title="Reassign RFP owner"
-      description="The new owner gets full control of this RFP. Shares and the team stay as they are."
+      title="Reassign proposal owner"
+      description="The new owner gets full control of this proposal. Shares and the team stay as they are."
       busy={busy}
       onClose={onClose}
       footer={(
@@ -66,7 +66,7 @@ export default function ReassignRfpDialog({ snapshot, onReassigned, onClose }: P
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0786cf] px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#066fab] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy ? <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <UserRoundCog size={16} aria-hidden="true" />}
-            {busy ? "Reassigning…" : "Reassign RFP"}
+            {busy ? "Reassigning…" : "Reassign proposal"}
           </button>
         </>
       )}
@@ -80,7 +80,7 @@ export default function ReassignRfpDialog({ snapshot, onReassigned, onClose }: P
         <div>
           <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-500">New owner</p>
           {candidates.length === 0 ? (
-            <p className="text-sm text-slate-600">No other active member can own RFPs. Viewers can’t own RFPs.</p>
+            <p className="text-sm text-slate-600">No other active member can own proposals. Viewers can’t own proposals.</p>
           ) : (
             <GlobalSelect aria-label="New owner" value={toUserId} onChange={(event) => { setToUserId(event.target.value); setError(""); }} className={selectClass} disabled={busy}>
               <option value="">Choose a member…</option>

@@ -13,7 +13,7 @@ export default function SupportAccessLink() {
             Support access
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-[#6b7280]">
-            RFPilot Support reads your RFPs only when you allow it. Grant time-limited access, revoke it, and see what Support did.
+            RFPilot Support reads your proposals only when you allow it. Grant time-limited access, revoke it, and see what Support did.
           </p>
         </div>
         <Link
