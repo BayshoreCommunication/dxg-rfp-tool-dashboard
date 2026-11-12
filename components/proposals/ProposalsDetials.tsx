@@ -53,6 +53,7 @@ const ProposalsDetials = ({ canCreate = true, rfpUsage = null }: { canCreate?: b
         activeFilter={activeFilter}
         onRefreshCounts={refreshCounts}
         rfpUsage={rfpUsage}
+        readOnly={!canCreate}
       />
     </div>
   );

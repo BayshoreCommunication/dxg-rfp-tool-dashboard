@@ -86,8 +86,11 @@ type ProposalTableListProps = {
   searchValue: string;
   activeFilter: ProposalFilterType;
   onRefreshCounts?: () => void;
-  // The plan's RFP counter (ORG-602); null on a plan with no limit.
+  // The plan's proposal counter (ORG-602); null on a plan with no limit.
   rfpUsage?: RfpUsage | null;
+  // The member can't edit proposals at all (a Viewer): no Edit action, and the title opens the
+  // read-only preview instead of an edit page the backend would refuse.
+  readOnly?: boolean;
 };
 
 type ProposalPagination = {
@@ -122,6 +125,7 @@ export default function ProposalTableList({
   activeFilter,
   onRefreshCounts,
   rfpUsage = null,
+  readOnly = false,
 }: ProposalTableListProps) {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +139,7 @@ export default function ProposalTableList({
   const [favoritingId, setFavoritingId] = useState<string | null>(null);
   const [copyModalProposal, setCopyModalProposal] = useState<ProposalListItem | null>(null);
   const [copyingSaving, setCopyingSaving] = useState(false);
-  // ORG-605: "Save as template" is offered to members who can use RFP templates (not Viewers).
+  // ORG-605: "Save as template" is offered to members who can use proposal templates (not Viewers).
   const [templateAccess, setTemplateAccess] = useState(NO_TEMPLATE_ACCESS);
   const [templateProposal, setTemplateProposal] = useState<ProposalListItem | null>(null);
   useEffect(() => {
@@ -468,8 +472,8 @@ export default function ProposalTableList({
         setRefreshTick((prev) => prev + 1);
         onRefreshCounts?.();
       } else if (result.code === PLAN_LIMIT_REACHED) {
-        // The plan's RFP limit is a plan state, not a failure (ORG-602): a copy counts as a new RFP.
-        toast.info(result.message || "Your plan's RFP limit is reached. Contact us to upgrade.");
+        // The plan's proposal limit is a plan state, not a failure (ORG-602): a copy counts as a new proposal.
+        toast.info(result.message || "Your plan's proposal limit is reached. Contact us to upgrade.");
         setCopyModalProposal(null);
       } else {
         toast.error(result.message || "Failed to save copy.");
@@ -580,12 +584,12 @@ export default function ProposalTableList({
               id="proposals-first-run-title"
               className="mt-2 text-balance text-2xl font-bold tracking-tight text-slate-900"
             >
-              Create your first RFP
+              Create your first proposal
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600">
-              RFPilot turns your event details into an AV production RFP, the
-              request you send to vendors so they can quote. Nothing goes out
-              until you pick vendors.
+              RFPilot turns your event details into an AV production proposal,
+              the request you send to vendors so they can quote. Nothing goes
+              out until you pick vendors.
             </p>
             <StarterLinks className="mt-6" />
           </section>
@@ -675,6 +679,16 @@ export default function ProposalTableList({
                 ? "bg-emerald-400 animate-pulse"
                 : "bg-slate-400";
               const isArchiveView = activeFilter === "archive";
+              const previewHref = `/proposal/${proposalSlug}`;
+              const editHref = `/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`;
+              // One rule for the Edit action and the title, so they can never disagree: an
+              // archived row offers neither, and a member who can't edit gets the preview.
+              const editOffered = !isArchiveView && !readOnly;
+              const titleLink = isArchiveView
+                ? null
+                : editOffered
+                ? { href: editHref, hint: "Edit proposal" }
+                : { href: previewHref, hint: "Preview proposal", newTab: true };
               const archivedDate = proposal?.archivedAt ? new Date(proposal.archivedAt) : null;
               const daysUntilPurge = archivedDate
                 ? Math.max(0, Math.ceil((archivedDate.getTime() + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -688,7 +702,7 @@ export default function ProposalTableList({
                 >
                   <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
                     <div className="min-w-0 flex-1">
-                      {/* State first, then what the RFP is called, then its dates. */}
+                      {/* State first, then what the proposal is called, then its dates. */}
                       <div className="flex flex-wrap items-center gap-1.5">
                         {isArchiveView ? (
                           <>
@@ -743,8 +757,25 @@ export default function ProposalTableList({
                         )}
                       </div>
 
-                      <h3 className="mt-1.5 break-words text-[15px] font-bold leading-snug tracking-tight text-slate-900 sm:truncate">
-                        {title}
+                      {/* The truncation sits on the link, not the heading, so the focus ring is
+                          never clipped; the link is only as wide as the title, so it never
+                          covers the row's buttons. */}
+                      <h3 className="mt-1.5 flex min-w-0 text-[15px] font-bold leading-snug tracking-tight text-slate-900">
+                        {titleLink ? (
+                          <Link
+                            href={titleLink.href}
+                            target={titleLink.newTab ? "_blank" : undefined}
+                            rel={titleLink.newTab ? "noopener noreferrer" : undefined}
+                            title={titleLink.hint}
+                            data-testid="proposal-title-link"
+                            className="min-w-0 break-words rounded-sm underline-offset-2 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 sm:truncate"
+                          >
+                            {title}
+                            {titleLink.newTab && <span className="sr-only"> (opens in a new tab)</span>}
+                          </Link>
+                        ) : (
+                          <span className="min-w-0 break-words sm:truncate">{title}</span>
+                        )}
                       </h3>
 
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-medium text-slate-400">
@@ -850,16 +881,18 @@ export default function ProposalTableList({
                             disabled={copyingLinkId !== null}
                           />
                           <ActionLink
-                            href={`/proposal/${proposalSlug}`}
+                            href={previewHref}
                             label="Preview"
                             icon={<Eye size={14} />}
                             target="_blank"
                           />
-                          <ActionLink
-                            href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`}
-                            label="Edit"
-                            icon={<Edit3 size={14} />}
-                          />
+                          {editOffered && (
+                            <ActionLink
+                              href={editHref}
+                              label="Edit"
+                              icon={<Edit3 size={14} />}
+                            />
+                          )}
                           <ActionLink
                             href={`/proposals/${encodeURIComponent(proposal._id)}/access`}
                             label="Team access"
@@ -870,7 +903,7 @@ export default function ProposalTableList({
                               icon={<CopyPlus size={14} />}
                               label="Save a copy"
                               onClick={() => {
-                                // A copy is a new RFP: at the plan's limit say so before anyone fills in the copy (ORG-602).
+                                // A copy is a new proposal: at the plan's limit say so before anyone fills in the copy (ORG-602).
                                 if (rfpUsage?.atLimit) toast.info(`${rfpUsageLabel(rfpUsage)}. ${rfpLimitMessage(rfpUsage)}`);
                                 else setCopyModalProposal(proposal);
                               }}

@@ -177,6 +177,8 @@ const server = http.createServer(async (request, response) => {
   // ORG-407: the organization audit log for the role accounts (auditLogFixture.mjs).
   if (handleAuditLog(request, response, url)) return;
   if (handleRoleDashboard(request, response, url)) return;
+  // Settings > Users for the role accounts (usersPageFixture.mjs).
+  if ((await import('./usersPageFixture.mjs')).handleUsersPage(request, response, url)) return;
   // ORG-607: vendor list, its role accounts and the send step (vendorListFixture.mjs).
   if (await handleVendorList(request, response, url)) return;
   if (await handlePlanEntitlements(request, response, url)) return;

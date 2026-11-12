@@ -12,13 +12,13 @@ type Props = {
   member: OrgMember;
   ownedRfpCount: number;
   members: OrgMember[];
-  // Runs after the RFPs moved; the caller retries the change that was refused.
+  // Runs after the proposals moved; the caller retries the change that was refused.
   onReassigned: (toMember: OrgMember, count: number) => void | Promise<void>;
   continueLabel: string;
 };
 
-// ORG-207 offboarding step: a member who owns RFPs hands them to someone else before a change
-// that would leave the RFPs without an owner (deactivation, or becoming a Viewer).
+// ORG-207 offboarding step: a member who owns proposals hands them to someone else before a change
+// that would leave the proposals without an owner (deactivation, or becoming a Viewer).
 export default function ReassignRfpsPanel({ member, ownedRfpCount, members, onReassigned, continueLabel }: Props) {
   const candidates = reassignTargets(members, member.userId);
   const [toUserId, setToUserId] = useState(candidates[0]?.userId ?? "");
@@ -28,7 +28,7 @@ export default function ReassignRfpsPanel({ member, ownedRfpCount, members, onRe
   const submit = async () => {
     const target = candidates.find((candidate) => candidate.userId === toUserId);
     if (!target) {
-      setError("Choose who receives the RFPs.");
+      setError("Choose who receives the proposals.");
       return;
     }
     setBusy(true);
@@ -49,20 +49,20 @@ export default function ReassignRfpsPanel({ member, ownedRfpCount, members, onRe
         <ArrowRightLeft size={18} className="mt-0.5 shrink-0 text-amber-700" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-amber-900">
-            {memberDisplayName(member)} owns {ownedRfpCount > 0 ? ownedRfpCount : "some"} RFP{ownedRfpCount === 1 ? "" : "s"}
+            {memberDisplayName(member)} owns {ownedRfpCount > 0 ? ownedRfpCount : "some"} proposal{ownedRfpCount === 1 ? "" : "s"}
           </p>
           <p className="mt-1 text-xs leading-5 text-amber-900/80">
-            Reassign them to another active member first. The new owner gets full access; nothing else about the RFPs changes.
+            Reassign them to another active member first. The new owner gets full access; nothing else about the proposals changes.
           </p>
         </div>
       </div>
       {candidates.length === 0 ? (
         <p className="mt-3 text-sm text-amber-900">
-          There&apos;s no other active member who can own RFPs. Invite or reactivate a Planner, Team Manager or Admin first.
+          There&apos;s no other active member who can own proposals. Invite or reactivate a Planner, Team Manager or Admin first.
         </p>
       ) : (
         <div className="mt-4">
-          <label htmlFor={`reassign-${member.userId}`} className={labelClass}>Reassign RFPs to</label>
+          <label htmlFor={`reassign-${member.userId}`} className={labelClass}>Reassign proposals to</label>
           <select
             id={`reassign-${member.userId}`}
             className={`${inputClass} appearance-auto`}

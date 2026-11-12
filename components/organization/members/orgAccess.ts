@@ -1,3 +1,4 @@
+import { ROLE_SUMMARIES } from "./roleAccess";
 import type { CustomerRole, Invitation, InvitableRole, OrgAccess, OrgMember } from "./types";
 
 // Role names and what the signed-in user may do. The backend enforces all of this; the UI only
@@ -11,13 +12,9 @@ export const ROLE_LABELS: Record<CustomerRole, string> = {
   viewer: "Viewer",
 };
 
-export const ROLE_DESCRIPTIONS: Record<CustomerRole, string> = {
-  owner: "Full control, including billing and ownership.",
-  organization_admin: "Manages members, teams, invitations and every RFP.",
-  team_manager: "Manages RFPs of the teams they lead.",
-  planner: "Creates and works on their own RFPs.",
-  viewer: "Reads RFPs shared with them.",
-};
+// The one-line summary shown next to each role in the invite and change-role dialogs. The words
+// live with the rest of the role guide in roleAccess.ts.
+export const ROLE_DESCRIPTIONS: Record<CustomerRole, string> = ROLE_SUMMARIES;
 
 export const ASSIGNABLE_ROLES: InvitableRole[] = ["organization_admin", "team_manager", "planner", "viewer"];
 const MANAGER_INVITABLE_ROLES: InvitableRole[] = ["planner", "viewer"];
@@ -79,7 +76,7 @@ export const inviteTeamRequired = (access: OrgAccess | null): boolean => Boolean
 export const canBeTeamManager = (member: Pick<OrgMember, "role" | "roles"> | undefined | null): boolean =>
   Boolean(member && (member.role === "team_manager" || member.roles?.includes("team_manager")));
 
-// Who can receive a member's RFPs: another active member who isn't a Viewer (ORG-207).
+// Who can receive a member's proposals: another active member who isn't a Viewer (ORG-207).
 export const reassignTargets = (members: OrgMember[], fromUserId: string): OrgMember[] =>
   members.filter((m) => m.userId !== fromUserId && m.status === "active" && m.role !== null && m.role !== "viewer");
 

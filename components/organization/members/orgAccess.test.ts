@@ -89,7 +89,7 @@ describe("team and reassignment rules", () => {
     expect(canBeTeamManager(undefined)).toBe(false);
   });
 
-  it("reassigns RFPs only to other active non-Viewers", () => {
+  it("reassigns proposals only to other active non-Viewers", () => {
     const list = [
       member({ userId: "from" }),
       member({ userId: "a", role: "planner" }),

@@ -48,8 +48,14 @@ function ProposalCard({ proposal }: { proposal: VendorResponseProposalSummary })
             )}
           </div>
 
-          <h2 className="mt-4 truncate text-2xl font-black tracking-tight text-slate-900">
-            {proposal.proposalTitle}
+          <h2 className="mt-4 flex min-w-0 text-2xl font-black tracking-tight text-slate-900">
+            {/* Same destination as "View responses", the row's only link. */}
+            <Link
+              href={`/vendor-responses/proposals/${encodeURIComponent(proposal.proposalId)}`}
+              className="min-w-0 truncate rounded-sm underline-offset-4 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            >
+              {proposal.proposalTitle}
+            </Link>
           </h2>
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-slate-500">
             <span className="inline-flex items-center gap-2">

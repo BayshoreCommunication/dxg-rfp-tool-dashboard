@@ -58,7 +58,7 @@ const useMemberChange = (initial: OrgMember, refresh: Props["refresh"]) => {
     return false;
   };
 
-  // After the RFPs moved: reload (the version may have moved too) and retry the change.
+  // After the proposals moved: reload (the version may have moved too) and retry the change.
   const retryAfterReassign = async (attempt: Attempt): Promise<boolean> => {
     const fresh = (await refresh()).find((m) => m.userId === member.userId) ?? member;
     setMember(fresh);
@@ -126,6 +126,11 @@ function ChangeRoleDialog({ member: initial, members, onClose, onDone, refresh }
           </label>
         ))}
       </fieldset>
+      {change.ownedCount === null && (
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          For the full comparison, see &ldquo;What each role can do&rdquo; on the Users page.
+        </p>
+      )}
       {change.ownedCount !== null && (
         <div className="mt-4">
           <ReassignRfpsPanel
@@ -135,7 +140,7 @@ function ChangeRoleDialog({ member: initial, members, onClose, onDone, refresh }
             continueLabel={`Reassign and make ${ROLE_LABELS[role]}`}
             onReassigned={async (to, count) => {
               if (await change.retryAfterReassign(attempt)) {
-                onDone(`Moved ${count} RFP${count === 1 ? "" : "s"} to ${memberDisplayName(to)}. ${name} is now ${roleWithArticle(role)}.`);
+                onDone(`Moved ${count} proposal${count === 1 ? "" : "s"} to ${memberDisplayName(to)}. ${name} is now ${roleWithArticle(role)}.`);
               }
             }}
           />
@@ -228,7 +233,7 @@ function DeactivateDialog({ member: initial, members, onClose, onDone, refresh }
       {change.ownedCount === null ? (
         <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-600">
           <ShieldAlert size={18} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" />
-          <p>Their RFP shares stay in place but grant nothing while they&apos;re deactivated. If they own RFPs, you&apos;ll reassign them next.</p>
+          <p>Their proposal shares stay in place but grant nothing while they&apos;re deactivated. If they own proposals, you&apos;ll reassign them next.</p>
         </div>
       ) : (
         <ReassignRfpsPanel
@@ -238,7 +243,7 @@ function DeactivateDialog({ member: initial, members, onClose, onDone, refresh }
           continueLabel="Reassign and deactivate"
           onReassigned={async (to, count) => {
             if (await change.retryAfterReassign(attempt)) {
-              onDone(`Moved ${count} RFP${count === 1 ? "" : "s"} to ${memberDisplayName(to)} and deactivated ${name}.`);
+              onDone(`Moved ${count} proposal${count === 1 ? "" : "s"} to ${memberDisplayName(to)} and deactivated ${name}.`);
             }
           }}
         />

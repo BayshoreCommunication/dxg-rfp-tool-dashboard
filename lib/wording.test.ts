@@ -17,15 +17,12 @@ const ALLOWED: Array<[file: string, text: string]> = [
   ["components/vendor/workspace/VendorResponseWorkspace.tsx", 'RFP<span className="text-[#2fc6f5]">ilot</span>'],
 ];
 
-// Files two open pull requests are rewording themselves (feat/dashboard-list-refactor and
-// fix/proposal-title-link-and-role-info). Delete each entry when its pull request merges.
+// Files an open pull request is rewording itself (feat/dashboard-list-refactor). Delete each
+// entry when that pull request merges.
 const PENDING = [
   /^components\/dashboard\//,
   /^app\/\(page\)\/dashboard\//,
   /^app\/actions\/rfpDashboard/,
-  /^components\/proposals\/ProposalTableList\.tsx$/,
-  /^components\/organization\/members\//,
-  /^app\/\(page\)\/settings\/users\//,
 ];
 
 const sourceFiles = (dir: string): string[] =>

@@ -7,9 +7,9 @@ describe("orgErrorMessage", () => {
     expect(orgErrorMessage({ code: "TEAM_NAME_TAKEN" })).toBe("An active team already has this name.");
   });
 
-  it("includes the RFP count for OWNER_HAS_RFPS", () => {
-    expect(orgErrorMessage({ code: "OWNER_HAS_RFPS", details: { ownedRfpCount: 3 } })).toBe("This member still owns 3 RFPs. Reassign them first.");
-    expect(orgErrorMessage({ code: "OWNER_HAS_RFPS", details: { ownedRfpCount: 1 } })).toMatch(/1 RFP\./);
+  it("includes the proposal count for OWNER_HAS_RFPS", () => {
+    expect(orgErrorMessage({ code: "OWNER_HAS_RFPS", details: { ownedRfpCount: 3 } })).toBe("This member still owns 3 proposals. Reassign them first.");
+    expect(orgErrorMessage({ code: "OWNER_HAS_RFPS", details: { ownedRfpCount: 1 } })).toMatch(/1 proposal\./);
   });
 
   it("shows the wait for the resend cooldown and the daily limit", () => {
@@ -28,7 +28,7 @@ describe("orgErrorMessage", () => {
     expect(orgErrorMessage({ status: 403 })).toMatch(/permission/);
   });
 
-  it("detects version conflicts and RFP ownership refusals", () => {
+  it("detects version conflicts and proposal ownership refusals", () => {
     expect(isVersionConflict({ code: "STALE_VERSION" })).toBe(true);
     expect(ownedRfpCount({ code: "OWNER_HAS_RFPS", details: { ownedRfpCount: 2 } })).toBe(2);
     expect(ownedRfpCount({ code: "STALE_VERSION" })).toBeNull();
