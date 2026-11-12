@@ -4,9 +4,9 @@ import FirstRunDashboard from "./FirstRunDashboard";
 describe("FirstRunDashboard", () => {
   test("says what the product is and offers the three starters plus help", () => {
     render(<FirstRunDashboard />);
-    const card = screen.getByRole("region", { name: "Create your first RFP" });
+    const card = screen.getByRole("region", { name: "Create your first proposal" });
     expect(card).toHaveTextContent(
-      "RFPilot turns your event details into an AV production RFP, the request you send to vendors so they can quote.",
+      "RFPilot turns your event details into an AV production proposal, the request you send to vendors so they can quote.",
     );
     const starters = within(card).getByRole("group", { name: "Ways to start" });
     expect(within(starters).getAllByRole("link")).toHaveLength(3);

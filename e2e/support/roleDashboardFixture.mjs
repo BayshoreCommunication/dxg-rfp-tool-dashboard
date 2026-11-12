@@ -1,6 +1,7 @@
 // Local-only stand-in for the backend's dashboard endpoints (GET /api/v1/rfps and
-// /api/v1/rfps/summary, ORG-401) and the member and team lists the Admin filters read.
-// Synthetic data only. Like the real backend it scopes every answer to the signed-in member's
+// /api/v1/rfps/summary, ORG-401), the member and team lists the Admin filters read, and the two
+// row actions the dashboard calls for these accounts (archive and copy). Synthetic data only.
+// The product calls these "proposals"; the API paths and fields keep their older name. Like the real backend it scopes every answer to the signed-in member's
 // role, and the summary is computed from the same filtered set as the list.
 
 const id = (char) => char.repeat(24);
@@ -55,8 +56,14 @@ const rfp = (n, eventName, stage, owner, team, city, startOffset, invited, respo
 });
 
 const A = DASHBOARD_ACCOUNTS;
+// What the row actions changed since the last reset: proposals archived from the dashboard and
+// the copies asked for. Copies are never listed by the dashboard endpoints (as in the backend).
+const changes = { archived: new Set(), copies: [] };
+
 // Built per request so "today" never drifts from the test's clock.
-const rfps = () => [
+const rfps = () => seedRfps().map((row) => (changes.archived.has(row.id) ? { ...row, stage: "archived" } : row));
+
+const seedRfps = () => [
   rfp(1, "Annual Sales Kickoff", "receiving_responses", A["planner-e2e@example.com"], CORPORATE, "Chicago", 45, 5, 3, { sharedWith: [id("5")] }),
   rfp(2, "Leadership Summit", "sent", A["planner-e2e@example.com"], CORPORATE, "Austin", 20, 4, 0),
   rfp(3, "Product Launch Evening", "draft", A["planner-e2e@example.com"], CORPORATE, null, null, 0, 0),
@@ -70,6 +77,10 @@ const rfps = () => [
   rfp(11, "Field Kickoff", "draft", FIONA, FIELD, "Dallas", 100, 0, 0),
   rfp(12, "Board Meeting AV", "awarded", A["owner-e2e@example.com"], null, "Chicago", 15, 2, 2),
   rfp(13, "All-Hands Broadcast", "sent", A["admin-e2e@example.com"], null, "Chicago", 8, 3, 0),
+  // Three proposals with one name: two on the same dates and one with no dates yet.
+  rfp(14, "Northstar Leadership Summit 2027", "sent", FIONA, FIELD, "Orlando", 150, 3, 0),
+  rfp(15, "Northstar Leadership Summit 2027", "draft", FIONA, FIELD, "Orlando", 150, 0, 0),
+  rfp(16, "Northstar Leadership Summit 2027", "draft", FIONA, FIELD, null, null, 0, 0),
   // Enough organization-wide rows for a second page.
   ...Array.from({ length: 20 }, (_, index) =>
     rfp(20 + index, `Regional Meetup ${String(index + 1).padStart(2, "0")}`, index % 2 ? "sent" : "draft", FIONA, FIELD, index % 3 ? "Dallas" : "Houston", 120 + index, index % 2 ? 2 : 0, 0)),
@@ -91,8 +102,8 @@ const actorOf = (request) => {
 
 const isAdmin = (actor) => actor.roles.includes("owner") || actor.roles.includes("organization_admin");
 
-// rfpListScope: everything for Owners and Admins, managed teams' RFPs for Team Managers, own
-// RFPs for Planners, plus anything shared with the member.
+// rfpListScope: everything for Owners and Admins, managed teams' proposals for Team Managers,
+// own proposals for Planners, plus anything shared with the member.
 const visibleTo = (actor) => (row) => {
   if (isAdmin(actor)) return true;
   if (row.sharedWith.includes(actor.userId)) return true;
@@ -139,13 +150,69 @@ const publicRow = (row) => {
   return copy;
 };
 
+// May this member change the proposal (rfpAccessPolicy: organization-wide roles, the owner, a
+// manager of its team)? A Viewer never may.
+const mayChange = (actor, row) =>
+  !actor.roles.includes("viewer")
+  && (isAdmin(actor)
+    || row.ownerUserId === actor.userId
+    || (actor.roles.includes("team_manager") && TEAMS.some((team) => team.id === row.teamId && team.managers.includes(actor.userId))));
+
+const readBody = async (request) => {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  } catch {
+    return {};
+  }
+};
+
+// Archive (DELETE /api/proposals/:id) and copy (POST /api/proposals/:id/copy) for the role
+// accounts, plus /__e2e/dashboard for a spec to read or reset what they changed.
+const handleRowActions = (request, response, url) => {
+  const pathname = url.pathname;
+  if (pathname === "/__e2e/dashboard") {
+    if (request.method === "POST") {
+      changes.archived.clear();
+      changes.copies.length = 0;
+    }
+    json(response, 200, { archived: [...changes.archived], copies: changes.copies });
+    return true;
+  }
+  const match = /^\/api\/proposals\/([a-f0-9]{24})(\/copy)?$/.exec(pathname);
+  if (!match || !((request.method === "DELETE" && !match[2]) || (request.method === "POST" && match[2]))) return false;
+  const actor = actorOf(request);
+  if (!actor) return false;
+  const row = rfps().find((candidate) => candidate.id === match[1]);
+  if (!row || !visibleTo(actor)(row)) {
+    json(response, 404, { success: false, message: "Proposal not found" });
+    return true;
+  }
+  if (!mayChange(actor, row)) {
+    json(response, 403, { success: false, code: "FORBIDDEN", message: "Your role doesn't allow this." });
+    return true;
+  }
+  if (request.method === "DELETE") {
+    changes.archived.add(row.id);
+    json(response, 200, { success: true, message: "Proposal archived", data: { _id: row.id } });
+    return true;
+  }
+  void readBody(request).then((body) => {
+    changes.copies.push({ sourceId: row.id, eventName: typeof body.eventName === "string" ? body.eventName : null });
+    json(response, 201, { success: true, message: "Proposal copied", data: { _id: "c".repeat(24), isCopy: true, event: { eventName: body.eventName ?? row.eventName } } });
+  });
+  return true;
+};
+
 export function handleRoleDashboard(request, response, url) {
+  if (handleRowActions(request, response, url)) return true;
   if (request.method !== "GET") return false;
   const pathname = url.pathname;
   const handled = ["/api/v1/rfps", "/api/v1/rfps/summary", "/api/organization/members", "/api/v1/teams"].includes(pathname);
   if (!handled) return false;
   const actor = actorOf(request);
-  // The older specs sign in with an opaque token: a member with no RFPs.
+  // The older specs sign in with an opaque token: a member with no proposals.
   if (!actor) {
     if (pathname === "/api/v1/rfps") json(response, 200, { success: true, data: { items: [], pagination: { total: 0, page: 1, limit: 25, totalPages: 0 } } });
     else if (pathname === "/api/v1/rfps/summary") json(response, 200, { success: true, data: { total: 0, activeRfps: 0, responsesReceived: 0, awardedThisQuarter: 0, byStage: Object.fromEntries(STAGES.map((stage) => [stage, 0])), quarter: { label: "2026-Q4", start: at(-30), end: at(30), timeZone: "UTC" } } });

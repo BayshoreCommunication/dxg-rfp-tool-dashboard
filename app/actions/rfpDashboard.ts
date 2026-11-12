@@ -9,7 +9,7 @@ import {
 import { orgRequest, type OrgActionResult } from "./organizationApi";
 
 // ORG-402 role dashboards, over the ORG-401 endpoints (backend routes/rfpDashboardRoute.ts).
-// Both answer only with RFPs the signed-in member may see; a filter can narrow that set, never
+// Both answer only with proposals the signed-in member may see; a filter can narrow that set, never
 // widen it. The list and the summary take the same filters.
 
 const withQuery = (path: string, query: Record<string, string>) => {

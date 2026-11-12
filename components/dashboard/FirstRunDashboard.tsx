@@ -20,10 +20,10 @@ export default function FirstRunDashboard() {
         id="first-run-title"
         className="mt-2 text-balance text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
       >
-        Create your first RFP
+        Create your first proposal
       </h2>
       <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600">
-        RFPilot turns your event details into an AV production RFP, the request
+        RFPilot turns your event details into an AV production proposal, the request
         you send to vendors so they can quote. Nothing goes out until you pick
         vendors.
       </p>
