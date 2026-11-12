@@ -1,5 +1,6 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
+import { boundedNumber, RESPONSE_NUMBER_LIMITS, RESPONSE_TEXT_LIMITS } from "@/lib/vendorResponses/workspaceModel";
 import WorkspaceSection, { fieldClass, labelClass, textAreaClass } from "./WorkspaceSection";
 
 export default function CompanyProfileSection({ questionnaire, response, onChange, sectionNumber, disabled }: {
@@ -27,16 +28,16 @@ export default function CompanyProfileSection({ questionnaire, response, onChang
     <WorkspaceSection number={sectionNumber} title={section?.title ?? "Company profile"} helperText={section?.helperText}>
       <div className="grid gap-5 sm:grid-cols-2">
         <label className={labelClass}>Legal company name {config.legalNameRequired ? <span className="text-rose-600">*</span> : null}
-          <input className={fieldClass} value={profile.legalName} disabled={disabled} onChange={(event) => update({ legalName: event.target.value })} />
+          <input className={fieldClass} maxLength={RESPONSE_TEXT_LIMITS.name} value={profile.legalName} disabled={disabled} onChange={(event) => update({ legalName: event.target.value })} />
         </label>
         <label className={labelClass}>Headquarters {config.headquartersRequired ? <span className="text-rose-600">*</span> : null}
-          <input className={fieldClass} value={profile.headquarters} disabled={disabled} placeholder="City, state / region" onChange={(event) => update({ headquarters: event.target.value })} />
+          <input className={fieldClass} maxLength={RESPONSE_TEXT_LIMITS.name} value={profile.headquarters} disabled={disabled} placeholder="City, state / region" onChange={(event) => update({ headquarters: event.target.value })} />
         </label>
         {config.yearsInBusinessEnabled ? <label className={labelClass}>Years in business
-          <input className={fieldClass} type="number" min="0" value={profile.yearsInBusiness ?? ""} disabled={disabled} onChange={(event) => update({ yearsInBusiness: event.target.value === "" ? undefined : Number(event.target.value) })} />
+          <input className={fieldClass} type="number" min="0" max={RESPONSE_NUMBER_LIMITS.yearsInBusiness.max} step="1" value={profile.yearsInBusiness ?? ""} disabled={disabled} onChange={(event) => update({ yearsInBusiness: boundedNumber(event.target.value, RESPONSE_NUMBER_LIMITS.yearsInBusiness) })} />
         </label> : null}
         {config.staffCountEnabled ? <label className={labelClass}>Full-time staff
-          <input className={fieldClass} type="number" min="0" value={profile.staffCount ?? ""} disabled={disabled} onChange={(event) => update({ staffCount: event.target.value === "" ? undefined : Number(event.target.value) })} />
+          <input className={fieldClass} type="number" min="0" max={RESPONSE_NUMBER_LIMITS.staffCount.max} step="1" value={profile.staffCount ?? ""} disabled={disabled} onChange={(event) => update({ staffCount: boundedNumber(event.target.value, RESPONSE_NUMBER_LIMITS.staffCount) })} />
         </label> : null}
         <label className={`${labelClass} sm:col-span-2`}>
           <span className="flex items-center gap-2">
@@ -47,14 +48,14 @@ export default function CompanyProfileSection({ questionnaire, response, onChang
           </span>
           <textarea
             className={textAreaClass}
-            value={profile.dba ?? ""}
+            maxLength={RESPONSE_TEXT_LIMITS.longText} value={profile.dba ?? ""}
             disabled={disabled}
             placeholder="Details of services you provide."
             onChange={(event) => update({ dba: event.target.value })}
           />
         </label>
         {config.largestComparableEventEnabled ? <label className={`${labelClass} sm:col-span-2`}>Largest comparable event <span className="text-rose-600">*</span>
-          <textarea className={textAreaClass} value={profile.largestComparableEvent} disabled={disabled} placeholder="Describe scale, scope, and services delivered." onChange={(event) => update({ largestComparableEvent: event.target.value })} />
+          <textarea className={textAreaClass} maxLength={RESPONSE_TEXT_LIMITS.longText} value={profile.largestComparableEvent} disabled={disabled} placeholder="Describe scale, scope, and services delivered." onChange={(event) => update({ largestComparableEvent: event.target.value })} />
         </label> : null}
       </div>
 
@@ -71,7 +72,7 @@ export default function CompanyProfileSection({ questionnaire, response, onChang
               return <label className={labelClass} key={category.categoryId}>{category.label}
                 <span className="relative block"><input className={`${fieldClass} pr-8`} type="number" min="0" max="100" value={value ?? ""} disabled={disabled} onChange={(event) => {
                   const next = profile.clientMix.filter((entry) => entry.categoryId !== category.categoryId);
-                  next.push({ categoryId: category.categoryId, percent: event.target.value === "" ? 0 : Number(event.target.value) });
+                  next.push({ categoryId: category.categoryId, percent: boundedNumber(event.target.value, RESPONSE_NUMBER_LIMITS.clientMixPercent) ?? 0 });
                   update({ clientMix: next });
                 }} /><span className="pointer-events-none absolute right-3 top-3 text-sm text-[#718496]">%</span></span>
               </label>;

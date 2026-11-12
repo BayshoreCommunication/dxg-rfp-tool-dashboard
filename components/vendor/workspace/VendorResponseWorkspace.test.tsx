@@ -430,6 +430,41 @@ describe("VendorResponseWorkspace", () => {
     jest.useRealTimers();
   });
 
+  /* A rejected save used to replace the draft with the same revision, which
+     re-armed autosave: the status flickered and a PATCH went out every second. */
+  it("does not retry an invalid save in a loop and names the field", async () => {
+    jest.useFakeTimers();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        success: false,
+        message: "Draft response is invalid",
+        latestDraftRevision: 1,
+        errors: [{ path: "/companyProfile/yearsInBusiness", message: "must be <= 1000" }],
+      }),
+    });
+    render(<VendorResponseWorkspace workspace={workspace()} accessGrant="grant" />);
+    fireEvent.change(screen.getByLabelText(/Vendor \/ company name/), {
+      target: { value: "Acme AV" },
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(900);
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Couldn't save: Years in business must be 1000 or less.",
+      ),
+    );
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    const patches = (global.fetch as jest.Mock).mock.calls.filter(
+      ([, init]) => init?.method === "PATCH",
+    );
+    expect(patches).toHaveLength(1);
+    jest.useRealTimers();
+  });
+
   it("reveals conditional travel and restores linked lodging answers by stable labor id", () => {
     const taskSix = workspace();
     taskSix.questionnaire.sections = [

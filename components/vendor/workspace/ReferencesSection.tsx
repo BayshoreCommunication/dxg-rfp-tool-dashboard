@@ -1,6 +1,6 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
-import { countRequirement } from "@/lib/vendorResponses/workspaceModel";
+import { boundedNumber, countRequirement, RESPONSE_NUMBER_LIMITS, RESPONSE_TEXT_LIMITS } from "@/lib/vendorResponses/workspaceModel";
 import { ImageUp, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { UploadDocuments } from "./documentTypes";
@@ -115,7 +115,7 @@ export default function ReferencesSection({
                   Client name *
                   <input
                     className={fieldClass}
-                    value={reference.clientName}
+                    maxLength={RESPONSE_TEXT_LIMITS.name} value={reference.clientName}
                     disabled={disabled}
                     onChange={(event) =>
                       onChange({
@@ -133,7 +133,7 @@ export default function ReferencesSection({
                   Event name *
                   <input
                     className={fieldClass}
-                    value={reference.eventName}
+                    maxLength={RESPONSE_TEXT_LIMITS.name} value={reference.eventName}
                     disabled={disabled}
                     onChange={(event) =>
                       onChange({
@@ -151,7 +151,7 @@ export default function ReferencesSection({
                   Contact name
                   <input
                     className={fieldClass}
-                    value={reference.contact.name}
+                    maxLength={RESPONSE_TEXT_LIMITS.name} value={reference.contact.name}
                     disabled={disabled}
                     onChange={(event) =>
                       onChange({
@@ -176,7 +176,7 @@ export default function ReferencesSection({
                   <input
                     className={fieldClass}
                     type="email"
-                    value={reference.contact.email}
+                    maxLength={RESPONSE_TEXT_LIMITS.email} value={reference.contact.email}
                     disabled={disabled}
                     onChange={(event) =>
                       onChange({
@@ -201,7 +201,7 @@ export default function ReferencesSection({
                   <input
                     className={fieldClass}
                     type="tel"
-                    value={reference.contact.phone}
+                    maxLength={RESPONSE_TEXT_LIMITS.phone} value={reference.contact.phone}
                     disabled={disabled}
                     onChange={(event) =>
                       onChange({
@@ -227,6 +227,8 @@ export default function ReferencesSection({
                     className={fieldClass}
                     type="number"
                     min="0"
+                    max={RESPONSE_NUMBER_LIMITS.attendance.max}
+                    step="1"
                     value={reference.attendance ?? ""}
                     disabled={disabled}
                     onChange={(event) =>
@@ -236,9 +238,10 @@ export default function ReferencesSection({
                           entry.referenceId === reference.referenceId
                             ? {
                                 ...entry,
-                                ...(event.target.value
-                                  ? { attendance: Number(event.target.value) }
-                                  : { attendance: undefined }),
+                                attendance: boundedNumber(
+                                  event.target.value,
+                                  RESPONSE_NUMBER_LIMITS.attendance,
+                                ),
                               }
                             : entry,
                         ),
@@ -294,7 +297,7 @@ export default function ReferencesSection({
                   Current status
                   <input
                     className={fieldClass}
-                    value={reference.currentStatus}
+                    maxLength={RESPONSE_TEXT_LIMITS.status} value={reference.currentStatus}
                     disabled={disabled}
                     placeholder="Current, completed, retained client…"
                     onChange={(event) =>
@@ -333,7 +336,7 @@ export default function ReferencesSection({
                 Services provided *
                 <textarea
                   className={textAreaClass}
-                  value={reference.servicesProvided}
+                  maxLength={RESPONSE_TEXT_LIMITS.longText} value={reference.servicesProvided}
                   disabled={disabled}
                   onChange={(event) =>
                     onChange({

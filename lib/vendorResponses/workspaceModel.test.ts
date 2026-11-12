@@ -2,6 +2,10 @@ import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
 import {
   applicableSections,
+  boundedNumber,
+  describeSaveFailure,
+  RESPONSE_NUMBER_LIMITS,
+  savableResponse,
   sectionState,
   validateWorkspaceResponse,
   workspaceTotals,
@@ -345,5 +349,54 @@ describe("vendor workspace model", () => {
         }),
       ]),
     );
+  });
+});
+
+/* The server rejects a whole draft save when one value breaks the schema, so
+   autosave must never send one (Fake Filler and ordinary edits hit these). */
+describe("autosave stays inside the response schema", () => {
+  it("keeps number fields in range and whole where the schema needs integers", () => {
+    expect(boundedNumber("1500", RESPONSE_NUMBER_LIMITS.yearsInBusiness)).toBe(1000);
+    expect(boundedNumber("12.6", RESPONSE_NUMBER_LIMITS.yearsInBusiness)).toBe(13);
+    expect(boundedNumber("-4", RESPONSE_NUMBER_LIMITS.attendance)).toBe(0);
+    expect(boundedNumber("150", RESPONSE_NUMBER_LIMITS.clientMixPercent)).toBe(100);
+    expect(boundedNumber("12.5", RESPONSE_NUMBER_LIMITS.clientMixPercent)).toBe(12.5);
+    expect(boundedNumber("0", RESPONSE_NUMBER_LIMITS.laborDays)).toBe(1);
+    expect(boundedNumber("", RESPONSE_NUMBER_LIMITS.staffCount)).toBeUndefined();
+    expect(boundedNumber("abc", RESPONSE_NUMBER_LIMITS.staffCount)).toBeUndefined();
+  });
+
+  it("drops blank assumption lines and fills cleared quantities and days", () => {
+    const draft = {
+      ...response,
+      rooms: [
+        {
+          ...response.rooms[0],
+          equipmentLines: [{ equipmentLineId: "e1", categoryId: "audio", description: "Mixer", quantity: 0 }],
+          laborLines: [{ laborLineId: "l1", roleId: "a1", days: 0, regularHours: 8, overtimeHours: 0, travel: false, notes: "" }],
+        },
+      ],
+      pricing: { ...response.pricing, assumptionsExclusions: ["Power by venue", "", "   "] },
+    } as unknown as VendorResponseV1;
+    const saved = savableResponse(draft);
+    expect(saved.pricing.assumptionsExclusions).toEqual(["Power by venue"]);
+    expect(saved.rooms[0].equipmentLines[0].quantity).toBe(1);
+    expect(saved.rooms[0].laborLines[0].days).toBe(1);
+    expect(draft.pricing.assumptionsExclusions).toHaveLength(3);
+  });
+
+  it("names the field and rule instead of the generic invalid message", () => {
+    expect(describeSaveFailure({
+      message: "Draft response is invalid",
+      errors: [
+        { path: "/pricing/assumptionsExclusions/0", message: "must NOT have fewer than 1 characters" },
+        { path: "/references/0/attendance", message: "must be integer" },
+      ],
+    })).toBe("Couldn't save: An assumptions and exclusions line cannot be blank (+1 more).");
+    expect(describeSaveFailure({
+      errors: [{ path: "/references/reference-1", message: "Reference end date cannot be before its start date" }],
+    })).toBe("Couldn't save: Reference end date cannot be before its start date.");
+    expect(describeSaveFailure({ message: "Too many requests. Please try again later." }))
+      .toBe("Too many requests. Please try again later.");
   });
 });

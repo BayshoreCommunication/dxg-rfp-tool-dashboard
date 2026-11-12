@@ -8,7 +8,9 @@ import type { VendorResponseWorkspaceV1 } from "@/contracts/generated/vendor-res
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
 import {
   applicableSections,
+  describeSaveFailure,
   formatMoney,
+  savableResponse,
   sectionState,
   validateWorkspaceResponse,
   withDefaultSpecCompliance,
@@ -342,20 +344,26 @@ export default function VendorResponseWorkspace({
             headers: requestHeaders,
             body: JSON.stringify({
               draftRevision: currentDraft.draftRevision,
-              response: snapshot,
+              response: savableResponse(snapshot),
             }),
           },
         );
         const json = await result.json();
         if (!result.ok || !json.success || !json.data) {
-          if (Number.isInteger(json.latestDraftRevision)) {
+          // Adopt the server's revision only when it moved (a conflict). An
+          // invalid save returns the same revision; replacing the draft then
+          // re-ran autosave every second in a loop that never succeeded.
+          if (
+            Number.isInteger(json.latestDraftRevision) &&
+            json.latestDraftRevision !== currentDraft.draftRevision
+          ) {
             const latest = {
               ...currentDraft,
               draftRevision: json.latestDraftRevision,
             };
             applyDraft(latest);
           }
-          throw new Error(json.message || "Changes could not be saved.");
+          throw new Error(describeSaveFailure(json));
         }
         const savedDraft = json.data as VendorDraftDto;
         applyDraft(savedDraft);

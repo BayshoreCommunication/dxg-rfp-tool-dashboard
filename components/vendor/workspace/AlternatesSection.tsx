@@ -1,9 +1,6 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
-import {
-  moneyInput,
-  signedMoneyFromInput,
-} from "@/lib/vendorResponses/workspaceModel";
+import { moneyInput, RESPONSE_TEXT_LIMITS, signedMoneyFromInput } from "@/lib/vendorResponses/workspaceModel";
 import { BadgeDollarSign, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import WorkspaceSection, {
@@ -123,7 +120,7 @@ export default function AlternatesSection({
                 Title *
                 <input
                   className={fieldClass}
-                  value={alternate.title}
+                  maxLength={RESPONSE_TEXT_LIMITS.title} value={alternate.title}
                   disabled={disabled}
                   placeholder="Freight consolidation"
                   onChange={(event) =>
@@ -187,7 +184,7 @@ export default function AlternatesSection({
               Trade-off and evaluator impact *
               <textarea
                 className={textAreaClass}
-                value={alternate.tradeoff}
+                maxLength={RESPONSE_TEXT_LIMITS.longText} value={alternate.tradeoff}
                 disabled={disabled}
                 placeholder="Explain what changes, what is preserved, and the client impact."
                 onChange={(event) =>

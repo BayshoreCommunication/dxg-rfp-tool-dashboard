@@ -1,6 +1,6 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
-import { wordCount } from "@/lib/vendorResponses/workspaceModel";
+import { RESPONSE_TEXT_LIMITS, wordCount } from "@/lib/vendorResponses/workspaceModel";
 import { Sparkles } from "lucide-react";
 import WorkspaceSection, {
   labelClass,
@@ -49,7 +49,7 @@ export default function ValueAddsSection({
         {questionnaire.valueAdds.required ? "*" : "(optional)"}
         <textarea
           className={`${textAreaClass} min-h-52`}
-          value={response.valueAdds}
+          maxLength={RESPONSE_TEXT_LIMITS.valueAdds} value={response.valueAdds}
           disabled={disabled}
           placeholder="Describe training, reusable deliverables, sustainability benefits, or service enhancements included at no base-price change."
           onChange={(event) =>

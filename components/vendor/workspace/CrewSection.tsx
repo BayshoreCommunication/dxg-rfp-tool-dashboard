@@ -1,7 +1,7 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
 import { groupCrewRoles } from "@/lib/vendorResponses/operatorRoles";
-import { wordCount } from "@/lib/vendorResponses/workspaceModel";
+import { RESPONSE_TEXT_LIMITS, wordCount } from "@/lib/vendorResponses/workspaceModel";
 import { ImageUp, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import CrewRoleOptions from "./CrewRoleOptions";
@@ -101,7 +101,7 @@ export default function CrewSection({
                   Full name *
                   <input
                     className={fieldClass}
-                    value={member.name}
+                    maxLength={RESPONSE_TEXT_LIMITS.name} value={member.name}
                     disabled={disabled}
                     placeholder="Full name"
                     onChange={(event) =>
@@ -162,7 +162,7 @@ export default function CrewSection({
                 Bio *
                 <textarea
                   className={textAreaClass}
-                  value={member.bio}
+                  maxLength={RESPONSE_TEXT_LIMITS.bio} value={member.bio}
                   disabled={disabled}
                   placeholder="Summarize relevant experience, event scale, platforms, and years in role."
                   onChange={(event) =>

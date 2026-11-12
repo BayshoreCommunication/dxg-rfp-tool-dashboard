@@ -703,3 +703,147 @@ export const signedMoneyFromInput = (
 };
 
 export const wordCount = words;
+
+/* Bounds from vendor-response.v1.schema.json. The server rejects the whole
+   draft save when one value falls outside them, and autosave then cannot save
+   anything, so the inputs keep values inside these limits. */
+export const RESPONSE_NUMBER_LIMITS = {
+  yearsInBusiness: { min: 0, max: 1000, integer: true },
+  staffCount: { min: 0, max: 10_000_000, integer: true },
+  clientMixPercent: { min: 0, max: 100, integer: false },
+  equipmentQuantity: { min: 1, max: 1_000_000, integer: true },
+  laborDays: { min: 1, max: 3660, integer: true },
+  laborHours: { min: 0, max: 100_000, integer: false },
+  attendance: { min: 0, max: 100_000_000, integer: true },
+} as const;
+
+export const RESPONSE_TEXT_LIMITS = {
+  name: 300,
+  email: 320,
+  phone: 100,
+  status: 500,
+  title: 500,
+  equipmentDescription: 1000,
+  laborNotes: 2000,
+  assumption: 2000,
+  longText: 4000,
+  plan: 20000,
+  bio: 30000,
+  valueAdds: 50000,
+} as const;
+
+type NumberBounds = { min: number; max: number; integer: boolean };
+
+/** Reads a number field into the schema range. Blank stays undefined so a
+ *  vendor can clear a field while typing a new value. */
+export const boundedNumber = (
+  raw: string,
+  bounds: NumberBounds,
+): number | undefined => {
+  if (raw.trim() === "") return undefined;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return undefined;
+  const value = bounds.integer ? Math.round(parsed) : parsed;
+  return Math.min(bounds.max, Math.max(bounds.min, value));
+};
+
+/** The draft as autosave sends it. In-progress states the schema forbids — a
+ *  just-added blank assumption line, a cleared quantity or day count — are
+ *  normalised here instead of failing the whole save. */
+export const savableResponse = (response: VendorResponseV1): VendorResponseV1 => ({
+  ...response,
+  rooms: response.rooms.map((room) => ({
+    ...room,
+    equipmentLines: room.equipmentLines.map((line) => ({
+      ...line,
+      quantity: Math.max(1, line.quantity || 1),
+    })),
+    laborLines: room.laborLines.map((line) => ({
+      ...line,
+      days: Math.max(1, line.days || 1),
+    })),
+  })),
+  pricing: {
+    ...response.pricing,
+    assumptionsExclusions: response.pricing.assumptionsExclusions.filter(
+      (line) => line.trim() !== "",
+    ),
+  },
+});
+
+const SAVE_FIELD_LABELS: Record<string, string> = {
+  yearsInBusiness: "Years in business",
+  staffCount: "Full-time staff",
+  percent: "Client mix percentage",
+  quantity: "Equipment quantity",
+  days: "Labor days",
+  regularHours: "Regular hours",
+  overtimeHours: "Overtime hours",
+  attendance: "Reference attendance",
+  assumptionsExclusions: "An assumptions and exclusions line",
+  note: "A specification note",
+  bio: "Crew bio",
+  dba: "DBA",
+  legalName: "Legal company name",
+  headquarters: "Headquarters",
+  largestComparableEvent: "Largest comparable event",
+  vendorName: "Vendor name",
+  submittedBy: "Submitted by",
+  email: "Email",
+  phone: "Phone",
+  name: "Name",
+  clientName: "Client name",
+  eventName: "Event name",
+  servicesProvided: "Services provided",
+  currentStatus: "Current status",
+  title: "Alternate title",
+  tradeoff: "Trade-off",
+  description: "Equipment description",
+  notes: "Labor notes",
+  valueAdds: "Value adds",
+  platformIntegrationPlan: "Platform integration plan",
+  feedHandoff: "Feed handoff plan",
+  redundancy: "Redundancy plan",
+  virtualAudienceExperience: "Virtual audience experience",
+  startDate: "Start date",
+  endDate: "End date",
+};
+
+const plainRule = (message: string): string =>
+  message
+    .replace(/^must be <= (\S+)$/, "must be $1 or less")
+    .replace(/^must be >= (\S+)$/, "must be at least $1")
+    .replace(/^must be integer$/, "must be a whole number")
+    .replace(/^must NOT have more than (\d+) characters$/, "must be $1 characters or fewer")
+    .replace(/^must NOT have fewer than 1 characters$/, "cannot be blank")
+    .replace(/^must match format "date"$/, "must be a valid date");
+
+/** A save failure the vendor can act on: names the field and the rule instead
+ *  of the server's generic "Draft response is invalid". */
+export const describeSaveFailure = (json: unknown): string => {
+  const body = (json ?? {}) as {
+    message?: unknown;
+    errors?: Array<{ path?: unknown; message?: unknown }>;
+  };
+  const issues = Array.isArray(body.errors) ? body.errors : [];
+  const first = issues[0];
+  if (!first || typeof first.message !== "string") {
+    return typeof body.message === "string" && body.message
+      ? body.message
+      : "Changes could not be saved.";
+  }
+  let text = first.message;
+  // Schema messages ("must be <= 1000") carry no field name; domain messages
+  // ("Crew bio must be 200 words or fewer") already read as a sentence.
+  if (/^must /.test(text)) {
+    const label = String(first.path ?? "")
+      .split("/")
+      .filter(Boolean)
+      .reverse()
+      .map((segment) => SAVE_FIELD_LABELS[segment])
+      .find(Boolean);
+    text = `${label ?? "A field"} ${plainRule(text)}`;
+  }
+  const more = issues.length > 1 ? ` (+${issues.length - 1} more)` : "";
+  return `Couldn't save: ${text.replace(/\.$/, "")}${more}.`;
+};

@@ -2,7 +2,7 @@ import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { Fragment, useState } from "react";
-import { formatMoney, moneyFromInput, moneyInput, workspaceTotals } from "@/lib/vendorResponses/workspaceModel";
+import { formatMoney, moneyFromInput, moneyInput, RESPONSE_TEXT_LIMITS, workspaceTotals } from "@/lib/vendorResponses/workspaceModel";
 import WorkspaceSection, { fieldClass, labelClass } from "./WorkspaceSection";
 
 export default function PricingSection({ questionnaire, response, onChange, sectionNumber, disabled }: {
@@ -159,7 +159,7 @@ export default function PricingSection({ questionnaire, response, onChange, sect
 
           {questionnaire.pricing.assumptionsAllowed ? <div className="mt-7 border-t border-[#e6ebef] pt-6">
             <div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-extrabold text-[#16283c]">Assumptions and exclusions</h3><p className="mt-1 text-sm text-[#718496]">List one clear commercial assumption per line.</p></div><button type="button" disabled={disabled} className="inline-flex items-center gap-1.5 rounded-md border border-[#008ad2] px-3 py-2 text-xs font-extrabold text-[#0075b4] hover:bg-[#eef8fd] disabled:opacity-50" onClick={() => update({ assumptionsExclusions: [...pricing.assumptionsExclusions, ""] })}><Plus size={14} aria-hidden="true" /> Add line</button></div>
-            <div className="mt-3 space-y-2">{pricing.assumptionsExclusions.map((entry, index) => <div className="flex gap-2" key={index}><label className="sr-only" htmlFor={`assumption-${index}`}>Assumption {index + 1}</label><input id={`assumption-${index}`} className={fieldClass} value={entry} disabled={disabled} onChange={(event) => update({ assumptionsExclusions: pricing.assumptionsExclusions.map((value, candidate) => candidate === index ? event.target.value : value) })} /><button type="button" disabled={disabled} className="mt-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-md text-[#718496] hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove assumption ${index + 1}`} onClick={() => update({ assumptionsExclusions: pricing.assumptionsExclusions.filter((_, candidate) => candidate !== index) })}><Trash2 size={16} aria-hidden="true" /></button></div>)}</div>
+            <div className="mt-3 space-y-2">{pricing.assumptionsExclusions.map((entry, index) => <div className="flex gap-2" key={index}><label className="sr-only" htmlFor={`assumption-${index}`}>Assumption {index + 1}</label><input id={`assumption-${index}`} className={fieldClass} maxLength={RESPONSE_TEXT_LIMITS.assumption} value={entry} disabled={disabled} onChange={(event) => update({ assumptionsExclusions: pricing.assumptionsExclusions.map((value, candidate) => candidate === index ? event.target.value : value) })} /><button type="button" disabled={disabled} className="mt-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-md text-[#718496] hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove assumption ${index + 1}`} onClick={() => update({ assumptionsExclusions: pricing.assumptionsExclusions.filter((_, candidate) => candidate !== index) })}><Trash2 size={16} aria-hidden="true" /></button></div>)}</div>
           </div> : null}
         </div>
 

@@ -1,6 +1,7 @@
 import type { VendorResponseQuestionnaireV1 } from "@/contracts/generated/vendor-response-questionnaire-v1";
 import type { VendorResponseV1 } from "@/contracts/generated/vendor-response-v1";
 import WorkspaceSection, { fieldClass, labelClass } from "./WorkspaceSection";
+import { RESPONSE_TEXT_LIMITS } from "@/lib/vendorResponses/workspaceModel";
 
 export default function ComplianceSection({ questionnaire, response, onChange, sectionNumber, disabled }: {
   questionnaire: VendorResponseQuestionnaireV1;
@@ -18,15 +19,15 @@ export default function ComplianceSection({ questionnaire, response, onChange, s
       <div className="grid gap-5 sm:grid-cols-2">
         <label className={labelClass}>
           Vendor / company name {questionnaire.identity.vendorNameRequired ? <span className="text-rose-600">*</span> : null}
-          <input className={fieldClass} value={response.identity.vendorName} disabled={disabled} autoComplete="organization" onChange={(event) => updateIdentity("vendorName", event.target.value)} />
+          <input className={fieldClass} maxLength={RESPONSE_TEXT_LIMITS.name} value={response.identity.vendorName} disabled={disabled} autoComplete="organization" onChange={(event) => updateIdentity("vendorName", event.target.value)} />
         </label>
         <label className={labelClass}>
           Submitted by {questionnaire.identity.submittedByRequired ? <span className="text-rose-600">*</span> : null}
-          <input className={fieldClass} value={response.identity.submittedBy} disabled={disabled} autoComplete="name" onChange={(event) => updateIdentity("submittedBy", event.target.value)} />
+          <input className={fieldClass} maxLength={RESPONSE_TEXT_LIMITS.name} value={response.identity.submittedBy} disabled={disabled} autoComplete="name" onChange={(event) => updateIdentity("submittedBy", event.target.value)} />
         </label>
         <label className={`${labelClass} sm:col-span-2`}>
           Response contact email {questionnaire.identity.emailRequired ? <span className="text-rose-600">*</span> : null}
-          <input className={fieldClass} type="email" value={response.identity.email} disabled={disabled} autoComplete="email" onChange={(event) => updateIdentity("email", event.target.value)} />
+          <input className={fieldClass} type="email" maxLength={RESPONSE_TEXT_LIMITS.email} value={response.identity.email} disabled={disabled} autoComplete="email" onChange={(event) => updateIdentity("email", event.target.value)} />
           <span className="mt-1.5 block font-normal text-[#718496]">This can differ from the address that received the invitation.</span>
         </label>
       </div>
