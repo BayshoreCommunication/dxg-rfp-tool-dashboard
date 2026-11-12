@@ -227,6 +227,56 @@ describe("role dashboards: links and labels", () => {
     expect(new Set(lines.values()).size).toBe(5);
   });
 
+
+  test("timestamps show the date in the organization's time zone", () => {
+    expect(formatInstant("2026-11-10T01:30:00.000Z", "America/New_York")).toBe("Nov 9, 2026");
+    expect(formatInstant("2026-11-10T01:30:00.000Z", null)).toBe("Nov 10, 2026");
+    expect(formatInstant("not a date", "UTC")).toBe("No date");
+    expect(formatInstant(null, "UTC")).toBe("No date");
+  });
+
+  test("dates read as written", () => {
+    expect(formatDay("2026-11-12")).toBe("Nov 12, 2026");
+    expect(formatDay("2026-11-12T23:30:00.000Z")).toBe("Nov 12, 2026");
+    expect(formatDay(null)).toBe("No date");
+    expect(formatEventDates({ eventStartDate: "2026-03-01", eventEndDate: "2026-03-03" })).toBe("Mar 1, 2026 – Mar 3, 2026");
+    expect(formatEventDates({ eventStartDate: "2026-03-01", eventEndDate: "2026-03-01" })).toBe("Mar 1, 2026");
+    expect(formatEventDates({ eventStartDate: null, eventEndDate: null })).toBe("No date");
+  });
+
+  test("deadlines count whole days from today", () => {
+    expect(daysUntil("2026-11-12", "2026-11-10")).toBe(2);
+    expect(daysUntil("2026-03-01", "2026-02-27")).toBe(2);
+    expect(daysUntil("bad", "2026-02-27")).toBeNull();
+    expect([dueLabel(-1), dueLabel(0), dueLabel(1), dueLabel(9), dueLabel(null)]).toEqual(["Passed", "Today", "Tomorrow", "In 9 days", ""]);
+  });
+
+  test("the response due date wins over the event date once the backend sends it", () => {
+    expect(deadlineOf({ responseDueDate: "2026-12-01", eventStartDate: "2027-01-10" })).toEqual({ kind: "response_due", label: "Responses due", day: "2026-12-01" });
+    expect(deadlineOf({ eventStartDate: "2027-01-10" })).toEqual({ kind: "event_start", label: "Event starts", day: "2027-01-10" });
+    expect(deadlineOf({ eventStartDate: null })).toBeNull();
+  });
+
+  test("today follows the organization's time zone and survives a bad one", () => {
+    const instant = new Date("2026-11-10T03:00:00.000Z");
+    expect(todayIn("America/Chicago", instant)).toBe("2026-11-09");
+    expect(todayIn("Asia/Dhaka", instant)).toBe("2026-11-10");
+    expect(todayIn("Not/AZone", instant)).toBe("2026-11-10");
+    expect(todayIn(null, instant)).toBe("2026-11-10");
+  });
+
+  test("the deadlines panel takes the soonest dates from today on", () => {
+    expect(earliestToday(new Date("2026-11-10T03:00:00.000Z"))).toBe("2026-11-09");
+    const rows = [
+      { id: "late", eventStartDate: "2027-03-01" },
+      { id: "past", eventStartDate: "2026-11-09" },
+      { id: "due", eventStartDate: "2027-06-01", responseDueDate: "2026-11-20" },
+      { id: "today", eventStartDate: "2026-11-10" },
+      { id: "undated", eventStartDate: null },
+    ];
+    expect(upcomingDeadlines(rows, "2026-11-10", 2).map((row) => row.id)).toEqual(["today", "due"]);
+  });
+
   test("quarter label", () => {
     expect(quarterLabel({ label: "2026-Q4", start: "", end: "", timeZone: "UTC" })).toBe("Q4 2026");
     expect(quarterLabel(null)).toBe("this quarter");

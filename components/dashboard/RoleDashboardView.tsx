@@ -20,7 +20,6 @@ import {
   dueLabel,
   filtersFor,
   formatDay,
-  formatEventDates,
   formatInstant,
   hasActiveFilters,
   quarterLabel,
@@ -72,9 +71,6 @@ export type RoleDashboardViewProps = {
 };
 
 const cardClass = "rounded-2xl border border-slate-200 bg-white shadow-sm";
-const fieldLabelClass = "mb-1.5 block text-xs font-semibold text-slate-600";
-const fieldClass =
-  "h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30";
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2";
 
 // Draft gray, Sent blue, Receiving amber, Under review purple, Awarded green, Archived muted.

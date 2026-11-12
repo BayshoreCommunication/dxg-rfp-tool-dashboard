@@ -22,7 +22,6 @@ import {
   stageCountQuery,
   todayIn,
   upcomingDeadlines,
-  viewsFor,
   type FilterOption,
 } from "./rfpDashboardModel";
 
@@ -60,7 +59,6 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
   const role = dashboardRoleOf(identity.roles);
   const userId = identity.userId ?? session?.user?._id ?? session?.user?.id ?? null;
   const state = parseDashboardState(searchParams, role);
-  const defaultView = viewsFor(role)[0];
   const isViewer = role === "viewer";
   const showPanels = !isViewer && state.view !== "organization";
   const scope = scopeQuery(state, userId);
