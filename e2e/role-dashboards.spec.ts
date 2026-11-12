@@ -70,8 +70,11 @@ const check = async (page: Page, testInfo: TestInfo, name: string) => {
 const checkBothThemes = async (page: Page, testInfo: TestInfo, name: string) => {
   await check(page, testInfo, `${name}-dark`);
   await page.evaluate(() => document.documentElement.classList.remove("dark"));
+  // Colours cross-fade when the theme flips; measure contrast once they have settled.
+  await page.waitForTimeout(500);
   await check(page, testInfo, `${name}-light`);
   await page.evaluate(() => document.documentElement.classList.add("dark"));
+  await page.waitForTimeout(500);
 };
 
 const statusTab = (page: Page, name: RegExp) => page.getByRole("navigation", { name: "Proposal status" }).getByRole("link", { name });
@@ -81,7 +84,8 @@ const chips = (page: Page) => page.getByTestId("filter-chip");
 const search = (page: Page) => page.getByRole("searchbox", { name: "Search proposals by event name" });
 const filtersButton = (page: Page) => page.getByRole("button", { name: /^Filters/ });
 const filtersPanel = (page: Page) => page.getByRole("dialog", { name: "Filters" });
-const menuButton = (page: Page, name: string) => page.getByRole("button", { name: `Actions for ${name}` });
+// The row menu's button once the menu is live in the browser (the server draws a plain button first).
+const menuButton = (page: Page, name: string) => page.locator(`button[data-rac][aria-label="Actions for ${name}"]`);
 const isMobile = (testInfo: TestInfo) => testInfo.project.name.startsWith("mobile");
 
 const openFilters = async (page: Page) => {

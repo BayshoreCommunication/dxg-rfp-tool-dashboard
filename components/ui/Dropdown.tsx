@@ -74,14 +74,24 @@ const DropdownPopover = (props: AriaPopoverProps) => (
 
 const DropdownSeparator = (props: AriaSeparatorProps) => <AriaSeparator {...props} className="my-1 h-px w-full bg-slate-200" />;
 
+const dotsButtonClass =
+  "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-slate-500 outline-none hover:bg-slate-100 hover:text-slate-900 data-[focus-visible]:ring-2 data-[focus-visible]:ring-sky-500 data-[focus-visible]:ring-offset-2 data-[pressed]:bg-slate-100";
+
 // The trigger. `aria-label` says what the menu is for, for example "Actions for Spring Gala".
 const DropdownDotsButton = (props: AriaButtonProps & RefAttributes<HTMLButtonElement> & { "aria-label": string }) => (
-  <AriaButton
-    {...props}
-    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-slate-500 outline-none hover:bg-slate-100 hover:text-slate-900 data-[focus-visible]:ring-2 data-[focus-visible]:ring-sky-500 data-[focus-visible]:ring-offset-2 data-[pressed]:bg-slate-100"
-  >
+  <AriaButton {...props} className={dotsButtonClass}>
     <MoreVertical size={18} aria-hidden="true" />
   </AriaButton>
+);
+
+// The trigger as the server draws it, before the menu exists in the browser. react-aria gives
+// its elements generated ids, and inside a streamed server-rendered list those ids don't match
+// between the server's HTML and the browser's first render. So a list renders this plain button
+// first and swaps in the real menu once it has mounted; the two look the same.
+const DropdownDotsPlaceholder = ({ "aria-label": label }: { "aria-label": string }) => (
+  <button type="button" aria-label={label} aria-haspopup="menu" aria-expanded={false} className={dotsButtonClass}>
+    <MoreVertical size={18} aria-hidden="true" />
+  </button>
 );
 
 export const Dropdown = {
@@ -91,4 +101,5 @@ export const Dropdown = {
   Item: DropdownItem,
   Separator: DropdownSeparator,
   DotsButton: DropdownDotsButton,
+  DotsPlaceholder: DropdownDotsPlaceholder,
 };

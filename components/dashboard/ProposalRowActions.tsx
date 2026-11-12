@@ -2,7 +2,7 @@
 
 import { Archive, CopyPlus, Eye, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "react-toastify";
 import { copyProposalAction, deleteProposalAction } from "@/app/actions/proposals";
 import ProposalDeletionDialog from "@/components/proposals/ProposalDeletionDialog";
@@ -25,6 +25,8 @@ export type ProposalRowActionsProps = {
   usage: RfpUsage | null;
 };
 
+const subscribeToNothing = () => () => {};
+
 const dayOf = (value: string | null): string => (value && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : "");
 
 export default function ProposalRowActions({ proposal, actions, editHref, viewHref, usage }: ProposalRowActionsProps) {
@@ -36,7 +38,11 @@ export default function ProposalRowActions({ proposal, actions, editHref, viewHr
   const [archiveError, setArchiveError] = useState("");
   const archiveInFlight = useRef(false);
 
+  // False on the server and during hydration, true once this is running in the browser.
+  const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+
   if (!actions.canEdit && !actions.canDuplicate && !actions.canArchive) return null;
+  if (!mounted) return <Dropdown.DotsPlaceholder aria-label={`Actions for ${proposal.eventName}`} />;
 
   const atLimit = usage?.atLimit === true;
 

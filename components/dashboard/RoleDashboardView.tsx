@@ -256,7 +256,7 @@ const StageTabs = ({ state, counts, defaultView }: { state: DashboardState; coun
             {tab.count !== null && (
               <>
                 <span className="sr-only">: </span>
-                <span className="text-xs font-bold text-slate-500">{tab.count}</span>
+                <span className="text-xs font-bold text-slate-600">{tab.count}</span>
                 <span className="sr-only"> {tab.count === 1 ? "proposal" : "proposals"}</span>
               </>
             )}
