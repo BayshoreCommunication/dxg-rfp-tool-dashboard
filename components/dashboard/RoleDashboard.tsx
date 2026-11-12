@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { listMembersAction } from "@/app/actions/organizationMembers";
 import { getDashboardRfpSummaryAction, listDashboardRfpsAction } from "@/app/actions/rfpDashboard";
@@ -13,7 +12,6 @@ import {
   ACTIVE_STAGES,
   canCreateRfps,
   dashboardErrorMessage,
-  dashboardHref,
   dashboardRoleOf,
   earliestToday,
   filterQuery,
@@ -97,10 +95,15 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
     canCreate ? loadRfpUsage() : null,
   ]);
 
-  // A page past the end (a stale link, or proposals archived since): go to the last page.
+  // A page past the end (a stale link, or proposals archived since): show the last page. The
+  // list is asked for again instead of redirecting: this component streams inside a Suspense
+  // boundary, and a redirect after the page has started to arrive breaks the browser's router.
+  let shownList = list;
+  let shownState = state;
   const lastPage = list.data ? Math.max(1, list.data.pagination.totalPages) : 1;
   if (list.success && list.data && list.data.items.length === 0 && list.data.pagination.total > 0 && state.page > lastPage) {
-    redirect(dashboardHref(state, { page: lastPage }, defaultView));
+    shownState = { ...state, page: lastPage };
+    shownList = await listDashboardRfpsAction(listQuery(shownState, userId));
   }
 
   const timeZone = stageCounts.data?.quarter?.timeZone ?? summary?.data?.quarter?.timeZone ?? null;
@@ -117,17 +120,17 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
           role={role}
           userId={userId}
           rfpUsage={rfpUsage}
-          state={state}
+          state={shownState}
           today={today}
           timeZone={timeZone}
-          list={list.success ? list.data ?? null : null}
+          list={shownList.success ? shownList.data ?? null : null}
           summary={summary?.success ? summary.data ?? null : null}
           stageCounts={stageCounts.success ? stageCounts.data?.byStage ?? null : null}
           deadlines={deadlines}
           submissions={submissions?.success ? submissions.data?.items ?? [] : null}
           owners={options.owners}
           teams={options.teams}
-          error={list.success ? null : dashboardErrorMessage(list.code, list.status)}
+          error={shownList.success ? null : dashboardErrorMessage(shownList.code, shownList.status)}
         />
       </div>
     </div>

@@ -24,7 +24,7 @@ test.beforeEach(async ({ page, request }) => {
   page.on("console", (message) => {
     if (message.type() === "error") seen.push(message.text());
   });
-  page.on("pageerror", (error) => seen.push(String(error)));
+  page.on("pageerror", (error) => seen.push(`${String(error)} at ${page.url()}`));
 });
 
 test.afterEach(async ({ request }) => {
@@ -289,10 +289,10 @@ for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const
       await expect(page.getByText("Showing 31–35 of 35 proposals")).toBeVisible();
       await expect(pages.getByRole("link", { name: /Next/ })).toHaveCount(0);
     }
-    // A page past the end goes to the last page.
+    // A page past the end shows the last page.
     await page.goto("/dashboard?page=99");
-    await expect(page).toHaveURL(/page=4/);
     await expect(rows(page)).toHaveCount(5);
+    await expect(page.getByText("Showing 31–35 of 35 proposals")).toBeVisible();
 
     // Sorting: a column header is a link; the backend sorts the whole list, not this page.
     await page.goto("/dashboard?page=2");
@@ -365,6 +365,8 @@ for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const
 
     // A chip removes its own filter; Clear all removes the rest and keeps the status tab.
     await statusTab(page, /^Draft/).click();
+    await expect(page).toHaveURL(/stage=draft/);
+    await expect(rows(page)).toHaveCount(1);
     await page.getByRole("link", { name: "Remove filter Venue city: chicago" }).click();
     await expect(page).not.toHaveURL(/venueCity/);
     await expect(chips(page)).toHaveText(["Team: Corporate Events"]);

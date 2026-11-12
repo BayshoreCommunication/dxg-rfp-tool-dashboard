@@ -48,7 +48,7 @@ const listOf = (count: number, total = count, page = 1) =>
       id: String(index + 1).padStart(24, "0"), eventName: `Event ${index + 1}`, stage: "sent",
       ownerUserId: PRIYA, ownerName: "Priya Planner", teamId: TEAM, teamName: "Corporate Events",
     })),
-    pagination: { total, page, limit: 25, totalPages: Math.ceil(total / 25) },
+    pagination: { total, page, limit: 10, totalPages: Math.ceil(total / 10) },
   });
 
 const summaryData = toRfpSummary({ total: 2, activeRfps: 2, responsesReceived: 3, awardedThisQuarter: 0, byStage: { sent: 2 }, quarter: { label: "2026-Q4", start: "", end: "", timeZone: "UTC" } });
@@ -217,13 +217,26 @@ describe("RoleDashboard", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  test("a page past the end goes to the last page", async () => {
+  test("a page past the end shows the last page instead", async () => {
     signInAs(["planner"]);
-    mockedList.mockResolvedValue({ success: true, message: "OK", data: listOf(0, 30, 9) });
-    await expect(renderDashboard({ page: "9", stage: "sent" })).rejects.toThrow("REDIRECT:/dashboard?stage=sent&page=2");
-    // The last page itself never redirects to itself.
-    mockedList.mockResolvedValue({ success: true, message: "OK", data: listOf(0, 30, 2) });
-    await renderDashboard({ page: "2", stage: "sent" });
+    mockedList.mockImplementation(async (query = {}) => ({
+      success: true, message: "OK",
+      data: query.page === "9" ? listOf(0, 30, 9) : listOf(2, 30, Number(query.page ?? 1)),
+    }));
+    const { unmount } = await renderDashboard({ page: "9", stage: "sent" });
+    // 30 proposals, ten to a page: the list is asked for again at page 3, with the same filters.
+    const pages = listQueries().filter((query) => query.page !== undefined);
+    expect(pages.map((query) => query.page)).toEqual(["9", "3"]);
+    expect(pages[1]).toEqual({ ...pages[0], page: "3" });
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Previous/ })).toHaveAttribute("href", "/dashboard?stage=sent&page=2");
+    unmount();
+
+    // A last page that is simply empty isn't asked for twice.
+    mockedList.mockClear();
+    mockedList.mockResolvedValue({ success: true, message: "OK", data: listOf(0, 30, 3) });
+    await renderDashboard({ page: "3", stage: "sent" });
+    expect(listQueries().filter((query) => query.page !== undefined)).toHaveLength(1);
     expect(screen.getByText("No proposals match these filters")).toBeInTheDocument();
   });
 
