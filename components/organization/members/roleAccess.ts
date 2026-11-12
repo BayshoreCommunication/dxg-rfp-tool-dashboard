@@ -98,7 +98,7 @@ export const ROLE_ACCESS_GROUPS: readonly RoleAccessGroup[] = [
         id: "proposal-share",
         capability: "Share a proposal with other members, to view or to edit",
         note: "A Viewer can only ever be given view access.",
-        source: "scope: share; routes/rfpSharesRoute.ts; docs/API.md RFP sharing",
+        source: "scope: share; routes/rfpSharesRoute.ts; docs/API.md, sharing section",
         access: {
           owner: yes,
           organization_admin: yes,
@@ -142,7 +142,7 @@ export const ROLE_ACCESS_GROUPS: readonly RoleAccessGroup[] = [
       {
         id: "template-use",
         capability: "Use templates: save personal ones and start a proposal from one",
-        source: "policy: template:use; docs/API.md RFP templates",
+        source: "policy: template:use; docs/API.md, templates section",
         access: allButViewer,
       },
       {

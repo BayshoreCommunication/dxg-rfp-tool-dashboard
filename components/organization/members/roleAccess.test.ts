@@ -1,3 +1,4 @@
+import { RFP_NOUN } from "@/test/wording";
 import { ROLE_LABELS } from "./orgAccess";
 import {
   ACCESS_LEVEL_LABELS,
@@ -68,7 +69,7 @@ describe("role access guide data", () => {
       ...ROLE_ACCESS_GROUPS.map((group) => group.title),
       ...rows.flatMap((row) => [row.capability, row.note ?? "", ...ROLES.map((role) => row.access[role].note ?? "")]),
     ];
-    for (const text of shown) expect(text.replace(/RFPilot/g, "")).not.toMatch(/\bRFPs?\b/i);
+    for (const text of shown) expect(text).not.toMatch(RFP_NOUN);
   });
 
   // Spot checks against the backend rules (authorizationPolicy.ts, rfpAccessPolicy.ts,

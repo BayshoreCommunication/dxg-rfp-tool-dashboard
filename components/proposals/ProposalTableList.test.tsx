@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import ProposalTableList from './ProposalTableList'
 import { toast } from 'react-toastify'
+import { RFP_NOUN } from '@/test/wording'
 
 // ─── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ describe('ProposalTableList — empty state', () => {
     const card = await screen.findByTestId('proposals-first-run', {}, LOAD_TIMEOUT)
     expect(card).toHaveTextContent('Create your first proposal')
     expect(card).toHaveTextContent('RFPilot turns your event details into an AV production proposal')
-    expect(card).not.toHaveTextContent(/\bRFPs?\b/)
+    expect(card.textContent).not.toMatch(RFP_NOUN)
     expect(card).not.toHaveTextContent(/filter/i)
     const starters = within(card).getByRole('group', { name: 'Ways to start' })
     expect(within(starters).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([

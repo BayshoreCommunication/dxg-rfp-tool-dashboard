@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect as baseExpect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expectProposalWording } from "./support/wording";
 
 // `next dev` compiles on demand, so give navigations more room than the suite's default.
 const expect = baseExpect.configure({ timeout: 45_000 });
@@ -85,7 +86,7 @@ const openGuide = async (page: Page, role: Role) => {
   await expect(summaries.getByText("(you)")).toHaveCount(1);
   await expect(guide.getByTestId("role-table")).toBeHidden();
   await expect(guide.getByTestId("role-stack")).toBeHidden();
-  expect((await guide.textContent())?.replace(/RFPilot/g, "")).not.toMatch(/\bRFPs?\b/i);
+  await expectProposalWording(guide);
   return guide;
 };
 

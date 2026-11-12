@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { RFP_NOUN } from "@/test/wording";
 import RoleAccessGuide from "./RoleAccessGuide";
 import { ROLE_ACCESS_GROUPS, ROLE_SUMMARIES } from "./roleAccess";
 
@@ -81,6 +82,6 @@ describe("RoleAccessGuide", () => {
 
   it("never says RFP", () => {
     const { container } = render(<RoleAccessGuide role="owner" />);
-    expect((container.textContent ?? "").replace(/RFPilot/g, "")).not.toMatch(/\bRFPs?\b/i);
+    expect(container.textContent ?? "").not.toMatch(RFP_NOUN);
   });
 });
