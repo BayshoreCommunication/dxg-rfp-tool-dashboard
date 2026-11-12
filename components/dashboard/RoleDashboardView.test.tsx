@@ -11,6 +11,7 @@ jest.mock("@/app/actions/proposals", () => ({ copyProposalAction: jest.fn(), del
 import type { CustomerRole } from "@/components/organization/members/types";
 import RoleDashboardView, { type RoleDashboardViewProps } from "./RoleDashboardView";
 import { parseDashboardState, toRfpList, toRfpSummary, type RfpListItem } from "./rfpDashboardModel";
+import { RFP_NOUN } from "@/test/wording";
 
 const PRIYA = "b".repeat(24);
 const TEAM = "c".repeat(24);
@@ -355,7 +356,7 @@ describe("RoleDashboardView", () => {
 
   test.each(["owner", "organization_admin", "team_manager", "planner", "viewer"] as const)("%s: copy says proposal, never RFP as a noun, and shows the role's label", (role) => {
     render(<RoleDashboardView {...propsFor(role)} />);
-    expect((document.body.textContent ?? "").replace(/RFPilot/g, "")).not.toMatch(/\bRFPs?\b/);
+    expect(document.body.textContent ?? "").not.toMatch(RFP_NOUN);
     const label = { owner: "Owner", organization_admin: "Admin", team_manager: "Team Manager", planner: "Planner", viewer: "Viewer" }[role];
     expect(screen.getByText("Your role:").parentElement).toHaveTextContent(`Your role: ${label}`);
   });

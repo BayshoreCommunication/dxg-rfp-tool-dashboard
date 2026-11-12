@@ -17,13 +17,9 @@ const ALLOWED: Array<[file: string, text: string]> = [
   ["components/vendor/workspace/VendorResponseWorkspace.tsx", 'RFP<span className="text-[#2fc6f5]">ilot</span>'],
 ];
 
-// Files an open pull request is rewording itself (feat/dashboard-list-refactor). Delete each
-// entry when that pull request merges.
-const PENDING = [
-  /^components\/dashboard\//,
-  /^app\/\(page\)\/dashboard\//,
-  /^app\/actions\/rfpDashboard/,
-];
+// Files an open pull request is rewording itself; none at the moment. Add a pattern here while
+// such a pull request is open and delete it when that pull request merges.
+const PENDING: RegExp[] = [];
 
 const sourceFiles = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {

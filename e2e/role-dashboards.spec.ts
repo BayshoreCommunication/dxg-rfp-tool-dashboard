@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect as baseExpect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expect as baseExpect, test, type Page, type TestInfo } from "@playwright/test";
+import { expectProposalWording } from "./support/wording";
 
 // `next dev` compiles and renders on demand, and each filter is a full server render, so give
 // navigations more room than the suite's default 8 seconds (a busy machine can take half a minute).
@@ -42,13 +43,6 @@ const signInAs = async (page: Page, role: "owner" | "admin" | "manager" | "plann
   await expect(page.getByTestId("role-dashboard")).toBeVisible({ timeout: 30_000 });
 };
 
-// The product's word is "proposal". Nothing a member reads on the dashboard says "RFP" as a
-// noun; the product name "RFPilot" is fine.
-const expectNoRfpNoun = async (scope: Locator) => {
-  const text = ((await scope.textContent()) || "").replace(/RFPilot/g, "");
-  expect(text).not.toMatch(/\bRFPs?\b/);
-};
-
 // Every state: no console errors, no serious accessibility violations, nothing wider than the
 // screen, and a screenshot as evidence.
 const check = async (page: Page, testInfo: TestInfo, name: string) => {
@@ -61,7 +55,7 @@ const check = async (page: Page, testInfo: TestInfo, name: string) => {
   ).toEqual([]);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
-  await expectNoRfpNoun(page.getByTestId("role-dashboard"));
+  await expectProposalWording(page.getByTestId("role-dashboard"));
   await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
   expect(problems.get(page)).toEqual([]);
 };

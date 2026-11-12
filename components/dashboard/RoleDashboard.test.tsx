@@ -29,6 +29,7 @@ import { loadRfpUsage } from "@/components/entitlements/planGate";
 import { getMemberIdentity } from "@/lib/server/memberIdentity";
 import RoleDashboard from "./RoleDashboard";
 import { toRfpList, toRfpSummary } from "./rfpDashboardModel";
+import { RFP_NOUN } from "@/test/wording";
 
 const ME = "a".repeat(24);
 const PRIYA = "b".repeat(24);
@@ -271,7 +272,7 @@ describe("RoleDashboard", () => {
     expect(button).toHaveAccessibleDescription(/2 of 2 proposals used\. Your plan includes 2 proposals and your organization has used both\./);
     const limit = within(screen.getByTestId("rfp-limit"));
     expect(limit.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/support");
-    expect(screen.getByTestId("rfp-limit")).not.toHaveTextContent(/\bRFPs?\b/);
+    expect(screen.getByTestId("rfp-limit")).not.toHaveTextContent(RFP_NOUN);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 

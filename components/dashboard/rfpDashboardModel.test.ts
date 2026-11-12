@@ -34,6 +34,7 @@ import {
   canCreateRfps,
   type RfpListItem,
 } from "./rfpDashboardModel";
+import { RFP_NOUN } from "@/test/wording";
 
 const USER = "a".repeat(24);
 const OTHER = "b".repeat(24);
@@ -243,7 +244,7 @@ describe("role dashboards: links and labels", () => {
     expect(new Set(messages).size).toBe(messages.length);
     for (const message of messages) {
       expect(message).not.toMatch(/[A-Z]{3,}_[A-Z]/);
-      expect(message.replace(/RFPilot/g, "")).not.toMatch(/\bRFPs?\b/);
+      expect(message).not.toMatch(RFP_NOUN);
     }
     expect(dashboardErrorMessage("NOT_FOUND", 404)).toContain("another organization");
   });

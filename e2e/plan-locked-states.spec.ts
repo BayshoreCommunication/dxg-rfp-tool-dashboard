@@ -99,10 +99,7 @@ test("Free trial: the proposal counter, and the create button at the limit", asy
   await expect(page.getByTestId("rfp-usage")).toHaveText("1 of 2 proposals used on the free trial");
   await expect(page.getByRole("main").getByRole("link", { name: "New Proposal" })).toHaveAttribute("href", "/proposals/add-new-proposal");
   await expect(page.getByTestId("rfp-limit")).toHaveCount(0);
-  // The dashboard's own copy is reworded in its own pull request (feat/dashboard-list-refactor);
-  // until that merges, the wording check here covers the counter this test is about. Drop the
-  // last argument then.
-  await check(page, testInfo, dashboard, '[data-testid="role-dashboard"]', "dashboard-1-of-2", page.getByTestId("rfp-usage"));
+  await check(page, testInfo, dashboard, '[data-testid="role-dashboard"]', "dashboard-1-of-2");
 
   // The organization creates its second RFP: the button is off and says why.
   await setPlan(request, { created: 2 });
