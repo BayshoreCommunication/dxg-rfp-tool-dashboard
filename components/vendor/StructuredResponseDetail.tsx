@@ -2,6 +2,7 @@
 
 import type { VendorSubmissionVersion } from "@/app/actions/vendorResponse";
 import { formatMoney } from "@/lib/vendorResponses/workspaceModel";
+import ResponseDocumentList from "./ResponseDocumentList";
 import {
   BadgeCheck,
   BedDouble,
@@ -207,8 +208,28 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
       </section>
 
       <section className="rounded-2xl border border-slate-200 p-5" aria-labelledby="categorized-documents-heading">
-        <h3 id="categorized-documents-heading" className="text-base font-extrabold text-slate-950">Categorized documents</h3>
-        {version.documents.length ? <ul className="mt-3 divide-y divide-slate-100">{version.documents.map((document) => <li key={document.documentId} className="flex flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-extrabold text-slate-900">{document.name}</p><p className="mt-0.5 text-xs text-slate-500">{purposeById.get(document.purposeId ?? "") ?? "Legacy attachment"} · {document.versionDisposition} · {document.scanStatus}</p></div>{document.url ? <a href={document.url} target="_blank" rel="noreferrer" className="text-xs font-extrabold text-[#0075b4]">Open file</a> : null}</li>)}</ul> : <p className="mt-3 text-sm text-slate-500">No documents attached.</p>}
+        <div className="flex items-center justify-between gap-3">
+          <h3 id="categorized-documents-heading" className="text-base font-extrabold text-slate-950">Categorized documents</h3>
+          {version.documents.length ? <span className="text-xs font-bold text-slate-500">{version.documents.length} file{version.documents.length === 1 ? "" : "s"}</span> : null}
+        </div>
+        <ResponseDocumentList
+          documents={version.documents}
+          context={{
+            purposeLabel: (purposeId) => purposeById.get(purposeId ?? "") ?? "Other attachment",
+            scopeLabel: (document) => {
+              if (document.scopeType === "room") return roomById.get(document.scopeId ?? "")?.name ?? "Room";
+              if (document.scopeType === "crew_member") {
+                const member = response.crew.find((entry) => entry.crewMemberId === document.scopeId);
+                return member?.name ? `Crew · ${member.name}` : "Crew member";
+              }
+              if (document.scopeType === "reference") {
+                const reference = response.references.find((entry) => entry.referenceId === document.scopeId);
+                return reference?.clientName ? `Reference · ${reference.clientName}` : "Reference";
+              }
+              return "Whole proposal";
+            },
+          }}
+        />
         {version.retiredDocuments.length ? <p className="mt-3 text-xs font-semibold text-amber-800">{version.retiredDocuments.length} document{version.retiredDocuments.length === 1 ? " was" : "s were"} retired in this version. Earlier immutable versions still retain them.</p> : null}
       </section>
 
