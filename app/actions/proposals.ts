@@ -62,23 +62,21 @@ const toSlug = (value: string): string =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-/** Derives proposalSlug, proposalLink, and publicProposalLink from a raw proposal object. */
+/**
+ * Derives proposalSlug and proposalLink (the signed-in dashboard view) from a raw proposal
+ * object. The link a vendor receives is not built here: the backend writes it into each
+ * invitation as `${FRONTEND_URL}/proposal-view/<slug>` with a per-recipient access grant.
+ */
 const buildProposalMeta = (proposal: any) => {
   const proposalId = proposal?._id ? String(proposal._id) : "";
   const title = proposal?.event?.eventName || "proposal";
   const slug = `${toSlug(title) || "proposal"}-${proposalId}`;
   const appProposalLink = `${FRONTEND_URL.replace(/\/+$/, "")}/proposal/${slug}`;
-  const prefix = String(proposal?.proposalSettings?.linkPrefix || "")
-    .trim()
-    .toLowerCase();
-  const proposalLinkPrefix = prefix || "abuco";
-  const publicProposalLink = `https://${proposalLinkPrefix}.goprospero.com/proposal/${slug}?source=public`;
 
   return {
     ...proposal,
     proposalSlug: slug,
     proposalLink: appProposalLink,
-    publicProposalLink,
   };
 };
 

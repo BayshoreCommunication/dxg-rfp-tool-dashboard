@@ -4,6 +4,7 @@ import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 import {
   createProposalAction,
   createProposalViewAccessGrantAction,
+  getProposalByIdAction,
   updateProposalAction,
 } from "./proposals";
 
@@ -79,5 +80,25 @@ describe("proposal write actions", () => {
         }),
       }),
     );
+  });
+
+  test("derives only the dashboard's own proposal link, whatever link prefix is stored", async () => {
+    mockedFetch.mockResolvedValue(
+      Response.json({
+        data: {
+          _id: "proposal-1",
+          event: { eventName: "Annual Summit" },
+          proposalSettings: { linkPrefix: "acme" },
+        },
+      }),
+    );
+
+    const result = await getProposalByIdAction("proposal-1");
+    const data = result.data as Record<string, unknown>;
+
+    expect(data.proposalSlug).toBe("annual-summit-proposal-1");
+    expect(String(data.proposalLink)).toMatch(/\/proposal\/annual-summit-proposal-1$/);
+    expect(data).not.toHaveProperty("publicProposalLink");
+    expect(JSON.stringify(data)).not.toMatch(/goprospero|acme\./i);
   });
 });

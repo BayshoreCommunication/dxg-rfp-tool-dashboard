@@ -51,14 +51,13 @@ describe('BrandingSettings — rendering', () => {
     expect(screen.getByDisplayValue('Acme Corp')).toBeInTheDocument()
   })
 
-  it('renders link prefix input with current value', () => {
-    render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
-    expect(screen.getByDisplayValue('acme')).toBeInTheDocument()
-  })
-
-  it('renders .goprospero.com suffix label', () => {
-    render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
-    expect(screen.getByText('.goprospero.com')).toBeInTheDocument()
+  // The prefix never changed a real link (vendors get ${FRONTEND_URL}/proposal-view/<slug> from
+  // the backend), so the field is gone. The stored value stays in the form state untouched.
+  it('does not offer a proposal link prefix or name another product domain', () => {
+    const { container } = render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
+    expect(screen.queryByLabelText(/link prefix/i)).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue('acme')).not.toBeInTheDocument()
+    expect(container.textContent).not.toMatch(/goprospero/i)
   })
 
   it('renders font dropdown with Poppins/Inter/Roboto options', () => {
@@ -145,11 +144,11 @@ describe('BrandingSettings — onChange callbacks', () => {
     )
   })
 
-  it('calls onChange when link prefix changes', () => {
+  it('keeps the stored link prefix when another field changes', () => {
     render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
-    fireEvent.change(screen.getByDisplayValue('acme'), { target: { value: 'newbrand' } })
+    fireEvent.change(screen.getByDisplayValue('Acme Corp'), { target: { value: 'New Brand' } })
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ linkPrefix: 'newbrand' }),
+      expect.objectContaining({ brandName: 'New Brand', linkPrefix: 'acme' }),
     )
   })
 

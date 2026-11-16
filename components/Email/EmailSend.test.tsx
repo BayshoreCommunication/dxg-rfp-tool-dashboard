@@ -65,7 +65,6 @@ const mockProposal = {
   },
   proposalSlug: 'bayshore-summit-prop-001',
   proposalLink: 'https://example.com/proposal/bayshore-summit-prop-001',
-  publicProposalLink: 'https://example.com/proposal/bayshore-summit-prop-001',
 }
 
 const LOAD_TIMEOUT = { timeout: 4000 }

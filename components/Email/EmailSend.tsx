@@ -35,7 +35,6 @@ type ProposalOption = {
     };
   };
   proposalLink?: string;
-  publicProposalLink?: string;
   proposalSlug?: string;
 };
 
@@ -113,11 +112,9 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
 
   const selectedProposal =
     proposals.find((item) => item._id === proposalId) || null;
-  // Used in the email body — full public URL so recipients can open it
-  const selectedProposalLink =
-    selectedProposal?.publicProposalLink ||
-    selectedProposal?.proposalLink ||
-    "";
+  // The planner's own link to the proposal. It is not sent: the backend adds each
+  // recipient's access link to the email.
+  const selectedProposalLink = selectedProposal?.proposalLink || "";
   // Used for the in-app "Open proposal" preview button — absolute URL so target="_blank" opens a new tab
   const previewProposalLink = selectedProposal?.proposalSlug
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/proposal/${selectedProposal.proposalSlug}`

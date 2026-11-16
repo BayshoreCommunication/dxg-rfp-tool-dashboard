@@ -138,25 +138,6 @@ const BrandingSettings = ({
         </div>
 
         <div>
-          <label htmlFor="linkPrefix" className={labelClass}>
-            Proposal Link Prefix
-          </label>
-          <div className="flex h-10 overflow-hidden rounded-md border border-[#e4e4e4] bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
-            <input
-              id="linkPrefix"
-              value={value.linkPrefix}
-              onChange={(e) =>
-                onChange({ ...value, linkPrefix: e.target.value })
-              }
-              className="w-full px-3 text-sm text-[#222628] outline-none"
-            />
-            <span className="flex items-center border-l border-[#e4e4e4] bg-[#f9fafc] px-3 text-xs font-medium text-[#222628]">
-              .goprospero.com
-            </span>
-          </div>
-        </div>
-
-        <div>
           <label htmlFor="defaultFont" className={labelClass}>
             Default Proposal Font
           </label>
