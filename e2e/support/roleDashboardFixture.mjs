@@ -1,6 +1,10 @@
 // Local-only stand-in for the backend's dashboard endpoints (GET /api/v1/rfps and
 // /api/v1/rfps/summary, ORG-401), the member and team lists the Admin filters read, and the two
 // row actions the dashboard calls for these accounts (archive and copy). Synthetic data only.
+// Every listed row carries `permissions` the way the backend computes them (rfpRowPermissions),
+// except one row that is served without, like an item from an API that doesn't send them yet.
+// On request (POST /__e2e/dashboard?proposalsPage=on) the same rows are also served to the
+// Proposals page (GET /api/proposals); a plain POST /__e2e/dashboard turns that off again.
 // The product calls these "proposals"; the API paths and fields keep their older name. Like the real backend it scopes every answer to the signed-in member's
 // role, and the summary is computed from the same filtered set as the list.
 
@@ -71,10 +75,13 @@ const seedRfps = () => [
   rfp(5, "Holiday Town Hall", "awarded", A["planner-e2e@example.com"], CORPORATE, "Chicago", 30, 3, 3),
   rfp(6, "Partner Summit 2025", "archived", A["planner-e2e@example.com"], CORPORATE, "Denver", -200, 4, 2),
   rfp(7, "Engineering Offsite", "sent", PETER, CORPORATE, "Seattle", 12, 3, 0),
-  rfp(8, "Investor Day", "receiving_responses", PETER, CORPORATE, "New York", 60, 4, 1),
+  // Served without `permissions` (older API): the dashboard falls back to its old rule for it.
+  rfp(8, "Investor Day", "receiving_responses", PETER, CORPORATE, "New York", 60, 4, 1, { withoutPermissions: true }),
   rfp(9, "Regional Roadshow", "draft", A["manager-e2e@example.com"], CORPORATE, "Chicago", 90, 0, 0),
-  rfp(10, "Trade Show Booth AV", "receiving_responses", FIONA, FIELD, "Las Vegas", 25, 5, 2, { sharedWith: [id("5")] }),
-  rfp(11, "Field Kickoff", "draft", FIONA, FIELD, "Dallas", 100, 0, 0),
+  // View-only shares: with the Viewer, with Priya (a Planner) and with Maya (a Team Manager who
+  // doesn't manage Field Marketing).
+  rfp(10, "Trade Show Booth AV", "receiving_responses", FIONA, FIELD, "Las Vegas", 25, 5, 2, { sharedWith: [id("5"), id("4")] }),
+  rfp(11, "Field Kickoff", "draft", FIONA, FIELD, "Dallas", 100, 0, 0, { sharedWith: [id("3")] }),
   rfp(12, "Board Meeting AV", "awarded", A["owner-e2e@example.com"], null, "Chicago", 15, 2, 2),
   rfp(13, "All-Hands Broadcast", "sent", A["admin-e2e@example.com"], null, "Chicago", 8, 3, 0),
   // Three proposals with one name: two on the same dates and one with no dates yet.
@@ -144,19 +151,78 @@ const json = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 
-const publicRow = (row) => {
-  const copy = { ...row };
-  delete copy.sharedWith;
-  return copy;
-};
-
-// May this member change the proposal (rfpAccessPolicy: organization-wide roles, the owner, a
-// manager of its team)? A Viewer never may.
+// May this member change the proposal (rfpAccessPolicy "edit" and "archive": organization-wide
+// roles, the owner, a manager of its team)? A Viewer never may, and a view-only share adds nothing.
+const mayWrite = (actor) => !actor.roles.includes("viewer");
 const mayChange = (actor, row) =>
-  !actor.roles.includes("viewer")
+  mayWrite(actor)
   && (isAdmin(actor)
     || row.ownerUserId === actor.userId
     || (actor.roles.includes("team_manager") && TEAMS.some((team) => team.id === row.teamId && team.managers.includes(actor.userId))));
+
+// rfpRowPermissions: each flag is the answer the mutation endpoint below gives. A copy only
+// reads its source, so it follows view access plus a role that can write.
+const permissionsFor = (actor, row) => ({
+  canEdit: mayChange(actor, row),
+  canDuplicate: mayWrite(actor) && visibleTo(actor)(row),
+  canArchive: mayChange(actor, row),
+});
+
+const withPermissions = (actor, row, item) => (row.withoutPermissions ? item : { ...item, permissions: permissionsFor(actor, row) });
+
+const publicRow = (actor) => (row) => {
+  const copy = { ...row };
+  delete copy.sharedWith;
+  delete copy.withoutPermissions;
+  return withPermissions(actor, row, copy);
+};
+
+// The Proposals page's list (GET /api/proposals), in that endpoint's own shape, for the role
+// accounts. Off unless a spec asks for it: other specs sign in with these accounts and seed the
+// stub's generic proposal list instead.
+let proposalsPage = false;
+
+const proposalsPageRow = (actor) => (row) => withPermissions(actor, row, {
+  _id: row.id,
+  status: row.status,
+  isDraft: row.isDraft,
+  isActive: true,
+  isFavorite: false,
+  isCopy: false,
+  isArchived: row.stage === "archived",
+  ...(row.stage === "archived" ? { archivedAt: row.updatedAt } : {}),
+  viewsCount: row.vendorsResponded,
+  createdAt: row.createdAt,
+  event: { eventName: row.eventName },
+});
+
+const handleProposalsPage = (request, response, url) => {
+  if (!proposalsPage || request.method !== "GET" || url.pathname !== "/api/proposals") return false;
+  const actor = actorOf(request);
+  if (!actor) return false;
+  const params = url.searchParams;
+  const search = (params.get("search") || "").trim().toLowerCase();
+  const seen = rfps().filter(visibleTo(actor)).filter((row) => !search || row.eventName.toLowerCase().includes(search));
+  const open = seen.filter((row) => row.stage !== "archived");
+  const archived = seen.filter((row) => row.stage === "archived");
+  const drafts = open.filter((row) => row.isDraft);
+  const live = open.filter((row) => !row.isDraft);
+  // Saved copies, favourites and expired proposals: this fixture has none.
+  const rows = params.get("archived") === "true" ? archived
+    : params.get("isCopy") === "true" || params.get("favorite") === "true" || params.get("isActive") === "false" ? []
+    : params.get("isDraft") === "true" ? drafts
+    : params.get("status") === "submitted" ? live
+    : open;
+  const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(params.get("limit") || "10", 10) || 10));
+  json(response, 200, {
+    success: true,
+    data: rows.slice((page - 1) * limit, page * limit).map(proposalsPageRow(actor)),
+    pagination: { total: rows.length, page, limit, totalPages: Math.max(1, Math.ceil(rows.length / limit)) },
+    counts: { all: open.length, draft: drafts.length, live: live.length, favorite: 0, expired: 0, archive: archived.length, saved: 0 },
+  });
+  return true;
+};
 
 const readBody = async (request) => {
   const chunks = [];
@@ -176,6 +242,7 @@ const handleRowActions = (request, response, url) => {
     if (request.method === "POST") {
       changes.archived.clear();
       changes.copies.length = 0;
+      proposalsPage = url.searchParams.get("proposalsPage") === "on";
     }
     json(response, 200, { archived: [...changes.archived], copies: changes.copies });
     return true;
@@ -189,7 +256,8 @@ const handleRowActions = (request, response, url) => {
     json(response, 404, { success: false, message: "Proposal not found" });
     return true;
   }
-  if (!mayChange(actor, row)) {
+  // Archiving needs the right to change the proposal; a copy only a role that can write.
+  if (!(request.method === "DELETE" ? mayChange(actor, row) : mayWrite(actor))) {
     json(response, 403, { success: false, code: "FORBIDDEN", message: "Your role doesn't allow this." });
     return true;
   }
@@ -207,6 +275,7 @@ const handleRowActions = (request, response, url) => {
 
 export function handleRoleDashboard(request, response, url) {
   if (handleRowActions(request, response, url)) return true;
+  if (handleProposalsPage(request, response, url)) return true;
   if (request.method !== "GET") return false;
   const pathname = url.pathname;
   const handled = ["/api/v1/rfps", "/api/v1/rfps/summary", "/api/organization/members", "/api/v1/teams"].includes(pathname);
@@ -283,7 +352,7 @@ export function handleRoleDashboard(request, response, url) {
   json(response, 200, {
     success: true,
     data: {
-      items: sorted.slice((page - 1) * limit, page * limit).map(publicRow),
+      items: sorted.slice((page - 1) * limit, page * limit).map(publicRow(actor)),
       pagination: { total: rows.length, page, limit, totalPages: Math.ceil(rows.length / limit) },
     },
   });
