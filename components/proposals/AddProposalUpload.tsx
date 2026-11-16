@@ -423,7 +423,7 @@ async function downloadSamplePdf() {
     doc.setTextColor(148, 163, 184);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
-    doc.text("RFPilot Sample Template — goprospero.com", ml, pageH - 4);
+    doc.text("RFPilot Sample Template", ml, pageH - 4);
     doc.text(`Page ${i} of ${total}`, mr, pageH - 4, { align: "right" });
   }
 
