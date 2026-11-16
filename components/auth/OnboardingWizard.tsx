@@ -9,7 +9,7 @@ import {
 } from "@/app/actions/organizationProfile";
 import { createBulkInvitationsAction, createInvitationAction } from "@/app/actions/invitations";
 import type { OrgActionResult } from "@/app/actions/organizationApi";
-import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/components/organization/members/orgAccess";
+import { ASSIGNABLE_ROLES, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/components/organization/members/orgAccess";
 import type { InvitableRole } from "@/components/organization/members/types";
 import {
   bulkInviteOutcome,
@@ -45,7 +45,10 @@ const STEPS: { step: WizardStep; label: string }[] = [
   { step: "team", label: "Team" },
 ];
 
-const INVITE_ROLES: InvitableRole[] = ["planner", "organization_admin", "viewer"];
+// Onboarding is done by the Owner (or an Admin), who may invite every role the regular invite
+// dialog offers, Team Manager included and with no team: the backend's inviteRefusal lets an
+// organization admin through before any role or team check. Same list, same order.
+const INVITE_ROLES: InvitableRole[] = ASSIGNABLE_ROLES;
 
 const errorFor = (result: OrgActionResult<unknown>, fallback: string) => {
   const field = result.details?.field;
