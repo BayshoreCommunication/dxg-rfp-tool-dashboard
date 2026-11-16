@@ -106,7 +106,7 @@ const MessageRow = ({
         <article
           className={`px-4 py-2.5 text-sm shadow-sm ${
             mine
-              ? `bg-[#008ad2] text-white ${endsGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`
+              ? `bg-[#0076b4] text-white ${endsGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`
               : `border border-slate-200 bg-white text-slate-800 ${endsGroup ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`
           } ${pending ? "opacity-70" : ""}`}
         >
