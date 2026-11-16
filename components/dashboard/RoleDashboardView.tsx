@@ -23,6 +23,7 @@ import {
   formatInstant,
   hasActiveFilters,
   quarterLabel,
+  hasRowActions,
   rfpEditHref,
   rfpResponsesHref,
   rfpRowHref,
@@ -305,8 +306,8 @@ const ProposalTable = ({ items, context }: { items: RfpListItem[]; context: RowC
   const showTeam = state.view === "organization" || state.view === "team";
   const identifiers = rowIdentifiers(items);
   const actionsOf = (item: RfpListItem) => rowActionsFor(item, role, userId);
-  // A Viewer changes nothing, so their table has no actions column at all.
-  const showActions = role !== "viewer" && items.some((item) => actionsOf(item).canEdit);
+  // No row on this page offers anything (a Viewer's list, say): no actions column at all.
+  const showActions = items.some((item) => hasRowActions(actionsOf(item)));
   const sort = (label: string, field: Parameters<typeof sortHref>[1]) => ({
     label,
     href: sortHref(state, field, defaultView),

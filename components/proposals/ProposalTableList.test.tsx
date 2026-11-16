@@ -331,6 +331,113 @@ describe('ProposalTableList — title link', () => {
     expect(document.querySelector('a[href*="proposal-edit"]')).toBeNull()
   })
 
+  describe('row permissions from the list', () => {
+    const withFlags = (canEdit: boolean, canDuplicate: boolean, canArchive: boolean, overrides = {}) =>
+      successPage([makeProposal({ permissions: { canEdit, canDuplicate, canArchive }, ...overrides })])
+    const archivedRow = { isArchived: true, archivedAt: '2026-09-01T00:00:00.000Z' }
+
+    it('offers Edit, Save a copy and Archive on a row that allows all three', async () => {
+      mockGetProposals.mockResolvedValue(withFlags(true, true, true))
+      // The row's flags win over the page-wide read-only rule.
+      render(<ProposalTableList searchValue="" activeFilter="all" readOnly />)
+      const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026' }, LOAD_TIMEOUT)
+      expect(title).toHaveAttribute('href', EDIT_HREF)
+      expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', EDIT_HREF)
+      expect(screen.getByRole('button', { name: 'Save a copy' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
+    })
+
+    it('a view-only share: no Edit or Archive, the title opens the preview, Save a copy stays', async () => {
+      mockGetProposals.mockResolvedValue(withFlags(false, true, false))
+      render(<ProposalTableList searchValue="" activeFilter="all" />)
+      const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026 (opens in a new tab)' }, LOAD_TIMEOUT)
+      expect(title).toHaveAttribute('href', PREVIEW_HREF)
+      expect(title).toHaveAttribute('target', '_blank')
+      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument()
+      expect(document.querySelector('a[href*="proposal-edit"]')).toBeNull()
+      expect(screen.getByRole('button', { name: 'Save a copy' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument()
+      // Untouched by the flags.
+      expect(screen.getByRole('link', { name: 'Preview' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Team access' })).toBeInTheDocument()
+    })
+
+    it('a row that allows nothing (a Viewer): no Edit, Save a copy or Archive', async () => {
+      mockGetProposals.mockResolvedValue(withFlags(false, false, false))
+      render(<ProposalTableList searchValue="" activeFilter="all" readOnly />)
+      const title = await screen.findByRole('link', { name: 'Bayshore Summit 2026 (opens in a new tab)' }, LOAD_TIMEOUT)
+      expect(title).toHaveAttribute('href', PREVIEW_HREF)
+      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Save a copy' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Preview' })).toBeInTheDocument()
+    })
+
+    it('each action follows its own flag', async () => {
+      mockGetProposals.mockResolvedValue(withFlags(true, false, false))
+      const { unmount } = render(<ProposalTableList searchValue="" activeFilter="all" />)
+      expect(await screen.findByRole('link', { name: 'Edit' }, LOAD_TIMEOUT)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Save a copy' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Archive' })).not.toBeInTheDocument()
+      unmount()
+
+      mockGetProposals.mockResolvedValue(withFlags(false, false, true))
+      render(<ProposalTableList searchValue="" activeFilter="all" />)
+      expect(await screen.findByRole('button', { name: 'Archive' }, LOAD_TIMEOUT)).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Save a copy' })).not.toBeInTheDocument()
+    })
+
+    it('on an archived row canArchive decides Restore; Delete forever is not touched', async () => {
+      mockGetProposals.mockResolvedValue(withFlags(false, false, true, archivedRow))
+      const { unmount } = render(<ProposalTableList searchValue="" activeFilter="archive" />)
+      expect(await screen.findByRole('button', { name: 'Restore' }, LOAD_TIMEOUT)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Delete forever' })).toBeInTheDocument()
+      unmount()
+
+      mockGetProposals.mockResolvedValue(withFlags(true, true, false, archivedRow))
+      render(<ProposalTableList searchValue="" activeFilter="archive" />)
+      expect(await screen.findByRole('button', { name: 'Delete forever' }, LOAD_TIMEOUT)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument()
+      // An archived row never offers Edit, whatever canEdit says.
+      expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    })
+
+    it('fallback, a row without flags (older API): everything as before, Edit unless read-only', async () => {
+      const { unmount } = render(<ProposalTableList searchValue="" activeFilter="all" />)
+      expect(await screen.findByRole('link', { name: 'Bayshore Summit 2026' }, LOAD_TIMEOUT)).toHaveAttribute('href', EDIT_HREF)
+      expect(screen.getByRole('link', { name: 'Edit' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Save a copy' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
+      unmount()
+
+      const readOnly = render(<ProposalTableList searchValue="" activeFilter="all" readOnly />)
+      expect(await screen.findByRole('link', { name: 'Bayshore Summit 2026 (opens in a new tab)' }, LOAD_TIMEOUT)).toHaveAttribute('href', PREVIEW_HREF)
+      expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Save a copy' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
+      readOnly.unmount()
+
+      mockGetProposals.mockResolvedValue(successPage([makeProposal(archivedRow)]))
+      render(<ProposalTableList searchValue="" activeFilter="archive" readOnly />)
+      expect(await screen.findByRole('button', { name: 'Restore' }, LOAD_TIMEOUT)).toBeInTheDocument()
+    })
+
+    it('decides per row: one page can mix rows with different flags and a row without any', async () => {
+      mockGetProposals.mockResolvedValue(successPage([
+        makeProposal({ _id: 'own', event: { eventName: 'Own' }, permissions: { canEdit: true, canDuplicate: true, canArchive: true } }),
+        makeProposal({ _id: 'shared', event: { eventName: 'Shared' }, permissions: { canEdit: false, canDuplicate: true, canArchive: false } }),
+        makeProposal({ _id: 'older', event: { eventName: 'Older' } }),
+      ], 3))
+      render(<ProposalTableList searchValue="" activeFilter="all" />)
+      await screen.findByRole('link', { name: 'Own' }, LOAD_TIMEOUT)
+      const cards = screen.getAllByTestId('proposal-card')
+      const offered = cards.map((card) => ['Edit', 'Save a copy', 'Archive'].filter((name) =>
+        within(card).queryByRole(name === 'Edit' ? 'link' : 'button', { name })))
+      expect(offered).toEqual([['Edit', 'Save a copy', 'Archive'], ['Save a copy'], ['Edit', 'Save a copy', 'Archive']])
+    })
+  })
+
   it('leaves the title as plain text on an archived row, which offers neither Edit nor Preview', async () => {
     mockGetProposals.mockResolvedValue(
       successPage([makeProposal({ isArchived: true, archivedAt: '2026-09-01T00:00:00.000Z' })])

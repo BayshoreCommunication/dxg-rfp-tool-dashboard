@@ -5,6 +5,7 @@
 // the counts always describe the list under them.
 
 import type { CustomerRole } from "@/components/organization/members/types";
+import { rowPermissionsOr, toRowPermissions, type RowPermissions } from "@/lib/proposals/rowPermissions";
 
 export const RFP_STAGES = ["draft", "sent", "receiving_responses", "under_review", "awarded", "archived"] as const;
 export type RfpStage = (typeof RFP_STAGES)[number];
@@ -43,6 +44,9 @@ export type RfpListItem = {
   // Not sent by the backend yet (see "Needs from other lanes" in the ORG-402 PR). When it is,
   // the deadlines panel shows it instead of the event date.
   responseDueDate?: string | null;
+  // What the member may do to this proposal, as the backend answered it. Null or missing on an
+  // item from an API that doesn't send it yet (see rowActionsFor).
+  permissions?: RowPermissions | null;
 };
 
 export type RfpPagination = { total: number; page: number; limit: number; totalPages: number };
@@ -248,27 +252,37 @@ const slugOf = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+
 export const rfpEditHref = (item: Pick<RfpListItem, "id">): string =>
   `/proposals/proposal-edit?proposalId=${encodeURIComponent(item.id)}`;
 
-export type RowActions = { canEdit: boolean; canDuplicate: boolean; canArchive: boolean };
+export type RowActions = RowPermissions;
 
 const NO_ROW_ACTIONS: RowActions = { canEdit: false, canDuplicate: false, canArchive: false };
 
-// What a row offers the member. The backend decides for real (rfpAccessPolicy): this only keeps
-// the dashboard from offering what it would refuse. Owners and Admins may change any proposal in
-// the organization and every other creator role their own; a Viewer changes nothing. A Team
-// Manager's rights over a team's proposals and an edit share aren't in the list response, so
-// those rows stay read-only here (see the PR's follow-ups). An archived proposal is restored
-// from the proposal list before anything else.
+// The rule from before list items carried `permissions`: Owners and Admins may change any
+// proposal in the organization, every other creator role their own, a Viewer nothing. Kept only
+// for an item from an older API; remove it with the fallback in lib/proposals/rowPermissions.ts.
+const legacyRowActions = (item: Pick<RfpListItem, "ownerUserId">, role: CustomerRole, userId: string | null): RowActions => {
+  if (role === "viewer") return NO_ROW_ACTIONS;
+  const organizationWide = role === "owner" || role === "organization_admin";
+  const own = Boolean(userId) && item.ownerUserId === userId;
+  return organizationWide || own ? { canEdit: true, canDuplicate: true, canArchive: true } : NO_ROW_ACTIONS;
+};
+
+// What a row offers the member: the row's own `permissions`, which the backend computes with the
+// same checks its mutation endpoints run (so a Team Manager gets Edit, Duplicate and Archive on
+// their teams' proposals, and a member with a view-only share gets Duplicate alone). This only
+// keeps the dashboard from offering what the backend would refuse. An archived proposal is
+// restored from the proposal list before anything else, so it offers nothing here whatever its
+// flags say.
 export const rowActionsFor = (
-  item: Pick<RfpListItem, "stage" | "ownerUserId">,
+  item: Pick<RfpListItem, "stage" | "ownerUserId" | "permissions">,
   role: CustomerRole,
   userId: string | null,
 ): RowActions => {
-  if (role === "viewer" || item.stage === "archived") return NO_ROW_ACTIONS;
-  const organizationWide = role === "owner" || role === "organization_admin";
-  const own = Boolean(userId) && item.ownerUserId === userId;
-  if (!organizationWide && !own) return NO_ROW_ACTIONS;
-  return { canEdit: true, canDuplicate: true, canArchive: true };
+  if (item.stage === "archived") return NO_ROW_ACTIONS;
+  return rowPermissionsOr(item.permissions, () => legacyRowActions(item, role, userId));
 };
+
+// Whether the row has a menu at all (Preview alone is the row's name, not a menu).
+export const hasRowActions = (actions: RowActions): boolean => actions.canEdit || actions.canDuplicate || actions.canArchive;
 
 // Where a row's name leads: the edit page for a proposal the member may edit (the same place as
 // Edit in the row menu), the read-only page for everything else.
@@ -452,6 +466,7 @@ export const toRfpList = (value: unknown): RfpList => {
       createdAt: textOrNull(item.createdAt),
       updatedAt: textOrNull(item.updatedAt),
       responseDueDate: textOrNull(item.responseDueDate),
+      permissions: toRowPermissions(item.permissions),
     }];
   });
   const pagination = isRecord(data.pagination) ? data.pagination : {};

@@ -10,7 +10,7 @@ import ProposalDeletionDialog from "@/components/proposals/ProposalDeletionDialo
 import SaveCopyModal, { type CopyOverrides } from "@/components/proposals/SaveCopyModal";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { PLAN_LIMIT_REACHED, rfpLimitMessage, rfpUsageLabel, type RfpUsage } from "@/lib/entitlements/entitlements";
-import type { RowActions } from "./rfpDashboardModel";
+import { hasRowActions, type RowActions } from "./rfpDashboardModel";
 
 // The "more" menu on a dashboard row: Edit, Duplicate, Archive. It calls the same server
 // actions, the same copy dialog and the same archive confirmation as the proposal list, and
@@ -42,7 +42,7 @@ export default function ProposalRowActions({ proposal, actions, editHref, viewHr
   // False on the server and during hydration, true once this is running in the browser.
   const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
 
-  if (!actions.canEdit && !actions.canDuplicate && !actions.canArchive) return null;
+  if (!hasRowActions(actions)) return null;
   if (!mounted) return <Dropdown.DotsPlaceholder aria-label={`Actions for ${proposal.eventName}`} />;
 
   const atLimit = usage?.atLimit === true;

@@ -12,6 +12,7 @@ import {
   formatDay,
   formatEventDates,
   formatInstant,
+  hasRowActions,
   rfpRowHref,
   rowActionsFor,
   rowIdentifiers,
@@ -183,25 +184,64 @@ describe("role dashboards: links and labels", () => {
     expect(rfpRowHref(row, { canEdit: false })).toBe(`/proposal/gala-${USER}`);
   });
 
-  test("row actions: Owners and Admins on any proposal, creators on their own, Viewers and archived rows none", () => {
+  describe("row actions", () => {
     const all = { canEdit: true, canDuplicate: true, canArchive: true };
     const none = { canEdit: false, canDuplicate: false, canArchive: false };
-    const mine = { stage: "sent" as const, ownerUserId: USER };
-    const theirs = { stage: "draft" as const, ownerUserId: OTHER };
-    expect(rowActionsFor(theirs, "owner", USER)).toEqual(all);
-    expect(rowActionsFor(theirs, "organization_admin", USER)).toEqual(all);
-    expect(rowActionsFor(mine, "planner", USER)).toEqual(all);
-    expect(rowActionsFor(mine, "team_manager", USER)).toEqual(all);
-    expect(rowActionsFor(theirs, "planner", USER)).toEqual(none);
-    // A team's or a shared proposal: the list doesn't say what the member may do, so nothing is offered.
-    expect(rowActionsFor(theirs, "team_manager", USER)).toEqual(none);
-    for (const role of ["owner", "organization_admin", "team_manager", "planner", "viewer"] as const) {
-      expect(rowActionsFor({ stage: "archived", ownerUserId: USER }, role, USER)).toEqual(none);
-    }
-    expect(rowActionsFor(mine, "viewer", USER)).toEqual(none);
-    expect(rowActionsFor(theirs, "viewer", USER)).toEqual(none);
-    // Nobody to compare with: no row is "mine".
-    expect(rowActionsFor({ stage: "sent", ownerUserId: null }, "planner", null)).toEqual(none);
+    const ROLES = ["owner", "organization_admin", "team_manager", "planner", "viewer"] as const;
+    const flags = (canEdit: boolean, canDuplicate: boolean, canArchive: boolean) => ({ canEdit, canDuplicate, canArchive });
+
+    test("each action follows the row's own flag, whatever the role and whoever owns the row", () => {
+      for (const canEdit of [true, false]) for (const canDuplicate of [true, false]) for (const canArchive of [true, false]) {
+        const permissions = flags(canEdit, canDuplicate, canArchive);
+        for (const role of ROLES) for (const ownerUserId of [USER, OTHER, null]) {
+          expect(rowActionsFor({ stage: "sent", ownerUserId, permissions }, role, USER)).toEqual(permissions);
+        }
+      }
+    });
+
+    test("a Team Manager gets the menu on a managed team's proposal, a view-only share gets Duplicate alone", () => {
+      const theirs = { stage: "sent" as const, ownerUserId: OTHER };
+      expect(rowActionsFor({ ...theirs, permissions: all }, "team_manager", USER)).toEqual(all);
+      const viewShare = rowActionsFor({ ...theirs, permissions: flags(false, true, false) }, "planner", USER);
+      expect(viewShare).toEqual(flags(false, true, false));
+      expect(hasRowActions(viewShare)).toBe(true);
+      // The backend never grants a Viewer anything; their own row included.
+      const viewer = rowActionsFor({ stage: "sent", ownerUserId: USER, permissions: none }, "viewer", USER);
+      expect(viewer).toEqual(none);
+      expect(hasRowActions(viewer)).toBe(false);
+    });
+
+    test("an archived row offers nothing, whatever its flags say (it is restored from the proposal list)", () => {
+      for (const role of ROLES) {
+        expect(rowActionsFor({ stage: "archived", ownerUserId: USER, permissions: all }, role, USER)).toEqual(none);
+        expect(rowActionsFor({ stage: "archived", ownerUserId: USER }, role, USER)).toEqual(none);
+      }
+    });
+
+    test("fallback, an item without flags (older API): Owners and Admins on any proposal, creators on their own, Viewers none", () => {
+      const mine = { stage: "sent" as const, ownerUserId: USER };
+      const theirs = { stage: "draft" as const, ownerUserId: OTHER };
+      expect(rowActionsFor(theirs, "owner", USER)).toEqual(all);
+      expect(rowActionsFor(theirs, "organization_admin", USER)).toEqual(all);
+      expect(rowActionsFor(mine, "planner", USER)).toEqual(all);
+      expect(rowActionsFor(mine, "team_manager", USER)).toEqual(all);
+      expect(rowActionsFor(theirs, "planner", USER)).toEqual(none);
+      expect(rowActionsFor(theirs, "team_manager", USER)).toEqual(none);
+      expect(rowActionsFor({ ...theirs, permissions: null }, "team_manager", USER)).toEqual(none);
+      expect(rowActionsFor(mine, "viewer", USER)).toEqual(none);
+      expect(rowActionsFor(theirs, "viewer", USER)).toEqual(none);
+      // Nobody to compare with: no row is "mine".
+      expect(rowActionsFor({ stage: "sent", ownerUserId: null }, "planner", null)).toEqual(none);
+    });
+
+    test("the list keeps the flags the backend sent and reads a missing or malformed value as none sent", () => {
+      const list = toRfpList({ items: [
+        { id: USER, eventName: "With flags", stage: "sent", permissions: { canEdit: false, canDuplicate: true, canArchive: false } },
+        { id: OTHER, eventName: "Older API", stage: "sent" },
+        { id: TEAM, eventName: "Malformed", stage: "sent", permissions: { canEdit: "yes" } },
+      ] });
+      expect(list.items.map((item) => item.permissions)).toEqual([flags(false, true, false), null, null]);
+    });
   });
 
   test("the line under a name is the event dates, or the short ID; same-named rows always differ", () => {
