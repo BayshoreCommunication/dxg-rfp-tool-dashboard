@@ -215,6 +215,17 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
                 setExpiry(event.target.value);
                 setError(null);
               }}
+              // Enter on the closed list opens it; it never grants access. (While the list is
+              // open the browser's own picker takes Enter to confirm the option.)
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                try {
+                  event.currentTarget.showPicker?.();
+                } catch {
+                  // No picker to open here (an older browser); Space and the arrow keys still work.
+                }
+              }}
               className={inputClass}
             >
               {EXPIRY_PRESETS.map((preset) => (

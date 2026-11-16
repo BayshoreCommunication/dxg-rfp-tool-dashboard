@@ -189,6 +189,39 @@ describe("SupportAccessSettings (ORG-405)", () => {
     await waitFor(() => expect(mockCreate).toHaveBeenCalledWith({ proposalId: null, expiresInDays: 21, reason: "" }));
   });
 
+  it("does not grant access when Enter is pressed in the expiry list; it opens the list instead", async () => {
+    const showPicker = jest.fn();
+    Object.defineProperty(HTMLSelectElement.prototype, "showPicker", { configurable: true, writable: true, value: showPicker });
+    try {
+      await renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Grant access" }));
+      const dialog = within(screen.getByRole("dialog"));
+      // Everything a grant needs is chosen, so a submit here would go through.
+      fireEvent.click(await dialog.findByRole("radio", { name: /Autumn Gala/ }));
+      const expiry = dialog.getByLabelText("Access ends after");
+
+      // fireEvent answers false when the handler cancelled the key, which is what stops the
+      // browser's implicit form submission.
+      expect(fireEvent.keyDown(expiry, { key: "Enter" })).toBe(false);
+      expect(showPicker).toHaveBeenCalledTimes(1);
+      await act(async () => {});
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      // Other keys are left to the list, and the choice still changes.
+      for (const key of [" ", "ArrowDown", "Escape", "Tab"]) expect(fireEvent.keyDown(expiry, { key })).toBe(true);
+      fireEvent.change(expiry, { target: { value: "14" } });
+      expect(expiry).toHaveValue("14");
+
+      // Enter still submits from the custom days field.
+      fireEvent.change(expiry, { target: { value: "custom" } });
+      expect(fireEvent.keyDown(dialog.getByLabelText("Days (1 to 30)"), { key: "Enter" })).toBe(true);
+      expect(mockCreate).not.toHaveBeenCalled();
+    } finally {
+      delete (HTMLSelectElement.prototype as { showPicker?: unknown }).showPicker;
+    }
+  });
+
   it("keeps the dialog open with a human message when the backend refuses the grant", async () => {
     await renderPage([]);
     fireEvent.click(screen.getByRole("button", { name: "Grant access" }));
