@@ -7,6 +7,7 @@ import { handleVendorList } from './vendorListFixture.mjs';
 import { handleSupportGrants } from './supportGrantsFixture.mjs';
 import { handlePlanEntitlements } from './planEntitlementsFixture.mjs';
 import { handleProposalTemplates } from './proposalTemplatesFixture.mjs';
+import { handleSettings } from './settingsFixture.mjs';
 
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
 const threads = new Map();
@@ -184,6 +185,9 @@ const server = http.createServer(async (request, response) => {
   if (await handlePlanEntitlements(request, response, url)) return;
   // ORG-605: RFP templates and the plan limit on starting an RFP from one (proposalTemplatesFixture.mjs).
   if (await handleProposalTemplates(request, response, url)) return;
+
+  // Settings > General: saved branding, proposal and signature settings (settingsFixture.mjs).
+  if (await handleSettings(request, response, url)) return;
 
   if (request.method === "GET" && pathname === "/health") {
     json(response, 200, { status: "ok" });
