@@ -70,6 +70,35 @@ const check = async (page: Page, testInfo: TestInfo, name: string, scope: Locato
 
 const checkDialog = (page: Page, testInfo: TestInfo, name: string) => check(page, testInfo, name, page.getByRole("dialog"), "dialog[open]");
 
+// Colours cross-fade when the theme flips (`transition-colors`). Axe has to measure the settled
+// colours, not a frame part-way between the dark palette and the light one.
+const coloursSettled = (page: Page) =>
+  page.waitForFunction(() => document.getAnimations().every((animation) => !(animation instanceof CSSTransition) || animation.playState !== "running"));
+
+const setTheme = async (page: Page, theme: "light" | "dark") => {
+  const toggle = page.getByTestId("dev-theme-toggle");
+  // The development-only toggle can sit under page content on a phone, so it is activated directly.
+  if ((await toggle.getAttribute("aria-pressed")) !== String(theme === "dark")) await toggle.dispatchEvent("click");
+  if (theme === "dark") await expect(page.locator("html")).toHaveClass(/dark/);
+  else await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await coloursSettled(page);
+};
+
+type ContrastRow = { target: string; ratio: number; foreground: string; background: string };
+
+// Axe's colour-contrast verdict for the text under `selector`, with the ratio it measured.
+const contrastOf = async (page: Page, selector: string) => {
+  const result = await new AxeBuilder({ page }).include(selector).withRules(["color-contrast"]).analyze();
+  const rows = (found: typeof result.violations): ContrastRow[] =>
+    found.flatMap((entry) =>
+      entry.nodes.map((node) => {
+        const data = (node.any[0]?.data ?? {}) as { contrastRatio?: number; fgColor?: string; bgColor?: string };
+        return { target: node.target.join(" "), ratio: data.contrastRatio ?? 0, foreground: data.fgColor ?? "", background: data.bgColor ?? "" };
+      }),
+    );
+  return { failed: rows(result.violations), passed: rows(result.passes), unsure: rows(result.incomplete) };
+};
+
 test("Owner: sees active and past access, with Support's activity under each grant", async ({ page }, testInfo) => {
   await signInAs(page, "owner");
   await openSupportAccess(page);
@@ -114,8 +143,7 @@ test("Owner: sees active and past access, with Support's activity under each gra
 test("Owner: every state in the light theme", async ({ page }, testInfo) => {
   await signInAs(page, "owner");
   await openSupportAccess(page);
-  await page.getByTestId("dev-theme-toggle").click();
-  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await setTheme(page, "light");
   await expect(activeList(page).getByRole("listitem")).toHaveCount(1);
   await check(page, testInfo, "light-populated");
 
@@ -142,6 +170,75 @@ test("Owner: every state in the light theme", async ({ page }, testInfo) => {
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText("RFPilot Support has no access")).toBeVisible();
   await check(page, testInfo, "light-empty-active");
+});
+
+// WCAG AA wants 4.5:1 for text this size. Both are measured in both themes: "View activity" on a
+// grant, and the support button every signed-in page carries (its words show from 640 px up; on a
+// phone it is the avatar alone, which has no text to measure).
+test("View activity and the support button meet AA contrast in the light and dark themes", async ({ page }, testInfo) => {
+  await signInAs(page, "owner");
+  await openSupportAccess(page);
+  const wide = (page.viewportSize()?.width ?? 0) >= 640;
+  const measured: Record<string, unknown> = {};
+  for (const theme of ["light", "dark"] as const) {
+    await setTheme(page, theme);
+    await expect(activeList(page).getByRole("listitem")).toHaveCount(1);
+
+    const screenContrast = await contrastOf(page, '[data-testid="support-access"]');
+    expect(screenContrast.failed, `${theme}: support access`).toEqual([]);
+    // The three "View activity" buttons (one active grant, two past), each with its measured ratio.
+    const activity = await contrastOf(page, '[data-testid="support-access"] button[aria-label^="View activity"]');
+    expect(activity.failed, `${theme}: View activity`).toEqual([]);
+    expect(activity.passed, `${theme}: View activity is measured`).toHaveLength(3);
+    expect(activity.passed.filter((row) => row.ratio < 4.5)).toEqual([]);
+
+    const fab = page.getByTestId("support-fab");
+    await expect(fab).toBeVisible();
+    const fabContrast = await contrastOf(page, '[data-testid="support-fab"]');
+    expect(fabContrast.failed, `${theme}: support button`).toEqual([]);
+    expect(fabContrast.unsure, `${theme}: support button`).toEqual([]);
+    if (wide) {
+      await expect(fab).toContainText("Need support?");
+      expect(fabContrast.passed.map((row) => row.ratio).filter((ratio) => ratio < 4.5)).toEqual([]);
+      expect(fabContrast.passed.length).toBeGreaterThan(0);
+    }
+    measured[theme] = { viewActivity: activity.passed, supportButton: fabContrast.passed };
+    // The button pulses, so it never holds still for an element screenshot: clip the page instead.
+    const box = await fab.boundingBox();
+    if (box) await page.screenshot({ path: testInfo.outputPath(`support-button-${theme}.png`), clip: { x: box.x - 8, y: box.y - 8, width: box.width + 16, height: box.height + 16 } });
+    await page.screenshot({ path: testInfo.outputPath(`contrast-${theme}.png`), fullPage: true });
+  }
+  await testInfo.attach("contrast-ratios", { body: JSON.stringify(measured, null, 2), contentType: "application/json" });
+  console.log(`contrast ${testInfo.project.name} ${JSON.stringify(measured)}`);
+  expect(problems.get(page)).toEqual([]);
+});
+
+// Enter in a select is "open the list", never "send the form": with a proposal already picked,
+// a submit here would have granted access.
+test("Owner: Enter in the expiry list leaves the dialog open and grants nothing", async ({ page, request }, testInfo) => {
+  await signInAs(page, "owner");
+  await openSupportAccess(page);
+  await page.getByRole("button", { name: "Grant access" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("radio", { name: /Regional Leadership Summit/ }).check();
+  const expiry = dialog.getByLabel("Access ends after");
+  await expiry.focus();
+  await expect(expiry).toBeFocused();
+  await page.keyboard.press("Enter");
+  // Long enough for a grant to have gone to the stub and closed the dialog.
+  await page.waitForTimeout(1500);
+  await expect(dialog.getByRole("heading", { name: "Grant RFPilot Support access" })).toBeVisible();
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+  await expect(expiry).toHaveValue("7");
+  const { grants } = (await (await request.post(STUB, { data: {} })).json()) as { grants: unknown[] };
+  expect(grants).toHaveLength(3);
+  await page.screenshot({ path: testInfo.outputPath("enter-in-expiry-list.png") });
+
+  // Nothing was granted behind the dialog either.
+  await page.reload();
+  await expect(activeList(page).getByRole("listitem")).toHaveCount(1);
+  await expect(page.getByText("Regional Leadership Summit")).toHaveCount(0);
+  expect(problems.get(page)).toEqual([]);
 });
 
 test("Owner: grants one picked proposal with an expiry, grants the whole organization, and revokes", async ({ page }, testInfo) => {
@@ -249,7 +346,8 @@ for (const [role, label] of [["manager", "Team Manager"], ["planner", "Planner"]
 
     // No way in from the Security page.
     await page.goto("/settings/security");
-    await expect(page.getByText("managed by your organization's Owner and Admins")).toBeVisible();
+    // Two cards on the page say this (organization security and single sign-on).
+    await expect(page.getByText("managed by your organization's Owner and Admins").first()).toBeVisible();
     await expect(page.getByRole("link", { name: /support access/i })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Support access" })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath(`${role}-security-no-entry.png`), fullPage: true });
