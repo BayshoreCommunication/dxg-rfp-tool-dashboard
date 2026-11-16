@@ -42,7 +42,7 @@ export default function SupportCenter({ tickets, pagination, errorMessage, view,
             <button
               type="button"
               onClick={() => setComposing(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#008ad2] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#0076b4]"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0076b4] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#0069a0]"
             >
               <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
               New request
