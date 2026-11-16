@@ -50,9 +50,12 @@ type Props = {
   serverNow?: number;
 };
 
-// The shared link button's brand blue is too faint on white for small text (3.7:1).
+// The shared link button's brand blue is too faint on white for small text (3.7:1); sky-700 is
+// 5.9:1 on white and the dark palette's cyan 11.8:1. Only the hover background fades: with
+// `transition-colors` the text cross-faded between the two palettes when the theme flipped, and
+// part-way through it was as low as 2.8:1 on white, which is what the contrast check caught.
 const activityButtonClass =
-  "rounded px-2 py-1 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2";
+  "rounded px-2 py-1 text-xs font-semibold text-sky-700 transition-[background-color] hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2";
 
 const STATUS_TONES: Record<SupportGrantStatus, BadgeTone> = { active: "emerald", expired: "slate", revoked: "rose" };
 const FORMER_MEMBER = "a former member";
