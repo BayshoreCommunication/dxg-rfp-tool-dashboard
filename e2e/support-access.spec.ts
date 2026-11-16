@@ -173,12 +173,16 @@ test("Owner: every state in the light theme", async ({ page }, testInfo) => {
 });
 
 // WCAG AA wants 4.5:1 for text this size. Both are measured in both themes: "View activity" on a
-// grant, and the support button every signed-in page carries (its words show from 640 px up; on a
-// phone it is the avatar alone, which has no text to measure).
-test("View activity and the support button meet AA contrast in the light and dark themes", async ({ page }, testInfo) => {
+// grant, and the support button every signed-in page carries. From 640 px up the button shows its
+// words and, with an unread reply, a red count badge; both are measured there. On a phone the
+// launcher is the avatar alone: it has no words to measure, so the mobile project only checks
+// that axe finds nothing wrong with it (the badge is measured on the wide screen, same colours).
+test("View activity and the support button meet AA contrast in the light and dark themes", async ({ page, request }, testInfo) => {
+  const wide = (page.viewportSize()?.width ?? 0) >= 640;
+  // One unread reply from RFPilot, so the launcher carries its badge.
+  if (wide) await request.post(STUB, { data: { unreadTickets: 1 } });
   await signInAs(page, "owner");
   await openSupportAccess(page);
-  const wide = (page.viewportSize()?.width ?? 0) >= 640;
   const measured: Record<string, unknown> = {};
   for (const theme of ["light", "dark"] as const) {
     await setTheme(page, theme);
@@ -198,9 +202,11 @@ test("View activity and the support button meet AA contrast in the light and dar
     expect(fabContrast.failed, `${theme}: support button`).toEqual([]);
     expect(fabContrast.unsure, `${theme}: support button`).toEqual([]);
     if (wide) {
-      await expect(fab).toContainText("Need support?");
-      expect(fabContrast.passed.map((row) => row.ratio).filter((ratio) => ratio < 4.5)).toEqual([]);
-      expect(fabContrast.passed.length).toBeGreaterThan(0);
+      await expect(fab).toHaveAccessibleName("Support: 1 new reply from RFPilot");
+      await expect(fab).toContainText("RFPilot replied");
+      expect(fabContrast.passed.filter((row) => row.ratio < 4.5)).toEqual([]);
+      // Two texts: the words on the button's blue, and the count on the badge's red.
+      expect(fabContrast.passed.map((row) => row.background).sort()).toEqual(["#0076b4", "#e11d48"]);
     }
     measured[theme] = { viewActivity: activity.passed, supportButton: fabContrast.passed };
     // The button pulses, so it never holds still for an element screenshot: clip the page instead.
@@ -238,6 +244,15 @@ test("Owner: Enter in the expiry list leaves the dialog open and grants nothing"
   await page.reload();
   await expect(activeList(page).getByRole("listitem")).toHaveCount(1);
   await expect(page.getByText("Regional Leadership Summit")).toHaveCount(0);
+
+  // Enter in the days field is still "grant access".
+  await page.getByRole("button", { name: "Grant access" }).click();
+  await dialog.getByRole("radio", { name: /Regional Leadership Summit/ }).check();
+  await dialog.getByLabel("Access ends after").selectOption("custom");
+  await dialog.getByLabel("Days (1 to 30)").fill("3");
+  await dialog.getByLabel("Days (1 to 30)").press("Enter");
+  await expect(dialog).toHaveCount(0);
+  await expect(activeList(page).getByRole("listitem").filter({ hasText: "Regional Leadership Summit" })).toContainText("Expires in 3 days");
   expect(problems.get(page)).toEqual([]);
 });
 
@@ -346,8 +361,12 @@ for (const [role, label] of [["manager", "Team Manager"], ["planner", "Planner"]
 
     // No way in from the Security page.
     await page.goto("/settings/security");
-    // Two cards on the page say this (organization security and single sign-on).
-    await expect(page.getByText("managed by your organization's Owner and Admins").first()).toBeVisible();
+    // Exactly two cards say so, each once: organization security, and single sign-on.
+    await expect(page.getByText("Organization security and verified domains are managed by your organization's Owner and Admins.", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Single sign-on is managed by your organization's Owner and Admins. Ask them if you need to change how your organization signs in.", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("managed by your organization's Owner and Admins")).toHaveCount(2);
     await expect(page.getByRole("link", { name: /support access/i })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Support access" })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath(`${role}-security-no-entry.png`), fullPage: true });

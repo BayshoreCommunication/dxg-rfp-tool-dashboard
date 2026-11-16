@@ -49,12 +49,15 @@ let grants;
 let events;
 let failList;
 let perPage;
+// Tickets with a reply from RFPilot the member has not read: what the support button's badge counts.
+let unreadTickets = 0;
 const seedGrant = (fields) => ({
   id: crypto.randomBytes(12).toString("hex"), organizationId: NORTHWIND, proposalId: null, reason: null,
   grantedBy: ACCOUNTS["support-grants-owner@example.com"].userId, revokedAt: null, revokedBy: null, ...fields,
 });
 const reset = (empty = false) => {
   failList = false;
+  unreadTickets = 0;
   perPage = 50;
   events = new Map();
   grants = [];
@@ -126,6 +129,7 @@ export async function handleSupportGrants(request, response, url) {
     if (input.reset) reset(input.empty === true);
     if (input.failList !== undefined) failList = input.failList === true;
     if (typeof input.perPage === "number") perPage = input.perPage;
+    if (typeof input.unreadTickets === "number") unreadTickets = input.unreadTickets;
     // The grant disappears from the organization, as another organization's grant would.
     if (input.vanish) grants = grants.filter((grant) => rfpOf(grant.organizationId, grant.proposalId)?.eventName !== input.vanish);
     json(response, 200, { grants: grants.map(present) });
@@ -167,6 +171,12 @@ export async function handleSupportGrants(request, response, url) {
   if (request.method === "GET" && path === "/api/organization/domains") {
     if (!manages) json(response, 403, { success: false, message: "Forbidden" });
     else json(response, 200, { success: true, domains: [] });
+    return true;
+  }
+
+  // The support button's unread count (GET /api/v1/support/tickets/unread-count), once a spec seeds one.
+  if (request.method === "GET" && path === "/api/v1/support/tickets/unread-count" && unreadTickets > 0) {
+    json(response, 200, { success: true, data: { unreadTickets } });
     return true;
   }
 
