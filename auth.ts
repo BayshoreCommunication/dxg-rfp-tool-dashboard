@@ -172,7 +172,11 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       authorization: {
         params: {
-          prompt: "consent",
+          // select_account makes Google show its account chooser even when the
+          // browser holds a single Google session, so a person signed in to a
+          // personal account can pick (or add) their work account. Google
+          // takes several prompt values space-separated.
+          prompt: "consent select_account",
           access_type: "offline",
           response_type: "code",
         },
