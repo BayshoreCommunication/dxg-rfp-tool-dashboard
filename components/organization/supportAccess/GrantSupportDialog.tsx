@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createSupportGrantAction, searchGrantableRfpsAction } from "@/app/actions/supportGrants";
 import {
   InlineError,
@@ -51,6 +51,9 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
   const [error, setError] = useState<string | null>(null);
   // When the dialog opened; the expiry preview is measured from here.
   const [openedAt] = useState(() => Date.now());
+  // Held while Enter is down on the expiry list. The key itself is left to the browser (open the
+  // list, or confirm an option); only the form submission it can also trigger is dropped.
+  const enterOnExpiry = useRef(false);
 
   useEffect(() => {
     if (scope !== "rfp") return;
@@ -134,6 +137,8 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
+          // Enter in a list chooses from the list; it never grants access.
+          if (enterOnExpiry.current) return;
           void submit();
         }}
       >
@@ -214,16 +219,14 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
                 setExpiry(event.target.value);
                 setError(null);
               }}
-              // Enter on the closed list opens it; it never grants access. (While the list is
-              // open the browser's own picker takes Enter to confirm the option.)
               onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                event.preventDefault();
-                try {
-                  event.currentTarget.showPicker?.();
-                } catch {
-                  // No picker to open here (an older browser); Space and the arrow keys still work.
-                }
+                if (event.key === "Enter") enterOnExpiry.current = true;
+              }}
+              onKeyUp={() => {
+                enterOnExpiry.current = false;
+              }}
+              onBlur={() => {
+                enterOnExpiry.current = false;
               }}
               className={inputClass}
             >
