@@ -7,7 +7,7 @@ import { handleVendorList } from './vendorListFixture.mjs';
 import { handleSupportGrants } from './supportGrantsFixture.mjs';
 import { handlePlanEntitlements } from './planEntitlementsFixture.mjs';
 import { handleProposalTemplates } from './proposalTemplatesFixture.mjs';
-import { handleSettings } from './settingsFixture.mjs';
+import { handleSettings, resetSettings } from './settingsFixture.mjs';
 
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
 const threads = new Map();
@@ -204,6 +204,7 @@ const server = http.createServer(async (request, response) => {
     holdDeletion = false;
     for (const release of pendingDeletions) release();
     pendingDeletions.clear();
+    resetSettings();
     json(response, 200, { reset: true });
     return;
   }

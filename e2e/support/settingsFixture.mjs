@@ -1,9 +1,11 @@
-// Settings > General for the default e2e account: the saved branding, proposal and signature
-// settings (shape from the backend's modal/settingsModel.ts). The stored `linkPrefix` is a value
-// saved before the field left the screen; the spec checks it is neither shown nor lost on save.
-// `/__e2e/settings` resets the document and returns what the dashboard last saved.
+// Settings > General (shape from the backend's modal/settingsModel.ts). By default the stub has
+// no saved settings and leaves `/api/settings` unanswered, as before this fixture existed, so the
+// dashboard shows its own defaults in every other spec. A spec that needs saved settings seeds
+// them with `POST /__e2e/settings { seed: "northwind" }`; a POST without a seed clears them, and
+// so does the stub's `/__e2e/reset`. A GET returns the settings and what the dashboard last saved.
+// The seeded `linkPrefix` is a value saved before the field left the screen.
 
-const initial = () => ({
+const northwind = () => ({
   branding: {
     brandName: "Northwind Events",
     linkPrefix: "northwind-legacy",
@@ -33,7 +35,12 @@ const initial = () => ({
   },
 });
 
-const state = { settings: initial(), saved: [] };
+const state = { settings: null, saved: [] };
+
+export const resetSettings = () => {
+  state.settings = null;
+  state.saved.length = 0;
+};
 
 const json = (response, status, body) => {
   response.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" });
@@ -63,14 +70,21 @@ export async function handleSettings(request, response, url) {
 
   if (pathname === "/__e2e/settings") {
     if (method === "POST") {
-      state.settings = initial();
-      state.saved.length = 0;
+      let body = {};
+      try {
+        body = JSON.parse((await readBody(request)) || "{}");
+      } catch {
+        body = {};
+      }
+      resetSettings();
+      if (body.seed === "northwind") state.settings = northwind();
     }
     json(response, 200, { settings: state.settings, saved: state.saved });
     return true;
   }
 
-  if (pathname !== "/api/settings") return false;
+  // Not seeded: fall through to the stub's 404, which the dashboard treats as "use defaults".
+  if (pathname !== "/api/settings" || !state.settings) return false;
 
   if (method === "GET") {
     json(response, 200, { success: true, message: "Settings fetched successfully", data: state.settings });
