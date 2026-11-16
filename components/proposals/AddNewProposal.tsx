@@ -420,7 +420,7 @@ type ProposalSectionKey = {
 const defaultProposalData: ProposalData = {
   proposalStatus: "submitted",
   proposalSettings: {
-    linkPrefix: "abuco",
+    linkPrefix: "",
     defaultFont: "Poppins",
     proposalLanguage: "English",
     defaultCurrency: "$",

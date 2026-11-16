@@ -38,6 +38,38 @@ test("uses RFPilot instead of the proposal link prefix in page chrome", () => {
   expect(html).toContain("RFPilot — General AV Services RFP — CONFIDENTIAL");
 });
 
+test("never prints a stored link prefix as the brand name when Brand Name is blank", () => {
+  const html = renderToStaticMarkup(
+    <ProposalRfpTemplate
+      proposal={{
+        event: { eventName: "Blank Brand Summit" },
+        proposalSetting: { branding: { brandName: "", linkPrefix: "legacyprefix" } },
+        proposalSettings: { linkPrefix: "legacyprefix" },
+        roomByRoom: [],
+      }}
+    />,
+  );
+
+  expect(html).not.toContain("legacyprefix");
+  expect(html).toContain("a platform by RFPilot");
+});
+
+test("prints the saved Brand Name, not the link prefix", () => {
+  const html = renderToStaticMarkup(
+    <ProposalRfpTemplate
+      proposal={{
+        event: { eventName: "Branded Summit" },
+        proposalSetting: { branding: { brandName: "Northwind Events" } },
+        proposalSettings: { linkPrefix: "legacyprefix" },
+        roomByRoom: [],
+      }}
+    />,
+  );
+
+  expect(html).not.toContain("legacyprefix");
+  expect(html).toContain("a platform by Northwind Events");
+});
+
 test("renders every room on its own page so detailed specifications cannot collide", () => {
   const rooms = Array.from({ length: 5 }, (_, index) => ({
     roomLocation: `Room ${index + 1}`,

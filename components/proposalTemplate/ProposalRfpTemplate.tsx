@@ -295,7 +295,6 @@ export default function ProposalRfpTemplate({ proposal }: { proposal: RfpProposa
 
   const brandName =
     p(proposal.proposalSetting?.branding?.brandName) ||
-    p(proposal.proposalSettings?.linkPrefix) ||
     "RFPilot";
 
   const eventName = p(ev.eventName) || "Event Proposal";
