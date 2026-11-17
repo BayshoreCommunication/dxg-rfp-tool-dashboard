@@ -7,7 +7,8 @@ import { createPortal } from "react-dom";
 // Small building blocks shared by the Users, Invitations and Teams screens. Classes follow
 // components/settings/* and components/proposals/ProposalDeletionDialog.tsx.
 
-export const labelClass = "mb-2 block text-sm font-semibold text-[#969798]";
+// slate-600 on white is 7.6:1. The muted grey this replaced (#969798) was 2.9:1, under WCAG AA.
+export const labelClass = "mb-2 block text-sm font-semibold text-slate-600";
 export const inputClass =
   "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 export const sectionClass = "rounded-md border border-[#e4e4e4] bg-white px-5 py-6 md:px-8";

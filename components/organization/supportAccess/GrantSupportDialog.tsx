@@ -6,6 +6,7 @@ import { createSupportGrantAction, searchGrantableRfpsAction } from "@/app/actio
 import {
   InlineError,
   inputClass,
+  labelClass,
   OrgDialog,
   primaryButtonClass,
   primaryButtonStyle,
@@ -35,8 +36,6 @@ type Props = {
 };
 
 const CUSTOM = "custom";
-// The shared field label's grey is too faint on white (2.9:1); this one passes AA.
-const labelClass = "mb-2 block text-sm font-semibold text-slate-600";
 
 // ORG-405: grant RFPilot Support read access to one RFP or the whole organization, until an
 // expiry the Owner or Admin chooses (7 days unless they change it, 30 at most).
@@ -214,6 +213,17 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
               onChange={(event) => {
                 setExpiry(event.target.value);
                 setError(null);
+              }}
+              // Enter on the closed list opens it; it never grants access. (While the list is
+              // open the browser's own picker takes Enter to confirm the option.)
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                try {
+                  event.currentTarget.showPicker?.();
+                } catch {
+                  // No picker to open here (an older browser); Space and the arrow keys still work.
+                }
               }}
               className={inputClass}
             >
