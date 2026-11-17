@@ -142,6 +142,11 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
   }, []);
 
   const filtered = hasFilters(filters);
+  const loadMoreButton = nextCursor ? (
+    <button type="button" className={secondaryButtonClass} onClick={() => void loadMore()} disabled={loadingMore}>
+      {loadingMore ? <Spinner /> : null} Load more
+    </button>
+  ) : null;
 
   return (
     <div className="space-y-6 px-6 pb-8" data-testid="audit-log">
@@ -154,7 +159,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
           <div className="min-w-0">
             <h2 id="audit-log-title" className={sectionTitleClass}>Audit log</h2>
             <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              Sign-ins, security changes, invitations, role and team changes, proposal sharing and RFPilot Support access in your organization. Entries can&apos;t be edited or deleted.
+              Sign-ins, security changes, invitations, role and team changes and proposal sharing in your organization. Entries can&apos;t be edited or deleted.
             </p>
           </div>
           <button type="button" className={secondaryButtonClass} onClick={() => void exportCsv()} disabled={exporting || Boolean(problem)}>
@@ -220,6 +225,12 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
             </div>
           ) : events === null ? (
             <TableSkeleton rows={6} />
+          ) : events.length === 0 && nextCursor ? (
+            // Nothing to show on the pages read so far, and older ones remain.
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-500" role="status">No activity to show yet. Older activity may follow.</p>
+              {loadMoreButton}
+            </div>
           ) : events.length === 0 ? (
             <EmptyState
               icon={<ScrollText size={20} />}
@@ -274,11 +285,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
                 <p className="text-xs text-slate-500" role="status">
                   Showing {events.length.toLocaleString("en-US")} event{events.length === 1 ? "" : "s"}{nextCursor ? ", newest first" : ""}.
                 </p>
-                {nextCursor ? (
-                  <button type="button" className={secondaryButtonClass} onClick={() => void loadMore()} disabled={loadingMore}>
-                    {loadingMore ? <Spinner /> : null} Load more
-                  </button>
-                ) : null}
+                {loadMoreButton}
               </div>
             </>
           )}

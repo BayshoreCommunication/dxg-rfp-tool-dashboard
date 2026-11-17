@@ -2,6 +2,9 @@
 // (docs/API.md "Organization audit log"): only an Owner or Admin reads it, every other role is
 // refused, the filters and the CSV export work on the same set, and RFPilot staff are shown as
 // "RFPilot Support". Uses the role accounts of roleDashboardFixture.mjs. No database, no real people.
+// Like the backend today, it still serves the "RFPilot Support access" category and its
+// support_access.* events: the dashboard no longer shows them (owner decision, 2026-11-17), and
+// audit-log.spec.ts proves that against these rows. Take them out when the backend stops sending them.
 import { DASHBOARD_ACCOUNTS } from "./roleDashboardFixture.mjs";
 
 const BASE = "/api/v1/organization/audit-events";
@@ -18,11 +21,11 @@ const CATEGORIES = [
   { key: "invitations", label: "Invitations", actions: [["organization.invitation.sent", "Invitation sent"]] },
   { key: "members", label: "Members and roles", actions: [["organization.member.role_changed", "Role changed"], ["organization.member.deactivated", "Member deactivated"]] },
   { key: "sharing", label: "Proposal sharing", actions: [["proposal.share_granted", "Proposal shared"]] },
-  { key: "support_access", label: "RFPilot Support access", actions: [["support_access.granted", "Support access granted"], ["support_access.used", "Support access used"], ["support_access.denied", "Support access refused"]] },
-  { key: "settings", label: "Organization settings", actions: [["organization.settings.updated", "Organization settings changed"]] },
+  { key: "support_access", label: "RFPilot Support access", actions: [["support_access.granted", "Support access granted"], ["support_access.revoked", "Support access revoked"], ["support_access.used", "Support access used"], ["support_access.denied", "Support access refused"]] },
+  { key: "settings", label: "Organization settings", actions: [["organization.settings.updated", "Organization settings changed"], ["organization.plan_changed", "Plan changed by RFPilot Support"]] },
 ];
 const LABELS = Object.fromEntries(CATEGORIES.flatMap((category) => category.actions.map(([value, label]) => [value, { label, category: category.key }])));
-const STAFF_ACTIONS = ["support_access.used", "support_access.denied"];
+const STAFF_ACTIONS = ["support_access.used", "support_access.denied", "organization.plan_changed"];
 
 const member = (account, email) => ({ kind: "member", id: account.userId, name: account.name, email });
 const support = { kind: "support", id: STAFF_ID, name: "RFPilot Support" };
@@ -41,6 +44,9 @@ const events = () => {
     row(5, "support_access.used", support, { type: "proposal", id: "0".repeat(23) + "1", name: null }, "allowed", "rfp.read", { grantId: "9".repeat(24), operation: "rfp.read" }),
     row(9, "support_access.denied", support, { type: "organization", id: "c".repeat(24), name: null }, "denied", "no_active_grant", { operation: "rfp.list" }),
     row(20, "support_access.granted", admin, { type: "support_access_grant", id: "9".repeat(24), name: null }, "created", "customer_granted", { grantId: "9".repeat(24), scope: "rfp" }),
+    row(30, "support_access.revoked", owner, { type: "support_access_grant", id: "9".repeat(24), name: null }, "revoked", "customer_revoked", { grantId: "9".repeat(24), scope: "rfp" }),
+    // A staff-attributed event customers still see: a plan change made in the admin app.
+    row(40, "organization.plan_changed", support, { type: "organization", id: "c".repeat(24), name: null }, "allowed", "staff_plan_change", { fromPlan: "free_trial", toPlan: "full_access" }),
     row(45, "auth.login.failed", planner, { type: "user", id: PLANNER.userId, name: PLANNER.name }, "denied", "wrong_password", { method: "password" }),
     row(50, "auth.session.created", planner, { type: "refresh_session", id: "s-1", name: null }, "created", "authentication_succeeded"),
     row(90, "organization.member.role_changed", owner, { type: "organization_membership", id: PLANNER.userId, name: PLANNER.name }, "allowed", "role_changed", { previousRole: "viewer", role: "planner" }),

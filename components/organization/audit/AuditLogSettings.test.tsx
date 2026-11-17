@@ -30,11 +30,12 @@ const event = (id: string, overrides: Partial<AuditEvent> = {}): AuditEvent => (
   details: { previousRole: "planner", role: "organization_admin" },
   ...overrides,
 });
+// A staff-attributed event customers still see: a plan change made by RFPilot staff.
 const supportEvent = event("e2", {
-  action: "support_access.used", label: "Support access used", category: "support_access", reason: "rfp.read",
+  action: "organization.plan_changed", label: "Plan changed by RFPilot Support", category: "settings", reason: "staff_plan_change",
   actor: { kind: "support", id: "a1", name: "RFPilot Support", email: null },
-  target: { type: "proposal", id: "0123456789abcdef01234567", name: null },
-  details: { operation: "rfp.read", grantId: "9".repeat(24) },
+  target: { type: "organization", id: "0123456789abcdef01234567", name: null },
+  details: { fromPlan: "free_trial", toPlan: "full_access" },
 });
 const options: AuditFilterOptions = {
   categories: [
@@ -68,10 +69,29 @@ describe("AuditLogSettings", () => {
     expect(rows()[0]).toHaveTextContent("Role: Admin");
     expect(rows()[0]).toHaveTextContent("Allowed");
     expect(rows()[1]).toHaveTextContent("RFPilot Support");
-    expect(rows()[1]).toHaveTextContent("Opened a proposal");
+    expect(rows()[1]).toHaveTextContent("New plan: Full access");
     expect(screen.getByTestId("audit-log").textContent).not.toMatch(RFP_NOUN);
     expect(screen.getByTestId("audit-log").textContent).not.toMatch(/organization_admin/i);
     expect(mockList).not.toHaveBeenCalled();
+  });
+
+  it("says nothing about RFPilot Support access", () => {
+    renderLog();
+    expect(screen.getByText("Sign-ins, security changes, invitations, role and team changes and proposal sharing in your organization. Entries can't be edited or deleted.")).toBeInTheDocument();
+    expect(screen.getByTestId("audit-log").textContent).not.toMatch(/support access/i);
+    expect(within(screen.getByLabelText("Action")).queryByRole("option", { name: /support access/i })).not.toBeInTheDocument();
+  });
+
+  it("counts only the events it shows, and offers older pages when the pages read so far had nothing to show", async () => {
+    renderLog(page([event("e1"), supportEvent], "cursor-1"));
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 2 events, newest first.");
+
+    renderLog(page([], "cursor-1"));
+    expect(screen.queryByText("No activity yet")).not.toBeInTheDocument();
+    mockList.mockResolvedValue(ok(page([event("e9")], null)));
+    fireEvent.click(screen.getAllByRole("button", { name: /Load more/ })[1]);
+    await waitFor(() => expect(screen.getAllByRole("list", { name: "Audit events" })).toHaveLength(2));
+    expect(mockList).toHaveBeenCalledWith({}, "cursor-1");
   });
 
   it("offers every member, RFPilot Support and the catalogued actions as filters", () => {

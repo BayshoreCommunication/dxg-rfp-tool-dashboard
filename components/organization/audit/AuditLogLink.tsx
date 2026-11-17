@@ -13,7 +13,7 @@ export default function AuditLogLink() {
             Audit log
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-[#6b7280]">
-            See who signed in, what changed in your organization and when RFPilot Support used its access. Filter it and export it as CSV.
+            See who signed in and what changed in your organization. Filter it and export it as CSV.
           </p>
         </div>
         <Link

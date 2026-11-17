@@ -89,9 +89,25 @@ const toEvent = (value: unknown): AuditEvent | null => {
   };
 };
 
+// Owner decision, 2026-11-17: customers no longer grant, see or control RFPilot Support access,
+// and its past events are not part of their audit log. The backend still returns them until its
+// own change ships, so they are dropped here, before anything is counted, listed or exported.
+const SUPPORT_ACCESS_CATEGORY = "support_access";
+const SUPPORT_ACCESS_ACTION = /^support_access\./;
+const SUPPORT_ACCESS_TARGET = "support_access_grant";
+const SUPPORT_ACCESS_DETAIL = "grantId";
+export const isSupportAccessEvent = (event: Pick<AuditEvent, "category" | "action" | "actor" | "target" | "details">): boolean =>
+  event.category === SUPPORT_ACCESS_CATEGORY
+  || SUPPORT_ACCESS_ACTION.test(event.action)
+  || event.target.type === SUPPORT_ACCESS_TARGET
+  // RFPilot Support acting under a grant, whatever the event is called.
+  || (event.actor.kind === "support" && SUPPORT_ACCESS_DETAIL in event.details);
+
 export const toAuditPage = (value: unknown): AuditPage => {
   const raw = record(value);
-  const events = Array.isArray(raw.events) ? raw.events.map(toEvent).filter((event): event is AuditEvent => event !== null) : [];
+  const events = Array.isArray(raw.events)
+    ? raw.events.map(toEvent).filter((event): event is AuditEvent => event !== null && !isSupportAccessEvent(event))
+    : [];
   return { events, nextCursor: nullableText(raw.nextCursor) };
 };
 
@@ -107,8 +123,9 @@ export const toAuditFilterOptions = (value: unknown): AuditFilterOptions => {
     const category = record(entry);
     const key = text(category.key);
     const label = text(category.label);
-    if (!key || !label) return null;
-    const actions = (Array.isArray(category.actions) ? category.actions : []).map(toOption).filter((option): option is AuditActionOption => option !== null);
+    if (!key || !label || key === SUPPORT_ACCESS_CATEGORY) return null;
+    const actions = (Array.isArray(category.actions) ? category.actions : []).map(toOption)
+      .filter((option): option is AuditActionOption => option !== null && !SUPPORT_ACCESS_ACTION.test(option.value));
     return { key, label, actions };
   }).filter((category): category is AuditCategoryOption => category !== null);
   return { categories, supportActor: { value: SUPPORT_ACTOR, label: SUPPORT_LABEL } };
@@ -182,7 +199,6 @@ const TARGET_LABELS: Record<string, string> = {
   organization_domain: "Domain",
   organization_vendor: "Vendor",
   refresh_session: "Session",
-  support_access_grant: "Support access",
 };
 const sentence = (code: string) => {
   const words = code.replace(/[_.:-]+/g, " ").trim();
@@ -197,12 +213,6 @@ export const targetLabel = (target: AuditEvent["target"]): string => {
 };
 export const shortId = (id: string): string => (id.length > 10 ? `…${id.slice(-6)}` : id);
 
-const OPERATIONS: Record<string, string> = {
-  "rfp.list": "Listed proposals",
-  "rfp.read": "Opened a proposal",
-  "vendor_responses.list": "Listed vendor responses",
-  "ticket.rfp.list": "Listed proposals from a support ticket",
-};
 const SCOPES: Record<string, string> = { rfp: "One proposal", organization: "Whole organization" };
 const SETTINGS: Record<string, string> = {
   requireTwoFactor: "Require two-factor",
@@ -213,7 +223,6 @@ const SETTINGS: Record<string, string> = {
 const REASONS: Record<string, string> = {
   wrong_password: "Wrong password",
   account_blocked: "Account blocked",
-  no_active_grant: "No active support access",
 };
 const DETAIL_LABELS: Record<string, string> = {
   role: "Role",
@@ -230,8 +239,6 @@ const DETAIL_LABELS: Record<string, string> = {
   signedOutMembers: "Members signed out",
   placedInTeam: "Placed in team",
   teamId: "Team ID",
-  grantId: "Support access ID",
-  ticketId: "Support ticket ID",
   proposalId: "Proposal ID",
   contactCount: "Contacts",
   secretChanged: "Client secret changed",
@@ -240,7 +247,7 @@ const DETAIL_LABELS: Record<string, string> = {
 };
 const PLAN_KEYS = new Set(["fromPlan", "toPlan"]);
 const ROLE_KEYS = new Set(["role", "previousRole", "newOwnerPreviousRole", "previousOwnerNewRole"]);
-const ID_KEYS = new Set(["teamId", "grantId", "ticketId", "proposalId"]);
+const ID_KEYS = new Set(["teamId", "proposalId"]);
 
 const scalar = (value: AuditDetailValue): string => (typeof value === "boolean" ? (value ? "Yes" : "No") : String(value));
 const settingValue = (value: AuditDetailValue | undefined): string =>
@@ -250,7 +257,6 @@ const settingValue = (value: AuditDetailValue | undefined): string =>
 export const detailLines = (event: Pick<AuditEvent, "details" | "reason" | "decision">): string[] => {
   const { details } = event;
   const lines: string[] = [];
-  if (typeof details.operation === "string") lines.push(OPERATIONS[details.operation] ?? sentence(details.operation));
   if (typeof details.scope === "string") lines.push(`Scope: ${SCOPES[details.scope] ?? sentence(details.scope)}`);
   if (typeof details.setting === "string") {
     const name = SETTINGS[details.setting] ?? sentence(details.setting);
@@ -259,7 +265,7 @@ export const detailLines = (event: Pick<AuditEvent, "details" | "reason" | "deci
     lines.push(before && after ? `${name}: ${before} → ${after}` : after ? `${name}: ${after}` : name);
   }
   for (const [key, value] of Object.entries(details)) {
-    if (["operation", "scope", "setting", "from", "to", "value"].includes(key)) continue;
+    if (["scope", "setting", "from", "to", "value"].includes(key)) continue;
     // Only a label made from a key is reworded; recorded values (a domain, a team) are shown as stored.
     const label = DETAIL_LABELS[key] ?? sentence(key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase());
     if (ROLE_KEYS.has(key)) {
@@ -301,5 +307,63 @@ export const auditErrorMessage = (error: ErrorLike, fallback: string): string =>
 // proxy or an older backend hands back a row that isn't. Idempotent: a neutralized cell is left alone.
 const FORMULA_CELL = /(^|,|\r\n|\n)"(\s*[=+\-@]|[\t\r])/g;
 export const neutralizeCsv = (csv: string): string => csv.replace(FORMULA_CELL, (_match, lead: string, start: string) => `${lead}"'${start}`);
+
+// The export is written by the backend, which still includes Support access rows. The file has
+// no action code or category key, only the labels the backend prints, so rows are matched on
+// those: the "Category" label, the four "Support access …" action labels, the grant target type,
+// and a support actor with a grant id in "Details". A file whose header isn't recognized is
+// returned untouched (`rows` null) rather than guessed at.
+const SUPPORT_ACCESS_CATEGORY_LABEL = "RFPilot Support access";
+const SUPPORT_ACCESS_ACTION_LABEL = /^Support access (granted|revoked|used|refused)$/;
+
+// Splits CSV text into records, each kept as its original text, with its unquoted cells.
+const csvRecords = (csv: string): { raw: string; cells: string[] }[] => {
+  const records: { raw: string; cells: string[] }[] = [];
+  let cells: string[] = [];
+  let cell = "";
+  let quoted = false;
+  let start = 0;
+  const end = (index: number, next: number) => {
+    cells.push(cell);
+    records.push({ raw: csv.slice(start, index), cells });
+    cells = [];
+    cell = "";
+    start = next;
+  };
+  for (let index = 0; index < csv.length; index += 1) {
+    const char = csv[index];
+    if (quoted) {
+      if (char !== '"') cell += char;
+      else if (csv[index + 1] === '"') { cell += '"'; index += 1; }
+      else quoted = false;
+    } else if (char === '"') quoted = true;
+    else if (char === ",") { cells.push(cell); cell = ""; }
+    else if (char === "\r" && csv[index + 1] === "\n") { end(index, index + 2); index += 1; }
+    else if (char === "\n") end(index, index + 1);
+    else cell += char;
+  }
+  if (start < csv.length) end(csv.length, csv.length);
+  return records;
+};
+
+export const withoutSupportAccessRows = (csv: string): { csv: string; rows: number | null; removed: number } => {
+  const [header, ...body] = csvRecords(csv);
+  const column = (name: string) => header?.cells.indexOf(name) ?? -1;
+  const category = column("Category");
+  const action = column("Action");
+  if (!header || (category < 0 && action < 0)) return { csv, rows: null, removed: 0 };
+  const targetType = column("Target type");
+  const actorType = column("Actor type");
+  const details = column("Details");
+  const hidden = ({ cells }: { cells: string[] }) =>
+    cells[category] === SUPPORT_ACCESS_CATEGORY_LABEL
+    || SUPPORT_ACCESS_ACTION_LABEL.test(cells[action] ?? "")
+    || cells[targetType] === SUPPORT_ACCESS_TARGET
+    || (cells[actorType] === "support" && /(^|; )grantId: /.test(cells[details] ?? ""));
+  const kept = body.filter((row) => !hidden(row));
+  const removed = body.length - kept.length;
+  if (removed === 0) return { csv, rows: body.length, removed };
+  return { csv: [header, ...kept].map((row) => `${row.raw}\r\n`).join(""), rows: kept.length, removed };
+};
 
 export const exportFileName = (now: Date = new Date()): string => `audit-log-${now.toISOString().slice(0, 10)}.csv`;
