@@ -642,20 +642,20 @@ test.describe("Proposals page: row permissions", () => {
     await expect(button(page, "Leadership Summit", "Save a copy")).toBeVisible();
     await expect(button(page, "Leadership Summit", "Archive")).toBeVisible();
 
-    await expectPreviewOnly(page, "Trade Show Booth AV");
-    await expect(button(page, "Trade Show Booth AV", "Archive")).toHaveCount(0);
-    await expect(button(page, "Trade Show Booth AV", "Save a copy")).toBeVisible();
+    await expectPreviewOnly(page, "Field Kickoff");
+    await expect(button(page, "Field Kickoff", "Archive")).toHaveCount(0);
+    await expect(button(page, "Field Kickoff", "Save a copy")).toBeVisible();
     await expect(cards(page).locator('a[href*="proposal-edit"]')).toHaveCount(10);
     await checkPage(page, testInfo, "proposals-planner-view-only-share");
 
     // The copy goes through: a view-only share may copy (the stub answers as the backend does).
-    await button(page, "Trade Show Booth AV", "Save a copy").click();
+    await button(page, "Field Kickoff", "Save a copy").click();
     const copy = page.getByRole("dialog", { name: "Save a Copy" });
-    await copy.getByPlaceholder("Enter event name for the copy").fill("Trade Show Booth AV (mine)");
+    await copy.getByPlaceholder("Enter event name for the copy").fill("Field Kickoff (mine)");
     await copy.getByRole("button", { name: "Save Copy" }).click();
     await expect(page.getByText("Copy saved successfully!")).toBeVisible();
     expect((await (await request.get(`${STUB}/__e2e/dashboard`)).json()).copies).toEqual([
-      { sourceId: "a".padStart(24, "0"), eventName: "Trade Show Booth AV (mine)" },
+      { sourceId: "b".padStart(24, "0"), eventName: "Field Kickoff (mine)" },
     ]);
 
     // Archived tab: her own archived proposal can be restored.

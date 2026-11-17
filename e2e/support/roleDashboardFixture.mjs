@@ -78,10 +78,10 @@ const seedRfps = () => [
   // Served without `permissions` (older API): the dashboard falls back to its old rule for it.
   rfp(8, "Investor Day", "receiving_responses", PETER, CORPORATE, "New York", 60, 4, 1, { withoutPermissions: true }),
   rfp(9, "Regional Roadshow", "draft", A["manager-e2e@example.com"], CORPORATE, "Chicago", 90, 0, 0),
-  // View-only shares: with the Viewer, with Priya (a Planner) and with Maya (a Team Manager who
-  // doesn't manage Field Marketing).
-  rfp(10, "Trade Show Booth AV", "receiving_responses", FIONA, FIELD, "Las Vegas", 25, 5, 2, { sharedWith: [id("5"), id("4")] }),
-  rfp(11, "Field Kickoff", "draft", FIONA, FIELD, "Dallas", 100, 0, 0, { sharedWith: [id("3")] }),
+  rfp(10, "Trade Show Booth AV", "receiving_responses", FIONA, FIELD, "Las Vegas", 25, 5, 2, { sharedWith: [id("5")] }),
+  // Shared to view with Priya (a Planner) and Maya (a Team Manager who doesn't manage Field
+  // Marketing). A draft with no responses, so no other spec's totals for those accounts move.
+  rfp(11, "Field Kickoff", "draft", FIONA, FIELD, "Dallas", 100, 0, 0, { sharedWith: [id("4"), id("3")] }),
   rfp(12, "Board Meeting AV", "awarded", A["owner-e2e@example.com"], null, "Chicago", 15, 2, 2),
   rfp(13, "All-Hands Broadcast", "sent", A["admin-e2e@example.com"], null, "Chicago", 8, 3, 0),
   // Three proposals with one name: two on the same dates and one with no dates yet.
