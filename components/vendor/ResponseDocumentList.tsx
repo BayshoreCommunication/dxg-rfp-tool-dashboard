@@ -4,6 +4,9 @@ import type { VendorSubmissionVersion } from "@/app/actions/vendorResponse";
 import { fileTypeLabel } from "@/lib/proposalIntelligence/plainLanguage";
 import { ExternalLink, File, FileImage, FileSpreadsheet, FileText, Presentation, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { displayFileName, documentKind, extensionOf, formatFileSize, type FileKind } from "@/lib/vendorResponses/documentFiles";
+
+export { displayFileName, documentKind, formatFileSize };
 
 type VersionDocuments = VendorSubmissionVersion["documents"];
 type VersionDocument = VersionDocuments[number];
@@ -13,43 +16,13 @@ export type ResponseDocumentContext = {
   scopeLabel: (document: VersionDocument) => string;
 };
 
-type Kind = "image" | "pdf" | "word" | "sheet" | "slides" | "other";
-
-const KIND_STYLE: Record<Kind, { tile: string; icon: typeof File }> = {
+const KIND_STYLE: Record<FileKind, { tile: string; icon: typeof File }> = {
   image: { tile: "bg-sky-50 text-sky-700 ring-sky-100", icon: FileImage },
   pdf: { tile: "bg-rose-50 text-rose-600 ring-rose-100", icon: FileText },
   word: { tile: "bg-blue-50 text-blue-700 ring-blue-100", icon: FileText },
   sheet: { tile: "bg-emerald-50 text-emerald-700 ring-emerald-100", icon: FileSpreadsheet },
   slides: { tile: "bg-orange-50 text-orange-600 ring-orange-100", icon: Presentation },
   other: { tile: "bg-slate-100 text-slate-600 ring-slate-200", icon: File },
-};
-
-const extensionOf = (name: string) => {
-  const dot = name.lastIndexOf(".");
-  return dot > 0 && dot < name.length - 1 ? name.slice(dot + 1).toLowerCase() : "";
-};
-
-export const documentKind = (mimeType: string, name: string): Kind => {
-  const mime = mimeType.toLowerCase();
-  const extension = extensionOf(name);
-  if (mime.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) return "image";
-  if (mime.includes("pdf") || extension === "pdf") return "pdf";
-  if (/wordprocessingml|msword/.test(mime) || ["doc", "docx"].includes(extension)) return "word";
-  if (/spreadsheetml|ms-excel|csv/.test(mime) || ["xls", "xlsx", "csv"].includes(extension)) return "sheet";
-  if (/presentationml|ms-powerpoint/.test(mime) || ["ppt", "pptx"].includes(extension)) return "slides";
-  return "other";
-};
-
-/** Uploads are stored with a UUID prefix ("80ce8bb1-…-Screenshot.png"); the
- *  vendor's own file name is what a planner recognises. */
-export const displayFileName = (name: string) =>
-  name.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[-_]/i, "") || name;
-
-export const formatFileSize = (bytes: number | null | undefined) => {
-  if (!bytes || bytes <= 0) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
 };
 
 function FileTile({ document }: { document: VersionDocument }) {

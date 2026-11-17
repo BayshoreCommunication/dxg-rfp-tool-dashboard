@@ -15,6 +15,7 @@ const ALLOWED: Array<[file: string, text: string]> = [
   // The RFPilot wordmark, drawn as "RFP" + an accented "ilot".
   ["components/proposalTemplate/ProposalRfpTemplate.tsx", 'RFP<span className="dxg-brand-wordmark-accent">ilot</span>'],
   ["components/vendor/workspace/VendorResponseWorkspace.tsx", 'RFP<span className="text-[#2fc6f5]">ilot</span>'],
+  ["components/vendor/VendorResponseDocument.tsx", "RFP<span>ilot</span>"],
 ];
 
 // Files an open pull request is rewording itself; none at the moment. Add a pattern here while
