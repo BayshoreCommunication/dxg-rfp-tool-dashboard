@@ -158,11 +158,11 @@ export async function handleProposalTemplates(request, response, url) {
       return true;
     }
     if (!/^[a-f0-9]{24}$/.test(String(input.proposalId || ""))) {
-      refuse(response, 400, "INVALID_TEMPLATE_SOURCE", "Choose the RFP to save as a template.");
+      refuse(response, 400, "INVALID_TEMPLATE_SOURCE", "Choose the proposal to save as a template.");
       return true;
     }
     if (input.proposalId === FOREIGN_RFP_ID) {
-      refuse(response, 404, "TEMPLATE_SOURCE_NOT_FOUND", "RFP not found.");
+      refuse(response, 404, "TEMPLATE_SOURCE_NOT_FOUND", "Proposal not found.");
       return true;
     }
     const template = seed(title, scope, actor.userId, { published: scope === "organization", layout, description: tidy(input.description) });

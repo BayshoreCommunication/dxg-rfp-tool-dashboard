@@ -17,7 +17,7 @@ const CATEGORIES = [
   { key: "two_factor", label: "Two-factor authentication", actions: [["auth.two_factor.enrolled", "Two-factor turned on"]] },
   { key: "invitations", label: "Invitations", actions: [["organization.invitation.sent", "Invitation sent"]] },
   { key: "members", label: "Members and roles", actions: [["organization.member.role_changed", "Role changed"], ["organization.member.deactivated", "Member deactivated"]] },
-  { key: "sharing", label: "RFP sharing", actions: [["proposal.share_granted", "RFP shared"]] },
+  { key: "sharing", label: "Proposal sharing", actions: [["proposal.share_granted", "Proposal shared"]] },
   { key: "support_access", label: "RFPilot Support access", actions: [["support_access.granted", "Support access granted"], ["support_access.used", "Support access used"], ["support_access.denied", "Support access refused"]] },
   { key: "settings", label: "Organization settings", actions: [["organization.settings.updated", "Organization settings changed"]] },
 ];

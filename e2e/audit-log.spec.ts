@@ -47,9 +47,8 @@ const openAuditLog = async (page: Page) => {
 // Every state: no serious accessibility violations, nothing wider than the screen, "proposal"
 // not "RFP", no console errors, and a screenshot as evidence.
 // Category and action names come from the backend's audit catalog (stubbed in
-// e2e/support/auditLogFixture.mjs as the backend sends them), so they still say "RFP" until the
-// backend is reworded.
-const BACKEND_LABELS = ["RFP sharing", "RFP shared"];
+// e2e/support/auditLogFixture.mjs as the backend sends them); they say "Proposal" too, so
+// nothing on this screen is excused from the wording check.
 const check = async (page: Page, testInfo: TestInfo, name: string) => {
   await expect(screen(page)).toBeVisible();
   const accessibility = await new AxeBuilder({ page }).include('[data-testid="audit-log"]').withTags(["wcag2a", "wcag2aa"]).analyze();
@@ -59,7 +58,7 @@ const check = async (page: Page, testInfo: TestInfo, name: string) => {
       .map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(" | ")}`),
   ).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
-  await expectProposalWording(screen(page), BACKEND_LABELS);
+  await expectProposalWording(screen(page));
   await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
   expect(problems.get(page)).toEqual([]);
 };

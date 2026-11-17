@@ -164,14 +164,22 @@ describe("support grant display", () => {
       expect(message.length).toBeGreaterThan(10);
     }
     expect(supportGrantErrorMessage({ code: "PROPOSAL_NOT_FOUND" })).toMatch(/proposal wasn't found/);
+    // A code this screen has no sentence for: the backend's message is shown, and it says
+    // "proposal". (It used to be swapped for "Something went wrong" whenever it said so.)
+    expect(supportGrantErrorMessage({ code: "SUPPORT_GRANT_SCOPE_CONFLICT", status: 409, message: "This proposal already has active support access." }))
+      .toBe("This proposal already has active support access.");
+    expect(supportGrantErrorMessage({ status: 400, message: "Choose a proposal in this organization." })).toBe("Choose a proposal in this organization.");
+    // Still never a bare code, and nothing at all falls back to the generic sentence.
+    expect(supportGrantErrorMessage({ code: "SOMETHING_NEW", status: 400, message: "SOMETHING_NEW" })).toBe("Something went wrong. Try again.");
+    expect(supportGrantErrorMessage({ status: 500 })).toBe("Something went wrong. Try again.");
     expect(supportGrantErrorMessage({ code: "SUPPORT_GRANT_EXPIRED" })).toMatch(/already expired/);
   });
 
-  it("explains a plain 403, a rate limit and a lost connection, and hides unknown wording about proposals", () => {
+  it("explains a plain 403, a rate limit and a lost connection, and shows the backend's message for an unknown code", () => {
     expect(supportGrantErrorMessage({ status: 403, message: "Forbidden" })).toBe("Only an Owner or Admin can manage RFPilot Support access.");
     expect(supportGrantErrorMessage({ status: 429, details: { retryAfterSeconds: 120 } })).toMatch(/Try again in 2 minutes/);
     expect(supportGrantErrorMessage({ code: "NETWORK_ERROR" })).toMatch(/couldn't reach the server/);
-    expect(supportGrantErrorMessage({ code: "SOMETHING_NEW", message: "Proposal store unavailable." }, "Try again.")).toBe("Try again.");
+    expect(supportGrantErrorMessage({ code: "SOMETHING_NEW", message: "Proposal store unavailable." }, "Try again.")).toBe("Proposal store unavailable.");
     expect(supportGrantErrorMessage({ code: "DASHBOARD_INTERNAL_ERROR", message: "The dashboard could not be loaded.", status: 500 })).toBe("Your proposals couldn't be loaded. Try again.");
   });
 });

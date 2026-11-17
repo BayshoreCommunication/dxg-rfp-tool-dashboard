@@ -72,7 +72,7 @@ describe("support grant actions (ORG-405)", () => {
     expect(lastCall().body).toEqual({ proposalId: "p1", expiresInDays: 30, reason: "Ticket 4821" });
     expect(created.data).toMatchObject({ scope: "rfp", rfp: { id: "p1", title: "Gala" } });
 
-    mockedFetch.mockResolvedValueOnce(jsonResponse(404, { success: false, code: "PROPOSAL_NOT_FOUND", message: "RFP not found." }));
+    mockedFetch.mockResolvedValueOnce(jsonResponse(404, { success: false, code: "PROPOSAL_NOT_FOUND", message: "Proposal not found." }));
     expect(await createSupportGrantAction({ proposalId: "other-org", expiresInDays: 7 })).toMatchObject({ success: false, status: 404, code: "PROPOSAL_NOT_FOUND" });
 
     mockedFetch.mockResolvedValueOnce(jsonResponse(400, { success: false, code: "INVALID_GRANT_EXPIRY", message: "x" }));
