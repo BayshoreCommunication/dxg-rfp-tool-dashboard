@@ -17,8 +17,6 @@ import {
   filterProblem,
   formatAuditTime,
   hasFilters,
-  SUPPORT_ACTOR,
-  SUPPORT_LABEL,
   targetLabel,
   toAuditQuery,
   type AuditEvent,
@@ -59,7 +57,6 @@ const ActorCell = ({ event }: { event: AuditEvent }) => (
     {event.actor.kind === "member" && event.actor.email && event.actor.email !== event.actor.name ? (
       <p className="truncate text-xs text-slate-500">{event.actor.email}</p>
     ) : null}
-    {event.actor.kind === "support" ? <p className="text-xs text-slate-500">RFPilot staff</p> : null}
   </div>
 );
 
@@ -76,6 +73,8 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // The last "Load more" brought nothing to show, and older pages remain.
+  const [nothingNew, setNothingNew] = useState(false);
   // Only the newest request may update the list, so a slow answer can't overwrite a newer filter.
   const requestRef = useRef(0);
 
@@ -84,6 +83,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
   const load = useCallback(async (next: AuditFilters) => {
     const request = ++requestRef.current;
     setLoading(true);
+    setNothingNew(false);
     const result = await listAuditEventsAction(toAuditQuery(next));
     if (request !== requestRef.current) return;
     setLoading(false);
@@ -112,11 +112,11 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
     if (request !== requestRef.current) return;
     if (result.success && result.data) {
       const page = result.data;
-      setEvents((current) => {
-        const seen = new Set((current ?? []).map((event) => event.id));
-        return [...(current ?? []), ...page.events.filter((event) => !seen.has(event.id))];
-      });
+      const seen = new Set((events ?? []).map((event) => event.id));
+      const added = page.events.filter((event) => !seen.has(event.id));
+      setEvents([...(events ?? []), ...added]);
       setNextCursor(page.nextCursor);
+      setNothingNew(added.length === 0 && Boolean(page.nextCursor));
     } else {
       toast.error(auditErrorMessage(result, "More activity couldn't be loaded. Try again."));
     }
@@ -129,6 +129,10 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
     setExporting(false);
     if (!result.success || !result.data) {
       toast.error(auditErrorMessage(result, "The export couldn't be created. Try again."));
+      return;
+    }
+    if (result.data.rows === 0) {
+      toast.info("There's nothing to export for this range.");
       return;
     }
     downloadCsv(result.data.csv, result.data.fileName);
@@ -172,7 +176,6 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
             <label htmlFor="audit-actor" className={labelClass}>User</label>
             <select id="audit-actor" className={inputClass} value={filters.actor} onChange={(event) => change({ actor: event.target.value })}>
               <option value="">Everyone</option>
-              <option value={SUPPORT_ACTOR}>{SUPPORT_LABEL}</option>
               {members.map((member) => (
                 <option key={member.userId} value={member.userId}>{memberDisplayName(member)}</option>
               ))}
@@ -228,7 +231,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
           ) : events.length === 0 && nextCursor ? (
             // Nothing to show on the pages read so far, and older ones remain.
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-slate-500" role="status">No activity to show yet. Older activity may follow.</p>
+              <p className="text-xs text-slate-500" role="status">Nothing to show in the most recent activity. Load more to see older activity.</p>
               {loadMoreButton}
             </div>
           ) : events.length === 0 ? (
@@ -284,6 +287,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-slate-500" role="status">
                   Showing {events.length.toLocaleString("en-US")} event{events.length === 1 ? "" : "s"}{nextCursor ? ", newest first" : ""}.
+                  {nothingNew && nextCursor ? " Nothing more to show yet. Load more to see older activity." : ""}
                 </p>
                 {loadMoreButton}
               </div>

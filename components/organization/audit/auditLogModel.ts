@@ -30,7 +30,7 @@ export type AuditPage = { events: AuditEvent[]; nextCursor: string | null };
 
 export type AuditActionOption = { value: string; label: string };
 export type AuditCategoryOption = { key: string; label: string; actions: AuditActionOption[] };
-export type AuditFilterOptions = { categories: AuditCategoryOption[]; supportActor: AuditActionOption };
+export type AuditFilterOptions = { categories: AuditCategoryOption[] };
 
 // What the filter bar holds. Dates are the browser's local calendar days (YYYY-MM-DD).
 export type AuditFilters = { actor: string; action: string; from: string; to: string };
@@ -38,9 +38,6 @@ export const EMPTY_FILTERS: AuditFilters = { actor: "", action: "", from: "", to
 
 // What is sent to the backend: ISO instants, `to` exclusive.
 export type AuditQuery = { actor?: string; action?: string; category?: string; from?: string; to?: string };
-
-export const SUPPORT_ACTOR = "support";
-export const SUPPORT_LABEL = "RFPilot Support";
 
 const record = (value: unknown): Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -52,8 +49,9 @@ const ACTOR_KINDS = ["member", "support", "unknown", "system"] as const;
 const toActor = (value: unknown): AuditActor => {
   const raw = record(value);
   const kind = ACTOR_KINDS.find((candidate) => candidate === raw.kind) ?? "unknown";
-  // Staff are never named: whatever the payload says, a support actor reads "RFPilot Support".
-  if (kind === "support") return { kind, id: nullableText(raw.id), name: SUPPORT_LABEL, email: null };
+  // Staff events are never shown (isHiddenEvent); the kind is kept only so they can be dropped,
+  // and nothing the payload says about the person is.
+  if (kind === "support") return { kind, id: null, name: "", email: null };
   if (kind === "system") return { kind, id: null, name: "System", email: null };
   if (kind === "unknown") return { kind, id: nullableText(raw.id), name: "Unknown user", email: null };
   const email = nullableText(raw.email);
@@ -89,9 +87,10 @@ const toEvent = (value: unknown): AuditEvent | null => {
   };
 };
 
-// Owner decision, 2026-11-17: customers no longer grant, see or control RFPilot Support access,
-// and its past events are not part of their audit log. The backend still returns them until its
-// own change ships, so they are dropped here, before anything is counted, listed or exported.
+// Owner decisions, 2026-11-17: customers no longer grant, see or control RFPilot Support access,
+// its past events are not part of their audit log, and neither is any other RFPilot staff
+// activity. The backend still returns these events until its own change ships, so they are
+// dropped here, before anything is counted, listed or exported.
 const SUPPORT_ACCESS_CATEGORY = "support_access";
 const SUPPORT_ACCESS_ACTION = /^support_access\./;
 const SUPPORT_ACCESS_TARGET = "support_access_grant";
@@ -103,10 +102,25 @@ export const isSupportAccessEvent = (event: Pick<AuditEvent, "category" | "actio
   // RFPilot Support acting under a grant, whatever the event is called.
   || (event.actor.kind === "support" && SUPPORT_ACCESS_DETAIL in event.details);
 
+// The staff-attributed actions of the backend's audit catalog, by name. The actor rule below
+// already covers them and any the backend adds later; this list is the second line.
+export const STAFF_ACTIONS: readonly string[] = [
+  "organization.legacy_customer.placed",
+  "organization.legacy_customer.placement_rolled_back",
+  "organization.plan_changed",
+];
+const STAFF_OPTION_LABEL = /RFPilot Support/i;
+const isHiddenAction = (action: string) => SUPPORT_ACCESS_ACTION.test(action) || STAFF_ACTIONS.includes(action);
+
+// Everything a customer's audit log leaves out: any event whose actor is RFPilot staff, the
+// staff actions by name, and every Support access event.
+export const isHiddenEvent = (event: Pick<AuditEvent, "category" | "action" | "actor" | "target" | "details">): boolean =>
+  event.actor.kind === "support" || STAFF_ACTIONS.includes(event.action) || isSupportAccessEvent(event);
+
 export const toAuditPage = (value: unknown): AuditPage => {
   const raw = record(value);
   const events = Array.isArray(raw.events)
-    ? raw.events.map(toEvent).filter((event): event is AuditEvent => event !== null && !isSupportAccessEvent(event))
+    ? raw.events.map(toEvent).filter((event): event is AuditEvent => event !== null && !isHiddenEvent(event))
     : [];
   return { events, nextCursor: nullableText(raw.nextCursor) };
 };
@@ -125,10 +139,10 @@ export const toAuditFilterOptions = (value: unknown): AuditFilterOptions => {
     const label = text(category.label);
     if (!key || !label || key === SUPPORT_ACCESS_CATEGORY) return null;
     const actions = (Array.isArray(category.actions) ? category.actions : []).map(toOption)
-      .filter((option): option is AuditActionOption => option !== null && !SUPPORT_ACCESS_ACTION.test(option.value));
+      .filter((option): option is AuditActionOption => option !== null && !isHiddenAction(option.value) && !STAFF_OPTION_LABEL.test(option.label));
     return { key, label, actions };
   }).filter((category): category is AuditCategoryOption => category !== null);
-  return { categories, supportActor: { value: SUPPORT_ACTOR, label: SUPPORT_LABEL } };
+  return { categories };
 };
 
 // ── Filters ─────────────────────────────────────────────────────────────────────────────────
@@ -153,7 +167,8 @@ export const filterProblem = (filters: AuditFilters): string | null => {
 // "From 3 Nov to 5 Nov" means all of both days in the reader's own time zone.
 export const toAuditQuery = (filters: AuditFilters): AuditQuery => {
   const query: AuditQuery = {};
-  if (filters.actor) query.actor = filters.actor;
+  // Only a member can be chosen; the backend's "support" actor filter is never sent.
+  if (filters.actor && filters.actor !== "support") query.actor = filters.actor;
   if (filters.action.startsWith(CATEGORY_PREFIX)) query.category = filters.action.slice(CATEGORY_PREFIX.length);
   else if (filters.action) query.action = filters.action;
   const from = localMidnight(filters.from);
@@ -213,7 +228,6 @@ export const targetLabel = (target: AuditEvent["target"]): string => {
 };
 export const shortId = (id: string): string => (id.length > 10 ? `…${id.slice(-6)}` : id);
 
-const SCOPES: Record<string, string> = { rfp: "One proposal", organization: "Whole organization" };
 const SETTINGS: Record<string, string> = {
   requireTwoFactor: "Require two-factor",
   requireSso: "Require company sign-in",
@@ -237,15 +251,11 @@ const DETAIL_LABELS: Record<string, string> = {
   recoveryCodesRemaining: "Recovery codes left",
   revokedSessions: "Sessions signed out",
   signedOutMembers: "Members signed out",
-  placedInTeam: "Placed in team",
   teamId: "Team ID",
   proposalId: "Proposal ID",
   contactCount: "Contacts",
   secretChanged: "Client secret changed",
-  fromPlan: "Previous plan",
-  toPlan: "New plan",
 };
-const PLAN_KEYS = new Set(["fromPlan", "toPlan"]);
 const ROLE_KEYS = new Set(["role", "previousRole", "newOwnerPreviousRole", "previousOwnerNewRole"]);
 const ID_KEYS = new Set(["teamId", "proposalId"]);
 
@@ -257,7 +267,6 @@ const settingValue = (value: AuditDetailValue | undefined): string =>
 export const detailLines = (event: Pick<AuditEvent, "details" | "reason" | "decision">): string[] => {
   const { details } = event;
   const lines: string[] = [];
-  if (typeof details.scope === "string") lines.push(`Scope: ${SCOPES[details.scope] ?? sentence(details.scope)}`);
   if (typeof details.setting === "string") {
     const name = SETTINGS[details.setting] ?? sentence(details.setting);
     const before = settingValue(details.from);
@@ -265,14 +274,13 @@ export const detailLines = (event: Pick<AuditEvent, "details" | "reason" | "deci
     lines.push(before && after ? `${name}: ${before} → ${after}` : after ? `${name}: ${after}` : name);
   }
   for (const [key, value] of Object.entries(details)) {
-    if (["scope", "setting", "from", "to", "value"].includes(key)) continue;
+    if (["setting", "from", "to", "value"].includes(key)) continue;
     // Only a label made from a key is reworded; recorded values (a domain, a team) are shown as stored.
     const label = DETAIL_LABELS[key] ?? sentence(key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase());
     if (ROLE_KEYS.has(key)) {
       const role = roleLabel(String(value));
       lines.push(`${label}: ${role === "No role" ? sentence(String(value)) : role}`);
     }
-    else if (PLAN_KEYS.has(key)) lines.push(`${label}: ${sentence(String(value))}`);
     else if (key === "expiresAt" && typeof value === "string" && !Number.isNaN(Date.parse(value))) lines.push(`${label}: ${formatAuditTime(value, "UTC")} UTC`);
     else if (ID_KEYS.has(key)) lines.push(`${label}: ${shortId(String(value))}`);
     else lines.push(`${label}: ${scalar(value)}`);
@@ -308,13 +316,16 @@ export const auditErrorMessage = (error: ErrorLike, fallback: string): string =>
 const FORMULA_CELL = /(^|,|\r\n|\n)"(\s*[=+\-@]|[\t\r])/g;
 export const neutralizeCsv = (csv: string): string => csv.replace(FORMULA_CELL, (_match, lead: string, start: string) => `${lead}"'${start}`);
 
-// The export is written by the backend, which still includes Support access rows. The file has
-// no action code or category key, only the labels the backend prints, so rows are matched on
-// those: the "Category" label, the four "Support access …" action labels, the grant target type,
-// and a support actor with a grant id in "Details". A file whose header isn't recognized is
-// returned untouched (`rows` null) rather than guessed at.
+// The export is written by the backend, which still includes RFPilot staff and Support access
+// rows. Staff rows are found by the file's "Actor type" column ("support"), which does not depend
+// on any label. The file has no action code or category key, so as a fallback rows are also
+// matched on what the backend prints: the "Category" label, the "Support access …" and
+// "… by RFPilot Support" action labels, the grant target type, and a grant id in "Details".
+// A file whose header has none of these columns is returned as it came. `rows` is always the
+// number of data rows in the returned file, counted from the parsed records.
+const STAFF_ACTOR_TYPE = "support";
 const SUPPORT_ACCESS_CATEGORY_LABEL = "RFPilot Support access";
-const SUPPORT_ACCESS_ACTION_LABEL = /^Support access (granted|revoked|used|refused)$/;
+const HIDDEN_ACTION_LABEL = /^Support access (granted|revoked|used|refused)$|RFPilot Support/i;
 
 // Splits CSV text into records, each kept as its original text, with its unquoted cells.
 const csvRecords = (csv: string): { raw: string; cells: string[] }[] => {
@@ -346,20 +357,21 @@ const csvRecords = (csv: string): { raw: string; cells: string[] }[] => {
   return records;
 };
 
-export const withoutSupportAccessRows = (csv: string): { csv: string; rows: number | null; removed: number } => {
+export const withoutHiddenRows = (csv: string): { csv: string; rows: number; removed: number } => {
   const [header, ...body] = csvRecords(csv);
   const column = (name: string) => header?.cells.indexOf(name) ?? -1;
   const category = column("Category");
   const action = column("Action");
-  if (!header || (category < 0 && action < 0)) return { csv, rows: null, removed: 0 };
-  const targetType = column("Target type");
   const actorType = column("Actor type");
+  if (!header || (actorType < 0 && category < 0 && action < 0)) return { csv, rows: body.length, removed: 0 };
+  const targetType = column("Target type");
   const details = column("Details");
   const hidden = ({ cells }: { cells: string[] }) =>
-    cells[category] === SUPPORT_ACCESS_CATEGORY_LABEL
-    || SUPPORT_ACCESS_ACTION_LABEL.test(cells[action] ?? "")
+    cells[actorType] === STAFF_ACTOR_TYPE
+    || cells[category] === SUPPORT_ACCESS_CATEGORY_LABEL
+    || HIDDEN_ACTION_LABEL.test(cells[action] ?? "")
     || cells[targetType] === SUPPORT_ACCESS_TARGET
-    || (cells[actorType] === "support" && /(^|; )grantId: /.test(cells[details] ?? ""));
+    || /(^|; )grantId: /.test(cells[details] ?? "");
   const kept = body.filter((row) => !hidden(row));
   const removed = body.length - kept.length;
   if (removed === 0) return { csv, rows: body.length, removed };

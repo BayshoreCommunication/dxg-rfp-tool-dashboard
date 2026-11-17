@@ -6,7 +6,7 @@ import {
   neutralizeCsv,
   toAuditFilterOptions,
   toAuditPage,
-  withoutSupportAccessRows,
+  withoutHiddenRows,
   type AuditFilterOptions,
   type AuditPage,
   type AuditQuery,
@@ -20,10 +20,11 @@ import { orgRequest, type OrgActionResult } from "./organizationApi";
 
 const BASE = "/api/v1/organization/audit-events";
 
-// RFPilot Support access events are dropped from every page (toAuditPage). A page that held
-// nothing else would read as "no activity" although older events follow, so the next pages are
-// fetched until one has something to show, up to this many extra requests.
-const EMPTY_PAGE_SKIPS = 5;
+// RFPilot staff and Support access events are dropped from every page (toAuditPage). A page that
+// held nothing else would read as "no activity" although older events follow, so the next pages
+// are fetched until one has something to show, the log ends or a request fails. Bounded: at most
+// this many extra requests; after that the screen says so and offers "Load more".
+const EMPTY_PAGE_SKIPS = 10;
 
 export async function listAuditEventsAction(query: AuditQuery = {}, cursor?: string | null): Promise<OrgActionResult<AuditPage>> {
   let next = cursor;
@@ -42,8 +43,8 @@ export async function getAuditFilterOptionsAction(): Promise<OrgActionResult<Aud
 export type AuditExport = { csv: string; fileName: string; rows: number; truncated: boolean };
 
 // The export takes the same filters as the list, so the file holds what the screen shows
-// (without paging), from the same organization. The backend writes the file; RFPilot Support
-// access rows are taken out of it here (withoutSupportAccessRows), as they are from the list.
+// (without paging), from the same organization. The backend writes the file; RFPilot staff and
+// Support access rows are taken out of it here (withoutHiddenRows), as they are from the list.
 export async function exportAuditLogAction(query: AuditQuery = {}): Promise<OrgActionResult<AuditExport>> {
   try {
     const res = await authenticatedBackendFetch(`${API_URL}${BASE}/export${auditQueryString(query)}`, { method: "GET", cache: "no-store" });
@@ -56,12 +57,13 @@ export async function exportAuditLogAction(query: AuditQuery = {}): Promise<OrgA
         message: typeof payload.message === "string" ? payload.message : "The export failed.",
       };
     }
-    const narrowed = withoutSupportAccessRows(neutralizeCsv(await res.text()));
+    const narrowed = withoutHiddenRows(neutralizeCsv(await res.text()));
     const csv = narrowed.csv;
     const rowsHeader = res.headers?.get?.("X-Audit-Export-Rows");
-    // A missing header is not zero rows: count them from the file instead. Rows taken out of the
-    // file are not counted either.
-    const rows = narrowed.removed > 0 && narrowed.rows !== null ? narrowed.rows : rowsHeader ? Number(rowsHeader) : Number.NaN;
+    // The backend's count stands only when no row was taken out and the header is a number;
+    // otherwise the rows are counted from the parsed file.
+    const counted = rowsHeader ? Number(rowsHeader) : Number.NaN;
+    const rows = narrowed.removed === 0 && Number.isFinite(counted) && counted >= 0 ? counted : narrowed.rows;
     return {
       success: true,
       status: res.status,
@@ -69,7 +71,7 @@ export async function exportAuditLogAction(query: AuditQuery = {}): Promise<OrgA
       data: {
         csv,
         fileName: exportFileName(),
-        rows: Number.isFinite(rows) && rows >= 0 ? rows : Math.max(0, csv.trimEnd().split("\r\n").length - 1),
+        rows,
         truncated: res.headers?.get?.("X-Audit-Export-Truncated") === "true",
       },
     };

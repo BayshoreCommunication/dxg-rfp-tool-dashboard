@@ -30,7 +30,7 @@ describe("/settings/audit", () => {
   beforeEach(() => {
     for (const mock of [mockList, mockOptions, mockMembers, mockIdentity]) mock.mockReset();
     mockList.mockResolvedValue(ok({ events: [{ id: "e1" }], nextCursor: null }));
-    mockOptions.mockResolvedValue(ok({ categories: [], supportActor: { value: "support", label: "RFPilot Support" } }));
+    mockOptions.mockResolvedValue(ok({ categories: [] }));
     mockMembers.mockResolvedValue(ok([{ userId: "u1", name: "Olivia Owner", email: "owner@example.com", role: "owner" }]));
   });
 
