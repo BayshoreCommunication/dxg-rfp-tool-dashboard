@@ -4185,14 +4185,14 @@ export default function AssistantWorkspacePage({
   const [extractionSeen, setExtractionSeen] = useState(false);
   const [revealIntroDone, setRevealIntroDone] = useState(false);
   const [revealGraceOver, setRevealGraceOver] = useState(false);
-  const [revealHandOff, setRevealHandOff] = useState<{ details: number; questions: number } | null>(null);
+  const [revealHandOff, setRevealHandOff] = useState(false);
   if (extractionPending && !extractionSeen) {
     // Adjusting state during render (React's documented pattern) so the
     // finished cards' first render already knows they are part of a reveal.
     setExtractionSeen(true);
     setRevealIntroDone(false);
     setRevealGraceOver(false);
-    setRevealHandOff(null);
+    setRevealHandOff(false);
   }
   // A failed send or extraction is not a reveal: its error shows at once and
   // nothing waits behind a placeholder.
@@ -4229,11 +4229,7 @@ export default function AssistantWorkspacePage({
     (extractionSeen && !extractionPending && (reducedMotion || revealAborted))
   ) {
     setExtractionSeen(false);
-    setRevealHandOff(
-      revealActive && reviewRowCount > 0
-        ? { details: reviewRowCount, questions: remainingIntakeCount }
-        : null,
-    );
+    setRevealHandOff(revealActive && reviewRowCount > 0);
   }
   const reviewCardVisibleRows = revealActive ? shownReviewRows : reviewRowCount;
   const showDetailsSkeleton =
@@ -5644,20 +5640,6 @@ export default function AssistantWorkspacePage({
                             revealing={revealSettling}
                           />
                         </div>
-                      </li>
-                    )}
-                  {revealHandOff &&
-                    revealHandOff.questions > 0 &&
-                    currentQuestion &&
-                    !revealSettling &&
-                    !chatBusy &&
-                    !extractionPending && (
-                      <li data-testid="extraction-hand-off" className="flex items-start gap-2.5 sm:gap-3">
-                        <span aria-hidden="true" className="mt-0.5 h-8 w-8 shrink-0" />
-                        <p className="dxg-reveal-in rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm leading-6 text-slate-700 shadow-sm">
-                          {revealHandOff.details === 1 ? 'Your detail is saved.' : `All ${revealHandOff.details} details are saved.`}{' '}
-                          Next, {revealHandOff.questions === 1 ? 'one quick question' : `${revealHandOff.questions} quick questions`} to fill the gaps.
-                        </p>
                       </li>
                     )}
                   {lastConfirmed && (
