@@ -420,7 +420,7 @@ type ProposalSectionKey = {
 const defaultProposalData: ProposalData = {
   proposalStatus: "submitted",
   proposalSettings: {
-    linkPrefix: "abuco",
+    linkPrefix: "",
     defaultFont: "Poppins",
     proposalLanguage: "English",
     defaultCurrency: "$",
@@ -1178,7 +1178,8 @@ const normalizeRoomFunctions = (
   }];
 };
 
-const mapApiProposalToFormData = (
+// Exported for its unit test only.
+export const mapApiProposalToFormData = (
   raw: EditableProposalApiResponse,
 ): ProposalData => ({
   ...defaultProposalData,

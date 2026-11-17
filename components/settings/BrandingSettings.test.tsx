@@ -51,8 +51,9 @@ describe('BrandingSettings — rendering', () => {
     expect(screen.getByDisplayValue('Acme Corp')).toBeInTheDocument()
   })
 
-  // The prefix never changed a real link (vendors get ${FRONTEND_URL}/proposal-view/<slug> from
-  // the backend), so the field is gone. The stored value stays in the form state untouched.
+  // The prefix changed no real link (vendors get ${FRONTEND_URL}/proposal-view/<slug> from the
+  // backend). Its one effect was as a fallback brand name on the proposal document, which is
+  // removed too. The field is gone; the stored value stays in the form state untouched.
   it('does not offer a proposal link prefix or name another product domain', () => {
     const { container } = render(<BrandingSettings value={defaultValue} onChange={mockOnChange} />)
     expect(screen.queryByLabelText(/link prefix/i)).not.toBeInTheDocument()

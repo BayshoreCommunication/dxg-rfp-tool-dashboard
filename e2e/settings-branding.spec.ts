@@ -6,8 +6,9 @@ import { expectProposalWording } from "./support/wording";
 const expect = baseExpect.configure({ timeout: 45_000 });
 
 // Settings > General > Branding against the stub backend (settingsFixture.mjs). The "Proposal Link
-// Prefix" field ended in another product's domain and never changed a real link, so it is gone.
-// The stub's saved settings still hold a prefix: it must not be shown, and saving must not lose it.
+// Prefix" field ended in another product's domain and changed no real link (its one effect, a
+// fallback brand name on the proposal document, is removed too), so it is gone. This spec seeds
+// saved settings that still hold a prefix: it must not be shown, and saving must not lose it.
 
 const backendOrigin = process.env.E2E_BACKEND_ORIGIN ?? "http://127.0.0.1:8011";
 const STORED_PREFIX = "northwind-legacy";
@@ -23,7 +24,12 @@ test.beforeEach(async ({ page, request }) => {
     if (message.type() === "error") seen.push(message.text());
   });
   page.on("pageerror", (error) => seen.push(String(error)));
-  await request.post(`${backendOrigin}/__e2e/settings`);
+  await request.post(`${backendOrigin}/__e2e/settings`, { data: { seed: "northwind" } });
+});
+
+// Leave the stub as the other specs expect it: no saved settings.
+test.afterEach(async ({ request }) => {
+  await request.post(`${backendOrigin}/__e2e/settings`, { data: {} });
 });
 
 const signIn = async (page: Page) => {
