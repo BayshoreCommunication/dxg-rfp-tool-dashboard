@@ -227,7 +227,7 @@ export const supportGrantErrorMessage = (error: ErrorLike, fallback = "Something
   if (known) return known;
   // Other roles get a plain 403 with no code.
   if (error.status === 403) return MESSAGES.SUPPORT_GRANT_FORBIDDEN;
-  const message = orgErrorMessage(error, fallback);
-  // The backend's own wording is shown for codes we don't know, but never its internal noun.
-  return /proposal/i.test(message) ? fallback : message;
+  // A code we don't know: the backend's own message is written for people and says "proposal",
+  // like the rest of the app. orgErrorMessage never shows a bare code.
+  return orgErrorMessage(error, fallback);
 };

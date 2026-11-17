@@ -226,7 +226,7 @@ export async function handleSupportGrants(request, response, url) {
     if (input.proposalId) {
       const rfp = rfpOf(organizationId, String(input.proposalId));
       if (!rfp) {
-        refuse(response, 404, "PROPOSAL_NOT_FOUND", "RFP not found.");
+        refuse(response, 404, "PROPOSAL_NOT_FOUND", "Proposal not found.");
         return true;
       }
       proposalId = rfp.id;

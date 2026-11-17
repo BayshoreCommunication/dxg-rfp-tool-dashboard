@@ -51,7 +51,7 @@ const entitlements = () => {
 
 const LOCKED_MESSAGES = {
   vendorResponses: "Vendor responses aren't included in your plan. Contact us to upgrade.",
-  proposalIntelligence: "RFP intelligence isn't included in your plan. Contact us to upgrade.",
+  proposalIntelligence: "Proposal intelligence isn't included in your plan. Contact us to upgrade.",
 };
 
 // The feature a route needs, as in the backend's tests/plan-entitlements.test.js.

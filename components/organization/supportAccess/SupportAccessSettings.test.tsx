@@ -274,7 +274,7 @@ describe("SupportAccessSettings (ORG-405)", () => {
     const dialog = within(screen.getByRole("dialog"));
     fireEvent.click(await dialog.findByRole("radio", { name: /Spring Sales Kickoff/ }));
     // The RFP was deleted, or belongs to another organization: both read as not found.
-    mockCreate.mockResolvedValue({ success: false, status: 404, code: "PROPOSAL_NOT_FOUND", message: "RFP not found." });
+    mockCreate.mockResolvedValue({ success: false, status: 404, code: "PROPOSAL_NOT_FOUND", message: "Proposal not found." });
     fireEvent.click(dialog.getByRole("button", { name: "Grant access" }));
     expect(await dialog.findByRole("alert")).toHaveTextContent("That proposal wasn't found. It may have been deleted, so choose another.");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
