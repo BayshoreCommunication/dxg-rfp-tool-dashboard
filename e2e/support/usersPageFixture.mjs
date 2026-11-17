@@ -27,6 +27,8 @@ const isAdmin = (actor) => actor.roles.includes("owner") || actor.roles.includes
 // The new-organization setup wizard (/welcome). Off until a spec turns it on with
 // POST /__e2e/welcome { on: true }: the organization then reads as part-way through onboarding
 // (the invite step) and the invitations sent from there are kept for the spec to read back.
+// The switch is module-global: one stub process serves every test, so it is only safe because the
+// Playwright config runs with `workers: 1` and each spec turns it off again afterwards.
 let welcome = false;
 let welcomeInvitations = [];
 

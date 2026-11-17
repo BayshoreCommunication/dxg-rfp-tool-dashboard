@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createSupportGrantAction, searchGrantableRfpsAction } from "@/app/actions/supportGrants";
 import {
   InlineError,
@@ -36,6 +36,8 @@ type Props = {
 };
 
 const CUSTOM = "custom";
+// A submit this soon after Enter went down on the expiry list is that same keypress.
+const ENTER_SUBMIT_WINDOW_MS = 100;
 
 // ORG-405: grant RFPilot Support read access to one RFP or the whole organization, until an
 // expiry the Owner or Admin chooses (7 days unless they change it, 30 at most).
@@ -51,6 +53,11 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
   const [error, setError] = useState<string | null>(null);
   // When the dialog opened; the expiry preview is measured from here.
   const [openedAt] = useState(() => Date.now());
+  // When Enter last went down on the expiry list (the event's own timeStamp). The key itself is
+  // left to the browser (open the list, or confirm an option); only the form submission the same
+  // keypress can trigger is dropped. It expires by itself: Safari may never send the keyup or blur
+  // that clears it, and a stuck flag would leave "Grant access" doing nothing.
+  const enterOnExpiryAt = useRef<number | null>(null);
 
   useEffect(() => {
     if (scope !== "rfp") return;
@@ -134,6 +141,13 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
+          // Enter in a list chooses from the list; it never grants access.
+          const enterAt = enterOnExpiryAt.current;
+          if (enterAt !== null) {
+            const since = event.timeStamp - enterAt;
+            if (since >= 0 && since < ENTER_SUBMIT_WINDOW_MS) return;
+            enterOnExpiryAt.current = null;
+          }
           void submit();
         }}
       >
@@ -214,16 +228,15 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
                 setExpiry(event.target.value);
                 setError(null);
               }}
-              // Enter on the closed list opens it; it never grants access. (While the list is
-              // open the browser's own picker takes Enter to confirm the option.)
               onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                event.preventDefault();
-                try {
-                  event.currentTarget.showPicker?.();
-                } catch {
-                  // No picker to open here (an older browser); Space and the arrow keys still work.
-                }
+                // A held key repeats, and each repeat renews the stamp.
+                if (event.key === "Enter") enterOnExpiryAt.current = event.timeStamp;
+              }}
+              onKeyUp={() => {
+                enterOnExpiryAt.current = null;
+              }}
+              onBlur={() => {
+                enterOnExpiryAt.current = null;
               }}
               className={inputClass}
             >

@@ -143,7 +143,7 @@ export default function SupportFab() {
 
   // White text needs 4.5:1 (WCAG AA). The brand blue #008ad2 gives 3.77:1, so the button sits on
   // #0076b4 (4.94:1) and darkens to brand-dark #0069a0 (5.95:1) on hover; the unread badge is
-  // rose-600 (4.70:1) for the same reason.
+  // rose-600 (4.53:1, up from rose-500's 3.75:1) for the same reason.
   return (
     <button
       ref={elementRef}

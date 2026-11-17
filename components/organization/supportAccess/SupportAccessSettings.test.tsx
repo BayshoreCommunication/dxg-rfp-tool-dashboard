@@ -1,5 +1,5 @@
 import { RFP_NOUN } from "@/test/wording";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import SupportAccessSettings from "./SupportAccessSettings";
 import type { SupportGrant, SupportGrantPage } from "./supportGrantModel";
 
@@ -189,37 +189,83 @@ describe("SupportAccessSettings (ORG-405)", () => {
     await waitFor(() => expect(mockCreate).toHaveBeenCalledWith({ proposalId: null, expiresInDays: 21, reason: "" }));
   });
 
-  it("does not grant access when Enter is pressed in the expiry list; it opens the list instead", async () => {
-    const showPicker = jest.fn();
-    Object.defineProperty(HTMLSelectElement.prototype, "showPicker", { configurable: true, writable: true, value: showPicker });
-    try {
-      await renderPage();
-      fireEvent.click(screen.getByRole("button", { name: "Grant access" }));
-      const dialog = within(screen.getByRole("dialog"));
-      // Everything a grant needs is chosen, so a submit here would go through.
-      fireEvent.click(await dialog.findByRole("radio", { name: /Autumn Gala/ }));
-      const expiry = dialog.getByLabelText("Access ends after");
+  // Events carry their own clock; the dialog compares the submit's timeStamp with the Enter
+  // keydown's, so the tests set both instead of waiting.
+  const at = (event: Event, timeStamp: number) => {
+    Object.defineProperty(event, "timeStamp", { value: timeStamp });
+    return event;
+  };
+  const openGrantDialogWithProposal = async () => {
+    await renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Grant access" }));
+    const dialog = within(screen.getByRole("dialog"));
+    // Everything a grant needs is chosen, so a submit would go through.
+    fireEvent.click(await dialog.findByRole("radio", { name: /Autumn Gala/ }));
+    const expiry = dialog.getByLabelText("Access ends after");
+    mockCreate.mockResolvedValue(ok(grant({ id: "g-new", rfp: { id: "p2", title: "Autumn Gala" } })));
+    return { dialog, expiry, form: expiry.closest("form") as HTMLFormElement };
+  };
 
-      // fireEvent answers false when the handler cancelled the key, which is what stops the
-      // browser's implicit form submission.
-      expect(fireEvent.keyDown(expiry, { key: "Enter" })).toBe(false);
-      expect(showPicker).toHaveBeenCalledTimes(1);
-      await act(async () => {});
-      expect(mockCreate).not.toHaveBeenCalled();
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
+  it("does not grant access when Enter in the expiry list submits the form, and still grants from the days field", async () => {
+    const { dialog, expiry, form } = await openGrantDialogWithProposal();
 
-      // Other keys are left to the list, and the choice still changes.
-      for (const key of [" ", "ArrowDown", "Escape", "Tab"]) expect(fireEvent.keyDown(expiry, { key })).toBe(true);
-      fireEvent.change(expiry, { target: { value: "14" } });
-      expect(expiry).toHaveValue("14");
+    // The key is left to the browser (it opens the list or confirms an option): not cancelled.
+    expect(fireEvent(expiry, at(createEvent.keyDown(expiry, { key: "Enter" }), 5_000))).toBe(true);
+    // A browser that treats Enter on a select as "send the form" fires submit in the same keypress.
+    fireEvent(form, at(createEvent.submit(form), 5_002));
+    // A held key repeats, and the submit that follows a repeat is dropped as well.
+    fireEvent(expiry, at(createEvent.keyDown(expiry, { key: "Enter", repeat: true }), 5_500));
+    fireEvent(form, at(createEvent.submit(form), 5_501));
+    fireEvent.keyUp(expiry, { key: "Enter" });
+    await act(async () => {});
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(dialog.queryByRole("alert")).not.toBeInTheDocument();
 
-      // Enter still submits from the custom days field.
-      fireEvent.change(expiry, { target: { value: "custom" } });
-      expect(fireEvent.keyDown(dialog.getByLabelText("Days (1 to 30)"), { key: "Enter" })).toBe(true);
-      expect(mockCreate).not.toHaveBeenCalled();
-    } finally {
-      delete (HTMLSelectElement.prototype as { showPicker?: unknown }).showPicker;
-    }
+    // The list still works, and Enter in the days field still grants.
+    fireEvent.change(expiry, { target: { value: "custom" } });
+    const days = dialog.getByLabelText("Days (1 to 30)");
+    fireEvent.change(days, { target: { value: "3" } });
+    fireEvent.keyDown(days, { key: "Enter" });
+    fireEvent.submit(form);
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledWith({ proposalId: "p2", expiresInDays: 3, reason: "" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("grants after Enter on the expiry list even if no keyup or blur ever arrives", async () => {
+    const { expiry, form } = await openGrantDialogWithProposal();
+
+    // Safari can swallow the keyup in its picker and does not focus a clicked button, so nothing
+    // clears the mark. Within the window the submit is still that keypress and is dropped…
+    fireEvent(expiry, at(createEvent.keyDown(expiry, { key: "Enter" }), 5_000));
+    fireEvent(form, at(createEvent.submit(form), 5_099));
+    await act(async () => {});
+    expect(mockCreate).not.toHaveBeenCalled();
+
+    // …and once it has passed, a submit is the member's own and goes through.
+    fireEvent(form, at(createEvent.submit(form), 5_100));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("grants from a click on Grant access long after Enter on the expiry list, with no keyup or blur", async () => {
+    const { dialog, expiry } = await openGrantDialogWithProposal();
+    // Stamped far before any clock the click's own submit event could carry.
+    fireEvent(expiry, at(createEvent.keyDown(expiry, { key: "Enter" }), -1_000_000));
+    fireEvent.click(dialog.getByRole("button", { name: "Grant access" }));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledWith({ proposalId: "p2", expiresInDays: 7, reason: "" }));
+  });
+
+  it.each([
+    ["Enter has been released", (expiry: HTMLElement) => fireEvent.keyUp(expiry, { key: "Enter" })],
+    ["the expiry list has lost focus", (expiry: HTMLElement) => fireEvent.blur(expiry)],
+  ])("grants straight away once %s", async (_name, clear) => {
+    const { expiry, form } = await openGrantDialogWithProposal();
+    fireEvent(expiry, at(createEvent.keyDown(expiry, { key: "Enter" }), 5_000));
+    clear(expiry);
+    // Still inside the window: only the keyup or blur can have let this through.
+    fireEvent(form, at(createEvent.submit(form), 5_010));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
   });
 
   it("keeps the dialog open with a human message when the backend refuses the grant", async () => {
