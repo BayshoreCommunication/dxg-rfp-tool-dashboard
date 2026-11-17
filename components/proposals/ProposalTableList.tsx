@@ -43,7 +43,7 @@ import {
 } from "@/lib/proposals/proposalShareLink";
 import type { ProposalFilterType } from "./ProposalFilters";
 import { formatAppDate } from "@/lib/dateFormat";
-import { rowPermissionsOr } from "@/lib/proposals/rowPermissions";
+import { toRowPermissions } from "@/lib/proposals/rowPermissions";
 
 type ProposalListItem = {
   _id: string;
@@ -71,7 +71,7 @@ type ProposalListItem = {
     contactLastName?: string;
   };
   // What the member may do to this proposal ({ canEdit, canDuplicate, canArchive }), sent by
-  // GET /api/proposals. Missing on an item from an API that doesn't send it yet.
+  // GET /api/proposals. The key is missing only on an item from an API that doesn't send it yet.
   permissions?: unknown;
 };
 
@@ -686,14 +686,17 @@ export default function ProposalTableList({
               const isArchiveView = activeFilter === "archive";
               const previewHref = `/proposal/${proposalSlug}`;
               const editHref = `/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`;
-              // Each action follows the row's own permission. A row without flags (older API)
-              // behaves as it did before them: everything offered, Edit unless the member is a
-              // Viewer.
-              const permissions = rowPermissionsOr(proposal.permissions, () => ({
-                canEdit: !readOnly,
-                canDuplicate: true,
-                canArchive: true,
-              }));
+              // Each action follows the row's own permission. A present `permissions` is read
+              // flag by flag and grants nothing it doesn't say (null, partial or malformed
+              // included). Only a row with no `permissions` key at all (older API) behaves as it
+              // did before the flags: everything offered, Edit unless the member is a Viewer.
+              const sentPermissions = toRowPermissions(proposal.permissions);
+              const permissions = sentPermissions ?? { canEdit: !readOnly, canDuplicate: true, canArchive: true };
+              // Who may permanently delete is an open product decision and has no flag of its
+              // own. The one thing known is that it needs at least the right to archive, so
+              // "Delete forever" is hidden only where the API said the member may not archive;
+              // a row without `permissions` keeps it, as before.
+              const deleteForeverOffered = !sentPermissions || sentPermissions.canArchive;
               // One rule for the Edit action and the title, so they can never disagree: an
               // archived row offers neither, and a member who can't edit gets the preview.
               const editOffered = !isArchiveView && permissions.canEdit;
@@ -867,7 +870,7 @@ export default function ProposalTableList({
                         </div>
                       </div>
 
-                      {isArchiveView ? (
+                      {isArchiveView ? (permissions.canArchive || deleteForeverOffered) && (
                         <div className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:items-center">
                           {/* canArchive on an archived proposal means "may restore". */}
                           {permissions.canArchive && (
@@ -881,12 +884,14 @@ export default function ProposalTableList({
                               {restoringId === proposal._id ? "Restoring..." : "Restore"}
                             </button>
                           )}
-                          <ActionButton
-                            icon={<Trash2 size={14} />}
-                            label={permanentDeletingId === proposal._id ? "Deleting..." : "Delete forever"}
-                            onClick={() => requestDeletion(proposal, "permanent")}
-                            disabled={permanentDeletingId === proposal._id}
-                          />
+                          {deleteForeverOffered && (
+                            <ActionButton
+                              icon={<Trash2 size={14} />}
+                              label={permanentDeletingId === proposal._id ? "Deleting..." : "Delete forever"}
+                              onClick={() => requestDeletion(proposal, "permanent")}
+                              disabled={permanentDeletingId === proposal._id}
+                            />
+                          )}
                         </div>
                       ) : (
                         <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:items-center">
