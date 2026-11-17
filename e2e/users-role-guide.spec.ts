@@ -222,8 +222,11 @@ test.describe("new organization setup", () => {
     await expect(role.locator("option")).toHaveText([/^Admin — /, /^Team Manager — /, /^Planner — /, /^Viewer — /]);
     await expect(role).toHaveValue("planner");
     // The form answers once the page has hydrated; a bad address being pointed out shows it has.
+    // Cleared first on every try: text typed before hydration is already the field's value, and
+    // React ignores an input event that sets the value it already has.
     const emails = page.getByLabel("Email addresses");
     await expect(async () => {
+      await emails.fill("");
       await emails.fill("not-an-address");
       await baseExpect(page.getByText("Check this address: not-an-address")).toBeVisible({ timeout: 1_000 });
     }).toPass();
