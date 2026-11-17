@@ -594,7 +594,7 @@ test.describe("Proposals page: row permissions", () => {
   const card = (page: Page, name: string) => cards(page).filter({ hasText: name });
   const editLink = (page: Page, name: string) => card(page, name).getByRole("link", { name: "Edit", exact: true });
   const button = (page: Page, name: string, label: string) => card(page, name).getByRole("button", { name: label, exact: true });
-  const editHref = (n: number) => `/proposals/proposal-edit?proposalId=${String(n).padStart(24, "0")}`;
+  const editHref = (n: number) => `/proposals/proposal-edit?proposalId=${n.toString(16).padStart(24, "0")}`;
 
   const openProposals = async (page: Page, request: APIRequestContext, count: number) => {
     await request.post(`${STUB}/__e2e/dashboard?proposalsPage=on`);
@@ -635,8 +635,8 @@ test.describe("Proposals page: row permissions", () => {
 
   test("Planner: own proposals offer everything; a view-only share offers Save a copy and the preview, no Edit", async ({ page, request }, testInfo) => {
     await signInAs(page, "planner");
-    // Her five open proposals and Fiona's, shared with her to view.
-    await openProposals(page, request, 6);
+    // Her five open proposals and two of Fiona's: one shared with her to view, one to edit.
+    await openProposals(page, request, 7);
 
     await expectEditable(page, "Leadership Summit", 2);
     await expect(button(page, "Leadership Summit", "Save a copy")).toBeVisible();
@@ -645,7 +645,11 @@ test.describe("Proposals page: row permissions", () => {
     await expectPreviewOnly(page, "Field Kickoff");
     await expect(button(page, "Field Kickoff", "Archive")).toHaveCount(0);
     await expect(button(page, "Field Kickoff", "Save a copy")).toBeVisible();
-    await expect(cards(page).locator('a[href*="proposal-edit"]')).toHaveCount(10);
+    // An edit share: Edit and Save a copy, but archiving is never shared.
+    await expectEditable(page, "Regional Meetup 01", 20);
+    await expect(button(page, "Regional Meetup 01", "Save a copy")).toBeVisible();
+    await expect(button(page, "Regional Meetup 01", "Archive")).toHaveCount(0);
+    await expect(cards(page).locator('a[href*="proposal-edit"]')).toHaveCount(12);
     await checkPage(page, testInfo, "proposals-planner-view-only-share");
 
     // The copy goes through: a view-only share may copy (the stub answers as the backend does).

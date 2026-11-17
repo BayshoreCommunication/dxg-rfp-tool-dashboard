@@ -56,6 +56,7 @@ const rfp = (n, eventName, stage, owner, team, city, startOffset, invited, respo
   createdAt: at(-30 - n),
   updatedAt: at(-n),
   sharedWith: [],
+  editSharedWith: [],
   ...extra,
 });
 
@@ -89,8 +90,10 @@ const seedRfps = () => [
   rfp(15, "Northstar Leadership Summit 2027", "draft", FIONA, FIELD, "Orlando", 150, 0, 0),
   rfp(16, "Northstar Leadership Summit 2027", "draft", FIONA, FIELD, null, null, 0, 0),
   // Enough organization-wide rows for a second page.
+  // The first one is shared for editing with Priya (a Planner): a draft with no responses.
   ...Array.from({ length: 20 }, (_, index) =>
-    rfp(20 + index, `Regional Meetup ${String(index + 1).padStart(2, "0")}`, index % 2 ? "sent" : "draft", FIONA, FIELD, index % 3 ? "Dallas" : "Houston", 120 + index, index % 2 ? 2 : 0, 0)),
+    rfp(20 + index, `Regional Meetup ${String(index + 1).padStart(2, "0")}`, index % 2 ? "sent" : "draft", FIONA, FIELD, index % 3 ? "Dallas" : "Houston", 120 + index, index % 2 ? 2 : 0, 0,
+      index === 0 ? { editSharedWith: [id("4")] } : {})),
 ];
 
 export const dashboardAccessToken = (account) =>
@@ -113,7 +116,7 @@ const isAdmin = (actor) => actor.roles.includes("owner") || actor.roles.includes
 // own proposals for Planners, plus anything shared with the member.
 const visibleTo = (actor) => (row) => {
   if (isAdmin(actor)) return true;
-  if (row.sharedWith.includes(actor.userId)) return true;
+  if (row.sharedWith.includes(actor.userId) || row.editSharedWith.includes(actor.userId)) return true;
   if (actor.roles.includes("viewer")) return false;
   if (row.ownerUserId === actor.userId) return true;
   return actor.roles.includes("team_manager") && TEAMS.some((team) => team.id === row.teamId && team.managers.includes(actor.userId));
@@ -162,8 +165,9 @@ const mayChange = (actor, row) =>
 
 // rfpRowPermissions: each flag is the answer the mutation endpoint below gives. A copy only
 // reads its source, so it follows view access plus a role that can write.
+// An edit share lets a role that can write edit, and nothing else: archive is never shared.
 const permissionsFor = (actor, row) => ({
-  canEdit: mayChange(actor, row),
+  canEdit: mayChange(actor, row) || (mayWrite(actor) && row.editSharedWith.includes(actor.userId)),
   canDuplicate: mayWrite(actor) && visibleTo(actor)(row),
   canArchive: mayChange(actor, row),
 });
@@ -173,6 +177,7 @@ const withPermissions = (actor, row, item) => (row.withoutPermissions ? item : {
 const publicRow = (actor) => (row) => {
   const copy = { ...row };
   delete copy.sharedWith;
+  delete copy.editSharedWith;
   delete copy.withoutPermissions;
   return withPermissions(actor, row, copy);
 };
