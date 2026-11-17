@@ -28,6 +28,11 @@ test.beforeEach(async ({ page, request }) => {
   page.on("pageerror", (error) => seen.push(String(error)));
 });
 
+// The unread support reply one test seeds must not reach whatever runs next, pass or fail.
+test.afterEach(async ({ request }) => {
+  await request.post(STUB, { data: { unreadTickets: 0 } });
+});
+
 const signInAs = async (page: Page, role: Role) => {
   await page.goto("/sign-in");
   await page.getByPlaceholder("name@company.com").fill(`support-grants-${role}@example.com`);
