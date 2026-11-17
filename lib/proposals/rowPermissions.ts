@@ -7,19 +7,23 @@ export type RowPermissions = { canEdit: boolean; canDuplicate: boolean; canArchi
 
 const FLAGS = ["canEdit", "canDuplicate", "canArchive"] as const;
 
-// The flags as the backend sent them, or null when the item carries none (or something that
-// isn't three booleans, which is read the same way as none).
-export const toRowPermissions = (value: unknown): RowPermissions | null => {
-  if (typeof value !== "object" || value === null) return null;
-  const record = value as Record<string, unknown>;
-  if (!FLAGS.every((flag) => typeof record[flag] === "boolean")) return null;
-  return { canEdit: record.canEdit === true, canDuplicate: record.canDuplicate === true, canArchive: record.canArchive === true };
+// The flags of an item, or undefined when the item has no `permissions` key at all. A value
+// that is present is read flag by flag and fails closed: only a literal `true` grants an action,
+// so `null`, a partial object or non-boolean flags never give back what the backend didn't grant.
+export const toRowPermissions = (value: unknown): RowPermissions | undefined => {
+  if (value === undefined) return undefined;
+  const record = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+  const [canEdit, canDuplicate, canArchive] = FLAGS.map((flag) => record[flag] === true);
+  return { canEdit, canDuplicate, canArchive };
 };
 
 // The one place both lists decide between the row's own flags and the rule they used before.
 // The dashboard deploys on merge and the API on its own release, so an item from an older API
-// has no `permissions`: `legacy` then answers exactly as the list did before the flags existed.
-// TODO: remove the `legacy` fallback (and the rules passed to it) once the backend release that
-// sends `permissions` (dxg-rfp-tool-backend#136) is confirmed live in production.
+// has no `permissions` key: only then does `legacy` answer, exactly as the list did before the
+// flags existed.
+// TODO: remove the `legacy` fallback once the backend release that sends `permissions`
+// (dxg-rfp-tool-backend#136) is confirmed live in production, together with the rules passed to
+// it: `legacyRowActions` in components/dashboard/rfpDashboardModel.ts, and the `readOnly` prop of
+// components/proposals/ProposalTableList.tsx that components/proposals/ProposalsDetials.tsx passes.
 export const rowPermissionsOr = (value: unknown, legacy: () => RowPermissions): RowPermissions =>
   toRowPermissions(value) ?? legacy();

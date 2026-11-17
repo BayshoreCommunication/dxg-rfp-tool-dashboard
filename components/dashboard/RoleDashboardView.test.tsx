@@ -347,6 +347,32 @@ describe("RoleDashboardView", () => {
     expect(screen.queryByRole("button", { name: /^Actions for/ })).not.toBeInTheDocument();
   });
 
+  test("row permissions fail closed: a malformed value offers an Owner no write action and the name opens the preview", () => {
+    // As the API would send them; toRfpList is the only reader.
+    const raw = (id: string, eventName: string, permissions?: unknown) => ({
+      id: id.repeat(24), eventName, stage: "sent", ownerUserId: PRIYA, ...(permissions === undefined ? {} : { permissions }),
+    });
+    const list = toRfpList({
+      items: [
+        raw("1", "Null flags", null),
+        raw("2", "Partial flags", { canEdit: false }),
+        raw("3", "String flags", { canEdit: "true", canDuplicate: "true", canArchive: "true" }),
+        raw("4", "Empty flags", {}),
+        // The key is absent (older API): an Owner keeps the menu, as before.
+        raw("5", "Older API"),
+      ],
+      pagination: { total: 5, page: 1, limit: 10, totalPages: 1 },
+    });
+    render(<RoleDashboardView {...propsFor("owner", {}, { list })} />);
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByRole("button", { name: /^Actions for/ }).map((button) => button.getAttribute("aria-label"))).toEqual(["Actions for Older API"]);
+    for (const [name, id] of [["Null flags", "1"], ["Partial flags", "2"], ["String flags", "3"], ["Empty flags", "4"]]) {
+      expect(within(table).getByRole("link", { name })).toHaveAttribute("href", expect.stringMatching(new RegExp(`^/proposal/.*-${id.repeat(24)}$`)));
+    }
+    expect(within(table).getByRole("link", { name: "Older API" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${"5".repeat(24)}`);
+    expect(table.querySelectorAll('a[href*="proposal-edit"]')).toHaveLength(1);
+  });
+
   test("two proposals with one name are told apart by the line under it", () => {
     const list = {
       items: [

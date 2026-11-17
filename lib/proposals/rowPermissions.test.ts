@@ -8,10 +8,19 @@ describe("row permissions", () => {
     expect(toRowPermissions({ canEdit: false, canDuplicate: false, canArchive: false, extra: 1 })).toEqual({ canEdit: false, canDuplicate: false, canArchive: false });
   });
 
-  it("reads anything that isn't three booleans as no flags", () => {
-    for (const value of [undefined, null, "yes", 1, [], {}, { canEdit: true }, { canEdit: "true", canDuplicate: true, canArchive: true }]) {
-      expect(toRowPermissions(value)).toBeNull();
+  it("fails closed on a value that is present but malformed: only a literal true grants an action", () => {
+    const none = { canEdit: false, canDuplicate: false, canArchive: false };
+    for (const value of [null, "yes", 1, true, [], {}, { canEdit: "true", canDuplicate: 1, canArchive: "yes" }]) {
+      expect(toRowPermissions(value)).toEqual(none);
     }
+    expect(toRowPermissions({ canEdit: true })).toEqual({ ...none, canEdit: true });
+    expect(toRowPermissions({ canEdit: false })).toEqual(none);
+    expect(toRowPermissions({ canEdit: "true", canDuplicate: true, canArchive: null })).toEqual({ ...none, canDuplicate: true });
+  });
+
+  it("reads only an absent key as no flags sent", () => {
+    expect(toRowPermissions(undefined)).toBeUndefined();
+    expect(toRowPermissions(({} as { permissions?: unknown }).permissions)).toBeUndefined();
   });
 
   it("uses the row's flags when it has them, without consulting the old rule", () => {
@@ -20,8 +29,16 @@ describe("row permissions", () => {
     expect(old).not.toHaveBeenCalled();
   });
 
-  it("falls back to the old rule for an item from an API that sends no flags", () => {
+  it("falls back to the old rule only for an item from an API that sends no flags", () => {
     expect(rowPermissionsOr(undefined, () => legacy)).toEqual(legacy);
-    expect(rowPermissionsOr(null, () => ({ canEdit: false, canDuplicate: true, canArchive: true }))).toEqual({ canEdit: false, canDuplicate: true, canArchive: true });
+    expect(rowPermissionsOr(undefined, () => ({ canEdit: false, canDuplicate: true, canArchive: true }))).toEqual({ canEdit: false, canDuplicate: true, canArchive: true });
+  });
+
+  it("never consults the old rule for a present value, however malformed", () => {
+    const old = jest.fn(() => legacy);
+    for (const value of [null, {}, { canEdit: false }, { canEdit: "true", canDuplicate: "true", canArchive: "true" }, "all"]) {
+      expect(rowPermissionsOr(value, old)).toEqual({ canEdit: false, canDuplicate: false, canArchive: false });
+    }
+    expect(old).not.toHaveBeenCalled();
   });
 });

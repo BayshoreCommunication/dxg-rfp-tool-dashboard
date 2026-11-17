@@ -227,20 +227,33 @@ describe("role dashboards: links and labels", () => {
       expect(rowActionsFor(mine, "team_manager", USER)).toEqual(all);
       expect(rowActionsFor(theirs, "planner", USER)).toEqual(none);
       expect(rowActionsFor(theirs, "team_manager", USER)).toEqual(none);
-      expect(rowActionsFor({ ...theirs, permissions: null }, "team_manager", USER)).toEqual(none);
       expect(rowActionsFor(mine, "viewer", USER)).toEqual(none);
       expect(rowActionsFor(theirs, "viewer", USER)).toEqual(none);
       // Nobody to compare with: no row is "mine".
       expect(rowActionsFor({ stage: "sent", ownerUserId: null }, "planner", null)).toEqual(none);
     });
 
-    test("the list keeps the flags the backend sent and reads a missing or malformed value as none sent", () => {
+    test("a present but malformed value fails closed, even for an Owner: the old rule is not consulted", () => {
+      const row = { stage: "sent" as const, ownerUserId: USER };
+      for (const permissions of [null, {}, { canEdit: false }, { canEdit: "true", canDuplicate: "true", canArchive: "true" }]) {
+        for (const role of ROLES) {
+          expect(rowActionsFor({ ...row, permissions: permissions as never }, role, USER)).toEqual(none);
+        }
+      }
+      expect(rowActionsFor({ ...row, permissions: { canDuplicate: true } as never }, "owner", USER)).toEqual(flags(false, true, false));
+    });
+
+    test("the list keeps the flags the backend sent, fails closed on a malformed value and leaves the key off only when none was sent", () => {
       const list = toRfpList({ items: [
         { id: USER, eventName: "With flags", stage: "sent", permissions: { canEdit: false, canDuplicate: true, canArchive: false } },
         { id: OTHER, eventName: "Older API", stage: "sent" },
-        { id: TEAM, eventName: "Malformed", stage: "sent", permissions: { canEdit: "yes" } },
+        { id: TEAM, eventName: "Partial", stage: "sent", permissions: { canEdit: "yes", canArchive: true } },
+        { id: "d".repeat(24), eventName: "Null", stage: "sent", permissions: null },
       ] });
-      expect(list.items.map((item) => item.permissions)).toEqual([flags(false, true, false), null, null]);
+      expect(list.items.map((item) => item.permissions)).toEqual([flags(false, true, false), undefined, flags(false, false, true), none]);
+      expect("permissions" in list.items[1]).toBe(false);
+      // Through the whole path, as an Owner: only the row without the key gets the old rule.
+      expect(list.items.map((item) => rowActionsFor(item, "owner", USER))).toEqual([flags(false, true, false), all, flags(false, false, true), none]);
     });
   });
 

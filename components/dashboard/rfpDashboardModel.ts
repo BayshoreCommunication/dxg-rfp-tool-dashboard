@@ -44,9 +44,10 @@ export type RfpListItem = {
   // Not sent by the backend yet (see "Needs from other lanes" in the ORG-402 PR). When it is,
   // the deadlines panel shows it instead of the event date.
   responseDueDate?: string | null;
-  // What the member may do to this proposal, as the backend answered it. Null or missing on an
-  // item from an API that doesn't send it yet (see rowActionsFor).
-  permissions?: RowPermissions | null;
+  // What the member may do to this proposal, as the backend answered it. Missing only on an
+  // item from an API that doesn't send the key at all (see rowActionsFor); anything the API did
+  // send, however malformed, is read flag by flag and grants nothing it doesn't say.
+  permissions?: RowPermissions;
 };
 
 export type RfpPagination = { total: number; page: number; limit: number; totalPages: number };
@@ -466,7 +467,8 @@ export const toRfpList = (value: unknown): RfpList => {
       createdAt: textOrNull(item.createdAt),
       updatedAt: textOrNull(item.updatedAt),
       responseDueDate: textOrNull(item.responseDueDate),
-      permissions: toRowPermissions(item.permissions),
+      // Left off entirely when the API sent no key, so the fallback can tell the two apart.
+      ...(item.permissions === undefined ? {} : { permissions: toRowPermissions(item.permissions) }),
     }];
   });
   const pagination = isRecord(data.pagination) ? data.pagination : {};
