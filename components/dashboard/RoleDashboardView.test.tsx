@@ -315,6 +315,64 @@ describe("RoleDashboardView", () => {
     expect(screen.getByRole("link", { name: "Event archived" })).toHaveAttribute("href", `/proposal/event-archived-${"6".repeat(24)}`);
   });
 
+  test("row permissions: the menu and the name follow each row's own flags, not the role", () => {
+    const MAYA = "9".repeat(24);
+    const flagged = (id: string, eventName: string, canEdit: boolean, canDuplicate: boolean, canArchive: boolean) =>
+      rfp({ id: id.repeat(24), eventName, permissions: { canEdit, canDuplicate, canArchive } });
+    const list = {
+      items: [
+        flagged("1", "Managed team", true, true, true),
+        flagged("2", "View share", false, true, false),
+        flagged("3", "Nothing allowed", false, false, false),
+        // No flags (older API): Priya's row is not Maya's own, so it stays read-only as before.
+        rfp({ id: "4".repeat(24), eventName: "Older API" }),
+      ],
+      pagination: { total: 4, page: 1, limit: 10, totalPages: 1 },
+    };
+    const { unmount } = render(<RoleDashboardView {...propsFor("team_manager", { view: "team" }, { userId: MAYA, list })} />);
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByRole("button", { name: /^Actions for/ }).map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Actions for Managed team", "Actions for View share",
+    ]);
+    expect(within(table).getByRole("link", { name: "Managed team" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${"1".repeat(24)}`);
+    for (const [name, id] of [["View share", "2"], ["Nothing allowed", "3"], ["Older API", "4"]]) {
+      expect(within(table).getByRole("link", { name })).toHaveAttribute("href", expect.stringMatching(new RegExp(`^/proposal/.*-${id.repeat(24)}$`)));
+    }
+    unmount();
+
+    // A page where no row allows anything has no actions column, whatever the role.
+    const nothing = { items: [flagged("3", "Nothing allowed", false, false, false)], pagination: { total: 1, page: 1, limit: 10, totalPages: 1 } };
+    render(<RoleDashboardView {...propsFor("planner", {}, { list: nothing })} />);
+    expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Actions for/ })).not.toBeInTheDocument();
+  });
+
+  test("row permissions fail closed: a malformed value offers an Owner no write action and the name opens the preview", () => {
+    // As the API would send them; toRfpList is the only reader.
+    const raw = (id: string, eventName: string, permissions?: unknown) => ({
+      id: id.repeat(24), eventName, stage: "sent", ownerUserId: PRIYA, ...(permissions === undefined ? {} : { permissions }),
+    });
+    const list = toRfpList({
+      items: [
+        raw("1", "Null flags", null),
+        raw("2", "Partial flags", { canEdit: false }),
+        raw("3", "String flags", { canEdit: "true", canDuplicate: "true", canArchive: "true" }),
+        raw("4", "Empty flags", {}),
+        // The key is absent (older API): an Owner keeps the menu, as before.
+        raw("5", "Older API"),
+      ],
+      pagination: { total: 5, page: 1, limit: 10, totalPages: 1 },
+    });
+    render(<RoleDashboardView {...propsFor("owner", {}, { list })} />);
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByRole("button", { name: /^Actions for/ }).map((button) => button.getAttribute("aria-label"))).toEqual(["Actions for Older API"]);
+    for (const [name, id] of [["Null flags", "1"], ["Partial flags", "2"], ["String flags", "3"], ["Empty flags", "4"]]) {
+      expect(within(table).getByRole("link", { name })).toHaveAttribute("href", expect.stringMatching(new RegExp(`^/proposal/.*-${id.repeat(24)}$`)));
+    }
+    expect(within(table).getByRole("link", { name: "Older API" })).toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${"5".repeat(24)}`);
+    expect(table.querySelectorAll('a[href*="proposal-edit"]')).toHaveLength(1);
+  });
+
   test("two proposals with one name are told apart by the line under it", () => {
     const list = {
       items: [

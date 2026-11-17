@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect as baseExpect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect as baseExpect, test, type APIRequestContext, type Page, type TestInfo } from "@playwright/test";
 import { expectProposalWording } from "./support/wording";
 
 // `next dev` compiles and renders on demand, and each filter is a full server render, so give
@@ -195,7 +195,7 @@ test("Planner: My Proposals by status, deadlines, new submissions and the Admin-
   await expect(page.getByRole("table")).not.toContainText("Trade Show Booth AV");
 });
 
-test("Team Manager: My Proposals plus a Team tab with a planner filter", async ({ page }, testInfo) => {
+test("Team Manager: My Proposals plus a Team tab with a planner filter, and the row menu on a managed team's proposals", async ({ page, request }, testInfo) => {
   await signInAs(page, "manager");
   await expect(page.getByText("Your role: Team Manager")).toBeVisible();
   const views = page.getByRole("navigation", { name: "Dashboard views" });
@@ -214,17 +214,36 @@ test("Team Manager: My Proposals plus a Team tab with a planner filter", async (
   await views.getByRole("link", { name: "Team" }).click();
   await expect(page).toHaveURL(/view=team/);
   await expect(page.getByRole("heading", { name: "Team", exact: true })).toBeVisible();
-  // The managed team's proposals (Priya's five open, Peter's two, her own); nothing from Field Marketing.
-  await expect(rows(page)).toHaveCount(8);
+  // The managed team's proposals (Priya's five open, Peter's two, her own), plus the one Field
+  // Marketing proposal shared with her to view; nothing else from Field Marketing.
+  await expect(rows(page)).toHaveCount(9);
   await expect(page.getByRole("table")).not.toContainText("Trade Show Booth AV");
-  // Her own row can be changed from here; the dashboard keeps other planners' rows read-only.
+
+  // Row permissions: a managed team's proposal can be changed from here, like her own.
   await expect(menuButton(page, "Regional Roadshow")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Actions for/ })).toHaveCount(1);
-  await expect(row(page, "Engineering Offsite").getByRole("link", { name: "Engineering Offsite" })).toHaveAttribute("href", /^\/proposal\//);
+  await expect(row(page, "Engineering Offsite").getByRole("link", { name: "Engineering Offsite" }))
+    .toHaveAttribute("href", `/proposals/proposal-edit?proposalId=${"7".padStart(24, "0")}`);
+  await menuButton(page, "Engineering Offsite").click();
+  await expect(page.getByRole("menuitem")).toHaveText(["Edit", "Preview", "Duplicate", "Archive"]);
+  await page.screenshot({ path: testInfo.outputPath("team-manager-managed-team-row-menu.png") });
+  await page.keyboard.press("Escape");
+  // Another team's proposal, shared to view: it can be copied, not edited or archived, and its
+  // name opens the read-only page.
+  await expect(row(page, "Field Kickoff").getByRole("link", { name: "Field Kickoff" })).toHaveAttribute("href", /^\/proposal\//);
+  await menuButton(page, "Field Kickoff").click();
+  await expect(page.getByRole("menuitem")).toHaveText(["Preview", "Duplicate"]);
+  await page.screenshot({ path: testInfo.outputPath("team-manager-other-team-row-menu.png") });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  // A row the API sent without permissions (an older API) behaves as before them: a team
+  // proposal that isn't her own stays read-only, with no menu.
+  await expect(row(page, "Investor Day").getByRole("link", { name: "Investor Day" })).toHaveAttribute("href", /^\/proposal\//);
+  await expect(page.getByRole("button", { name: "Actions for Investor Day" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Actions for/ })).toHaveCount(8);
 
   // The team view's Filters popover: planner and team, nothing an Admin alone gets.
   await openFilters(page);
-  await expect(filtersPanel(page).getByLabel("Planner").locator("option")).toHaveText(["All planners", "Maya Manager", "Peter Planner", "Priya Planner"]);
+  await expect(filtersPanel(page).getByLabel("Planner").locator("option")).toHaveText(["All planners", "Fiona Field", "Maya Manager", "Peter Planner", "Priya Planner"]);
   await expect(filtersPanel(page).getByLabel("Team")).toBeVisible();
   await expect(filtersPanel(page).getByLabel("Venue city")).toHaveCount(0);
   await expect(filtersPanel(page).getByRole("button", { name: /Event dates/ })).toHaveCount(0);
@@ -246,9 +265,17 @@ test("Team Manager: My Proposals plus a Team tab with a planner filter", async (
   await check(page, testInfo, "team-manager-planner-filter");
 
   await page.getByRole("link", { name: "Clear all" }).click();
-  await expect(rows(page)).toHaveCount(8);
+  await expect(rows(page)).toHaveCount(9);
   await expect(chips(page)).toHaveCount(0);
   await expect(page).toHaveURL(/\/dashboard\?view=team$/);
+
+  // The menu's Archive works on a managed team's proposal: the backend (here the stub) agrees.
+  await menuButton(page, "Engineering Offsite").click();
+  await page.getByRole("menuitem", { name: "Archive" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Move to archive" }).click();
+  await expect(page.getByText("Proposal moved to archive.")).toBeVisible();
+  await expect(row(page, "Engineering Offsite")).toHaveCount(0);
+  expect((await (await request.get(`${STUB}/__e2e/dashboard`)).json()).archived).toEqual(["7".padStart(24, "0")]);
 });
 
 for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const) {
@@ -557,4 +584,125 @@ test("Viewer: a read-only Shared with me view only", async ({ page }, testInfo) 
   await expect(rows(page)).toHaveCount(2);
   await expect(page.getByRole("table")).not.toContainText("Engineering Offsite");
   await expect(chips(page)).toHaveCount(0);
+});
+
+// Row permissions on the Proposals page: each card offers Edit, "Save a copy", Archive and
+// Restore by the row's own `permissions` from GET /api/proposals. The stub serves the role
+// accounts the same proposals as the dashboard here (roleDashboardFixture.mjs).
+test.describe("Proposals page: row permissions", () => {
+  const cards = (page: Page) => page.getByTestId("proposal-card");
+  const card = (page: Page, name: string) => cards(page).filter({ hasText: name });
+  const editLink = (page: Page, name: string) => card(page, name).getByRole("link", { name: "Edit", exact: true });
+  const button = (page: Page, name: string, label: string) => card(page, name).getByRole("button", { name: label, exact: true });
+  const editHref = (n: number) => `/proposals/proposal-edit?proposalId=${n.toString(16).padStart(24, "0")}`;
+
+  const openProposals = async (page: Page, request: APIRequestContext, count: number) => {
+    await request.post(`${STUB}/__e2e/dashboard?proposalsPage=on`);
+    await page.goto("/proposals");
+    await expect(cards(page)).toHaveCount(count);
+  };
+
+  // A card whose member may edit: the title and Edit open the edit page.
+  const expectEditable = async (page: Page, name: string, n: number) => {
+    await expect(editLink(page, name)).toHaveAttribute("href", editHref(n));
+    await expect(card(page, name).getByTestId("proposal-title-link")).toHaveAttribute("href", editHref(n));
+    await expect(card(page, name).getByTestId("proposal-title-link")).not.toHaveAttribute("target", "_blank");
+  };
+
+  // A card whose member may not: no Edit, and the title opens the preview in a new tab.
+  const expectPreviewOnly = async (page: Page, name: string) => {
+    await expect(editLink(page, name)).toHaveCount(0);
+    const title = card(page, name).getByRole("link", { name: `${name} (opens in a new tab)`, exact: true });
+    const previewHref = await card(page, name).getByRole("link", { name: "Preview", exact: true }).getAttribute("href");
+    expect(previewHref).toMatch(/^\/proposal\//);
+    await expect(title).toHaveAttribute("href", previewHref as string);
+    await expect(title).toHaveAttribute("target", "_blank");
+  };
+
+  const checkPage = async (page: Page, testInfo: TestInfo, name: string) => {
+    const accessibility = await new AxeBuilder({ page }).include('[data-testid="proposal-card"]').withTags(["wcag2a", "wcag2aa"]).analyze();
+    expect(
+      accessibility.violations
+        .filter((violation) => ["critical", "serious"].includes(violation.impact || ""))
+        .map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(" | ")}`),
+    ).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    // The page defines the term once: "requests for proposal (RFPs)".
+    await expectProposalWording(page.getByRole("main"), ["requests for proposal (RFPs)"]);
+    await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
+    expect(problems.get(page)).toEqual([]);
+  };
+
+  test("Planner: own proposals offer everything; a view-only share offers Save a copy and the preview, no Edit", async ({ page, request }, testInfo) => {
+    await signInAs(page, "planner");
+    // Her five open proposals and two of Fiona's: one shared with her to view, one to edit.
+    await openProposals(page, request, 7);
+
+    await expectEditable(page, "Leadership Summit", 2);
+    await expect(button(page, "Leadership Summit", "Save a copy")).toBeVisible();
+    await expect(button(page, "Leadership Summit", "Archive")).toBeVisible();
+
+    await expectPreviewOnly(page, "Field Kickoff");
+    await expect(button(page, "Field Kickoff", "Archive")).toHaveCount(0);
+    await expect(button(page, "Field Kickoff", "Save a copy")).toBeVisible();
+    // An edit share: Edit and Save a copy, but archiving is never shared.
+    await expectEditable(page, "Regional Meetup 01", 20);
+    await expect(button(page, "Regional Meetup 01", "Save a copy")).toBeVisible();
+    await expect(button(page, "Regional Meetup 01", "Archive")).toHaveCount(0);
+    await expect(cards(page).locator('a[href*="proposal-edit"]')).toHaveCount(12);
+    await checkPage(page, testInfo, "proposals-planner-view-only-share");
+
+    // The copy goes through: a view-only share may copy (the stub answers as the backend does).
+    await button(page, "Field Kickoff", "Save a copy").click();
+    const copy = page.getByRole("dialog", { name: "Save a Copy" });
+    await copy.getByPlaceholder("Enter event name for the copy").fill("Field Kickoff (mine)");
+    await copy.getByRole("button", { name: "Save Copy" }).click();
+    await expect(page.getByText("Copy saved successfully!")).toBeVisible();
+    expect((await (await request.get(`${STUB}/__e2e/dashboard`)).json()).copies).toEqual([
+      { sourceId: "b".padStart(24, "0"), eventName: "Field Kickoff (mine)" },
+    ]);
+
+    // Archived tab: her own archived proposal can be restored.
+    await page.getByRole("button", { name: /^ARCHIVE/ }).click();
+    await expect(cards(page)).toHaveCount(1);
+    await expect(button(page, "Partner Summit 2025", "Restore")).toBeVisible();
+    await expect(button(page, "Partner Summit 2025", "Delete forever")).toBeVisible();
+    await checkPage(page, testInfo, "proposals-planner-archived");
+  });
+
+  test("Team Manager: a managed team's proposals are editable, another team's view share is not, and a row without permissions behaves as before", async ({ page, request }, testInfo) => {
+    await signInAs(page, "manager");
+    await openProposals(page, request, 9);
+
+    // Peter's proposal, in the team she manages.
+    await expectEditable(page, "Engineering Offsite", 7);
+    await expect(button(page, "Engineering Offsite", "Save a copy")).toBeVisible();
+    await expect(button(page, "Engineering Offsite", "Archive")).toBeVisible();
+
+    // Field Marketing's, shared with her to view.
+    await expectPreviewOnly(page, "Field Kickoff");
+    await expect(button(page, "Field Kickoff", "Save a copy")).toBeVisible();
+    await expect(button(page, "Field Kickoff", "Archive")).toHaveCount(0);
+
+    // Served without `permissions` (an older API): everything is offered to a member who isn't
+    // a Viewer, exactly as this page did before the flags.
+    await expectEditable(page, "Investor Day", 8);
+    await expect(button(page, "Investor Day", "Save a copy")).toBeVisible();
+    await expect(button(page, "Investor Day", "Archive")).toBeVisible();
+    await checkPage(page, testInfo, "proposals-team-manager");
+  });
+
+  test("Viewer: no Edit, Save a copy or Archive on any proposal", async ({ page, request }, testInfo) => {
+    await signInAs(page, "viewer");
+    await openProposals(page, request, 2);
+    for (const name of ["Annual Sales Kickoff", "Trade Show Booth AV"]) {
+      await expectPreviewOnly(page, name);
+      await expect(card(page, name).getByRole("link", { name: "Preview", exact: true })).toBeVisible();
+    }
+    for (const label of ["Save a copy", "Archive", "Restore"]) {
+      await expect(page.getByRole("main").getByRole("button", { name: label, exact: true })).toHaveCount(0);
+    }
+    await expect(cards(page).locator('a[href*="proposal-edit"]')).toHaveCount(0);
+    await checkPage(page, testInfo, "proposals-viewer");
+  });
 });

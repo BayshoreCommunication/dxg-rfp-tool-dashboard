@@ -43,6 +43,7 @@ import {
 } from "@/lib/proposals/proposalShareLink";
 import type { ProposalFilterType } from "./ProposalFilters";
 import { formatAppDate } from "@/lib/dateFormat";
+import { toRowPermissions } from "@/lib/proposals/rowPermissions";
 
 type ProposalListItem = {
   _id: string;
@@ -69,6 +70,9 @@ type ProposalListItem = {
     contactFirstName?: string;
     contactLastName?: string;
   };
+  // What the member may do to this proposal ({ canEdit, canDuplicate, canArchive }), sent by
+  // GET /api/proposals. The key is missing only on an item from an API that doesn't send it yet.
+  permissions?: unknown;
 };
 
 // Plain words for each filter in the empty state ("No draft proposals yet").
@@ -88,8 +92,9 @@ type ProposalTableListProps = {
   onRefreshCounts?: () => void;
   // The plan's proposal counter (ORG-602); null on a plan with no limit.
   rfpUsage?: RfpUsage | null;
-  // The member can't edit proposals at all (a Viewer): no Edit action, and the title opens the
-  // read-only preview instead of an edit page the backend would refuse.
+  // The member can't edit proposals at all (a Viewer). Only consulted for a row that carries no
+  // `permissions` (an older API): such a row then gets no Edit action and its title opens the
+  // read-only preview, as before. Remove with the fallback in lib/proposals/rowPermissions.ts.
   readOnly?: boolean;
 };
 
@@ -681,9 +686,20 @@ export default function ProposalTableList({
               const isArchiveView = activeFilter === "archive";
               const previewHref = `/proposal/${proposalSlug}`;
               const editHref = `/proposals/proposal-edit?proposalId=${encodeURIComponent(proposal._id)}`;
+              // Each action follows the row's own permission. A present `permissions` is read
+              // flag by flag and grants nothing it doesn't say (null, partial or malformed
+              // included). Only a row with no `permissions` key at all (older API) behaves as it
+              // did before the flags: everything offered, Edit unless the member is a Viewer.
+              const sentPermissions = toRowPermissions(proposal.permissions);
+              const permissions = sentPermissions ?? { canEdit: !readOnly, canDuplicate: true, canArchive: true };
+              // Who may permanently delete is an open product decision and has no flag of its
+              // own. The one thing known is that it needs at least the right to archive, so
+              // "Delete forever" is hidden only where the API said the member may not archive;
+              // a row without `permissions` keeps it, as before.
+              const deleteForeverOffered = !sentPermissions || sentPermissions.canArchive;
               // One rule for the Edit action and the title, so they can never disagree: an
               // archived row offers neither, and a member who can't edit gets the preview.
-              const editOffered = !isArchiveView && !readOnly;
+              const editOffered = !isArchiveView && permissions.canEdit;
               const titleLink = isArchiveView
                 ? null
                 : editOffered
@@ -854,23 +870,28 @@ export default function ProposalTableList({
                         </div>
                       </div>
 
-                      {isArchiveView ? (
+                      {isArchiveView ? (permissions.canArchive || deleteForeverOffered) && (
                         <div className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:items-center">
-                          <button
-                            type="button"
-                            onClick={() => void handleRestoreProposal(proposal)}
-                            disabled={restoringId === proposal._id}
-                            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-3 text-[11px] font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-4"
-                          >
-                            <ArchiveRestore size={14} />
-                            {restoringId === proposal._id ? "Restoring..." : "Restore"}
-                          </button>
-                          <ActionButton
-                            icon={<Trash2 size={14} />}
-                            label={permanentDeletingId === proposal._id ? "Deleting..." : "Delete forever"}
-                            onClick={() => requestDeletion(proposal, "permanent")}
-                            disabled={permanentDeletingId === proposal._id}
-                          />
+                          {/* canArchive on an archived proposal means "may restore". */}
+                          {permissions.canArchive && (
+                            <button
+                              type="button"
+                              onClick={() => void handleRestoreProposal(proposal)}
+                              disabled={restoringId === proposal._id}
+                              className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-3 text-[11px] font-bold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-4"
+                            >
+                              <ArchiveRestore size={14} />
+                              {restoringId === proposal._id ? "Restoring..." : "Restore"}
+                            </button>
+                          )}
+                          {deleteForeverOffered && (
+                            <ActionButton
+                              icon={<Trash2 size={14} />}
+                              label={permanentDeletingId === proposal._id ? "Deleting..." : "Delete forever"}
+                              onClick={() => requestDeletion(proposal, "permanent")}
+                              disabled={permanentDeletingId === proposal._id}
+                            />
+                          )}
                         </div>
                       ) : (
                         <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:items-center">
@@ -898,7 +919,7 @@ export default function ProposalTableList({
                             label="Team access"
                             icon={<Users size={14} />}
                           />
-                          {!isCopy && (
+                          {!isCopy && permissions.canDuplicate && (
                             <ActionButton
                               icon={<CopyPlus size={14} />}
                               label="Save a copy"
@@ -916,13 +937,15 @@ export default function ProposalTableList({
                               onClick={() => setTemplateProposal(proposal)}
                             />
                           )}
-                          <ActionButton
-                            icon={<Archive size={14} />}
-                            label={deletingId === proposal._id ? "Archiving..." : "Archive"}
-                            title="Move to archive — recoverable for 30 days."
-                            onClick={() => requestDeletion(proposal, "archive")}
-                            disabled={deletingId === proposal._id}
-                          />
+                          {permissions.canArchive && (
+                            <ActionButton
+                              icon={<Archive size={14} />}
+                              label={deletingId === proposal._id ? "Archiving..." : "Archive"}
+                              title="Move to archive — recoverable for 30 days."
+                              onClick={() => requestDeletion(proposal, "archive")}
+                              disabled={deletingId === proposal._id}
+                            />
+                          )}
                           {/* Only a live (published) proposal can be sent to
                               vendors; a draft or offline one keeps the slot but
                               says why it cannot be shared yet. */}
