@@ -844,6 +844,7 @@ export const visibleRunMessages = (
   }
   return messages.filter(
     (message) =>
+      !isAutomaticRoomScheduleGuidance(message) &&
       !(
         message.runType &&
         message.status === 'failed' &&
@@ -851,6 +852,14 @@ export const visibleRunMessages = (
       ),
   );
 };
+
+// The backend still appends this room-schedule prompt once the room-count
+// question is settled; the product no longer shows it. A planner who asks
+// about room schedules still gets the chat reply with the same actions.
+const isAutomaticRoomScheduleGuidance = (message: ConversationMessage) =>
+  message.role === 'assistant' &&
+  message.kind === 'status' &&
+  message.content.startsWith('Next, add room specifications.');
 
 // A run-result message is inserted immediately after the action-request that
 // created it. Keeping this relationship in the conversation history lets a
