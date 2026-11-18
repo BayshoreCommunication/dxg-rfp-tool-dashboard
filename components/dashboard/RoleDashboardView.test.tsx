@@ -11,6 +11,7 @@ jest.mock("@/app/actions/proposals", () => ({ copyProposalAction: jest.fn(), del
 import type { CustomerRole } from "@/components/organization/members/types";
 import RoleDashboardView, { type RoleDashboardViewProps } from "./RoleDashboardView";
 import { parseDashboardState, toRfpList, toRfpSummary, type RfpListItem } from "./rfpDashboardModel";
+import type { DashboardStats } from "./dashboardStats";
 import { RFP_NOUN } from "@/test/wording";
 
 const PRIYA = "b".repeat(24);
@@ -45,6 +46,13 @@ const summary = toRfpSummary({
   quarter: { label: "2026-Q4", start: "", end: "", timeZone: "UTC" },
 });
 
+// The member's own totals, as the stat cards get them.
+const stats: DashboardStats = {
+  totalProposals: 42, totalEmailSent: 15, totalEmailClicked: 7, totalProposalViews: 1234,
+  totalVendorResponses: 9, unreadVendorResponses: 3, vendorResponsesLocked: false,
+};
+const statCards = () => screen.queryByRole("region", { name: "Your totals" });
+
 const propsFor = (role: CustomerRole, params: Record<string, string> = {}, overrides: Partial<RoleDashboardViewProps> = {}): RoleDashboardViewProps => {
   const state = parseDashboardState(params, role);
   return {
@@ -54,7 +62,7 @@ const propsFor = (role: CustomerRole, params: Record<string, string> = {}, overr
     today: "2026-11-10",
     timeZone: "UTC",
     list: { items, pagination: { total: items.length, page: 1, limit: 25, totalPages: 1 } },
-    summary: role === "viewer" ? null : summary,
+    stats: role === "viewer" ? null : stats,
     stageCounts: summary.byStage,
     deadlines: role === "viewer" || state.view === "organization" ? null : [items[0]],
     submissions: role === "viewer" || state.view === "organization" ? null : [items[1]],
@@ -140,18 +148,19 @@ describe("RoleDashboardView", () => {
       .toHaveAttribute("href", `/dashboard?view=team&stage=sent&owner=${PRIYA}`);
   });
 
-  test.each(["organization_admin", "owner"] as const)("%s: organization-wide list, every filter and the summary row", (role) => {
+  test.each(["organization_admin", "owner"] as const)("%s: organization-wide list, every filter and their own stat cards", (role) => {
     render(<RoleDashboardView {...propsFor(role, { venueCity: "Chicago" })} />);
 
     expect(viewNames()).toEqual(["Organization", "My Proposals"]);
     expect(screen.getByRole("heading", { name: "Organization" })).toBeInTheDocument();
     expect(screen.getByText("Every proposal in your organization, drafts included.")).toBeInTheDocument();
 
-    const summaryRow = screen.getByRole("region", { name: "Summary" });
-    expect(within(summaryRow).getByTestId("summary-active")).toHaveTextContent("2");
-    expect(within(summaryRow).getByTestId("summary-responses")).toHaveTextContent("4");
-    expect(within(summaryRow).getByTestId("summary-awarded")).toHaveTextContent("1");
-    expect(within(summaryRow).getByText("Awarded in Q4 2026")).toBeInTheDocument();
+    // The list is the whole organization's; the cards above it are this member's own and say so.
+    const cards = within(statCards()!);
+    expect(cards.getByTestId("dashboard-stat-cards-caption")).toHaveTextContent("Your totals");
+    expect(cards.getByTestId("dashboard-stat-cards-caption")).toHaveTextContent("Counts for the proposals you own. The view and filters below don't change them.");
+    expect(cards.getByTestId("stat-card-proposals-value")).toHaveTextContent("42");
+    expect(cards.getAllByRole("listitem")).toHaveLength(5);
 
     expect(chipTexts()).toEqual(["Venue city: Chicago"]);
     expect(screen.getByRole("link", { name: "Clear all" })).toHaveAttribute("href", "/dashboard");
@@ -200,7 +209,7 @@ describe("RoleDashboardView", () => {
     expect(screen.getByRole("heading", { name: "Shared with me" })).toBeInTheDocument();
     expect(screen.getByText(/You can read them; you can't edit or send them\./)).toBeInTheDocument();
     expect(viewNames()).toEqual([]);
-    expect(screen.queryByRole("region", { name: "Summary" })).not.toBeInTheDocument();
+    expect(statCards()).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Upcoming deadlines" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "New submissions" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("admin-visibility-note")).not.toBeInTheDocument();
@@ -226,10 +235,12 @@ describe("RoleDashboardView", () => {
 
   test("a Planner with no proposals at all gets the ways to start; a Team Manager keeps the Team tab", () => {
     const empty = { items: [], pagination: { total: 0, page: 1, limit: 25, totalPages: 0 } };
-    const none = { list: empty, stageCounts: toRfpSummary(null).byStage, summary: toRfpSummary(null), deadlines: [], submissions: [] };
+    const none = { list: empty, stageCounts: toRfpSummary(null).byStage, deadlines: [], submissions: [] };
     const { unmount } = render(<RoleDashboardView {...propsFor("planner", {}, none)} />);
     expect(screen.getByTestId("first-run-dashboard")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    // The ways to start stand in for the cards: five zeros say nothing to a new planner.
+    expect(statCards()).not.toBeInTheDocument();
     unmount();
 
     render(<RoleDashboardView {...propsFor("team_manager", {}, none)} />);
@@ -251,14 +262,15 @@ describe("RoleDashboardView", () => {
   test("a failed load (for example another organization's data, a 404) shows a plain message with a way back", () => {
     render(
       <RoleDashboardView
-        {...propsFor("organization_admin", { team: TEAM }, { list: null, summary: null, stageCounts: null, error: "We couldn't find those proposals. They may have been moved or belong to another organization." })}
+        {...propsFor("organization_admin", { team: TEAM }, { list: null, stageCounts: null, error: "We couldn't find those proposals. They may have been moved or belong to another organization." })}
       />,
     );
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("We couldn't find those proposals.");
     expect(within(alert).getByRole("link", { name: "reset the dashboard" })).toHaveAttribute("href", "/dashboard");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Summary" })).not.toBeInTheDocument();
+    // The member's own totals don't depend on the list that failed.
+    expect(statCards()).toBeInTheDocument();
     // Status tabs still render, without counts.
     expect(within(screen.getByRole("navigation", { name: "Proposal status" })).getByRole("link", { name: "Draft" })).toBeInTheDocument();
   });
@@ -390,26 +402,45 @@ describe("RoleDashboardView", () => {
     ]);
   });
 
-  test("when every stat is zero, one card with a create button replaces the three zeros", () => {
-    const zero = toRfpSummary({ total: 3, byStage: { draft: 3 }, quarter: { label: "2026-Q4", start: "", end: "", timeZone: "UTC" } });
-    const { unmount } = render(<RoleDashboardView {...propsFor("planner", {}, { summary: zero, stageCounts: zero.byStage })} />);
-    const card = within(screen.getByRole("region", { name: "Summary" }));
-    expect(card.getByRole("heading", { name: "No proposal activity yet" })).toBeInTheDocument();
-    expect(card.getByRole("link", { name: "New Proposal" })).toHaveAttribute("href", "/proposals/add-new-proposal");
-    for (const id of ["summary-active", "summary-responses", "summary-awarded"]) expect(card.queryByTestId(id)).not.toBeInTheDocument();
-    unmount();
+  describe("stat cards (the member's own totals)", () => {
+    test.each(["planner", "team_manager", "organization_admin", "owner"] as const)("%s: five cards with a caption saying whose totals they are", (role) => {
+      render(<RoleDashboardView {...propsFor(role)} />);
+      const cards = within(statCards()!);
+      expect(cards.getByRole("heading", { name: "Your totals" })).toBeInTheDocument();
+      expect(cards.getByText("Counts for the proposals you own. The view and filters below don't change them.")).toBeInTheDocument();
+      expect(cards.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/proposals", "/email", "/email", "/proposals", "/vendor-responses"]);
+      expect(cards.getByTestId("stat-card-views-value")).toHaveTextContent("1,234");
+      expect(cards.getByTestId("stat-card-vendor-responses-badge")).toHaveTextContent("3 unread");
+    });
 
-    // At the plan's limit there is nothing to offer.
-    const atLimit = { used: 2, limit: 2, atLimit: true, planName: "Free trial", onPlan: "on the free trial" };
-    const second = render(<RoleDashboardView {...propsFor("planner", { stage: "draft" }, { summary: zero, stageCounts: zero.byStage, rfpUsage: atLimit })} />);
-    expect(screen.getByRole("heading", { name: "No activity for these filters yet" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "New Proposal" })).not.toBeInTheDocument();
-    second.unmount();
+    test("a Viewer sees no cards, even if totals were passed", () => {
+      render(<RoleDashboardView {...propsFor("viewer", {}, { stats })} />);
+      expect(statCards()).not.toBeInTheDocument();
+      expect(screen.queryByTestId("dashboard-stat-cards")).not.toBeInTheDocument();
+      expect(document.querySelector("[data-dashboard-stat-card]")).toBeNull();
+    });
 
-    // One non-zero stat brings the three cards back.
-    render(<RoleDashboardView {...propsFor("planner", {}, { summary: toRfpSummary({ responsesReceived: 1 }) })} />);
-    expect(screen.queryByTestId("summary-empty")).not.toBeInTheDocument();
-    expect(screen.getByTestId("summary-responses")).toHaveTextContent("1");
+    test("the three role summary cards are gone, with their empty card and its create button", () => {
+      render(<RoleDashboardView {...propsFor("organization_admin")} />);
+      expect(screen.queryByRole("region", { name: "Summary" })).not.toBeInTheDocument();
+      for (const id of ["summary-active", "summary-responses", "summary-awarded", "summary-empty", "summary-empty-create"]) {
+        expect(screen.queryByTestId(id)).not.toBeInTheDocument();
+      }
+      for (const label of ["Active proposals", "Responses received", "Awarded this quarter", "No proposal activity yet"]) {
+        expect(screen.queryByText(label)).not.toBeInTheDocument();
+      }
+    });
+
+    test("totals that couldn't be loaded leave the cards unavailable and the list as it is", () => {
+      const failed: DashboardStats = { ...stats, totalProposals: null, totalEmailSent: null, totalEmailClicked: null, totalProposalViews: null };
+      render(<RoleDashboardView {...propsFor("planner", {}, { stats: failed })} />);
+      const cards = within(statCards()!);
+      for (const id of ["proposals", "sent", "clicked", "views"]) expect(cards.getByTestId(`stat-card-${id}-value`)).toHaveTextContent("—");
+      expect(cards.getByTestId("stat-card-vendor-responses-value")).toHaveTextContent("9");
+      expect(cards.getByTestId("dashboard-stat-cards-unavailable")).toHaveTextContent("We couldn't load some of your totals. Reload the page to try again.");
+      expect(cards.queryByText("0")).not.toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
+    });
   });
 
   test.each(["owner", "organization_admin", "team_manager", "planner", "viewer"] as const)("%s: copy says proposal, never RFP as a noun, and shows the role's label", (role) => {

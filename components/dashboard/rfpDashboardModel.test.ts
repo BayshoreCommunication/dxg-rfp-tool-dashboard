@@ -24,7 +24,6 @@ import {
   listQuery,
   optionsFromItems,
   parseDashboardState,
-  quarterLabel,
   rfpViewHref,
   scopeQuery,
   stageCountQuery,
@@ -125,7 +124,7 @@ describe("role dashboards: the list and its counts share one query", () => {
     expect(scopeQuery(parseDashboardState({}, "viewer"), USER)).toEqual({});
   });
 
-  test("the summary gets exactly the list's filters; the list adds only paging and sorting", () => {
+  test("the list sends the scope, the selected stage, paging and sorting", () => {
     const filters = filterQuery(state, USER);
     expect(filters).toEqual({ owner: OTHER, team: TEAM, venueCity: "Chicago", eventFrom: "2026-01-01", search: "gala", stage: "sent" });
     const { page, limit, sortBy, sortOrder, ...rest } = listQuery(state, USER);
@@ -330,11 +329,6 @@ describe("role dashboards: links and labels", () => {
     expect(upcomingDeadlines(rows, "2026-11-10", 2).map((row) => row.id)).toEqual(["today", "due"]);
   });
 
-  test("quarter label", () => {
-    expect(quarterLabel({ label: "2026-Q4", start: "", end: "", timeZone: "UTC" })).toBe("Q4 2026");
-    expect(quarterLabel(null)).toBe("this quarter");
-  });
-
   test("refusals are plain sentences that never show a code, and say proposal, not RFP", () => {
     const messages = [
       dashboardErrorMessage("DASHBOARD_FILTER_INVALID", 400),
@@ -355,10 +349,11 @@ describe("role dashboards: links and labels", () => {
 
 describe("role dashboards: reading backend payloads", () => {
   test("a summary with missing fields reads as zeros", () => {
-    expect(toRfpSummary(null)).toMatchObject({ total: 0, activeRfps: 0, responsesReceived: 0, awardedThisQuarter: 0, quarter: null });
+    expect(toRfpSummary(null)).toEqual({ responsesReceived: 0, byStage: { draft: 0, sent: 0, receiving_responses: 0, under_review: 0, awarded: 0, archived: 0 }, quarter: null });
     const summary = toRfpSummary({ total: 4, activeRfps: 2, responsesReceived: 7, awardedThisQuarter: 1, byStage: { draft: 1, sent: 2, awarded: 1 }, quarter: { label: "2026-Q4", start: "s", end: "e", timeZone: "America/Chicago" } });
     expect(summary.byStage).toEqual({ draft: 1, sent: 2, receiving_responses: 0, under_review: 0, awarded: 1, archived: 0 });
     expect(summary.quarter?.timeZone).toBe("America/Chicago");
+    expect(summary.responsesReceived).toBe(7);
   });
 
   test("list rows without an id are dropped and unknown stages read as draft", () => {
