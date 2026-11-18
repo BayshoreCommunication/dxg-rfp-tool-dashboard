@@ -1,20 +1,22 @@
 import { auth } from "@/auth";
 import { listMembersAction } from "@/app/actions/organizationMembers";
+import { getDashboardOverviewAction } from "@/app/actions/overview";
 import { getDashboardRfpSummaryAction, listDashboardRfpsAction } from "@/app/actions/rfpDashboard";
 import { listTeamsAction } from "@/app/actions/teams";
+import { getVendorResponsesAction } from "@/app/actions/vendorResponse";
 import { memberDisplayName } from "@/components/organization/members/orgAccess";
 import { loadRfpUsage } from "@/components/entitlements/planGate";
 import { getMemberIdentity } from "@/lib/server/memberIdentity";
 import RoleDashboardView from "./RoleDashboardView";
 import TopHeader from "./TopHeader";
 import VerifyDomainPrompt from "./VerifyDomainPrompt";
+import { toDashboardStats } from "./dashboardStats";
 import {
   ACTIVE_STAGES,
   canCreateRfps,
   dashboardErrorMessage,
   dashboardRoleOf,
   earliestToday,
-  filterQuery,
   listQuery,
   optionsFromItems,
   parseDashboardState,
@@ -52,8 +54,9 @@ const loadFilterOptions = async (view: string): Promise<{ owners: FilterOption[]
   return { owners: [], teams: [] };
 };
 
-// /dashboard for the signed-in member's role (ORG-402). Every number and row comes from the two
-// scoped ORG-401 endpoints with the same filters, so the counts always describe the list.
+// /dashboard for the signed-in member's role (ORG-402). The list and the status-tab counts come
+// from the two scoped ORG-401 endpoints with the same filters, so the counts always describe the
+// list. The stat cards above them are the member's own totals and ignore the view and filters.
 export default async function RoleDashboard({ searchParams }: { searchParams: SearchParams }) {
   const [identity, session] = await Promise.all([getMemberIdentity(), auth()]);
   const role = dashboardRoleOf(identity.roles);
@@ -70,7 +73,7 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
         <TopHeader canCreate={false} />
         <RoleDashboardView
           role={role} userId={null} state={state} today={todayIn("UTC")} timeZone={null}
-          list={null} summary={null} stageCounts={null} deadlines={null} submissions={null} owners={[]} teams={[]}
+          list={null} stats={null} stageCounts={null} deadlines={null} submissions={null} owners={[]} teams={[]}
           error={dashboardErrorMessage(undefined, 401)}
         />
       </div>
@@ -78,10 +81,13 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
   }
 
   const canCreate = canCreateRfps(role);
-  const [list, summary, stageCounts, deadlineSource, submissions, options, rfpUsage] = await Promise.all([
+  const [list, stageCounts, overview, vendorResponses, deadlineSource, submissions, options, rfpUsage] = await Promise.all([
     listDashboardRfpsAction(listQuery(state, userId)),
-    isViewer ? null : getDashboardRfpSummaryAction(filterQuery(state, userId)),
     getDashboardRfpSummaryAction(stageCountQuery(state, userId)),
+    // The stat cards: the member's own totals. A Viewer owns nothing, so nothing is asked. Neither
+    // call throws; one that fails leaves its cards unavailable and the rest of the page as it is.
+    isViewer ? null : getDashboardOverviewAction(),
+    isViewer ? null : getVendorResponsesAction({ page: 1, limit: 1 }),
     showPanels
       ? listDashboardRfpsAction({ ...scope, stage: ACTIVE_STAGES.join(","), eventFrom: earliestToday(), sortBy: "eventStartDate", sortOrder: "asc", limit: "10" })
       : null,
@@ -104,7 +110,7 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
     shownList = await listDashboardRfpsAction(listQuery(shownState, userId));
   }
 
-  const timeZone = stageCounts.data?.quarter?.timeZone ?? summary?.data?.quarter?.timeZone ?? null;
+  const timeZone = stageCounts.data?.quarter?.timeZone ?? null;
   const today = todayIn(timeZone);
   const deadlines = deadlineSource?.success ? upcomingDeadlines(deadlineSource.data?.items ?? [], today, PANEL_SIZE) : null;
 
@@ -122,7 +128,7 @@ export default async function RoleDashboard({ searchParams }: { searchParams: Se
           today={today}
           timeZone={timeZone}
           list={shownList.success ? shownList.data ?? null : null}
-          summary={summary?.success ? summary.data ?? null : null}
+          stats={isViewer ? null : toDashboardStats(overview?.success ? overview.data : null, vendorResponses)}
           stageCounts={stageCounts.success ? stageCounts.data?.byStage ?? null : null}
           deadlines={deadlines}
           submissions={submissions?.success ? submissions.data?.items ?? [] : null}
