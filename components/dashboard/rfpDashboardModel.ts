@@ -53,11 +53,12 @@ export type RfpListItem = {
 export type RfpPagination = { total: number; page: number; limit: number; totalPages: number };
 export type RfpList = { items: RfpListItem[]; pagination: RfpPagination };
 
+// What is read from GET /api/v1/rfps/summary: the per-stage counts for the dashboard's status
+// tabs, the organization's time zone (carried on `quarter`), and the responses total the
+// plan-locked screens quote (components/entitlements/planGate.tsx). The endpoint's other totals
+// aren't shown anywhere, so they aren't read.
 export type RfpSummary = {
-  total: number;
-  activeRfps: number;
   responsesReceived: number;
-  awardedThisQuarter: number;
   byStage: Record<RfpStage, number>;
   quarter: { label: string; start: string; end: string; timeZone: string } | null;
 };
@@ -187,7 +188,7 @@ export const scopeQuery = (state: DashboardState, userId: string | null): Record
   return query;
 };
 
-// The list on screen and the summary row above it: the scope plus the selected stage.
+// The list on screen: the scope plus the selected stage.
 export const filterQuery = (state: DashboardState, userId: string | null): Record<string, string> => ({
   ...scopeQuery(state, userId),
   ...(state.stage ? { stage: state.stage } : {}),
@@ -393,11 +394,6 @@ export const upcomingDeadlines = <T extends Pick<RfpListItem, "responseDueDate" 
     .slice(0, size);
 };
 
-export const quarterLabel = (quarter: RfpSummary["quarter"]): string => {
-  const match = quarter ? /^(\d{4})-Q([1-4])$/.exec(quarter.label) : null;
-  return match ? `Q${match[2]} ${match[1]}` : "this quarter";
-};
-
 // Backend refusals as plain sentences; codes are never shown.
 export const dashboardErrorMessage = (code: string | undefined, status: number | undefined): string => {
   if (code === "DASHBOARD_FILTER_INVALID" || status === 400) return "One of the filters isn't valid. Clear the filters and try again.";
@@ -428,14 +424,7 @@ export const toRfpSummary = (value: unknown): RfpSummary => {
         timeZone: typeof data.quarter.timeZone === "string" ? data.quarter.timeZone : "UTC",
       }
     : null;
-  return {
-    total: count(data.total),
-    activeRfps: count(data.activeRfps),
-    responsesReceived: count(data.responsesReceived),
-    awardedThisQuarter: count(data.awardedThisQuarter),
-    byStage,
-    quarter,
-  };
+  return { responsesReceived: count(data.responsesReceived), byStage, quarter };
 };
 
 // A draft nobody has named yet.

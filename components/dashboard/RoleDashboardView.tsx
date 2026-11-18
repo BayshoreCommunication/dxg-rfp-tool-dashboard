@@ -1,4 +1,4 @@
-import { BarChart3, ChevronLeft, ChevronRight, Eye, FileText, Inbox, Plus, Trophy, UsersRound } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, FileText, UsersRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CustomerRole } from "@/components/organization/members/types";
@@ -10,6 +10,8 @@ import type { RfpUsage } from "@/lib/entitlements/entitlements";
 import DashboardFilters from "./DashboardFilters";
 import FirstRunDashboard from "./FirstRunDashboard";
 import ProposalRowActions from "./ProposalRowActions";
+import TopCardItem from "./TopCardItem";
+import type { DashboardStats } from "./dashboardStats";
 import {
   RFP_STAGES,
   STAGE_LABELS,
@@ -22,7 +24,6 @@ import {
   formatDay,
   formatInstant,
   hasActiveFilters,
-  quarterLabel,
   hasRowActions,
   rfpEditHref,
   rfpResponsesHref,
@@ -40,7 +41,6 @@ import {
   type RfpList,
   type RfpListItem,
   type RfpStage,
-  type RfpSummary,
 } from "./rfpDashboardModel";
 
 // The role dashboards (ORG-402): what a Planner, Team Manager, Admin/Owner or Viewer sees on
@@ -59,7 +59,8 @@ export type RoleDashboardViewProps = {
   today: string;
   timeZone: string | null;
   list: RfpList | null;
-  summary: RfpSummary | null;
+  // The member's own totals for the stat cards. null: no cards (a Viewer owns nothing).
+  stats: DashboardStats | null;
   stageCounts: Record<RfpStage, number> | null;
   deadlines: RfpListItem[] | null;
   submissions: RfpListItem[] | null;
@@ -111,61 +112,6 @@ const ViewTabs = ({ views, state }: { views: DashboardView[]; state: DashboardSt
       );
     })}
   </nav>
-);
-
-const SummaryCard = ({ id, icon, label, value, hint }: { id: string; icon: ReactNode; label: string; value: number; hint: string }) => (
-  <li className={`${cardClass} flex items-center gap-4 px-5 py-4`}>
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700" aria-hidden="true">{icon}</div>
-    <p className="min-w-0">
-      <span className="block text-xs font-semibold text-slate-600">{label}</span>
-      <span data-testid={`summary-${id}`} className="block text-2xl font-extrabold leading-tight tracking-tight text-slate-900">{value.toLocaleString("en-US")}</span>
-      <span className="block text-xs text-slate-500">{hint}</span>
-    </p>
-  </li>
-);
-
-const summaryIsEmpty = (summary: RfpSummary): boolean =>
-  summary.activeRfps === 0 && summary.responsesReceived === 0 && summary.awardedThisQuarter === 0;
-
-// Three zeros say nothing: one card says what will show up here and offers the way to start.
-const SummaryEmpty = ({ narrowed, canCreate }: { narrowed: boolean; canCreate: boolean }) => (
-  <section aria-label="Summary">
-    <div data-testid="summary-empty" className={`${cardClass} flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between`}>
-      <div className="flex items-start gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700" aria-hidden="true">
-          <BarChart3 size={20} />
-        </div>
-        <div className="min-w-0">
-          <h2 className="text-sm font-bold text-slate-900">
-            {narrowed ? "No activity for these filters yet" : "No proposal activity yet"}
-          </h2>
-          <p className="mt-0.5 max-w-xl text-sm text-slate-600">
-            Active proposals, vendor responses and awards are counted here once a proposal has been sent to vendors.
-          </p>
-        </div>
-      </div>
-      {canCreate && (
-        <Link
-          href="/proposals/add-new-proposal"
-          data-testid="summary-empty-create"
-          className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-sky-700 px-5 text-sm font-bold text-white hover:bg-sky-800 ${focusRing}`}
-        >
-          <Plus size={16} aria-hidden="true" />
-          New Proposal
-        </Link>
-      )}
-    </div>
-  </section>
-);
-
-const SummaryRow = ({ summary }: { summary: RfpSummary }) => (
-  <section aria-label="Summary">
-    <ul className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <SummaryCard id="active" icon={<FileText size={20} />} label="Active proposals" value={summary.activeRfps} hint="Sent, receiving responses or under review" />
-      <SummaryCard id="responses" icon={<Inbox size={20} />} label="Responses received" value={summary.responsesReceived} hint="Vendor responses on the proposals listed below" />
-      <SummaryCard id="awarded" icon={<Trophy size={20} />} label="Awarded this quarter" value={summary.awardedThisQuarter} hint={`Awarded in ${quarterLabel(summary.quarter)}`} />
-    </ul>
-  </section>
 );
 
 const PanelShell = ({ id, title, hint, children }: { id: string; title: string; hint: string; children: ReactNode }) => (
@@ -470,7 +416,7 @@ const EmptyList = ({ state, defaultView }: { state: DashboardState; defaultView:
 };
 
 export default function RoleDashboardView(props: RoleDashboardViewProps) {
-  const { role, state, list, summary, stageCounts, deadlines, submissions, error } = props;
+  const { role, state, list, stats, stageCounts, deadlines, submissions, error } = props;
   const rfpUsage = props.rfpUsage ?? null;
   const views = viewsFor(role);
   const defaultView = views[0];
@@ -501,11 +447,7 @@ export default function RoleDashboardView(props: RoleDashboardViewProps) {
         <FirstRunDashboard />
       ) : (
         <>
-          {!isViewer && summary && (
-            summaryIsEmpty(summary)
-              ? <SummaryEmpty narrowed={hasActiveFilters(state) || state.stage !== null} canCreate={!rfpUsage?.atLimit} />
-              : <SummaryRow summary={summary} />
-          )}
+          {!isViewer && stats && <TopCardItem stats={stats} />}
 
           {!isViewer && state.view !== "organization" && (deadlines || submissions) && (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

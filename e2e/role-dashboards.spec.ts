@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect as baseExpect, test, type APIRequestContext, type Page, type TestInfo } from "@playwright/test";
+import { expect as baseExpect, test, type APIRequestContext, type Frame, type Page, type Request, type TestInfo } from "@playwright/test";
 import { expectProposalWording } from "./support/wording";
 
 // `next dev` compiles and renders on demand, and each filter is a full server render, so give
@@ -71,6 +71,69 @@ const checkBothThemes = async (page: Page, testInfo: TestInfo, name: string) => 
   await page.waitForTimeout(500);
 };
 
+// Opens /dashboard and waits until the app shell's mount actions are over, so a click that follows
+// starts its navigation with no server action in flight.
+//
+// Why: on mount the shell calls five server actions (components/layout/Sidebar.tsx: notification
+// unread count, vendor unread count, support unread count, notification socket config;
+// components/support/SupportFab.tsx: support unread count again). Next runs server actions one at a
+// time through its router action queue, and a navigation that starts while one is in flight can be
+// overwritten when a later queued action settles against the state from before the navigation.
+//
+// A server action is a POST carrying a Next-Action header. The wait ends when at least
+// SHELL_MOUNT_ACTIONS of them, started by the freshly loaded document, have ended and none is in
+// flight. The floor matters because the queue is serial: between two actions nothing is in flight.
+const SHELL_MOUNT_ACTIONS = 5;
+const dashboardWithShellSettled = async (page: Page) => {
+  const inFlight = new Set<Request>();
+  let ended = 0;
+  const isServerAction = (request: Request) => request.method() === "POST" && Boolean(request.headers()["next-action"]);
+  const onRequest = (request: Request) => {
+    if (isServerAction(request)) inFlight.add(request);
+  };
+  // Finished or failed (the browser reports some as cancelled once Next has read the result).
+  const onEnd = (request: Request) => {
+    if (inFlight.delete(request)) ended += 1;
+  };
+  // Count only the new document's actions, not ones the page being left still had open.
+  const onNavigated = (frame: Frame) => {
+    if (frame !== page.mainFrame()) return;
+    inFlight.clear();
+    ended = 0;
+  };
+  page.on("request", onRequest);
+  page.on("requestfinished", onEnd);
+  page.on("requestfailed", onEnd);
+  page.on("framenavigated", onNavigated);
+  try {
+    await page.goto("/dashboard");
+    await expect
+      .poll(() => (ended >= SHELL_MOUNT_ACTIONS && inFlight.size === 0 ? "settled" : `${ended} of ${SHELL_MOUNT_ACTIONS} ended, ${inFlight.size} in flight`), {
+        message: "the app shell's mount server actions should all have ended",
+      })
+      .toBe("settled");
+  } finally {
+    page.off("request", onRequest);
+    page.off("requestfinished", onEnd);
+    page.off("requestfailed", onEnd);
+    page.off("framenavigated", onNavigated);
+  }
+};
+
+// The stat cards: the signed-in member's own totals, in the order they are shown (proposals,
+// emails sent, emails clicked, proposal views, vendor responses).
+const statCards = (page: Page) => page.getByRole("region", { name: "Your totals" });
+const STAT_IDS = ["proposals", "sent", "clicked", "views", "vendor-responses"] as const;
+const expectStatValues = async (page: Page, values: readonly [string, string, string, string, string]) => {
+  for (const [index, id] of STAT_IDS.entries()) await expect(statCards(page).getByTestId(`stat-card-${id}-value`)).toHaveText(values[index]);
+};
+const unreadPill = (page: Page) => statCards(page).getByTestId("stat-card-vendor-responses-badge");
+// The three role summary cards the stat cards replaced, and the card that stood in for them.
+const expectNoSummaryRow = async (page: Page) => {
+  await expect(page.getByRole("region", { name: "Summary" })).toHaveCount(0);
+  await expect(page.locator('[data-testid^="summary-"]')).toHaveCount(0);
+};
+
 const statusTab = (page: Page, name: RegExp) => page.getByRole("navigation", { name: "Proposal status" }).getByRole("link", { name });
 const rows = (page: Page) => page.getByRole("table").locator("tbody tr");
 const row = (page: Page, name: string) => rows(page).filter({ hasText: name });
@@ -122,11 +185,11 @@ test("Planner: My Proposals by status, deadlines, new submissions and the Admin-
   await expect(filtersButton(page)).toHaveCount(0);
   await expect(dashboard.getByRole("button", { name: "Apply" })).toHaveCount(0);
 
-  // Summary row describes the same list: 3 active, 3 + 0 + 6 + 3 responses, 1 awarded.
-  const summary = page.getByRole("region", { name: "Summary" });
-  await expect(summary.getByTestId("summary-active")).toHaveText("3");
-  await expect(summary.getByTestId("summary-responses")).toHaveText("12");
-  await expect(summary.getByTestId("summary-awarded")).toHaveText("1");
+  // The stat cards are Priya's own totals: six proposals (the archived one included), 22 emails
+  // sent, 9 clicked, 1,234 views and 14 vendor responses, three of them unread.
+  await expectStatValues(page, ["6", "22", "9", "1,234", "14"]);
+  await expect(unreadPill(page)).toHaveText("3 unread");
+  await expectNoSummaryRow(page);
 
   const deadlines = page.getByRole("region", { name: "Upcoming deadlines" });
   await expect(deadlines.getByRole("listitem")).toHaveCount(3);
@@ -162,14 +225,13 @@ test("Planner: My Proposals by status, deadlines, new submissions and the Admin-
   await expect(menuButton(page, "Leadership Summit")).toBeFocused();
   await checkBothThemes(page, testInfo, "planner-my-proposals");
 
-  // By status: the tab narrows the list and the summary with it.
+  // By status: the tab narrows the list. The stat cards are the planner's totals and stay put.
   await statusTab(page, /^Draft/).click();
   await expect(page).toHaveURL(/stage=draft/);
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Product Launch Evening");
-  // Nothing active, no responses, nothing awarded: one card instead of three zeros.
-  await expect(summary.getByTestId("summary-empty")).toContainText("No activity for these filters yet");
-  await expect(summary.getByTestId("summary-active")).toHaveCount(0);
+  await expectStatValues(page, ["6", "22", "9", "1,234", "14"]);
+  await expectNoSummaryRow(page);
 
   // Archived proposals are restored from the proposal list: no row menu here, and a muted badge.
   await statusTab(page, /^Archived/).click();
@@ -204,12 +266,12 @@ test("Team Manager: My Proposals plus a Team tab with a planner filter, and the 
   await expect(rows(page).first()).toContainText("Regional Roadshow");
   await expect(page.getByTestId("admin-visibility-note")).toBeVisible();
 
-  // One draft and nothing sent yet: every stat is zero, so one card says so and offers to start.
-  const summary = page.getByRole("region", { name: "Summary" });
-  await expect(summary.getByTestId("summary-empty")).toContainText("No proposal activity yet");
-  await expect(summary.getByTestId("summary-active")).toHaveCount(0);
-  await expect(summary.getByTestId("summary-empty-create")).toHaveAttribute("href", "/proposals/add-new-proposal");
-  await check(page, testInfo, "team-manager-zero-stats");
+  // One draft of her own and nothing sent yet: real zeros, and the header's button is the way to start.
+  await expectStatValues(page, ["1", "0", "0", "0", "0"]);
+  await expect(unreadPill(page)).toHaveText("0 unread");
+  await expectNoSummaryRow(page);
+  await expect(page.getByRole("link", { name: "New Proposal" })).toHaveAttribute("href", "/proposals/add-new-proposal");
+  await check(page, testInfo, "team-manager-own-totals");
 
   await views.getByRole("link", { name: "Team" }).click();
   await expect(page).toHaveURL(/view=team/);
@@ -255,7 +317,8 @@ test("Team Manager: My Proposals plus a Team tab with a planner filter, and the 
   await expect(page.getByRole("table")).toContainText("Engineering Offsite");
   await expect(page.getByRole("table")).toContainText("Investor Day");
   await expect(statusTab(page, /^All open/)).toHaveText("All open: 2 proposals");
-  await expect(summary.getByTestId("summary-responses")).toHaveText("1");
+  // The Team tab and its planner filter list other people's proposals; the cards are still Maya's own.
+  await expectStatValues(page, ["1", "0", "0", "0", "0"]);
   await expect(chips(page)).toHaveText(["Planner: Peter Planner"]);
   // Escape closes the popover and hands focus back to its button.
   await page.keyboard.press("Escape");
@@ -279,7 +342,7 @@ test("Team Manager: My Proposals plus a Team tab with a planner filter, and the 
 });
 
 for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const) {
-  test(`${label}: organization-wide view with every filter, sorting, paging and the summary row`, async ({ page }, testInfo) => {
+  test(`${label}: organization-wide view with every filter, sorting, paging and their own stat cards`, async ({ page }, testInfo) => {
     await signInAs(page, account);
     await expect(page.getByText(`Your role: ${label}`)).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Dashboard views" }).getByRole("link")).toHaveText(["Organization", "My Proposals"]);
@@ -290,10 +353,12 @@ for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const
     await expect(statusTab(page, /^All open/)).toHaveText("All open: 35 proposals");
     await expect(rows(page)).toHaveCount(10);
     await expect(page.getByText("Showing 1–10 of 35 proposals")).toBeVisible();
-    const summary = page.getByRole("region", { name: "Summary" });
-    await expect(summary.getByTestId("summary-active")).toHaveText("18");
-    await expect(summary.getByTestId("summary-responses")).toHaveText("17");
-    await expect(summary.getByTestId("summary-awarded")).toHaveText("2");
+    // The list is the whole organization's; the cards are this member's own single proposal.
+    const ownTotals = account === "admin" ? (["1", "3", "2", "18", "0"] as const) : (["1", "2", "1", "7", "2"] as const);
+    await expectStatValues(page, ownTotals);
+    await expect(unreadPill(page)).toHaveText(account === "admin" ? "0 unread" : "1 unread");
+    await expect(statCards(page).getByTestId("dashboard-stat-cards-caption")).toContainText("Counts for the proposals you own.");
+    await expectNoSummaryRow(page);
     // No Apply button and no "Sort by" list: filters apply as they change, columns sort.
     await expect(page.getByTestId("role-dashboard").getByRole("button", { name: "Apply" })).toHaveCount(0);
     await expect(page.getByLabel("Sort by")).toHaveCount(0);
@@ -353,7 +418,7 @@ for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const
     await page.reload();
     await expect(rows(page).first()).toContainText("Trade Show Booth AV");
 
-    // Team + venue city + status together; the summary follows the list. Each change is in the URL.
+    // Team + venue city + status together. Each change is in the URL; none of them moves the stat cards.
     await page.goto("/dashboard?page=2");
     await openFilters(page);
     await filtersPanel(page).getByLabel("Team", { exact: true }).selectOption({ label: "Corporate Events" });
@@ -363,14 +428,14 @@ for (const [account, label] of [["admin", "Admin"], ["owner", "Owner"]] as const
     await filtersPanel(page).getByLabel("Venue city").fill("chicago");
     await expect(page).toHaveURL(/team=a{24}&venueCity=chicago$/);
     await expect(rows(page)).toHaveCount(3);
-    await expect(summary.getByTestId("summary-responses")).toHaveText("6");
+    await expectStatValues(page, ownTotals);
     await expect(chips(page)).toHaveText(["Team: Corporate Events", "Venue city: chicago"]);
     await page.keyboard.press("Escape");
     await statusTab(page, /^Awarded/).click();
     await expect(page).toHaveURL(/stage=awarded/);
     await expect(rows(page)).toHaveCount(1);
     await expect(rows(page).first()).toContainText("Holiday Town Hall");
-    await expect(summary.getByTestId("summary-awarded")).toHaveText("1");
+    await expectStatValues(page, ownTotals);
     await check(page, testInfo, `${account}-filtered`);
 
     // The filters are the URL: they survive a reload...
@@ -539,10 +604,129 @@ test("Owner: the row menu edits, duplicates and archives, and respects the plan 
   await expect(page.getByRole("alert").filter({ hasText: "2 of 2" })).toBeVisible();
   expect((await (await request.get(`${STUB}/__e2e/dashboard`)).json()).copies).toHaveLength(1);
 
-  // The all-zero stat card offers no create button at the limit either.
+  // The free trial doesn't include vendor responses: that card says so instead of a number, and
+  // the old all-zero summary card (with its create button) is gone.
   await page.goto("/dashboard?view=mine&stage=draft");
-  await expect(page.getByTestId("summary-empty")).toBeVisible();
-  await expect(page.getByTestId("summary-empty-create")).toHaveCount(0);
+  await expect(statCards(page).getByTestId("stat-card-vendor-responses-value")).toHaveText("—");
+  await expect(unreadPill(page)).toHaveText("Not in your plan");
+  await expect(statCards(page).getByTestId("dashboard-stat-cards-unavailable")).toHaveCount(0);
+  await expectStatValues(page, ["1", "2", "1", "7", "—"]);
+  await expectNoSummaryRow(page);
+});
+
+// The five stat cards: the signed-in member's own totals from GET /api/dashboard/overview and the
+// vendor-responses total, above a list that may be a team's or the whole organization's.
+test.describe("Stat cards", () => {
+  const CARDS = [
+    { id: "proposals", title: "Total Proposals", action: "Open proposals", href: "/proposals" },
+    { id: "sent", title: "Total Email Sent", action: "Open email activity", href: "/email" },
+    { id: "clicked", title: "Total Email Clicked", action: "Open email activity", href: "/email" },
+    { id: "views", title: "Total Proposal Views", action: "Review proposals", href: "/proposals" },
+    { id: "vendor-responses", title: "Vendor Responses", action: "Open responses", href: "/vendor-responses" },
+  ] as const;
+  const noOverflow = async (page: Page) =>
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  // How many cards sit on the first row.
+  const acrossFirstRow = async (page: Page) => {
+    const tops = await statCards(page).locator("[data-dashboard-stat-card]").evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().top)));
+    return tops.filter((top) => top === tops[0]).length;
+  };
+  const setTheme = async (page: Page, theme: "dark" | "light") => {
+    await page.evaluate((dark) => document.documentElement.classList.toggle("dark", dark), theme === "dark");
+    await page.waitForTimeout(500);
+  };
+
+  for (const [account, values, unread, names] of [
+    ["planner", ["6", "22", "9", "1,234", "14"], "3 unread", ["Your Total Proposals: 6. Open proposals", "Your Total Email Sent: 22. Open email activity", "Your Total Email Clicked: 9. Open email activity", "Your Total Proposal Views: 1,234. Review proposals", "Your Vendor Responses: 14, 3 unread. Open responses"]],
+    ["admin", ["1", "3", "2", "18", "0"], "0 unread", ["Your Total Proposals: 1. Open proposals", "Your Total Email Sent: 3. Open email activity", "Your Total Email Clicked: 2. Open email activity", "Your Total Proposal Views: 18. Review proposals", "Your Vendor Responses: 0, 0 unread. Open responses"]],
+  ] as const) {
+    test(`${account}: five cards with their own totals, the unread pill, the caption and a link each`, async ({ page }, testInfo) => {
+      await signInAs(page, account);
+      const cards = statCards(page);
+      await expect(cards.getByRole("heading", { name: "Your totals" })).toBeVisible();
+      await expect(cards.getByTestId("dashboard-stat-cards-caption")).toContainText("Counts for the proposals you own. The view and filters below don't change them.");
+      await expect(cards.locator("[data-dashboard-stat-card]")).toHaveCount(5);
+      await expect(cards.getByRole("heading", { level: 3 })).toHaveText(CARDS.map((card) => card.title));
+      await expectStatValues(page, values);
+      await expect(unreadPill(page)).toHaveText(unread);
+      await expect(cards.getByTestId("dashboard-stat-cards-unavailable")).toHaveCount(0);
+      for (const [index, card] of CARDS.entries()) {
+        const link = cards.getByTestId(`stat-card-${card.id}`);
+        await expect(link).toHaveAttribute("href", card.href);
+        await expect(link).toHaveAccessibleName(names[index]);
+        await expect(link).toContainText(card.action);
+      }
+      await expectNoSummaryRow(page);
+      await expectProposalWording(cards);
+
+      // Five across on a wide screen; on a phone one column, also at 375 px, never wider than the screen.
+      if (isMobile(testInfo)) {
+        expect(await acrossFirstRow(page)).toBe(1);
+        await noOverflow(page);
+        await page.setViewportSize({ width: 375, height: 812 });
+        expect(await acrossFirstRow(page)).toBe(1);
+        await noOverflow(page);
+      } else {
+        expect(await acrossFirstRow(page)).toBe(5);
+        await noOverflow(page);
+      }
+      const size = isMobile(testInfo) ? "phone-375" : "desktop";
+      await check(page, testInfo, `stat-cards-${account}-${size}-dark`);
+      await setTheme(page, "light");
+      await check(page, testInfo, `stat-cards-${account}-${size}-light`);
+      await setTheme(page, "dark");
+
+      // Each card opens the screen it names, on the first click. The click waits for the app shell's
+      // mount actions (see dashboardWithShellSettled): clicked while one is in flight, the route change
+      // can be undone a moment later (to /email and straight back to /dashboard). The wait keeps this
+      // spec deterministic; it is not the fix. The fix belongs in the app (Sidebar.tsx, SupportFab.tsx)
+      // and is a separate issue. No retry here: a bounce has to fail this test.
+      for (const card of [CARDS[0], CARDS[1], CARDS[4]]) {
+        await dashboardWithShellSettled(page);
+        const opened = new RegExp(`${card.href}$`);
+        const visited: string[] = [];
+        const record = (frame: Frame) => {
+          if (frame === page.mainFrame()) visited.push(frame.url());
+        };
+        page.on("framenavigated", record);
+        await statCards(page).getByTestId(`stat-card-${card.id}`).click();
+        await expect(page).toHaveURL(opened);
+        // The dashboard is gone, the address is still the card's, and nothing else was visited on the way.
+        await expect(page.getByTestId("role-dashboard")).toHaveCount(0);
+        await expect(page).toHaveURL(opened);
+        page.off("framenavigated", record);
+        expect(visited.filter((url) => !opened.test(url))).toEqual([]);
+      }
+    });
+  }
+
+  test("a list of other people's proposals leaves the cards as the member's own", async ({ page }) => {
+    await signInAs(page, "admin");
+    // 35 open proposals in the organization; one of them is Adam's.
+    await expect(statusTab(page, /^All open/)).toHaveText("All open: 35 proposals");
+    await expectStatValues(page, ["1", "3", "2", "18", "0"]);
+    await page.getByRole("navigation", { name: "Dashboard views" }).getByRole("link", { name: "My Proposals" }).click();
+    await expect(page.getByTestId("role-dashboard")).toHaveAttribute("data-dashboard-view", "mine");
+    await expect(rows(page)).toHaveCount(1);
+    await expectStatValues(page, ["1", "3", "2", "18", "0"]);
+  });
+
+  test("when the overview can't be loaded the cards say so and the dashboard still works", async ({ page, request }, testInfo) => {
+    await signInAs(page, "planner");
+    await request.post(`${STUB}/__e2e/dashboard?overview=down`);
+    await page.reload();
+    await expect(page.getByTestId("role-dashboard")).toBeVisible();
+    // No made-up zeros: the four overview totals are missing, the vendor responses still count.
+    await expectStatValues(page, ["—", "—", "—", "—", "14"]);
+    await expect(unreadPill(page)).toHaveText("3 unread");
+    await expect(statCards(page).getByTestId("dashboard-stat-cards-unavailable")).toHaveText("We couldn't load some of your totals. Reload the page to try again.");
+    await expect(statCards(page).getByTestId("stat-card-proposals")).toHaveAccessibleName("Your Total Proposals: unavailable. Open proposals");
+    await expect(rows(page)).toHaveCount(5);
+    await expect(page.getByRole("region", { name: "Upcoming deadlines" })).toBeVisible();
+    // No error banner (Next's own route announcer is an alert, so look inside the dashboard).
+    await expect(page.getByTestId("role-dashboard").getByRole("alert")).toHaveCount(0);
+    await check(page, testInfo, "stat-cards-overview-unavailable");
+  });
 });
 
 test("Viewer: a read-only Shared with me view only", async ({ page }, testInfo) => {
@@ -560,7 +744,10 @@ test("Viewer: a read-only Shared with me view only", async ({ page }, testInfo) 
 
   // Read-only: no other views, no summary or panels, nothing to create, edit, send or comment on.
   await expect(page.getByRole("navigation", { name: "Dashboard views" })).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Summary" })).toHaveCount(0);
+  // A Viewer owns nothing: no stat cards (and no summary row).
+  await expect(statCards(page)).toHaveCount(0);
+  await expect(page.locator("[data-dashboard-stat-card]")).toHaveCount(0);
+  await expectNoSummaryRow(page);
   await expect(page.getByRole("region", { name: "Upcoming deadlines" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "New submissions" })).toHaveCount(0);
   await expect(page.getByTestId("admin-visibility-note")).toHaveCount(0);

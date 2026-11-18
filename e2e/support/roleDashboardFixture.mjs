@@ -5,6 +5,10 @@
 // except one row that is served without, like an item from an API that doesn't send them yet.
 // On request (POST /__e2e/dashboard?proposalsPage=on) the same rows are also served to the
 // Proposals page (GET /api/proposals); a plain POST /__e2e/dashboard turns that off again.
+// The stat cards' two reads are here too: GET /api/dashboard/overview (the signed-in member's own
+// totals, whatever their role) and the totals of GET /api/vendor-responses, which
+// planEntitlementsFixture.mjs answers after its plan gate. POST /__e2e/dashboard?overview=down
+// makes the overview fail until the next plain POST.
 // The product calls these "proposals"; the API paths and fields keep their older name. Like the real backend it scopes every answer to the signed-in member's
 // role, and the summary is computed from the same filtered set as the list.
 
@@ -65,6 +69,15 @@ const A = DASHBOARD_ACCOUNTS;
 // the copies asked for. Copies are never listed by the dashboard endpoints (as in the backend).
 const changes = { archived: new Set(), copies: [] };
 
+// Stat cards: what only the overview knows about a member's own proposals, and how many of the
+// responses to them are unread. Anyone not listed has none.
+const OWN_ACTIVITY = {
+  [id("1")]: { emailClicked: 1, proposalViews: 7, unread: 1 },
+  [id("2")]: { emailClicked: 2, proposalViews: 18, unread: 0 },
+  [id("4")]: { emailClicked: 9, proposalViews: 1234, unread: 3 },
+};
+let overviewDown = false;
+
 // Built per request so "today" never drifts from the test's clock.
 const rfps = () => seedRfps().map((row) => (changes.archived.has(row.id) ? { ...row, stage: "archived" } : row));
 
@@ -120,6 +133,50 @@ const visibleTo = (actor) => (row) => {
   if (actor.roles.includes("viewer")) return false;
   if (row.ownerUserId === actor.userId) return true;
   return actor.roles.includes("team_manager") && TEAMS.some((team) => team.id === row.teamId && team.managers.includes(actor.userId));
+};
+
+// The proposals a member owns, archived ones included: shares and managed teams don't count.
+const ownedBy = (actor) => rfps().filter((row) => row.ownerUserId === actor.userId);
+
+// GET /api/dashboard/overview. An opaque token (the older specs) is a member with no proposals.
+const handleOverview = (request, response, url) => {
+  if (request.method !== "GET" || url.pathname !== "/api/dashboard/overview") return false;
+  if (overviewDown) {
+    json(response, 500, { success: false, message: "Error fetching dashboard overview" });
+    return true;
+  }
+  const actor = actorOf(request);
+  const own = actor ? ownedBy(actor) : [];
+  const activity = (actor && OWN_ACTIVITY[actor.userId]) || { emailClicked: 0, proposalViews: 0 };
+  json(response, 200, {
+    success: true,
+    message: "Dashboard overview fetched successfully",
+    data: {
+      totals: {
+        totalProposals: own.length,
+        totalEmailSent: own.reduce((sum, row) => sum + row.vendorsInvited, 0),
+        totalEmailClicked: activity.emailClicked,
+        totalProposalViews: activity.proposalViews,
+      },
+      latestProposals: [],
+    },
+  });
+  return true;
+};
+
+// The stat cards' read of GET /api/vendor-responses (every response to a proposal the member
+// owns, no proposal or campaign filter): its total and unread count, or null for any other
+// request. The sidebar's own unread read sends no `unreadOnly` and keeps its answer of 0, so
+// other specs' sidebars don't change.
+export const dashboardVendorResponseTotals = (request, url) => {
+  const params = url.searchParams;
+  if (!params.has("unreadOnly") || params.has("proposalId") || params.has("campaignId")) return null;
+  const actor = actorOf(request);
+  if (!actor) return null;
+  return {
+    total: ownedBy(actor).reduce((sum, row) => sum + row.vendorsResponded, 0),
+    unreadCount: OWN_ACTIVITY[actor.userId]?.unread ?? 0,
+  };
 };
 
 const OBJECT_ID = /^[0-9a-f]{24}$/i;
@@ -248,6 +305,7 @@ const handleRowActions = (request, response, url) => {
       changes.archived.clear();
       changes.copies.length = 0;
       proposalsPage = url.searchParams.get("proposalsPage") === "on";
+      overviewDown = url.searchParams.get("overview") === "down";
     }
     json(response, 200, { archived: [...changes.archived], copies: changes.copies });
     return true;
@@ -281,6 +339,7 @@ const handleRowActions = (request, response, url) => {
 export function handleRoleDashboard(request, response, url) {
   if (handleRowActions(request, response, url)) return true;
   if (handleProposalsPage(request, response, url)) return true;
+  if (handleOverview(request, response, url)) return true;
   if (request.method !== "GET") return false;
   const pathname = url.pathname;
   const handled = ["/api/v1/rfps", "/api/v1/rfps/summary", "/api/organization/members", "/api/v1/teams"].includes(pathname);
