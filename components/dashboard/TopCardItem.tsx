@@ -22,13 +22,18 @@ interface StatMetric {
   missing?: string;
 }
 
+// The keyboard focus ring the rest of the dashboard uses (RoleDashboardView, DashboardFilters): a sky
+// ring behind a gap in the default offset colour (white), which shows on the light page and on the
+// dark one. A white ring on these cards was all but invisible on the light page.
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2";
+
 const StatCard = ({ id, title, value, icon, gradient, href, actionLabel, badge, missing = "unavailable" }: StatMetric) => (
   <Link
     href={href}
     aria-label={`Your ${title}: ${value === null ? missing : formatCount(value)}${badge ? `, ${badge}` : ""}. ${actionLabel}`}
     data-dashboard-stat-card
     data-testid={`stat-card-${id}`}
-    className="group relative block h-full min-h-40 overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-[transform,box-shadow,filter] duration-300 hover:-translate-y-1 hover:brightness-[1.03] hover:shadow-xl active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-200 sm:p-6"
+    className={`group relative block h-full min-h-40 overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-[transform,box-shadow,filter] duration-300 hover:-translate-y-1 hover:brightness-[1.03] hover:shadow-xl active:translate-y-0 active:scale-[0.99] sm:p-6 ${focusRing}`}
     style={{ background: gradient }}
   >
     {/* Large watermark background icon */}

@@ -113,6 +113,17 @@ describe("TopCardItem", () => {
     expect(screen.getAllByRole("link")).toHaveLength(5);
   });
 
+  it("gives every card link the dashboard's keyboard focus ring, not a white one", () => {
+    render(<TopCardItem stats={stats} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(5);
+    for (const link of links) {
+      expect(link).toHaveClass("focus-visible:outline-none", "focus-visible:ring-2", "focus-visible:ring-sky-500", "focus-visible:ring-offset-2");
+      // The old ring: white, with an offset the dark theme paints dark, so it vanished on the light page.
+      expect(link.className).not.toMatch(/focus-visible:ring-white|focus-visible:ring-offset-slate-200|focus-visible:ring-4/);
+    }
+  });
+
   it("says proposal, never RFP as a noun, in text and accessible names", () => {
     render(<TopCardItem stats={stats} />);
     expect(document.body.textContent ?? "").not.toMatch(RFP_NOUN);
