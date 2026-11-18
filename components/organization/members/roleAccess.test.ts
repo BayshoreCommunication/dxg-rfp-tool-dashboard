@@ -38,8 +38,8 @@ describe("role access guide data", () => {
     expect(Object.keys(ROLE_SUMMARIES).sort()).toEqual([...ROLES].sort());
   });
 
-  it("groups the rows as Proposals, People, Organization, Security and support", () => {
-    expect(ROLE_ACCESS_GROUPS.map((group) => group.title)).toEqual(["Proposals", "People", "Organization", "Security and support"]);
+  it("groups the rows as Proposals, People, Organization, Security", () => {
+    expect(ROLE_ACCESS_GROUPS.map((group) => group.title)).toEqual(["Proposals", "People", "Organization", "Security"]);
     for (const group of ROLE_ACCESS_GROUPS) expect(group.rows.length).toBeGreaterThan(0);
   });
 
@@ -99,14 +99,13 @@ describe("role access guide data", () => {
     ["security-own", ["yes", "yes", "yes", "yes", "yes"]],
     ["security-settings", ["yes", "yes", "no", "no", "no"]],
     ["security-reset-2fa", ["yes", "yes", "no", "no", "no"]],
-    ["support-access", ["yes", "yes", "no", "no", "no"]],
     ["audit-log", ["yes", "yes", "no", "no", "no"]],
   ])("%s matches the backend rule", (id, expected) => {
     expect(levels(id)).toEqual(expected);
   });
 
   it("pins every row, so a new one is checked against the backend before it ships", () => {
-    expect(rows).toHaveLength(26);
+    expect(rows).toHaveLength(25);
   });
 
   it("says what the Team Manager invite depends on", () => {

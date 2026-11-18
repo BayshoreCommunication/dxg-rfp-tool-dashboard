@@ -6,6 +6,9 @@ import { expectProposalWording } from "./support/wording";
 // ORG-407: the organization audit log for each role, against the stub backend
 // (e2e/support/auditLogFixture.mjs), which applies the backend's rule: an Owner or Admin reads
 // it, every other role is refused. `next dev` compiles on demand, so waits are long.
+// Owner decisions, 2026-11-17: RFPilot Support access events and every other RFPilot staff
+// event are not part of the customer's audit log. The stub still serves them, as the backend
+// does today, and none may reach the screen.
 const expect = baseExpect.configure({ timeout: 45_000 });
 
 type Role = "owner" | "admin" | "manager" | "planner" | "viewer";
@@ -34,6 +37,12 @@ const signInAs = async (page: Page, role: Role) => {
   // Only what happens on the screens under test counts.
   problems.get(page)!.length = 0;
 };
+
+// The stub's port can be moved (ASSISTANT_E2E_BACKEND_PORT) when 8011 is taken by another run.
+const STUB = `http://127.0.0.1:${process.env.ASSISTANT_E2E_BACKEND_PORT || 8011}`;
+// Shaped like the role accounts' access token (roleDashboardFixture.mjs), to ask the stub directly.
+const stubToken = (roles: string[]) => `e2e.${Buffer.from(JSON.stringify({ userId: "1".repeat(24), roles })).toString("base64url")}.stub`;
+const STAFF = /support access|support_access|RFPilot Support|RFPilot staff|Plan changed|placed by|placement undone|legacy_customer|plan_changed/i;
 
 const screen = (page: Page) => page.getByTestId("audit-log");
 const rows = (page: Page) => page.getByRole("list", { name: "Audit events" }).locator("> li");
@@ -64,38 +73,82 @@ const check = async (page: Page, testInfo: TestInfo, name: string) => {
 };
 
 for (const role of ["owner", "admin"] as const) {
-  test(`${role}: reads the audit log, with RFPilot Support shown by that name`, async ({ page }, testInfo) => {
+  test(`${role}: reads the audit log, with no RFPilot staff activity in it`, async ({ page }, testInfo) => {
     await signInAs(page, role);
     await openAuditLog(page);
 
-    await expect(rows(page)).toHaveCount(50);
-    const first = rows(page).first();
-    await expect(first).toContainText("Support access used");
-    await expect(first).toContainText("RFPilot Support");
-    await expect(first).toContainText("Opened a proposal");
-    await expect(rows(page).nth(1)).toContainText("Refused");
-    await expect(rows(page).nth(1)).toContainText("Reason: No active support access");
-    await expect(rows(page).nth(5)).toContainText("Previous role: Viewer");
-    await expect(rows(page).nth(5)).toContainText("Role: Planner");
-    await expect(rows(page).nth(6)).toContainText("Require two-factor: Off → On");
+    // The backend's first page holds 50 events; seven are RFPilot staff or Support access
+    // events and are not shown.
+    await expect(rows(page)).toHaveCount(43);
+    await expect(page.getByText("Showing 43 events, newest first.")).toBeVisible();
+    await expect(rows(page).first()).toContainText("Sign-in failed");
+    await expect(rows(page).first()).toContainText("Refused");
+    await expect(rows(page).first()).toContainText("Reason: Wrong password");
+    await expect(rows(page).nth(2)).toContainText("Previous role: Viewer");
+    await expect(rows(page).nth(2)).toContainText("Role: Planner");
+    await expect(rows(page).nth(3)).toContainText("Require two-factor: Off → On");
+    expect(await screen(page).textContent()).not.toMatch(STAFF);
     // Role codes never reach the screen.
     expect(await screen(page).textContent()).not.toMatch(/organization_admin|team_manager/);
     await check(page, testInfo, `${role}-populated`);
 
     await page.getByRole("button", { name: "Load more" }).click();
-    await expect(rows(page)).toHaveCount(66);
+    await expect(rows(page)).toHaveCount(63);
+    await expect(page.getByText("Showing 63 events.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(0);
+    expect(await screen(page).textContent()).not.toMatch(STAFF);
   });
 }
+
+test("owner: RFPilot staff and Support access events the backend still serves are not shown, filtered or exported", async ({ page, request }, testInfo) => {
+  // The stub serves them, as the backend does until its own change ships.
+  const headers = { Authorization: `Bearer ${stubToken(["owner"])}` };
+  const served = await (await request.get(`${STUB}/api/v1/organization/audit-events?limit=100`, { headers })).json();
+  const servedActions: string[] = served.data.events.map((event: { action: string }) => event.action);
+  expect(servedActions.filter((action) => action.startsWith("support_access.")).sort())
+    .toEqual(["support_access.denied", "support_access.granted", "support_access.revoked", "support_access.used"]);
+  for (const action of ["organization.legacy_customer.placed", "organization.legacy_customer.placement_rolled_back", "organization.plan_changed"]) expect(servedActions).toContain(action);
+  expect(served.data.events.filter((event: { actor: { kind: string } }) => event.actor.kind === "support")).toHaveLength(5);
+  const filters = await (await request.get(`${STUB}/api/v1/organization/audit-events/filters`, { headers })).json();
+  expect(filters.data.categories.map((category: { key: string }) => category.key)).toContain("support_access");
+
+  await signInAs(page, "owner");
+  await openAuditLog(page);
+  await expect(page.getByText("Sign-ins, security changes, invitations, role and team changes and proposal sharing in your organization. Entries can't be edited or deleted.", { exact: true })).toBeVisible();
+
+  // Only members can be chosen as the user.
+  const userOptions = await screen(page).getByLabel("User", { exact: true }).locator("option").allTextContents();
+  expect(userOptions[0]).toBe("Everyone");
+  expect(userOptions.filter((label) => STAFF.test(label))).toEqual([]);
+
+  // No Support access filter and no staff action: neither the category nor any such action.
+  const actionOptions = await screen(page).getByLabel("Action", { exact: true }).locator("option, optgroup").evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).label || node.textContent || ""));
+  expect(actionOptions).toContain("All: Organization settings");
+  expect(actionOptions.filter((label) => STAFF.test(label))).toEqual([]);
+
+  // None of the seven events is in the list, on either page.
+  await page.getByRole("button", { name: "Load more" }).click();
+  await expect(rows(page)).toHaveCount(63);
+  for (const label of ["Support access used", "Support access refused", "Support access granted", "Support access revoked", "Support access ID", "No active support access", "Member placed by RFPilot Support", "Member placement undone by RFPilot Support", "Plan changed by RFPilot Support", "RFPilot Support", "RFPilot staff"]) {
+    await expect(screen(page).getByText(label)).toHaveCount(0);
+  }
+  expect(await screen(page).textContent()).not.toMatch(STAFF);
+  await check(page, testInfo, "owner-no-support-access");
+
+  // The export leaves them out too, and counts what it holds.
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export CSV" }).click()]);
+  const csv = fs.readFileSync(await download.path(), "utf8");
+  expect(csv.trimEnd().split("\r\n")).toHaveLength(64);
+  expect(csv).not.toMatch(STAFF);
+  expect(csv).not.toContain("grantId");
+  expect(csv).not.toContain('"support"');
+  expect(csv).toContain('"Role changed"');
+  await expect(page.getByText("Exported 63 events.")).toBeVisible();
+});
 
 test("owner: filters by user, action and date, sees the empty state, and exports what is filtered", async ({ page }, testInfo) => {
   await signInAs(page, "owner");
   await openAuditLog(page);
-
-  await screen(page).getByLabel("User", { exact: true }).selectOption({ label: "RFPilot Support" });
-  await expect(rows(page)).toHaveCount(2);
-  for (const row of await rows(page).all()) await expect(row).toContainText("RFPilot Support");
-  await check(page, testInfo, "owner-filter-support");
 
   await screen(page).getByLabel("User", { exact: true }).selectOption({ label: "Priya Planner" });
   await expect(rows(page)).toHaveCount(3);
@@ -117,15 +170,21 @@ test("owner: filters by user, action and date, sees the empty state, and exports
   await expect(page.getByText("Exported 1 event.")).toBeVisible();
 
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(rows(page)).toHaveCount(50);
+  await expect(rows(page)).toHaveCount(43);
 
   // A category, then a date range with nothing in it.
-  await screen(page).getByLabel("Action", { exact: true }).selectOption({ label: "All: RFPilot Support access" });
-  await expect(rows(page)).toHaveCount(3);
+  await screen(page).getByLabel("Action", { exact: true }).selectOption({ label: "All: Organization settings" });
+  // The backend returns two; the plan change made by RFPilot staff is not shown.
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page).first()).toContainText("Organization settings changed");
+  await expect(page.getByText("Showing 1 event.")).toBeVisible();
   await screen(page).getByLabel("From", { exact: true }).fill("2020-01-01");
   await screen(page).getByLabel("To", { exact: true }).fill("2020-01-31");
   await expect(page.getByText("No activity matches these filters")).toBeVisible();
   await check(page, testInfo, "owner-empty");
+  // Nothing in the range: the screen says so, and no file is handed over.
+  await page.getByRole("button", { name: "Export CSV" }).click();
+  await expect(page.getByText("There's nothing to export for this range.")).toBeVisible();
 
   // A start after the end is refused on the screen, and the export is not offered.
   await screen(page).getByLabel("To", { exact: true }).fill("2019-12-01");
@@ -138,8 +197,7 @@ test("owner: finds the audit log from the Security page", async ({ page }, testI
   await signInAs(page, "owner");
   await page.goto("/settings/security");
   const link = page.getByRole("link", { name: "Open audit log" });
-  // The stub may not serve the organization security block; the link lives inside it.
-  test.skip(!(await link.isVisible({ timeout: 60_000 }).catch(() => false)), "the stub does not serve organization security settings");
+  await expect(link).toBeVisible({ timeout: 60_000 });
   await link.click();
   await expect(page).toHaveURL(/\/settings\/audit$/);
   await expect(page.getByRole("heading", { name: "Audit log", level: 2 })).toBeVisible();
@@ -154,7 +212,7 @@ for (const role of ["manager", "planner", "viewer"] as const) {
     await expect(screen(page)).toHaveCount(0);
     await expect(page.getByRole("list", { name: "Audit events" })).toHaveCount(0);
     const body = (await page.locator("body").textContent()) ?? "";
-    expect(body).not.toMatch(/Support access used|Sign-in failed|Role changed/);
+    expect(body).not.toMatch(/Plan changed|Sign-in failed|Role changed/);
     await page.screenshot({ path: testInfo.outputPath(`${role}-not-found.png`), fullPage: true });
     expect(problems.get(page)).toEqual([]);
   });

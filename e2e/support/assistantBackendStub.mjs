@@ -4,7 +4,7 @@ import { handleProposalOnboarding } from './proposalOnboardingFixture.mjs';
 import { DASHBOARD_ACCOUNTS, dashboardAccessToken, handleRoleDashboard } from './roleDashboardFixture.mjs';
 import { handleAuditLog } from './auditLogFixture.mjs';
 import { handleVendorList } from './vendorListFixture.mjs';
-import { handleSupportGrants } from './supportGrantsFixture.mjs';
+import { handleSecurityPage } from './securityPageFixture.mjs';
 import { handlePlanEntitlements } from './planEntitlementsFixture.mjs';
 import { handleProposalTemplates } from './proposalTemplatesFixture.mjs';
 import { handleSettings, resetSettings } from './settingsFixture.mjs';
@@ -172,9 +172,9 @@ const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
   const pathname = url.pathname;
   if (await handleProposalOnboarding(request, response, url)) return;
-  // ORG-405: support access grants and their role accounts (supportGrantsFixture.mjs). First,
-  // so its accounts get its own RFP list; it leaves every other account to the handlers below.
-  if (await handleSupportGrants(request, response, url)) return;
+  // Settings > Security for the role accounts, and the support button's unread count
+  // (securityPageFixture.mjs).
+  if (await handleSecurityPage(request, response, url)) return;
   // ORG-407: the organization audit log for the role accounts (auditLogFixture.mjs).
   if (handleAuditLog(request, response, url)) return;
   if (handleRoleDashboard(request, response, url)) return;
