@@ -124,7 +124,7 @@ describe("role dashboards: the list and its counts share one query", () => {
     expect(scopeQuery(parseDashboardState({}, "viewer"), USER)).toEqual({});
   });
 
-  test("the list sends the scope, the selected stage, paging and sorting", () => {
+  test("the list sends the scope, the selected stage, paging and sorting; the status-tab counts are asked with the same filters", () => {
     const filters = filterQuery(state, USER);
     expect(filters).toEqual({ owner: OTHER, team: TEAM, venueCity: "Chicago", eventFrom: "2026-01-01", search: "gala", stage: "sent" });
     const { page, limit, sortBy, sortOrder, ...rest } = listQuery(state, USER);
