@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect as baseExpect, test, type APIRequestContext, type Page, type TestInfo } from "@playwright/test";
+import { expect as baseExpect, test, type APIRequestContext, type Frame, type Page, type Request, type TestInfo } from "@playwright/test";
 import { expectProposalWording } from "./support/wording";
 
 // `next dev` compiles and renders on demand, and each filter is a full server render, so give
@@ -69,6 +69,55 @@ const checkBothThemes = async (page: Page, testInfo: TestInfo, name: string) => 
   await check(page, testInfo, `${name}-light`);
   await page.evaluate(() => document.documentElement.classList.add("dark"));
   await page.waitForTimeout(500);
+};
+
+// Opens /dashboard and waits until the app shell's mount actions are over, so a click that follows
+// starts its navigation with no server action in flight.
+//
+// Why: on mount the shell calls five server actions (components/layout/Sidebar.tsx: notification
+// unread count, vendor unread count, support unread count, notification socket config;
+// components/support/SupportFab.tsx: support unread count again). Next runs server actions one at a
+// time through its router action queue, and a navigation that starts while one is in flight can be
+// overwritten when a later queued action settles against the state from before the navigation.
+//
+// A server action is a POST carrying a Next-Action header. The wait ends when at least
+// SHELL_MOUNT_ACTIONS of them, started by the freshly loaded document, have ended and none is in
+// flight. The floor matters because the queue is serial: between two actions nothing is in flight.
+const SHELL_MOUNT_ACTIONS = 5;
+const dashboardWithShellSettled = async (page: Page) => {
+  const inFlight = new Set<Request>();
+  let ended = 0;
+  const isServerAction = (request: Request) => request.method() === "POST" && Boolean(request.headers()["next-action"]);
+  const onRequest = (request: Request) => {
+    if (isServerAction(request)) inFlight.add(request);
+  };
+  // Finished or failed (the browser reports some as cancelled once Next has read the result).
+  const onEnd = (request: Request) => {
+    if (inFlight.delete(request)) ended += 1;
+  };
+  // Count only the new document's actions, not ones the page being left still had open.
+  const onNavigated = (frame: Frame) => {
+    if (frame !== page.mainFrame()) return;
+    inFlight.clear();
+    ended = 0;
+  };
+  page.on("request", onRequest);
+  page.on("requestfinished", onEnd);
+  page.on("requestfailed", onEnd);
+  page.on("framenavigated", onNavigated);
+  try {
+    await page.goto("/dashboard");
+    await expect
+      .poll(() => (ended >= SHELL_MOUNT_ACTIONS && inFlight.size === 0 ? "settled" : `${ended} of ${SHELL_MOUNT_ACTIONS} ended, ${inFlight.size} in flight`), {
+        message: "the app shell's mount server actions should all have ended",
+      })
+      .toBe("settled");
+  } finally {
+    page.off("request", onRequest);
+    page.off("requestfinished", onEnd);
+    page.off("requestfailed", onEnd);
+    page.off("framenavigated", onNavigated);
+  }
 };
 
 // The stat cards: the signed-in member's own totals, in the order they are shown (proposals,
@@ -627,16 +676,26 @@ test.describe("Stat cards", () => {
       await check(page, testInfo, `stat-cards-${account}-${size}-light`);
       await setTheme(page, "dark");
 
-      // Each card opens the screen it names. The click is tried again if the page is back on the
-      // dashboard: under `next dev` the route change was once undone a moment after it happened
-      // (to /email and straight back, while the dev server was compiling). Cause not established.
+      // Each card opens the screen it names, on the first click. The click waits for the app shell's
+      // mount actions (see dashboardWithShellSettled): clicked while one is in flight, the route change
+      // can be undone a moment later (to /email and straight back to /dashboard). The wait keeps this
+      // spec deterministic; it is not the fix. The fix belongs in the app (Sidebar.tsx, SupportFab.tsx)
+      // and is a separate issue. No retry here: a bounce has to fail this test.
       for (const card of [CARDS[0], CARDS[1], CARDS[4]]) {
-        await page.goto("/dashboard");
+        await dashboardWithShellSettled(page);
         const opened = new RegExp(`${card.href}$`);
-        await expect(async () => {
-          if (!opened.test(page.url())) await statCards(page).getByTestId(`stat-card-${card.id}`).click({ timeout: 10_000 });
-          await baseExpect(page).toHaveURL(opened, { timeout: 5_000 });
-        }).toPass();
+        const visited: string[] = [];
+        const record = (frame: Frame) => {
+          if (frame === page.mainFrame()) visited.push(frame.url());
+        };
+        page.on("framenavigated", record);
+        await statCards(page).getByTestId(`stat-card-${card.id}`).click();
+        await expect(page).toHaveURL(opened);
+        // The dashboard is gone, the address is still the card's, and nothing else was visited on the way.
+        await expect(page.getByTestId("role-dashboard")).toHaveCount(0);
+        await expect(page).toHaveURL(opened);
+        page.off("framenavigated", record);
+        expect(visited.filter((url) => !opened.test(url))).toEqual([]);
       }
     });
   }
