@@ -7,6 +7,8 @@
 // feature is refused with 403 PLAN_FEATURE_LOCKED before anything is read, and that refusal
 // carries no vendor data.
 
+import { dashboardVendorResponseTotals } from "./roleDashboardFixture.mjs";
+
 const FREE_TRIAL_LIMIT = 2;
 const state = { plan: "full_access", created: 0, lockedRequests: [] };
 
@@ -135,6 +137,12 @@ export async function handlePlanEntitlements(request, response, url) {
     return true;
   }
   if (method === "GET" && pathname === "/api/vendor-responses") {
+    // The dashboard's stat cards ask for the totals across the member's own proposals.
+    const totals = dashboardVendorResponseTotals(request, url);
+    if (totals) {
+      json(response, 200, { success: true, data: [], pagination: { total: totals.total, page: 1, limit: 1, totalPages: totals.total }, unreadCount: totals.unreadCount, filteredUnreadCount: totals.unreadCount });
+      return true;
+    }
     const forRfp = url.searchParams.get("proposalId") === PLAN_RFP_ID;
     const data = forRfp ? RESPONSE_IDS.map(responseItem) : [];
     json(response, 200, { success: true, data, pagination: { total: data.length, page: 1, limit: 100, totalPages: 1 }, unreadCount: 0 });

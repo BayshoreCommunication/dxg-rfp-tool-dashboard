@@ -1,6 +1,8 @@
 // The five stat cards at the top of /dashboard: the signed-in member's own totals. A figure that
 // could not be read is null and shown as unavailable, never as a made-up zero.
 
+import { PLAN_FEATURE_LOCKED } from "@/lib/entitlements/entitlements";
+
 export type DashboardOverviewTotals = {
   totalProposals: number;
   totalEmailSent: number;
@@ -51,7 +53,7 @@ export const toDashboardStats = (overview: DashboardOverviewTotals | null | unde
     totalProposalViews: overview?.totalProposalViews ?? null,
     totalVendorResponses: counted ? total : null,
     unreadVendorResponses: counted ? unread : null,
-    vendorResponsesLocked: isRecord(vendorResponses) && vendorResponses.code === "PLAN_FEATURE_LOCKED",
+    vendorResponsesLocked: isRecord(vendorResponses) && vendorResponses.code === PLAN_FEATURE_LOCKED,
   };
 };
 
