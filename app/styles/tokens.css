@@ -1,0 +1,131 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   RFPilot semantic design tokens.
+
+   Two layers:
+     1. Theme variables (:root = light, .dark = dark) hold the actual values.
+     2. `@theme inline` exposes them to Tailwind, so utilities such as
+        `bg-surface`, `text-heading` and `border-line` follow the active theme.
+
+   New components use these tokens only; no hex values. Legacy screens keep their
+   existing classes and the attribute-selector dark remaps in globals.css, which
+   this file does not touch.
+
+   Contrast is enforced by lib/designTokens.test.ts: every text token must reach
+   WCAG AA (4.5:1) on the surfaces it is used on, and every control/UI token 3:1.
+   Change a value here and that test tells you if it no longer holds.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces */
+  --page: #f5f7fa;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+
+  /* Lines. `line` is decorative (hairlines, card edges). `control` outlines form
+     controls and must be visible on its own (WCAG 1.4.11, 3:1). */
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --control: #8492a6;
+
+  /* Text */
+  --heading: #172033;
+  --body: #475569;
+  --muted: #5b6a80;
+  /* Decorative or disabled content only. Below 4.5:1: never use for readable text. */
+  --subtle: #8492a6;
+
+  /* Brand `#218CCB` fills, rings, icons and large elements (3.7:1 on white).
+     Action `#1B73AA` is for buttons, links and small blue text (5.15:1 on white). */
+  --brand: #218ccb;
+  --action: #1b73aa;
+  --action-hover: #1a6fa5;
+  --on-action: #ffffff;
+  --brand-soft: #e8f3fa;
+
+  /* Status: base colour for fills and icons, strong for text, soft for tinted surfaces. */
+  --success: #16a37a;
+  --success-strong: #0f7a5a;
+  --success-soft: #e7f6f1;
+  --warning: #d99a32;
+  --warning-strong: #855a0b;
+  --warning-soft: #fff6e5;
+  --danger: #dc5656;
+  --danger-strong: #be3a3a;
+  --danger-soft: #fdecec;
+
+  --focus-ring: rgb(33 140 203 / 0.45);
+
+  /* Shape and depth */
+  --r-control: 0.5rem;
+  --r-card: 0.75rem;
+  --sh-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 6px 20px rgb(15 42 67 / 0.05);
+  --sh-pop: 0 12px 32px rgb(15 23 42 / 0.16);
+}
+
+.dark {
+  --page: #07131c;
+  --surface: #0d1d28;
+  --surface-muted: #0a1923;
+
+  --line: #283c4a;
+  --line-strong: #3a5163;
+  --control: #5f7586;
+
+  --heading: #e6eef5;
+  --body: #c3d0db;
+  --muted: #97a9b8;
+  --subtle: #6b7f90;
+
+  --brand: #4da8dc;
+  --action: #4da8dc;
+  --action-hover: #7bc0e8;
+  --on-action: #07131c;
+  --brand-soft: #0e2c3e;
+
+  --success: #34b88c;
+  --success-strong: #5fd3a8;
+  --success-soft: #0b2a22;
+  --warning: #d99a32;
+  --warning-strong: #f0c060;
+  --warning-soft: #2a1f08;
+  --danger: #e06a6a;
+  --danger-strong: #f29a9a;
+  --danger-soft: #2e1214;
+
+  --focus-ring: rgb(77 168 220 / 0.55);
+
+  --sh-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.25);
+  --sh-pop: 0 14px 36px rgb(0 0 0 / 0.5);
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-control: var(--control);
+  --color-heading: var(--heading);
+  --color-body: var(--body);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-on-action: var(--on-action);
+  --color-brand-soft: var(--brand-soft);
+  --color-success: var(--success);
+  --color-success-strong: var(--success-strong);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-strong: var(--warning-strong);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-danger-soft: var(--danger-soft);
+  --color-focus-ring: var(--focus-ring);
+
+  --radius-control: var(--r-control);
+  --radius-card: var(--r-card);
+  --shadow-card: var(--sh-card);
+  --shadow-pop: var(--sh-pop);
+}
