@@ -160,4 +160,24 @@ describe("ProcessList", () => {
     await user.click(venueTechnical);
     expect(onStepChange).toHaveBeenCalledWith(7);
   });
+
+  it("offers a Retry button only when an autosave has failed", async () => {
+    const user = userEvent.setup();
+    const onAutosaveRetry = jest.fn();
+    const { rerender } = render(
+      <ProcessList autosaveStatus="All changes saved" onAutosaveRetry={onAutosaveRetry} />,
+    );
+    expect(screen.queryByRole("button", { name: "Retry save" })).not.toBeInTheDocument();
+
+    rerender(
+      <ProcessList
+        autosaveStatus="Save failed. Latest changes are not saved."
+        autosaveError
+        onAutosaveRetry={onAutosaveRetry}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Save failed");
+    await user.click(screen.getByRole("button", { name: "Retry save" }));
+    expect(onAutosaveRetry).toHaveBeenCalledTimes(1);
+  });
 });
