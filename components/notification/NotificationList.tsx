@@ -56,14 +56,14 @@ const getNotificationIcon = (type: NotificationItem["type"]) => {
 const getNotificationIconStyle = (type: NotificationItem["type"]) => {
   switch (type) {
     case "proposal_view":
-      return "bg-[#008ad2]/5 text-[#0069a0]";
+      return "bg-[#218ccb]/5 text-[#0069a0]";
     case "proposal_expiring_soon":
       return "bg-amber-50 text-amber-600";
     case "proposal_expired":
       return "bg-rose-50 text-rose-600";
     case "support_ticket":
     case "access_request":
-      return "bg-[#008ad2]/5 text-[#0069a0]";
+      return "bg-[#218ccb]/5 text-[#0069a0]";
     default:
       return "bg-slate-100 text-slate-600";
   }
@@ -176,14 +176,14 @@ export default function NotificationList({
     <section className="space-y-6 px-6">
       <div className="relative">
         {/* Ambient glow behind header */}
-        <div className="absolute -inset-4 bg-gradient-to-r from-[#008ad2]/5 via-[#0ea5e9]/3 to-[#2563eb]/5 rounded-3xl blur-2xl pointer-events-none flex items-center justify-center" />
+        <div className="absolute -inset-4 bg-gradient-to-r from-[#218ccb]/5 via-[#0ea5e9]/3 to-[#2563eb]/5 rounded-3xl blur-2xl pointer-events-none flex items-center justify-center" />
 
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           {/* Left: Title block */}
           <div className="flex flex-col gap-1">
             {/* Pill badge */}
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-[#008ad2] mb-1">
-              <Sparkles size={10} className="fill-[#008ad2]" />
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-[#218ccb] mb-1">
+              <Sparkles size={10} className="fill-[#218ccb]" />
               Overview
             </span>
 
@@ -207,7 +207,7 @@ export default function NotificationList({
 
           <div className="flex flex-wrap items-center gap-3 lg:ml-auto lg:justify-end">
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-              <Siren size={15} className="text-[#008ad2]" />
+              <Siren size={15} className="text-[#218ccb]" />
               {unreadCount} unread
             </div>
             <button
@@ -221,7 +221,7 @@ export default function NotificationList({
             </button>
             <Link
               href="/notification/settings"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#2fc6f5] to-[#008ad2] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2] focus-visible:ring-offset-2"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#2fc6f5] to-[#218ccb] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb] focus-visible:ring-offset-2"
             >
               <SlidersHorizontal size={16} aria-hidden="true" /> Notification settings
             </Link>
@@ -253,7 +253,7 @@ export default function NotificationList({
                   className={`flex w-full items-start gap-4 rounded-2xl border px-4 py-4 text-left transition-colors ${
                     notification.isRead
                       ? "border-slate-200 bg-white"
-                      : "border-[#008ad2]/20 bg-[#008ad2]/5"
+                      : "border-[#218ccb]/20 bg-[#218ccb]/5"
                   } disabled:cursor-default`}
                 >
                   <div
@@ -302,7 +302,7 @@ export default function NotificationList({
                   </div>
 
                   {!notification.isRead && (
-                    <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#008ad2]" />
+                    <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#218ccb]" />
                   )}
                 </button>
               ))}
@@ -352,7 +352,7 @@ export default function NotificationList({
                           href={`?page=${item}`}
                           className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
                             item === currentPage
-                              ? "border-[#008ad2] bg-[#008ad2]/5 text-brand-dark"
+                              ? "border-[#218ccb] bg-[#218ccb]/5 text-brand-dark"
                               : "border-slate-200 text-slate-600 hover:bg-slate-50"
                           }`}
                         >

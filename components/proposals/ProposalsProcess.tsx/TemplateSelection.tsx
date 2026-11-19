@@ -54,7 +54,7 @@ export default function TemplateSelection({
             onClick={() => onSelect("template-one")}
             className={`${cardBaseClass} ${
               templateId === "template-one"
-                ? "border-[#1DBFD3] bg-[#1DBFD3]/5 shadow-[0_0_0_2px_rgba(0,138,210,0.2)]"
+                ? "border-[#1DBFD3] bg-[#1DBFD3]/5 shadow-[0_0_0_2px_rgba(33,140,203,0.2)]"
                 : "border-slate-200 bg-white hover:border-[#1DBFD3]/50"
             }`}
           >
@@ -79,7 +79,7 @@ export default function TemplateSelection({
             onClick={() => onSelect("template-two")}
             className={`${cardBaseClass} ${
               templateId === "template-two"
-                ? "border-[#1DBFD3] bg-[#1DBFD3]/5 shadow-[0_0_0_2px_rgba(0,138,210,0.2)]"
+                ? "border-[#1DBFD3] bg-[#1DBFD3]/5 shadow-[0_0_0_2px_rgba(33,140,203,0.2)]"
                 : "border-slate-200 bg-white hover:border-[#1DBFD3]/50"
             }`}
           >

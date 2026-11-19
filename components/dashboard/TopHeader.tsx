@@ -38,14 +38,14 @@ const TopHeader = ({ canCreate = true, rfpUsage = null }: { canCreate?: boolean;
   return (
     <div className="relative">
       {/* Ambient glow behind header */}
-      <div className="absolute -inset-4 bg-gradient-to-r from-[#008ad2]/5 via-[#0ea5e9]/3 to-[#2563eb]/5 rounded-3xl blur-2xl pointer-events-none" />
+      <div className="absolute -inset-4 bg-gradient-to-r from-[#218ccb]/5 via-[#0ea5e9]/3 to-[#2563eb]/5 rounded-3xl blur-2xl pointer-events-none" />
 
       <div className="relative flex flex-col gap-4 px-1 sm:flex-row sm:items-center sm:justify-between sm:px-2 lg:px-5">
         {/* Left: Title block */}
         <div className="flex flex-col gap-1">
           {/* Pill badge */}
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-[#008ad2] mb-1">
-            <Sparkles size={10} className="fill-[#008ad2]" />
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-[#218ccb] mb-1">
+            <Sparkles size={10} className="fill-[#218ccb]" />
             Overview
           </span>
 

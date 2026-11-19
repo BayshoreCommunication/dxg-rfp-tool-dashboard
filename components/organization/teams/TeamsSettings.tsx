@@ -74,7 +74,7 @@ export default function TeamsSettings() {
           onClick={() => setOpenTeamId(team.id)}
           className="group flex w-full items-center gap-4 rounded-md border border-[#e4e4e4] bg-white px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-[#008ad2]"><UsersRound size={18} /></span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-[#218ccb]"><UsersRound size={18} /></span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold text-slate-800">{team.name}</span>
             <span className="mt-0.5 block truncate text-xs text-slate-500">
@@ -83,7 +83,7 @@ export default function TeamsSettings() {
             </span>
           </span>
           {team.archived && <Badge>Archived</Badge>}
-          <ChevronRight size={16} className="text-slate-300 transition-colors group-hover:text-[#008ad2]" aria-hidden="true" />
+          <ChevronRight size={16} className="text-slate-300 transition-colors group-hover:text-[#218ccb]" aria-hidden="true" />
         </button>
       </li>
     );
@@ -129,7 +129,7 @@ export default function TeamsSettings() {
             <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
               {active.map((team) => (
                 <li key={team.id} className="flex items-center gap-3 rounded-md border border-[#e4e4e4] px-4 py-3 text-sm font-medium text-slate-700">
-                  <UsersRound size={16} className="text-[#008ad2]" aria-hidden="true" /> {team.name}
+                  <UsersRound size={16} className="text-[#218ccb]" aria-hidden="true" /> {team.name}
                 </li>
               ))}
             </ul>

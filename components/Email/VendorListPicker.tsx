@@ -136,7 +136,7 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
               placeholder="Search by company or category"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]"
+              className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-[13px] text-slate-700 outline-none focus:border-[#218ccb]"
             />
           </div>
 
@@ -158,7 +158,7 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
                       <label className={`flex min-h-6 items-start gap-2 text-[13px] ${emails.length === 0 ? "text-slate-400" : "cursor-pointer text-slate-800"}`}>
                         <input
                           type="checkbox"
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#008ad2]"
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#218ccb]"
                           checked={all}
                           disabled={emails.length === 0}
                           ref={(element) => {
@@ -181,7 +181,7 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
                               <label className="flex min-h-6 cursor-pointer items-start gap-2 text-[12px] text-slate-700">
                                 <input
                                   type="checkbox"
-                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#008ad2]"
+                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#218ccb]"
                                   checked={selected.has(contact.email)}
                                   onChange={(event) => toggle([contact.email], event.target.checked)}
                                 />
@@ -216,7 +216,7 @@ export default function VendorListPicker({ recipients, onAdd, onRemove }: Props)
           <button
             type="button"
             onClick={openSave}
-            className="shrink-0 rounded-lg border border-[#008ad2]/40 bg-white px-3 py-1.5 text-[12px] font-semibold text-[#0076b4] hover:bg-[#008ad2]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="shrink-0 rounded-lg border border-[#218ccb]/40 bg-white px-3 py-1.5 text-[12px] font-semibold text-[#0076b4] hover:bg-[#218ccb]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           >
             Save new vendor to the list
           </button>

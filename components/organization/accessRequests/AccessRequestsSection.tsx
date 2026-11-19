@@ -120,7 +120,7 @@ export default function AccessRequestsSection({ teams, onInvited }: Props) {
         <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-md border border-slate-200 bg-slate-50/60 p-4">
           <input
             type="checkbox"
-            className="mt-0.5 h-4 w-4 accent-[#008ad2]"
+            className="mt-0.5 h-4 w-4 accent-[#218ccb]"
             checked={settings.autoApproveDomain}
             disabled={savingSetting}
             onChange={(event) => void toggleAutoApprove(event.target.checked)}
@@ -132,7 +132,7 @@ export default function AccessRequestsSection({ teams, onInvited }: Props) {
             </span>
             <span className="mt-1 block text-xs text-slate-500">
               New requests get a Planner invitation straight away, sent in the Owner&apos;s name. Manage domains in{" "}
-              <Link href="/settings/security" className="font-semibold text-[#008ad2] hover:underline">Security</Link>.
+              <Link href="/settings/security" className="font-semibold text-[#218ccb] hover:underline">Security</Link>.
             </span>
           </span>
         </label>

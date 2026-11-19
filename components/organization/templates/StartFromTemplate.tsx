@@ -122,7 +122,7 @@ export function TemplatePickerDialog({ onClose }: PickerProps) {
         <ul className="space-y-2">
           {items.map((template) => (
             <li key={template.id}>
-              <label className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 ${selectedId === template.id ? "border-[#008ad2] bg-sky-50" : "border-[#e4e4e4] hover:border-slate-300"}`}>
+              <label className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 ${selectedId === template.id ? "border-[#218ccb] bg-sky-50" : "border-[#e4e4e4] hover:border-slate-300"}`}>
                 <input
                   type="radio"
                   name={groupName}

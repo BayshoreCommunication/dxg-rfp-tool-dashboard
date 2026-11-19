@@ -452,7 +452,7 @@ export const SingleSignOnCard = () => {
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#e4e4e4] px-4 py-3">
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 text-sm font-semibold text-[#222628]">
-                <ShieldCheck size={16} className="text-[#008ad2]" /> Require company sign-in
+                <ShieldCheck size={16} className="text-[#218ccb]" /> Require company sign-in
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Members with an email on {connection.domains.join(", ") || "your connected domains"} can only sign in through your

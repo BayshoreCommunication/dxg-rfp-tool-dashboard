@@ -75,7 +75,7 @@ export default function VendorResponseDetailWorkspace({
       <header className="border-b border-slate-200 bg-white px-5 py-5 sm:px-7 lg:px-9 print:px-9">
         <Link
           href={proposalResponsesHref}
-          className="inline-flex min-h-9 items-center gap-2 rounded-lg text-xs font-bold text-slate-600 print:hidden hover:text-[#0076b4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/20"
+          className="inline-flex min-h-9 items-center gap-2 rounded-lg text-xs font-bold text-slate-600 print:hidden hover:text-[#0076b4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#218ccb]/20"
         >
           <ArrowLeft size={15} aria-hidden="true" /> Back to proposal responses
         </Link>
@@ -142,7 +142,7 @@ export default function VendorResponseDetailWorkspace({
                       type="button"
                       aria-current={isSelected ? "true" : undefined}
                       onClick={() => setSelectedVersionId(version.versionId)}
-                      className={`w-full rounded-2xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#008ad2]/20 ${isSelected ? "border-[#008ad2]/35 bg-white shadow-sm" : "border-transparent bg-transparent hover:border-slate-200 hover:bg-white"}`}
+                      className={`w-full rounded-2xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#218ccb]/20 ${isSelected ? "border-[#218ccb]/35 bg-white shadow-sm" : "border-transparent bg-transparent hover:border-slate-200 hover:bg-white"}`}
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="text-sm font-extrabold text-slate-900">
@@ -410,7 +410,7 @@ function SourceReadiness({
                     href={document.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 hover:border-[#008ad2]/30 hover:text-[#0076b4]"
+                    className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 hover:border-[#218ccb]/30 hover:text-[#0076b4]"
                   >
                     <FileText size={14} aria-hidden="true" /> Open
                   </a>

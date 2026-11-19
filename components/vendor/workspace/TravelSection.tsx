@@ -87,7 +87,7 @@ export default function TravelSection({
       }
     >
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4">
-        <Hotel size={20} className="text-[#008ad2]" aria-hidden="true" />
+        <Hotel size={20} className="text-[#218ccb]" aria-hidden="true" />
         <div>
           <p className="text-sm font-extrabold text-[#16283c]">
             {lines.length} traveling position{lines.length === 1 ? "" : "s"}
@@ -128,7 +128,7 @@ export default function TravelSection({
                 <label className="flex items-center gap-2 text-sm font-bold text-[#42576a]">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-[#008ad2]"
+                    className="h-4 w-4 accent-[#218ccb]"
                     checked={clientProvided}
                     disabled={disabled}
                     onChange={(event) =>

@@ -106,7 +106,7 @@ const MessageRow = ({
         <article
           className={`px-4 py-2.5 text-sm shadow-sm ${
             mine
-              ? `bg-[#008ad2] text-white ${endsGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`
+              ? `bg-[#218ccb] text-white ${endsGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`
               : `border border-slate-200 bg-white text-slate-800 ${endsGroup ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`
           } ${pending ? "opacity-70" : ""}`}
         >
@@ -337,7 +337,7 @@ export default function SupportTicketThread({
               <SupportDateTime value={closesAt} />.
             </p>
           )}
-          <div className="flex flex-wrap items-end gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 transition focus-within:border-[#008ad2] focus-within:ring-2 focus-within:ring-[#008ad2]/15">
+          <div className="flex flex-wrap items-end gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 transition focus-within:border-[#218ccb] focus-within:ring-2 focus-within:ring-[#218ccb]/15">
             <AttachmentPicker files={files} onChange={setFiles} disabled={isPending} iconOnly />
             <textarea
               ref={composer}
@@ -361,7 +361,7 @@ export default function SupportTicketThread({
               disabled={isPending}
               aria-label="Send"
               title="Send (Enter)"
-              className={`order-3 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#008ad2] text-sm font-bold text-white shadow-sm transition hover:bg-[#0076b4] disabled:opacity-60 w-9`}
+              className={`order-3 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#218ccb] text-sm font-bold text-white shadow-sm transition hover:bg-[#0076b4] disabled:opacity-60 w-9`}
             >
               {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowUp className="h-4 w-4" aria-hidden="true" />}
             </button>

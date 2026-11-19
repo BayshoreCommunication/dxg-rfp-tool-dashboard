@@ -314,7 +314,7 @@ export default function ReferencesSection({
                 </label>
                 <label className="flex items-end gap-2 pb-2 text-sm font-bold text-[#42576a]">
                   <input
-                    className="h-4 w-4 accent-[#008ad2]"
+                    className="h-4 w-4 accent-[#218ccb]"
                     type="checkbox"
                     checked={reference.comparable}
                     disabled={disabled}
@@ -372,7 +372,7 @@ export default function ReferencesSection({
                   onClick={() => {
                     uploadForId.current = reference.referenceId;
                   }}
-                  className={`inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-3 py-2 text-xs font-extrabold text-[#0075b4] ${disabled || showPlaceholder || !canUpload || !imageCategory ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#eef8fd]"}`}
+                  className={`inline-flex items-center gap-2 rounded-md border border-[#218ccb] px-3 py-2 text-xs font-extrabold text-[#0075b4] ${disabled || showPlaceholder || !canUpload || !imageCategory ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#eef8fd]"}`}
                 >
                   <ImageUp size={14} aria-hidden="true" />
                   {uploadingId === reference.referenceId
@@ -417,7 +417,7 @@ export default function ReferencesSection({
         <button
           type="button"
           disabled={disabled}
-          className="mt-4 inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-4 py-2.5 text-sm font-extrabold text-[#0075b4] hover:bg-[#eef8fd] disabled:opacity-50"
+          className="mt-4 inline-flex items-center gap-2 rounded-md border border-[#218ccb] px-4 py-2.5 text-sm font-extrabold text-[#0075b4] hover:bg-[#eef8fd] disabled:opacity-50"
           onClick={() =>
             onChange({
               ...response,

@@ -609,7 +609,7 @@ export default function ProposalTableList({
               <Link
                 href="/proposals/add-new-proposal"
                 className="group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_rgba(14,165,233,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.6)] active:translate-y-0"
-                style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+                style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" }}
               >
                 <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
                 <Plus size={15} strokeWidth={3} className="shrink-0" />
@@ -768,7 +768,7 @@ export default function ProposalTableList({
                             rel={titleLink.newTab ? "noopener noreferrer" : undefined}
                             title={titleLink.hint}
                             data-testid="proposal-title-link"
-                            className="min-w-0 break-words rounded-sm underline-offset-2 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 sm:truncate"
+                            className="min-w-0 break-words rounded-sm underline-offset-2 transition-colors hover:text-[#218ccb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 sm:truncate"
                           >
                             {title}
                             {titleLink.newTab && <span className="sr-only"> (opens in a new tab)</span>}
@@ -1099,7 +1099,7 @@ function ActionLink({
       title={label}
       className={`inline-flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[10px] font-bold shadow-sm transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 sm:px-0 ${
         emphasis
-          ? "border-[#008ad2] bg-gradient-to-br from-[#2fc6f5] to-[#008ad2] text-white hover:shadow-md hover:shadow-[#0ea5e9]/20 sm:w-auto sm:px-3.5 sm:text-[11px]"
+          ? "border-[#218ccb] bg-gradient-to-br from-[#2fc6f5] to-[#218ccb] text-white hover:shadow-md hover:shadow-[#0ea5e9]/20 sm:w-auto sm:px-3.5 sm:text-[11px]"
           : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 sm:w-9"
       }`}
     >

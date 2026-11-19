@@ -36,7 +36,7 @@ export default function ValueAddsSection({
       <div className="mb-5 flex gap-3 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4">
         <Sparkles
           size={20}
-          className="shrink-0 text-[#008ad2]"
+          className="shrink-0 text-[#218ccb]"
           aria-hidden="true"
         />
         <p className="text-sm leading-5 text-[#52687b]">

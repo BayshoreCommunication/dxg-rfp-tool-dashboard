@@ -93,7 +93,7 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
 
   const scopeOption = (value: Scope, title: string, body: string) => (
     <label
-      className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 text-sm transition-colors ${scope === value ? "border-[#008ad2] bg-sky-50" : "border-[#e4e4e4] bg-white hover:border-slate-300"}`}
+      className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 text-sm transition-colors ${scope === value ? "border-[#218ccb] bg-sky-50" : "border-[#e4e4e4] bg-white hover:border-slate-300"}`}
     >
       <input
         type="radio"
@@ -104,7 +104,7 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
           setScope(value);
           setError(null);
         }}
-        className="mt-1 h-4 w-4 accent-[#008ad2]"
+        className="mt-1 h-4 w-4 accent-[#218ccb]"
       />
       <span className="min-w-0">
         <span className="block font-semibold text-slate-800">{title}</span>
@@ -188,7 +188,7 @@ export default function GrantSupportDialog({ onClose, onGranted }: Props) {
                         setSelected(rfp);
                         setError(null);
                       }}
-                      className="h-4 w-4 shrink-0 accent-[#008ad2]"
+                      className="h-4 w-4 shrink-0 accent-[#218ccb]"
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-slate-800">{rfp.title}</span>

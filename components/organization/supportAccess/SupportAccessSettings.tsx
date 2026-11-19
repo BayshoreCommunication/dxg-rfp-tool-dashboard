@@ -169,7 +169,7 @@ export default function SupportAccessSettings({ initialPage, initialError = null
         {/* Stacked on a phone: beside the buttons the title would be squeezed to a letter's width. */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3 sm:flex-1">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-[#008ad2]">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-[#218ccb]">
               {grant.scope === "organization" ? <Building2 size={17} aria-hidden="true" /> : <FileText size={17} aria-hidden="true" />}
             </span>
             <div className="min-w-0 flex-1">
@@ -226,11 +226,11 @@ export default function SupportAccessSettings({ initialPage, initialError = null
   return (
     <div className="space-y-6 px-6 pb-10" data-testid="support-access">
       <div>
-        <Link href="/settings/security" className="inline-flex items-center gap-1 rounded text-xs font-semibold text-slate-600 hover:text-[#008ad2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+        <Link href="/settings/security" className="inline-flex items-center gap-1 rounded text-xs font-semibold text-slate-600 hover:text-[#218ccb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
           <ArrowLeft size={12} aria-hidden="true" /> Security
         </Link>
         <h1 className="mt-2 flex items-center gap-2 text-[30px] font-black leading-none tracking-tight text-slate-900">
-          <LifeBuoy size={24} className="shrink-0 text-[#008ad2]" aria-hidden="true" />
+          <LifeBuoy size={24} className="shrink-0 text-[#218ccb]" aria-hidden="true" />
           Support access
         </h1>
         <p className="mt-2 max-w-3xl text-[13px] font-medium text-slate-600">

@@ -89,7 +89,7 @@ export default function TeamDrawer({ team, members, onClose, onChanged, onRename
     >
       <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#008ad2]">Team</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#218ccb]">Team</p>
           <h2 id={titleId} className="mt-1 break-words text-2xl font-bold tracking-tight text-slate-950">{team.name}</h2>
           <p className="mt-1 text-xs text-slate-500">
             {(team.members ?? []).length} member{(team.members ?? []).length === 1 ? "" : "s"}
@@ -141,7 +141,7 @@ export default function TeamDrawer({ team, members, onClose, onChanged, onRename
                     checked={asManager}
                     onChange={(event) => setAsManager(event.target.checked)}
                     disabled={!selected || !canBeTeamManager(selected) || busyKey !== null}
-                    className="mt-0.5 h-4 w-4 accent-[#008ad2]"
+                    className="mt-0.5 h-4 w-4 accent-[#218ccb]"
                   />
                   <span>
                     Make them a manager of this team
@@ -186,7 +186,7 @@ export default function TeamDrawer({ team, members, onClose, onChanged, onRename
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          className="rounded px-2 py-1 text-xs font-semibold text-[#008ad2] hover:bg-sky-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+                          className="rounded px-2 py-1 text-xs font-semibold text-[#218ccb] hover:bg-sky-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
                           disabled={busyKey !== null || (!entry.isManager && !eligible)}
                           title={!entry.isManager && !eligible ? "Only members with the Team Manager role can manage a team." : undefined}
                           onClick={() => run(`mgr-${entry.userId}`, () => setTeamManagerAction(team.id, entry.userId, !entry.isManager),

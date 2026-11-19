@@ -4494,7 +4494,7 @@ export default function AssistantWorkspacePage({
               <a
                 href="/files/RFPilot%20schedule-example-sheet.xlsx"
                 download
-                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#008ad2] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#006fa8] sm:w-auto"
+                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#218ccb] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#006fa8] sm:w-auto"
               >
                 <Download size={14} aria-hidden />
                 Download Sample Sheet
@@ -4504,7 +4504,7 @@ export default function AssistantWorkspacePage({
               proposalId && (
                 <Link
                   href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposalId)}&step=3`}
-                  className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#008ad2] bg-white px-3 py-2 text-center text-xs font-semibold text-[#008ad2] transition-colors hover:bg-[#008ad2]/5 sm:w-auto"
+                  className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#218ccb] bg-white px-3 py-2 text-center text-xs font-semibold text-[#218ccb] transition-colors hover:bg-[#218ccb]/5 sm:w-auto"
                 >
                   <Upload size={14} aria-hidden />
                   Open Room Specifications &amp; Upload

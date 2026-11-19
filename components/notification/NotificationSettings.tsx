@@ -167,14 +167,14 @@ const ChannelSwitch = ({
         aria-checked={checked}
         aria-label={`${label} notifications for ${title}`}
         onClick={onChange}
-        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2] focus-visible:ring-offset-2 ${
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb] focus-visible:ring-offset-2 ${
           checked
-            ? "border-[#008ad2] bg-[#008ad2]"
+            ? "border-[#218ccb] bg-[#218ccb]"
             : "border-slate-300 bg-slate-200"
         }`}
       >
         <span
-          className={`theme-preserve-white grid h-5 w-5 place-items-center rounded-full bg-white text-[#008ad2] shadow-sm transition-transform ${
+          className={`theme-preserve-white grid h-5 w-5 place-items-center rounded-full bg-white text-[#218ccb] shadow-sm transition-transform ${
             checked ? "translate-x-[22px]" : "translate-x-[3px]"
           }`}
         >
@@ -272,11 +272,11 @@ export default function NotificationSettings({
           <div>
             <Link
               href="/notification"
-              className="mb-4 inline-flex items-center gap-2 rounded-lg text-sm font-bold text-[#0069a0] transition hover:text-[#008ad2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2] focus-visible:ring-offset-2"
+              className="mb-4 inline-flex items-center gap-2 rounded-lg text-sm font-bold text-[#0069a0] transition hover:text-[#218ccb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb] focus-visible:ring-offset-2"
             >
               <ArrowLeft size={16} aria-hidden="true" /> Back to notifications
             </Link>
-            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#008ad2]">
+            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#218ccb]">
               <Sparkles size={11} aria-hidden="true" /> Preferences
             </span>
             <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
@@ -310,7 +310,7 @@ export default function NotificationSettings({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
             <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
-              isMuted ? "bg-violet-100 text-violet-700" : "bg-sky-50 text-[#008ad2]"
+              isMuted ? "bg-violet-100 text-violet-700" : "bg-sky-50 text-[#218ccb]"
             }`}>
               {isMuted ? <BellOff size={21} aria-hidden="true" /> : <BellRing size={21} aria-hidden="true" />}
             </span>
@@ -338,9 +338,9 @@ export default function NotificationSettings({
               </button>
             ) : (
               <>
-                <button type="button" onClick={() => setMute(muteUntilFor("hour"))} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-[#008ad2] hover:text-[#0069a0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2]">Mute 1 hour</button>
-                <button type="button" onClick={() => setMute(muteUntilFor("tomorrow"))} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-[#008ad2] hover:text-[#0069a0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2]">Until tomorrow</button>
-                <button type="button" onClick={() => setMute(muteUntilFor("week"))} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-[#008ad2] hover:text-[#0069a0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2]">Mute 1 week</button>
+                <button type="button" onClick={() => setMute(muteUntilFor("hour"))} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-[#218ccb] hover:text-[#0069a0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb]">Mute 1 hour</button>
+                <button type="button" onClick={() => setMute(muteUntilFor("tomorrow"))} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-[#218ccb] hover:text-[#0069a0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb]">Until tomorrow</button>
+                <button type="button" onClick={() => setMute(muteUntilFor("week"))} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 transition hover:border-[#218ccb] hover:text-[#0069a0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb]">Mute 1 week</button>
               </>
             )}
           </div>
@@ -362,7 +362,7 @@ export default function NotificationSettings({
                 return (
                   <div key={item.key} className="flex flex-col gap-5 px-5 py-5 sm:px-6 lg:flex-row lg:items-center">
                     <div className="flex min-w-0 flex-1 items-start gap-3.5">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-[#008ad2]">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-[#218ccb]">
                         <ItemIcon size={18} aria-hidden="true" />
                       </span>
                       <div>
@@ -393,7 +393,7 @@ export default function NotificationSettings({
                             value={item.frequencies.includes(preference.frequency) ? preference.frequency : item.frequencies[0]}
                             disabled={!enabled}
                             onChange={(event) => updatePreference(item.key, { frequency: event.target.value as NotificationFrequency })}
-                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-[#008ad2] focus:ring-2 focus:ring-[#008ad2]/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-[#218ccb] focus:ring-2 focus:ring-[#218ccb]/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                           >
                             {item.frequencies.map((frequency) => <option key={frequency} value={frequency}>{FREQUENCY_LABELS[frequency]}</option>)}
                           </select>
@@ -417,7 +417,7 @@ export default function NotificationSettings({
           type="button"
           onClick={() => void savePreferences()}
           disabled={!isDirty || saving}
-          className="inline-flex min-w-40 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2fc6f5] to-[#008ad2] px-5 py-3 text-sm font-extrabold text-white shadow-[0_8px_24px_rgba(0,138,210,0.25)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(0,138,210,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+          className="inline-flex min-w-40 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2fc6f5] to-[#218ccb] px-5 py-3 text-sm font-extrabold text-white shadow-[0_8px_24px_rgba(33,140,203,0.25)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(33,140,203,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
         >
           <Save size={16} aria-hidden="true" /> {saving ? "Saving…" : "Save preferences"}
         </button>

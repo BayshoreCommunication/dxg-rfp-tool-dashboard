@@ -57,11 +57,11 @@ const SecuritySettings = () => {
   return (
     <div className="space-y-6 px-6 pb-10">
       <div>
-        <Link href="/settings" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-[#008ad2]">
+        <Link href="/settings" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-[#218ccb]">
           <ArrowLeft size={12} /> Settings
         </Link>
         <h1 className="mt-2 flex items-center gap-2 text-[30px] font-black leading-none tracking-tight text-slate-900">
-          <Lock size={24} className="text-[#008ad2]" />
+          <Lock size={24} className="text-[#218ccb]" />
           Security
         </h1>
         <p className="mt-2 text-[13px] font-medium text-slate-400">

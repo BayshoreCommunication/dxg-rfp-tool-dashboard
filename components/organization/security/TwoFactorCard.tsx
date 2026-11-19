@@ -146,7 +146,7 @@ const TwoFactorCard = ({ status, loadError, account, startSignal = 0, onChanged 
                 </span>
               )}
               {status.requiredByOrganization ? (
-                <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-[#008ad2]">
+                <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-[#218ccb]">
                   Required by your organization
                 </span>
               ) : null}

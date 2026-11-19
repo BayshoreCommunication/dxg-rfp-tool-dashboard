@@ -42,7 +42,7 @@ export default function NewRfpAction({ usage, label = "New Proposal" }: { usage:
       <Link
         href="/proposals/add-new-proposal"
         className={`group ${buttonShape} text-white shadow-[0_4px_20px_rgba(14,165,233,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.5)] active:translate-y-0`}
-        style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+        style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" }}
       >
         {/* Shine sweep */}
         <span className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-full" />

@@ -9,7 +9,7 @@ export default function SupportAccessLink() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
           <h2 id="support-access-link-title" className="flex items-center gap-2 text-xl font-semibold leading-tight text-[#222628] md:text-[26px]">
-            <LifeBuoy size={22} className="shrink-0 text-[#008ad2]" aria-hidden="true" />
+            <LifeBuoy size={22} className="shrink-0 text-[#218ccb]" aria-hidden="true" />
             Support access
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-[#6b7280]">

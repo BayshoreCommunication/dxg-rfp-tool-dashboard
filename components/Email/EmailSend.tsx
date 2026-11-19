@@ -44,7 +44,7 @@ const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 const invitationRow = "grid min-w-0 gap-x-3.5 gap-y-2 @2xl/invite:grid-cols-[170px_minmax(0,1fr)]";
 const invitationLabel = "text-[13px] !font-semibold text-slate-800";
 const invitationField = "min-h-10 w-full min-w-0 rounded-lg border border-[var(--invite-border)] bg-white px-3 py-2.5 text-[13px] text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:focus-visible:outline-teal-300";
-const questionField = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#008ad2]";
+const questionField = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] text-slate-700 outline-none focus:border-[#218ccb]";
 
 const DEFAULT_MESSAGE = `Hello,
 
@@ -422,7 +422,7 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
               </Link>
             )}
             <h1 className="mt-1 flex items-center gap-2 text-xl font-extrabold text-slate-900">
-              <MessageCircleQuestion size={20} className="text-[#008ad2]" aria-hidden="true" />
+              <MessageCircleQuestion size={20} className="text-[#218ccb]" aria-hidden="true" />
               Ask {questionVendor} a question
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
@@ -520,7 +520,7 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
             <div className={cn(
               "flex w-full flex-wrap items-center gap-2 border bg-white text-[13px] transition-colors focus-within:ring-1",
               questionMode
-                ? "min-h-[46px] rounded-xl border-slate-200 px-3 py-2 focus-within:border-[#008ad2] focus-within:ring-[#008ad2]/30"
+                ? "min-h-[46px] rounded-xl border-slate-200 px-3 py-2 focus-within:border-[#218ccb] focus-within:ring-[#218ccb]/30"
                 : "min-h-10 rounded-lg border-[var(--invite-border)] px-2 py-1.5 focus-within:border-teal-700 focus-within:ring-teal-700 dark:focus-within:border-teal-300 dark:focus-within:ring-teal-300",
             )}>
               {recipientEmails.map((email) => (
@@ -529,7 +529,7 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
                   className={cn(
                     "flex min-w-0 max-w-full items-center gap-1.5 rounded-md text-xs font-medium",
                     questionMode
-                      ? "border border-[#008ad2]/30 bg-[#008ad2]/5 px-2.5 py-1 text-brand-dark"
+                      ? "border border-[#218ccb]/30 bg-[#218ccb]/5 px-2.5 py-1 text-brand-dark"
                       : "bg-[var(--invite-tint)] py-0.5 pr-1 pl-2 text-teal-800 dark:text-teal-200",
                   )}
                 >
@@ -540,7 +540,7 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
                     className={cn(
                       "flex shrink-0 items-center justify-center",
                       questionMode
-                        ? "h-4 w-4 rounded-full text-[#008ad2] hover:bg-[#008ad2]/20 hover:text-brand-dark"
+                        ? "h-4 w-4 rounded-full text-[#218ccb] hover:bg-[#218ccb]/20 hover:text-brand-dark"
                         : "size-5 rounded hover:bg-teal-200/50 focus-visible:outline-2 dark:hover:bg-teal-800",
                     )}
                     aria-label={`Remove ${email}`}
@@ -654,16 +654,16 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
       )}>
         <label className={cn(
           "flex min-h-11 cursor-pointer items-center text-slate-700 focus-within:ring-2",
-          questionMode ? "gap-3 text-sm font-bold focus-within:ring-[#008ad2]" : "gap-2 text-[13px] focus-within:ring-teal-700 dark:focus-within:ring-teal-300",
+          questionMode ? "gap-3 text-sm font-bold focus-within:ring-[#218ccb]" : "gap-2 text-[13px] focus-within:ring-teal-700 dark:focus-within:ring-teal-300",
         )}>
           <input
             type="checkbox"
             checked={sendApproved}
             onChange={(event) => setSendApproved(event.target.checked)}
-            className={questionMode ? "size-5 shrink-0 accent-[#008ad2]" : "size-4 shrink-0 accent-teal-800 dark:accent-teal-300"}
+            className={questionMode ? "size-5 shrink-0 accent-[#218ccb]" : "size-4 shrink-0 accent-teal-800 dark:accent-teal-300"}
           />
           <span className="inline-flex items-center gap-2">
-            <ShieldCheck size={15} className={cn("shrink-0", questionMode ? "text-[#008ad2]" : "text-teal-800 dark:text-teal-300")} aria-hidden="true" />
+            <ShieldCheck size={15} className={cn("shrink-0", questionMode ? "text-[#218ccb]" : "text-teal-800 dark:text-teal-300")} aria-hidden="true" />
             {questionMode ? "I reviewed this message." : "I reviewed the recipients and invitation text."}
           </span>
         </label>
@@ -674,10 +674,10 @@ export default function EmailSend({ proposalId: fixedProposalId, onSent }: Email
           className={cn(
             "inline-flex shrink-0 items-center justify-center gap-2 text-xs uppercase shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
             questionMode
-              ? "rounded-xl px-5 py-2.5 font-bold tracking-wider text-white transition-opacity hover:opacity-95 focus-visible:outline-[#008ad2]"
+              ? "rounded-xl px-5 py-2.5 font-bold tracking-wider text-white transition-opacity hover:opacity-95 focus-visible:outline-[#218ccb]"
               : "min-h-10 self-end rounded-lg bg-[#175e66] px-3.5 !font-semibold tracking-wide text-white hover:bg-[#104c54] focus-visible:outline-teal-800 dark:bg-teal-300 dark:text-teal-950 dark:hover:bg-teal-200 dark:focus-visible:outline-teal-300",
           )}
-          style={questionMode ? { background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" } : undefined}
+          style={questionMode ? { background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" } : undefined}
         >
           <Send size={14} aria-hidden="true" />
           {sending ? "Sending..." : questionMode ? "Send question" : fixedMode ? "Send invitations" : "Send Campaign"}

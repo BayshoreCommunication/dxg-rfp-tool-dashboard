@@ -11,7 +11,7 @@ export const inputClass =
 export const primaryButtonClass =
   "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(14,165,233,0.30)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0";
 export const primaryButtonStyle = {
-  background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)",
+  background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)",
 };
 export const secondaryButtonClass =
   "inline-flex items-center justify-center gap-2 rounded-md border border-[#e4e4e4] bg-white px-4 py-2 text-[13px] font-semibold text-[#222628] transition hover:bg-[#f5f6f8] disabled:cursor-not-allowed disabled:opacity-60";

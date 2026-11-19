@@ -30,7 +30,7 @@ export default async function VendorResponseDetailPage({
         </p>
         <Link
           href="/vendor-responses"
-          className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#008ad2] px-4 text-sm font-bold text-white"
+          className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#218ccb] px-4 text-sm font-bold text-white"
         >
           <ArrowLeft size={15} aria-hidden="true" /> Return to vendor responses
         </Link>

@@ -35,7 +35,7 @@ export default function DevThemeToggle({
       {darkPreview ? (
         <Sun className="h-4 w-4 text-amber-400" aria-hidden />
       ) : (
-        <Moon className="h-4 w-4 text-[#008ad2]" aria-hidden />
+        <Moon className="h-4 w-4 text-[#218ccb]" aria-hidden />
       )}
       <span>{darkPreview ? "Dark preview: On" : "Dark preview: Off"}</span>
       <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-cyan-700 dark:bg-[#0b3033] dark:text-[#67e8f9]">

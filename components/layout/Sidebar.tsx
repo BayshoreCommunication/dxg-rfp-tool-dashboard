@@ -102,7 +102,7 @@ function AccountMenu({
         className={cn(
           "group relative grid place-items-center rounded-full border border-primary/30 bg-primary/10 font-extrabold text-primary transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:text-[#38bdf8] dark:focus-visible:ring-offset-[#0d1d28]",
           "h-10 w-10 text-xs",
-          open && "border-primary/50 bg-primary/15 shadow-[0_10px_24px_-16px_rgba(0,138,210,0.9)]",
+          open && "border-primary/50 bg-primary/15 shadow-[0_10px_24px_-16px_rgba(33,140,203,0.9)]",
         )}
       >
         {initials}
@@ -383,7 +383,7 @@ const Sidebar = ({
                 )}
               >
                 {isActive && (
-                  <div className="absolute -left-3 top-1/2 h-7 w-[4px] -translate-y-1/2 rounded-r-full bg-primary shadow-[2px_0_8px_rgba(0,138,210,0.4)]" />
+                  <div className="absolute -left-3 top-1/2 h-7 w-[4px] -translate-y-1/2 rounded-r-full bg-primary shadow-[2px_0_8px_rgba(33,140,203,0.4)]" />
                 )}
 
                 <div
@@ -396,7 +396,7 @@ const Sidebar = ({
                 >
                   {item.icon}
                   {badge !== null && (
-                    <span className="pointer-events-none absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#008ad2] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+                    <span className="pointer-events-none absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#218ccb] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
@@ -462,7 +462,7 @@ const Sidebar = ({
           className={cn(
             "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200",
             pathname.startsWith("/notification")
-              ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(0,138,210,0.95)]"
+              ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(33,140,203,0.95)]"
               : "border-slate-200 bg-white text-slate-500 hover:border-primary/10 hover:bg-primary/5 hover:text-primary",
           )}
         >
@@ -592,7 +592,7 @@ const Sidebar = ({
               >
                 {item.icon}
                 {badge !== null && (
-                  <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#008ad2] px-1 text-[9px] font-black text-white ring-2 ring-white">
+                  <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#218ccb] px-1 text-[9px] font-black text-white ring-2 ring-white">
                     {badge > 99 ? "99+" : badge}
                   </span>
                 )}
