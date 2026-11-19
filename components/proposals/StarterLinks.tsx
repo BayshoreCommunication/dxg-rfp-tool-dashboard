@@ -1,5 +1,6 @@
 import { PencilLine, Sparkles, Upload } from "lucide-react";
 import Link from "next/link";
+import { STARTER_CHIP_CLASS, STARTER_ICON_CLASS } from "./starterChip";
 
 // The same three ways in that the new-proposal workspace offers, as links,
 // so a first-run dashboard or an empty proposals list can hand a planner
@@ -47,15 +48,15 @@ export default function StarterLinks({
       aria-label="Ways to start"
       className={`flex flex-wrap items-center justify-center gap-2 ${className}`}
     >
-      {label ? <span className="mr-1 text-xs text-slate-500">{label}</span> : null}
+      {label ? <span className="mr-1 text-xs text-muted">{label}</span> : null}
       {STARTER_LINKS.map(({ id, label: text, title, href, icon: Icon }) => (
         <Link
           key={id}
           href={href}
           title={title}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50/60 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
+          className={STARTER_CHIP_CLASS}
         >
-          <Icon size={15} aria-hidden className="shrink-0 text-[#00aeb5]" />
+          <Icon size={15} aria-hidden className={STARTER_ICON_CLASS} />
           {text}
         </Link>
       ))}

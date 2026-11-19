@@ -50,7 +50,7 @@ import {
   getProposalByIdAction,
 } from '@/app/actions/proposals';
 import { getUserData } from '@/app/actions/user';
-import AssistantOrb from '@/components/ai/shared/AssistantOrb';
+import ProposalEntry from './ProposalEntry';
 import TypingIndicator from '@/components/ai/shared/TypingIndicator';
 import type { ProposalData } from '@/components/proposals/AddNewProposal';
 import {
@@ -761,8 +761,6 @@ export const mentionedFieldAnswers = (
   );
 };
 
-const ACCENT = '#00c2c9';
-const DEEP = '#087f69';
 
 const runLabels: Record<
   ConversationRunType,
@@ -1307,7 +1305,7 @@ function SourceChips({
         {chips.map((chip) => (
           <li
             key={chip.label}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700"
+            className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface-muted px-2.5 py-1 text-xs text-body"
           >
             <FileText
               size={11}
@@ -4636,9 +4634,6 @@ export default function AssistantWorkspacePage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStarter, started]);
 
-  const starterButtonClass =
-    'inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50/60 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white';
-
   // Drag-and-drop onto the whole workspace card. The paperclip is an
   // unlabelled icon, and uploading a brief is the product's strongest path,
   // so the card itself accepts files. Dropping only stages chips, exactly
@@ -4789,7 +4784,7 @@ export default function AssistantWorkspacePage({
           </div>
         </div>
       ) : (
-      <div className="rounded-[1.75rem] border border-slate-200 bg-white p-1.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.55)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#00c2c9] focus-within:shadow-[0_0_0_3px_rgba(0,194,201,0.12)] md:rounded-2xl md:p-2 md:shadow-sm">
+      <div className="rounded-[1.75rem] border border-control bg-surface p-1.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.55)] transition-[border-color,box-shadow] duration-200 focus-within:border-focus focus-within:ring-2 focus-within:ring-focus md:rounded-2xl md:p-2 md:shadow-sm">
         {aiHaltedMessage ? (
           <p
             role="status"
@@ -4805,7 +4800,7 @@ export default function AssistantWorkspacePage({
             {staged.map((file, index) => (
               <li
                 key={`${file.name}-${index}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface-muted px-2.5 py-1 text-xs text-body"
               >
                 <FileText
                   size={12}
@@ -4818,7 +4813,7 @@ export default function AssistantWorkspacePage({
                 >
                   {file.name}
                 </span>
-                <span className="shrink-0 text-[10px] text-slate-400">
+                <span className="shrink-0 text-xs text-muted">
                   {formatFileSize(file.size)}
                 </span>
                 <button
@@ -4826,7 +4821,7 @@ export default function AssistantWorkspacePage({
                   aria-label={`Remove ${file.name}`}
                   onClick={() => removeStaged(index)}
                   disabled={sendBusy}
-                  className="shrink-0 rounded-full p-0.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="shrink-0 rounded-full p-0.5 text-muted transition-colors hover:bg-line hover:text-heading disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <X size={12} aria-hidden />
                 </button>
@@ -4853,7 +4848,7 @@ export default function AssistantWorkspacePage({
             onClick={() => fileInputRef.current?.click()}
             disabled={attachDisabled}
             title={attachDisabledTitle}
-            className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-surface-muted hover:text-heading disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <Paperclip size={17} aria-hidden />
           </button>
@@ -4864,7 +4859,7 @@ export default function AssistantWorkspacePage({
               onClick={() => startVoiceInput()}
               disabled={sendBusy}
               title="Describe your event by voice"
-              className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-surface-muted hover:text-heading disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Mic size={17} aria-hidden />
             </button>
@@ -4883,7 +4878,7 @@ export default function AssistantWorkspacePage({
             }
             aria-label="Message the proposal assistant"
             aria-describedby="proposal-message-character-limit"
-            className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-slate-900 outline-none placeholder:text-slate-400 max-sm:!h-9 max-sm:!max-h-9 max-sm:overflow-x-auto max-sm:overflow-y-hidden max-sm:whitespace-nowrap max-sm:text-[11px] max-sm:leading-5"
+            className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-heading outline-none placeholder:text-muted max-sm:!h-9 max-sm:!max-h-9 max-sm:overflow-x-auto max-sm:overflow-y-hidden max-sm:whitespace-nowrap max-sm:text-[11px] max-sm:leading-5"
           />
           <button
             type="button"
@@ -4906,17 +4901,14 @@ export default function AssistantWorkspacePage({
               sendLocked ||
               aiHalted
             }
-            className={`grid h-10 shrink-0 place-items-center rounded-full border border-white/30 p-0 text-white shadow-[0_5px_14px_-5px_rgba(8,145,150,0.85)] transition-[transform,box-shadow,filter,opacity] duration-150 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_8px_18px_-6px_rgba(8,145,150,0.9)] active:translate-y-0 active:scale-95 active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:translate-y-0 disabled:scale-100 disabled:opacity-55 disabled:shadow-none ${started ? 'w-10' : 'grid-flow-col gap-1.5 px-4'}`}
-            style={{
-              background: `linear-gradient(135deg, ${ACCENT} 0%, ${DEEP} 100%)`,
-            }}
+            className={`grid h-10 shrink-0 place-items-center rounded-full border border-transparent bg-action p-0 text-on-action shadow-card transition-[transform,box-shadow,background-color,opacity] duration-150 hover:-translate-y-0.5 hover:bg-action-hover active:translate-y-0 active:scale-95 active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:translate-y-0 disabled:scale-100 disabled:opacity-55 disabled:shadow-none ${started ? 'w-10' : 'grid-flow-col gap-1.5 px-4'}`}
           >
             {chatBusy || sendBusy || sendLocked ? (
               <Loader2 size={17} className="animate-spin" aria-hidden />
             ) : (
               <>
                 {!started && (
-                  <span className="text-xs font-bold">Send</span>
+                  <span className="text-xs font-semibold">Send</span>
                 )}
                 <ArrowUp size={17} strokeWidth={2.4} aria-hidden />
               </>
@@ -4926,7 +4918,7 @@ export default function AssistantWorkspacePage({
         <p
           id="proposal-message-character-limit"
           className={text.length >= MESSAGE_LIMIT_WARNING_AT
-            ? 'mt-1 text-right text-[11px] text-slate-500'
+            ? 'mt-1 text-right text-xs text-muted'
             : 'sr-only'}
         >
           {text.length.toLocaleString()} of {PROPOSAL_MESSAGE_MAX_CHARACTERS.toLocaleString()} characters
@@ -5044,142 +5036,34 @@ export default function AssistantWorkspacePage({
             <div
               role="status"
               data-testid="attachment-dropzone"
-              className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-[#00c2c9] bg-white/90 text-center md:rounded-3xl"
+              className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-focus bg-surface/90 text-center md:rounded-3xl"
             >
-              <Upload size={26} aria-hidden className="text-[#00aeb5]" />
-              <p className="text-base font-semibold text-slate-900">
+              <Upload size={26} aria-hidden className="text-action" />
+              <p className="text-base font-semibold text-heading">
                 {attachDisabled ? attachDisabledTitle : 'Drop to attach'}
               </p>
               {!attachDisabled && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted">
                   {ACCEPTED_ATTACHMENT_LABEL}, up to {MAX_STAGED_FILES} files per message
                 </p>
               )}
             </div>
           )}
           {!started ? (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 py-6 text-center md:justify-center md:p-0">
-                <AssistantOrb className="h-24 w-24 sm:h-28 sm:w-28" />
-                <div className="max-w-xl">
-                  <h1 className="text-balance text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-                    {/* The profile resolves after mount, so server and first
-                        client render use the same timezone-neutral greeting. */}
-                    {firstName ? `Good ${dayPart()}, ${firstName}` : 'Welcome'}
-                  </h1>
-                  <p
-                    className="mt-2 text-base font-semibold md:text-xl"
-                    style={{ color: ACCENT }}
-                  >
-                    Let’s build your event proposal
-                  </p>
-                  {/* First-run definition: the one sentence that says what
-                      the product does, what an RFP is, and that nothing goes
-                      out without the planner. The old "Tell me what you're
-                      planning" and "Include if you know" lines were dropped:
-                      the starters and the composer placeholder say it. */}
-                  <p
-                    data-testid="assistant-product-definition"
-                    className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600"
-                  >
-                    RFPilot turns your event details into an AV production proposal,
-                    the request you send to vendors so they can quote. Nothing
-                    goes out until you pick vendors.
-                  </p>
-                </div>
-                <div
-                  role="group"
-                  aria-label="Ways to start"
-                  data-testid="assistant-starters"
-                  className="w-full max-w-2xl"
-                >
-                  {/* One row of compact chips. The explanatory line each chip
-                      used to carry repeated step 1, so it moved into the
-                      chip's tooltip. */}
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void startFromExampleBrief()}
-                      disabled={exampleBriefBusy || attachDisabled}
-                      aria-busy={exampleBriefBusy}
-                      title={
-                        attachDisabled
-                          ? attachDisabledTitle
-                          : 'A fictional summit brief, so you can watch RFPilot read a document'
-                      }
-                      className={starterButtonClass}
-                    >
-                      {exampleBriefBusy ? (
-                        <Loader2
-                          size={15}
-                          aria-hidden
-                          className="shrink-0 animate-spin text-[#00aeb5]"
-                        />
-                      ) : (
-                        <Sparkles
-                          size={15}
-                          aria-hidden
-                          className="shrink-0 text-[#00aeb5]"
-                        />
-                      )}
-                      Try an example brief
-                    </button>
-                    <button
-                      type="button"
-                      onClick={startFromUpload}
-                      disabled={attachDisabled}
-                      title={
-                        attachDisabled
-                          ? attachDisabledTitle
-                          : 'PDF, DOCX, XLSX, CSV or TXT'
-                      }
-                      className={starterButtonClass}
-                    >
-                      <Upload
-                        size={15}
-                        aria-hidden
-                        className="shrink-0 text-[#00aeb5]"
-                      />
-                      Upload my brief or old proposal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={startFromScratch}
-                      title="Drops a sample description into the box for you to edit"
-                      className={starterButtonClass}
-                    >
-                      <PencilLine
-                        size={15}
-                        aria-hidden
-                        className="shrink-0 text-[#00aeb5]"
-                      />
-                      Describe it from scratch
-                    </button>
-                    {extraStarter}
-                  </div>
-                  {starterError && (
-                    <p
-                      role="alert"
-                      className="mx-auto mt-2 max-w-lg rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-800"
-                    >
-                      {starterError}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="w-full shrink-0 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-4 md:mx-auto md:max-w-xl md:bg-transparent md:px-0 md:pb-0 md:pt-4">
-                {composer}
-                {/* The one visible line that says what the paperclip and
-                    the drop target accept. Empty state only; once the
-                    thread starts, the chips and thread carry the context. */}
-                <p
-                  data-testid="attachment-caption"
-                  className="mt-2 text-center text-[11px] leading-4 text-slate-500"
-                >
-                  Drop a file here or use the paperclip: {ACCEPTED_ATTACHMENT_LABEL}, up to {MAX_STAGED_FILES} per message.
-                </p>
-              </div>
-            </div>
+            <ProposalEntry
+              greeting={firstName ? `Good ${dayPart()}, ${firstName}` : 'Welcome'}
+              composer={composer}
+              extraStarter={extraStarter}
+              onExample={() => void startFromExampleBrief()}
+              onUpload={startFromUpload}
+              onScratch={startFromScratch}
+              exampleBusy={exampleBriefBusy}
+              attachDisabled={attachDisabled}
+              attachDisabledTitle={attachDisabledTitle}
+              starterError={starterError}
+              acceptedLabel={ACCEPTED_ATTACHMENT_LABEL}
+              maxFiles={MAX_STAGED_FILES}
+            />
           ) : (
             <>
               <div
