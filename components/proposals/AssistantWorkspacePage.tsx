@@ -1447,7 +1447,7 @@ function DraftProgressCard({ updating }: { updating: boolean }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-bold text-slate-900">
+            <h3 className="text-sm font-bold text-heading">
               {updating
                 ? 'Updating your proposal draft…'
                 : 'Creating your proposal draft…'}
@@ -1805,7 +1805,7 @@ function GuidedQuestionCard({
           </span>
         )}
       </div>
-      <p className="mt-2 text-sm font-medium text-slate-900">
+      <p className="mt-2 text-sm font-medium text-heading">
         {displayQuestionPrompt(question)}
       </p>
 
@@ -1911,7 +1911,7 @@ function GuidedQuestionCard({
                 error={displayError ?? undefined}
                 ariaInvalid={!!displayError}
                 ariaDescribedBy={displayError ? errorId : undefined}
-                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-9 text-sm text-heading outline-none transition-colors placeholder:text-muted focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted transition-colors hover:text-action"
                 constrainToScrollParent
               />
@@ -1969,7 +1969,7 @@ function GuidedQuestionCard({
                 error={displayError ?? undefined}
                 ariaInvalid={!!displayError}
                 ariaDescribedBy={displayError ? errorId : undefined}
-                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-16 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-16 text-sm text-heading outline-none transition-colors placeholder:text-muted focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted transition-colors hover:text-action"
                 placeholder="Select date & time"
                 constrainToScrollParent
@@ -1997,7 +1997,7 @@ function GuidedQuestionCard({
                 error={displayError ?? undefined}
                 ariaInvalid={!!displayError}
                 ariaDescribedBy={displayError ? errorId : undefined}
-                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-9 text-sm text-heading outline-none transition-colors placeholder:text-muted focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
                 buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted transition-colors hover:text-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/35"
                 constrainToScrollParent
               />
@@ -2095,7 +2095,7 @@ function SuggestedAnswersReviewCard({
             <p className="text-xs font-bold uppercase tracking-widest text-action">
               Proposal details
             </p>
-            <h3 id="suggested-answers-title" className="mt-1 text-sm font-bold text-slate-900">
+            <h3 id="suggested-answers-title" className="mt-1 text-sm font-bold text-heading">
               {questions.length} saved {questions.length === 1 ? 'detail' : 'details'}
             </h3>
           </div>
@@ -2113,31 +2113,33 @@ function SuggestedAnswersReviewCard({
         </p>
       </div>
 
-      <dl className="divide-y divide-slate-100 px-4">
+      <dl className="divide-y divide-line px-4">
         {questions.map((question) => {
           const label = questionFieldLabel(question);
           const editing = editingQuestionId === question.id;
           return (
+            // dt and dd are direct children of the row so the list is valid; the Edit button lives
+            // inside the dd with the value it edits.
             <div key={question.id} className="py-3">
-              <div className="flex items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <dt className="text-xs font-semibold text-muted">{label}</dt>
-                  <dd className="mt-0.5 break-words text-sm font-medium text-slate-900">
+              <dt className="text-xs font-semibold text-muted">{label}</dt>
+              <dd className="mt-0.5">
+                <div className="flex items-start gap-3">
+                  <span className="min-w-0 flex-1 break-words text-sm font-medium text-heading">
                     {question.reviewAnswer ?? question.suggestedAnswer}
-                  </dd>
-                </div>
-                <button
-                  type="button"
-                  aria-label={`Edit ${label}`}
-                  disabled={busy}
-                  onClick={() => onEdit(question.id)}
-                  className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-body transition-colors hover:border-cyan-300 hover:bg-brand-soft hover:text-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <PencilLine size={13} aria-hidden />
-                  {editing ? 'Editing' : 'Edit'}
-                </button>
-              </div>
-              {editing ? editor : null}
+                  </span>
+                    <button
+                      type="button"
+                      aria-label={`Edit ${label}`}
+                      disabled={busy}
+                      onClick={() => onEdit(question.id)}
+                      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-body transition-colors hover:border-action hover:bg-brand-soft hover:text-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <PencilLine size={13} aria-hidden />
+                      {editing ? 'Editing' : 'Edit'}
+                    </button>
+                    </div>
+                {editing ? editor : null}
+              </dd>
             </div>
           );
         })}
@@ -2392,7 +2394,7 @@ function DraftRunCard({
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-sm font-bold text-heading">
                 {updated
                   ? 'Updated proposal draft ready'
                   : 'Proposal draft ready'}
@@ -2681,10 +2683,10 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
         Results — Readiness check
       </p>
       <div className="mt-2 flex items-baseline justify-between gap-3">
-        <p className="text-sm font-semibold text-slate-900">
+        <p className="text-sm font-semibold text-heading">
           Overall completeness
         </p>
-        <p className="text-xl font-bold text-slate-900">
+        <p className="text-xl font-bold text-heading">
           {Math.round(report.overallCompleteness * 100)}%
         </p>
       </div>
@@ -4335,7 +4337,7 @@ export default function AssistantWorkspacePage({
             </div>
           )}
           <div className="flex justify-end">
-              <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-slate-900 sm:max-w-[75%]">
+              <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-heading sm:max-w-[75%]">
               {message.kind === 'question_answer' && (
                 <p className="mb-1 text-xs font-bold uppercase tracking-widest text-action">
                   Answer
@@ -4730,7 +4732,7 @@ export default function AssistantWorkspacePage({
       )}
       {isListening || isTranscribing ? (
         <div className="rounded-3xl border border-line bg-surface-muted p-4 shadow-sm sm:p-5">
-          <p className="mb-4 text-center text-lg font-semibold text-slate-900">
+          <p className="mb-4 text-center text-lg font-semibold text-heading">
             {isTranscribing ? 'Transcribing…' : 'Ready when you are.'}
           </p>
           <div
@@ -5006,7 +5008,7 @@ export default function AssistantWorkspacePage({
           <Link
             href="/proposals"
             aria-label="Back to all proposals"
-            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-semibold text-body transition-colors hover:bg-surface hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-semibold text-body transition-colors hover:bg-surface hover:text-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
           >
             <ArrowLeft size={14} aria-hidden />
             All proposals
@@ -5014,7 +5016,7 @@ export default function AssistantWorkspacePage({
           <span aria-hidden className="text-slate-300">
             /
           </span>
-          <span className="font-semibold text-slate-900">
+          <span className="font-semibold text-heading">
             {proposalId ? eventName || 'Untitled proposal' : 'New proposal'}
           </span>
         </nav>
@@ -5100,7 +5102,7 @@ export default function AssistantWorkspacePage({
                   ])}
                   {showLocalAttachment && attachmentTurn && (
                     <li data-testid="attachment-user-turn" className="flex justify-end">
-                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-slate-900 sm:max-w-[75%]">
+                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-heading sm:max-w-[75%]">
                         <p className="whitespace-pre-wrap">{attachmentTurn.content}</p>
                         <ul className="mt-2 flex flex-wrap gap-1.5">
                           {attachmentTurn.filenames.map((name, index) => <li key={`${index}:${name}`} className="max-w-full break-all rounded-full border border-focus/40 bg-surface px-2 py-0.5 text-xs text-body">{name}</li>)}
@@ -5181,7 +5183,7 @@ export default function AssistantWorkspacePage({
                       key={entry.localId}
                       className="flex justify-end"
                     >
-                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-slate-900 opacity-90 sm:max-w-[75%]">
+                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-heading opacity-90 sm:max-w-[75%]">
                         <p className="whitespace-pre-wrap">
                           {entry.content}
                         </p>
@@ -5515,7 +5517,7 @@ export default function AssistantWorkspacePage({
             </button>
             <aside
               aria-label="Proposal assistant tools"
-              className={`${toolsOpen ? 'flex' : 'hidden'} max-h-[min(56dvh,34rem)] w-full shrink-0 flex-col overflow-hidden border-t border-line bg-surface-muted p-2 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 xl:flex xl:h-full xl:max-h-none xl:min-h-0 xl:w-full xl:rounded-3xl xl:border xl:border-slate-200/80 xl:bg-white/45 xl:shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] xl:backdrop-blur-sm`}
+              className={`${toolsOpen ? 'flex' : 'hidden'} max-h-[min(56dvh,34rem)] w-full shrink-0 flex-col overflow-hidden border-t border-line bg-surface-muted p-2 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 xl:flex xl:h-full xl:max-h-none xl:min-h-0 xl:w-full xl:rounded-3xl xl:border xl:border-line xl:bg-white/45 xl:shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] xl:backdrop-blur-sm`}
             >
             <div
               data-testid="proposal-assistant-tools-scroll"
@@ -5535,6 +5537,15 @@ export default function AssistantWorkspacePage({
             {/* Key questions checklist: every guided question the assistant
                 asks, ticked once it is answered or skipped, so the planner can
                 see how far along the intake is without scrolling the thread. */}
+            <RailDetails
+              rows={overviewRows}
+              editHref={proposalId ? `/proposals/proposal-edit?proposalId=${encodeURIComponent(proposalId)}` : null}
+            />
+            <RailSources
+              sources={sources
+                .filter((source) => source.origin === 'upload')
+                .map((source) => ({ id: source.id, name: source.originalFilename, status: source.status }))}
+            />
             <section
               aria-labelledby="rail-questions-title"
               className="min-w-0 rounded-2xl border border-line bg-surface p-3 shadow-card sm:p-4"
@@ -5648,15 +5659,6 @@ export default function AssistantWorkspacePage({
                 </>
               )}
             </section>
-            <RailDetails
-              rows={overviewRows}
-              editHref={proposalId ? `/proposals/proposal-edit?proposalId=${encodeURIComponent(proposalId)}` : null}
-            />
-            <RailSources
-              sources={sources
-                .filter((source) => source.origin === 'upload')
-                .map((source) => ({ id: source.id, name: source.originalFilename, status: source.status }))}
-            />
             </div>
             </aside>
           </div>

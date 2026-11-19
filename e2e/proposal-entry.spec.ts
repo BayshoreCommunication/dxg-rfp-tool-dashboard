@@ -73,3 +73,62 @@ for (const theme of ["light", "dark"] as const) {
     ).toEqual([]);
   });
 }
+
+// A mid-intake proposal: nine answered questions, the "event type" choice open, details captured.
+const intakePrompts = [
+  ["eventName", "What is this event called?", "Northstar Leadership Summit 2027"], ["startDate", "When does the event start?", "2027-09-14"],
+  ["endDate", "When does the event end?", "2027-09-16"], ["eventFormat", "Is the event in-person, hybrid, or virtual?", "In-Person"],
+  ["eventType", "What type of event are you planning?", null], ["venueName", "Which venue will host the event?", "Lakeside Convention Center"],
+  ["venueCity", "Which city will host the event?", "Chicago"], ["attendees", "How many in-person attendees are expected?", "450"],
+  ["venueState", "Which state or region will host the event?", "Illinois"], ["rooms", "How many event rooms are required?", "4"],
+  ["loadIn", "When is load-in?", null], ["strike", "When is strike?", null], ["audio", "Is an audio system required?", null],
+] as const;
+
+for (const theme of ["light", "dark"] as const) {
+  test(`a mid-intake workspace (details, questions, review card) has no serious accessibility violations (${theme})`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chromium", "Desktop covers the markup.");
+    test.setTimeout(90_000);
+    const questions = intakePrompts.map(([key, prompt, answer], index) => ({
+      id: `q-${key}`, code: `field:${key}`, severity: "question", paths: [`/content/event/${key}`], prompt,
+      status: answer ? "answered" : "open", impact: "scope", answerType: key === "eventType" ? "choice" : "text",
+      options: key === "eventType" ? ["Corporate Conference", "Sales Kickoff (SKO)", "Product Launch", "Other"] : [],
+      reviewAnswer: answer, suggestedAnswer: answer, answeredMessageId: null, contextRunId: null, createdAt: new Date(2027, 0, 1, 0, index).toISOString(),
+    }));
+    const intakeProgress = {
+      total: intakePrompts.length, completed: intakePrompts.filter((entry) => entry[2]).length, extraQuestionIds: [],
+      items: intakePrompts.map(([key, prompt, answer]) => ({ key, paths: [`/content/event/${key}`], prompt, status: answer ? "answered" : "open", questionId: `q-${key}` })),
+    };
+    await page.request.post(fixture, {
+      data: {
+        reset: true, questions, intakeProgress, scan: "ready",
+        proposal: {
+          event: { eventName: "Northstar Leadership Summit 2027", startDate: "2027-09-14", endDate: "2027-09-16", eventFormat: "In-Person", attendees: "450" },
+          venueSchedule: { venueName: "Lakeside Convention Center", venueCity: "Chicago", numberOfEventRooms: "4" },
+        },
+      },
+    });
+    await page.goto("/proposals/cccccccccccccccccccccccc/assistant");
+    await expect(page.getByText(/Guided question 5 of 13/)).toBeVisible({ timeout: 30_000 });
+    const isDark = await page.locator("html").evaluate((element) => element.classList.contains("dark"));
+    if ((theme === "dark") !== isDark) await page.getByTestId("dev-theme-toggle").click();
+    await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+
+    // The rail lists details, then key questions, in that order, and the details are read-only.
+    const rail = page.getByRole("complementary", { name: "Proposal assistant tools" });
+    const headings = await rail.getByRole("heading", { level: 2 }).allTextContents();
+    expect(headings.indexOf("Proposal details")).toBeGreaterThanOrEqual(0);
+    expect(headings.indexOf("Proposal details")).toBeLessThan(headings.indexOf("Key questions"));
+    await expect(rail.getByText("Lakeside Convention Center")).toBeVisible();
+    await expect(rail.getByRole("link", { name: /Edit all details/ })).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .include('[aria-label="Proposal assistant workspace"]')
+      .include('[aria-label="Proposal assistant tools"]')
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+    const blocking = results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""));
+    expect(
+      blocking.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).slice(0, 3).join(" | ")}`),
+    ).toEqual([]);
+  });
+}

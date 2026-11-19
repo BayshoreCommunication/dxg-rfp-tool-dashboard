@@ -1736,6 +1736,14 @@ describe("AssistantWorkspacePage", () => {
     expect(review).toHaveTextContent("1 saved detail");
     expect(review).toHaveTextContent(`${loadInDate} at 07:30`);
     expect(screen.queryByText(`Production load-in: ${loadInDate} at 07:30 ✓`)).not.toBeInTheDocument();
+
+    // The saved details are a valid definition list: each row holds only a dt and a dd, and the
+    // Edit button lives inside the dd with the value it edits.
+    const list = review.querySelector("dl") as HTMLElement;
+    for (const row of Array.from(list.children)) {
+      expect(Array.from(row.children).map((child) => child.tagName)).toEqual(["DT", "DD"]);
+      expect(within(row as HTMLElement).getByRole("button", { name: /^Edit / })).toBeInTheDocument();
+    }
   });
 
   test("venue-name guidance points undecided users to Skip, not a missing option", () => {
