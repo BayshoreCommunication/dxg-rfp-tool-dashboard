@@ -1,4 +1,5 @@
 import { expect as baseExpect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { ORGANIZATION_TYPE_OPTIONS, US_TIME_ZONE_OPTIONS } from "../components/auth/onboardingOptions";
 import { expectProposalWording } from "./support/wording";
 
 // The new-organization setup wizard (/welcome) fits the window: on a laptop or desktop screen the
@@ -95,6 +96,38 @@ const pageFits = async (page: Page, button: Locator, step: string, { innerScroll
 
 const top = async (target: Locator) => (await target.boundingBox())!;
 
+const longest = (options: { value: string; label: string }[]) =>
+  options.reduce((widest, option) => (option.label.length > widest.label.length ? option : widest));
+
+// A select here has no arrow of its own and clips a label that is too long, with no ellipsis.
+// Choose the option and compare its label, set in the select's own font, with the room inside
+// the select's padding.
+const labelFitsSelect = async (page: Page, label: string, option: { value: string; label: string }) => {
+  const select = page.getByLabel(label);
+  await select.selectOption(option.value);
+  const measured = await select.evaluate((node) => {
+    const control = node as HTMLSelectElement;
+    const style = getComputedStyle(control);
+    const probe = document.createElement("span");
+    probe.textContent = control.selectedOptions[0].text;
+    probe.style.cssText = "position:absolute;visibility:hidden;white-space:pre;left:-9999px;top:0";
+    probe.style.font = style.font;
+    probe.style.letterSpacing = style.letterSpacing;
+    document.body.append(probe);
+    const text = probe.getBoundingClientRect().width;
+    probe.remove();
+    return {
+      shown: control.selectedOptions[0].text,
+      text,
+      room: control.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight),
+    };
+  });
+  const { width, height } = page.viewportSize()!;
+  console.log(`[onboarding-fit] ${width}x${height} ${label}: "${measured.shown}" is ${measured.text.toFixed(1)} px wide, the select has room for ${measured.room.toFixed(1)} px`);
+  expect(measured.shown).toBe(option.label);
+  expect(measured.text, `${label}: "${option.label}" is not cut off`).toBeLessThanOrEqual(measured.room);
+};
+
 // The form answers once the page has hydrated; before that a click would submit it natively.
 const saveCompany = async (page: Page) => {
   await expect(async () => {
@@ -141,8 +174,9 @@ for (const viewport of DESKTOP_VIEWPORTS) {
     }
     for (const select of [type, country, zone]) expect(select.height).toBeGreaterThanOrEqual(44);
     expect((await top(proceed)).height).toBeGreaterThanOrEqual(44);
-    // The longest time zone name is not cut off in its field.
-    await page.getByLabel("Time zone").selectOption("America/Phoenix");
+    // The longest organization type and the longest time zone name are not cut off in their fields.
+    await labelFitsSelect(page, "Organization type", longest(ORGANIZATION_TYPE_OPTIONS));
+    await labelFitsSelect(page, "Time zone", longest(US_TIME_ZONE_OPTIONS));
     // Tab order follows the visual order.
     await page.getByLabel("Company name").focus();
     for (const label of ["Organization type", "Industry (optional)", "Country", "Time zone", "Events per year (optional)"]) {
