@@ -30,13 +30,17 @@ const yesNoCls = (opt: "YES" | "NO", value: string): string => {
 const YesNo = ({
   value,
   onChange,
+  labelledBy,
 }: {
   value: string;
   onChange: (v: "YES" | "NO") => void;
+  /** id of the visible question text, so the pair is announced as a named group. */
+  labelledBy?: string;
 }) => (
-  <div className="flex gap-3">
+  <div role="group" aria-labelledby={labelledBy} className="flex gap-3">
     <button
       type="button"
+      aria-pressed={value === "YES"}
       className={yesNoCls("YES", value)}
       onClick={() => onChange("YES")}
     >
@@ -44,6 +48,7 @@ const YesNo = ({
     </button>
     <button
       type="button"
+      aria-pressed={value === "NO"}
       className={yesNoCls("NO", value)}
       onClick={() => onChange("NO")}
     >
@@ -85,27 +90,32 @@ const Stepper = ({
   onChange,
   min = 1,
   max = 99,
+  label,
 }: {
   value: string;
   onChange: (v: string) => void;
   min?: number;
   max?: number;
+  /** Accessible name for the control, e.g. "Number of power drops". */
+  label?: string;
 }) => {
   const num = parseInt(value, 10) || min;
   return (
-    <div className="flex items-center gap-0 overflow-hidden rounded-lg border border-[#e4e4e4] w-fit">
+    <div role="group" aria-label={label} className="flex items-center gap-0 overflow-hidden rounded-lg border border-[#e4e4e4] w-fit">
       <button
         type="button"
+        aria-label={label ? `Decrease ${label.toLowerCase()}` : "Decrease"}
         onClick={() => onChange(String(Math.max(min, num - 1)))}
         className="flex h-10 w-10 items-center justify-center bg-[#f9f9f9] text-lg font-bold text-[#222628] hover:bg-[#eeeeee] transition-colors"
       >
         −
       </button>
-      <span className="flex h-10 w-14 items-center justify-center text-sm font-bold text-slate-800">
+      <span aria-live="polite" className="flex h-10 w-14 items-center justify-center text-sm font-bold text-slate-800">
         {num}
       </span>
       <button
         type="button"
+        aria-label={label ? `Increase ${label.toLowerCase()}` : "Increase"}
         onClick={() => onChange(String(Math.min(max, num + 1)))}
         className="flex h-10 w-10 items-center justify-center bg-[#f9f9f9] text-lg font-bold text-[#222628] hover:bg-[#eeeeee] transition-colors"
       >
@@ -242,11 +252,12 @@ const VenueTechnicalRequirements = ({
 
         <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div>
-            <label className={labelClass}>
-              Contact Name
-              <InfoTooltip text="The on-site venue coordinator or AV liaison. The AV company will contact this person for load-in logistics, power hookups, and rigging approvals." />
-            </label>
-            <input
+            <div className={labelClass}>
+            <label htmlFor="venue-tech-contact-name" className="flex items-center gap-1.5">
+            Contact Name</label>
+            <InfoTooltip text="The on-site venue coordinator or AV liaison. The AV company will contact this person for load-in logistics, power hookups, and rigging approvals." />
+            </div>
+            <input id="venue-tech-contact-name"
               className={inputClass}
               placeholder="e.g. Jane Smith"
               value={data.venueAvContactName}
@@ -254,10 +265,10 @@ const VenueTechnicalRequirements = ({
             />
           </div>
           <div>
-            <label className={labelClass}>
+            <label htmlFor="venue-tech-phone" className={labelClass}>
               Phone
             </label>
-            <input
+            <input id="venue-tech-phone"
               className={inputClass}
               placeholder="e.g. (555) 555-0100"
               value={data.venueAvContactPhone}
@@ -265,10 +276,10 @@ const VenueTechnicalRequirements = ({
             />
           </div>
           <div>
-            <label className={labelClass}>
+            <label htmlFor="venue-tech-email" className={labelClass}>
               Email
             </label>
-            <input
+            <input id="venue-tech-email"
               type="email"
               className={inputClass}
               placeholder="e.g. jsmith@venue.com"
@@ -282,11 +293,12 @@ const VenueTechnicalRequirements = ({
             Block 2 — In-House AV Company
         ───────────────────────────────────────── */}
         <div className="mb-6">
-          <label className={labelClass}>
-            In-House AV Company Name
-            <InfoTooltip text="The name of the venue's preferred or exclusive in-house AV vendor. Knowing this upfront helps RFPilot determine whether coordination, a patch-in fee, or an exclusivity fee applies." />
-          </label>
-          <input
+          <div className={labelClass}>
+          <label htmlFor="venue-tech-in-house-av-company-name" className="flex items-center gap-1.5">
+          In-House AV Company Name</label>
+          <InfoTooltip text="The name of the venue's preferred or exclusive in-house AV vendor. Knowing this upfront helps RFPilot determine whether coordination, a patch-in fee, or an exclusivity fee applies." />
+          </div>
+          <input id="venue-tech-in-house-av-company-name"
             className={inputClass}
             placeholder="e.g. Encore, Pinnacle Live, Inspire — or leave blank if none"
             value={data.inHouseAvCompanyName}
@@ -300,11 +312,13 @@ const VenueTechnicalRequirements = ({
         <Group label="Rigging" />
 
         <div className="mb-6">
-          <label className={labelClass}>
-            Rigging Required? <span className="text-red-500">*</span>
-            <InfoTooltip text="Flown elements include speakers, lighting trusses, LED walls, or screens suspended from the ceiling. Most venues require certified riggers for any overhead load." />
-          </label>
+          <div className={labelClass}>
+          <span id="venue-tech-rigging-required-label" className="flex items-center gap-1.5">
+          Rigging Required? <span className="text-red-500">*</span></span>
+          <InfoTooltip text="Flown elements include speakers, lighting trusses, LED walls, or screens suspended from the ceiling. Most venues require certified riggers for any overhead load." />
+          </div>
           <YesNo
+ labelledBy="venue-tech-rigging-required-label"
             value={data.riggingRequired}
             onChange={(v) =>
               onChange({
@@ -315,7 +329,7 @@ const VenueTechnicalRequirements = ({
             }
           />
           {showErrors && !data.riggingRequired && (
-            <p className="mt-1 text-xs text-red-500">Required</p>
+            <p role="alert" className="mt-1 text-xs text-red-500">Required</p>
           )}
 
           {data.riggingRequired === "YES" && (
@@ -323,21 +337,25 @@ const VenueTechnicalRequirements = ({
               <p className={subPanelHeader}>Rigging Details</p>
               <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <label className={labelClass}>
-                    Are Truss and Motors Exclusively Provided by the Venue?
-                    <InfoTooltip text="Some venues require that all flown truss and chain motors be sourced exclusively through their in-house rigging vendor. Knowing this upfront helps RFPilot scope coordination or exclusivity fees." />
-                  </label>
+                  <div className={labelClass}>
+                  <span id="venue-tech-are-truss-and-motors-exclusive-label" className="flex items-center gap-1.5">
+                  Are Truss and Motors Exclusively Provided by the Venue?</span>
+                  <InfoTooltip text="Some venues require that all flown truss and chain motors be sourced exclusively through their in-house rigging vendor. Knowing this upfront helps RFPilot scope coordination or exclusivity fees." />
+                  </div>
                   <YesNo
+ labelledBy="venue-tech-are-truss-and-motors-exclusive-label"
                     value={data.trussAndMotorsProvidedByVenue}
                     onChange={(v) => onChange({ trussAndMotorsProvidedByVenue: v })}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>
-                    Are Lifts Exclusively Provided by the Venue?
-                    <InfoTooltip text="Some venues require that all lifts (scissor lifts, genie lifts) used for rigging or installation be sourced exclusively through their in-house vendor." />
-                  </label>
+                  <div className={labelClass}>
+                  <span id="venue-tech-are-lifts-exclusively-provided-label" className="flex items-center gap-1.5">
+                  Are Lifts Exclusively Provided by the Venue?</span>
+                  <InfoTooltip text="Some venues require that all lifts (scissor lifts, genie lifts) used for rigging or installation be sourced exclusively through their in-house vendor." />
+                  </div>
                   <YesNo
+ labelledBy="venue-tech-are-lifts-exclusively-provided-label"
                     value={data.liftsProvidedByVenue}
                     onChange={(v) => onChange({ liftsProvidedByVenue: v })}
                   />
@@ -363,11 +381,13 @@ const VenueTechnicalRequirements = ({
         )}
 
         <div className="mb-6">
-          <label className={labelClass}>
-            Power Drops Required? <span className="text-red-500">*</span>
-            <InfoTooltip text="Dedicated drops provide isolated electrical circuits for AV equipment, preventing interference and tripped breakers from shared venue power." />
-          </label>
+          <div className={labelClass}>
+          <span id="venue-tech-power-drops-required-label" className="flex items-center gap-1.5">
+          Power Drops Required? <span className="text-red-500">*</span></span>
+          <InfoTooltip text="Dedicated drops provide isolated electrical circuits for AV equipment, preventing interference and tripped breakers from shared venue power." />
+          </div>
           <YesNo
+ labelledBy="venue-tech-power-drops-required-label"
             value={data.powerDropsRequired}
             onChange={(v) =>
               onChange({
@@ -378,7 +398,7 @@ const VenueTechnicalRequirements = ({
             }
           />
           {showErrors && !data.powerDropsRequired && (
-            <p className="mt-1 text-xs text-red-500">Required</p>
+            <p role="alert" className="mt-1 text-xs text-red-500">Required</p>
           )}
 
           {data.powerDropsRequired === "YES" && (
@@ -386,15 +406,16 @@ const VenueTechnicalRequirements = ({
               <p className={subPanelHeader}>Power Drop Details</p>
 
               <div className="mb-4">
-                <label className={labelClass}>
+                <p id="venue-tech-amperage-per-drop-label" className={labelClass}>
                   Amperage per Drop
                   <InfoTooltip text="The amperage of each dedicated circuit. Large LED walls and audio systems typically require 200–400A. The AV company will confirm exact requirements." />
-                </label>
-                <div className="flex flex-wrap gap-2">
+                </p>
+                <div role="group" aria-labelledby="venue-tech-amperage-per-drop-label" className="flex flex-wrap gap-2">
                   {POWER_AMPERAGE_OPTIONS.map((opt) => (
                     <button
                       key={opt}
                       type="button"
+                      aria-pressed={data.powerDropAmperage === opt}
                       onClick={() => onChange({ powerDropAmperage: opt })}
                       className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
                         data.powerDropAmperage === opt
@@ -409,11 +430,13 @@ const VenueTechnicalRequirements = ({
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Number of Power Drops
-                  <InfoTooltip text="Total number of dedicated circuits needed. Common breakdowns: 1–2 at stage, 1 at FOH mix position, 1 at video village." />
-                </label>
+                <div className={labelClass}>
+                <span className="flex items-center gap-1.5">
+                Number of Power Drops</span>
+                <InfoTooltip text="Total number of dedicated circuits needed. Common breakdowns: 1–2 at stage, 1 at FOH mix position, 1 at video village." />
+                </div>
                 <Stepper
+                  label="Number of power drops"
                   value={data.numberOfPowerDrops || "1"}
                   onChange={(v) => onChange({ numberOfPowerDrops: v })}
                   min={1}
@@ -425,11 +448,12 @@ const VenueTechnicalRequirements = ({
         </div>
 
         <div className="mb-6">
-          <label className={labelClass}>
+          <p id="venue-tech-wireless-internet-required-label" className={labelClass}>
             Wireless Internet Required? <span className="text-red-500">*</span>
             <InfoTooltip text="Indicates whether WiFi coverage is needed for attendees, crew, or AV systems. Required for live polling, digital Q&A, event apps, and streaming encoders." />
-          </label>
+          </p>
           <YesNo
+ labelledBy="venue-tech-wireless-internet-required-label"
             value={data.wirelessInternetRequired}
             onChange={(v) =>
               onChange({
@@ -439,7 +463,7 @@ const VenueTechnicalRequirements = ({
             }
           />
           {showErrors && !data.wirelessInternetRequired && (
-            <p className="mt-1 text-xs text-red-500">Required</p>
+            <p role="alert" className="mt-1 text-xs text-red-500">Required</p>
           )}
 
           {data.wirelessInternetRequired === "YES" && (
@@ -472,11 +496,12 @@ const VenueTechnicalRequirements = ({
         <Group label="Compliance &amp; Access" />
 
         <div className="mb-6">
-          <label className={labelClass}>
-            COI Requirements
-            <InfoTooltip text="Most venues require the AV company to provide a Certificate of Insurance naming the venue as an additional insured before load-in begins. Paste the venue's specific COI language or requirements here." />
-          </label>
-          <textarea
+          <div className={labelClass}>
+          <label htmlFor="venue-tech-coi-requirements" className="flex items-center gap-1.5">
+          COI Requirements</label>
+          <InfoTooltip text="Most venues require the AV company to provide a Certificate of Insurance naming the venue as an additional insured before load-in begins. Paste the venue's specific COI language or requirements here." />
+          </div>
+          <textarea id="venue-tech-coi-requirements"
             rows={4}
             maxLength={500}
             className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
@@ -493,11 +518,12 @@ const VenueTechnicalRequirements = ({
         </div>
 
         <div className="mb-6">
-          <label className={labelClass}>
-            Venue Access Requirements
-            <InfoTooltip text="Any venue-specific restrictions on load-in times, freight elevator reservations, dock scheduling, security badge requirements, or areas requiring escort. This goes directly into the venue logistics section of the proposal." />
-          </label>
-          <textarea
+          <div className={labelClass}>
+          <label htmlFor="venue-tech-venue-access-requirements" className="flex items-center gap-1.5">
+          Venue Access Requirements</label>
+          <InfoTooltip text="Any venue-specific restrictions on load-in times, freight elevator reservations, dock scheduling, security badge requirements, or areas requiring escort. This goes directly into the venue logistics section of the proposal." />
+          </div>
+          <textarea id="venue-tech-venue-access-requirements"
             rows={3}
             maxLength={400}
             className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
