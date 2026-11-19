@@ -2423,15 +2423,15 @@ const AddNewProposal = ({
           if (normalized.roomByRoom && normalized.roomByRoom.length > 0) {
             setRooms(normalized.roomByRoom.map((r) => ({ ...defaultRoom(), ...r })));
           }
-          toast.success("? Fields pre-filled from your document!");
+          toast.success("Fields pre-filled from your document.");
         } else {
           toast.info(
-            "No matching fields found � please fill the form manually.",
+            "No matching fields found. Please fill the form manually.",
           );
         }
       } catch {
         toast.info(
-          "Couldn't read the document � please fill the form manually.",
+          "Couldn't read the document. Please fill the form manually.",
         );
       } finally {
         setIsExtracting(false);
@@ -2456,7 +2456,7 @@ const AddNewProposal = ({
       reportIncompleteRoom();
       return;
     }
-    // Steps 4 (Hybrid & Virtual), 5 (Content & Creative), 6 (Video Recording) � no required validation
+    // Steps 4 (Hybrid & Virtual), 5 (Content & Creative), 6 (Video Recording) - no required validation
     if (proposalProcessStep === 7 && !isVenueStepValid()) {
       return;
     }
@@ -2662,7 +2662,7 @@ const AddNewProposal = ({
     >
       {loadingExisting && (
         <div className="flex w-full flex-col gap-4 @min-[1000px]:flex-row">
-          {/* Form card skeleton � 80% */}
+          {/* Form card skeleton - 80% */}
           <div className="min-w-0 flex-1 space-y-6">
             <div className="flex min-h-screen flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #2fc6f5, #008ad2)" }} />
@@ -2695,7 +2695,7 @@ const AddNewProposal = ({
               </div>
             </div>
           </div>
-          {/* Step sidebar skeleton � 20% */}
+          {/* Step sidebar skeleton - 20% */}
           <div className="w-full shrink-0 space-y-2 @min-[1000px]:w-[288px]">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               {Array.from({ length: 9 }).map((_, i) => (
