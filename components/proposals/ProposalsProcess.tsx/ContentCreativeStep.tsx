@@ -230,7 +230,7 @@ const ContentCreativeStep = ({
         {/* Field 1 — Gateway */}
         <div>
           <div className={labelClass}>
-          <span id="content-creative-services-needed-label" className="flex items-center gap-1.5">
+          <span id="content-creative-services-needed-label" className="flex items-center gap-[inherit]">
           Content / Creative Services Needed?{" "}
           <span className="text-red-500">*</span></span>
           <InfoTooltip text="Do you need the AV vendor to provide any content design or creative production services beyond live show technical execution? This includes designing slide templates, producing opener videos, building lower-third graphics, or creating sizzle reels. Select No if you have a separate creative agency handling all content and the AV vendor will only execute the live show." />
@@ -445,7 +445,7 @@ const ContentCreativeStep = ({
             <div>
               <p className={groupLabelClass}>Creative Direction</p>
               <div className={labelClass}>
-              <label htmlFor="content-creative-creative-direction-notes" className="flex items-center gap-1.5">
+              <label htmlFor="content-creative-creative-direction-notes" className="flex items-center gap-[inherit]">
               Creative Direction Notes
               <span className="ml-2 text-xs font-normal normal-case tracking-normal text-slate-400">
               (Optional)

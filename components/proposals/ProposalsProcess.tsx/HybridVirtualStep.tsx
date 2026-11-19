@@ -196,7 +196,7 @@ const HybridVirtualStep = ({
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <div className={labelClass}>
-                <label htmlFor="hybrid-virtual-attendee-estimate" className="flex items-center gap-1.5">
+                <label htmlFor="hybrid-virtual-attendee-estimate" className="flex items-center gap-[inherit]">
                 Virtual Attendee Estimate</label>
                 <InfoTooltip text="Expected number of remote viewers. Helps vendors size streaming infrastructure — CDN, encoding bandwidth, and platform licensing tiers." />
                 </div>
@@ -213,7 +213,7 @@ const HybridVirtualStep = ({
 
               <div>
                 <div className={labelClass}>
-                <label id="hybrid-streaming-platform-label" className="flex items-center gap-1.5">
+                <label id="hybrid-streaming-platform-label" className="flex items-center gap-[inherit]">
                 Streaming Platform</label>
                 <InfoTooltip text="The platform delivering the virtual experience to remote attendees. If unsure, select 'Vendor Recommendation Needed' — RFPilot will suggest the best fit based on your scope." />
                 </div>
@@ -254,7 +254,7 @@ const HybridVirtualStep = ({
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <div className={labelClass}>
-                <span id="hybrid-platformIntegrationWithAv-label" className="flex items-center gap-1.5">
+                <span id="hybrid-platformIntegrationWithAv-label" className="flex items-center gap-[inherit]">
                 Platform Integration with In-Room AV?</span>
                 <InfoTooltip text="Whether the streaming platform connects directly with the in-room video signal chain. Deep integration requires additional switching and encoding gear — affects technical scope and crew count." />
                 </div>
@@ -267,7 +267,7 @@ const HybridVirtualStep = ({
 
               <div>
                 <div className={labelClass}>
-                <label id="hybrid-stream-ownership-label" className="flex items-center gap-1.5">
+                <label id="hybrid-stream-ownership-label" className="flex items-center gap-[inherit]">
                 Stream Ownership</label>
                 <InfoTooltip text="Clarifies who operates and manages the live stream. 'AV Vendor Owns Full Stream' means RFPilot handles everything end-to-end. 'Client Owns Platform' means RFPilot provides the feed but the client manages delivery." />
                 </div>
@@ -299,7 +299,7 @@ const HybridVirtualStep = ({
               {/* Remote Speakers */}
               <div>
                 <div className={labelClass}>
-                <span id="hybrid-remoteSpeakers-label" className="flex items-center gap-1.5">
+                <span id="hybrid-remoteSpeakers-label" className="flex items-center gap-[inherit]">
                 Remote Speakers Presenting Into Room?</span>
                 <InfoTooltip text="Whether any presenters will join virtually and be displayed on screen in the physical room. Requires a dedicated encoder/decoder setup, confidence monitor for virtual feed, and an operator to manage the handoff." />
                 </div>
@@ -325,7 +325,7 @@ const HybridVirtualStep = ({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <div className={labelClass}>
-                        <label htmlFor="hybrid-how-many-remote-speakers" className="flex items-center gap-1.5">
+                        <label htmlFor="hybrid-how-many-remote-speakers" className="flex items-center gap-[inherit]">
                         How Many Remote Speakers?</label>
                         <InfoTooltip text="The number of virtual presenters who need to be brought into the room. Each additional speaker may require a separate encoding input and dedicated operator attention." />
                         </div>
@@ -346,7 +346,7 @@ const HybridVirtualStep = ({
                       </div>
                       <div>
                         <div className={labelClass}>
-                        <label id="hybrid-remote-feed-platform-label" className="flex items-center gap-1.5">
+                        <label id="hybrid-remote-feed-platform-label" className="flex items-center gap-[inherit]">
                         Remote Feed Platform</label>
                         <InfoTooltip text="The app remote speakers will use to connect. StreamYard and Riverside are most AV-friendly for broadcast integration; Zoom and Teams require NDI or hardware bridging." />
                         </div>
@@ -373,7 +373,7 @@ const HybridVirtualStep = ({
                     </div>
                     <div>
                       <div className={labelClass}>
-                      <label id="hybrid-tech-rehearsal-owner-label" className="flex items-center gap-1.5">
+                      <label id="hybrid-tech-rehearsal-owner-label" className="flex items-center gap-[inherit]">
                       Tech Rehearsal Owner</label>
                       <InfoTooltip text="Who is responsible for running the pre-event tech rehearsal with remote speakers. Affects producer scheduling and pre-show call sheet." />
                       </div>
@@ -405,7 +405,7 @@ const HybridVirtualStep = ({
               <div className="space-y-6">
                 <div>
                   <div className={labelClass}>
-                  <span id="hybrid-liveVirtualQa-label" className="flex items-center gap-1.5">
+                  <span id="hybrid-liveVirtualQa-label" className="flex items-center gap-[inherit]">
                   Live Virtual Q&amp;A Integration?</span>
                   <InfoTooltip text="Whether virtual attendees can submit questions in real time during sessions. Requires platform integration and a dedicated operator to moderate and display questions." />
                   </div>
@@ -419,7 +419,7 @@ const HybridVirtualStep = ({
                 {/* Virtual-Only Breakout Sessions */}
                 <div>
                   <div className={labelClass}>
-                  <span id="hybrid-virtualOnlyBreakouts-label" className="flex items-center gap-1.5">
+                  <span id="hybrid-virtualOnlyBreakouts-label" className="flex items-center gap-[inherit]">
                   Virtual-Only Breakout Sessions?</span>
                   <InfoTooltip text="Whether the event includes separate breakout rooms or tracks for virtual-only attendees. A platform capability that affects producer workload and platform configuration scope." />
                   </div>
@@ -443,7 +443,7 @@ const HybridVirtualStep = ({
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <div className={labelClass}>
-                <span id="hybrid-dedicatedVirtualProducer-label" className="flex items-center gap-1.5">
+                <span id="hybrid-dedicatedVirtualProducer-label" className="flex items-center gap-[inherit]">
                 Dedicated Virtual Producer?</span>
                 <InfoTooltip text="An RFPilot producer whose sole focus is managing the virtual side of the show — monitoring stream health, managing remote speaker handoffs, moderating virtual Q&A, and troubleshooting platform issues in real time. Strongly recommended for events with 500+ virtual attendees or multiple remote speakers." />
                 </div>
@@ -456,7 +456,7 @@ const HybridVirtualStep = ({
 
               <div>
                 <div className={labelClass}>
-                <span id="hybrid-closedCaptions-label" className="flex items-center gap-1.5">
+                <span id="hybrid-closedCaptions-label" className="flex items-center gap-[inherit]">
                 Closed Captions / Translation?</span>
                 <InfoTooltip text="Live closed captioning delivered to virtual attendees. Required for ADA compliance in many jurisdictions and for events with international audiences." />
                 </div>
@@ -482,7 +482,7 @@ const HybridVirtualStep = ({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className={labelClass}>
-                        <span id="hybrid-caption-languages-label" className="flex items-center gap-1.5">
+                        <span id="hybrid-caption-languages-label" className="flex items-center gap-[inherit]">
                         Languages</span>
                         <InfoTooltip text="Each language that needs to be captioned. Each additional language typically requires a separate captioner or AI processing stream — select all that apply." />
                         </div>
@@ -537,7 +537,7 @@ const HybridVirtualStep = ({
                       </div>
                       <div>
                         <div className={labelClass}>
-                        <label id="hybrid-caption-source-label" className="flex items-center gap-1.5">
+                        <label id="hybrid-caption-source-label" className="flex items-center gap-[inherit]">
                         Caption Source</label>
                         <InfoTooltip text="AI auto-captions are fast and affordable but have accuracy limitations. 'AI with Human Review' balances cost and accuracy. Human CART captioners provide near-perfect accuracy — required for legal, medical, or government events." />
                         </div>
@@ -569,7 +569,7 @@ const HybridVirtualStep = ({
             <div className="grid grid-cols-3 gap-5">
               <div>
                 <div className={labelClass}>
-                <span id="hybrid-onDemandRecording-label" className="flex items-center gap-1.5">
+                <span id="hybrid-onDemandRecording-label" className="flex items-center gap-[inherit]">
                 On-Demand Recording?</span>
                 <InfoTooltip text="Whether the stream will be recorded and made available for viewing after the event. Requires cloud storage, post-event processing, and delivery setup." />
                 </div>
@@ -582,7 +582,7 @@ const HybridVirtualStep = ({
 
               <div>
                 <div className={labelClass}>
-                <span id="hybrid-sponsorOverlays-label" className="flex items-center gap-1.5">
+                <span id="hybrid-sponsorOverlays-label" className="flex items-center gap-[inherit]">
                 Sponsor Overlays on Stream?</span>
                 <InfoTooltip text="Branded lower-thirds, full-screen sponsor bumpers, or overlay graphics displayed during the virtual broadcast. Requires a graphics operator and pre-built assets." />
                 </div>

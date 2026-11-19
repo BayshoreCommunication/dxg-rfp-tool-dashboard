@@ -484,7 +484,7 @@ const VenueScheduleStep = ({
           {/* Venue Name */}
           <div className="mb-5">
             <div className={labelClass}>
-            <label htmlFor="venue-schedule-venue-name" className="flex items-center gap-1.5">
+            <label htmlFor="venue-schedule-venue-name" className="flex items-center gap-[inherit]">
             Venue Name <span className="text-red-500">*</span></label>
             <InfoTooltip text="Full official name of the venue as it appears on the venue's website or contract. Appears on the cover subtitle, Section 1 Scope Overview, Section 6 Venue row, and the union note callout." />
             </div>
@@ -511,7 +511,7 @@ const VenueScheduleStep = ({
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
               <div className={labelClass}>
-              <label id="venue-schedule-state-label" className="flex items-center gap-1.5">
+              <label id="venue-schedule-state-label" className="flex items-center gap-[inherit]">
               State <span className="text-red-500">*</span></label>
               <InfoTooltip text="State or region. Used for jurisdiction context, union market detection, and time zone auto-detection. Selecting a state automatically suggests the correct time zone below." />
               </div>
@@ -532,7 +532,7 @@ const VenueScheduleStep = ({
             </div>
             <div>
               <div className={labelClass}>
-              <label htmlFor="venue-schedule-city" className="flex items-center gap-1.5">
+              <label htmlFor="venue-schedule-city" className="flex items-center gap-[inherit]">
               City <span className="text-red-500">*</span></label>
               <InfoTooltip text="The city where the venue is located. Compared against 20 known union markets to trigger the union jurisdiction advisory banner." />
               </div>
@@ -567,7 +567,7 @@ const VenueScheduleStep = ({
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
               <div className={labelClass}>
-              <label id="venue-schedule-venue-type-label" className="flex items-center gap-1.5">
+              <label id="venue-schedule-venue-type-label" className="flex items-center gap-[inherit]">
               Venue Type <span className="text-red-500">*</span></label>
               <InfoTooltip text="Convention centers and arenas typically have union labor requirements; hotels and resorts vary. Helps vendors gauge infrastructure and labor expectations." />
               </div>
@@ -587,7 +587,7 @@ const VenueScheduleStep = ({
             </div>
             <div>
               <div className={labelClass}>
-              <label id="venue-schedule-venue-confirmed-status-label" className="flex items-center gap-1.5">
+              <label id="venue-schedule-venue-confirmed-status-label" className="flex items-center gap-[inherit]">
               Venue Confirmed Status <span className="text-red-500">*</span></label>
               <InfoTooltip text="Is your venue locked in? Vendors use this to gauge how firmly location specs can be relied upon. Unconfirmed venues may surface as a flag chip on the cover." />
               </div>
@@ -612,7 +612,7 @@ const VenueScheduleStep = ({
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
               <div className={labelClass}>
-              <label htmlFor="venue-schedule-venue-address" className="flex items-center gap-1.5">
+              <label htmlFor="venue-schedule-venue-address" className="flex items-center gap-[inherit]">
               Venue Address
               <span className="ml-1 text-[#969798] text-xs font-normal normal-case tracking-normal">(optional)</span></label>
               <InfoTooltip text="Full street address including ZIP code. Used for freight delivery coordination and vendor logistics planning." />
@@ -627,7 +627,7 @@ const VenueScheduleStep = ({
             </div>
             <div>
               <div className={labelClass}>
-              <label id="venue-schedule-time-zone-label" className="flex items-center gap-1.5">
+              <label id="venue-schedule-time-zone-label" className="flex items-center gap-[inherit]">
               Time Zone <span className="text-red-500">*</span></label>
               <InfoTooltip text="Time zone of the venue. Appended to all times in the Section 1 timeline, Section 9 proposal deadline, and venue section. Auto-detected when you select a state above." />
               </div>
@@ -756,7 +756,7 @@ const VenueScheduleStep = ({
 
                 <div>
                   <div className={`${labelClass} mt-0`}>
-                  <label htmlFor="venue-schedule-details-or-contract-language" className="flex items-center gap-1.5">
+                  <label htmlFor="venue-schedule-details-or-contract-language" className="flex items-center gap-[inherit]">
                   Details or Contract Language
                   <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
                   <InfoTooltip text="Add any specific details, jurisdictions, or contract language vendors should be aware of." />
@@ -782,7 +782,7 @@ const VenueScheduleStep = ({
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
               <div className={labelClass}>
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-[inherit]">
               Load-In Date &amp; Time <span className="text-red-500">*</span></span>
               <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue — this is the earliest you can start setup, not the show start. Typical load-in is 1–3 days before show day for large events." />
               </div>
@@ -819,7 +819,7 @@ const VenueScheduleStep = ({
 
             <div>
               <div className={labelClass}>
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-[inherit]">
               Rehearsal Date &amp; Time</span>
               <InfoTooltip text="When is your speaker/tech rehearsal scheduled? Most productions run a full tech rehearsal the day before show day. Leave blank if no formal rehearsal is planned — timeline column will display 'TBD'." />
               </div>
@@ -864,7 +864,7 @@ const VenueScheduleStep = ({
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
               <div className={labelClass}>
-              <label id="venue-schedule-show-start-date-time-label" className="flex items-center gap-1.5">
+              <label id="venue-schedule-show-start-date-time-label" className="flex items-center gap-[inherit]">
               Show Start Date &amp; Time <span className="text-red-500">*</span></label>
               <InfoTooltip text="When does the show/general session officially begin? Populates the Section 1 timeline and is used to calculate overall production runtime alongside Show End." />
               </div>
@@ -896,7 +896,7 @@ const VenueScheduleStep = ({
 
             <div>
               <div className={labelClass}>
-              <label id="venue-schedule-show-end-date-time-label" className="flex items-center gap-1.5">
+              <label id="venue-schedule-show-end-date-time-label" className="flex items-center gap-[inherit]">
               Show End Date &amp; Time <span className="text-red-500">*</span></label>
               <InfoTooltip text="When does the show/general session officially end? Must be on or after Show Start. Populates the Section 1 timeline and marks the end of live production." />
               </div>
@@ -931,7 +931,7 @@ const VenueScheduleStep = ({
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
               <div className={labelClass}>
-              <label id="venue-schedule-strike-date-time-label" className="flex items-center gap-1.5">
+              <label id="venue-schedule-strike-date-time-label" className="flex items-center gap-[inherit]">
               Strike Date &amp; Time <span className="text-red-500">*</span></label>
               <InfoTooltip text="When must all equipment be fully removed from the venue? This is your final load-out deadline per the venue contract — typically the same evening as final show day or early next morning. Union venues may have strict overtime rules after the contracted strike window." />
               </div>

@@ -316,7 +316,7 @@ const ContactInfo = ({
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <div className={labelClass}>
-            <label htmlFor="contactFirstName" className="flex items-center gap-1.5">
+            <label htmlFor="contactFirstName" className="flex items-center gap-[inherit]">
               First Name <span className="text-red-500">*</span></label>
             <InfoTooltip text="Your legal first name as it appears on correspondence. Shown on the proposal cover page and all vendor portal communications." />
           </div>
@@ -334,7 +334,7 @@ const ContactInfo = ({
           </div>
           <div>
             <div className={labelClass}>
-            <label htmlFor="contactLastName" className="flex items-center gap-1.5">
+            <label htmlFor="contactLastName" className="flex items-center gap-[inherit]">
               Last Name <span className="text-red-500">*</span></label>
             <InfoTooltip text="Your legal last name for correspondence and proposal documentation." />
           </div>
@@ -356,7 +356,7 @@ const ContactInfo = ({
         <div className={`mb-6 grid grid-cols-1 gap-4 ${mode === "advanced" ? "sm:grid-cols-2" : ""}`}>
           {mode === "advanced" && <div>
             <div className={labelClass}>
-            <label htmlFor="contactTitle" className="flex items-center gap-1.5">
+            <label htmlFor="contactTitle" className="flex items-center gap-[inherit]">
               Job Title <span className="text-red-500">*</span></label>
             <InfoTooltip text="Your professional title as it should appear on the proposal. Appears in the Primary Contact box on the cover page alongside your organization." />
           </div>
@@ -374,7 +374,7 @@ const ContactInfo = ({
           </div>}
           <div>
             <div className={labelClass}>
-            <label htmlFor="contactOrganization" className="flex items-center gap-1.5">
+            <label htmlFor="contactOrganization" className="flex items-center gap-[inherit]">
               Organization (Display Name) <span className="text-red-500">*</span></label>
             <InfoTooltip text="Your organization's common display name for the contact box — e.g. 'Apex Dynamics'. For the full legal name used in document headers, see below." />
           </div>
@@ -395,7 +395,7 @@ const ContactInfo = ({
         {/* Field 3 — Email */}
         <div className="mb-6">
           <div className={labelClass}>
-            <label htmlFor="contactEmail" className="flex items-center gap-1.5">
+            <label htmlFor="contactEmail" className="flex items-center gap-[inherit]">
             Email Address <span className="text-red-500">*</span></label>
             <InfoTooltip text="All vendor questions, proposal notifications, and portal activity alerts will be sent here. Use your professional work email — not a personal address or unmonitored shared mailbox." />
           </div>
@@ -434,7 +434,7 @@ const ContactInfo = ({
         {/* Field 4 — Phone */}
         <div className="mb-6">
           <div className={labelClass}>
-            <label htmlFor="contactPhone" className="flex items-center gap-1.5">
+            <label htmlFor="contactPhone" className="flex items-center gap-[inherit]">
             Phone Number <span className="text-red-500">*</span></label>
             <InfoTooltip text="Best number to reach you for vendor questions, production calls, and urgent communications. Mobile numbers are preferred for event professionals who are often on-site." />
           </div>
@@ -482,7 +482,7 @@ const ContactInfo = ({
         {/* Field 5 — Legal Name */}
         <div className="mb-6">
           <div className={labelClass}>
-            <label htmlFor="organizationLegalName" className="flex items-center gap-1.5">
+            <label htmlFor="organizationLegalName" className="flex items-center gap-[inherit]">
             Organization / Company Legal Name <span className="text-red-500">*</span></label>
             <InfoTooltip text="Full legal name of your organization as it should appear on all official documents including vendor contracts, NDAs, and the proposal header. May differ from the display name — e.g. 'Apex Dynamics Corporation' vs 'Apex Dynamics'." />
           </div>
@@ -609,7 +609,7 @@ const ContactInfo = ({
 
         <div className="mb-6">
           <div className={labelClass}>
-            <label htmlFor="anythingElse" className="flex items-center gap-1.5">
+            <label htmlFor="anythingElse" className="flex items-center gap-[inherit]">
             Anything else to share?</label>
             <InfoTooltip text="Any additional context, special requirements, or notes the production team should know before building your proposal." />
           </div>

@@ -161,7 +161,7 @@ const EventForm = ({
             <div className={`grid grid-cols-1 gap-5 ${mode === "advanced" ? "lg:grid-cols-2" : ""}`}>
               <div data-assistant-field-key="/content/event/name">
                 <div className={labelClass}>
-                  <label htmlFor={fid("name")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("name")} className="flex items-center gap-[inherit]">
                   Event Name <span className="text-red-500">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/name")} />
                 </div>
@@ -184,7 +184,7 @@ const EventForm = ({
 
               {mode === "advanced" && <div data-assistant-field-key="/content/event/edition">
                 <div className={labelClass}>
-                  <label htmlFor={fid("edition")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("edition")} className="flex items-center gap-[inherit]">
                   Edition / Year
                   <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/edition")} />
@@ -201,7 +201,7 @@ const EventForm = ({
 
             {mode === "advanced" && <div data-assistant-field-key="/content/event/objectives">
               <div className={labelClass}>
-                  <label htmlFor={fid("objectives")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("objectives")} className="flex items-center gap-[inherit]">
                 Event summary / Narrative <span className="text-red-500">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
                 </div>
@@ -225,7 +225,7 @@ const EventForm = ({
             <div className={`grid grid-cols-1 gap-4 ${mode === "advanced" ? "sm:grid-cols-2" : ""}`}>
               <div data-assistant-field-key="/content/event/type">
                 <div className={labelClass}>
-                  <label id={fid("type-label")} className="flex items-center gap-1.5">
+                  <label id={fid("type-label")} className="flex items-center gap-[inherit]">
                   Event Type <span className="text-red-500">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/type")} />
                 </div>
@@ -287,7 +287,7 @@ const EventForm = ({
 
               {mode === "advanced" && <div data-assistant-field-key="/content/event/theme">
                 <div className={labelClass}>
-                  <label htmlFor={fid("theme")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("theme")} className="flex items-center gap-[inherit]">
                   Event Theme / Tagline
                   <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/theme")} />
@@ -306,7 +306,7 @@ const EventForm = ({
             {mode === "advanced" && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div data-assistant-field-key="/content/event/website">
                 <div className={labelClass}>
-                  <label htmlFor={fid("website")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("website")} className="flex items-center gap-[inherit]">
                   Event Website
                   <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/website")} />
@@ -419,7 +419,7 @@ const EventForm = ({
             {/* Start Date */}
             <div data-assistant-field-key="/content/event/startDate">
               <div className={labelClass}>
-                  <label htmlFor="startDate" className="flex items-center gap-1.5">
+                  <label htmlFor="startDate" className="flex items-center gap-[inherit]">
                 Start Date <span className="text-red-500">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/startDate")} />
                 </div>
@@ -453,7 +453,7 @@ const EventForm = ({
             {/* End Date */}
             <div data-assistant-field-key="/content/event/endDate">
               <div className={labelClass}>
-                  <label htmlFor="endDate" className="flex items-center gap-1.5">
+                  <label htmlFor="endDate" className="flex items-center gap-[inherit]">
                 End Date <span className="text-red-500">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/endDate")} />
                 </div>
@@ -491,7 +491,7 @@ const EventForm = ({
             {/* Total Attendance */}
             <div data-assistant-field-key="/content/event/attendeeCount">
               <div className={labelClass}>
-                  <label htmlFor={fid("attendees")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("attendees")} className="flex items-center gap-[inherit]">
                 Total Attendance <span className="text-red-500">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/attendeeCount")} />
                 </div>
@@ -571,7 +571,7 @@ const EventForm = ({
             {/* Sacred Constraints */}
             <div data-assistant-field-key="/content/event/sacredConstraints">
               <div className={labelClass}>
-                  <label htmlFor={fid("sacred")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("sacred")} className="flex items-center gap-[inherit]">
                 Sacred Constraints / Special Considerations
                 <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/sacredConstraints")} />
@@ -594,7 +594,7 @@ const EventForm = ({
             {/* About The Organization */}
             <div data-assistant-field-key="/content/event/organizationBackground">
               <div className={labelClass}>
-                  <label htmlFor={fid("about")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("about")} className="flex items-center gap-[inherit]">
                 About The Organization
                 <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/organizationBackground")} />
@@ -618,7 +618,7 @@ const EventForm = ({
             <div id="statement-of-work-section" tabIndex={-1} className="scroll-mt-6" data-assistant-field-key="/content/event/statementOfWork">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div className={labelClass}>
-                  <label htmlFor="statement-of-work" className="flex items-center gap-1.5">
+                  <label htmlFor="statement-of-work" className="flex items-center gap-[inherit]">
                   Statement of Work
                   <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/statementOfWork")} />
@@ -653,7 +653,7 @@ const EventForm = ({
             {/* Event Profile */}
             <div data-assistant-field-key="/content/event/eventProfile">
               <div className={labelClass}>
-                  <label htmlFor={fid("profile")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("profile")} className="flex items-center gap-[inherit]">
                 Event Profile
                 <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/eventProfile")} />
@@ -676,7 +676,7 @@ const EventForm = ({
             {/* RFP Timeline */}
             <div data-assistant-field-key="/content/event/rfpTimelineNotes">
               <div className={labelClass}>
-                  <label htmlFor={fid("timeline")} className="flex items-center gap-1.5">
+                  <label htmlFor={fid("timeline")} className="flex items-center gap-[inherit]">
                 Proposal Timeline
                 <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/rfpTimelineNotes")} />

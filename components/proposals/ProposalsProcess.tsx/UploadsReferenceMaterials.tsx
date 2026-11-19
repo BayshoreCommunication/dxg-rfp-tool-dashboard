@@ -839,7 +839,7 @@ const UploadsReferenceMaterials = ({
         {/* Field 1 — Brand Guide */}
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="uploads-brand-guide-style-guide-label" className="flex items-center gap-1.5">
+          <span id="uploads-brand-guide-style-guide-label" className="flex items-center gap-[inherit]">
           Brand Guide / Style Guide</span>
           <InfoTooltip text="Upload your event brand guide or style guide. Include logo files, color values (hex/RGB/Pantone), typography specs, and usage rules. This is the single most important creative reference for AV vendors producing content." />
           </div>
@@ -874,7 +874,7 @@ const UploadsReferenceMaterials = ({
         {/* Field 2 — Event Logo Files */}
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="uploads-event-logo-files-label" className="flex items-center gap-1.5">
+          <span id="uploads-event-logo-files-label" className="flex items-center gap-[inherit]">
           Event Logo Files</span>
           <InfoTooltip text="Upload your event logo in all required formats. Include vector formats (AI, EPS, SVG) for print and large-format production, and PNG with transparency for digital use. Include all color variants: full color, reversed, and one-color." />
           </div>
@@ -891,7 +891,7 @@ const UploadsReferenceMaterials = ({
         {/* Field 3 — Reference / Inspiration Materials */}
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="uploads-reference-materials-label" className="flex items-center gap-1.5">
+          <span id="uploads-reference-materials-label" className="flex items-center gap-[inherit]">
           Reference / Inspiration Materials</span>
           <InfoTooltip text="Upload mood boards, reference event photos, sample videos, or prior year recap reels. These give vendors a visceral understanding of the aesthetic you are chasing far better than written descriptions alone." />
           </div>
@@ -949,7 +949,7 @@ const UploadsReferenceMaterials = ({
 
         <div id="scenic-inspirations" ref={scenicRef} tabIndex={-1} className="mb-6 scroll-mt-6">
           <div className={labelClass}>
-          <span id="uploads-scenic-inspirations-label" className="flex items-center gap-1.5">
+          <span id="uploads-scenic-inspirations-label" className="flex items-center gap-[inherit]">
           Scenic Inspirations</span>
           <InfoTooltip text="Upload mood boards, sketches, reference photos, or renderings specifically for the scenic design scope." />
           </div>
@@ -967,7 +967,7 @@ const UploadsReferenceMaterials = ({
         {/* Field 4 — Venue Documents */}
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="uploads-venue-documents-label" className="flex items-center gap-1.5">
+          <span id="uploads-venue-documents-label" className="flex items-center gap-[inherit]">
           Venue Documents</span>
           <InfoTooltip text="Upload venue floor plans, room diagrams, rigging plots, or electrical schematics. AV vendors need these to spec power layouts, rigging points, and equipment placement accurately. Most venues provide these upon request." />
           </div>
@@ -989,7 +989,7 @@ const UploadsReferenceMaterials = ({
 
         <div id="venue-coi-documents" ref={venueCoiRef} tabIndex={-1} className="mb-6 scroll-mt-6">
           <div className={labelClass}>
-          <span id="uploads-venue-coi-documents-label" className="flex items-center gap-1.5">
+          <span id="uploads-venue-coi-documents-label" className="flex items-center gap-[inherit]">
           Venue / COI Documents</span>
           <InfoTooltip text="Upload COI instructions, additional-insured language, access rules, dock details, or related venue documentation." />
           </div>
@@ -1196,7 +1196,7 @@ const UploadsReferenceMaterials = ({
 
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="uploads-nda-required-before-sharing-pr-label" className="flex items-center gap-1.5">
+          <span id="uploads-nda-required-before-sharing-pr-label" className="flex items-center gap-[inherit]">
           NDA Required Before Sharing Proposal? <span className="text-red-500">*</span></span>
           <InfoTooltip text="If Yes, vendors must execute a Non-Disclosure Agreement through the RFPilot portal before accessing the full proposal document and attachments. Required when the proposal contains proprietary event concepts, confidential attendee data, or brand materials not yet publicly released." />
           </div>

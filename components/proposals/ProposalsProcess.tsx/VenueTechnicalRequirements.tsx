@@ -253,7 +253,7 @@ const VenueTechnicalRequirements = ({
         <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div>
             <div className={labelClass}>
-            <label htmlFor="venue-tech-contact-name" className="flex items-center gap-1.5">
+            <label htmlFor="venue-tech-contact-name" className="flex items-center gap-[inherit]">
             Contact Name</label>
             <InfoTooltip text="The on-site venue coordinator or AV liaison. The AV company will contact this person for load-in logistics, power hookups, and rigging approvals." />
             </div>
@@ -294,7 +294,7 @@ const VenueTechnicalRequirements = ({
         ───────────────────────────────────────── */}
         <div className="mb-6">
           <div className={labelClass}>
-          <label htmlFor="venue-tech-in-house-av-company-name" className="flex items-center gap-1.5">
+          <label htmlFor="venue-tech-in-house-av-company-name" className="flex items-center gap-[inherit]">
           In-House AV Company Name</label>
           <InfoTooltip text="The name of the venue's preferred or exclusive in-house AV vendor. Knowing this upfront helps RFPilot determine whether coordination, a patch-in fee, or an exclusivity fee applies." />
           </div>
@@ -313,7 +313,7 @@ const VenueTechnicalRequirements = ({
 
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="venue-tech-rigging-required-label" className="flex items-center gap-1.5">
+          <span id="venue-tech-rigging-required-label" className="flex items-center gap-[inherit]">
           Rigging Required? <span className="text-red-500">*</span></span>
           <InfoTooltip text="Flown elements include speakers, lighting trusses, LED walls, or screens suspended from the ceiling. Most venues require certified riggers for any overhead load." />
           </div>
@@ -338,7 +338,7 @@ const VenueTechnicalRequirements = ({
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <div className={labelClass}>
-                  <span id="venue-tech-are-truss-and-motors-exclusive-label" className="flex items-center gap-1.5">
+                  <span id="venue-tech-are-truss-and-motors-exclusive-label" className="flex items-center gap-[inherit]">
                   Are Truss and Motors Exclusively Provided by the Venue?</span>
                   <InfoTooltip text="Some venues require that all flown truss and chain motors be sourced exclusively through their in-house rigging vendor. Knowing this upfront helps RFPilot scope coordination or exclusivity fees." />
                   </div>
@@ -350,7 +350,7 @@ const VenueTechnicalRequirements = ({
                 </div>
                 <div>
                   <div className={labelClass}>
-                  <span id="venue-tech-are-lifts-exclusively-provided-label" className="flex items-center gap-1.5">
+                  <span id="venue-tech-are-lifts-exclusively-provided-label" className="flex items-center gap-[inherit]">
                   Are Lifts Exclusively Provided by the Venue?</span>
                   <InfoTooltip text="Some venues require that all lifts (scissor lifts, genie lifts) used for rigging or installation be sourced exclusively through their in-house vendor." />
                   </div>
@@ -382,7 +382,7 @@ const VenueTechnicalRequirements = ({
 
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="venue-tech-power-drops-required-label" className="flex items-center gap-1.5">
+          <span id="venue-tech-power-drops-required-label" className="flex items-center gap-[inherit]">
           Power Drops Required? <span className="text-red-500">*</span></span>
           <InfoTooltip text="Dedicated drops provide isolated electrical circuits for AV equipment, preventing interference and tripped breakers from shared venue power." />
           </div>
@@ -431,7 +431,7 @@ const VenueTechnicalRequirements = ({
 
               <div>
                 <div className={labelClass}>
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-[inherit]">
                 Number of Power Drops</span>
                 <InfoTooltip text="Total number of dedicated circuits needed. Common breakdowns: 1–2 at stage, 1 at FOH mix position, 1 at video village." />
                 </div>
@@ -497,7 +497,7 @@ const VenueTechnicalRequirements = ({
 
         <div className="mb-6">
           <div className={labelClass}>
-          <label htmlFor="venue-tech-coi-requirements" className="flex items-center gap-1.5">
+          <label htmlFor="venue-tech-coi-requirements" className="flex items-center gap-[inherit]">
           COI Requirements</label>
           <InfoTooltip text="Most venues require the AV company to provide a Certificate of Insurance naming the venue as an additional insured before load-in begins. Paste the venue's specific COI language or requirements here." />
           </div>
@@ -519,7 +519,7 @@ const VenueTechnicalRequirements = ({
 
         <div className="mb-6">
           <div className={labelClass}>
-          <label htmlFor="venue-tech-venue-access-requirements" className="flex items-center gap-1.5">
+          <label htmlFor="venue-tech-venue-access-requirements" className="flex items-center gap-[inherit]">
           Venue Access Requirements</label>
           <InfoTooltip text="Any venue-specific restrictions on load-in times, freight elevator reservations, dock scheduling, security badge requirements, or areas requiring escort. This goes directly into the venue logistics section of the proposal." />
           </div>

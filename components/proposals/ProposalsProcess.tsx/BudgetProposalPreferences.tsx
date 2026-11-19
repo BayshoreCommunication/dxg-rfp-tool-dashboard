@@ -834,7 +834,7 @@ const BudgetProposalPreferences = ({
         {/* Scoring Notes */}
         <div className="mb-6">
           <div className={labelClass}>
-          <label htmlFor="budget-scoring-notes-key-decision-factors" className="flex items-center gap-1.5">
+          <label htmlFor="budget-scoring-notes-key-decision-factors" className="flex items-center gap-[inherit]">
           Scoring Notes / Key Decision Factors</label>
           <InfoTooltip text="Any additional context about how proposals will be evaluated — scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
           </div>
@@ -850,7 +850,7 @@ const BudgetProposalPreferences = ({
         {/* Sustainability & DEI Practices */}
         <div className="mb-6">
           <div className={labelClass}>
-          <label htmlFor="budget-sustainability-dei-practices" className="flex items-center gap-1.5">
+          <label htmlFor="budget-sustainability-dei-practices" className="flex items-center gap-[inherit]">
           Sustainability &amp; DEI Practices
           <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
           <InfoTooltip text="Describe any sustainability or DEI (diversity, equity, and inclusion) requirements or preferences vendors should address in their proposal." />
@@ -876,7 +876,7 @@ const BudgetProposalPreferences = ({
         <div className="mb-6 grid grid-cols-2 gap-5">
           <div>
             <div className={labelClass}>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-[inherit]">
             Vendor Questions Due <span className="text-red-500">*</span></span>
             <InfoTooltip text="The deadline for vendors to submit clarifying questions about the proposal." />
             </div>
@@ -900,7 +900,7 @@ const BudgetProposalPreferences = ({
           </div>
           <div>
             <div className={labelClass}>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-[inherit]">
             Response to Vendor Questions <span className="text-red-500">*</span></span>
             <InfoTooltip text="The date by which you'll respond to vendor questions submitted above." />
             </div>
@@ -928,7 +928,7 @@ const BudgetProposalPreferences = ({
         <div className="mb-6 grid grid-cols-2 gap-5">
           <div>
             <div className={labelClass}>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-[inherit]">
             Proposal Submission Due <span className="text-red-500">*</span></span>
             <InfoTooltip text="The deadline for vendors to submit their completed proposals." />
             </div>
@@ -952,7 +952,7 @@ const BudgetProposalPreferences = ({
           </div>
           <div>
             <div className={labelClass}>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-[inherit]">
             Shortlist Notification <span className="text-red-500">*</span></span>
             <InfoTooltip text="The date by which shortlisted vendors will be notified." />
             </div>
@@ -979,7 +979,7 @@ const BudgetProposalPreferences = ({
         {/* Vendor Presentation Opportunity */}
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="budget-will-vendors-be-given-an-opportu-label" className="flex items-center gap-1.5">
+          <span id="budget-will-vendors-be-given-an-opportu-label" className="flex items-center gap-[inherit]">
           Will Vendors Be Given an Opportunity to Present if Shortlisted?{" "}
           <span className="text-red-500">*</span></span>
           <InfoTooltip text="If yes, shortlisted vendors will be invited to present their proposal before final selection." />
@@ -1028,7 +1028,7 @@ const BudgetProposalPreferences = ({
         {/* Vendor Selection */}
         <div className="mb-6">
           <div className={labelClass}>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-[inherit]">
           Vendor Selection <span className="text-red-500">*</span></span>
           <InfoTooltip text="The date by which the vendor will be selected." />
           </div>
@@ -1056,7 +1056,7 @@ const BudgetProposalPreferences = ({
         {/* Target Decision Date */}
         <div className="mb-6">
           <div className={labelClass}>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-[inherit]">
           Target Decision Date</span>
           <InfoTooltip text="The date by which you plan to award or select a vendor. Helps us schedule follow-ups appropriately." />
           </div>
@@ -1081,7 +1081,7 @@ const BudgetProposalPreferences = ({
         {/* Competitive Bid */}
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="budget-competitive-bid-label" className="flex items-center gap-1.5">
+          <span id="budget-competitive-bid-label" className="flex items-center gap-[inherit]">
           Competitive Bid?</span>
           <InfoTooltip text="Are multiple vendors being solicited for this proposal? Helps us understand the competitive context and tailor our response strategy." />
           </div>
@@ -1151,7 +1151,7 @@ const BudgetProposalPreferences = ({
 
         <div className="mb-6">
           <div className={labelClass}>
-          <span id="budget-how-did-you-hear-about-this-tool-label" className="flex items-center gap-1.5">
+          <span id="budget-how-did-you-hear-about-this-tool-label" className="flex items-center gap-[inherit]">
           How did you hear about this tool? <span className="text-red-500">*</span></span>
           <InfoTooltip text="Helps us understand where our clients are finding us so we can improve outreach and support." />
           </div>

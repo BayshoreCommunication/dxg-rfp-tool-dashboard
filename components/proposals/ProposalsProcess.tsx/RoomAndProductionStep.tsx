@@ -807,7 +807,7 @@ const RoomForm = ({
 
       <div>
         <div className={labelClass}>
-        <label htmlFor={`${uid}-physical-room-name`} className="flex items-center gap-1.5">
+        <label htmlFor={`${uid}-physical-room-name`} className="flex items-center gap-[inherit]">
         Physical Room Name <span className="text-red-500">*</span></label>
         <InfoTooltip text="The venue room shared by every function listed below. Example: 'A-110-112'." />
         </div>
@@ -1103,7 +1103,7 @@ const RoomForm = ({
       {/* Stage Dimensions */}
       <div>
         <div className={labelClass}>
-        <label htmlFor={`${uid}-stage-dimensions`} className="flex items-center gap-1.5">
+        <label htmlFor={`${uid}-stage-dimensions`} className="flex items-center gap-[inherit]">
         Stage Dimensions
         <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
         <InfoTooltip text="Stage dimensions in feet — Width × Depth × Height (optional). Standard general session stage is 60ft x 24ft; large keynote stages run 100–200ft wide. If no formal stage: enter 'Floor presentation — no stage.'" />
@@ -1121,7 +1121,7 @@ const RoomForm = ({
 
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-audio-system-required`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-audio-system-required`} className="flex items-center gap-[inherit]">
         Audio System Required? <span className="text-red-500">*</span></span>
         <InfoTooltip text="Does this room need a full audio system (speakers, mixing, microphones)? Almost all production rooms require this. Select No only for spaces like a quiet VIP lounge with no programmed content." />
         </div>
@@ -1139,7 +1139,7 @@ const RoomForm = ({
               {/* Podium Mic */}
               <div>
                 <div className={labelClass}>
-                <span id={`${uid}-yn-podium-mic-required-conditio`} className="flex items-center gap-1.5">
+                <span id={`${uid}-yn-podium-mic-required-conditio`} className="flex items-center gap-[inherit]">
                 Podium Mic Required?
                 <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></span>
                 <InfoTooltip text="Fixed microphone mounted at the lectern for standing presenters. Separate from handheld or lavalier mics for moving presenters." />
@@ -1156,7 +1156,7 @@ const RoomForm = ({
               {/* Audience Q&A Style */}
               <div>
                 <div className={labelClass}>
-                <label id={`${uid}-audience-q-a-style-label`} className="flex items-center gap-1.5">
+                <label id={`${uid}-audience-q-a-style-label`} className="flex items-center gap-[inherit]">
                 Audience Q&amp;A Style
                 <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></label>
                 <InfoTooltip text="How will audience questions be taken? Passed handheld is most common under 500 people; floor mics for larger rooms; digital tools work best for hybrid events." />
@@ -1192,7 +1192,7 @@ const RoomForm = ({
             {/* Wireless Mics */}
             <div className="mb-4">
               <div className={labelClass}>
-              <span id={`${uid}-yn-wireless-mics`} className="flex items-center gap-1.5">
+              <span id={`${uid}-yn-wireless-mics`} className="flex items-center gap-[inherit]">
               Wireless Mics?</span>
               <InfoTooltip text="Battery-powered microphones for speakers who move on stage. Specify quantity so the AV company can allocate transmitters and receivers." />
               </div>
@@ -1268,7 +1268,7 @@ const RoomForm = ({
             {/* Audio Recording */}
             <div>
               <div className={labelClass}>
-              <span id={`${uid}-yn-audio-recording`} className="flex items-center gap-1.5">
+              <span id={`${uid}-yn-audio-recording`} className="flex items-center gap-[inherit]">
               Audio Recording?</span>
               <InfoTooltip text="Whether the audio from this session should be captured to a file for post-event distribution or review." />
               </div>
@@ -1288,7 +1288,7 @@ const RoomForm = ({
       {/* LED Wall */}
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-led-wall-required`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-led-wall-required`} className="flex items-center gap-[inherit]">
         LED Wall Required? <span className="text-red-500">*</span></span>
         <InfoTooltip text="Will this room use an LED video wall as the primary stage backdrop? LED walls deliver the highest visual impact but significantly increase budget. If No, screens will use projection or standard displays." />
         </div>
@@ -1383,7 +1383,7 @@ const RoomForm = ({
       {/* Large Monitors */}
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-large-monitors-or-screen-amp`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-large-monitors-or-screen-amp`} className="flex items-center gap-[inherit]">
         Large Monitors or Screen &amp; Projector?</span>
         <InfoTooltip text="Audience-facing displays for content viewing. Used when LED wall is not specified or in addition to it." />
         </div>
@@ -1585,7 +1585,7 @@ const RoomForm = ({
       {/* Scenic Stage Design */}
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-scenic-stage-design-required`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-scenic-stage-design-required`} className="flex items-center gap-[inherit]">
         Scenic Stage Design Required? <span className="text-red-500">*</span></span>
         <InfoTooltip text="Do you need custom scenic elements built for the stage — set pieces, branded scenic walls, custom podium? Scenic adds production value but increases budget and load-in time. A producer call is recommended." />
         </div>
@@ -1603,7 +1603,7 @@ const RoomForm = ({
           <div className={subPanelClass}>
             <p className={subPanelHeader}>Scenic Notes</p>
             <div className={labelClass}>
-            <label htmlFor={`${uid}-describe-your-scenic-vision`} className="flex items-center gap-1.5">
+            <label htmlFor={`${uid}-describe-your-scenic-vision`} className="flex items-center gap-[inherit]">
             Describe Your Scenic Vision
             <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></label>
             <InfoTooltip text="Set pieces, branded elements, color direction, and reference materials. Upload mood boards in Section 7 — Uploads & Co-Vendors." />
@@ -1638,7 +1638,7 @@ const RoomForm = ({
       {/* Video Playback */}
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-video-playback`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-video-playback`} className="flex items-center gap-[inherit]">
         Video Playback?</span>
         <InfoTooltip text="Pre-recorded video content — sizzle reels, intro videos, b-roll — to be played during the session. Specify the number of clips." />
         </div>
@@ -1695,7 +1695,7 @@ const RoomForm = ({
       {/* Cameras */}
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-cameras`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-cameras`} className="flex items-center gap-[inherit]">
         Cameras?</span>
         <InfoTooltip text="Camera coverage for IMAG or recording. Choose a specific typed plan, or ask the vendor to recommend the right plan for this room." />
         </div>
@@ -1780,7 +1780,7 @@ const RoomForm = ({
       {/* Video Recording */}
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-video-recording`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-video-recording`} className="flex items-center gap-[inherit]">
         Video Recording?</span>
         <InfoTooltip text="Whether the session should be recorded. 'Camera Feed Only' captures the stage image. 'Presentation Only' captures slides. 'Side by Side' combines both." />
         </div>
@@ -1860,7 +1860,7 @@ const RoomForm = ({
       {/* Presentation Laptops */}
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-presentation-laptops`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-presentation-laptops`} className="flex items-center gap-[inherit]">
         Presentation Laptops?</span>
         <InfoTooltip text="Laptops provided by the AV company to run presenter slideshows or media playback." />
         </div>
@@ -1935,7 +1935,7 @@ const RoomForm = ({
 
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-confidence-monitors-required`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-confidence-monitors-required`} className="flex items-center gap-[inherit]">
         Confidence Monitors Required? <span className="text-red-500">*</span></span>
         <InfoTooltip text="Confidence monitors are screens on the front of stage facing presenters, showing their slides and/or notes. Standard for any event with prepared keynote presentations." />
         </div>
@@ -1964,7 +1964,7 @@ const RoomForm = ({
             <div className="grid grid-cols-3 gap-5">
               <div>
                 <div className={labelClass}>
-                <label htmlFor={`${uid}-program-monitors-qty`} className="flex items-center gap-1.5">
+                <label htmlFor={`${uid}-program-monitors-qty`} className="flex items-center gap-[inherit]">
                 Program Monitors (qty)</label>
                 <InfoTooltip text="Screens showing the current slide or live program feed — what the audience sees. Standard setup: 2 monitors angled toward stage left and stage right." />
                 </div>
@@ -1987,7 +1987,7 @@ const RoomForm = ({
               </div>
               <div>
                 <div className={labelClass}>
-                <label htmlFor={`${uid}-notes-monitors-qty`} className="flex items-center gap-1.5">
+                <label htmlFor={`${uid}-notes-monitors-qty`} className="flex items-center gap-[inherit]">
                 Notes Monitors (qty)</label>
                 <InfoTooltip text="Screens showing speaker notes or teleprompter text. Often combined with teleprompter operators." />
                 </div>
@@ -2010,7 +2010,7 @@ const RoomForm = ({
               </div>
               <div>
                 <div className={labelClass}>
-                <span id={`${uid}-yn-speaker-timer`} className="flex items-center gap-1.5">
+                <span id={`${uid}-yn-speaker-timer`} className="flex items-center gap-[inherit]">
                 Speaker Timer?</span>
                 <InfoTooltip text="Countdown display visible to the speaker showing remaining session time. Essential for tightly scheduled programs with multiple speakers." />
                 </div>
@@ -2030,7 +2030,7 @@ const RoomForm = ({
 
       <div>
         <div className={labelClass}>
-        <span id={`${uid}-yn-teleprompter-required`} className="flex items-center gap-1.5">
+        <span id={`${uid}-yn-teleprompter-required`} className="flex items-center gap-[inherit]">
         Teleprompter Required? <span className="text-red-500">*</span></span>
         <InfoTooltip text="Will any speakers use a teleprompter (scrolling script on glass panels)? Common for CEOs, scripted keynotes, and broadcast-quality productions. Requires a dedicated teleprompter operator." />
         </div>
@@ -2052,7 +2052,7 @@ const RoomForm = ({
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <div className={labelClass}>
-                <span id={`${uid}-yn-bilingual-teleprompter-condi`} className="flex items-center gap-1.5">
+                <span id={`${uid}-yn-bilingual-teleprompter-condi`} className="flex items-center gap-[inherit]">
                 Bilingual Teleprompter?
                 <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></span>
                 <InfoTooltip text="Will the teleprompter operate in multiple languages simultaneously? Bilingual operators are specialized — flag this early. Common for international audiences and dual-language broadcasts." />
@@ -2179,7 +2179,7 @@ const RoomForm = ({
 
       <div>
         <div className={labelClass}>
-        <label htmlFor={`${uid}-other-roles-or-support-needed`} className="flex items-center gap-1.5">
+        <label htmlFor={`${uid}-other-roles-or-support-needed`} className="flex items-center gap-[inherit]">
         Other Roles or Support Needed?{" "}
         <span className="font-normal normal-case tracking-normal text-slate-400 text-xs">(Optional)</span></label>
         <InfoTooltip text="Any additional positions not listed — e.g. LED technician, drone operator, or show caller support." />
@@ -2655,7 +2655,7 @@ const RoomAndProductionStep = ({
         {/* Schedule upload */}
         <div className="mb-6 rounded-md border border-[#e4e4e4] p-5">
           <div className={labelClass}>
-          <label htmlFor="room-upload-room-schedule" className="flex items-center gap-1.5">
+          <label htmlFor="room-upload-room-schedule" className="flex items-center gap-[inherit]">
           Upload Room Schedule
           <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
           <InfoTooltip text="Upload an Excel (.xlsx) schedule to bulk-create room modules. Each schedule row becomes a separate module, so the same physical room can contain multiple functions on the same date. This replaces the current room list." />
