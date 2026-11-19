@@ -49,6 +49,9 @@ const TEXT_PAIRS: Array<[fg: string, bg: string[]]> = [
   ["heading", ["page", "surface", "surface-muted"]],
   ["body", ["page", "surface", "surface-muted"]],
   ["muted", ["page", "surface", "surface-muted"]],
+  // Alert and badge text sits on the tinted status surfaces.
+  ["heading", ["brand-soft", "success-soft", "warning-soft", "danger-soft"]],
+  ["body", ["brand-soft", "success-soft", "warning-soft", "danger-soft"]],
   ["action", ["page", "surface", "surface-muted", "brand-soft"]],
   ["action-hover", ["surface"]],
   ["on-action", ["action", "action-hover"]],
@@ -61,6 +64,7 @@ const TEXT_PAIRS: Array<[fg: string, bg: string[]]> = [
 const UI_PAIRS: Array<[fg: string, bg: string[]]> = [
   ["control", ["surface"]],
   ["brand", ["surface"]],
+  ["focus", ["surface", "page"]],
 ];
 
 describe.each(["light", "dark"] as Theme[])("design tokens (%s theme)", (theme) => {
