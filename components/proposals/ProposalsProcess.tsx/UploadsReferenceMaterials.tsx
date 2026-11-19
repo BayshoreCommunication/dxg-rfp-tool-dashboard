@@ -22,7 +22,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import type {
   CoVendorEntry,
@@ -55,15 +55,18 @@ const yesNoCls = (opt: "YES" | "NO", val: string): string => {
 const YesNo = ({
   value,
   onChange,
+  labelledBy,
 }: {
   value: string;
   onChange: (v: "YES" | "NO") => void;
+  /** id of the visible question text, so the pair is announced as a named group. */
+  labelledBy?: string;
 }) => (
-  <div className="flex gap-3">
-    <button type="button" className={yesNoCls("YES", value)} onClick={() => onChange("YES")}>
+  <div role="group" aria-labelledby={labelledBy} className="flex gap-3">
+    <button type="button" aria-pressed={value === "YES"} className={yesNoCls("YES", value)} onClick={() => onChange("YES")}>
       ✓ Yes
     </button>
-    <button type="button" className={yesNoCls("NO", value)} onClick={() => onChange("NO")}>
+    <button type="button" aria-pressed={value === "NO"} className={yesNoCls("NO", value)} onClick={() => onChange("NO")}>
       ✗ No
     </button>
   </div>
@@ -118,7 +121,10 @@ export const UploadBox = ({
   maxFiles,
   maxSizeMb = 50,
   uploadField = "supportDocuments",
+  labelledBy,
 }: {
+  /** id of the visible label text, so the drop zone and its button are announced with a name. */
+  labelledBy?: string;
   files: string[];
   onFiles: (files: string[]) => void;
   accept?: string;
@@ -252,6 +258,8 @@ export const UploadBox = ({
   return (
     <div className="w-full">
       <div
+        role="group"
+        aria-labelledby={labelledBy}
         data-testid="file-dropzone"
         onDragEnter={(event) => {
           event.preventDefault();
@@ -304,6 +312,7 @@ export const UploadBox = ({
         {!atMax && (
           <button
             type="button"
+            aria-describedby={labelledBy}
             onClick={() => ref.current?.click()}
             disabled={busy}
             className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#1DBFD3] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#087f90] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/30 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
@@ -451,6 +460,8 @@ const CoVendorCard = ({
   topBanner?: React.ReactNode;
   advisory?: string;
 }) => {
+  // Per-instance ids: this card renders once per co-vendor, so static ids would collide.
+  const uid = useId();
   const hasData = !!(value.companyName || value.contactName || value.status);
   const up = (p: Partial<CoVendorEntry>) => onChange({ ...value, ...p });
   const completedDetails = [value.companyName, value.contactName, value.status].filter(Boolean).length;
@@ -520,8 +531,8 @@ const CoVendorCard = ({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>Company Name</label>
-              <input
+              <label htmlFor={`${uid}-company-name`} className={labelClass}>Company Name</label>
+              <input id={`${uid}-company-name`}
                 className={inputClass}
                 placeholder={companyPlaceholder}
                 value={value.companyName}
@@ -529,8 +540,8 @@ const CoVendorCard = ({
               />
             </div>
             <div>
-              <label className={labelClass}>Contact Name</label>
-              <input
+              <label htmlFor={`${uid}-contact-name`} className={labelClass}>Contact Name</label>
+              <input id={`${uid}-contact-name`}
                 className={inputClass}
                 placeholder={contactPlaceholder}
                 value={value.contactName}
@@ -538,8 +549,8 @@ const CoVendorCard = ({
               />
             </div>
             <div>
-              <label className={labelClass}>Contact Email</label>
-              <input
+              <label htmlFor={`${uid}-contact-email`} className={labelClass}>Contact Email</label>
+              <input id={`${uid}-contact-email`}
                 type="email"
                 className={inputClass}
                 placeholder="e.g. contact@company.com"
@@ -548,8 +559,8 @@ const CoVendorCard = ({
               />
             </div>
             <div>
-              <label className={labelClass}>Contact Phone</label>
-              <input
+              <label htmlFor={`${uid}-contact-phone`} className={labelClass}>Contact Phone</label>
+              <input id={`${uid}-contact-phone`}
                 type="tel"
                 className={inputClass}
                 placeholder="e.g. (555) 555-0100"
@@ -560,8 +571,8 @@ const CoVendorCard = ({
           </div>
 
           <div className="mt-4">
-            <label className={labelClass}>Status</label>
-            <GlobalSelect
+            <label id={`${uid}-status-label`} className={labelClass}>Status</label>
+            <GlobalSelect id={`${uid}-status`} aria-labelledby={`${uid}-status-label`}
               value={value.status}
               onChange={(e) => up({ status: e.target.value })}
               className={inputClass}
@@ -576,8 +587,8 @@ const CoVendorCard = ({
           </div>
 
           <div className="mt-4">
-            <label className={labelClass}>Notes</label>
-            <input
+            <label htmlFor={`${uid}-notes`} className={labelClass}>Notes</label>
+            <input id={`${uid}-notes`}
               className={inputClass}
               placeholder="Optional coordination notes…"
               value={value.notes}
@@ -827,10 +838,11 @@ const UploadsReferenceMaterials = ({
 
         {/* Field 1 — Brand Guide */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Brand Guide / Style Guide
-            <InfoTooltip text="Upload your event brand guide or style guide. Include logo files, color values (hex/RGB/Pantone), typography specs, and usage rules. This is the single most important creative reference for AV vendors producing content." />
-          </label>
+          <div className={labelClass}>
+          <span id="uploads-brand-guide-style-guide-label" className="flex items-center gap-1.5">
+          Brand Guide / Style Guide</span>
+          <InfoTooltip text="Upload your event brand guide or style guide. Include logo files, color values (hex/RGB/Pantone), typography specs, and usage rules. This is the single most important creative reference for AV vendors producing content." />
+          </div>
           {brandGuideAdvisory && (
             <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
               <span className="shrink-0 text-amber-500">⚠</span>
@@ -838,6 +850,7 @@ const UploadsReferenceMaterials = ({
             </div>
           )}
           <UploadBox
+ labelledBy="uploads-brand-guide-style-guide-label"
             files={safeData.brandGuideFiles}
             onFiles={(f) => onChange({ brandGuideFiles: f })}
             accept=".pdf,.zip,.ai,.eps,.png,.jpg,.jpeg"
@@ -845,10 +858,10 @@ const UploadsReferenceMaterials = ({
             maxFiles={1}
           />
           <div className="mt-3">
-            <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-[#969798]">
+            <label htmlFor="uploads-brand-guide-url-alternative-to-upload" className="mb-1 block text-xs font-bold uppercase tracking-widest text-[#969798]">
               Brand Guide URL (alternative to upload)
             </label>
-            <input
+            <input id="uploads-brand-guide-url-alternative-to-upload"
               type="url"
               className={inputClass}
               placeholder="e.g. https://brand.yourcompany.com"
@@ -860,11 +873,13 @@ const UploadsReferenceMaterials = ({
 
         {/* Field 2 — Event Logo Files */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Event Logo Files
-            <InfoTooltip text="Upload your event logo in all required formats. Include vector formats (AI, EPS, SVG) for print and large-format production, and PNG with transparency for digital use. Include all color variants: full color, reversed, and one-color." />
-          </label>
+          <div className={labelClass}>
+          <span id="uploads-event-logo-files-label" className="flex items-center gap-1.5">
+          Event Logo Files</span>
+          <InfoTooltip text="Upload your event logo in all required formats. Include vector formats (AI, EPS, SVG) for print and large-format production, and PNG with transparency for digital use. Include all color variants: full color, reversed, and one-color." />
+          </div>
           <UploadBox
+ labelledBy="uploads-event-logo-files-label"
             files={safeData.eventLogoFiles}
             onFiles={(f) => onChange({ eventLogoFiles: f })}
             accept=".ai,.eps,.svg,.png,.pdf"
@@ -875,11 +890,13 @@ const UploadsReferenceMaterials = ({
 
         {/* Field 3 — Reference / Inspiration Materials */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Reference / Inspiration Materials
-            <InfoTooltip text="Upload mood boards, reference event photos, sample videos, or prior year recap reels. These give vendors a visceral understanding of the aesthetic you are chasing far better than written descriptions alone." />
-          </label>
+          <div className={labelClass}>
+          <span id="uploads-reference-materials-label" className="flex items-center gap-1.5">
+          Reference / Inspiration Materials</span>
+          <InfoTooltip text="Upload mood boards, reference event photos, sample videos, or prior year recap reels. These give vendors a visceral understanding of the aesthetic you are chasing far better than written descriptions alone." />
+          </div>
           <UploadBox
+            labelledBy="uploads-reference-materials-label"
             files={safeData.referenceFiles}
             onFiles={(f) => onChange({ referenceFiles: f })}
             accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,.pptx,.key"
@@ -888,12 +905,13 @@ const UploadsReferenceMaterials = ({
           />
           {/* Reference URLs */}
           <div className="mt-3">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
+            <p id="uploads-reference-urls-label" className="mb-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
               Reference URLs (Vimeo, YouTube, Behance, etc.)
             </p>
             {safeData.referenceUrls.map((u, i) => (
               <div key={i} className="mb-2 flex gap-2">
                 <input
+                  aria-label={`Reference URL ${i + 1}`}
                   type="url"
                   className={`${inputClass} flex-1`}
                   placeholder="e.g. https://vimeo.com/123456789"
@@ -901,6 +919,7 @@ const UploadsReferenceMaterials = ({
                   onChange={(e) => updateRefUrl(i, { url: e.target.value })}
                 />
                 <input
+                  aria-label={`Label for reference URL ${i + 1}`}
                   className="w-44 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
                   placeholder="Label (optional)"
                   value={u.label}
@@ -908,6 +927,7 @@ const UploadsReferenceMaterials = ({
                 />
                 <button
                   type="button"
+                  aria-label={`Remove reference URL ${i + 1}`}
                   onClick={() => removeRefUrl(i)}
                   className="flex items-center text-slate-400 hover:text-red-400"
                 >
@@ -928,11 +948,13 @@ const UploadsReferenceMaterials = ({
         </div>
 
         <div id="scenic-inspirations" ref={scenicRef} tabIndex={-1} className="mb-6 scroll-mt-6">
-          <label className={labelClass}>
-            Scenic Inspirations
-            <InfoTooltip text="Upload mood boards, sketches, reference photos, or renderings specifically for the scenic design scope." />
-          </label>
+          <div className={labelClass}>
+          <span id="uploads-scenic-inspirations-label" className="flex items-center gap-1.5">
+          Scenic Inspirations</span>
+          <InfoTooltip text="Upload mood boards, sketches, reference photos, or renderings specifically for the scenic design scope." />
+          </div>
           <UploadBox
+ labelledBy="uploads-scenic-inspirations-label"
             files={safeData.scenicInspirationFiles}
             onFiles={(files) => onChange({ scenicInspirationFiles: files })}
             uploadField="scenicInspirationFiles"
@@ -944,10 +966,11 @@ const UploadsReferenceMaterials = ({
 
         {/* Field 4 — Venue Documents */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Venue Documents
-            <InfoTooltip text="Upload venue floor plans, room diagrams, rigging plots, or electrical schematics. AV vendors need these to spec power layouts, rigging points, and equipment placement accurately. Most venues provide these upon request." />
-          </label>
+          <div className={labelClass}>
+          <span id="uploads-venue-documents-label" className="flex items-center gap-1.5">
+          Venue Documents</span>
+          <InfoTooltip text="Upload venue floor plans, room diagrams, rigging plots, or electrical schematics. AV vendors need these to spec power layouts, rigging points, and equipment placement accurately. Most venues provide these upon request." />
+          </div>
           {venuDocsAdvisory && (
             <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
               <span className="shrink-0 text-amber-500">⚠</span>
@@ -955,6 +978,7 @@ const UploadsReferenceMaterials = ({
             </div>
           )}
           <UploadBox
+ labelledBy="uploads-venue-documents-label"
             files={safeData.venueDocs}
             onFiles={(f) => onChange({ venueDocs: f })}
             accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png"
@@ -964,11 +988,13 @@ const UploadsReferenceMaterials = ({
         </div>
 
         <div id="venue-coi-documents" ref={venueCoiRef} tabIndex={-1} className="mb-6 scroll-mt-6">
-          <label className={labelClass}>
-            Venue / COI Documents
-            <InfoTooltip text="Upload COI instructions, additional-insured language, access rules, dock details, or related venue documentation." />
-          </label>
+          <div className={labelClass}>
+          <span id="uploads-venue-coi-documents-label" className="flex items-center gap-1.5">
+          Venue / COI Documents</span>
+          <InfoTooltip text="Upload COI instructions, additional-insured language, access rules, dock details, or related venue documentation." />
+          </div>
           <UploadBox
+ labelledBy="uploads-venue-coi-documents-label"
             files={safeData.venueCoiFiles}
             onFiles={(files) => onChange({ venueCoiFiles: files })}
             uploadField="venueCoiFiles"
@@ -1169,11 +1195,13 @@ const UploadsReferenceMaterials = ({
         <Group label="NDA &amp; Distribution" />
 
         <div className="mb-6">
-          <label className={labelClass}>
-            NDA Required Before Sharing Proposal? <span className="text-red-500">*</span>
-            <InfoTooltip text="If Yes, vendors must execute a Non-Disclosure Agreement through the RFPilot portal before accessing the full proposal document and attachments. Required when the proposal contains proprietary event concepts, confidential attendee data, or brand materials not yet publicly released." />
-          </label>
+          <div className={labelClass}>
+          <span id="uploads-nda-required-before-sharing-pr-label" className="flex items-center gap-1.5">
+          NDA Required Before Sharing Proposal? <span className="text-red-500">*</span></span>
+          <InfoTooltip text="If Yes, vendors must execute a Non-Disclosure Agreement through the RFPilot portal before accessing the full proposal document and attachments. Required when the proposal contains proprietary event concepts, confidential attendee data, or brand materials not yet publicly released." />
+          </div>
           <YesNo
+ labelledBy="uploads-nda-required-before-sharing-pr-label"
             value={safeData.ndaRequired}
             onChange={(v) =>
               onChange({
@@ -1248,7 +1276,7 @@ const UploadsReferenceMaterials = ({
               )}
 
               {/* NDA Document Upload */}
-              <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-[#969798]">
+              <p id="uploads-nda-document-label" className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-[#969798]">
                 NDA Document Upload
                 {safeData.ndaType !== "custom" && (
                   <span className="ml-2 font-normal normal-case text-slate-400">
@@ -1257,6 +1285,7 @@ const UploadsReferenceMaterials = ({
                 )}
               </p>
               <UploadBox
+                labelledBy="uploads-nda-document-label"
                 files={safeData.ndaDocumentFiles}
                 onFiles={(f) => onChange({ ndaDocumentFiles: f })}
                 accept=".pdf,.docx"
