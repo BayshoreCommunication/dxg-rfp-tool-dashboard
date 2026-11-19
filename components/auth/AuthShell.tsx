@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import { useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 
 /* The split card used by the (auth) pages: brand panel on the left, form on
    the right. Shared by sign-in (and its two-factor step) and /invite/[token].
@@ -97,15 +97,28 @@ export const AuthHeading = ({
   </>
 );
 
-export const AuthError = ({ message, compact = false }: { message: string; compact?: boolean }) =>
-  message ? (
+/* `revealKey` is for a form that scrolls inside its card (the setup wizard): the alert sits at
+   the top of the scrolling box, so a submit that fails while the form is scrolled down would
+   change nothing on screen. With a key, the alert is scrolled into view when the message appears
+   and again each time the key changes (the same message, refused again). Keyboard focus is not
+   moved. */
+export const AuthError = ({ message, compact = false, revealKey }: { message: string; compact?: boolean; revealKey?: number }) => {
+  const alert = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (revealKey === undefined || !message) return;
+    const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    alert.current?.scrollIntoView?.({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+  }, [message, revealKey]);
+  return message ? (
     <div
+      ref={alert}
       role="alert"
       className={`mb-6 rounded-xl border border-red-100/50 bg-red-50 p-4 text-center text-sm font-medium text-red-600 ${compact ? "lg:mb-4 lg:p-3" : ""}`}
     >
       {message}
     </div>
   ) : null;
+};
 
 export const AuthField = ({
   label,

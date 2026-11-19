@@ -234,6 +234,49 @@ test("a window too short for the form scrolls inside the card and keeps the butt
   expect(field.y + field.height).toBeLessThanOrEqual(button.y);
 });
 
+test("a refused submit brings the error into view when the form is scrolled inside the card", async ({ page }, testInfo) => {
+  test.skip(isMobile(testInfo), "The desktop sizes are checked in the desktop project.");
+  await page.setViewportSize({ width: 1280, height: 540 });
+  await openWizard(page);
+  const proceed = page.getByRole("button", { name: "Continue", exact: true });
+  const alert = page.getByRole("alert").filter({ hasText: "Enter your company name." });
+  // Where the alert sits against the visible part of the box that scrolls the form.
+  const alertInScrollBox = () =>
+    alert.evaluate((node) => {
+      let box = node.parentElement!;
+      while (getComputedStyle(box).overflowY !== "auto") box = box.parentElement!;
+      const visible = box.getBoundingClientRect();
+      const rect = node.getBoundingClientRect();
+      return { inside: rect.top >= visible.top - 0.5 && rect.bottom <= visible.bottom + 0.5, scrolled: box.scrollTop };
+    });
+  const scrollFormToEnd = () =>
+    page.getByLabel("Events per year (optional)").evaluate((node) => {
+      let box = node.parentElement!;
+      while (getComputedStyle(box).overflowY !== "auto") box = box.parentElement!;
+      box.scrollTo({ top: box.scrollHeight, behavior: "instant" });
+    });
+
+  // The form answers once the page has hydrated; before that a click would submit it natively.
+  await expect(async () => {
+    await page.getByLabel("Company name").fill("");
+    await scrollFormToEnd();
+    await proceed.click();
+    await baseExpect(alert).toBeVisible({ timeout: 5_000 });
+  }).toPass();
+  await expect.poll(async () => (await alertInScrollBox()).inside, { message: "the new error is in view" }).toBe(true);
+
+  // Scrolled away from the error, the same refusal brings it back; the keyboard focus stays on the button.
+  await scrollFormToEnd();
+  const away = await alertInScrollBox();
+  expect(away.inside, "the error is out of view once the form is scrolled down").toBe(false);
+  await proceed.click();
+  await expect.poll(async () => (await alertInScrollBox()).inside, { message: "the repeated error is back in view" }).toBe(true);
+  await expect(proceed).toBeFocused();
+  await insideViewport(page, proceed);
+  const { scrollHeight, innerHeight } = await page.evaluate(() => ({ scrollHeight: document.documentElement.scrollHeight, innerHeight: window.innerHeight }));
+  expect(scrollHeight, "the page itself still does not scroll").toBeLessThanOrEqual(innerHeight + 1);
+});
+
 test("on a phone the wizard scrolls as a page, in one column", async ({ page }, testInfo) => {
   test.skip(!isMobile(testInfo), "The phone size is checked in the mobile project.");
   await page.setViewportSize({ width: 375, height: 812 });

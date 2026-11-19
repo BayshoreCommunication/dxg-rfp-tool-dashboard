@@ -155,6 +155,12 @@ const OnboardingWizard = ({
   const [step, setStep] = useState<WizardStep>(profile.onboardingStep === "done" ? "team" : profile.onboardingStep);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Counts the refusals, so the alert is brought back into view when the same message comes again.
+  const [refusals, setRefusals] = useState(0);
+  const fail = (message: string) => {
+    setError(message);
+    setRefusals((count) => count + 1);
+  };
 
   const [details, setDetails] = useState<OrganizationDetailsInput>(() => ({
     name: isPlaceholderName(profile.name) ? "" : profile.name,
@@ -181,7 +187,7 @@ const OnboardingWizard = ({
     try {
       await work();
     } catch {
-      setError("Something went wrong. Try again.");
+      fail("Something went wrong. Try again.");
     } finally {
       setBusy(false);
     }
@@ -195,18 +201,18 @@ const OnboardingWizard = ({
   const saveDetails = (event: React.FormEvent) => {
     event.preventDefault();
     if (!details.name.trim()) {
-      setError("Enter your company name.");
+      fail("Enter your company name.");
       return;
     }
     const events = details.eventsPerYear.trim();
     if (events && !/^\d+$/.test(events)) {
-      setError(ORGANIZATION_FIELD_ERRORS.eventsPerYear);
+      fail(ORGANIZATION_FIELD_ERRORS.eventsPerYear);
       return;
     }
     void run(async () => {
       const result = await saveOrganizationDetailsAction({ ...details, name: details.name.trim() });
       if (!result.success) {
-        setError(errorFor(result, "We couldn't save your company details. Try again."));
+        fail(errorFor(result, "We couldn't save your company details. Try again."));
         return;
       }
       goTo("plan");
@@ -217,7 +223,7 @@ const OnboardingWizard = ({
     run(async () => {
       const result = await chooseOnboardingPlanAction("free_trial");
       if (!result.success) {
-        setError(errorFor(result, "We couldn't start your trial. Try again."));
+        fail(errorFor(result, "We couldn't start your trial. Try again."));
         return;
       }
       goTo("team");
@@ -227,7 +233,7 @@ const OnboardingWizard = ({
     run(async () => {
       const result = await completeOnboardingAction();
       if (!result.success) {
-        setError(errorFor(result, "We couldn't finish setting up. Try again."));
+        fail(errorFor(result, "We couldn't finish setting up. Try again."));
         return;
       }
       navigate("/dashboard");
@@ -236,11 +242,11 @@ const OnboardingWizard = ({
   const sendInvites = (event: React.FormEvent) => {
     event.preventDefault();
     if (inviteSummary.emails.length === 0) {
-      setError("Enter at least one email address, or skip this step.");
+      fail("Enter at least one email address, or skip this step.");
       return;
     }
     if (inviteSummary.tooMany) {
-      setError(`Invite at most ${MAX_BULK_INVITATIONS} people at a time.`);
+      fail(`Invite at most ${MAX_BULK_INVITATIONS} people at a time.`);
       return;
     }
     void run(async () => {
@@ -252,7 +258,7 @@ const OnboardingWizard = ({
               await createBulkInvitationsAction({ emails: inviteSummary.emails, role: inviteRole, teamId: null }),
             );
       if (outcome.kind === "error") {
-        setError(outcome.message);
+        fail(outcome.message);
         return;
       }
       setInvited(outcome);
@@ -306,7 +312,7 @@ const OnboardingWizard = ({
             title={firstName ? `Welcome, ${firstName}` : "Welcome"}
             subtitle="Tell us about your organization. Only the company name is required."
           />
-          <AuthError compact message={error} />
+          <AuthError compact message={error} revealKey={refusals} />
           <form id={DETAILS_FORM} onSubmit={saveDetails} noValidate>
             <div className="space-y-4 lg:space-y-3.5">
               <AuthField
@@ -397,7 +403,7 @@ const OnboardingWizard = ({
         <>
           <BackButton onClick={() => goTo("details")} disabled={busy} />
           <AuthHeading compact title="Choose your plan" subtitle="Start free. You can upgrade when paid plans open." />
-          <AuthError compact message={error} />
+          <AuthError compact message={error} revealKey={refusals} />
           <div className="rounded-2xl border-2 border-primary bg-primary/5 p-5">
             <div className="mb-2 flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -415,7 +421,7 @@ const OnboardingWizard = ({
         <>
           <BackButton onClick={() => goTo("plan")} disabled={busy} />
           <AuthHeading compact title="Invite your team" subtitle="Add the people you plan events with. You can do this later too." />
-          <AuthError compact message={error} />
+          <AuthError compact message={error} revealKey={refusals} />
           {invited ? (
             <div role="status" className="mb-6 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 lg:mb-4 lg:p-3">
               <p className="mb-2 text-[14px] font-bold text-gray-900">
