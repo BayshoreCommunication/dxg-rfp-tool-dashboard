@@ -47,17 +47,17 @@ type Measure = {
   innerHeight: number;
   scrollWidth: number;
   innerWidth: number;
-  // Ancestors of the primary button that scroll their own content (the card's form column would).
+  // Boxes on the page that scroll their own content (the form inside the card would).
   innerScroll: string[];
 };
 
-const measure = (button: Locator) =>
-  button.evaluate((node): Measure => {
+const measure = (page: Page) =>
+  page.evaluate((): Measure => {
     const innerScroll: string[] = [];
-    for (let parent = node.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
-      const overflow = getComputedStyle(parent).overflowY;
-      if ((overflow === "auto" || overflow === "scroll") && parent.scrollHeight > parent.clientHeight + 1) {
-        innerScroll.push(`${parent.tagName.toLowerCase()} ${parent.scrollHeight} > ${parent.clientHeight}`);
+    for (const box of Array.from(document.querySelectorAll("body *:not(textarea)"))) {
+      const overflow = getComputedStyle(box).overflowY;
+      if ((overflow === "auto" || overflow === "scroll") && box.scrollHeight > box.clientHeight + 1) {
+        innerScroll.push(`${box.tagName.toLowerCase()} ${box.scrollHeight} > ${box.clientHeight}`);
       }
     }
     const root = document.documentElement;
@@ -83,7 +83,7 @@ const insideViewport = async (page: Page, target: Locator) => {
 // The page itself does not scroll, in either direction, and the step's primary button is in view.
 const pageFits = async (page: Page, button: Locator, step: string, { innerScrollAllowed = false } = {}) => {
   await expect(button).toBeVisible();
-  const measured = await measure(button);
+  const measured = await measure(page);
   const { width, height } = page.viewportSize()!;
   console.log(`[onboarding-fit] ${width}x${height} ${step}: scrollHeight ${measured.scrollHeight} / innerHeight ${measured.innerHeight}, scrollWidth ${measured.scrollWidth} / innerWidth ${measured.innerWidth}, inner scroll: ${measured.innerScroll.join("; ") || "none"}`);
   expect(measured.scrollHeight, `${step}: the page does not scroll down`).toBeLessThanOrEqual(measured.innerHeight + 1);
@@ -111,7 +111,8 @@ for (const viewport of DESKTOP_VIEWPORTS) {
     test.skip(isMobile(testInfo), "The desktop sizes are checked in the desktop project.");
     await page.setViewportSize(viewport);
     await openWizard(page);
-    const card = page.locator("form").locator("xpath=ancestor::div[contains(@class,'rounded-[2.5rem]')]");
+    // The whole card, both panels: the progress list is on every step.
+    const card = page.getByRole("list", { name: "Setup progress" }).locator("xpath=ancestor::div[contains(@class,'rounded-[2.5rem]')]");
     const shot = async (step: string) => {
       if (SCREENSHOT_AT.has(size)) await page.screenshot({ path: testInfo.outputPath(`onboarding-${step}-${size}.png`) });
     };
@@ -192,7 +193,7 @@ test("a window too short for the form scrolls inside the card and keeps the butt
   await page.getByLabel("Company name").scrollIntoViewIfNeeded();
   await insideViewport(page, page.getByLabel("Company name"));
   await insideViewport(page, proceed);
-  // The pinned button does not cover the field that has the keyboard focus.
+  // The button stays put and never covers the field that has the keyboard focus.
   await page.getByLabel("Events per year (optional)").focus();
   const field = await top(page.getByLabel("Events per year (optional)"));
   const button = await top(proceed);

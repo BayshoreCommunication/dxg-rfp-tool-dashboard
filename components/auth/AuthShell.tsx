@@ -10,17 +10,19 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react
    `fit` (the setup wizard) sizes the card to the window on a laptop or desktop
    screen (lg and up, where the two panels sit side by side): the page itself
    never scrolls, the form gets the wider panel, and a form taller than the
-   window scrolls inside its panel (the wizard pins its buttons to the bottom
-   of that panel; the scroll padding keeps a focused field clear of them).
-   Below lg the page scrolls as usual. */
+   window scrolls inside its panel while `footer` (the step's buttons) stays
+   in view under it. Below lg the page scrolls as usual and `footer` simply
+   follows the form. */
 export const AuthShell = ({
   aside,
   children,
   fit = false,
+  footer,
 }: {
   aside: ReactNode;
   children: ReactNode;
   fit?: boolean;
+  footer?: ReactNode;
 }) => (
   <div className={`relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F0F2F5] p-4 text-[#000000] sm:p-8 ${fit ? "lg:h-dvh lg:min-h-0 lg:p-5" : ""}`}>
     <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 transform items-center justify-center">
@@ -50,10 +52,8 @@ export const AuthShell = ({
         </div>
       </div>
 
-      {/* In `fit` the content is centred by its own margins, not by the flex container: a
-          centred flex child taller than its scrolling parent would lose its top. */}
-      <div className={`flex w-full flex-col bg-white px-8 py-16 sm:px-16 ${fit ? "justify-center lg:w-[56%] lg:justify-start lg:overflow-y-auto lg:scroll-pb-44 lg:px-10 lg:py-6" : "justify-center lg:w-1/2"}`}>
-        <div className={`mx-auto w-full ${fit ? "max-w-sm lg:my-auto lg:max-w-[480px]" : "max-w-sm"}`}>
+      <div className={`flex w-full flex-col justify-center bg-white px-8 py-16 sm:px-16 ${fit ? "lg:min-h-0 lg:w-[56%] lg:px-10 lg:py-6" : "lg:w-1/2"}`}>
+        <div className={`mx-auto w-full max-w-sm ${fit ? "lg:flex lg:min-h-0 lg:max-w-[480px] lg:flex-col" : ""}`}>
           <div className="mb-10 flex justify-center lg:hidden">
             <Image
               src="/assets/logo/rfpilot-primary-logo.png"
@@ -64,7 +64,9 @@ export const AuthShell = ({
               priority
             />
           </div>
-          {children}
+          {/* The padding leaves room for the fields' focus rings inside the scrolling box. */}
+          {fit ? <div className="lg:-mx-2 lg:min-h-0 lg:overflow-y-auto lg:px-2 lg:pb-1">{children}</div> : children}
+          {footer}
         </div>
       </div>
     </div>
