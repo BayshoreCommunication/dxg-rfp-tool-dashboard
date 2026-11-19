@@ -4,7 +4,7 @@ const production = process.env.ONBOARDING_PRODUCTION === '1';
 
 export default defineConfig({
   ...base,
-  testMatch: '**/proposal-onboarding.spec.ts',
+  testMatch: ['**/proposal-onboarding.spec.ts', '**/proposal-entry.spec.ts'],
   testIgnore: [],
   timeout: 60_000,
   webServer: (Array.isArray(base.webServer) ? base.webServer : []).map(server => ({
