@@ -26,7 +26,8 @@ describe("VenueScheduleStep accessibility wiring", () => {
     for (const name of [/^Venue Name/, /^City/, /^Venue Address/]) {
       expect(screen.getByLabelText(name)).toBeInTheDocument();
     }
-    for (const name of [/^State/, /^Venue Type/, /^Venue Confirmed Status/, /^Time Zone/]) {
+    // State and Time Zone keep their original aria-label names ("Venue state", "Venue time zone").
+    for (const name of [/Venue state/i, /^Venue Type/, /^Venue Confirmed Status/, /Venue time zone/i]) {
       expect(screen.getByRole("combobox", { name })).toBeInTheDocument();
     }
   });

@@ -515,7 +515,7 @@ const VenueScheduleStep = ({
               State <span className="text-red-500">*</span></label>
               <InfoTooltip text="State or region. Used for jurisdiction context, union market detection, and time zone auto-detection. Selecting a state automatically suggests the correct time zone below." />
               </div>
-              <GlobalSelect id="venue-schedule-state" aria-labelledby="venue-schedule-state-label"
+              <GlobalSelect id="venue-schedule-state"
                 aria-label="Venue state"
                 value={safeData.venueState}
                 onChange={(e) => handleStateChange(e.target.value)}
@@ -631,7 +631,7 @@ const VenueScheduleStep = ({
               Time Zone <span className="text-red-500">*</span></label>
               <InfoTooltip text="Time zone of the venue. Appended to all times in the Section 1 timeline, Section 9 proposal deadline, and venue section. Auto-detected when you select a state above." />
               </div>
-              <GlobalSelect id="venue-schedule-time-zone" aria-labelledby="venue-schedule-time-zone-label"
+              <GlobalSelect id="venue-schedule-time-zone"
                 aria-label="Venue time zone"
                 value={displayedTimeZoneValue}
                 onChange={(e) => {
