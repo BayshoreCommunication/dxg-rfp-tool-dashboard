@@ -36,3 +36,40 @@ for (const theme of ["light", "dark"] as const) {
     ).toEqual([]);
   });
 }
+
+const fixture = "http://127.0.0.1:8011/__e2e/onboarding";
+
+for (const theme of ["light", "dark"] as const) {
+  test(`the AI workspace thread and rail have no serious accessibility violations (${theme})`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chromium", "The attachment flow is slow on the mobile profile; desktop covers the markup.");
+    test.setTimeout(120_000);
+    await page.request.post(fixture, { data: { reset: true, delays: { create: 100, upload: 300, chat: 300 } } });
+    await page.goto("/proposals/add-new-proposal");
+    await expect(page.getByLabel("Message the proposal assistant")).toBeVisible({ timeout: 20_000 });
+    await page.locator('input[type="file"]').first().setInputFiles({ name: "first-brief.txt", mimeType: "text/plain", buffer: Buffer.from("Northstar Leadership Summit, September 14-16, 2027.") });
+    await page.getByRole("button", { name: "Send message", exact: true }).click();
+    await expect(page).toHaveURL(/\/proposals\/cccccccccccccccccccccccc\/assistant$/, { timeout: 30_000 });
+    await page.request.post(fixture, { data: { scan: "ready" } });
+    await expect(page.getByText("Reading your brief").first()).toBeVisible({ timeout: 60_000 });
+
+    const isDark = await page.locator("html").evaluate((element) => element.classList.contains("dark"));
+    if ((theme === "dark") !== isDark) await page.getByTestId("dev-theme-toggle").click();
+    await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+
+    // The rail shows the summary, the key questions, the details and the uploaded document.
+    const rail = page.getByRole("complementary", { name: "Proposal assistant tools" });
+    await expect(rail.getByRole("heading", { name: "Proposal details" })).toBeVisible();
+    await expect(rail.getByRole("heading", { name: "Source documents" })).toBeVisible();
+    await expect(rail.getByText("first-brief.txt")).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .include('[aria-label="Proposal assistant workspace"]')
+      .include('[aria-label="Proposal assistant tools"]')
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze();
+    const blocking = results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""));
+    expect(
+      blocking.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).slice(0, 3).join(" | ")}`),
+    ).toEqual([]);
+  });
+}
