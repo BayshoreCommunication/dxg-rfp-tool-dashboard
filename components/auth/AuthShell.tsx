@@ -5,23 +5,32 @@ import Image from "next/image";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 
 /* The split card used by the (auth) pages: brand panel on the left, form on
-   the right. Shared by sign-in (and its two-factor step) and /invite/[token]. */
+   the right. Shared by sign-in (and its two-factor step) and /invite/[token].
+
+   `fit` (the setup wizard) sizes the card to the window on a laptop or desktop
+   screen (lg and up, where the two panels sit side by side): the page itself
+   never scrolls, the form gets the wider panel, and a form taller than the
+   window scrolls inside its panel (the wizard pins its buttons to the bottom
+   of that panel; the scroll padding keeps a focused field clear of them).
+   Below lg the page scrolls as usual. */
 export const AuthShell = ({
   aside,
   children,
+  fit = false,
 }: {
   aside: ReactNode;
   children: ReactNode;
+  fit?: boolean;
 }) => (
-  <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F0F2F5] p-4 text-[#000000] sm:p-8">
+  <div className={`relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F0F2F5] p-4 text-[#000000] sm:p-8 ${fit ? "lg:h-dvh lg:min-h-0 lg:p-5" : ""}`}>
     <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 transform items-center justify-center">
       <div className="absolute h-[600px] w-[600px] rounded-full bg-primary/20 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
       <div className="absolute ml-40 mt-40 h-[500px] w-[500px] rounded-full bg-blue-300/30 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
       <div className="absolute -ml-40 -mt-20 h-[550px] w-[550px] rounded-full bg-cyan-200/20 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
     </div>
 
-    <div className="relative z-10 flex w-full max-w-[1000px] overflow-hidden rounded-[2.5rem] bg-white/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] backdrop-blur-2xl ring-1 ring-black/5 sm:min-h-[640px]">
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-primary p-12 text-white lg:flex">
+    <div className={`relative z-10 flex w-full max-w-[1000px] overflow-hidden rounded-[2.5rem] bg-white/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] backdrop-blur-2xl ring-1 ring-black/5 sm:min-h-[640px] ${fit ? "lg:max-h-full lg:min-h-[min(640px,100%)]" : ""}`}>
+      <div className={`relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-white lg:flex ${fit ? "w-[44%]" : "w-1/2"}`}>
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
         <div className="relative z-10">
           <div className="inline-flex rounded-2xl bg-white p-2 shadow-lg shadow-black/10">
@@ -41,8 +50,10 @@ export const AuthShell = ({
         </div>
       </div>
 
-      <div className="flex w-full flex-col justify-center bg-white px-8 py-16 sm:px-16 lg:w-1/2">
-        <div className="mx-auto w-full max-w-sm">
+      {/* In `fit` the content is centred by its own margins, not by the flex container: a
+          centred flex child taller than its scrolling parent would lose its top. */}
+      <div className={`flex w-full flex-col bg-white px-8 py-16 sm:px-16 ${fit ? "justify-center lg:w-[56%] lg:justify-start lg:overflow-y-auto lg:scroll-pb-44 lg:px-10 lg:py-6" : "justify-center lg:w-1/2"}`}>
+        <div className={`mx-auto w-full ${fit ? "max-w-sm lg:my-auto lg:max-w-[480px]" : "max-w-sm"}`}>
           <div className="mb-10 flex justify-center lg:hidden">
             <Image
               src="/assets/logo/rfpilot-primary-logo.png"
@@ -60,30 +71,35 @@ export const AuthShell = ({
   </div>
 );
 
+/* `compact`, on the heading, the error and the field, tightens the spacing on a laptop or
+   desktop screen (lg and up) for a form that has to fit the window. Text sizes for labels and
+   fields do not change, and nothing changes below lg. */
 export const AuthHeading = ({
   title,
   subtitle,
+  compact = false,
 }: {
   title: string;
   subtitle?: ReactNode;
+  compact?: boolean;
 }) => (
   <>
-    <h2 className="mb-3 text-center text-[32px] font-extrabold leading-none tracking-tight text-gray-900 lg:text-left">
+    <h2 className={`mb-3 text-center text-[32px] font-extrabold leading-none tracking-tight text-gray-900 lg:text-left ${compact ? "lg:mb-2 lg:text-[28px]" : ""}`}>
       {title}
     </h2>
     {subtitle ? (
-      <p className="mb-10 text-center text-[14px] font-medium text-gray-400 lg:text-left">
+      <p className={`mb-10 text-center text-[14px] font-medium text-gray-400 lg:text-left ${compact ? "lg:mb-5" : ""}`}>
         {subtitle}
       </p>
     ) : null}
   </>
 );
 
-export const AuthError = ({ message }: { message: string }) =>
+export const AuthError = ({ message, compact = false }: { message: string; compact?: boolean }) =>
   message ? (
     <div
       role="alert"
-      className="mb-6 rounded-xl border border-red-100/50 bg-red-50 p-4 text-center text-sm font-medium text-red-600"
+      className={`mb-6 rounded-xl border border-red-100/50 bg-red-50 p-4 text-center text-sm font-medium text-red-600 ${compact ? "lg:mb-4 lg:p-3" : ""}`}
     >
       {message}
     </div>
@@ -94,15 +110,17 @@ export const AuthField = ({
   icon,
   trailing,
   id,
+  compact = false,
   ...input
 }: InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   icon: ReactNode;
   trailing?: ReactNode;
   id: string;
+  compact?: boolean;
 }) => (
   <div className="group">
-    <label htmlFor={id} className="mb-2 block text-[13px] font-bold text-gray-700">
+    <label htmlFor={id} className={`mb-2 block text-[13px] font-bold text-gray-700 ${compact ? "lg:mb-1.5" : ""}`}>
       {label}
     </label>
     <div className="relative flex items-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/50 transition-all duration-300 focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10 hover:border-gray-300 has-[:disabled]:opacity-80">
@@ -112,7 +130,7 @@ export const AuthField = ({
       <input
         id={id}
         {...input}
-        className="w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400 disabled:cursor-not-allowed"
+        className={`w-full bg-transparent py-4 pr-4 text-[15px] font-semibold text-gray-900 outline-none placeholder:font-medium placeholder:text-gray-400 disabled:cursor-not-allowed ${compact ? "min-w-0 lg:py-3" : ""}`}
       />
       {trailing}
     </div>
