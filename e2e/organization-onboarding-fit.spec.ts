@@ -1,0 +1,250 @@
+import { expect as baseExpect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expectProposalWording } from "./support/wording";
+
+// The new-organization setup wizard (/welcome) fits the window: on a laptop or desktop screen the
+// page never scrolls and each step's primary button is in view; on a phone the page scrolls as
+// usual, in one column. Against the stub backend (usersPageFixture.mjs answers the organization
+// profile and moves the step on, the way the backend does).
+
+// `next dev` compiles on demand, so give navigations more room than the suite's default.
+const expect = baseExpect.configure({ timeout: 45_000 });
+
+const backendOrigin = process.env.E2E_BACKEND_ORIGIN ?? "http://127.0.0.1:8011";
+const welcomeStub = `${backendOrigin}/__e2e/welcome`;
+
+const DESKTOP_VIEWPORTS = [
+  { width: 1280, height: 720 },
+  { width: 1366, height: 768 },
+  { width: 1440, height: 900 },
+  { width: 1680, height: 933 },
+];
+// The sizes whose screenshots are kept.
+const SCREENSHOT_AT = new Set(["1280x720", "1680x933"]);
+
+const isMobile = (testInfo: TestInfo) => testInfo.project.name.startsWith("mobile");
+
+test.beforeEach(async ({ request }) => {
+  test.setTimeout(240_000);
+  await request.post(welcomeStub, { data: { on: true, step: "details" } });
+});
+test.afterEach(async ({ request }) => {
+  await request.post(welcomeStub, { data: { on: false } });
+});
+
+// An organization still in onboarding is sent to the wizard, at the step it had reached.
+const openWizard = async (page: Page) => {
+  await page.goto("/sign-in");
+  await page.getByPlaceholder("name@company.com").fill("owner-e2e@example.com");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.locator('input[type="password"]').fill("role-e2e-password");
+  await page.getByRole("button", { name: "Sign In to Dashboard" }).click();
+  await expect(page).toHaveURL(/\/welcome$/, { timeout: 180_000 });
+  await expect(page.getByRole("heading", { name: "Welcome, Olivia" })).toBeVisible();
+};
+
+type Measure = {
+  scrollHeight: number;
+  innerHeight: number;
+  scrollWidth: number;
+  innerWidth: number;
+  // Ancestors of the primary button that scroll their own content (the card's form column would).
+  innerScroll: string[];
+};
+
+const measure = (button: Locator) =>
+  button.evaluate((node): Measure => {
+    const innerScroll: string[] = [];
+    for (let parent = node.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+      const overflow = getComputedStyle(parent).overflowY;
+      if ((overflow === "auto" || overflow === "scroll") && parent.scrollHeight > parent.clientHeight + 1) {
+        innerScroll.push(`${parent.tagName.toLowerCase()} ${parent.scrollHeight} > ${parent.clientHeight}`);
+      }
+    }
+    const root = document.documentElement;
+    return {
+      scrollHeight: root.scrollHeight,
+      innerHeight: window.innerHeight,
+      scrollWidth: root.scrollWidth,
+      innerWidth: window.innerWidth,
+      innerScroll,
+    };
+  });
+
+const insideViewport = async (page: Page, target: Locator) => {
+  const box = await target.boundingBox();
+  const viewport = page.viewportSize()!;
+  expect(box, "the button is on the page").not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+};
+
+// The page itself does not scroll, in either direction, and the step's primary button is in view.
+const pageFits = async (page: Page, button: Locator, step: string, { innerScrollAllowed = false } = {}) => {
+  await expect(button).toBeVisible();
+  const measured = await measure(button);
+  const { width, height } = page.viewportSize()!;
+  console.log(`[onboarding-fit] ${width}x${height} ${step}: scrollHeight ${measured.scrollHeight} / innerHeight ${measured.innerHeight}, scrollWidth ${measured.scrollWidth} / innerWidth ${measured.innerWidth}, inner scroll: ${measured.innerScroll.join("; ") || "none"}`);
+  expect(measured.scrollHeight, `${step}: the page does not scroll down`).toBeLessThanOrEqual(measured.innerHeight + 1);
+  expect(measured.scrollWidth, `${step}: the page does not scroll sideways`).toBeLessThanOrEqual(measured.innerWidth);
+  await insideViewport(page, button);
+  if (!innerScrollAllowed) expect(measured.innerScroll, `${step}: nothing scrolls inside the card`).toEqual([]);
+  return measured;
+};
+
+const top = async (target: Locator) => (await target.boundingBox())!;
+
+// The form answers once the page has hydrated; before that a click would submit it natively.
+const saveCompany = async (page: Page) => {
+  await expect(async () => {
+    await page.getByLabel("Company name").fill("Northwind Events");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await baseExpect(page.getByRole("heading", { name: "Choose your plan" })).toBeVisible({ timeout: 5_000 });
+  }).toPass();
+};
+
+for (const viewport of DESKTOP_VIEWPORTS) {
+  const size = `${viewport.width}x${viewport.height}`;
+
+  test(`every step fits a ${viewport.width} × ${viewport.height} window without scrolling`, async ({ page }, testInfo) => {
+    test.skip(isMobile(testInfo), "The desktop sizes are checked in the desktop project.");
+    await page.setViewportSize(viewport);
+    await openWizard(page);
+    const card = page.locator("form").locator("xpath=ancestor::div[contains(@class,'rounded-[2.5rem]')]");
+    const shot = async (step: string) => {
+      if (SCREENSHOT_AT.has(size)) await page.screenshot({ path: testInfo.outputPath(`onboarding-${step}-${size}.png`) });
+    };
+
+    // Company.
+    const proceed = page.getByRole("button", { name: "Continue", exact: true });
+    await pageFits(page, proceed, "company");
+    // The short fields sit side by side, the left one first; the company name keeps the full width.
+    const name = await top(page.getByLabel("Company name"));
+    const type = await top(page.getByLabel("Organization type"));
+    const industry = await top(page.getByLabel("Industry (optional)"));
+    const country = await top(page.getByLabel("Country"));
+    const zone = await top(page.getByLabel("Time zone"));
+    const events = await top(page.getByLabel("Events per year (optional)"));
+    expect(Math.abs(type.y + type.height / 2 - (industry.y + industry.height / 2))).toBeLessThanOrEqual(2);
+    expect(type.x + type.width).toBeLessThanOrEqual(industry.x);
+    expect(Math.abs(country.y - zone.y)).toBeLessThanOrEqual(2);
+    expect(country.x + country.width).toBeLessThanOrEqual(zone.x);
+    expect(name.y).toBeLessThan(type.y);
+    expect(type.y).toBeLessThan(country.y);
+    expect(country.y).toBeLessThan(events.y);
+    // Text stays readable and the controls stay a comfortable size.
+    for (const label of ["Company name", "Organization type", "Industry (optional)", "Country", "Time zone", "Events per year (optional)"]) {
+      const field = page.getByLabel(label);
+      expect(Number.parseFloat(await field.evaluate((node) => getComputedStyle(node).fontSize)), `${label} text size`).toBeGreaterThanOrEqual(15);
+    }
+    for (const select of [type, country, zone]) expect(select.height).toBeGreaterThanOrEqual(44);
+    expect((await top(proceed)).height).toBeGreaterThanOrEqual(44);
+    // The longest time zone name is not cut off in its field.
+    await page.getByLabel("Time zone").selectOption("America/Phoenix");
+    // Tab order follows the visual order.
+    await page.getByLabel("Company name").focus();
+    for (const label of ["Organization type", "Industry (optional)", "Country", "Time zone", "Events per year (optional)"]) {
+      await page.keyboard.press("Tab");
+      await expect(page.getByLabel(label)).toBeFocused();
+    }
+    await page.keyboard.press("Tab");
+    await expect(proceed).toBeFocused();
+    await expectProposalWording(card);
+    await page.getByLabel("Company name").fill("Northwind Events");
+    await page.getByLabel("Company name").blur();
+    await shot("company");
+
+    // Plan.
+    await saveCompany(page);
+    await pageFits(page, page.getByRole("button", { name: "Start free trial" }), "plan");
+    await expectProposalWording(card);
+    await shot("plan");
+
+    // Team.
+    await page.getByRole("button", { name: "Start free trial" }).click();
+    await expect(page.getByRole("heading", { name: "Invite your team" })).toBeVisible();
+    await pageFits(page, page.getByRole("button", { name: "Send invitations" }), "team");
+    await insideViewport(page, page.getByRole("button", { name: "Skip for now" }));
+    await expectProposalWording(card);
+    await shot("team");
+
+    // One invitation sent, with its result listed, still fits.
+    await page.getByLabel("Email addresses").fill("maya.manager@example.com");
+    await page.getByRole("button", { name: "Send invitations" }).click();
+    await expect(page.getByText("1 invitation sent")).toBeVisible();
+    await pageFits(page, page.getByRole("button", { name: "Send invitations" }), "team, one invitation sent", { innerScrollAllowed: true });
+    await insideViewport(page, page.getByRole("button", { name: "Go to dashboard" }));
+  });
+}
+
+test("a window too short for the form scrolls inside the card and keeps the button in view", async ({ page }, testInfo) => {
+  test.skip(isMobile(testInfo), "The desktop sizes are checked in the desktop project.");
+  await page.setViewportSize({ width: 1280, height: 540 });
+  await openWizard(page);
+  const proceed = page.getByRole("button", { name: "Continue", exact: true });
+  const measured = await pageFits(page, proceed, "company, short window", { innerScrollAllowed: true });
+  expect(measured.innerScroll).toHaveLength(1);
+  // Everything is still reachable: the first and the last field scroll into view under the pointer.
+  await page.getByLabel("Events per year (optional)").scrollIntoViewIfNeeded();
+  await insideViewport(page, page.getByLabel("Events per year (optional)"));
+  await insideViewport(page, proceed);
+  await page.getByLabel("Company name").scrollIntoViewIfNeeded();
+  await insideViewport(page, page.getByLabel("Company name"));
+  await insideViewport(page, proceed);
+  // The pinned button does not cover the field that has the keyboard focus.
+  await page.getByLabel("Events per year (optional)").focus();
+  const field = await top(page.getByLabel("Events per year (optional)"));
+  const button = await top(proceed);
+  expect(field.y + field.height).toBeLessThanOrEqual(button.y);
+});
+
+test("on a phone the wizard scrolls as a page, in one column", async ({ page }, testInfo) => {
+  test.skip(!isMobile(testInfo), "The phone size is checked in the mobile project.");
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openWizard(page);
+  const sideways = async (step: string) => {
+    const { scrollWidth, innerWidth } = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
+    expect(scrollWidth, `${step}: no sideways scroll`).toBeLessThanOrEqual(innerWidth);
+  };
+  const reachable = async (button: Locator) => {
+    await button.scrollIntoViewIfNeeded();
+    await insideViewport(page, button);
+    expect((await top(button)).height).toBeGreaterThanOrEqual(44);
+  };
+
+  // Company: one column, in order, nothing cut off, every control at least 44 px high.
+  await sideways("company");
+  const labels = ["Company name", "Organization type", "Industry (optional)", "Country", "Time zone", "Events per year (optional)"];
+  let previousBottom = 0;
+  for (const label of labels) {
+    const field = page.getByLabel(label);
+    const box = await top(field);
+    expect(box.y, `${label} sits below the field before it`).toBeGreaterThanOrEqual(previousBottom);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(375);
+    // An input sits inside its bordered box, which is the touch target.
+    const target = (await field.evaluate((node) => node.tagName)) === "INPUT" ? field.locator("xpath=..") : field;
+    expect((await top(target)).height, `${label} touch target`).toBeGreaterThanOrEqual(44);
+    expect(Number.parseFloat(await field.evaluate((node) => getComputedStyle(node).fontSize)), `${label} text size`).toBeGreaterThanOrEqual(15);
+    previousBottom = box.y + box.height;
+  }
+  const page1 = await page.evaluate(() => ({ scrollHeight: document.documentElement.scrollHeight, innerHeight: window.innerHeight }));
+  console.log(`[onboarding-fit] 375x812 company: scrollHeight ${page1.scrollHeight} / innerHeight ${page1.innerHeight} (the page scrolls)`);
+  await reachable(page.getByRole("button", { name: "Continue", exact: true }));
+  await expectProposalWording(page.locator("body"));
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: testInfo.outputPath("onboarding-company-375x812.png"), fullPage: true });
+
+  await saveCompany(page);
+  await sideways("plan");
+  await reachable(page.getByRole("button", { name: "Start free trial" }));
+  await expectProposalWording(page.locator("body"));
+
+  await page.getByRole("button", { name: "Start free trial" }).click();
+  await expect(page.getByRole("heading", { name: "Invite your team" })).toBeVisible();
+  await sideways("team");
+  await reachable(page.getByRole("button", { name: "Send invitations" }));
+  await reachable(page.getByRole("button", { name: "Skip for now" }));
+  await expectProposalWording(page.locator("body"));
+});
