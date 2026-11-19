@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
+/* A window big enough for a card sized to it (AuthShell's `fit`): two panels side by side (lg)
+   and tall enough that the brand panel's text and a step's buttons are not cut off. */
+@custom-variant fit (@media (min-width: 64rem) and (min-height: 520px));
 @source not "../.next";
 @source not "../.next-*";
 

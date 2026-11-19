@@ -58,8 +58,17 @@ const errorFor = (result: OrgActionResult<unknown>, fallback: string) => {
   return fallback;
 };
 
+/* The wizard fits the window on a laptop or desktop screen (lg and up, and at least 520 px tall:
+   the `fit:` variant): AuthShell's `fit` sizes the card, the `lg:` spacing here is tighter, and
+   the Company step pairs its short fields.
+   Should a step still be taller than the window (a short window, a long list of invitation
+   results), the form scrolls inside the card and the step's buttons, which AuthShell renders
+   under it as `footer`, stay in view. A submit button there names its form with `form`. */
+const DETAILS_FORM = "onboarding-details-form";
+const INVITE_FORM = "onboarding-invite-form";
+
 const selectClass =
-  "w-full appearance-none rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-4 text-[15px] font-semibold text-gray-900 outline-none transition-all duration-300 hover:border-gray-300 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:opacity-80";
+  "w-full min-w-0 appearance-none rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-4 text-[15px] font-semibold text-gray-900 outline-none transition-all duration-300 hover:border-gray-300 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:opacity-80 lg:py-3";
 
 const SelectField = ({
   id,
@@ -77,7 +86,7 @@ const SelectField = ({
   children: ReactNode;
 }) => (
   <div>
-    <label htmlFor={id} className="mb-2 block text-[13px] font-bold text-gray-700">
+    <label htmlFor={id} className="mb-2 block text-[13px] font-bold text-gray-700 lg:mb-1.5">
       {label}
     </label>
     <select id={id} className={selectClass} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
@@ -89,7 +98,7 @@ const SelectField = ({
 const Progress = ({ current }: { current: WizardStep }) => {
   const index = STEPS.findIndex((entry) => entry.step === current);
   return (
-    <ol className="mb-8 flex items-center gap-2" aria-label="Setup progress">
+    <ol className="mb-8 flex items-center gap-2 lg:mb-5" aria-label="Setup progress">
       {STEPS.map((entry, i) => (
         <li key={entry.step} className="flex flex-1 items-center gap-2" aria-current={i === index ? "step" : undefined}>
           <span
@@ -128,7 +137,7 @@ const BackButton = ({ onClick, disabled }: { onClick: () => void; disabled?: boo
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="mb-6 flex items-center text-sm font-medium text-gray-500 hover:text-black disabled:opacity-60"
+    className="mb-6 flex items-center text-sm font-medium text-gray-500 hover:text-black disabled:opacity-60 lg:mb-4"
   >
     <ArrowLeft className="mr-1 h-4 w-4" />
     Back
@@ -147,6 +156,12 @@ const OnboardingWizard = ({
   const [step, setStep] = useState<WizardStep>(profile.onboardingStep === "done" ? "team" : profile.onboardingStep);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Counts the refusals, so the alert is brought back into view when the same message comes again.
+  const [refusals, setRefusals] = useState(0);
+  const fail = (message: string) => {
+    setError(message);
+    setRefusals((count) => count + 1);
+  };
 
   const [details, setDetails] = useState<OrganizationDetailsInput>(() => ({
     name: isPlaceholderName(profile.name) ? "" : profile.name,
@@ -173,7 +188,7 @@ const OnboardingWizard = ({
     try {
       await work();
     } catch {
-      setError("Something went wrong. Try again.");
+      fail("Something went wrong. Try again.");
     } finally {
       setBusy(false);
     }
@@ -187,18 +202,18 @@ const OnboardingWizard = ({
   const saveDetails = (event: React.FormEvent) => {
     event.preventDefault();
     if (!details.name.trim()) {
-      setError("Enter your company name.");
+      fail("Enter your company name.");
       return;
     }
     const events = details.eventsPerYear.trim();
     if (events && !/^\d+$/.test(events)) {
-      setError(ORGANIZATION_FIELD_ERRORS.eventsPerYear);
+      fail(ORGANIZATION_FIELD_ERRORS.eventsPerYear);
       return;
     }
     void run(async () => {
       const result = await saveOrganizationDetailsAction({ ...details, name: details.name.trim() });
       if (!result.success) {
-        setError(errorFor(result, "We couldn't save your company details. Try again."));
+        fail(errorFor(result, "We couldn't save your company details. Try again."));
         return;
       }
       goTo("plan");
@@ -209,7 +224,7 @@ const OnboardingWizard = ({
     run(async () => {
       const result = await chooseOnboardingPlanAction("free_trial");
       if (!result.success) {
-        setError(errorFor(result, "We couldn't start your trial. Try again."));
+        fail(errorFor(result, "We couldn't start your trial. Try again."));
         return;
       }
       goTo("team");
@@ -219,7 +234,7 @@ const OnboardingWizard = ({
     run(async () => {
       const result = await completeOnboardingAction();
       if (!result.success) {
-        setError(errorFor(result, "We couldn't finish setting up. Try again."));
+        fail(errorFor(result, "We couldn't finish setting up. Try again."));
         return;
       }
       navigate("/dashboard");
@@ -228,11 +243,11 @@ const OnboardingWizard = ({
   const sendInvites = (event: React.FormEvent) => {
     event.preventDefault();
     if (inviteSummary.emails.length === 0) {
-      setError("Enter at least one email address, or skip this step.");
+      fail("Enter at least one email address, or skip this step.");
       return;
     }
     if (inviteSummary.tooMany) {
-      setError(`Invite at most ${MAX_BULK_INVITATIONS} people at a time.`);
+      fail(`Invite at most ${MAX_BULK_INVITATIONS} people at a time.`);
       return;
     }
     void run(async () => {
@@ -244,7 +259,7 @@ const OnboardingWizard = ({
               await createBulkInvitationsAction({ emails: inviteSummary.emails, role: inviteRole, teamId: null }),
             );
       if (outcome.kind === "error") {
-        setError(outcome.message);
+        fail(outcome.message);
         return;
       }
       setInvited(outcome);
@@ -252,20 +267,57 @@ const OnboardingWizard = ({
     });
   };
 
+  const footer = (
+    <div className="pt-6 lg:shrink-0 lg:pt-4">
+      {step === "details" ? (
+        <AuthPrimaryButton type="submit" form={DETAILS_FORM} disabled={busy}>
+          {busy ? "Saving..." : "Continue"}
+        </AuthPrimaryButton>
+      ) : null}
+      {step === "plan" ? (
+        <>
+          <AuthPrimaryButton type="button" onClick={startTrial} disabled={busy} className="mb-4">
+            {busy ? "Starting..." : "Start free trial"}
+          </AuthPrimaryButton>
+          <p className="text-center text-[13px] font-medium text-gray-400">
+            Need more now? Talk to us about a paid plan.
+          </p>
+        </>
+      ) : null}
+      {step === "team" ? (
+        <>
+          <AuthPrimaryButton type="submit" form={INVITE_FORM} disabled={busy} className="mb-4 lg:mb-3">
+            {busy ? "Sending..." : "Send invitations"}
+          </AuthPrimaryButton>
+          <button
+            type="button"
+            onClick={finish}
+            disabled={busy}
+            className="flex w-full cursor-pointer items-center justify-center rounded-2xl border border-gray-200 bg-white py-4 text-[15px] font-bold text-gray-700 transition-all hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {invited && invited.invited > 0 ? "Go to dashboard" : "Skip for now"}
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+
   return (
-    <AuthShell aside={<WelcomeAside />}>
+    <AuthShell aside={<WelcomeAside />} fit footer={footer}>
       <Progress current={step} />
 
       {step === "details" ? (
         <>
           <AuthHeading
+            compact
             title={firstName ? `Welcome, ${firstName}` : "Welcome"}
             subtitle="Tell us about your organization. Only the company name is required."
           />
-          <AuthError message={error} />
-          <form onSubmit={saveDetails} noValidate>
-            <div className="mb-6 space-y-4">
+          <AuthError compact message={error} revealKey={refusals} />
+          <form id={DETAILS_FORM} onSubmit={saveDetails} noValidate>
+            <div className="space-y-4 lg:space-y-3.5">
               <AuthField
+                compact
                 id="onboarding-name"
                 label="Company name"
                 icon={<Building2 className="h-5 w-5" strokeWidth={2} />}
@@ -277,57 +329,63 @@ const OnboardingWizard = ({
                 disabled={busy}
                 onChange={(e) => setDetail("name", e.target.value)}
               />
-              <SelectField
-                id="onboarding-type"
-                label="Organization type"
-                value={details.type}
-                disabled={busy}
-                onChange={(value) => setDetail("type", value as OrganizationDetailsInput["type"])}
-              >
-                <option value="">Choose one (optional)</option>
-                {ORGANIZATION_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </SelectField>
+              <div className="grid gap-4 lg:grid-cols-2 lg:gap-3">
+                <SelectField
+                  id="onboarding-type"
+                  label="Organization type"
+                  value={details.type}
+                  disabled={busy}
+                  onChange={(value) => setDetail("type", value as OrganizationDetailsInput["type"])}
+                >
+                  <option value="">Choose one (optional)</option>
+                  {ORGANIZATION_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </SelectField>
+                <AuthField
+                  compact
+                  id="onboarding-industry"
+                  label="Industry (optional)"
+                  icon={<Factory className="h-5 w-5" strokeWidth={2} />}
+                  placeholder="Pharmaceuticals, technology, finance…"
+                  maxLength={120}
+                  value={details.industry}
+                  disabled={busy}
+                  onChange={(e) => setDetail("industry", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-4 lg:grid-cols-[2fr_3fr] lg:gap-3">
+                <SelectField
+                  id="onboarding-country"
+                  label="Country"
+                  value={details.country}
+                  disabled={busy}
+                  onChange={(value) => setDetail("country", value)}
+                >
+                  {COUNTRY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </SelectField>
+                <SelectField
+                  id="onboarding-time-zone"
+                  label="Time zone"
+                  value={details.timeZone}
+                  disabled={busy}
+                  onChange={(value) => setDetail("timeZone", value)}
+                >
+                  {US_TIME_ZONE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
               <AuthField
-                id="onboarding-industry"
-                label="Industry (optional)"
-                icon={<Factory className="h-5 w-5" strokeWidth={2} />}
-                placeholder="Pharmaceuticals, technology, finance…"
-                maxLength={120}
-                value={details.industry}
-                disabled={busy}
-                onChange={(e) => setDetail("industry", e.target.value)}
-              />
-              <SelectField
-                id="onboarding-country"
-                label="Country"
-                value={details.country}
-                disabled={busy}
-                onChange={(value) => setDetail("country", value)}
-              >
-                {COUNTRY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </SelectField>
-              <SelectField
-                id="onboarding-time-zone"
-                label="Time zone"
-                value={details.timeZone}
-                disabled={busy}
-                onChange={(value) => setDetail("timeZone", value)}
-              >
-                {US_TIME_ZONE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </SelectField>
-              <AuthField
+                compact
                 id="onboarding-events"
                 label="Events per year (optional)"
                 icon={<CalendarDays className="h-5 w-5" strokeWidth={2} />}
@@ -338,9 +396,6 @@ const OnboardingWizard = ({
                 onChange={(e) => setDetail("eventsPerYear", e.target.value.replace(/[^\d]/g, ""))}
               />
             </div>
-            <AuthPrimaryButton type="submit" disabled={busy}>
-              {busy ? "Saving..." : "Continue"}
-            </AuthPrimaryButton>
           </form>
         </>
       ) : null}
@@ -348,9 +403,9 @@ const OnboardingWizard = ({
       {step === "plan" ? (
         <>
           <BackButton onClick={() => goTo("details")} disabled={busy} />
-          <AuthHeading title="Choose your plan" subtitle="Start free. You can upgrade when paid plans open." />
-          <AuthError message={error} />
-          <div className="mb-6 rounded-2xl border-2 border-primary bg-primary/5 p-5">
+          <AuthHeading compact title="Choose your plan" subtitle="Start free. You can upgrade when paid plans open." />
+          <AuthError compact message={error} revealKey={refusals} />
+          <div className="rounded-2xl border-2 border-primary bg-primary/5 p-5">
             <div className="mb-2 flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
               <p className="text-[16px] font-extrabold text-gray-900">Free trial</p>
@@ -360,22 +415,16 @@ const OnboardingWizard = ({
               <li>Vendor responses and proposal intelligence unlock on a paid plan.</li>
             </ul>
           </div>
-          <AuthPrimaryButton type="button" onClick={startTrial} disabled={busy} className="mb-4">
-            {busy ? "Starting..." : "Start free trial"}
-          </AuthPrimaryButton>
-          <p className="text-center text-[13px] font-medium text-gray-400">
-            Need more now? Talk to us about a paid plan.
-          </p>
         </>
       ) : null}
 
       {step === "team" ? (
         <>
           <BackButton onClick={() => goTo("plan")} disabled={busy} />
-          <AuthHeading title="Invite your team" subtitle="Add the people you plan events with. You can do this later too." />
-          <AuthError message={error} />
+          <AuthHeading compact title="Invite your team" subtitle="Add the people you plan events with. You can do this later too." />
+          <AuthError compact message={error} revealKey={refusals} />
           {invited ? (
-            <div role="status" className="mb-6 rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
+            <div role="status" className="mb-6 rounded-2xl border border-gray-200 bg-gray-50/60 p-4 lg:mb-4 lg:p-3">
               <p className="mb-2 text-[14px] font-bold text-gray-900">
                 {invited.invited === 1 ? "1 invitation sent" : `${invited.invited} invitations sent`}
               </p>
@@ -396,7 +445,7 @@ const OnboardingWizard = ({
               </ul>
             </div>
           ) : null}
-          <form onSubmit={sendInvites} noValidate>
+          <form id={INVITE_FORM} onSubmit={sendInvites} noValidate>
             <div className="mb-4">
               <label htmlFor="onboarding-invite-emails" className="mb-2 block text-[13px] font-bold text-gray-700">
                 Email addresses
@@ -420,7 +469,7 @@ const OnboardingWizard = ({
                 </p>
               ) : null}
             </div>
-            <div className="mb-6">
+            <div>
               <SelectField
                 id="onboarding-invite-role"
                 label="Role"
@@ -435,18 +484,7 @@ const OnboardingWizard = ({
                 ))}
               </SelectField>
             </div>
-            <AuthPrimaryButton type="submit" disabled={busy} className="mb-4">
-              {busy ? "Sending..." : "Send invitations"}
-            </AuthPrimaryButton>
           </form>
-          <button
-            type="button"
-            onClick={finish}
-            disabled={busy}
-            className="flex w-full cursor-pointer items-center justify-center rounded-2xl border border-gray-200 bg-white py-4 text-[15px] font-bold text-gray-700 transition-all hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {invited && invited.invited > 0 ? "Go to dashboard" : "Skip for now"}
-          </button>
         </>
       ) : null}
     </AuthShell>
