@@ -2,7 +2,7 @@
 
 import GlobalDateInput from "@/components/shared/GlobalDateInput";
 import GlobalSelect from "@/components/shared/GlobalSelect";
-import { useCallback, useRef } from "react";
+import { useCallback, useId, useRef } from "react";
 import type { EventData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip, PillCheckbox, RadioIndicator, toggleItem, useClickOutside } from "./shared";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -102,6 +102,10 @@ const EventForm = ({
   const startDateValue = fromIsoToDate(data.startDate);
   const endDateValue = fromIsoToDate(data.endDate);
 
+  // Stable, unique ids so every label, error and hint is programmatically tied to its control.
+  const uid = useId();
+  const fid = (name: string) => `${uid}-${name}`;
+
   const typeRef = useRef<HTMLDivElement>(null);
   useClickOutside(typeRef, useCallback(() => {}, []));
 
@@ -156,11 +160,12 @@ const EventForm = ({
             {/* Row 1: Event Name + Edition/Year */}
             <div className={`grid grid-cols-1 gap-5 ${mode === "advanced" ? "lg:grid-cols-2" : ""}`}>
               <div data-assistant-field-key="/content/event/name">
-                <label className={labelClass}>
-                  Event Name <span className="text-red-500">*</span>
+                <div className={labelClass}>
+                  <label htmlFor={fid("name")} className="flex items-center gap-1.5">
+                  Event Name <span className="text-red-500">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/name")} />
-                </label>
-                <input
+                </div>
+                <input id={fid("name")} aria-required="true" aria-invalid={showErrors && !data.eventName.trim() ? true : undefined} aria-describedby={showErrors && !data.eventName.trim() ? fid("name-error") : undefined}
                   className={`${inputClass} ${showErrors && !data.eventName.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
                   placeholder="e.g. Apex Dynamics Global Summit 2026"
                   maxLength={120}
@@ -169,7 +174,7 @@ const EventForm = ({
                 />
                 <div className="mt-0.5 flex items-start justify-between">
                   {showErrors && !data.eventName.trim() ? (
-                    <p className="text-sm text-red-500 normal-case">Event name is required.</p>
+                    <p id={fid("name-error")} role="alert" className="text-sm text-red-500 normal-case">Event name is required.</p>
                   ) : <span />}
                   <span className="ml-2 shrink-0 text-[11px] text-[#687782]">
                     {data.eventName.length}/120
@@ -178,12 +183,13 @@ const EventForm = ({
               </div>
 
               {mode === "advanced" && <div data-assistant-field-key="/content/event/edition">
-                <label className={labelClass}>
+                <div className={labelClass}>
+                  <label htmlFor={fid("edition")} className="flex items-center gap-1.5">
                   Edition / Year
-                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/edition")} />
-                </label>
-                <input
+                </div>
+                <input id={fid("edition")}
                   className={inputClass}
                   placeholder="e.g. 12th Annual or Inaugural 2026"
                   maxLength={60}
@@ -194,14 +200,15 @@ const EventForm = ({
             </div>
 
             {mode === "advanced" && <div data-assistant-field-key="/content/event/objectives">
-              <label className={labelClass}>
-                Event summary / Narrative <span className="text-red-500">*</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
-              </label>
+              <div className={labelClass}>
+                  <label htmlFor={fid("objectives")} className="flex items-center gap-1.5">
+                Event summary / Narrative <span className="text-red-500">*</span></label>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
+                </div>
               <p className="mb-1.5 text-[13px] leading-5 text-[#566a78] normal-case">
                 Provide a short summary of the event goals, audience, and key outcomes. This narrative will appear on your proposal cover page.
               </p>
-              <textarea
+              <textarea id={fid("objectives")} aria-required="true"
                 rows={3}
                 maxLength={800}
                 className={textareaClass}
@@ -217,12 +224,15 @@ const EventForm = ({
             {/* Row 2: Event Type + Theme/Tagline */}
             <div className={`grid grid-cols-1 gap-4 ${mode === "advanced" ? "sm:grid-cols-2" : ""}`}>
               <div data-assistant-field-key="/content/event/type">
-                <label className={labelClass}>
-                  Event Type <span className="text-red-500">*</span>
+                <div className={labelClass}>
+                  <label id={fid("type-label")} className="flex items-center gap-1.5">
+                  Event Type <span className="text-red-500">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/type")} />
-                </label>
+                </div>
                 <div ref={typeRef}>
                   <GlobalSelect
+                    id={fid("type")}
+                    aria-labelledby={fid("type-label")}
                     className={`${inputClass} appearance-none ${
                       showErrors && !data.eventType.eventType
                         ? "border-red-500 focus:border-red-500"
@@ -254,6 +264,7 @@ const EventForm = ({
                 </div>
                 {data.eventType.eventType === "Other" && (
                   <input
+                    aria-label="Specify the other event type"
                     className={`${inputClass} mt-2`}
                     placeholder="Please specify..."
                     value={data.eventType.eventTypeOther}
@@ -268,19 +279,20 @@ const EventForm = ({
                   />
                 )}
                 {showErrors && !data.eventType.eventType && (
-                  <p className="mt-1 text-sm text-red-500 normal-case">
+                  <p id={fid("type-error")} role="alert" className="mt-1 text-sm text-red-500 normal-case">
                     Event type is required.
                   </p>
                 )}
               </div>
 
               {mode === "advanced" && <div data-assistant-field-key="/content/event/theme">
-                <label className={labelClass}>
+                <div className={labelClass}>
+                  <label htmlFor={fid("theme")} className="flex items-center gap-1.5">
                   Event Theme / Tagline
-                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/theme")} />
-                </label>
-                <input
+                </div>
+                <input id={fid("theme")}
                   className={inputClass}
                   placeholder='e.g. "Velocity" or "Built for What&apos;s Next"'
                   maxLength={100}
@@ -293,12 +305,13 @@ const EventForm = ({
             {/* Row 3: Event Website */}
             {mode === "advanced" && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div data-assistant-field-key="/content/event/website">
-                <label className={labelClass}>
+                <div className={labelClass}>
+                  <label htmlFor={fid("website")} className="flex items-center gap-1.5">
                   Event Website
-                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/website")} />
-                </label>
-                <input
+                </div>
+                <input id={fid("website")}
                   type="url"
                   className={inputClass}
                   placeholder="e.g. https://www.example.com/summit2026"
@@ -318,14 +331,14 @@ const EventForm = ({
 
             {/* Event Format */}
             <div data-assistant-field-key="/content/event/format">
-              <label className={labelClass}>
+              <p id={fid("format-label")} className={labelClass}>
                 Event Format <span className="text-red-500">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/format")} />
-              </label>
+              </p>
               <p className="mb-2 text-xs text-[#566a78] normal-case">
                 Your selection adds Hybrid &amp; Virtual Production when applicable.
               </p>
-              <div className="flex flex-col gap-2">
+              <div role="radiogroup" aria-labelledby={fid("format-label")} className="flex flex-col gap-2">
                 {formatOptions.map((fmt) => (
                   <label
                     key={fmt.value}
@@ -355,15 +368,15 @@ const EventForm = ({
 
             {/* Primary Audience */}
             {mode === "advanced" && <div data-assistant-field-key="/content/event/primaryAudiences/*">
-              <label className={labelClass}>
+              <p id={fid("audience-label")} className={labelClass}>
                 Primary Audience <span className="text-red-500">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/primaryAudiences/*")} />
-              </label>
+              </p>
               <p className="mb-2 text-xs text-[#566a78] normal-case">
                 Select up to {maximumAudienceSelections} audience types.
                 {audienceSelected.length > 0 && ` ${audienceSelected.length}/${maximumAudienceSelections} selected.`}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div role="group" aria-labelledby={fid("audience-label")} className="flex flex-wrap gap-2">
                 {audienceOptions.map((opt) => {
                   const checked = audienceSelected.includes(opt);
                   const maxReached =
@@ -390,7 +403,7 @@ const EventForm = ({
                 </p>
               )}
               {showErrors && audienceSelected.length === 0 && (
-                <p className="mt-2 text-sm text-red-500 normal-case">
+                <p role="alert" className="mt-2 text-sm text-red-500 normal-case">
                   Please select at least one audience type.
                 </p>
               )}
@@ -405,12 +418,14 @@ const EventForm = ({
 
             {/* Start Date */}
             <div data-assistant-field-key="/content/event/startDate">
-              <label className={labelClass}>
-                Start Date <span className="text-red-500">*</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/startDate")} />
-              </label>
+              <div className={labelClass}>
+                  <label htmlFor="startDate" className="flex items-center gap-1.5">
+                Start Date <span className="text-red-500">*</span></label>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/startDate")} />
+                </div>
               <GlobalDateInput
                 id="startDate"
+                ariaInvalid={showErrors && !data.startDate.trim()}
                 label="Start Date"
                 hideLabel
                 showFormatInLabel={false}
@@ -431,18 +446,20 @@ const EventForm = ({
                 </p>
               )}
               {showErrors && !data.startDate.trim() && (
-                <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+                <p id={fid("startDate-error")} role="alert" className="mt-1 text-sm text-red-500 normal-case">Required.</p>
               )}
             </div>
 
             {/* End Date */}
             <div data-assistant-field-key="/content/event/endDate">
-              <label className={labelClass}>
-                End Date <span className="text-red-500">*</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/endDate")} />
-              </label>
+              <div className={labelClass}>
+                  <label htmlFor="endDate" className="flex items-center gap-1.5">
+                End Date <span className="text-red-500">*</span></label>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/endDate")} />
+                </div>
               <GlobalDateInput
                 id="endDate"
+                ariaInvalid={showErrors && !data.endDate.trim()}
                 label="End Date"
                 hideLabel
                 showFormatInLabel={false}
@@ -459,7 +476,7 @@ const EventForm = ({
                 buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#687782] hover:text-primary"
               />
               {showErrors && !data.endDate.trim() && (
-                <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+                <p id={fid("endDate-error")} role="alert" className="mt-1 text-sm text-red-500 normal-case">Required.</p>
               )}
               {/* A date before the start is discarded by the picker, which just
                   empties the field. State the rule so a date that vanishes is
@@ -473,11 +490,12 @@ const EventForm = ({
 
             {/* Total Attendance */}
             <div data-assistant-field-key="/content/event/attendeeCount">
-              <label className={labelClass}>
-                Total Attendance <span className="text-red-500">*</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/attendeeCount")} />
-              </label>
-              <input
+              <div className={labelClass}>
+                  <label htmlFor={fid("attendees")} className="flex items-center gap-1.5">
+                Total Attendance <span className="text-red-500">*</span></label>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/attendeeCount")} />
+                </div>
+              <input id={fid("attendees")} aria-required="true" aria-invalid={showErrors && !data.attendees.trim() ? true : undefined} aria-describedby={showErrors && !data.attendees.trim() ? fid("attendees-error") : undefined}
                 type="number"
                 min={1}
                 max={100000}
@@ -491,7 +509,7 @@ const EventForm = ({
                 onChange={(e) => onChange({ attendees: e.target.value })}
               />
               {showErrors && !data.attendees.trim() && (
-                <p className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+                <p id={fid("attendees-error")} role="alert" className="mt-1 text-sm text-red-500 normal-case">Required.</p>
               )}
             </div>
           </div>
@@ -504,16 +522,16 @@ const EventForm = ({
 
             {/* Tone / Brand Direction */}
             <div data-assistant-field-key="/content/event/toneDirections/*">
-              <label className={labelClass}>
+              <p id={fid("tone-label")} className={labelClass}>
                 Tone / Brand Direction
                 <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/toneDirections/*")} />
-              </label>
+              </p>
               <p className="mb-2 text-xs text-[#566a78] normal-case">
                 Select up to {maximumToneSelections} tags.
                 {toneSelected.length > 0 && ` ${toneSelected.length}/${maximumToneSelections} selected.`}
               </p>
-              <div className="space-y-3">
+              <div role="group" aria-labelledby={fid("tone-label")} className="space-y-3">
                 {toneGroups.map((group) => (
                   <div key={group.label}>
                     <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[#687782]">
@@ -552,12 +570,13 @@ const EventForm = ({
 
             {/* Sacred Constraints */}
             <div data-assistant-field-key="/content/event/sacredConstraints">
-              <label className={labelClass}>
+              <div className={labelClass}>
+                  <label htmlFor={fid("sacred")} className="flex items-center gap-1.5">
                 Sacred Constraints / Special Considerations
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/sacredConstraints")} />
-              </label>
-              <textarea
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/sacredConstraints")} />
+                </div>
+              <textarea id={fid("sacred")}
                 rows={3}
                 maxLength={500}
                 className={textareaClass}
@@ -574,12 +593,13 @@ const EventForm = ({
 
             {/* About The Organization */}
             <div data-assistant-field-key="/content/event/organizationBackground">
-              <label className={labelClass}>
+              <div className={labelClass}>
+                  <label htmlFor={fid("about")} className="flex items-center gap-1.5">
                 About The Organization
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/organizationBackground")} />
-              </label>
-              <textarea
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/organizationBackground")} />
+                </div>
+              <textarea id={fid("about")}
                 rows={3}
                 maxLength={1500}
                 className={textareaClass}
@@ -597,11 +617,12 @@ const EventForm = ({
             {/* Statement of Work */}
             <div id="statement-of-work-section" tabIndex={-1} className="scroll-mt-6" data-assistant-field-key="/content/event/statementOfWork">
               <div className="flex flex-wrap items-end justify-between gap-2">
-                <label htmlFor="statement-of-work" className={labelClass}>
+                <div className={labelClass}>
+                  <label htmlFor="statement-of-work" className="flex items-center gap-1.5">
                   Statement of Work
-                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/statementOfWork")} />
-                </label>
+                </div>
                 {onGenerateStatementOfWork && (
                   <button
                     type="button"
@@ -631,12 +652,13 @@ const EventForm = ({
 
             {/* Event Profile */}
             <div data-assistant-field-key="/content/event/eventProfile">
-              <label className={labelClass}>
+              <div className={labelClass}>
+                  <label htmlFor={fid("profile")} className="flex items-center gap-1.5">
                 Event Profile
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/eventProfile")} />
-              </label>
-              <textarea
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/eventProfile")} />
+                </div>
+              <textarea id={fid("profile")}
                 rows={3}
                 maxLength={1500}
                 className={textareaClass}
@@ -653,12 +675,13 @@ const EventForm = ({
 
             {/* RFP Timeline */}
             <div data-assistant-field-key="/content/event/rfpTimelineNotes">
-              <label className={labelClass}>
+              <div className={labelClass}>
+                  <label htmlFor={fid("timeline")} className="flex items-center gap-1.5">
                 Proposal Timeline
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
-                <InfoTooltip text={eventOverviewFieldHelper("/content/event/rfpTimelineNotes")} />
-              </label>
-              <textarea
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                  <InfoTooltip text={eventOverviewFieldHelper("/content/event/rfpTimelineNotes")} />
+                </div>
+              <textarea id={fid("timeline")}
                 rows={3}
                 maxLength={1000}
                 className={textareaClass}
