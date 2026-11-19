@@ -13,14 +13,16 @@ const expect = baseExpect.configure({ timeout: 45_000 });
 const backendOrigin = process.env.E2E_BACKEND_ORIGIN ?? "http://127.0.0.1:8011";
 const welcomeStub = `${backendOrigin}/__e2e/welcome`;
 
+// The wizard fits the window from the lg breakpoint (1024 px wide) up.
 const DESKTOP_VIEWPORTS = [
+  { width: 1024, height: 768 },
   { width: 1280, height: 720 },
   { width: 1366, height: 768 },
   { width: 1440, height: 900 },
   { width: 1680, height: 933 },
 ];
 // The sizes whose screenshots are kept.
-const SCREENSHOT_AT = new Set(["1280x720", "1680x933"]);
+const SCREENSHOT_AT = new Set(["1024x768", "1280x720", "1680x933"]);
 
 const isMobile = (testInfo: TestInfo) => testInfo.project.name.startsWith("mobile");
 
@@ -153,6 +155,21 @@ for (const viewport of DESKTOP_VIEWPORTS) {
     // Company.
     const proceed = page.getByRole("button", { name: "Continue", exact: true });
     await pageFits(page, proceed, "company");
+    // A refused submit adds its error above the fields: the page still does not scroll and the
+    // button is still in view. (The form answers once the page has hydrated.)
+    const refused = page.getByRole("alert").filter({ hasText: "Enter your company name." });
+    await expect(async () => {
+      await page.getByLabel("Company name").fill("");
+      await proceed.click();
+      await baseExpect(refused).toBeVisible({ timeout: 5_000 });
+    }).toPass();
+    await pageFits(page, proceed, "company, with an error");
+    await insideViewport(page, refused);
+    if (SCREENSHOT_AT.has(size)) await page.screenshot({ path: testInfo.outputPath(`onboarding-company-error-${size}.png`) });
+    // Typing clears the error; the rest of the step is checked without it.
+    await page.getByLabel("Company name").fill("Northwind");
+    await expect(refused).toHaveCount(0);
+    await page.getByLabel("Company name").fill("");
     // The short fields sit side by side, the left one first; the company name keeps the full width.
     const name = await top(page.getByLabel("Company name"));
     const type = await top(page.getByLabel("Organization type"));
