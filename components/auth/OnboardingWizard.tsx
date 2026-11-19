@@ -58,8 +58,9 @@ const errorFor = (result: OrgActionResult<unknown>, fallback: string) => {
   return fallback;
 };
 
-/* The wizard fits the window on a laptop or desktop screen (lg and up): AuthShell's `fit` sizes
-   the card, the `lg:` spacing here is tighter, and the Company step pairs its short fields.
+/* The wizard fits the window on a laptop or desktop screen (lg and up, and at least 520 px tall:
+   the `fit:` variant): AuthShell's `fit` sizes the card, the `lg:` spacing here is tighter, and
+   the Company step pairs its short fields.
    Should a step still be taller than the window (a short window, a long list of invitation
    results), the form scrolls inside the card and the step's buttons, which AuthShell renders
    under it as `footer`, stay in view. A submit button there names its form with `form`. */

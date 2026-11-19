@@ -8,11 +8,16 @@ import { useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes,
    the right. Shared by sign-in (and its two-factor step) and /invite/[token].
 
    `fit` (the setup wizard) sizes the card to the window on a laptop or desktop
-   screen (lg and up, where the two panels sit side by side): the page itself
-   never scrolls, the form gets the wider panel, and a form taller than the
-   window scrolls inside its panel while `footer` (the step's buttons) stays
-   in view under it. Below lg the page scrolls as usual and `footer` simply
-   follows the form. */
+   screen: the page itself never scrolls, the form gets the wider panel, and a
+   form taller than the window scrolls inside its panel while `footer` (the
+   step's buttons) stays in view under it. That applies under the `fit:` variant
+   (globals.css): a window at least 1024 px wide (lg, where the two panels sit
+   side by side) and at least 520 px tall. In a shorter window the card could
+   not hold the brand panel's text or the buttons, and below lg there is one
+   column: in both the page scrolls as usual and `footer` simply follows the
+   form. The `lg:` classes here are spacing and widths only. The two `fit:`
+   minimum heights are marked important because Tailwind emits a custom
+   variant before `sm:`, so the plain card's `sm:min-h-[640px]` would win. */
 export const AuthShell = ({
   aside,
   children,
@@ -24,14 +29,14 @@ export const AuthShell = ({
   fit?: boolean;
   footer?: ReactNode;
 }) => (
-  <div className={`relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F0F2F5] p-4 text-[#000000] sm:p-8 ${fit ? "lg:h-dvh lg:min-h-0 lg:p-5" : ""}`}>
+  <div className={`relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F0F2F5] p-4 text-[#000000] sm:p-8 ${fit ? "fit:h-dvh fit:min-h-0! lg:p-5" : ""}`}>
     <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 transform items-center justify-center">
       <div className="absolute h-[600px] w-[600px] rounded-full bg-primary/20 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
       <div className="absolute ml-40 mt-40 h-[500px] w-[500px] rounded-full bg-blue-300/30 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
       <div className="absolute -ml-40 -mt-20 h-[550px] w-[550px] rounded-full bg-cyan-200/20 blur-[100px] mix-blend-multiply sm:blur-[120px]"></div>
     </div>
 
-    <div className={`relative z-10 flex w-full max-w-[1000px] overflow-hidden rounded-[2.5rem] bg-white/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] backdrop-blur-2xl ring-1 ring-black/5 sm:min-h-[640px] ${fit ? "lg:max-h-full lg:min-h-[min(640px,100%)]" : ""}`}>
+    <div className={`relative z-10 flex w-full max-w-[1000px] overflow-hidden rounded-[2.5rem] bg-white/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] backdrop-blur-2xl ring-1 ring-black/5 sm:min-h-[640px] ${fit ? "fit:max-h-full fit:min-h-[min(640px,100%)]!" : ""}`}>
       <div className={`relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-white lg:flex ${fit ? "w-[44%]" : "w-1/2"}`}>
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
         <div className="relative z-10">
@@ -65,7 +70,7 @@ export const AuthShell = ({
             />
           </div>
           {/* The padding leaves room for the fields' focus rings inside the scrolling box. */}
-          {fit ? <div className="lg:-mx-2 lg:min-h-0 lg:overflow-y-auto lg:px-2 lg:pb-1">{children}</div> : children}
+          {fit ? <div className="lg:-mx-2 lg:min-h-0 fit:overflow-y-auto lg:px-2 lg:pb-1">{children}</div> : children}
           {footer}
         </div>
       </div>

@@ -294,6 +294,78 @@ test("a refused submit brings the error into view when the form is scrolled insi
   expect(scrollHeight, "the page itself still does not scroll").toBeLessThanOrEqual(innerHeight + 1);
 });
 
+// Fit mode needs height as well as width (the `fit:` variant in globals.css): 520 px. Under that
+// the card could not hold the brand panel's text or a step's buttons, so the page scrolls instead.
+const FIT_MIN_HEIGHT = 520;
+
+// The brand panel's three blocks (logo, text, copyright), top to bottom: the smallest gap between
+// two of them. Negative when they overlap.
+const brandPanelGap = (page: Page) =>
+  page.getByRole("heading", { name: "Let's set up your workspace." }).evaluate((heading) => {
+    const panel = heading.parentElement!.parentElement!;
+    const blocks = Array.from(panel.children)
+      .map((child) => child.getBoundingClientRect())
+      .filter((rect) => rect.height < panel.getBoundingClientRect().height);
+    let gap = Number.POSITIVE_INFINITY;
+    for (let i = 1; i < blocks.length; i += 1) gap = Math.min(gap, blocks[i].top - blocks[i - 1].bottom);
+    return { gap, cutOff: panel.scrollHeight - panel.clientHeight };
+  });
+
+test(`the shortest window that fits (1280 × ${FIT_MIN_HEIGHT}) cuts nothing off`, async ({ page }, testInfo) => {
+  test.skip(isMobile(testInfo), "The desktop sizes are checked in the desktop project.");
+  await page.setViewportSize({ width: 1280, height: FIT_MIN_HEIGHT });
+  await openWizard(page);
+  const brand = await brandPanelGap(page);
+  console.log(`[onboarding-fit] 1280x${FIT_MIN_HEIGHT} brand panel: smallest gap between its blocks ${brand.gap.toFixed(1)} px, cut off by ${brand.cutOff} px`);
+  expect(brand.gap, "the brand panel's blocks do not touch").toBeGreaterThanOrEqual(16);
+  expect(brand.cutOff, "the brand panel is not cut off").toBeLessThanOrEqual(0);
+  await pageFits(page, page.getByRole("button", { name: "Continue", exact: true }), "company, shortest fit", { innerScrollAllowed: true });
+  await saveCompany(page);
+  await pageFits(page, page.getByRole("button", { name: "Start free trial" }), "plan, shortest fit", { innerScrollAllowed: true });
+  await page.getByRole("button", { name: "Start free trial" }).click();
+  await expect(page.getByRole("heading", { name: "Invite your team" })).toBeVisible();
+  await pageFits(page, page.getByRole("button", { name: "Send invitations" }), "team, shortest fit", { innerScrollAllowed: true });
+  await insideViewport(page, page.getByRole("button", { name: "Skip for now" }));
+  // The form still has a usable height left to scroll in.
+  const field = await top(page.getByLabel("Email addresses"));
+  expect(field.height).toBeGreaterThanOrEqual(44);
+});
+
+for (const height of [400, FIT_MIN_HEIGHT - 1]) {
+  test(`a wide window too short to fit (1280 × ${height}) scrolls as a page`, async ({ page }, testInfo) => {
+    test.skip(isMobile(testInfo), "The desktop sizes are checked in the desktop project.");
+    await page.setViewportSize({ width: 1280, height });
+    await openWizard(page);
+    const scrollsAsPage = async (step: string) => {
+      const measured = await measure(page);
+      console.log(`[onboarding-fit] 1280x${height} ${step}: scrollHeight ${measured.scrollHeight} / innerHeight ${measured.innerHeight} (the page scrolls), inner scroll: ${measured.innerScroll.join("; ") || "none"}`);
+      expect(measured.scrollHeight, `${step}: the page scrolls down`).toBeGreaterThan(measured.innerHeight);
+      expect(measured.scrollWidth, `${step}: the page does not scroll sideways`).toBeLessThanOrEqual(measured.innerWidth);
+      expect(measured.innerScroll, `${step}: nothing scrolls inside the card`).toEqual([]);
+      const brand = await brandPanelGap(page);
+      expect(brand.gap, `${step}: the brand panel's blocks do not touch`).toBeGreaterThanOrEqual(16);
+      expect(brand.cutOff, `${step}: the brand panel is not cut off`).toBeLessThanOrEqual(0);
+    };
+    const reachable = async (button: Locator) => {
+      await button.scrollIntoViewIfNeeded();
+      await insideViewport(page, button);
+    };
+
+    await scrollsAsPage("company");
+    await reachable(page.getByLabel("Company name"));
+    await reachable(page.getByRole("button", { name: "Continue", exact: true }));
+    await saveCompany(page);
+    await scrollsAsPage("plan");
+    await reachable(page.getByRole("button", { name: "Start free trial" }));
+    await page.getByRole("button", { name: "Start free trial" }).click();
+    await expect(page.getByRole("heading", { name: "Invite your team" })).toBeVisible();
+    await scrollsAsPage("team");
+    await reachable(page.getByRole("button", { name: "Send invitations" }));
+    await reachable(page.getByRole("button", { name: "Skip for now" }));
+    await expectProposalWording(page.locator("body"));
+  });
+}
+
 test("on a phone the wizard scrolls as a page, in one column", async ({ page }, testInfo) => {
   test.skip(!isMobile(testInfo), "The phone size is checked in the mobile project.");
   await page.setViewportSize({ width: 375, height: 812 });
