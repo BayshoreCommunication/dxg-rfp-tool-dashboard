@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, PlusCircle, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, useId } from "react";
 import GlobalSelect from "@/components/shared/GlobalSelect";
 import type { AdditionalContact, ContactData, ProposalSettings } from "../AddNewProposal";
 import { InfoTooltip } from "./shared";
@@ -93,6 +93,8 @@ const AdditionalContactCard = ({
   open: boolean;
   onToggle: () => void;
 }) => {
+  // Per-instance ids: one card renders per additional contact.
+  const uid = useId();
   const hasData = !!(contact.fullName || contact.email);
   const up = (p: Partial<AdditionalContact>) => onChange({ ...contact, ...p });
 
@@ -130,8 +132,8 @@ const AdditionalContactCard = ({
         <div className="border-t border-[#f0f0f0] px-4 pb-4 pt-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>Full Name</label>
-              <input
+              <label htmlFor={`${uid}-full-name`} className={labelClass}>Full Name</label>
+              <input id={`${uid}-full-name`}
                 className={inputClass}
                 placeholder="e.g. Michael Torres"
                 value={contact.fullName}
@@ -139,8 +141,8 @@ const AdditionalContactCard = ({
               />
             </div>
             <div>
-              <label className={labelClass}>Title &amp; Role</label>
-              <input
+              <label htmlFor={`${uid}-title-role`} className={labelClass}>Title &amp; Role</label>
+              <input id={`${uid}-title-role`}
                 className={inputClass}
                 placeholder="e.g. AV Liaison, Events Team"
                 value={contact.titleAndRole}
@@ -148,8 +150,8 @@ const AdditionalContactCard = ({
               />
             </div>
             <div>
-              <label className={labelClass}>Email</label>
-              <input
+              <label htmlFor={`${uid}-email`} className={labelClass}>Email</label>
+              <input id={`${uid}-email`}
                 type="email"
                 className={inputClass}
                 placeholder="e.g. m.torres@company.com"
@@ -158,8 +160,8 @@ const AdditionalContactCard = ({
               />
             </div>
             <div>
-              <label className={labelClass}>Phone (optional)</label>
-              <input
+              <label htmlFor={`${uid}-phone-optional`} className={labelClass}>Phone (optional)</label>
+              <input id={`${uid}-phone-optional`}
                 type="tel"
                 className={inputClass}
                 placeholder="e.g. (555) 555-0100"
@@ -170,8 +172,8 @@ const AdditionalContactCard = ({
           </div>
 
           <div className="mt-4">
-            <label className={labelClass}>Role in Proposal Process</label>
-            <GlobalSelect
+            <label id={`${uid}-role-in-proposal-process-label`} className={labelClass}>Role in Proposal Process</label>
+            <GlobalSelect id={`${uid}-role-in-proposal-process`} aria-labelledby={`${uid}-role-in-proposal-process-label`}
               value={contact.role}
               onChange={(e) => up({ role: e.target.value })}
               className={inputClass}
@@ -313,12 +315,13 @@ const ContactInfo = ({
         {/* Field 1 — First + Last Name */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="contactFirstName" className={labelClass}>
-              First Name <span className="text-red-500">*</span>
-              <InfoTooltip text="Your legal first name as it appears on correspondence. Shown on the proposal cover page and all vendor portal communications." />
-            </label>
+            <div className={labelClass}>
+            <label htmlFor="contactFirstName" className="flex items-center gap-1.5">
+              First Name <span className="text-red-500">*</span></label>
+            <InfoTooltip text="Your legal first name as it appears on correspondence. Shown on the proposal cover page and all vendor portal communications." />
+          </div>
             <input
-              id="contactFirstName"
+              id="contactFirstName" aria-required="true" aria-invalid={showErrors && !safeData.contactFirstName.trim() ? true : undefined} aria-describedby={showErrors && !safeData.contactFirstName.trim() ? "contactFirstName-error" : undefined}
               type="text"
               value={safeData.contactFirstName}
               onChange={(e) => onChange({ contactFirstName: e.target.value })}
@@ -326,16 +329,17 @@ const ContactInfo = ({
               className={errInputCls(safeData.contactFirstName, showErrors)}
             />
             {showErrors && !safeData.contactFirstName.trim() && (
-              <p className={errorClass}>First name is required.</p>
+              <p id="contactFirstName-error" role="alert" className={errorClass}>First name is required.</p>
             )}
           </div>
           <div>
-            <label htmlFor="contactLastName" className={labelClass}>
-              Last Name <span className="text-red-500">*</span>
-              <InfoTooltip text="Your legal last name for correspondence and proposal documentation." />
-            </label>
+            <div className={labelClass}>
+            <label htmlFor="contactLastName" className="flex items-center gap-1.5">
+              Last Name <span className="text-red-500">*</span></label>
+            <InfoTooltip text="Your legal last name for correspondence and proposal documentation." />
+          </div>
             <input
-              id="contactLastName"
+              id="contactLastName" aria-required="true" aria-invalid={showErrors && !safeData.contactLastName.trim() ? true : undefined} aria-describedby={showErrors && !safeData.contactLastName.trim() ? "contactLastName-error" : undefined}
               type="text"
               value={safeData.contactLastName}
               onChange={(e) => onChange({ contactLastName: e.target.value })}
@@ -343,7 +347,7 @@ const ContactInfo = ({
               className={errInputCls(safeData.contactLastName, showErrors)}
             />
             {showErrors && !safeData.contactLastName.trim() && (
-              <p className={errorClass}>Last name is required.</p>
+              <p id="contactLastName-error" role="alert" className={errorClass}>Last name is required.</p>
             )}
           </div>
         </div>
@@ -351,12 +355,13 @@ const ContactInfo = ({
         {/* Field 2 — Job Title + Organization Display */}
         <div className={`mb-6 grid grid-cols-1 gap-4 ${mode === "advanced" ? "sm:grid-cols-2" : ""}`}>
           {mode === "advanced" && <div>
-            <label htmlFor="contactTitle" className={labelClass}>
-              Job Title <span className="text-red-500">*</span>
-              <InfoTooltip text="Your professional title as it should appear on the proposal. Appears in the Primary Contact box on the cover page alongside your organization." />
-            </label>
+            <div className={labelClass}>
+            <label htmlFor="contactTitle" className="flex items-center gap-1.5">
+              Job Title <span className="text-red-500">*</span></label>
+            <InfoTooltip text="Your professional title as it should appear on the proposal. Appears in the Primary Contact box on the cover page alongside your organization." />
+          </div>
             <input
-              id="contactTitle"
+              id="contactTitle" aria-required={mode === "advanced" ? "true" : undefined} aria-invalid={showErrors && !safeData.contactTitle.trim() ? true : undefined} aria-describedby={showErrors && !safeData.contactTitle.trim() ? "contactTitle-error" : undefined}
               type="text"
               value={safeData.contactTitle}
               onChange={(e) => onChange({ contactTitle: e.target.value })}
@@ -364,16 +369,17 @@ const ContactInfo = ({
               className={errInputCls(safeData.contactTitle, showErrors)}
             />
             {showErrors && !safeData.contactTitle.trim() && (
-              <p className={errorClass}>Job title is required.</p>
+              <p id="contactTitle-error" role="alert" className={errorClass}>Job title is required.</p>
             )}
           </div>}
           <div>
-            <label htmlFor="contactOrganization" className={labelClass}>
-              Organization (Display Name) <span className="text-red-500">*</span>
-              <InfoTooltip text="Your organization's common display name for the contact box — e.g. 'Apex Dynamics'. For the full legal name used in document headers, see below." />
-            </label>
+            <div className={labelClass}>
+            <label htmlFor="contactOrganization" className="flex items-center gap-1.5">
+              Organization (Display Name) <span className="text-red-500">*</span></label>
+            <InfoTooltip text="Your organization's common display name for the contact box — e.g. 'Apex Dynamics'. For the full legal name used in document headers, see below." />
+          </div>
             <input
-              id="contactOrganization"
+              id="contactOrganization" aria-required="true" aria-invalid={showErrors && !safeData.contactOrganization.trim() ? true : undefined} aria-describedby={showErrors && !safeData.contactOrganization.trim() ? "contactOrganization-error" : undefined}
               type="text"
               value={safeData.contactOrganization}
               onChange={(e) => onChange({ contactOrganization: e.target.value })}
@@ -381,19 +387,22 @@ const ContactInfo = ({
               className={errInputCls(safeData.contactOrganization, showErrors)}
             />
             {showErrors && !safeData.contactOrganization.trim() && (
-              <p className={errorClass}>Organization name is required.</p>
+              <p id="contactOrganization-error" role="alert" className={errorClass}>Organization name is required.</p>
             )}
           </div>
         </div>
 
         {/* Field 3 — Email */}
         <div className="mb-6">
-          <label htmlFor="contactEmail" className={labelClass}>
-            Email Address <span className="text-red-500">*</span>
+          <div className={labelClass}>
+            <label htmlFor="contactEmail" className="flex items-center gap-1.5">
+            Email Address <span className="text-red-500">*</span></label>
             <InfoTooltip text="All vendor questions, proposal notifications, and portal activity alerts will be sent here. Use your professional work email — not a personal address or unmonitored shared mailbox." />
-          </label>
+          </div>
           <input
-            id="contactEmail"
+            id="contactEmail" aria-required="true"
+            aria-invalid={showErrors && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeData.contactEmail) ? true : undefined}
+            aria-describedby={showErrors ? (!safeData.contactEmail.trim() ? "contactEmail-error" : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeData.contactEmail) ? "contactEmail-format-error" : undefined) : undefined}
             type="email"
             value={safeData.contactEmail}
             onChange={(e) => onChange({ contactEmail: e.target.value })}
@@ -405,10 +414,10 @@ const ContactInfo = ({
             }
           />
           {showErrors && !safeData.contactEmail.trim() && (
-            <p className={errorClass}>Email address is required.</p>
+            <p id="contactEmail-error" role="alert" className={errorClass}>Email address is required.</p>
           )}
           {showErrors && safeData.contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeData.contactEmail) && (
-            <p className={errorClass}>Enter a valid email address.</p>
+            <p id="contactEmail-format-error" role="alert" className={errorClass}>Enter a valid email address.</p>
           )}
           {sharedMailboxAdvisory && (
             <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
@@ -424,13 +433,14 @@ const ContactInfo = ({
         {mode === "advanced" && <>
         {/* Field 4 — Phone */}
         <div className="mb-6">
-          <label htmlFor="contactPhone" className={labelClass}>
-            Phone Number <span className="text-red-500">*</span>
+          <div className={labelClass}>
+            <label htmlFor="contactPhone" className="flex items-center gap-1.5">
+            Phone Number <span className="text-red-500">*</span></label>
             <InfoTooltip text="Best number to reach you for vendor questions, production calls, and urgent communications. Mobile numbers are preferred for event professionals who are often on-site." />
-          </label>
+          </div>
           <div className="flex gap-3">
             <input
-              id="contactPhone"
+              id="contactPhone" aria-required={mode === "advanced" ? "true" : undefined} aria-invalid={showErrors && !safeData.contactPhone.trim() ? true : undefined} aria-describedby={showErrors && !safeData.contactPhone.trim() ? "contactPhone-error" : undefined}
               type="tel"
               value={safeData.contactPhone}
               onChange={(e) => onChange({ contactPhone: e.target.value })}
@@ -438,6 +448,7 @@ const ContactInfo = ({
               className={`${errInputCls(safeData.contactPhone, showErrors)} flex-1`}
             />
             <input
+              aria-label="Phone extension"
               type="text"
               value={safeData.contactPhoneExt}
               onChange={(e) => onChange({ contactPhoneExt: e.target.value })}
@@ -446,9 +457,9 @@ const ContactInfo = ({
             />
           </div>
           {showErrors && !safeData.contactPhone.trim() && (
-            <p className={errorClass}>Phone number is required.</p>
+            <p id="contactPhone-error" role="alert" className={errorClass}>Phone number is required.</p>
           )}
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div role="group" aria-label="Phone type" className="mt-3 flex flex-wrap gap-2">
             {PHONE_TYPES.map((pt) => (
               <button
                 key={pt.value}
@@ -470,12 +481,13 @@ const ContactInfo = ({
 
         {/* Field 5 — Legal Name */}
         <div className="mb-6">
-          <label htmlFor="organizationLegalName" className={labelClass}>
-            Organization / Company Legal Name <span className="text-red-500">*</span>
+          <div className={labelClass}>
+            <label htmlFor="organizationLegalName" className="flex items-center gap-1.5">
+            Organization / Company Legal Name <span className="text-red-500">*</span></label>
             <InfoTooltip text="Full legal name of your organization as it should appear on all official documents including vendor contracts, NDAs, and the proposal header. May differ from the display name — e.g. 'Apex Dynamics Corporation' vs 'Apex Dynamics'." />
-          </label>
+          </div>
           <input
-            id="organizationLegalName"
+            id="organizationLegalName" aria-required={mode === "advanced" ? "true" : undefined} aria-invalid={showErrors && !safeData.organizationLegalName.trim() ? true : undefined} aria-describedby={showErrors && !safeData.organizationLegalName.trim() ? "organizationLegalName-error" : undefined}
             type="text"
             value={safeData.organizationLegalName}
             onChange={(e) => onChange({ organizationLegalName: e.target.value })}
@@ -483,7 +495,7 @@ const ContactInfo = ({
             className={errInputCls(safeData.organizationLegalName, showErrors)}
           />
           {showErrors && !safeData.organizationLegalName.trim() && (
-            <p className={errorClass}>Legal organization name is required.</p>
+            <p id="organizationLegalName-error" role="alert" className={errorClass}>Legal organization name is required.</p>
           )}
           {safeData.organizationLegalName && (
             <div className="mt-2 rounded-lg border border-[#eeeeee] bg-[#f9f9f9] px-3 py-2">
@@ -542,11 +554,11 @@ const ContactInfo = ({
         <Group label="Contact Preferences" />
 
         <div className="mb-6">
-          <label className={labelClass}>
+          <p id="contact-preferred-contact-method-label" className={labelClass}>
             Preferred Contact Method
             <InfoTooltip text="How would you prefer the RFPilot team to reach you for questions or updates?" />
-          </label>
-          <div className="flex flex-wrap gap-3">
+          </p>
+          <div role="group" aria-labelledby="contact-preferred-contact-method-label" className="flex flex-wrap gap-3">
             {CONTACT_METHODS.map((opt) => (
               <button
                 key={opt}
@@ -567,11 +579,11 @@ const ContactInfo = ({
         </div>
 
         <div className="mb-6">
-          <label className={labelClass}>
+          <p id="contact-best-time-to-reach-you-label" className={labelClass}>
             Best Time to Reach You
             <InfoTooltip text="Helps us schedule calls at a time that works best for you." />
-          </label>
-          <div className="flex flex-wrap gap-3">
+          </p>
+          <div role="group" aria-labelledby="contact-best-time-to-reach-you-label" className="flex flex-wrap gap-3">
             {REACH_TIMES.map((opt) => (
               <button
                 key={opt}
@@ -596,10 +608,11 @@ const ContactInfo = ({
         <Group label="Additional Notes" />
 
         <div className="mb-6">
-          <label htmlFor="anythingElse" className={labelClass}>
-            Anything else to share?
+          <div className={labelClass}>
+            <label htmlFor="anythingElse" className="flex items-center gap-1.5">
+            Anything else to share?</label>
             <InfoTooltip text="Any additional context, special requirements, or notes the production team should know before building your proposal." />
-          </label>
+          </div>
           <textarea
             id="anythingElse"
             rows={5}
