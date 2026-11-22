@@ -115,4 +115,34 @@ describe("ProposalExperienceBar", () => {
       .not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
   });
+
+  test("says how many sections are not applicable instead of counting them", () => {
+    const { rerender } = render(
+      <ProposalExperienceBar mode="advanced" onModeChange={jest.fn()} completedSteps={3} totalSteps={8}
+        notApplicableCount={1} issues={[]} onIssueClick={jest.fn()} compact showModeSelector={false} />,
+    );
+    expect(screen.getByText(/3 of 8 sections complete · 1 not applicable/)).toBeInTheDocument();
+    rerender(
+      <ProposalExperienceBar mode="advanced" onModeChange={jest.fn()} completedSteps={3} totalSteps={9}
+        issues={[]} onIssueClick={jest.fn()} compact showModeSelector={false} />,
+    );
+    expect(screen.getByText(/3 of 9 sections complete/)).not.toHaveTextContent("not applicable");
+  });
+
+  test("shows the autosave state in the header and offers Retry after a failure", async () => {
+    const user = userEvent.setup();
+    const onRetrySave = jest.fn();
+    const base = { mode: "advanced" as const, onModeChange: jest.fn(), completedSteps: 1, totalSteps: 9, issues: [], onIssueClick: jest.fn(), compact: true, showModeSelector: false };
+    const { rerender } = render(<ProposalExperienceBar {...base} saveState="saved" onRetrySave={onRetrySave} />);
+    expect(screen.getByText("All changes saved")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry save" })).not.toBeInTheDocument();
+
+    rerender(<ProposalExperienceBar {...base} saveState="error" onRetrySave={onRetrySave} />);
+    expect(screen.getByText(/Save failed/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry save" }));
+    expect(onRetrySave).toHaveBeenCalledTimes(1);
+
+    rerender(<ProposalExperienceBar {...base} />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
 });

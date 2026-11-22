@@ -35,20 +35,20 @@ import { uploadProposalFiles } from "@/lib/proposals/uploadProposalFiles";
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
-const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
-const subPanelClass = "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
-const errorClass = "mt-1 text-sm text-red-500 normal-case";
+  "w-full rounded-lg border border-control bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20";
+const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-muted";
+const subPanelClass = "mt-3 rounded-xl border border-line bg-surface-muted p-4";
+const errorClass = "mt-1 text-sm text-danger-strong normal-case";
 
 /* ─── Yes/No ─── */
 const yesNoCls = (opt: "YES" | "NO", val: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (val !== opt)
-    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
-  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
+    return `${base} border-line bg-surface text-muted hover:border-control`;
+  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-success-strong`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
 
@@ -73,7 +73,7 @@ const YesNo = ({
 );
 
 const Group = ({ label }: { label: string }) => (
-  <div className="mb-5 mt-8 border-t border-[#f0f0f0] pt-6 first:mt-0 first:border-0 first:pt-0">
+  <div className="mb-5 mt-8 border-t border-line pt-6 first:mt-0 first:border-0 first:pt-0">
     <p className={groupLabelClass}>{label}</p>
   </div>
 );
@@ -278,10 +278,10 @@ export const UploadBox = ({
         }}
         className={`flex min-h-[190px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-7 text-center transition-all ${
           isDragging
-            ? "scale-[1.01] border-[#1DBFD3] bg-cyan-50 shadow-sm"
+            ? "scale-[1.01] border-action bg-cyan-50 shadow-sm"
             : atMax
-              ? "border-slate-200 bg-slate-50"
-              : "border-sky-300 bg-sky-50/30 hover:border-[#1DBFD3] hover:bg-cyan-50/60"
+              ? "border-line bg-surface-muted"
+              : "border-sky-300 bg-sky-50/30 hover:border-action hover:bg-cyan-50/60"
         }`}
       >
         <input
@@ -293,10 +293,10 @@ export const UploadBox = ({
           onChange={handleChange}
           disabled={busy || atMax}
         />
-        <span className={`mb-3 grid h-12 w-12 place-items-center rounded-xl ${isDragging ? "bg-[#1DBFD3] text-white" : "bg-white text-[#109aaf] shadow-sm ring-1 ring-sky-100"}`}>
+        <span className={`mb-3 grid h-12 w-12 place-items-center rounded-xl ${isDragging ? "bg-action text-on-action" : "bg-surface text-action shadow-sm ring-1 ring-sky-100"}`}>
           {busy ? <Loader2 size={24} className="animate-spin" /> : <CloudUpload size={25} />}
         </span>
-        <p className="text-sm font-bold text-[#222628]">
+        <p className="text-sm font-bold text-heading">
           {isDragging
             ? "Release files to upload"
             : atMax
@@ -305,8 +305,8 @@ export const UploadBox = ({
                 ? "Uploading your files…"
                 : "Drop files here or click to browse"}
         </p>
-        <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500">{hint}</p>
-        <p className="mt-1 text-[11px] font-medium text-slate-400">
+        <p className="mt-1 max-w-xl text-xs leading-5 text-muted">{hint}</p>
+        <p className="mt-1 text-[11px] font-medium text-muted">
           Maximum {maxSizeMb} MB per file{maxFiles ? ` · ${maxFiles} ${maxFiles === 1 ? "file" : "files"} total` : ""}
         </p>
         {!atMax && (
@@ -315,7 +315,7 @@ export const UploadBox = ({
             aria-describedby={labelledBy}
             onClick={() => ref.current?.click()}
             disabled={busy}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#1DBFD3] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#087f90] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/30 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-action px-4 py-2 text-xs font-bold text-on-action shadow-sm transition-colors hover:bg-action focus:outline-none focus:ring-2 focus:ring-focus/30 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
           >
             {busy ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}
             {busy ? "Uploading…" : "Choose files"}
@@ -325,12 +325,12 @@ export const UploadBox = ({
 
       {busy && batchCount > 0 && (
         <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50/70 px-3 py-2.5" aria-live="polite">
-          <div className="mb-2 flex items-center justify-between text-xs font-semibold text-slate-600">
+          <div className="mb-2 flex items-center justify-between text-xs font-semibold text-body">
             <span>Uploading {finishedCount + 1} of {batchCount}</span>
             <span>{progress}% complete</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-sky-100">
-            <div className="h-full rounded-full bg-[#1DBFD3] transition-all" style={{ width: `${progress}%` }} />
+            <div className="h-full rounded-full bg-action transition-all" style={{ width: `${progress}%` }} />
           </div>
         </div>
       )}
@@ -345,23 +345,23 @@ export const UploadBox = ({
                   ? "border-rose-200 bg-rose-50/60"
                   : item.status === "success"
                     ? "border-emerald-200 bg-emerald-50/50"
-                    : "border-sky-100 bg-white"
+                    : "border-sky-100 bg-surface"
               }`}
             >
-              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-slate-500 shadow-sm ring-1 ring-slate-100">
+              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface text-muted shadow-sm ring-1 ring-slate-100">
                 <FileIcon size={17} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-700">{item.file.name}</p>
+                <p className="truncate text-sm font-semibold text-body">{item.file.name}</p>
                 <div className="mt-0.5 flex items-center gap-1.5 text-xs">
-                  {item.status === "uploading" && <><Loader2 size={13} className="animate-spin text-[#109aaf]" /><span className="text-[#087f90]">Uploading · {formatFileSize(item.file.size)}</span></>}
-                  {item.status === "queued" && <span className="text-slate-500">Waiting to upload · {formatFileSize(item.file.size)}</span>}
-                  {item.status === "success" && <><CheckCircle2 size={13} className="text-emerald-600" /><span className="font-medium text-emerald-700">Uploaded successfully · {formatFileSize(item.file.size)}</span></>}
+                  {item.status === "uploading" && <><Loader2 size={13} className="animate-spin text-action" /><span className="text-action">Uploading · {formatFileSize(item.file.size)}</span></>}
+                  {item.status === "queued" && <span className="text-muted">Waiting to upload · {formatFileSize(item.file.size)}</span>}
+                  {item.status === "success" && <><CheckCircle2 size={13} className="text-success-strong" /><span className="font-medium text-success-strong">Uploaded successfully · {formatFileSize(item.file.size)}</span></>}
                   {item.status === "error" && <><AlertCircle size={13} className="shrink-0 text-rose-600" /><span className="text-rose-700">{item.error}</span></>}
                 </div>
               </div>
               {item.status === "error" && item.retryable && (
-                <button type="button" onClick={() => void uploadOne(item)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-[#087f90] hover:bg-white" aria-label={`Retry ${item.file.name}`}>
+                <button type="button" onClick={() => void uploadOne(item)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-action hover:bg-surface" aria-label={`Retry ${item.file.name}`}>
                   <RotateCcw size={13} /> Retry
                 </button>
               )}
@@ -369,7 +369,7 @@ export const UploadBox = ({
                 <button
                   type="button"
                   onClick={() => item.remoteUrl ? removeUploaded(item.remoteUrl) : setPending((current) => current.filter((entry) => entry.id !== item.id))}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-rose-600"
+                  className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-rose-600"
                   aria-label={`Remove ${item.file.name}`}
                 >
                   <Trash2 size={15} />
@@ -378,13 +378,13 @@ export const UploadBox = ({
             </div>
           ))}
           {persistedFiles.map((file) => (
-            <div key={file} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-50 text-slate-500"><FileIcon size={17} /></span>
+            <div key={file} className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface-muted text-muted"><FileIcon size={17} /></span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-700">{getUploadedFileName(file)}</p>
-                <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-emerald-700"><CheckCircle2 size={13} /> Uploaded</p>
+                <p className="truncate text-sm font-semibold text-body">{getUploadedFileName(file)}</p>
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-success-strong"><CheckCircle2 size={13} /> Uploaded</p>
               </div>
-              <button type="button" onClick={() => removeUploaded(file)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${getUploadedFileName(file)}`}>
+              <button type="button" onClick={() => removeUploaded(file)} className="rounded-lg p-1.5 text-muted hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${getUploadedFileName(file)}`}>
                 <Trash2 size={15} />
               </button>
             </div>
@@ -468,23 +468,23 @@ const CoVendorCard = ({
   const statusLabel = statuses.find((status) => status.value === value.status)?.label;
 
   return (
-    <div className={`overflow-hidden rounded-xl border bg-white transition-shadow ${open ? "border-[#1DBFD3]/40 shadow-sm" : "border-[#e4e4e4] hover:shadow-sm"}`}>
+    <div className={`overflow-hidden rounded-xl border bg-surface transition-shadow ${open ? "border-action/40 shadow-sm" : "border-line hover:shadow-sm"}`}>
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="group flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
+        className="group flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-muted"
       >
         <div className="flex items-center gap-3">
           <span
             aria-hidden="true"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200/80 bg-slate-50 text-slate-500 transition-colors group-hover:border-[#1DBFD3]/35 group-hover:bg-[#1DBFD3]/5 group-hover:text-[#109aaf]"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200/80 bg-surface-muted text-muted transition-colors group-hover:border-action/35 group-hover:bg-action/5 group-hover:text-action"
           >
             {icon}
           </span>
           <div>
-            <span className="text-sm font-bold text-[#222628]">{title}</span>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <span className="text-sm font-bold text-heading">{title}</span>
+            <p className="mt-0.5 text-xs text-muted">
               {hasData
                 ? [value.companyName, value.contactName].filter(Boolean).join(" · ") || "Coordination details started"
                 : "Add company, contact, and coordination status"}
@@ -493,38 +493,38 @@ const CoVendorCard = ({
         </div>
         <div className="flex items-center gap-2">
           {statusLabel && (
-            <span className="hidden max-w-[210px] truncate rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 sm:inline-block">
+            <span className="hidden max-w-[210px] truncate rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-success-strong sm:inline-block">
               {statusLabel}
             </span>
           )}
           {!statusLabel && hasData && (
-            <span className="hidden rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 sm:inline-block">
+            <span className="hidden rounded-full border border-warning/40 bg-warning-soft px-2.5 py-1 text-[11px] font-semibold text-warning-strong sm:inline-block">
               Status needed
             </span>
           )}
           {open ? (
-            <ChevronUp size={16} className="text-slate-400" />
+            <ChevronUp size={16} className="text-muted" />
           ) : (
-            <ChevronDown size={16} className="text-slate-400" />
+            <ChevronDown size={16} className="text-muted" />
           )}
         </div>
       </button>
 
       {open && (
-        <div className="border-t border-[#f0f0f0] px-4 pb-4 pt-4">
+        <div className="border-t border-line px-4 pb-4 pt-4">
           {topBanner}
           {advisory && (
-            <div className="mb-4 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <div className="mb-4 flex gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2">
               <span className="shrink-0 text-amber-500">⚠</span>
-              <p className="text-xs text-amber-700">{advisory}</p>
+              <p className="text-xs text-warning-strong">{advisory}</p>
             </div>
           )}
-          <div className="mb-4 flex flex-col gap-3 rounded-lg bg-slate-50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs leading-5 text-slate-600">{helpText}</p>
+          <div className="mb-4 flex flex-col gap-3 rounded-lg bg-surface-muted px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-body">{helpText}</p>
             <div className="shrink-0">
-              <p className="mb-1 text-[11px] font-semibold text-slate-500">{completedDetails} of 3 key details</p>
+              <p className="mb-1 text-[11px] font-semibold text-muted">{completedDetails} of 3 key details</p>
               <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
-                <div className="h-full rounded-full bg-[#1DBFD3] transition-all" style={{ width: `${(completedDetails / 3) * 100}%` }} />
+                <div className="h-full rounded-full bg-action transition-all" style={{ width: `${(completedDetails / 3) * 100}%` }} />
               </div>
             </div>
           </div>
@@ -597,11 +597,11 @@ const CoVendorCard = ({
           </div>
 
           {/* PDF row preview */}
-          <div className="mt-4 rounded-lg border border-[#eeeeee] bg-[#f9f9f9] px-3 py-2">
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
+          <div className="mt-4 rounded-lg border border-line bg-surface-muted px-3 py-2">
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">
               PDF Section 7 Preview
             </p>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-body">
               <span className="font-semibold">{title}</span>
               {" · "}
               {value.companyName || "—"}
@@ -621,8 +621,8 @@ const CoVendorCard = ({
 /* ─── NDA type card style ─── */
 const ndaTypeCls = (opt: string, selected: string): string =>
   selected === opt
-    ? "flex items-start gap-3 rounded-lg border border-[#1DBFD3] bg-[#1DBFD3]/5 px-4 py-3 cursor-pointer"
-    : "flex items-start gap-3 rounded-lg border border-[#e4e4e4] bg-white px-4 py-3 cursor-pointer hover:border-slate-300";
+    ? "flex items-start gap-3 rounded-lg border border-action bg-action/5 px-4 py-3 cursor-pointer"
+    : "flex items-start gap-3 rounded-lg border border-line bg-surface px-4 py-3 cursor-pointer hover:border-control";
 
 /* ─── Props ─── */
 interface Props {
@@ -818,13 +818,13 @@ const UploadsReferenceMaterials = ({
 
   return (
     <section
-      className="flex min-h-screen flex-col rounded-md border border-[#e4e4e4] bg-white"
+      className="flex min-h-screen flex-col rounded-md border border-line bg-surface"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="border-b border-[#e4e4e4] px-8 py-6">
-        <h2 className="text-[22px] font-bold text-[#222628]">Uploads &amp; Co-Vendors</h2>
-        <p className="mt-1 text-sm text-[#969798]">
+      <div className="border-b border-line px-8 py-6">
+        <h2 className="text-[22px] font-bold text-heading">Uploads &amp; Co-Vendors</h2>
+        <p className="mt-1 text-sm text-muted">
           Reference files, brand assets, co-vendor coordination, and NDA settings.
         </p>
       </div>
@@ -844,9 +844,9 @@ const UploadsReferenceMaterials = ({
           <InfoTooltip text="Upload your event brand guide or style guide. Include logo files, color values (hex/RGB/Pantone), typography specs, and usage rules. This is the single most important creative reference for AV vendors producing content." />
           </div>
           {brandGuideAdvisory && (
-            <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <div className="mb-3 flex gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2">
               <span className="shrink-0 text-amber-500">⚠</span>
-              <p className="text-xs text-amber-700">{brandGuideAdvisory}</p>
+              <p className="text-xs text-warning-strong">{brandGuideAdvisory}</p>
             </div>
           )}
           <UploadBox
@@ -858,7 +858,7 @@ const UploadsReferenceMaterials = ({
             maxFiles={1}
           />
           <div className="mt-3">
-            <label htmlFor="uploads-brand-guide-url-alternative-to-upload" className="mb-1 block text-xs font-bold uppercase tracking-widest text-[#969798]">
+            <label htmlFor="uploads-brand-guide-url-alternative-to-upload" className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted">
               Brand Guide URL (alternative to upload)
             </label>
             <input id="uploads-brand-guide-url-alternative-to-upload"
@@ -905,7 +905,7 @@ const UploadsReferenceMaterials = ({
           />
           {/* Reference URLs */}
           <div className="mt-3">
-            <p id="uploads-reference-urls-label" className="mb-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
+            <p id="uploads-reference-urls-label" className="mb-2 text-xs font-bold uppercase tracking-widest text-muted">
               Reference URLs (Vimeo, YouTube, Behance, etc.)
             </p>
             {safeData.referenceUrls.map((u, i) => (
@@ -920,7 +920,7 @@ const UploadsReferenceMaterials = ({
                 />
                 <input
                   aria-label={`Label for reference URL ${i + 1}`}
-                  className="w-44 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
+                  className="w-44 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20"
                   placeholder="Label (optional)"
                   value={u.label}
                   onChange={(e) => updateRefUrl(i, { label: e.target.value })}
@@ -929,7 +929,7 @@ const UploadsReferenceMaterials = ({
                   type="button"
                   aria-label={`Remove reference URL ${i + 1}`}
                   onClick={() => removeRefUrl(i)}
-                  className="flex items-center text-slate-400 hover:text-red-400"
+                  className="flex items-center text-muted hover:text-red-400"
                 >
                   <X size={16} />
                 </button>
@@ -939,7 +939,7 @@ const UploadsReferenceMaterials = ({
               <button
                 type="button"
                 onClick={addRefUrl}
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#1DBFD3] hover:underline"
+                className="flex items-center gap-1.5 text-xs font-semibold text-action hover:underline"
               >
                 <PlusCircle size={14} /> Add reference URL
               </button>
@@ -972,9 +972,9 @@ const UploadsReferenceMaterials = ({
           <InfoTooltip text="Upload venue floor plans, room diagrams, rigging plots, or electrical schematics. AV vendors need these to spec power layouts, rigging points, and equipment placement accurately. Most venues provide these upon request." />
           </div>
           {venuDocsAdvisory && (
-            <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <div className="mb-3 flex gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2">
               <span className="shrink-0 text-amber-500">⚠</span>
-              <p className="text-xs text-amber-700">{venuDocsAdvisory}</p>
+              <p className="text-xs text-warning-strong">{venuDocsAdvisory}</p>
             </div>
           )}
           <UploadBox
@@ -1009,19 +1009,19 @@ const UploadsReferenceMaterials = ({
         ══════════════════════════════════════════ */}
         <Group label="Co-Vendor Coordination" />
 
-        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-line bg-surface-muted px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-bold text-slate-800">Coordinate every production partner in one place</p>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+            <p className="text-sm font-bold text-heading">Coordinate every production partner in one place</p>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted">
               These details populate Section 7 of the proposal. Add only the partners involved in this event; vendors marked Not Applicable are left out of the PDF.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <span className="rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#087f90]">
+            <span className="rounded-full border border-sky-200 bg-surface px-3 py-1.5 text-xs font-semibold text-action">
               {configuredCoVendors} of {coVendorEntries.length} statuses set
             </span>
             {coVendorsNeedingStatus > 0 && (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
+              <span className="rounded-full border border-warning/40 bg-warning-soft px-3 py-1.5 text-xs font-semibold text-warning-strong">
                 {coVendorsNeedingStatus} need {coVendorsNeedingStatus === 1 ? "a status" : "statuses"}
               </span>
             )}
@@ -1030,10 +1030,10 @@ const UploadsReferenceMaterials = ({
 
         {/* Pre-fill banner for In-House AV */}
         {prefillAvailable && (
-          <div className="mb-4 flex items-start gap-3 rounded-xl border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-4 py-3">
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-action/30 bg-action/5 px-4 py-3">
             <span
               aria-hidden="true"
-              className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#1DBFD3]/25 bg-white text-[#109aaf] shadow-sm"
+              className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-action/25 bg-surface text-action shadow-sm"
             >
               <Building2 size={16} strokeWidth={1.9} />
             </span>
@@ -1041,7 +1041,7 @@ const UploadsReferenceMaterials = ({
               <p className="text-sm font-bold text-brand-dark">
                 Venue AV contact available from Venue &amp; Technical
               </p>
-              <p className="mt-0.5 text-xs text-[#0069a0]">
+              <p className="mt-0.5 text-xs text-action">
                 {inHouseAvCompanyName && (
                   <span className="font-semibold">{inHouseAvCompanyName}</span>
                 )}
@@ -1052,7 +1052,7 @@ const UploadsReferenceMaterials = ({
             <button
               type="button"
               onClick={applyPrefill}
-              className="shrink-0 rounded-lg border border-[#1DBFD3]/30 bg-white px-3 py-1.5 text-xs font-bold text-brand-dark hover:bg-[#1DBFD3]/5"
+              className="shrink-0 rounded-lg border border-action/30 bg-surface px-3 py-1.5 text-xs font-bold text-brand-dark hover:bg-action/5"
             >
               Apply ✓
             </button>
@@ -1135,29 +1135,29 @@ const UploadsReferenceMaterials = ({
         </div>
 
         {/* Section 7 PDF preview table */}
-        <div className="mt-5 overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
+        <div className="mt-5 overflow-hidden rounded-xl border border-line bg-surface">
           <button
             type="button"
             onClick={() => setPdfPreviewOpen(!pdfPreviewOpen)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
+            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-muted"
           >
-            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
-              <FileText aria-hidden="true" size={15} strokeWidth={1.9} className="shrink-0 text-slate-400" />
+            <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted">
+              <FileText aria-hidden="true" size={15} strokeWidth={1.9} className="shrink-0 text-muted" />
               <span>Section 7 PDF Preview — Co-Vendor Table</span>
             </span>
             {pdfPreviewOpen ? (
-              <ChevronUp size={14} className="text-slate-400" />
+              <ChevronUp size={14} className="text-muted" />
             ) : (
-              <ChevronDown size={14} className="text-slate-400" />
+              <ChevronDown size={14} className="text-muted" />
             )}
           </button>
           {pdfPreviewOpen && (
-            <div className="border-t border-[#f0f0f0] overflow-x-auto px-4 pb-4 pt-3">
+            <div className="border-t border-line overflow-x-auto px-4 pb-4 pt-3">
               <table className="w-full min-w-[560px] text-xs">
                 <thead>
-                  <tr className="border-b border-[#f0f0f0]">
+                  <tr className="border-b border-line">
                     {["Category", "Company", "Contact", "Coordination Scope"].map((h) => (
-                      <th key={h} className="pb-2 text-left font-bold text-slate-500 pr-3">
+                      <th key={h} className="pb-2 text-left font-bold text-muted pr-3">
                         {h}
                       </th>
                     ))}
@@ -1166,20 +1166,20 @@ const UploadsReferenceMaterials = ({
                 <tbody>
                   {pdfRows.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-3 text-center text-slate-400">
+                      <td colSpan={4} className="py-3 text-center text-muted">
                         No co-vendors specified — vendor to confirm with client.
                       </td>
                     </tr>
                   ) : (
                     pdfRows.map((r, i) => (
-                      <tr key={i} className="border-b border-[#f0f4f8] last:border-0">
-                        <td className="py-2 pr-3 font-semibold text-[#222628]">{r.category}</td>
-                        <td className="py-2 pr-3 text-slate-600">{r.entry.companyName || "TBD"}</td>
-                        <td className="py-2 pr-3 text-slate-600">
+                      <tr key={i} className="border-b border-line last:border-0">
+                        <td className="py-2 pr-3 font-semibold text-heading">{r.category}</td>
+                        <td className="py-2 pr-3 text-body">{r.entry.companyName || "TBD"}</td>
+                        <td className="py-2 pr-3 text-body">
                           {r.entry.contactName || "TBD"}
                           {r.entry.contactEmail ? ` · ${r.entry.contactEmail}` : ""}
                         </td>
-                        <td className="py-2 text-slate-400">{r.scope}</td>
+                        <td className="py-2 text-muted">{r.scope}</td>
                       </tr>
                     ))
                   )}
@@ -1197,7 +1197,7 @@ const UploadsReferenceMaterials = ({
         <div className="mb-6">
           <div className={labelClass}>
           <span id="uploads-nda-required-before-sharing-pr-label" className="flex items-center gap-[inherit]">
-          NDA Required Before Sharing Proposal? <span className="text-red-500">*</span></span>
+          NDA Required Before Sharing Proposal? <span className="text-danger-strong">*</span></span>
           <InfoTooltip text="If Yes, vendors must execute a Non-Disclosure Agreement through the RFPilot portal before accessing the full proposal document and attachments. Required when the proposal contains proprietary event concepts, confidential attendee data, or brand materials not yet publicly released." />
           </div>
           <YesNo
@@ -1218,7 +1218,7 @@ const UploadsReferenceMaterials = ({
           {safeData.ndaRequired === "YES" && (
             <div className={subPanelClass}>
               {/* Vendor experience flow */}
-              <div className="mb-5 rounded-lg border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-4 py-3">
+              <div className="mb-5 rounded-lg border border-action/30 bg-action/5 px-4 py-3">
                 <p className="mb-2 text-xs font-bold uppercase tracking-widest text-brand-dark">
                   Vendor Experience
                 </p>
@@ -1231,8 +1231,8 @@ const UploadsReferenceMaterials = ({
               </div>
 
               {/* NDA Type */}
-              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#969798]">
-                NDA Type <span className="text-red-500">*</span>
+              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-muted">
+                NDA Type <span className="text-danger-strong">*</span>
               </p>
               <div className="mb-4 space-y-2">
                 {[
@@ -1265,8 +1265,8 @@ const UploadsReferenceMaterials = ({
                       <RadioIndicator checked={safeData.ndaType === opt.value} />
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-[#222628]">{opt.label}</p>
-                      <p className="text-xs text-slate-500">{opt.desc}</p>
+                      <p className="text-sm font-semibold text-heading">{opt.label}</p>
+                      <p className="text-xs text-muted">{opt.desc}</p>
                     </div>
                   </label>
                 ))}
@@ -1276,10 +1276,10 @@ const UploadsReferenceMaterials = ({
               )}
 
               {/* NDA Document Upload */}
-              <p id="uploads-nda-document-label" className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-[#969798]">
+              <p id="uploads-nda-document-label" className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-muted">
                 NDA Document Upload
                 {safeData.ndaType !== "custom" && (
-                  <span className="ml-2 font-normal normal-case text-slate-400">
+                  <span className="ml-2 font-normal normal-case text-muted">
                     (Optional — leave blank to use RFPilot standard NDA)
                   </span>
                 )}
@@ -1301,11 +1301,11 @@ const UploadsReferenceMaterials = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between border-t border-[#e4e4e4] px-8 py-5">
+      <div className="flex items-center justify-between border-t border-line px-8 py-5">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           Investment &amp; Evaluation

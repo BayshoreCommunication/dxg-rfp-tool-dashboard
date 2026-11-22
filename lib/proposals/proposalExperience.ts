@@ -165,28 +165,77 @@ export const proposalStepOrder = (
   );
 };
 
+/** Hybrid & Virtual Production only applies when part of the audience is remote. */
+export const HYBRID_VIRTUAL_STEP_ID = 4 as const;
+
+export type ProposalSection = {
+  id: number;
+  /** False for a section that is shown but needs nothing from the planner. */
+  applicable: boolean;
+};
+
 /**
- * Resolves old editor deep links against the currently visible workflow. A
- * retired-section link advances to the next visible section rather than
- * leaving the editor on a hidden page.
+ * Every section the planner can open, in order. Unlike `proposalStepOrder`, which lists only the
+ * sections that need answers (and drives Continue/Back and the completion count), this keeps
+ * Hybrid & Virtual in the list for in-person events, marked not applicable, so Advanced mode
+ * always shows the same nine sections. The retired recording section is never listed.
+ */
+export const proposalSections = (
+  mode: ProposalExperienceMode,
+  eventFormat: string,
+): ProposalSection[] => {
+  const source = mode === "basic" ? BASIC_STEP_IDS : ADVANCED_STEP_IDS;
+  return source
+    .filter(
+      (step) =>
+        !(
+          step === STANDALONE_VIDEO_RECORDING_STEP_ID &&
+          !STANDALONE_VIDEO_RECORDING_STEP_ENABLED
+        ),
+    )
+    .map((id) => ({
+      id,
+      applicable: !(id === HYBRID_VIRTUAL_STEP_ID && eventFormat === "In-Person"),
+    }));
+};
+
+/**
+ * The next (direction 1) or previous (-1) section that needs answers, starting from any section
+ * including one that is not applicable. Stays put at either end.
+ */
+export const adjacentApplicableStep = (
+  mode: ProposalExperienceMode,
+  eventFormat: string,
+  current: number,
+  direction: 1 | -1,
+): number => {
+  const sections = proposalSections(mode, eventFormat);
+  const index = sections.findIndex((section) => section.id === current);
+  if (index === -1) return current;
+  for (let i = index + direction; i >= 0 && i < sections.length; i += direction) {
+    if (sections[i].applicable) return sections[i].id;
+  }
+  return current;
+};
+
+/**
+ * Resolves old editor deep links against the sections the planner can open. A retired-section
+ * link advances to the next visible section rather than leaving the editor on a hidden page. A
+ * link to Hybrid & Virtual on an in-person event opens its "not applicable" page.
  */
 export const resolveProposalStep = (
   requestedStep: number,
   mode: ProposalExperienceMode,
   eventFormat: string,
 ): number => {
-  const visibleSteps = proposalStepOrder(mode, eventFormat);
+  const sections = proposalSections(mode, eventFormat).map((section) => section.id);
   if (
     requestedStep === STANDALONE_VIDEO_RECORDING_STEP_ID &&
     !STANDALONE_VIDEO_RECORDING_STEP_ENABLED
   ) {
-    return (
-      visibleSteps.find((step) => step > requestedStep) ??
-      visibleSteps[0] ??
-      1
-    );
+    return sections.find((step) => step > requestedStep) ?? sections[0] ?? 1;
   }
-  return visibleSteps.includes(requestedStep) ? requestedStep : (visibleSteps[0] ?? 1);
+  return sections.includes(requestedStep) ? requestedStep : (sections[0] ?? 1);
 };
 
 const parseDate = (raw: string | undefined): number | null => {

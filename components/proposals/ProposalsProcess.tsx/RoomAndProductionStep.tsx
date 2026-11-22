@@ -384,22 +384,22 @@ export const parseScheduleWorkbook = async (
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
+  "w-full rounded-lg border border-control bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-muted";
 const subPanelClass =
-  "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
+  "mt-3 rounded-xl border border-line bg-surface-muted p-4";
 const subPanelHeader =
-  "mb-3 text-xs font-bold uppercase tracking-widest text-[#969798]";
+  "mb-3 text-xs font-bold uppercase tracking-widest text-muted";
 
 // ─── YES/NO button helper (Tailwind-safe) ─────────────────────────────────────
 const yesNoCls = (opt: "Yes" | "No", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
-  if (value !== opt) return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
-  if (opt === "Yes") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
+  if (value !== opt) return `${base} border-line bg-surface text-muted hover:border-control`;
+  if (opt === "Yes") return `${base} border-emerald-400 bg-emerald-50 text-success-strong`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
 
@@ -579,7 +579,7 @@ export const defaultRoom = (): RoomByRoomData => ({
 const Group = ({ label }: { label: string }) => (
   <div className="mb-5 mt-7 first:mt-0">
     <p className={groupLabelClass}>{label}</p>
-    <div className="h-px bg-[#f0f0f0]" />
+    <div className="h-px bg-line" />
   </div>
 );
 
@@ -721,7 +721,7 @@ const RoomForm = ({
 }) => {
   const uid = `room-${roomIndex}`;
   const errCls = (v: string) =>
-    showErrors && !v.trim() ? "border-red-400 focus:border-red-400" : "";
+    showErrors && !v.trim() ? "border-danger-strong focus:border-danger-strong" : "";
 
   const crewQty: Record<string, string> = data.showCrewQty ?? {};
   const lighting = data.lightingRequirements ?? [];
@@ -808,7 +808,7 @@ const RoomForm = ({
       <div>
         <div className={labelClass}>
         <label htmlFor={`${uid}-physical-room-name`} className="flex items-center gap-[inherit]">
-        Physical Room Name <span className="text-red-500">*</span></label>
+        Physical Room Name <span className="text-danger-strong">*</span></label>
         <InfoTooltip text="The venue room shared by every function listed below. Example: 'A-110-112'." />
         </div>
         <input id={`${uid}-physical-room-name`}
@@ -844,14 +844,14 @@ const RoomForm = ({
           const minimumEndTime = addMinutesToTimeValue(startTimeValue, 15);
 
           return (
-          <div key={`${uid}-function-${functionIndex}`} className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] p-4">
+          <div key={`${uid}-function-${functionIndex}`} className="rounded-xl border border-line bg-surface-muted p-4">
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-bold text-[#222628]">Function {functionIndex + 1}</p>
+              <p className="text-sm font-bold text-heading">Function {functionIndex + 1}</p>
               {functionSchedules.length > 1 && (
                 <button
                   type="button"
                   onClick={() => updateFunctionSchedules(functionSchedules.filter((_, index) => index !== functionIndex))}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-danger-strong hover:text-danger-strong"
                 >
                   <Trash2 size={13} /> Remove function
                 </button>
@@ -859,7 +859,7 @@ const RoomForm = ({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label htmlFor={`${uid}-function-name`} className={labelClass}>Function Name <span className="text-red-500">*</span></label>
+                <label htmlFor={`${uid}-function-name`} className={labelClass}>Function Name <span className="text-danger-strong">*</span></label>
                 <input id={`${uid}-function-name`}
                   maxLength={200}
                   className={`${inputClass} ${errCls(entry.functionName)}`}
@@ -869,22 +869,22 @@ const RoomForm = ({
                 />
               </div>
               <div>
-                <label htmlFor={`${uid}-of-attendees`} className={labelClass}># of Attendees <span className="text-red-500">*</span></label>
+                <label htmlFor={`${uid}-of-attendees`} className={labelClass}># of Attendees <span className="text-danger-strong">*</span></label>
                 <input id={`${uid}-of-attendees`}
                   type="number"
                   min={1}
                   max={50000}
-                  className={`${inputClass} ${showErrors && !isPositiveIntegerText(entry.estimatedAttendees) ? "border-red-400 focus:border-red-400" : ""}`}
+                  className={`${inputClass} ${showErrors && !isPositiveIntegerText(entry.estimatedAttendees) ? "border-danger-strong focus:border-danger-strong" : ""}`}
                   value={entry.estimatedAttendees}
                   onChange={(event) => updateFunction(functionIndex, { estimatedAttendees: event.target.value })}
                   placeholder="e.g. 160"
                 />
                 {showErrors && !isPositiveIntegerText(entry.estimatedAttendees) && (
-                  <p role="alert" className="mt-1 text-xs text-red-500">Enter a whole number greater than zero.</p>
+                  <p role="alert" className="mt-1 text-xs text-danger-strong">Enter a whole number greater than zero.</p>
                 )}
               </div>
               <div>
-                <label id={`${uid}-room-setup-label`} className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                <label id={`${uid}-room-setup-label`} className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-muted">(optional)</span></label>
                 <GlobalSelect id={`${uid}-room-setup`} aria-labelledby={`${uid}-room-setup-label`}
                   className={inputClass}
                   value={entry.roomSetup}
@@ -894,11 +894,11 @@ const RoomForm = ({
                   {ROOM_SETUP_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                 </GlobalSelect>
               </div>
-              <fieldset className="md:col-span-2 rounded-xl border border-sky-100 bg-white p-4">
-                <legend className="px-1 text-xs font-extrabold uppercase tracking-wide text-[#173744]">Function schedule</legend>
+              <fieldset className="md:col-span-2 rounded-xl border border-sky-100 bg-surface p-4">
+                <legend className="px-1 text-xs font-extrabold uppercase tracking-wide text-heading">Function schedule</legend>
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
-                    <label htmlFor={`${uid}-function-${functionIndex}-date`} className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#3d4143]">Date <span className="text-red-500">*</span></label>
+                    <label htmlFor={`${uid}-function-${functionIndex}-date`} className="mb-2 block text-xs font-bold uppercase tracking-wide text-body">Date <span className="text-danger-strong">*</span></label>
                     <GlobalDateInput
                       id={`${uid}-function-${functionIndex}-date`}
                       label={`Function ${functionIndex + 1} date`}
@@ -923,9 +923,9 @@ const RoomForm = ({
                       error={dateError}
                       ariaInvalid={Boolean(dateError)}
                       ariaDescribedBy={`${uid}-function-${functionIndex}-date-help`}
-                      inputClassName={`${inputClass} pr-12 ${dateError ? "border-red-400 focus:border-red-400" : ""}`}
+                      inputClassName={`${inputClass} pr-12 ${dateError ? "border-danger-strong focus:border-danger-strong" : ""}`}
                     />
-                    <p id={`${uid}-function-${functionIndex}-date-help`} className={`mt-1 text-xs ${dateError ? "text-red-500" : "text-slate-500"}`}>
+                    <p id={`${uid}-function-${functionIndex}-date-help`} className={`mt-1 text-xs ${dateError ? "text-danger-strong" : "text-muted"}`}>
                       {dateError || eventDateWindowLabel(eventStartDate || "", eventEndDate || "")}
                     </p>
                   </div>
@@ -973,7 +973,7 @@ const RoomForm = ({
                   />
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sky-100 pt-3">
-                  <span className="mr-1 text-xs text-slate-500">Set duration:</span>
+                  <span className="mr-1 text-xs text-muted">Set duration:</span>
                   {FUNCTION_DURATION_OPTIONS.map((duration) => {
                     const nextEnd = addMinutesToTimeValue(startTimeValue, duration.minutes);
                     return (
@@ -990,7 +990,7 @@ const RoomForm = ({
                       </button>
                     );
                   })}
-                  <span className="ml-auto text-xs text-slate-500">15-minute increments · {eventTimeZone || "venue time"}</span>
+                  <span className="ml-auto text-xs text-muted">15-minute increments · {eventTimeZone || "venue time"}</span>
                 </div>
               </fieldset>
             </div>
@@ -1000,7 +1000,7 @@ const RoomForm = ({
         <button
           type="button"
           onClick={() => updateFunctionSchedules([...functionSchedules, defaultFunctionSchedule()])}
-          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#1DBFD3] hover:text-[#0069a0] transition-colors"
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-action hover:text-action transition-colors"
         >
           <Plus size={14} /> Add another function
         </button>
@@ -1013,24 +1013,24 @@ const RoomForm = ({
         <button
           type="button"
           onClick={() => setShowManualTimes((value) => !value)}
-          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#1DBFD3] hover:text-[#0069a0]"
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-action hover:text-action"
         >
           <Plus size={14} className={showManualTimes ? "rotate-45" : ""} />
           Add room load-in &amp; rehearsal times
         </button>
         {showManualTimes && (
-          <fieldset className="mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-            <legend className="px-1 text-xs font-bold uppercase tracking-wide text-slate-700">
+          <fieldset className="mt-3 rounded-xl border border-line bg-slate-50/60 p-4">
+            <legend className="px-1 text-xs font-bold uppercase tracking-wide text-body">
               Production access schedule
             </legend>
-            <p id={`${uid}-production-access-guidance`} className="mb-4 text-xs leading-5 text-slate-600">
+            <p id={`${uid}-production-access-guidance`} className="mb-4 text-xs leading-5 text-body">
               Select a date and time in one control. Allowed window: {productionWindowLabel}; 15-minute increments · {eventTimeZone || "venue time"}.
             </p>
             <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label id={`${uid}-load-in-label`} htmlFor={`${uid}-load-in`} className={`${labelClass} mt-0`}>
                 Load-In
-                <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span>
+                <span className="ml-1 text-xs font-normal normal-case text-muted">(optional)</span>
               </label>
               <GlobalDateTimeInput
                 id={`${uid}-load-in`}
@@ -1050,13 +1050,13 @@ const RoomForm = ({
                 ariaInvalid={Boolean(productionAccessErrors.loadIn)}
                 ariaLabelledBy={`${uid}-load-in-label`}
                 ariaDescribedBy={`${uid}-production-access-guidance${productionAccessErrors.loadIn ? ` ${uid}-load-in-error` : ""}`}
-                inputClassName={`${inputClass} pr-12 ${productionAccessErrors.loadIn ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
+                inputClassName={`${inputClass} pr-12 ${productionAccessErrors.loadIn ? "border-danger-strong focus:border-danger-strong focus:ring-red-200" : ""}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-action hover:text-action"
                 placeholder="Select date & time"
                 showErrorMessage={false}
               />
               {productionAccessErrors.loadIn && (
-                <p id={`${uid}-load-in-error`} className="mt-1 text-xs text-red-500">
+                <p id={`${uid}-load-in-error`} className="mt-1 text-xs text-danger-strong">
                   {productionAccessErrors.loadIn}
                 </p>
               )}
@@ -1064,7 +1064,7 @@ const RoomForm = ({
             <div>
               <label id={`${uid}-rehearsal-label`} htmlFor={`${uid}-rehearsal`} className={`${labelClass} mt-0`}>
                 Rehearsal
-                <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span>
+                <span className="ml-1 text-xs font-normal normal-case text-muted">(optional)</span>
               </label>
               <GlobalDateTimeInput
                 id={`${uid}-rehearsal`}
@@ -1084,13 +1084,13 @@ const RoomForm = ({
                 ariaInvalid={Boolean(productionAccessErrors.rehearsal)}
                 ariaLabelledBy={`${uid}-rehearsal-label`}
                 ariaDescribedBy={`${uid}-production-access-guidance${productionAccessErrors.rehearsal ? ` ${uid}-rehearsal-error` : ""}`}
-                inputClassName={`${inputClass} pr-12 ${productionAccessErrors.rehearsal ? "border-red-400 focus:border-red-400 focus:ring-red-200" : ""}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
+                inputClassName={`${inputClass} pr-12 ${productionAccessErrors.rehearsal ? "border-danger-strong focus:border-danger-strong focus:ring-red-200" : ""}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-action hover:text-action"
                 placeholder="Select date & time (optional)"
                 showErrorMessage={false}
               />
               {productionAccessErrors.rehearsal && (
-                <p id={`${uid}-rehearsal-error`} className="mt-1 text-xs text-red-500">
+                <p id={`${uid}-rehearsal-error`} className="mt-1 text-xs text-danger-strong">
                   {productionAccessErrors.rehearsal}
                 </p>
               )}
@@ -1105,7 +1105,7 @@ const RoomForm = ({
         <div className={labelClass}>
         <label htmlFor={`${uid}-stage-dimensions`} className="flex items-center gap-[inherit]">
         Stage Dimensions
-        <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+        <span className="ml-2 text-xs font-normal normal-case text-muted">(optional)</span></label>
         <InfoTooltip text="Stage dimensions in feet — Width × Depth × Height (optional). Standard general session stage is 60ft x 24ft; large keynote stages run 100–200ft wide. If no formal stage: enter 'Floor presentation — no stage.'" />
         </div>
         <input id={`${uid}-stage-dimensions`}
@@ -1122,7 +1122,7 @@ const RoomForm = ({
       <div>
         <div className={labelClass}>
         <span id={`${uid}-yn-audio-system-required`} className="flex items-center gap-[inherit]">
-        Audio System Required? <span className="text-red-500">*</span></span>
+        Audio System Required? <span className="text-danger-strong">*</span></span>
         <InfoTooltip text="Does this room need a full audio system (speakers, mixing, microphones)? Almost all production rooms require this. Select No only for spaces like a quiet VIP lounge with no programmed content." />
         </div>
         <YesNo
@@ -1141,7 +1141,7 @@ const RoomForm = ({
                 <div className={labelClass}>
                 <span id={`${uid}-yn-podium-mic-required-conditio`} className="flex items-center gap-[inherit]">
                 Podium Mic Required?
-                <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></span>
+                <span className="ml-2 text-xs font-normal normal-case text-muted">(conditional)</span></span>
                 <InfoTooltip text="Fixed microphone mounted at the lectern for standing presenters. Separate from handheld or lavalier mics for moving presenters." />
                 </div>
                 <YesNo
@@ -1158,7 +1158,7 @@ const RoomForm = ({
                 <div className={labelClass}>
                 <label id={`${uid}-audience-q-a-style-label`} className="flex items-center gap-[inherit]">
                 Audience Q&amp;A Style
-                <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></label>
+                <span className="ml-2 text-xs font-normal normal-case text-muted">(conditional)</span></label>
                 <InfoTooltip text="How will audience questions be taken? Passed handheld is most common under 500 people; floor mics for larger rooms; digital tools work best for hybrid events." />
                 </div>
                 <GlobalSelect id={`${uid}-audience-q-a-style`} aria-labelledby={`${uid}-audience-q-a-style-label`}
@@ -1289,7 +1289,7 @@ const RoomForm = ({
       <div>
         <div className={labelClass}>
         <span id={`${uid}-yn-led-wall-required`} className="flex items-center gap-[inherit]">
-        LED Wall Required? <span className="text-red-500">*</span></span>
+        LED Wall Required? <span className="text-danger-strong">*</span></span>
         <InfoTooltip text="Will this room use an LED video wall as the primary stage backdrop? LED walls deliver the highest visual impact but significantly increase budget. If No, screens will use projection or standard displays." />
         </div>
         <YesNo
@@ -1310,12 +1310,12 @@ const RoomForm = ({
           <div className={subPanelClass}>
             <p className={subPanelHeader}>LED Wall Specifications</p>
             <div className="mb-5 max-w-xs">
-              <label htmlFor={`${uid}-number-of-led-walls`} className={labelClass}>Number of LED Walls <span className="text-red-500">*</span></label>
+              <label htmlFor={`${uid}-number-of-led-walls`} className={labelClass}>Number of LED Walls <span className="text-danger-strong">*</span></label>
               <input id={`${uid}-number-of-led-walls`}
                 type="number"
                 min={1}
                 max={20}
-                className={`${inputClass} ${showErrors && activeLedWallCount < 1 ? "border-red-400 focus:border-red-400" : ""}`}
+                className={`${inputClass} ${showErrors && activeLedWallCount < 1 ? "border-danger-strong focus:border-danger-strong" : ""}`}
                 value={data.ledWallCount ?? ""}
                 onChange={(event) => {
                   const rawCount = event.target.value;
@@ -1330,51 +1330,51 @@ const RoomForm = ({
 
             <div className="space-y-5">
               {ledWalls.slice(0, activeLedWallCount).map((wall, wallIndex) => (
-                <div key={wallIndex} className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="mb-4 text-sm font-bold text-[#222628]">LED Wall {wallIndex + 1}</p>
+                <div key={wallIndex} className="rounded-xl border border-line bg-surface p-4">
+                  <p className="mb-4 text-sm font-bold text-heading">LED Wall {wallIndex + 1}</p>
                   <div className="mb-4 grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor={`${uid}-width-ft`} className={labelClass}>Width (ft) <span className="text-red-500">*</span></label>
-                      <input id={`${uid}-width-ft`} type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.width) > 0) ? "border-red-400" : ""}`} placeholder="e.g. 40" value={wall.width} onChange={(event) => updateLedWall(wallIndex, { width: event.target.value })} />
+                      <label htmlFor={`${uid}-width-ft`} className={labelClass}>Width (ft) <span className="text-danger-strong">*</span></label>
+                      <input id={`${uid}-width-ft`} type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.width) > 0) ? "border-danger-strong" : ""}`} placeholder="e.g. 40" value={wall.width} onChange={(event) => updateLedWall(wallIndex, { width: event.target.value })} />
                     </div>
                     <div>
-                      <label htmlFor={`${uid}-height-ft`} className={labelClass}>Height (ft) <span className="text-red-500">*</span></label>
-                      <input id={`${uid}-height-ft`} type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.height) > 0) ? "border-red-400" : ""}`} placeholder="e.g. 15" value={wall.height} onChange={(event) => updateLedWall(wallIndex, { height: event.target.value })} />
+                      <label htmlFor={`${uid}-height-ft`} className={labelClass}>Height (ft) <span className="text-danger-strong">*</span></label>
+                      <input id={`${uid}-height-ft`} type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.height) > 0) ? "border-danger-strong" : ""}`} placeholder="e.g. 15" value={wall.height} onChange={(event) => updateLedWall(wallIndex, { height: event.target.value })} />
                     </div>
                   </div>
                   <div className="mb-4 grid grid-cols-2 gap-4">
                     <div>
-                      <label id={`${uid}-shape-label`} className={labelClass}>Shape <span className="text-red-500">*</span></label>
-                      <GlobalSelect id={`${uid}-shape`} aria-labelledby={`${uid}-shape-label`} className={`${inputClass} ${showErrors && !wall.shape ? "border-red-400" : ""}`} value={wall.shape} onChange={(event) => updateLedWall(wallIndex, { shape: event.target.value })}>
+                      <label id={`${uid}-shape-label`} className={labelClass}>Shape <span className="text-danger-strong">*</span></label>
+                      <GlobalSelect id={`${uid}-shape`} aria-labelledby={`${uid}-shape-label`} className={`${inputClass} ${showErrors && !wall.shape ? "border-danger-strong" : ""}`} value={wall.shape} onChange={(event) => updateLedWall(wallIndex, { shape: event.target.value })}>
                         <option value="">Select shape…</option>
                         <option>Flat / Straight</option><option>Curved</option><option>Multi-Panel / Segmented</option><option>Wraparound</option>
                       </GlobalSelect>
                     </div>
                     <div>
-                      <label id={`${uid}-pixel-pitch-label`} className={labelClass}>Pixel Pitch <span className="text-red-500">*</span></label>
-                      <GlobalSelect id={`${uid}-pixel-pitch`} aria-labelledby={`${uid}-pixel-pitch-label`} className={`${inputClass} ${showErrors && !wall.pixelPitch ? "border-red-400" : ""}`} value={wall.pixelPitch} onChange={(event) => updateLedWall(wallIndex, { pixelPitch: event.target.value })}>
+                      <label id={`${uid}-pixel-pitch-label`} className={labelClass}>Pixel Pitch <span className="text-danger-strong">*</span></label>
+                      <GlobalSelect id={`${uid}-pixel-pitch`} aria-labelledby={`${uid}-pixel-pitch-label`} className={`${inputClass} ${showErrors && !wall.pixelPitch ? "border-danger-strong" : ""}`} value={wall.pixelPitch} onChange={(event) => updateLedWall(wallIndex, { pixelPitch: event.target.value })}>
                         <option value="">Select preference…</option>
                         <option>1.9mm or finer (Premium)</option><option>2.6mm (Standard)</option><option>3.9mm (Acceptable for distance)</option><option>Vendor Recommendation</option>
                       </GlobalSelect>
                     </div>
                   </div>
                   <div className="mb-4">
-                    <label id={`${uid}-switcher-processor-label`} className={labelClass}>Switcher / Processor <span className="text-red-500">*</span></label>
-                    <GlobalSelect id={`${uid}-switcher-processor`} aria-labelledby={`${uid}-switcher-processor-label`} className={`${inputClass} ${showErrors && !wall.switcher ? "border-red-400" : ""}`} value={wall.switcher} onChange={(event) => updateLedWall(wallIndex, { switcher: event.target.value })}>
+                    <label id={`${uid}-switcher-processor-label`} className={labelClass}>Switcher / Processor <span className="text-danger-strong">*</span></label>
+                    <GlobalSelect id={`${uid}-switcher-processor`} aria-labelledby={`${uid}-switcher-processor-label`} className={`${inputClass} ${showErrors && !wall.switcher ? "border-danger-strong" : ""}`} value={wall.switcher} onChange={(event) => updateLedWall(wallIndex, { switcher: event.target.value })}>
                       <option value="">Select preference…</option>
                       {LED_SWITCHER_OPTIONS.map((option) => <option key={option}>{option}</option>)}
                     </GlobalSelect>
                   </div>
                   <div>
-                    <label htmlFor={`${uid}-additional-notes`} className={labelClass}>Additional Notes <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
-                    <textarea id={`${uid}-additional-notes`} rows={2} className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm" value={wall.notes} onChange={(event) => updateLedWall(wallIndex, { notes: event.target.value })} />
+                    <label htmlFor={`${uid}-additional-notes`} className={labelClass}>Additional Notes <span className="text-xs font-normal normal-case text-muted">(optional)</span></label>
+                    <textarea id={`${uid}-additional-notes`} rows={2} className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm" value={wall.notes} onChange={(event) => updateLedWall(wallIndex, { notes: event.target.value })} />
                   </div>
-                  {Number(wall.width) >= 60 && <p className="mt-3 text-xs text-amber-700">Large LED wall: walls ≥ 60ft may trigger a Producer Insight Call recommendation.</p>}
+                  {Number(wall.width) >= 60 && <p className="mt-3 text-xs text-warning-strong">Large LED wall: walls ≥ 60ft may trigger a Producer Insight Call recommendation.</p>}
                 </div>
               ))}
             </div>
             {showErrors && ledWallPlanMissingFields(data).length > 0 && (
-              <p role="alert" className="mt-3 text-xs text-red-500">Complete: {ledWallPlanMissingFields(data).join(", ")}.</p>
+              <p role="alert" className="mt-3 text-xs text-danger-strong">Complete: {ledWallPlanMissingFields(data).join(", ")}.</p>
             )}
           </div>
         )}
@@ -1472,7 +1472,7 @@ const RoomForm = ({
                 {data.largeMonitorsOrScreenProjector.monitorSize === SCREEN_SIZE_OTHER && (
                   <div>
                     <label htmlFor={`${uid}-monitor-size-other`} className={`${labelClass} mt-0`}>
-                      Custom Monitor Size <span className="text-red-500">*</span>
+                      Custom Monitor Size <span className="text-danger-strong">*</span>
                     </label>
                     <input
                       id={`${uid}-monitor-size-other`}
@@ -1480,7 +1480,7 @@ const RoomForm = ({
                       required
                       aria-invalid={showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) ? true : undefined}
                       aria-describedby={showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) ? `${uid}-monitor-size-other-error` : undefined}
-                      className={`${inputClass} ${showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) ? "border-red-400 focus:border-red-400" : ""}`}
+                      className={`${inputClass} ${showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) ? "border-danger-strong focus:border-danger-strong" : ""}`}
                       placeholder={'e.g. 85" wall-mounted'}
                       value={data.largeMonitorsOrScreenProjector.monitorSizeOther}
                       onChange={(e) => onChange({
@@ -1491,7 +1491,7 @@ const RoomForm = ({
                       })}
                     />
                     {showErrors && customMonitorSizeIsMissing(data.largeMonitorsOrScreenProjector) && (
-                      <p id={`${uid}-monitor-size-other-error`} className="mt-1 text-xs text-red-500">
+                      <p id={`${uid}-monitor-size-other-error`} className="mt-1 text-xs text-danger-strong">
                         Enter the custom monitor size.
                       </p>
                     )}
@@ -1525,7 +1525,7 @@ const RoomForm = ({
                 {data.largeMonitorsOrScreenProjector.screenSize === SCREEN_SIZE_OTHER && (
                   <div>
                     <label htmlFor={`${uid}-screen-size-other`} className={`${labelClass} mt-0`}>
-                      Custom Screen Size <span className="text-red-500">*</span>
+                      Custom Screen Size <span className="text-danger-strong">*</span>
                     </label>
                     <input
                       id={`${uid}-screen-size-other`}
@@ -1533,7 +1533,7 @@ const RoomForm = ({
                       required
                       aria-invalid={showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) ? true : undefined}
                       aria-describedby={showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) ? `${uid}-screen-size-other-error` : undefined}
-                      className={`${inputClass} ${showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) ? "border-red-400 focus:border-red-400" : ""}`}
+                      className={`${inputClass} ${showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) ? "border-danger-strong focus:border-danger-strong" : ""}`}
                       placeholder={'e.g. 22\' × 12\' rear projection'}
                       value={data.largeMonitorsOrScreenProjector.screenSizeOther}
                       onChange={(e) => onChange({
@@ -1544,7 +1544,7 @@ const RoomForm = ({
                       })}
                     />
                     {showErrors && customScreenSizeIsMissing(data.largeMonitorsOrScreenProjector) && (
-                      <p id={`${uid}-screen-size-other-error`} className="mt-1 text-xs text-red-500">
+                      <p id={`${uid}-screen-size-other-error`} className="mt-1 text-xs text-danger-strong">
                         Enter the custom screen size.
                       </p>
                     )}
@@ -1559,7 +1559,7 @@ const RoomForm = ({
       {/* Video Format / Aspect Ratio */}
       <div>
         <p id={`${uid}-video-format-aspect-ratio-label`} className={labelClass}>
-          Video Format / Aspect Ratio <span className="text-red-500">*</span>
+          Video Format / Aspect Ratio <span className="text-danger-strong">*</span>
           <InfoTooltip text="What video aspect ratio will source content be produced in? 16:9 HD is most common; 4K is preferred for LED walls and large screens; ultrawide and custom ratios require specialized content production." />
         </p>
         <div role="group" aria-labelledby={`${uid}-video-format-aspect-ratio-label`} className="flex flex-wrap gap-3">
@@ -1586,7 +1586,7 @@ const RoomForm = ({
       <div>
         <div className={labelClass}>
         <span id={`${uid}-yn-scenic-stage-design-required`} className="flex items-center gap-[inherit]">
-        Scenic Stage Design Required? <span className="text-red-500">*</span></span>
+        Scenic Stage Design Required? <span className="text-danger-strong">*</span></span>
         <InfoTooltip text="Do you need custom scenic elements built for the stage — set pieces, branded scenic walls, custom podium? Scenic adds production value but increases budget and load-in time. A producer call is recommended." />
         </div>
         <YesNo
@@ -1605,29 +1605,29 @@ const RoomForm = ({
             <div className={labelClass}>
             <label htmlFor={`${uid}-describe-your-scenic-vision`} className="flex items-center gap-[inherit]">
             Describe Your Scenic Vision
-            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></label>
+            <span className="ml-2 text-xs font-normal normal-case text-muted">(conditional)</span></label>
             <InfoTooltip text="Set pieces, branded elements, color direction, and reference materials. Upload mood boards in Section 7 — Uploads & Co-Vendors." />
             </div>
             <textarea id={`${uid}-describe-your-scenic-vision`}
               rows={3}
               maxLength={600}
-              className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
+              className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20"
               placeholder='e.g. "Custom branded scenic wall flanking the LED, integrated lighting, illuminated logo above stage. Reference: minimalist editorial style, dark navy palette."'
               value={data.scenicStageDesignNotes ?? ""}
               onChange={(e) => onChange({ scenicStageDesignNotes: e.target.value })}
             />
             <div className="mt-1 flex justify-between items-center">
-              <p className="text-xs text-amber-600 normal-case">
+              <p className="text-xs text-warning-strong normal-case">
                 Scenic stage design may trigger a Producer Insight consultation recommendation.
               </p>
-              <span className="text-xs text-[#969798] shrink-0 ml-2">
+              <span className="text-xs text-muted shrink-0 ml-2">
                 {(data.scenicStageDesignNotes ?? "").length}/600
               </span>
             </div>
             <button
               type="button"
               onClick={onOpenScenicInspirations}
-              className="mt-2 text-xs font-semibold text-[#1DBFD3] hover:underline"
+              className="mt-2 text-xs font-semibold text-action hover:underline"
             >
               Upload scenic inspiration files in Section 7 — Uploads &amp; Co-Vendors →
             </button>
@@ -1717,7 +1717,7 @@ const RoomForm = ({
         />
         {data.cameras.cameras === "Yes" && (
           <div className={subPanelClass}>
-            <p id={`${uid}-camera-planning-approach-label`} className={labelClass}>Camera Planning Approach <span className="text-red-500">*</span></p>
+            <p id={`${uid}-camera-planning-approach-label`} className={labelClass}>Camera Planning Approach <span className="text-danger-strong">*</span></p>
             <div role="group" aria-labelledby={`${uid}-camera-planning-approach-label`} className="flex flex-wrap gap-3">
               {[CAMERA_PLAN_SPECIFIC, CAMERA_PLAN_VENDOR_RECOMMENDATION].map((option) => (
                 <PillRadio
@@ -1741,7 +1741,7 @@ const RoomForm = ({
             {data.cameras.cameraPlanMode === CAMERA_PLAN_SPECIFIC && (
               <div className="mt-4 space-y-4">
                 <div>
-                  <label id={`${uid}-camera-type-label`} className={labelClass}>Camera Type <span className="text-red-500">*</span></label>
+                  <label id={`${uid}-camera-type-label`} className={labelClass}>Camera Type <span className="text-danger-strong">*</span></label>
                   <GlobalSelect id={`${uid}-camera-type`} aria-labelledby={`${uid}-camera-type-label`}
                     className={inputClass}
                     value={data.cameras.cameraType}
@@ -1760,19 +1760,19 @@ const RoomForm = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   {[CAMERA_TYPE_PTZ, CAMERA_TYPE_BOTH].includes(data.cameras.cameraType) && (
-                    <div><label htmlFor={`${uid}-ptz-quantity`} className={labelClass}>PTZ Quantity <span className="text-red-500">*</span></label><input id={`${uid}-ptz-quantity`} type="number" min={1} className={inputClass} value={data.cameras.ptzCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, ptzCameraQty: event.target.value } })} /></div>
+                    <div><label htmlFor={`${uid}-ptz-quantity`} className={labelClass}>PTZ Quantity <span className="text-danger-strong">*</span></label><input id={`${uid}-ptz-quantity`} type="number" min={1} className={inputClass} value={data.cameras.ptzCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, ptzCameraQty: event.target.value } })} /></div>
                   )}
                   {[CAMERA_TYPE_STUDIO, CAMERA_TYPE_BOTH].includes(data.cameras.cameraType) && (
-                    <div><label htmlFor={`${uid}-studio-broadcast-quantity`} className={labelClass}>Studio / Broadcast Quantity <span className="text-red-500">*</span></label><input id={`${uid}-studio-broadcast-quantity`} type="number" min={1} className={inputClass} value={data.cameras.studioCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, studioCameraQty: event.target.value } })} /></div>
+                    <div><label htmlFor={`${uid}-studio-broadcast-quantity`} className={labelClass}>Studio / Broadcast Quantity <span className="text-danger-strong">*</span></label><input id={`${uid}-studio-broadcast-quantity`} type="number" min={1} className={inputClass} value={data.cameras.studioCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, studioCameraQty: event.target.value } })} /></div>
                   )}
                   {data.cameras.cameraType === CAMERA_TYPE_OTHER && (
-                    <><div><label htmlFor={`${uid}-other-camera-type`} className={labelClass}>Other Camera Type <span className="text-red-500">*</span></label><input id={`${uid}-other-camera-type`} className={inputClass} value={data.cameras.otherCameraType} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraType: event.target.value } })} /></div><div><label htmlFor={`${uid}-quantity-2`} className={labelClass}>Quantity <span className="text-red-500">*</span></label><input id={`${uid}-quantity-2`} type="number" min={1} className={inputClass} value={data.cameras.otherCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraQty: event.target.value } })} /></div></>
+                    <><div><label htmlFor={`${uid}-other-camera-type`} className={labelClass}>Other Camera Type <span className="text-danger-strong">*</span></label><input id={`${uid}-other-camera-type`} className={inputClass} value={data.cameras.otherCameraType} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraType: event.target.value } })} /></div><div><label htmlFor={`${uid}-quantity-2`} className={labelClass}>Quantity <span className="text-danger-strong">*</span></label><input id={`${uid}-quantity-2`} type="number" min={1} className={inputClass} value={data.cameras.otherCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraQty: event.target.value } })} /></div></>
                   )}
                 </div>
-                {cameraPlanTotal(data.cameras) > 0 && <p className="text-xs font-semibold text-[#0069a0]">Derived total: {cameraPlanTotal(data.cameras)} camera(s)</p>}
+                {cameraPlanTotal(data.cameras) > 0 && <p className="text-xs font-semibold text-action">Derived total: {cameraPlanTotal(data.cameras)} camera(s)</p>}
               </div>
             )}
-            {showErrors && cameraPlanMissingFields(data.cameras).length > 0 && <p role="alert" className="mt-2 text-xs text-red-500">Complete: {cameraPlanMissingFields(data.cameras).join(", ")}.</p>}
+            {showErrors && cameraPlanMissingFields(data.cameras).length > 0 && <p role="alert" className="mt-2 text-xs text-danger-strong">Complete: {cameraPlanMissingFields(data.cameras).join(", ")}.</p>}
           </div>
         )}
       </div>
@@ -1898,13 +1898,13 @@ const RoomForm = ({
 
       <div>
         <p id={`${uid}-lighting-requirements-label`} className={labelClass}>
-          Lighting Requirements <span className="text-red-500">*</span>
+          Lighting Requirements <span className="text-danger-strong">*</span>
           <InfoTooltip text="Select all lighting types needed. Backlighting and audience lighting are essential if you have cameras and IMAG. Moving lights add energy but require a Lighting Director (L1) on crew." />
         </p>
-        <p className="mb-3 text-xs text-slate-500 normal-case">
+        <p className="mb-3 text-xs text-muted normal-case">
           Select all that apply, or select &quot;None / Minimal&quot; if house lighting only.
           {lighting.includes("Moving Lights / Programmable Effects") && (
-            <span className="ml-1 text-[#1DBFD3] font-semibold">
+            <span className="ml-1 text-action font-semibold">
               L1 (Lighting Director) will be auto-suggested in crew below.
             </span>
           )}
@@ -1924,7 +1924,7 @@ const RoomForm = ({
           ))}
         </div>
         {showErrors && lighting.length === 0 && (
-          <p role="alert" className="mt-2 text-sm normal-case text-red-500">
+          <p role="alert" className="mt-2 text-sm normal-case text-danger-strong">
             Please select at least one lighting option or &quot;None / Minimal&quot;.
           </p>
         )}
@@ -1936,7 +1936,7 @@ const RoomForm = ({
       <div>
         <div className={labelClass}>
         <span id={`${uid}-yn-confidence-monitors-required`} className="flex items-center gap-[inherit]">
-        Confidence Monitors Required? <span className="text-red-500">*</span></span>
+        Confidence Monitors Required? <span className="text-danger-strong">*</span></span>
         <InfoTooltip text="Confidence monitors are screens on the front of stage facing presenters, showing their slides and/or notes. Standard for any event with prepared keynote presentations." />
         </div>
         <YesNo
@@ -2031,7 +2031,7 @@ const RoomForm = ({
       <div>
         <div className={labelClass}>
         <span id={`${uid}-yn-teleprompter-required`} className="flex items-center gap-[inherit]">
-        Teleprompter Required? <span className="text-red-500">*</span></span>
+        Teleprompter Required? <span className="text-danger-strong">*</span></span>
         <InfoTooltip text="Will any speakers use a teleprompter (scrolling script on glass panels)? Common for CEOs, scripted keynotes, and broadcast-quality productions. Requires a dedicated teleprompter operator." />
         </div>
         <YesNo
@@ -2054,7 +2054,7 @@ const RoomForm = ({
                 <div className={labelClass}>
                 <span id={`${uid}-yn-bilingual-teleprompter-condi`} className="flex items-center gap-[inherit]">
                 Bilingual Teleprompter?
-                <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></span>
+                <span className="ml-2 text-xs font-normal normal-case text-muted">(conditional)</span></span>
                 <InfoTooltip text="Will the teleprompter operate in multiple languages simultaneously? Bilingual operators are specialized — flag this early. Common for international audiences and dual-language broadcasts." />
                 </div>
                 <YesNo
@@ -2063,7 +2063,7 @@ const RoomForm = ({
                   onChange={(v) => onChange({ teleprompterBilingual: v })}
                 />
                 {data.teleprompterBilingual === "Yes" && (
-                  <p className="mt-1 text-xs text-amber-600 normal-case">
+                  <p className="mt-1 text-xs text-warning-strong normal-case">
                     Bilingual teleprompter may trigger a Producer Insight consultation.
                   </p>
                 )}
@@ -2071,7 +2071,7 @@ const RoomForm = ({
               <div>
                 <p id={`${uid}-languages-label`} className={labelClass}>
                   Languages
-                  <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span>
+                  <span className="ml-2 text-xs font-normal normal-case text-muted">(conditional)</span>
                   <InfoTooltip text="Languages the teleprompter content will be displayed in. Each additional language typically requires a separate operator. Minimum 2 if bilingual." />
                 </p>
                 <div role="group" aria-labelledby={`${uid}-languages-label`} className="flex flex-wrap gap-2">
@@ -2099,7 +2099,7 @@ const RoomForm = ({
 
       {/* Auto-suggestions banner */}
       {unaddedSuggestions.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 p-3 text-xs text-[#0069a0]">
+        <div className="flex items-start gap-2 rounded-lg border border-action/30 bg-action/5 p-3 text-xs text-action">
           <span className="shrink-0 font-bold">⚡</span>
           <div>
             <strong>Auto-suggestions based on your selections:</strong>
@@ -2111,7 +2111,7 @@ const RoomForm = ({
                   onClick={() =>
                     onChange({ showCrewNeeded: [...data.showCrewNeeded, role] })
                   }
-                  className="rounded-full border border-[#1DBFD3]/30 bg-white px-2.5 py-0.5 text-xs font-semibold text-[#0069a0] hover:bg-[#1DBFD3]/10 transition-colors"
+                  className="rounded-full border border-action/30 bg-surface px-2.5 py-0.5 text-xs font-semibold text-action hover:bg-action/10 transition-colors"
                 >
                   + {role}
                 </button>
@@ -2123,14 +2123,14 @@ const RoomForm = ({
 
       <div
         className={`-mx-1 rounded-lg px-1 py-1 transition-colors ${
-          showErrors && data.showCrewNeeded.length === 0 ? "bg-red-50" : ""
+          showErrors && data.showCrewNeeded.length === 0 ? "bg-danger-soft" : ""
         }`}
       >
         <p id={`${uid}-show-crew-needed-label`} className={labelClass}>
-          Show Crew Needed <span className="text-red-500">*</span>
+          Show Crew Needed <span className="text-danger-strong">*</span>
           <InfoTooltip text="Select all technical crew roles needed for this room. Each role generates a line item in the Show Crew callout bar. Teleprompter Operators and Breakout Room Managers route to the Special Note box." />
         </p>
-        <p className="mb-3 text-xs text-slate-400 normal-case">
+        <p className="mb-3 text-xs text-muted normal-case">
           Select &quot;Vendor Recommendation Requested&quot; to let the AV vendor propose the right crew.
         </p>
         <div role="group" aria-labelledby={`${uid}-show-crew-needed-label`} className="flex flex-wrap gap-3">
@@ -2155,12 +2155,12 @@ const RoomForm = ({
               ({ label: role, hasQty }) => hasQty && data.showCrewNeeded.includes(role),
             ).map(({ label: role }) => (
               <div key={role} className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[#222628]">{role}</span>
+                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-heading">{role}</span>
                 <input
                   type="number"
                   min={1}
                   max={20}
-                  className="h-8 w-14 rounded-md border border-[#e4e4e4] bg-white text-center text-sm font-bold text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20"
+                  className="h-8 w-14 rounded-md border border-line bg-surface text-center text-sm font-bold text-heading outline-none focus:border-action focus:ring-1 focus:ring-focus/20"
                   placeholder="qty"
                   value={crewQty[role] ?? ""}
                   onChange={(e) =>
@@ -2173,7 +2173,7 @@ const RoomForm = ({
         )}
 
         {showErrors && data.showCrewNeeded.length === 0 && (
-          <p role="alert" className="mt-2 text-sm normal-case text-red-500">Please select at least one crew role.</p>
+          <p role="alert" className="mt-2 text-sm normal-case text-danger-strong">Please select at least one crew role.</p>
         )}
       </div>
 
@@ -2181,12 +2181,12 @@ const RoomForm = ({
         <div className={labelClass}>
         <label htmlFor={`${uid}-other-roles-or-support-needed`} className="flex items-center gap-[inherit]">
         Other Roles or Support Needed?{" "}
-        <span className="font-normal normal-case tracking-normal text-slate-400 text-xs">(Optional)</span></label>
+        <span className="font-normal normal-case tracking-normal text-muted text-xs">(Optional)</span></label>
         <InfoTooltip text="Any additional positions not listed — e.g. LED technician, drone operator, or show caller support." />
         </div>
         <textarea id={`${uid}-other-roles-or-support-needed`}
           rows={3}
-          className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
+          className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20"
           placeholder="Write here…"
           value={data.otherRolesNeeded}
           onChange={(e) => onChange({ otherRolesNeeded: e.target.value })}
@@ -2245,9 +2245,9 @@ const RoomCard = ({
   const functionCount = schedulesForRoom(room).filter((entry) => entry.functionName.trim()).length;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
+    <div className="overflow-hidden rounded-xl border border-line bg-surface">
       <div
-        className="flex flex-col items-stretch gap-3 px-4 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+        className="flex flex-col items-stretch gap-3 px-4 py-4 transition-colors hover:bg-surface-muted sm:flex-row sm:items-center sm:justify-between sm:px-5"
         style={{ borderBottom: isExpanded ? "1px solid var(--dxg-divider)" : "none" }}
       >
         <button
@@ -2255,7 +2255,7 @@ const RoomCard = ({
           onClick={onToggle}
           aria-expanded={isExpanded}
           aria-controls={`room-panel-${index}`}
-          className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
@@ -2264,20 +2264,20 @@ const RoomCard = ({
             {index + 1}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-[#222628]">
+            <p className="text-sm font-bold text-heading">
               {roomLabel}
-              <span className="ml-2 text-xs font-normal text-[#969798]">
+              <span className="ml-2 text-xs font-normal text-muted">
                 Room {index + 1} of {total}
               </span>
             </p>
             {!isExpanded && (
-              <p className="text-xs text-[#969798]">
+              <p className="text-xs text-muted">
                 {functionCount} function{functionCount === 1 ? "" : "s"}
                 {room.estimatedAttendeesInRoom ? ` · peak ${room.estimatedAttendeesInRoom} attendees` : ""}
               </p>
             )}
           </div>
-          <span className="ml-auto text-[#969798]" aria-hidden="true">
+          <span className="ml-auto text-muted" aria-hidden="true">
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </span>
         </button>
@@ -2286,7 +2286,7 @@ const RoomCard = ({
             type="button"
             onClick={onDuplicate}
             title="Copy this room's details to start a new room"
-            className="flex items-center gap-1.5 rounded-full border border-[#e4e4e4] bg-white px-3 py-1 text-xs font-semibold text-[#222628] hover:border-[#1DBFD3] hover:text-[#1DBFD3] transition-colors"
+            className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold text-heading hover:border-action hover:text-action transition-colors"
           >
             <Copy size={13} className="shrink-0" />
             Copy Room
@@ -2296,7 +2296,7 @@ const RoomCard = ({
               type="button"
               onClick={onDelete}
               title="Remove this room"
-              className="flex items-center gap-1.5 rounded-full border border-[#e4e4e4] bg-white px-3 py-1 text-xs font-semibold text-[#222628] hover:border-red-400 hover:text-red-500 transition-colors"
+              className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold text-heading hover:border-danger-strong hover:text-danger-strong transition-colors"
             >
               <Trash2 size={13} className="shrink-0" />
               Remove
@@ -2591,22 +2591,22 @@ const RoomAndProductionStep = ({
     <section
       id="room-specifications-section"
       tabIndex={-1}
-      className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-[#e4e4e4] bg-white focus:outline-none"
+      className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-line bg-surface focus:outline-none"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* Header */}
-      <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <h2 className="text-[22px] font-bold text-[#222628]">Room Specifications &amp; Schedule</h2>
-        <p className="mt-1 text-sm text-[#969798]">
+      <div className="px-8 py-6 border-b border-line">
+        <h2 className="text-[22px] font-bold text-heading">Room Specifications &amp; Schedule</h2>
+        <p className="mt-1 text-sm text-muted">
           One module per room — each room generates its own section in the proposal.
         </p>
       </div>
 
       {/* Number of Event Rooms — stepper */}
       <div className="px-6 pt-6">
-        <div className="mb-6 rounded-md border border-[#e4e4e4] p-5">
+        <div className="mb-6 rounded-md border border-line p-5">
           <p id="room-number-of-event-rooms-label" className={labelClass}>
-            Number of Event Rooms <span className="text-red-500">*</span>
+            Number of Event Rooms <span className="text-danger-strong">*</span>
             <InfoTooltip text="How many separate rooms require AV production? Each room gets its own specification module below. Example: 1 General Session + 1 Breakout + 1 VIP Lounge = 3 rooms." />
           </p>
           <div role="group" aria-labelledby="room-number-of-event-rooms-label" className="flex items-center gap-3">
@@ -2616,7 +2616,7 @@ const RoomAndProductionStep = ({
               onClick={() =>
                 onNumberOfEventRoomsChange(String(Math.max(1, roomCount - 1)))
               }
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors select-none"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-surface text-lg font-bold text-heading hover:bg-surface-muted transition-colors select-none"
             >
               −
             </button>
@@ -2630,19 +2630,19 @@ const RoomAndProductionStep = ({
                   String(Math.max(1, Number(e.target.value) || 1)),
                 )
               }
-              className="h-10 w-16 rounded-lg border border-[#e4e4e4] bg-white text-center text-sm font-bold text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-2 focus:ring-[#1DBFD3]/20"
+              className="h-10 w-16 rounded-lg border border-line bg-surface text-center text-sm font-bold text-heading outline-none focus:border-action focus:ring-2 focus:ring-focus/20"
             />
             <button
               type="button"
               aria-label="Increase number of event rooms"
               onClick={() => onNumberOfEventRoomsChange(String(roomCount + 1))}
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors select-none"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-surface text-lg font-bold text-heading hover:bg-surface-muted transition-colors select-none"
             >
               +
             </button>
           </div>
           {numberOfEventRooms && Number(numberOfEventRooms) > 0 && (
-            <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 p-3 text-xs text-brand-dark">
+            <div className="mt-2 flex items-start gap-2 rounded-lg border border-action/30 bg-action/5 p-3 text-xs text-brand-dark">
               <span className="mt-0.5 shrink-0">⚙️</span>
               <span>
                 <strong>System:</strong> This generates{" "}
@@ -2653,14 +2653,14 @@ const RoomAndProductionStep = ({
         </div>
 
         {/* Schedule upload */}
-        <div className="mb-6 rounded-md border border-[#e4e4e4] p-5">
+        <div className="mb-6 rounded-md border border-line p-5">
           <div className={labelClass}>
           <label htmlFor="room-upload-room-schedule" className="flex items-center gap-[inherit]">
           Upload Room Schedule
-          <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+          <span className="ml-2 text-xs font-normal normal-case text-muted">(optional)</span></label>
           <InfoTooltip text="Upload an Excel (.xlsx) schedule to bulk-create room modules. Each schedule row becomes a separate module, so the same physical room can contain multiple functions on the same date. This replaces the current room list." />
           </div>
-          <p className="mb-3 text-xs text-slate-500 normal-case">
+          <p className="mb-3 text-xs text-muted normal-case">
             Rows with the same room name are grouped into one physical room. Each row remains a separate function schedule sharing that room&apos;s AV specifications.
           </p>
           <input id="room-upload-room-schedule"
@@ -2675,7 +2675,7 @@ const RoomAndProductionStep = ({
               type="button"
               disabled={isUploadingSchedule}
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 rounded-lg border border-[#e4e4e4] bg-white px-4 py-2 text-sm font-semibold text-[#222628] hover:border-[#1DBFD3] hover:text-[#1DBFD3] transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold text-heading hover:border-action hover:text-action transition-colors disabled:opacity-50"
             >
               <Upload size={15} className="shrink-0" />
               {isUploadingSchedule ? "Reading file…" : "Upload Schedule (Excel)"}
@@ -2683,7 +2683,7 @@ const RoomAndProductionStep = ({
             <a
               href="/files/RFPilot%20schedule-example-sheet.xlsx"
               download
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-[#1DBFD3] hover:text-[#0069a0] transition-colors"
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-action hover:text-action transition-colors"
             >
               <Download size={15} className="shrink-0" />
               Download Sample Sheet
@@ -2734,11 +2734,11 @@ const RoomAndProductionStep = ({
       )}
 
       {/* Footer nav */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-line">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           Venue &amp; Schedule

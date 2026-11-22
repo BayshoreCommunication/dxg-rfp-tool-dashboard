@@ -7,11 +7,11 @@ import GlobalSelect from "@/components/shared/GlobalSelect";
 
 /* ─── Shared style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const inputClass =
-  "h-10 w-full rounded-md border border-[#e4e4e4] bg-white px-3 text-sm text-[#222628] outline-none focus:border-[#1DBFD3] focus:ring-1 focus:ring-[#1DBFD3]/20";
+  "h-10 w-full rounded-md border border-control bg-surface px-3 text-sm text-heading outline-none focus:border-action focus:ring-1 focus:ring-focus/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-muted border-b border-line pb-2";
 
 const streamingPlatformOptions = [
   "Client-Owned Platform",
@@ -70,8 +70,8 @@ const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-18 cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
-  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
+    return `${base} border-line bg-surface text-muted hover:border-control`;
+  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-success-strong`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
 
@@ -105,8 +105,8 @@ const YesNo = ({
 
 /* ─── Conditional sub-panel wrapper ─── */
 const SubPanel = ({ children }: { children: React.ReactNode }) => (
-  <div className="mt-3 rounded-md border border-[#e4e4e4] bg-slate-50 p-4 space-y-4">
-    <p className="text-xs font-bold uppercase tracking-wide text-[#969798]">
+  <div className="mt-3 rounded-md border border-line bg-surface-muted p-4 space-y-4">
+    <p className="text-xs font-bold uppercase tracking-wide text-muted">
       Sub-Questions — Triggered
     </p>
     {children}
@@ -168,17 +168,17 @@ const HybridVirtualStep = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-line bg-surface"
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
     >
       {/* Header */}
-      <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <h2 className="text-[22px] font-bold text-[#222628]">
+      <div className="px-8 py-6 border-b border-line">
+        <h2 className="text-[22px] font-bold text-heading">
           {isVirtualOnly ? "Virtual" : "Hybrid"} &amp; Virtual Production
         </h2>
-        <p className="mt-1 text-sm text-[#969798]">
+        <p className="mt-1 text-sm text-muted">
           Conditional {isVirtualOnly ? "virtual" : "hybrid"} production requirements — active because you selected{" "}
           {isVirtualOnly ? "Virtual Only" : "Hybrid or Virtual"} format.
         </p>
@@ -490,7 +490,7 @@ const HybridVirtualStep = ({
                           {captionLanguageOptions.map((lang) => (
                             <label
                               key={lang}
-                              className="flex items-center gap-2 text-sm text-[#222628] cursor-pointer"
+                              className="flex items-center gap-2 text-sm text-heading cursor-pointer"
                             >
                               <input
                                 type="checkbox"
@@ -611,11 +611,11 @@ const HybridVirtualStep = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-line">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           Room Specifications

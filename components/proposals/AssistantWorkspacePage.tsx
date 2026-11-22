@@ -2202,13 +2202,13 @@ function ProposalDetailsSkeleton({ label }: { label: string }) {
     <div
       data-testid="proposal-details-skeleton"
       role="status"
-      className="my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm"
+      className="my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-action/30 bg-surface shadow-card"
     >
-      <div className="border-b border-cyan-100 bg-cyan-50/70 px-4 py-3.5">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-[#087f69]">
+      <div className="border-b border-action/20 bg-brand-soft px-4 py-3.5">
+        <p className="text-xs font-bold uppercase tracking-widest text-action">
           Proposal details
         </p>
-        <p className="mt-1 text-sm font-bold text-slate-900">{label}</p>
+        <p className="mt-1 text-sm font-bold text-heading">{label}</p>
       </div>
       <div aria-hidden="true" className="space-y-4 px-4 py-4">
         {['w-3/5', 'w-2/5', 'w-1/2', 'w-1/3'].map((width) => (
@@ -5709,7 +5709,7 @@ export default function AssistantWorkspacePage({
               tabIndex={0}
               role="region"
               aria-label="AI workspace overview and questions"
-              className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl pr-1 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
+              className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl pr-1 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
             >
             <RailSummary
               title={aiStatus.title}

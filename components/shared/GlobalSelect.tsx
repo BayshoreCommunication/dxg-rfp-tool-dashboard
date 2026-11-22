@@ -135,7 +135,7 @@ const GlobalSelect = ({
         }}
         className={`${className} flex items-center justify-between gap-3 pr-11 text-left disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`}
       >
-        <span className={`min-w-0 truncate ${selectedValue ? "" : "text-slate-400"}`}>
+        <span className={`min-w-0 truncate ${selectedValue ? "" : "text-muted"}`}>
           {selectedOption?.label || options[0]?.label || "Select an option"}
         </span>
         <span className="pointer-events-none absolute right-3 grid h-7 w-7 place-items-center rounded-lg bg-[#eafafd] text-[#1DBFD3]">

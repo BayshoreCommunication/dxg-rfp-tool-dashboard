@@ -5,7 +5,7 @@ const proposalId = 'cccccccccccccccccccccccc';
 const sourceId = '11111111-1111-4111-8111-111111111111';
 const stamp = () => new Date().toISOString();
 let state;
-const reset = () => { state = { messages: [], scan: 'scanning', uploaded: false, name: 'brief.txt', requests: [], uploadCount: 0, eventName: 'Untitled proposal', delays: {} }; };
+const reset = () => { state = { messages: [], scan: 'scanning', uploaded: false, name: 'brief.txt', requests: [], uploadCount: 0, eventName: 'Untitled proposal', delays: {}, puts: [], failPuts: 0, putDelay: 0 }; };
 reset();
 const json = (res, data, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify(data)); };
 const body = async req => { const chunks = []; for await (const chunk of req) chunks.push(chunk); return JSON.parse(Buffer.concat(chunks).toString() || '{}'); };
@@ -24,6 +24,9 @@ export async function handleProposalOnboarding(req, res, url) {
       if (input.scan) state.scan = input.scan;
       if (input.intakeProgress) state.intakeProgress = input.intakeProgress;
       if (input.proposal) state.proposal = input.proposal;
+      // Draft saves: record every PUT, fail the next N, and optionally hold each one open.
+      if (typeof input.failPuts === 'number') state.failPuts = input.failPuts;
+      if (typeof input.putDelay === 'number') state.putDelay = input.putDelay;
       if (Array.isArray(input.questions)) {
         state.questions = input.questions;
         state.messages = [message({ role: 'user', kind: 'instruction', content: 'Help me plan an event.' })];
@@ -48,6 +51,17 @@ export async function handleProposalOnboarding(req, res, url) {
   }
   if (path === `/api/proposals/${proposalId}` && req.method === 'GET') {
     json(res, { data: { _id: proposalId, version: 1, isDraft: true, status: 'unsubmitted', event: { eventName: state.eventName }, ...(state.proposal ?? {}) } }); return true;
+  }
+  if (path === `/api/proposals/${proposalId}` && req.method === 'PUT') {
+    const payload = await body(req);
+    await new Promise(resolve => setTimeout(resolve, state.putDelay));
+    if (state.failPuts > 0) {
+      state.failPuts -= 1;
+      state.puts.push({ failed: true, payload });
+      json(res, { message: 'Update failed' }, 500); return true;
+    }
+    state.puts.push({ failed: false, payload });
+    json(res, { message: 'Proposal updated', data: { _id: proposalId, version: 2, isDraft: payload.isDraft ?? true, status: payload.status ?? 'unsubmitted', event: payload.event ?? { eventName: state.eventName } } }); return true;
   }
   const base = `/api/v1/proposals/${proposalId}`;
   if (path === `${base}/sources/upload-session`) {

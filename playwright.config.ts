@@ -8,7 +8,7 @@ const backendOrigin = `http://127.0.0.1:${backendPort}`;
 export default defineConfig({
   testDir: "./e2e",
   // Onboarding uses the conversation-enabled backend fixture/config.
-  testIgnore: ["**/proposal-onboarding.spec.ts", "**/proposal-entry.spec.ts"],
+  testIgnore: ["**/proposal-onboarding.spec.ts", "**/proposal-entry.spec.ts", "**/proposal-builder-save.spec.ts", "**/proposal-qa.spec.ts"],
   fullyParallel: false,
   workers: 1,
   timeout: 30_000,

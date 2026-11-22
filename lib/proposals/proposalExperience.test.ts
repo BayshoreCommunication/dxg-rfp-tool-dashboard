@@ -9,6 +9,8 @@ import {
   omitStandaloneVideoRecording,
   proposalStepOrder,
   resolveProposalStep,
+  adjacentApplicableStep,
+  proposalSections,
 } from "./proposalExperience";
 
 describe("proposal experience helpers", () => {
@@ -210,5 +212,37 @@ describe("proposal experience helpers", () => {
     );
     expect(invitation.message).toContain("- Proposal due: September 20, 2026");
     expect(invitation.message).toContain("send your questions by September 10, 2026");
+  });
+
+  test("advanced mode always lists nine sections; Hybrid & Virtual is not applicable for in-person events", () => {
+    const hybrid = proposalSections("advanced", "Hybrid");
+    expect(hybrid.map((section) => section.id)).toEqual([1, 2, 3, 4, 5, 7, 8, 9, 10]);
+    expect(hybrid.every((section) => section.applicable)).toBe(true);
+
+    for (const format of ["In-Person", "Virtual"]) {
+      expect(proposalSections("advanced", format)).toHaveLength(9);
+    }
+    expect(proposalSections("advanced", "In-Person").filter((section) => !section.applicable)).toEqual([{ id: 4, applicable: false }]);
+    expect(proposalSections("advanced", "Virtual").find((section) => section.id === 4)?.applicable).toBe(true);
+  });
+
+  test("basic mode keeps its five sections and never lists the retired recording section", () => {
+    expect(proposalSections("basic", "In-Person").map((section) => section.id)).toEqual([1, 2, 3, 8, 10]);
+    expect(proposalSections("advanced", "Hybrid").some((section) => section.id === 6)).toBe(false);
+  });
+
+  test("a link to Hybrid & Virtual on an in-person event opens its not-applicable page", () => {
+    expect(resolveProposalStep(4, "advanced", "In-Person")).toBe(4);
+    expect(resolveProposalStep(4, "basic", "In-Person")).toBe(1);
+  });
+
+  test("Continue and Back skip a not-applicable section, including from it", () => {
+    expect(adjacentApplicableStep("advanced", "In-Person", 3, 1)).toBe(5);
+    expect(adjacentApplicableStep("advanced", "In-Person", 5, -1)).toBe(3);
+    expect(adjacentApplicableStep("advanced", "In-Person", 4, 1)).toBe(5);
+    expect(adjacentApplicableStep("advanced", "In-Person", 4, -1)).toBe(3);
+    expect(adjacentApplicableStep("advanced", "Hybrid", 3, 1)).toBe(4);
+    expect(adjacentApplicableStep("advanced", "Hybrid", 10, 1)).toBe(10);
+    expect(adjacentApplicableStep("advanced", "Hybrid", 1, -1)).toBe(1);
   });
 });
