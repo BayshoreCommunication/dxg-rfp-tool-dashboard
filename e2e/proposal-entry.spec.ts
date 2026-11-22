@@ -26,6 +26,10 @@ for (const theme of ["light", "dark"] as const) {
     await expect(starters.getByRole("button")).toHaveCount(3);
     await expect(page.getByRole("button", { name: "Upload my brief or old proposal" })).toHaveAccessibleDescription(/PDF, DOCX/);
 
+    // Colours animate after a theme switch; measure the settled colours, not a mid-transition frame.
+
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; animation: none !important; }" });
+
     const results = await new AxeBuilder({ page })
       .include('[aria-label="Proposal assistant workspace"]')
       .withTags(["wcag2a", "wcag2aa"])
@@ -61,6 +65,10 @@ for (const theme of ["light", "dark"] as const) {
     await expect(rail.getByRole("heading", { name: "Proposal details" })).toBeVisible();
     await expect(rail.getByRole("heading", { name: "Source documents" })).toBeVisible();
     await expect(rail.getByText("first-brief.txt")).toBeVisible();
+
+    // Colours animate after a theme switch; measure the settled colours, not a mid-transition frame.
+
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; animation: none !important; }" });
 
     const results = await new AxeBuilder({ page })
       .include('[aria-label="Proposal assistant workspace"]')
@@ -121,6 +129,10 @@ for (const theme of ["light", "dark"] as const) {
     await expect(rail.getByText("Lakeside Convention Center")).toBeVisible();
     await expect(rail.getByRole("link", { name: /Edit all details/ })).toBeVisible();
 
+    // Colours animate after a theme switch; measure the settled colours, not a mid-transition frame.
+
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; animation: none !important; }" });
+
     const results = await new AxeBuilder({ page })
       .include('[aria-label="Proposal assistant workspace"]')
       .include('[aria-label="Proposal assistant tools"]')
@@ -179,6 +191,10 @@ test.describe("proposal builder sections", () => {
         const isDark = await page.locator("html").evaluate((element) => element.classList.contains("dark"));
         if ((theme === "dark") !== isDark) await page.getByTestId("dev-theme-toggle").click();
         await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+
+        // Colours animate after a theme switch; measure the settled colours, not a mid-transition frame.
+
+        await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; animation: none !important; }" });
 
         const results = await new AxeBuilder({ page }).include('[data-testid="proposal-editor-layout"]').withTags(["wcag2a", "wcag2aa"]).analyze();
         const blocking = results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""));
