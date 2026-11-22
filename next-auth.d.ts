@@ -8,6 +8,8 @@ declare module "next-auth" {
       avatar?: string;
     };
     authError?: string;
+    /** Set with authError when RFPilot paused the member's organization. */
+    authEndReason?: string;
     backendAccessExpired?: boolean;
     /** The organization hasn't finished onboarding and this user (Owner or Admin) can finish it. */
     needsOnboarding?: boolean;
@@ -34,6 +36,7 @@ declare module "next-auth/jwt" {
     refreshTokenExpiresAt?: number;
     sessionId?: string;
     authError?: string;
+    authEndReason?: string;
     needsOnboarding?: boolean;
   }
 }

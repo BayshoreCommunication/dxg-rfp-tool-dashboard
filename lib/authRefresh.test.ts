@@ -137,6 +137,38 @@ describe("backend refresh coordinator", () => {
     });
   });
 
+  it("keeps the reason when a refresh is refused because the organization is paused", async () => {
+    const blocked = createBackendRefreshCoordinator({
+      fetcher: jest.fn(async () =>
+        Response.json(
+          { code: "REFRESH_SESSION_EXPIRED", reason: "organization_blocked" },
+          { status: 401 },
+        ),
+      ) as unknown as typeof fetch,
+      now: () => 100,
+    });
+    const result = await blocked.refresh(token);
+    expect(result).toMatchObject({
+      authError: SESSION_EXPIRED_ERROR,
+      authEndReason: "ORGANIZATION_BLOCKED",
+    });
+    expect(result.refreshToken).toBeUndefined();
+
+    // Every other refusal ends the session without a reason.
+    const reused = createBackendRefreshCoordinator({
+      fetcher: jest.fn(async () =>
+        Response.json(
+          { code: "REFRESH_SESSION_EXPIRED", reason: "reuse_detected" },
+          { status: 401 },
+        ),
+      ) as unknown as typeof fetch,
+      now: () => 100,
+    });
+    const other = await reused.refresh(token);
+    expect(other.authError).toBe(SESSION_EXPIRED_ERROR);
+    expect(other.authEndReason).toBeUndefined();
+  });
+
   it("keeps refresh credentials after a transient backend failure", async () => {
     const coordinator = createBackendRefreshCoordinator({
       fetcher: jest.fn(async () =>

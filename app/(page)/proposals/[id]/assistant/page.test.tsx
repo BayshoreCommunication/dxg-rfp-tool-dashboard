@@ -105,6 +105,13 @@ describe("/proposals/[id]/assistant", () => {
     expect(mockRedirect).toHaveBeenCalledWith(expect.stringContaining('reason=session-expired'));
     expect(mockNotFound).not.toHaveBeenCalled();
   });
+  test('a paused organization leaves through the exit that shows the message', async () => {
+    mockGetProposalById.mockResolvedValueOnce({success:false, status:401, code:'ORGANIZATION_BLOCKED'});
+    const Page = await loadPage('true');
+    await expect(Page({params:Promise.resolve({id:PROPOSAL_ID})})).rejects.toThrow('NEXT_REDIRECT');
+    expect(mockRedirect).toHaveBeenCalledTimes(1);
+    expect(mockRedirect).toHaveBeenCalledWith('/api/auth/organization-blocked');
+  });
   test('denied access never mounts the workspace', async () => {
     mockGetProposalById.mockResolvedValueOnce({success:false, status:403});
     const Page = await loadPage('true');

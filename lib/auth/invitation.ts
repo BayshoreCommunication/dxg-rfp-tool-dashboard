@@ -1,5 +1,6 @@
 /* Accept-invite page (ORG-205): the parts with no I/O. */
 
+import { ORGANIZATION_BLOCKED_MESSAGE } from "./organizationBlocked";
 import { hasSsoErrorMessage, ORGANIZATION_SETUP_REQUIRED_MESSAGE, ssoErrorMessage } from "./sso";
 
 export type InvitationRole =
@@ -91,6 +92,7 @@ export const ACCEPT_ERROR_MESSAGES: Record<string, string> = {
   MEMBER_DEACTIVATED: "Your membership in this organization was deactivated. Ask your organization's admin to reactivate it.",
   RATE_LIMITED: "Too many attempts. Wait a few minutes and try again.",
   MEMBERSHIP_INACTIVE: "Your organization membership isn't active. Contact your organization's admin.",
+  ORGANIZATION_BLOCKED: ORGANIZATION_BLOCKED_MESSAGE,
   server_unavailable: "Could not reach the server. Please try again.",
 };
 

@@ -140,6 +140,7 @@ describe('SigninPage', () => {
     ['EMAIL_IN_ANOTHER_ORGANIZATION', /another RFPilot organization/],
     ['PASSWORD_SIGN_IN_DISABLED', /no longer available/],
     ['AccessDenied', /denied/],
+    ['ORGANIZATION_BLOCKED', /Your organization's access to RFPilot is paused\. Contact RFPilot support for help\./],
     ['SOMETHING_NEW', /Sign-in failed/],
   ])('shows ?error=%s as a plain message', (code, message) => {
     render(<SigninPage authError={code} />)

@@ -4,9 +4,11 @@ import { unstable_update } from "@/auth";
 import {
   BACKEND_REFRESH_COMMAND,
   BACKEND_REFRESH_HANDOFF,
+  ORGANIZATION_BLOCKED_COMMAND,
   backendRefreshCoordinator,
   createBackendRefreshCommand,
 } from "@/lib/authRefresh";
+import { isOrganizationBlockedBody } from "@/lib/auth/organizationBlocked";
 import {
   hasExpiredBackendSession,
   hasRetryableBackendSessionError,
@@ -20,6 +22,8 @@ type BackendClientDependencies = {
   readSession: () => Promise<BackendSession>;
   forceRefresh: () => Promise<BackendSession | null>;
   fetcher: typeof fetch;
+  // Called when the backend answers 401 ORGANIZATION_BLOCKED.
+  endOrganizationBlockedSession?: () => Promise<void>;
 };
 
 type SessionRefreshOperation = () => Promise<BackendSession | null>;
@@ -102,6 +106,18 @@ export function createAuthenticatedBackendClient(
       input,
       withBearer(init, session.accessToken),
     );
+    // RFPilot paused the organization. A refresh would be refused for the same
+    // reason, so none is tried: the session ends here and the caller gets the
+    // backend's answer. The member's next page load goes to the sign-in page.
+    if (
+      firstResponse.status === 401 &&
+      isOrganizationBlockedBody(
+        await firstResponse.clone().json().catch(() => null),
+      )
+    ) {
+      await dependencies.endOrganizationBlockedSession?.();
+      return firstResponse;
+    }
     if (
       firstResponse.status !== 401 ||
       options.retryOnUnauthorized === false ||
@@ -192,8 +208,26 @@ export async function forceRefreshBackendSession(): Promise<BackendSession | nul
   });
 }
 
+// Marks the Auth.js session as ended by the block. In a server action or a
+// route handler the cookie is rewritten at once; during a page render it
+// cannot be, and the first action or route call from that page does it.
+export async function endOrganizationBlockedSession(): Promise<void> {
+  try {
+    const current = await getBackendSession();
+    if (!current.sessionId || current.expired) return;
+    await unstable_update({
+      [ORGANIZATION_BLOCKED_COMMAND]: await createBackendRefreshCommand(
+        current.sessionId,
+      ),
+    } as never);
+  } catch {
+    // Nothing to do: the next request is answered the same way.
+  }
+}
+
 export const authenticatedBackendFetch = createAuthenticatedBackendClient({
   readSession: getBackendSession,
   forceRefresh: forceRefreshBackendSession,
   fetcher: fetch,
+  endOrganizationBlockedSession,
 });

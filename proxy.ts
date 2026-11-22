@@ -6,7 +6,16 @@ import type {
 import type { NextAuthRequest } from "next-auth";
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
-import { SESSION_EXPIRED_ERROR } from "./lib/authTokenState";
+import {
+  ORGANIZATION_BLOCKED_CODE,
+  ORGANIZATION_BLOCKED_MESSAGE,
+  ORGANIZATION_BLOCKED_SIGN_OUT_PATH,
+} from "./lib/auth/organizationBlocked";
+import { isDocumentNavigation } from "./lib/auth/requestKind";
+import {
+  hasOrganizationBlockedSession,
+  SESSION_EXPIRED_ERROR,
+} from "./lib/authTokenState";
 import { ONBOARDING_PATH } from "./lib/auth/onboarding";
 
 const excludedPrefixes = [
@@ -47,6 +56,49 @@ const handleAuthenticatedRequest = (
     SESSION_EXPIRED_ERROR;
   const backendAccessExpired =
     request.auth?.backendAccessExpired === true;
+
+  // --- ORGANIZATION PAUSED BY RFPILOT ---
+  // The block ended this session. The exit route removes the cookie and the
+  // message is the page that request ends on, so only a request that shows
+  // its answer may go there. The sign-in and sign-up pages stay reachable.
+  if (
+    hasOrganizationBlockedSession(
+      request.auth as Record<string, unknown> | null,
+    ) &&
+    pathname !== "/sign-in" &&
+    pathname !== "/sign-up"
+  ) {
+    // A server action is a fetch that cannot follow a redirect to a page.
+    // Answer the way a redirecting action does, and the browser goes there.
+    if (request.headers.has("next-action")) {
+      return new NextResponse(null, {
+        headers: {
+          "x-action-redirect": `${ORGANIZATION_BLOCKED_SIGN_OUT_PATH};replace`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+    // A page load: 303, so a posted form arrives at the exit as a GET.
+    if (isDocumentNavigation(request.method, request.headers)) {
+      return NextResponse.redirect(
+        new URL(ORGANIZATION_BLOCKED_SIGN_OUT_PATH, request.url),
+        303,
+      );
+    }
+    // Anything else (a background fetch, a prefetch, a router request) is
+    // refused and the cookie is left alone: a redirect here would sign the
+    // member out where nobody sees the message, and a fetch would read the
+    // redirected answer as success. The router turns this refusal of a click
+    // into a page load of the same address, which takes the branch above.
+    return NextResponse.json(
+      {
+        success: false,
+        code: ORGANIZATION_BLOCKED_CODE,
+        message: ORGANIZATION_BLOCKED_MESSAGE,
+      },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   // --- OAUTH CALLBACK HANDLING ---
   if (pathname === "/auth/callback") {

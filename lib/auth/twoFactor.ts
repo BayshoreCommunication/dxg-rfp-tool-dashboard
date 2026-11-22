@@ -1,6 +1,8 @@
 /* Two-factor sign-in (ORG-303/304): the parts with no I/O, shared by auth.ts,
    the sign-in server actions and the code / setup step on the page. */
 
+import { ORGANIZATION_BLOCKED_MESSAGE } from "./organizationBlocked";
+
 export type TwoFactorNextStep = "two_factor_challenge" | "two_factor_enrolment";
 
 /* What the page is allowed to know about a pending second factor. The
@@ -55,6 +57,7 @@ export const TWO_FACTOR_ERROR_MESSAGES: Record<string, string> = {
   TWO_FACTOR_NOT_CONFIGURED: "Two-factor sign-in isn't available right now. Please try again later.",
   TWO_FACTOR_ERROR: "Something went wrong checking your code. Please try again.",
   MEMBERSHIP_INACTIVE: "Your organization membership isn't active. Contact your organization's admin.",
+  ORGANIZATION_BLOCKED: ORGANIZATION_BLOCKED_MESSAGE,
   server_unavailable: "Could not reach the server. Please try again.",
 };
 
@@ -66,6 +69,8 @@ const RESTART_CODES = new Set([
   "TWO_FACTOR_ALREADY_ENABLED",
   "TWO_FACTOR_NOT_ENABLED",
   "MEMBERSHIP_INACTIVE",
+  // The backend issues no challenge for a blocked organization.
+  "ORGANIZATION_BLOCKED",
 ]);
 
 export const twoFactorErrorMessage = (code: string | undefined) =>

@@ -1,5 +1,6 @@
 import AssistantWorkspacePage from "@/components/proposals/AssistantWorkspacePage";
 import { getProposalByIdAction } from "@/app/actions/proposals";
+import { ORGANIZATION_BLOCKED_CODE, ORGANIZATION_BLOCKED_SIGN_OUT_PATH } from "@/lib/auth/organizationBlocked";
 import { isSafeProposalId } from "@/lib/aiAssistant/handoff";
 import { notFound, redirect } from "next/navigation";
 import ProposalLoadRecovery from '@/components/proposals/ProposalLoadRecovery';
@@ -31,6 +32,8 @@ const Page = async ({
   const proposal = await getProposalByIdAction(id);
   if (!proposal.success) {
     if (proposal.status === 404) notFound();
+    // RFPilot paused the organization: leave through the exit that says so.
+    if (proposal.status === 401 && proposal.code === ORGANIZATION_BLOCKED_CODE) redirect(ORGANIZATION_BLOCKED_SIGN_OUT_PATH);
     if (proposal.status === 401) redirect(`/sign-in?${new URLSearchParams({ callbackUrl: `/proposals/${id}/assistant`, reason: 'session-expired' })}`);
     return <ProposalLoadRecovery denied={proposal.status === 403} />;
   }

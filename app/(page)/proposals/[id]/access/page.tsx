@@ -1,6 +1,7 @@
 import { getRfpAccessAction } from "@/app/actions/rfpSharing";
 import ProposalLoadRecovery from "@/components/proposals/ProposalLoadRecovery";
 import RfpAccessPanel from "@/components/proposals/sharing/RfpAccessPanel";
+import { ORGANIZATION_BLOCKED_CODE, ORGANIZATION_BLOCKED_SIGN_OUT_PATH } from "@/lib/auth/organizationBlocked";
 import { ArrowLeft, BarChart3, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,6 +16,8 @@ export default async function RfpAccessPage({ params }: { params: Promise<{ id: 
   const result = await getRfpAccessAction(id);
   if (!result.success) {
     if (result.status === 404) notFound();
+    // RFPilot paused the organization: leave through the exit that says so.
+    if (result.status === 401 && result.code === ORGANIZATION_BLOCKED_CODE) redirect(ORGANIZATION_BLOCKED_SIGN_OUT_PATH);
     if (result.status === 401) redirect(`/sign-in?${new URLSearchParams({ callbackUrl: `/proposals/${id}/access`, reason: "session-expired" })}`);
     return <ProposalLoadRecovery denied={result.status === 403} />;
   }

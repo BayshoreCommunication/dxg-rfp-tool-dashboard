@@ -1,3 +1,8 @@
+import {
+  isOrganizationBlockedBody,
+  ORGANIZATION_BLOCKED_CODE,
+  ORGANIZATION_BLOCKED_REFRESH_REASON,
+} from "@/lib/auth/organizationBlocked";
 import { BACKEND_URL } from "@/lib/config";
 import {
   expireBackendSession,
@@ -12,6 +17,9 @@ export const AUTH_API_ORIGIN = BACKEND_URL.endsWith("/api")
 export const AUTH_FETCH_TIMEOUT_MS = 8_000;
 export const BACKEND_REFRESH_COMMAND = "backendRefreshCommand";
 export const BACKEND_REFRESH_HANDOFF = "backendRefreshHandoff";
+// Auth.js update key: end the session because the organization is paused.
+// Carries the same signed command as a refresh, so only server code can send it.
+export const ORGANIZATION_BLOCKED_COMMAND = "organizationBlockedCommand";
 
 const defaultFetcher: typeof fetch = (...args) => globalThis.fetch(...args);
 
@@ -242,7 +250,17 @@ export function createBackendRefreshCoordinator(
       );
 
       if (response.status === 401 || response.status === 403) {
-        return expireBackendSession(token);
+        // A paused organization is told so on the sign-in page.
+        const refusal = (await response.json().catch(() => null)) as
+          | Record<string, unknown>
+          | null;
+        return expireBackendSession(
+          token,
+          refusal?.reason === ORGANIZATION_BLOCKED_REFRESH_REASON ||
+            isOrganizationBlockedBody(refusal)
+            ? ORGANIZATION_BLOCKED_CODE
+            : undefined,
+        );
       }
       if (!response.ok) {
         return { ...token, authError: REFRESH_RETRY_ERROR };
