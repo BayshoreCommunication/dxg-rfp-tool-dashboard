@@ -11,9 +11,13 @@ export const ORGANIZATION_BLOCKED_REFRESH_REASON = "organization_blocked";
 export const ORGANIZATION_BLOCKED_MESSAGE =
   "Your organization's access to RFPilot is paused. Contact RFPilot support for help.";
 
-/* Where a member lands when the block ends their session: the sign-in page
-   reads ?error= and shows the message, exactly as after a refused sign-in. */
+/* The sign-in page reads ?error= and shows the message, exactly as after a
+   refused sign-in. */
 export const ORGANIZATION_BLOCKED_SIGN_IN_PATH = `/sign-in?error=${ORGANIZATION_BLOCKED_CODE}`;
+
+/* Where a member goes when the block ended their session: this route removes
+   the session cookie, then sends them to the sign-in page above. */
+export const ORGANIZATION_BLOCKED_SIGN_OUT_PATH = "/api/auth/organization-blocked";
 
 /* True for a backend error body that carries the code, under either key. */
 export const isOrganizationBlockedBody = (body: unknown): boolean => {

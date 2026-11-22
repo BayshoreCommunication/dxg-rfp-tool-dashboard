@@ -6,7 +6,11 @@ import type {
 import type { NextAuthRequest } from "next-auth";
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
-import { SESSION_EXPIRED_ERROR } from "./lib/authTokenState";
+import { ORGANIZATION_BLOCKED_SIGN_OUT_PATH } from "./lib/auth/organizationBlocked";
+import {
+  hasOrganizationBlockedSession,
+  SESSION_EXPIRED_ERROR,
+} from "./lib/authTokenState";
 import { ONBOARDING_PATH } from "./lib/auth/onboarding";
 
 const excludedPrefixes = [
@@ -47,6 +51,21 @@ const handleAuthenticatedRequest = (
     SESSION_EXPIRED_ERROR;
   const backendAccessExpired =
     request.auth?.backendAccessExpired === true;
+
+  // --- ORGANIZATION PAUSED BY RFPILOT ---
+  // The block ended this session. Remove its cookie and show the message on
+  // the sign-in page. The sign-in and sign-up pages themselves stay reachable.
+  if (
+    hasOrganizationBlockedSession(
+      request.auth as Record<string, unknown> | null,
+    ) &&
+    pathname !== "/sign-in" &&
+    pathname !== "/sign-up"
+  ) {
+    return NextResponse.redirect(
+      new URL(ORGANIZATION_BLOCKED_SIGN_OUT_PATH, request.url),
+    );
+  }
 
   // --- OAUTH CALLBACK HANDLING ---
   if (pathname === "/auth/callback") {

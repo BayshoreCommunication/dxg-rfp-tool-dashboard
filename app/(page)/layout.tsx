@@ -7,10 +7,13 @@ import { settingsAccessForRoles } from "@/components/settings/settingsAccess";
 import DevThemeToggle from "@/components/layout/DevThemeToggle";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { ORGANIZATION_BLOCKED_SIGN_OUT_PATH } from "@/lib/auth/organizationBlocked";
+import { hasOrganizationBlockedSession } from "@/lib/authTokenState";
 import { getMemberIdentity } from "@/lib/server/memberIdentity";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -33,6 +36,11 @@ export default async function RootLayout({
     auth(),
     getMemberIdentity(),
   ]);
+  // RFPilot paused the organization and a request on this page was refused
+  // for it: leave for the sign-in page, which says so.
+  if (hasOrganizationBlockedSession(session as Record<string, unknown> | null)) {
+    redirect(ORGANIZATION_BLOCKED_SIGN_OUT_PATH);
+  }
   // One read of the session's roles for every settings menu and the settings dialog.
   const settingsAccess = settingsAccessForRoles(identity.roles);
   const assistantEnabled = access?.success === true && access.data.enabled;

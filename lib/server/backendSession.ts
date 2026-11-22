@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getToken } from "next-auth/jwt";
 import {
   hasExpiredBackendSession,
+  hasOrganizationBlockedSession,
   hasRetryableBackendSessionError,
 } from "@/lib/authTokenState";
 
@@ -15,6 +16,8 @@ export type BackendSession = {
   sessionId: string | null;
   expired: boolean;
   retryableError: boolean;
+  /** The session ended because RFPilot paused the member's organization. */
+  organizationBlocked?: boolean;
 };
 
 export async function getBackendSession() {
@@ -40,6 +43,7 @@ export async function getBackendSession() {
       sessionId: null,
       expired: true,
       retryableError: false,
+      organizationBlocked: hasOrganizationBlockedSession(token),
     } satisfies BackendSession;
   }
   return {

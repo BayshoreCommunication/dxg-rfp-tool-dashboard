@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { ORGANIZATION_BLOCKED_SIGN_OUT_PATH } from "@/lib/auth/organizationBlocked";
 import { forceRefreshBackendSession } from "@/lib/server/backendClient";
 import { getBackendSession } from "@/lib/server/backendSession";
 
@@ -31,6 +32,13 @@ export async function GET(request: NextRequest) {
         },
       },
     );
+  }
+
+  if (state.organizationBlocked) {
+    return new Response(null, {
+      status: 303,
+      headers: { Location: ORGANIZATION_BLOCKED_SIGN_OUT_PATH },
+    });
   }
 
   const signIn = new URLSearchParams({

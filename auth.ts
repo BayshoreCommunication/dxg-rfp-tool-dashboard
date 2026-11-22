@@ -6,6 +6,7 @@ import {
   authBffHeaders,
   BACKEND_REFRESH_COMMAND,
   BACKEND_REFRESH_HANDOFF,
+  ORGANIZATION_BLOCKED_COMMAND,
   backendRefreshCoordinator,
   fetchWithTimeout,
   verifyBackendRefreshCommand,
@@ -20,6 +21,7 @@ import {
   TWO_FACTOR_REQUIRED_CODE,
   twoFactorErrorRequiresRestart,
 } from "@/lib/auth/twoFactor";
+import { ORGANIZATION_BLOCKED_CODE } from "@/lib/auth/organizationBlocked";
 import { sanitizeInvitationToken } from "@/lib/auth/invitation";
 import { sanitizeHandoff } from "@/lib/auth/sso";
 import { ONBOARDING_DONE_UPDATE, readNeedsOnboarding } from "@/lib/auth/onboarding";
@@ -515,7 +517,7 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
     async jwt({ token, user, trigger, session }) {
       if (user) {
         const needsOnboarding = await readNeedsOnboarding(user.accessToken);
-        return { ...token, ...user, needsOnboarding, authError: undefined };
+        return { ...token, ...user, needsOnboarding, authError: undefined, authEndReason: undefined };
       }
       const nextToken = { ...token };
       delete nextToken[BACKEND_REFRESH_HANDOFF];
@@ -558,6 +560,20 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
       }
       const sessionId =
         typeof nextToken.sessionId === "string" ? nextToken.sessionId : "";
+      // A request was answered 401 ORGANIZATION_BLOCKED: end the session and
+      // keep the reason for the sign-in page. No refresh is tried.
+      if (
+        trigger === "update" &&
+        Boolean(sessionId) &&
+        (await verifyBackendRefreshCommand(
+          (session as Record<string, unknown> | undefined)?.[
+            ORGANIZATION_BLOCKED_COMMAND
+          ],
+          sessionId,
+        ))
+      ) {
+        return expireBackendSession(nextToken, ORGANIZATION_BLOCKED_CODE);
+      }
       const forceRefresh =
         trigger === "update" &&
         Boolean(sessionId) &&
@@ -592,6 +608,7 @@ export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
         });
         Object.assign(session, {
           authError: token.authError,
+          authEndReason: token.authEndReason,
           backendAccessExpired:
             typeof token.accessTokenExpiresAt === "number" &&
             Date.now() >= token.accessTokenExpiresAt,
