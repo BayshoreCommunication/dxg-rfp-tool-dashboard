@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useEffect } from "react";
 import { SettingsAccessProvider } from "./SettingsAccessContext";
-import SettingsModal from "./SettingsModal";
+import SettingsModal, { KEEP_CLOSED_SECTIONS_MS, SettingsDialogOpener } from "./SettingsModal";
 import { useInSettingsModal } from "./SettingsModalContext";
 import { settingsAccessForRoles } from "./settingsAccess";
 
@@ -12,7 +12,7 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ back }),
 }));
 
-// Each section is replaced by a probe that counts its mockMounts: a mount is a fresh data load.
+// Each section is replaced by a probe that counts its mounts: a mount is a fresh data load.
 const mockMounts: Record<string, number> = {};
 function mockProbe(name: string) {
   return function Probe() {
@@ -20,7 +20,13 @@ function mockProbe(name: string) {
     useEffect(() => {
       mockMounts[name] = (mockMounts[name] ?? 0) + 1;
     }, []);
-    return <p>{`${name} section${inModal ? " in dialog" : ""}`}</p>;
+    return (
+      <div>
+        <p>{`${name} section${inModal ? " in dialog" : ""}`}</p>
+        <input aria-label={`${name} field`} />
+        <button type="button">{`${name} action`}</button>
+      </div>
+    );
   };
 }
 jest.mock("./SettingsDetials", () => ({ __esModule: true, default: mockProbe("General") }));
@@ -30,16 +36,22 @@ jest.mock("@/components/organization/security/SecuritySettings", () => ({ __esMo
 jest.mock("@/components/organization/vendors/VendorListSettings", () => ({ __esModule: true, default: mockProbe("Vendors") }));
 jest.mock("@/components/organization/templates/TemplateListSettings", () => ({ __esModule: true, default: mockProbe("Templates") }));
 
-const renderAs = (role: string) =>
-  render(
+// The host wraps the app; the opener stands in for the intercepted settings route.
+function Harness({ role = "planner", open = true }: { role?: string; open?: boolean }) {
+  return (
     <SettingsAccessProvider value={settingsAccessForRoles([role])}>
-      <SettingsModal />
-    </SettingsAccessProvider>,
+      <SettingsModal>
+        <p>page underneath</p>
+        {open && <SettingsDialogOpener />}
+      </SettingsModal>
+    </SettingsAccessProvider>
   );
+}
 
-const navLink = (name: string) =>
-  screen.getByRole("navigation", { name: "Settings sections" }).querySelector(`a[href="${hrefOf(name)}"]`) as HTMLElement;
 const hrefOf = (name: string) => (name === "General" ? "/settings" : `/settings/${name.toLowerCase()}`);
+const navLink = (name: string) =>
+  document.querySelector(`nav[aria-label="Settings sections"] a[href="${hrefOf(name)}"]`) as HTMLElement;
+const settingsDialog = () => document.querySelector('[role="dialog"][aria-label="Settings"]') as HTMLElement | null;
 
 describe("SettingsModal", () => {
   let replaceState: jest.SpyInstance;
@@ -50,34 +62,44 @@ describe("SettingsModal", () => {
     for (const key of Object.keys(mockMounts)) delete mockMounts[key];
     replaceState = jest.spyOn(window.history, "replaceState").mockImplementation(() => undefined);
   });
-  afterEach(() => replaceState.mockRestore());
+  afterEach(() => {
+    replaceState.mockRestore();
+    jest.restoreAllMocks();
+  });
 
-  test("groups the sections, marks the current one and renders only that section", () => {
-    renderAs("planner");
+  test("renders nothing over the page until a settings route opens it", () => {
+    render(<Harness open={false} />);
+    expect(screen.getByText("page underneath")).toBeInTheDocument();
+    expect(settingsDialog()).toBeNull();
+  });
+
+  test("groups the sections, marks the current one and renders only that section", async () => {
+    render(<Harness />);
 
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
     expect(nav).toHaveTextContent("Organization");
     expect(nav).toHaveTextContent("Proposals");
     expect(navLink("Teams")).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("heading", { name: "Teams" })).toBeInTheDocument();
-    expect(screen.getByText("Teams section in dialog")).toBeInTheDocument();
+    expect(await screen.findByText("Teams section in dialog")).toBeInTheDocument();
     expect(screen.queryByText(/Users section/)).not.toBeInTheDocument();
   });
 
   test("a Viewer sees neither Vendors nor Templates, from the first render", () => {
-    renderAs("viewer");
+    render(<Harness role="viewer" />);
     expect(navLink("Security")).toBeInTheDocument();
     expect(navLink("Vendors")).toBeNull();
     expect(navLink("Templates")).toBeNull();
   });
 
-  test("switching section rewrites the address without navigating and keeps visited sections loaded", () => {
-    renderAs("planner");
+  test("switching section rewrites the address without navigating and keeps visited sections loaded", async () => {
+    render(<Harness />);
+    await screen.findByText("Teams section in dialog");
 
     fireEvent.click(navLink("Users"));
     expect(replaceState).toHaveBeenLastCalledWith(null, "", "/settings/users");
     expect(navLink("Users")).toHaveAttribute("aria-current", "page");
-    expect(screen.getByText("Users section in dialog")).toBeVisible();
+    expect(await screen.findByText("Users section in dialog")).toBeVisible();
     expect(screen.getByText("Teams section in dialog")).not.toBeVisible();
 
     fireEvent.click(navLink("Teams"));
@@ -86,11 +108,10 @@ describe("SettingsModal", () => {
     expect(mockMounts).toEqual({ Teams: 1, Users: 1 });
   });
 
-  test("hovering a section starts loading it before the click", () => {
-    renderAs("planner");
+  test("hovering a section starts loading it before the click", async () => {
+    render(<Harness />);
     fireEvent.mouseEnter(navLink("Vendors"));
-    expect(mockMounts.Vendors).toBe(1);
-    expect(screen.getByText("Vendors section in dialog")).not.toBeVisible();
+    expect(await screen.findByText("Vendors section in dialog")).not.toBeVisible();
 
     fireEvent.click(navLink("Vendors"));
     expect(screen.getByText("Vendors section in dialog")).toBeVisible();
@@ -98,39 +119,33 @@ describe("SettingsModal", () => {
   });
 
   test("a modified click is left to the browser", () => {
-    renderAs("planner");
+    render(<Harness />);
     fireEvent.click(navLink("Users"), { metaKey: true });
     expect(replaceState).not.toHaveBeenCalled();
     expect(navLink("Teams")).toHaveAttribute("aria-current", "page");
   });
 
   test("follows a link inside a section to another section, but not the page underneath on close", () => {
-    const view = renderAs("planner");
-    const rerender = () =>
-      view.rerender(
-        <SettingsAccessProvider value={settingsAccessForRoles(["planner"])}>
-          <SettingsModal />
-        </SettingsAccessProvider>,
-      );
+    const view = render(<Harness />);
 
     mockPathname = "/settings/security";
-    rerender();
+    view.rerender(<Harness />);
     expect(navLink("Security")).toHaveAttribute("aria-current", "page");
 
     mockPathname = "/dashboard";
-    rerender();
+    view.rerender(<Harness />);
     expect(navLink("Security")).toHaveAttribute("aria-current", "page");
   });
 
   test("closes back to the page underneath with the button or Escape", () => {
-    renderAs("planner");
+    render(<Harness />);
     fireEvent.click(screen.getAllByRole("button", { name: "Close settings" })[1]);
     fireEvent.keyDown(document, { key: "Escape" });
     expect(back).toHaveBeenCalledTimes(2);
   });
 
   test("Escape closes a dialog opened from a section first, not the settings dialog", () => {
-    renderAs("planner");
+    render(<Harness />);
     const inner = document.createElement("div");
     inner.setAttribute("role", "dialog");
     inner.setAttribute("aria-modal", "true");
@@ -139,5 +154,64 @@ describe("SettingsModal", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(back).not.toHaveBeenCalled();
     inner.remove();
+  });
+
+  test("reopening shows the sections already loaded, without loading them again", async () => {
+    const view = render(<Harness />);
+    await screen.findByText("Teams section in dialog");
+    fireEvent.click(navLink("Users"));
+    await screen.findByText("Users section in dialog");
+
+    // Closed: hidden, not unmounted, and no longer modal.
+    mockPathname = "/dashboard";
+    view.rerender(<Harness open={false} />);
+    expect(settingsDialog()).not.toBeVisible();
+    expect(document.body.style.overflow).not.toBe("hidden");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(back).not.toHaveBeenCalled();
+
+    mockPathname = "/settings/users";
+    view.rerender(<Harness />);
+    expect(settingsDialog()).toBeVisible();
+    expect(screen.getByText("Users section in dialog")).toBeVisible();
+    expect(mockMounts).toEqual({ Teams: 1, Users: 1 });
+  });
+
+  test("a section the member interacted with starts fresh on reopen; the others are kept", async () => {
+    const view = render(<Harness />);
+    await screen.findByText("Teams section in dialog");
+    fireEvent.mouseEnter(navLink("Security"));
+    await screen.findByText("Security section in dialog");
+    fireEvent.mouseEnter(navLink("General"));
+    await screen.findByText("General section in dialog");
+
+    fireEvent.input(screen.getByLabelText("Teams field"), { target: { value: "unsaved" } });
+    fireEvent.click(screen.getByRole("button", { name: "Security action", hidden: true }));
+    // Clicking text, not a control, is only reading.
+    fireEvent.click(screen.getByText("General section in dialog"));
+
+    mockPathname = "/dashboard";
+    view.rerender(<Harness open={false} />);
+    mockPathname = "/settings/teams";
+    view.rerender(<Harness />);
+
+    expect(await screen.findByLabelText("Teams field")).toHaveValue("");
+    expect(mockMounts).toEqual({ Teams: 2, Security: 1, General: 1 });
+    expect(screen.queryByText("Security section in dialog")).not.toBeInTheDocument();
+  });
+
+  test(`reopening after ${KEEP_CLOSED_SECTIONS_MS / 60_000} minutes loads every section fresh`, async () => {
+    const now = jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+    const view = render(<Harness />);
+    await screen.findByText("Teams section in dialog");
+
+    mockPathname = "/dashboard";
+    view.rerender(<Harness open={false} />);
+    now.mockReturnValue(1_000_000 + KEEP_CLOSED_SECTIONS_MS + 1);
+    mockPathname = "/settings/teams";
+    act(() => view.rerender(<Harness />));
+
+    await screen.findByText("Teams section in dialog");
+    expect(mockMounts.Teams).toBe(2);
   });
 });

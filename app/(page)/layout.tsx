@@ -2,6 +2,7 @@ import { getAssistantAccessAction } from "@/app/actions/aiAssistant";
 import { auth } from "@/auth";
 import PostSignInNotice from "@/components/auth/PostSignInNotice";
 import { SettingsAccessProvider } from "@/components/settings/SettingsAccessContext";
+import SettingsModal from "@/components/settings/SettingsModal";
 import { settingsAccessForRoles } from "@/components/settings/settingsAccess";
 import DevThemeToggle from "@/components/layout/DevThemeToggle";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
@@ -58,21 +59,24 @@ export default async function RootLayout({
       >
         <ToastProvider>
           <SettingsAccessProvider value={settingsAccess}>
-            <PostSignInNotice />
-            <LayoutWrapper
-              assistantEnabled={assistantEnabled}
-              currentUser={
-                session?.user
-                  ? {
-                      name: session.user.name,
-                      email: session.user.email,
-                    }
-                  : undefined
-              }
-            >
-              {children}
-            </LayoutWrapper>
-            {modal}
+            {/* Settings dialog host: stays mounted so a reopened dialog shows what it loaded. */}
+            <SettingsModal>
+              <PostSignInNotice />
+              <LayoutWrapper
+                assistantEnabled={assistantEnabled}
+                currentUser={
+                  session?.user
+                    ? {
+                        name: session.user.name,
+                        email: session.user.email,
+                      }
+                    : undefined
+                }
+              >
+                {children}
+              </LayoutWrapper>
+              {modal}
+            </SettingsModal>
           </SettingsAccessProvider>
         </ToastProvider>
         {showLocalThemePreview && <DevThemeToggle defaultDark />}
