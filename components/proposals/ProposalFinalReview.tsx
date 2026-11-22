@@ -48,7 +48,7 @@ type Props = {
 const sourcePresentation = {
   user: { label: "User-provided", className: "border-sky-200 bg-sky-50 text-sky-700" },
   ai: { label: "AI-generated", className: "border-violet-200 bg-violet-50 text-violet-700" },
-  assumed: { label: "Assumed", className: "border-amber-200 bg-amber-50 text-amber-800" },
+  assumed: { label: "Assumed", className: "border-warning/40 bg-warning-soft text-warning-strong" },
 } as const;
 
 const SourceBadge = ({ provenance }: { provenance?: AnswerProvenance }) => {
@@ -82,10 +82,10 @@ const ReviewCard = ({
   provenance?: AnswerProvenance;
   children: React.ReactNode;
 }) => (
-  <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <article className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
     <div className="flex items-start justify-between gap-3">
-      <div className="flex items-center gap-2 text-slate-800">
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#eef8fd] text-[#0786cf]">
+      <div className="flex items-center gap-2 text-heading">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-soft text-action">
           {icon}
         </span>
         <h3 className="text-sm font-extrabold">{title}</h3>
@@ -93,13 +93,13 @@ const ReviewCard = ({
       <button
         type="button"
         onClick={() => onEdit(step, targetId)}
-        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold text-[#0786cf] hover:bg-[#eef8fd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0786cf]"
+        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold text-action hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         aria-label={`Edit ${title}`}
       >
         <Pencil size={13} aria-hidden="true" /> Edit
       </button>
     </div>
-    <div className="mt-3 text-sm leading-6 text-slate-600">{children}</div>
+    <div className="mt-3 text-sm leading-6 text-body">{children}</div>
     <div className="mt-3"><SourceBadge provenance={provenance} /></div>
   </article>
 );
@@ -126,21 +126,21 @@ export default function ProposalFinalReview({
     <section
       id="proposal-final-review"
       aria-labelledby="proposal-final-review-title"
-      className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 sm:px-5 lg:px-6"
+      className="rounded-2xl border border-line bg-surface-muted px-4 py-5 sm:px-5 lg:px-6"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.17em] text-[#0786cf]">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.17em] text-action">
             Final review
           </p>
-          <h2 id="proposal-final-review-title" className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">
+          <h2 id="proposal-final-review-title" className="mt-1 text-2xl font-extrabold tracking-tight text-heading">
             Confirm what vendors will receive
           </h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-body">
             Review scope, dates, procurement milestones, contacts, and recipients before publishing. Choosing which vendors to invite is the step right after.
           </p>
         </div>
-        <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-extrabold ${issues.length === 0 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
+        <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-extrabold ${issues.length === 0 ? "bg-emerald-100 text-success-strong" : "bg-amber-100 text-warning-strong"}`}>
           {issues.length === 0 ? <CheckCircle2 size={15} aria-hidden="true" /> : <ClipboardCheck size={15} aria-hidden="true" />}
           {issues.length === 0
             ? "Required information complete"
@@ -150,19 +150,19 @@ export default function ProposalFinalReview({
 
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <ReviewCard title="Scope" step={1} targetId="event-overview-section" onEdit={onEditStep} provenance={provenance.event} icon={<ClipboardCheck size={17} aria-hidden="true" />}>
-          <p className="font-bold text-slate-900">{event.eventName || "Event name not provided"}</p>
+          <p className="font-bold text-heading">{event.eventName || "Event name not provided"}</p>
           <p>{event.eventFormat} · {event.eventType.eventType || "Event type not provided"}</p>
           <p>{event.attendees || "—"} anticipated attendees · {rooms.length} room{rooms.length === 1 ? "" : "s"}</p>
         </ReviewCard>
 
         <ReviewCard title="Venue and dates" step={2} targetId="venue-schedule-section" onEdit={onEditStep} provenance={provenance.venueSchedule} icon={<MapPin size={17} aria-hidden="true" />}>
-          <p className="font-bold text-slate-900">{venue.venueName || "Venue not provided"}</p>
+          <p className="font-bold text-heading">{venue.venueName || "Venue not provided"}</p>
           <p>{[venue.venueCity, venue.venueState].filter(Boolean).join(", ") || "Location not provided"}</p>
           <p className="inline-flex items-center gap-1.5"><CalendarDays size={14} aria-hidden="true" />{event.startDate || "Start date"} – {event.endDate || "End date"}</p>
         </ReviewCard>
 
         <ReviewCard title="Rooms and AV approach" step={3} targetId="room-specifications-section" onEdit={onEditStep} provenance={provenance.roomByRoom} icon={<Sparkles size={17} aria-hidden="true" />}>
-          <p className="font-bold text-slate-900">{rooms.length} production room{rooms.length === 1 ? "" : "s"}</p>
+          <p className="font-bold text-heading">{rooms.length} production room{rooms.length === 1 ? "" : "s"}</p>
           <p>{rooms.map((room, index) => room.roomLocation || room.roomFunction || `Room ${index + 1}`).join(", ")}</p>
           <p>Vendor recommendations remain editable in Advanced production.</p>
         </ReviewCard>
@@ -173,25 +173,25 @@ export default function ProposalFinalReview({
         </ReviewCard>
 
         <ReviewCard title="Primary contact" step={10} targetId="primary-contact-section" onEdit={onEditStep} provenance={provenance.contact} icon={<Users size={17} aria-hidden="true" />}>
-          <p className="font-bold text-slate-900">{[contact.contactFirstName, contact.contactLastName].filter(Boolean).join(" ") || "Contact not provided"}</p>
+          <p className="font-bold text-heading">{[contact.contactFirstName, contact.contactLastName].filter(Boolean).join(" ") || "Contact not provided"}</p>
           <p>{contact.contactOrganization || contact.organizationLegalName || "Organization not provided"}</p>
           <p>{contact.contactEmail || "Email not provided"}</p>
         </ReviewCard>
 
         <ReviewCard title="Invitation recipients" step={10} targetId="invitation-recipients-section" onEdit={onEditStep} provenance={provenance.contact} icon={<Mail size={17} aria-hidden="true" />}>
           {recipients.length > 0 ? recipients.map((recipient) => <p key={recipient}>{recipient}</p>) : <p>No notification contacts added.</p>}
-          <p className="mt-1 text-xs text-slate-500">Vendor invitation recipients are selected after publishing.</p>
+          <p className="mt-1 text-xs text-muted">Vendor invitation recipients are selected after publishing.</p>
         </ReviewCard>
 
       </div>
 
       {assumptions.length > 0 && (
-        <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+        <div className="mt-4 rounded-2xl border border-warning/40 bg-warning-soft p-4 text-amber-950">
           <p className="text-sm font-extrabold">Assumptions requiring approval</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
             {assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}
           </ul>
-          <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-amber-300 bg-white px-3 py-3 text-sm font-bold focus-within:ring-2 focus-within:ring-amber-600">
+          <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-warning/40 bg-surface px-3 py-3 text-sm font-bold focus-within:ring-2 focus-within:ring-amber-600">
             <input
               type="checkbox"
               checked={assumptionsApproved}

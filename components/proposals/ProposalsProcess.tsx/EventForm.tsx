@@ -20,13 +20,13 @@ import { formatAppDate } from "@/lib/dateFormat";
 
 /* ─── Shared style constants ─── */
 const labelClass =
-  "mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-[#172b3a]";
+  "mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-heading";
 const inputClass =
-  "h-11 w-full rounded-lg border border-[#dce3e8] bg-white px-3.5 text-sm text-[#172b3a] placeholder:text-[#687782] shadow-[0_1px_2px_rgba(15,42,67,0.025)] outline-none transition hover:border-[#c7d3da] focus:border-[#0069a0] focus:ring-4 focus:ring-[#0069a0]/15";
+  "h-11 w-full rounded-lg border border-control bg-surface px-3.5 text-sm text-heading placeholder:text-muted shadow-[0_1px_2px_rgba(15,42,67,0.025)] outline-none transition hover:border-line-strong focus:border-action focus:ring-4 focus:ring-focus/15";
 const textareaClass =
-  "w-full resize-none rounded-lg border border-[#dce3e8] bg-white px-3.5 py-2.5 text-sm leading-5 text-[#172b3a] placeholder:text-[#687782] shadow-[0_1px_2px_rgba(15,42,67,0.025)] outline-none transition hover:border-[#c7d3da] focus:border-[#0069a0] focus:ring-4 focus:ring-[#0069a0]/15";
+  "w-full resize-none rounded-lg border border-control bg-surface px-3.5 py-2.5 text-sm leading-5 text-heading placeholder:text-muted shadow-[0_1px_2px_rgba(15,42,67,0.025)] outline-none transition hover:border-line-strong focus:border-action focus:ring-4 focus:ring-focus/15";
 const groupLabelClass =
-  "mb-4 text-[15px] font-bold text-[#172b3a]";
+  "mb-4 text-[15px] font-bold text-heading";
 
 const normalizeDateFormat = (format: string) =>
   (format || "MM/DD/YYYY").replaceAll("_", "-").toUpperCase();
@@ -136,13 +136,13 @@ const EventForm = ({
   const rfpTimelineLen = (data.rfpTimeline ?? "").length;
 
   return (
-    <section id="event-overview-section" tabIndex={-1} className="flex scroll-mt-6 flex-col bg-white focus:outline-none">
+    <section id="event-overview-section" tabIndex={-1} className="flex scroll-mt-6 flex-col bg-surface focus:outline-none">
       {/* Header */}
-      <div className="border-t border-[#edf0f2] bg-[#fbfcfd] px-5 pb-4 pt-5 sm:px-6 lg:px-7">
-        <h2 className="text-2xl font-extrabold tracking-tight text-[#172b3a]">
+      <div className="border-t border-line bg-surface-muted px-5 pb-4 pt-5 sm:px-6 lg:px-7">
+        <h2 className="text-2xl font-extrabold tracking-tight text-heading">
           {mode === "basic" ? "Event Essentials" : "Event Overview & Narrative"}
         </h2>
-        <p className="mt-1.5 max-w-4xl text-[13px] leading-5 text-[#566a78]">
+        <p className="mt-1.5 max-w-4xl text-[13px] leading-5 text-body">
           {mode === "basic"
             ? "Capture the event, format, dates, and attendance. You can add narrative and audience strategy in Advanced production."
             : "These fields power the auto-generated narrative on your proposal cover page and set the tone for every section that follows."}
@@ -162,11 +162,11 @@ const EventForm = ({
               <div data-assistant-field-key="/content/event/name">
                 <div className={labelClass}>
                   <label htmlFor={fid("name")} className="flex items-center gap-[inherit]">
-                  Event Name <span className="text-red-500">*</span></label>
+                  Event Name <span className="text-danger-strong">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/name")} />
                 </div>
                 <input id={fid("name")} aria-required="true" aria-invalid={showErrors && !data.eventName.trim() ? true : undefined} aria-describedby={showErrors && !data.eventName.trim() ? fid("name-error") : undefined}
-                  className={`${inputClass} ${showErrors && !data.eventName.trim() ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
+                  className={`${inputClass} ${showErrors && !data.eventName.trim() ? "border-danger-strong focus:border-danger-strong focus:ring-red-500/20" : ""}`}
                   placeholder="e.g. Apex Dynamics Global Summit 2026"
                   maxLength={120}
                   value={data.eventName}
@@ -174,9 +174,9 @@ const EventForm = ({
                 />
                 <div className="mt-0.5 flex items-start justify-between">
                   {showErrors && !data.eventName.trim() ? (
-                    <p id={fid("name-error")} role="alert" className="text-sm text-red-500 normal-case">Event name is required.</p>
+                    <p id={fid("name-error")} role="alert" className="text-sm text-danger-strong normal-case">Event name is required.</p>
                   ) : <span />}
-                  <span className="ml-2 shrink-0 text-[11px] text-[#687782]">
+                  <span className="ml-2 shrink-0 text-[11px] text-muted">
                     {data.eventName.length}/120
                   </span>
                 </div>
@@ -186,7 +186,7 @@ const EventForm = ({
                 <div className={labelClass}>
                   <label htmlFor={fid("edition")} className="flex items-center gap-[inherit]">
                   Edition / Year
-                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/edition")} />
                 </div>
                 <input id={fid("edition")}
@@ -202,10 +202,10 @@ const EventForm = ({
             {mode === "advanced" && <div data-assistant-field-key="/content/event/objectives">
               <div className={labelClass}>
                   <label htmlFor={fid("objectives")} className="flex items-center gap-[inherit]">
-                Event summary / Narrative <span className="text-red-500">*</span></label>
+                Event summary / Narrative <span className="text-danger-strong">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/objectives")} />
                 </div>
-              <p className="mb-1.5 text-[13px] leading-5 text-[#566a78] normal-case">
+              <p className="mb-1.5 text-[13px] leading-5 text-body normal-case">
                 Provide a short summary of the event goals, audience, and key outcomes. This narrative will appear on your proposal cover page.
               </p>
               <textarea id={fid("objectives")} aria-required="true"
@@ -217,7 +217,7 @@ const EventForm = ({
                 onChange={(e) => onChange({ eventObjectives: e.target.value })}
               />
               <div className="mt-0.5 flex justify-end">
-                <span className={`text-[11px] ${objLen > 720 ? "text-amber-600" : "text-[#687782]"}`}>{objLen}/800</span>
+                <span className={`text-[11px] ${objLen > 720 ? "text-warning-strong" : "text-muted"}`}>{objLen}/800</span>
               </div>
             </div>}
 
@@ -226,7 +226,7 @@ const EventForm = ({
               <div data-assistant-field-key="/content/event/type">
                 <div className={labelClass}>
                   <label id={fid("type-label")} className="flex items-center gap-[inherit]">
-                  Event Type <span className="text-red-500">*</span></label>
+                  Event Type <span className="text-danger-strong">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/type")} />
                 </div>
                 <div ref={typeRef}>
@@ -235,7 +235,7 @@ const EventForm = ({
                     aria-labelledby={fid("type-label")}
                     className={`${inputClass} appearance-none ${
                       showErrors && !data.eventType.eventType
-                        ? "border-red-500 focus:border-red-500"
+                        ? "border-danger-strong focus:border-danger-strong"
                         : ""
                     }`}
                     value={data.eventType.eventType}
@@ -279,7 +279,7 @@ const EventForm = ({
                   />
                 )}
                 {showErrors && !data.eventType.eventType && (
-                  <p id={fid("type-error")} role="alert" className="mt-1 text-sm text-red-500 normal-case">
+                  <p id={fid("type-error")} role="alert" className="mt-1 text-sm text-danger-strong normal-case">
                     Event type is required.
                   </p>
                 )}
@@ -289,7 +289,7 @@ const EventForm = ({
                 <div className={labelClass}>
                   <label htmlFor={fid("theme")} className="flex items-center gap-[inherit]">
                   Event Theme / Tagline
-                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/theme")} />
                 </div>
                 <input id={fid("theme")}
@@ -308,7 +308,7 @@ const EventForm = ({
                 <div className={labelClass}>
                   <label htmlFor={fid("website")} className="flex items-center gap-[inherit]">
                   Event Website
-                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/website")} />
                 </div>
                 <input id={fid("website")}
@@ -332,17 +332,17 @@ const EventForm = ({
             {/* Event Format */}
             <div data-assistant-field-key="/content/event/format">
               <p id={fid("format-label")} className={labelClass}>
-                Event Format <span className="text-red-500">*</span>
+                Event Format <span className="text-danger-strong">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/format")} />
               </p>
-              <p className="mb-2 text-xs text-[#566a78] normal-case">
+              <p className="mb-2 text-xs text-body normal-case">
                 Your selection adds Hybrid &amp; Virtual Production when applicable.
               </p>
               <div role="radiogroup" aria-labelledby={fid("format-label")} className="flex flex-col gap-2">
                 {formatOptions.map((fmt) => (
                   <label
                     key={fmt.value}
-                    className="flex cursor-pointer items-center gap-2.5 text-sm text-[#172b3a]"
+                    className="flex cursor-pointer items-center gap-2.5 text-sm text-heading"
                   >
                     <input
                       type="radio"
@@ -357,7 +357,7 @@ const EventForm = ({
                 ))}
               </div>
               {(data.eventFormat === "Hybrid" || data.eventFormat === "Virtual") && (
-                <div className="mt-2.5 flex items-start gap-2 rounded-md border border-[#1DBFD3]/30 bg-[#1DBFD3]/5 px-3.5 py-2.5 text-[13px] leading-5 text-brand-dark">
+                <div className="mt-2.5 flex items-start gap-2 rounded-md border border-action/30 bg-action/5 px-3.5 py-2.5 text-[13px] leading-5 text-brand-dark">
                   <span className="font-bold">⚡</span>
                   <span>
                     <strong>Hybrid scope added:</strong> Hybrid &amp; Virtual Production fields are now active in Advanced production.
@@ -369,10 +369,10 @@ const EventForm = ({
             {/* Primary Audience */}
             {mode === "advanced" && <div data-assistant-field-key="/content/event/primaryAudiences/*">
               <p id={fid("audience-label")} className={labelClass}>
-                Primary Audience <span className="text-red-500">*</span>
+                Primary Audience <span className="text-danger-strong">*</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/primaryAudiences/*")} />
               </p>
-              <p className="mb-2 text-xs text-[#566a78] normal-case">
+              <p className="mb-2 text-xs text-body normal-case">
                 Select up to {maximumAudienceSelections} audience types.
                 {audienceSelected.length > 0 && ` ${audienceSelected.length}/${maximumAudienceSelections} selected.`}
               </p>
@@ -398,12 +398,12 @@ const EventForm = ({
                 })}
               </div>
               {audienceSelected.length >= maximumAudienceSelections && (
-                <p className="mt-2 text-xs text-amber-600 normal-case">
+                <p className="mt-2 text-xs text-warning-strong normal-case">
                   Maximum {maximumAudienceSelections} audience types selected.
                 </p>
               )}
               {showErrors && audienceSelected.length === 0 && (
-                <p role="alert" className="mt-2 text-sm text-red-500 normal-case">
+                <p role="alert" className="mt-2 text-sm text-danger-strong normal-case">
                   Please select at least one audience type.
                 </p>
               )}
@@ -420,7 +420,7 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/startDate">
               <div className={labelClass}>
                   <label htmlFor="startDate" className="flex items-center gap-[inherit]">
-                Start Date <span className="text-red-500">*</span></label>
+                Start Date <span className="text-danger-strong">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/startDate")} />
                 </div>
               <GlobalDateInput
@@ -435,18 +435,18 @@ const EventForm = ({
                 format={pickerFormat}
                 inputClassName={`${inputClass} pr-10 ${
                   showErrors && !data.startDate.trim()
-                    ? "border-red-500 focus:border-red-500"
+                    ? "border-danger-strong focus:border-danger-strong"
                     : ""
                 }`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#687782] hover:text-primary"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary"
               />
               {isStartInPast && data.startDate && (
-                <p className="mt-1 text-xs text-amber-600 normal-case">
+                <p className="mt-1 text-xs text-warning-strong normal-case">
                   Warning: Start date is in the past.
                 </p>
               )}
               {showErrors && !data.startDate.trim() && (
-                <p id={fid("startDate-error")} role="alert" className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+                <p id={fid("startDate-error")} role="alert" className="mt-1 text-sm text-danger-strong normal-case">Required.</p>
               )}
             </div>
 
@@ -454,7 +454,7 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/endDate">
               <div className={labelClass}>
                   <label htmlFor="endDate" className="flex items-center gap-[inherit]">
-                End Date <span className="text-red-500">*</span></label>
+                End Date <span className="text-danger-strong">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/endDate")} />
                 </div>
               <GlobalDateInput
@@ -470,19 +470,19 @@ const EventForm = ({
                 format={pickerFormat}
                 inputClassName={`${inputClass} pr-10 ${
                   showErrors && !data.endDate.trim()
-                    ? "border-red-500 focus:border-red-500"
+                    ? "border-danger-strong focus:border-danger-strong"
                     : ""
                 }`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#687782] hover:text-primary"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary"
               />
               {showErrors && !data.endDate.trim() && (
-                <p id={fid("endDate-error")} role="alert" className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+                <p id={fid("endDate-error")} role="alert" className="mt-1 text-sm text-danger-strong normal-case">Required.</p>
               )}
               {/* A date before the start is discarded by the picker, which just
                   empties the field. State the rule so a date that vanishes is
                   explained rather than mysterious. */}
               {startDateValue && !data.endDate.trim() && (
-                <p className="mt-1 text-xs text-[#566a78] normal-case">
+                <p className="mt-1 text-xs text-body normal-case">
                   Must be on or after the start date ({formatAppDate(startDateValue)}).
                 </p>
               )}
@@ -492,7 +492,7 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/attendeeCount">
               <div className={labelClass}>
                   <label htmlFor={fid("attendees")} className="flex items-center gap-[inherit]">
-                Total Attendance <span className="text-red-500">*</span></label>
+                Total Attendance <span className="text-danger-strong">*</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/attendeeCount")} />
                 </div>
               <input id={fid("attendees")} aria-required="true" aria-invalid={showErrors && !data.attendees.trim() ? true : undefined} aria-describedby={showErrors && !data.attendees.trim() ? fid("attendees-error") : undefined}
@@ -501,7 +501,7 @@ const EventForm = ({
                 max={100000}
                 className={`${inputClass} ${
                   showErrors && !data.attendees.trim()
-                    ? "border-red-500 focus:border-red-500"
+                    ? "border-danger-strong focus:border-danger-strong"
                     : ""
                 }`}
                 placeholder="e.g. 1500"
@@ -509,7 +509,7 @@ const EventForm = ({
                 onChange={(e) => onChange({ attendees: e.target.value })}
               />
               {showErrors && !data.attendees.trim() && (
-                <p id={fid("attendees-error")} role="alert" className="mt-1 text-sm text-red-500 normal-case">Required.</p>
+                <p id={fid("attendees-error")} role="alert" className="mt-1 text-sm text-danger-strong normal-case">Required.</p>
               )}
             </div>
           </div>
@@ -524,17 +524,17 @@ const EventForm = ({
             <div data-assistant-field-key="/content/event/toneDirections/*">
               <p id={fid("tone-label")} className={labelClass}>
                 Tone / Brand Direction
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span>
                 <InfoTooltip text={eventOverviewFieldHelper("/content/event/toneDirections/*")} />
               </p>
-              <p className="mb-2 text-xs text-[#566a78] normal-case">
+              <p className="mb-2 text-xs text-body normal-case">
                 Select up to {maximumToneSelections} tags.
                 {toneSelected.length > 0 && ` ${toneSelected.length}/${maximumToneSelections} selected.`}
               </p>
               <div role="group" aria-labelledby={fid("tone-label")} className="space-y-3">
                 {toneGroups.map((group) => (
                   <div key={group.label}>
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[#687782]">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
                       {group.label}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -562,7 +562,7 @@ const EventForm = ({
                 ))}
               </div>
               {toneSelected.length >= 5 && (
-                <p className="mt-2 text-xs text-amber-600 normal-case">
+                <p className="mt-2 text-xs text-warning-strong normal-case">
                   Maximum 5 tone tags selected.
                 </p>
               )}
@@ -573,7 +573,7 @@ const EventForm = ({
               <div className={labelClass}>
                   <label htmlFor={fid("sacred")} className="flex items-center gap-[inherit]">
                 Sacred Constraints / Special Considerations
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/sacredConstraints")} />
                 </div>
               <textarea id={fid("sacred")}
@@ -585,7 +585,7 @@ const EventForm = ({
                 onChange={(e) => onChange({ sacredConstraints: e.target.value })}
               />
               <div className="mt-0.5 flex justify-end">
-                <span className={`text-[11px] ${constraintsLen > 450 ? "text-amber-600" : "text-[#687782]"}`}>
+                <span className={`text-[11px] ${constraintsLen > 450 ? "text-warning-strong" : "text-muted"}`}>
                   {constraintsLen}/500
                 </span>
               </div>
@@ -596,7 +596,7 @@ const EventForm = ({
               <div className={labelClass}>
                   <label htmlFor={fid("about")} className="flex items-center gap-[inherit]">
                 About The Organization
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/organizationBackground")} />
                 </div>
               <textarea id={fid("about")}
@@ -608,7 +608,7 @@ const EventForm = ({
                 onChange={(e) => onChange({ aboutOrganization: e.target.value })}
               />
               <div className="mt-0.5 flex justify-end">
-                <span className={`text-[11px] ${aboutOrganizationLen > 1350 ? "text-amber-600" : "text-[#687782]"}`}>
+                <span className={`text-[11px] ${aboutOrganizationLen > 1350 ? "text-warning-strong" : "text-muted"}`}>
                   {aboutOrganizationLen}/1500
                 </span>
               </div>
@@ -620,7 +620,7 @@ const EventForm = ({
                 <div className={labelClass}>
                   <label htmlFor="statement-of-work" className="flex items-center gap-[inherit]">
                   Statement of Work
-                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                  <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/statementOfWork")} />
                 </div>
                 {onGenerateStatementOfWork && (
@@ -644,7 +644,7 @@ const EventForm = ({
                 onChange={(e) => onChange({ statementOfWork: e.target.value })}
               />
               <div className="mt-0.5 flex justify-end">
-                <span className={`text-[11px] ${statementOfWorkLen > 1350 ? "text-amber-600" : "text-[#687782]"}`}>
+                <span className={`text-[11px] ${statementOfWorkLen > 1350 ? "text-warning-strong" : "text-muted"}`}>
                   {statementOfWorkLen}/1500
                 </span>
               </div>
@@ -655,7 +655,7 @@ const EventForm = ({
               <div className={labelClass}>
                   <label htmlFor={fid("profile")} className="flex items-center gap-[inherit]">
                 Event Profile
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/eventProfile")} />
                 </div>
               <textarea id={fid("profile")}
@@ -667,7 +667,7 @@ const EventForm = ({
                 onChange={(e) => onChange({ eventProfile: e.target.value })}
               />
               <div className="mt-0.5 flex justify-end">
-                <span className={`text-[11px] ${eventProfileLen > 1350 ? "text-amber-600" : "text-[#687782]"}`}>
+                <span className={`text-[11px] ${eventProfileLen > 1350 ? "text-warning-strong" : "text-muted"}`}>
                   {eventProfileLen}/1500
                 </span>
               </div>
@@ -678,7 +678,7 @@ const EventForm = ({
               <div className={labelClass}>
                   <label htmlFor={fid("timeline")} className="flex items-center gap-[inherit]">
                 Proposal Timeline
-                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-[#687782]">(optional)</span></label>
+                <span className="ml-1 text-[11px] font-normal normal-case tracking-normal text-muted">(optional)</span></label>
                   <InfoTooltip text={eventOverviewFieldHelper("/content/event/rfpTimelineNotes")} />
                 </div>
               <textarea id={fid("timeline")}
@@ -690,7 +690,7 @@ const EventForm = ({
                 onChange={(e) => onChange({ rfpTimeline: e.target.value })}
               />
               <div className="mt-0.5 flex justify-end">
-                <span className={`text-[11px] ${rfpTimelineLen > 900 ? "text-amber-600" : "text-[#687782]"}`}>
+                <span className={`text-[11px] ${rfpTimelineLen > 900 ? "text-warning-strong" : "text-muted"}`}>
                   {rfpTimelineLen}/1000
                 </span>
               </div>
@@ -700,12 +700,12 @@ const EventForm = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="sticky bottom-0 flex items-center justify-between border-t border-[#e4e4e4] bg-white/95 px-5 py-3 backdrop-blur sm:px-6 lg:px-7">
-        <button type="button" onClick={onSaveDraft ?? onBack} className="text-sm font-semibold text-[#0069a0] hover:text-[#172b3a]">Save draft</button>
+      <div className="sticky bottom-0 flex items-center justify-between border-t border-line bg-white/95 px-5 py-3 backdrop-blur sm:px-6 lg:px-7">
+        <button type="button" onClick={onSaveDraft ?? onBack} className="text-sm font-semibold text-action hover:text-heading">Save draft</button>
         {/* <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           Back
@@ -713,7 +713,7 @@ const EventForm = ({
         <button
           type="button"
           onClick={onContinue}
-          className="group relative flex min-h-10 items-center gap-2.5 overflow-hidden rounded-md bg-[#0069a0] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172b3a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0069a0]"
+          className="group relative flex min-h-10 items-center gap-2.5 overflow-hidden rounded-md bg-action px-5 py-2 text-sm font-semibold text-on-action transition hover:bg-heading focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/20 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
           Save &amp; continue

@@ -7,23 +7,23 @@ import { STANDALONE_VIDEO_RECORDING_STEP_ENABLED } from "@/lib/proposals/proposa
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
+  "w-full rounded-lg border border-control bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-muted";
 const subPanelClass =
-  "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
+  "mt-3 rounded-xl border border-line bg-surface-muted p-4";
 const subPanelHeader =
-  "mb-3 text-xs font-bold uppercase tracking-widest text-[#969798]";
+  "mb-3 text-xs font-bold uppercase tracking-widest text-muted";
 
 /* ─── Yes/No buttons ─── */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
-  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
+    return `${base} border-line bg-surface text-muted hover:border-control`;
+  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-success-strong`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
 
@@ -58,7 +58,7 @@ const YesNo = ({
 );
 
 const Group = ({ label }: { label: string }) => (
-  <div className="mb-5 mt-8 border-t border-[#f0f0f0] pt-6 first:mt-0 first:border-0 first:pt-0">
+  <div className="mb-5 mt-8 border-t border-line pt-6 first:mt-0 first:border-0 first:pt-0">
     <p className={groupLabelClass}>{label}</p>
   </div>
 );
@@ -101,23 +101,23 @@ const Stepper = ({
 }) => {
   const num = parseInt(value, 10) || min;
   return (
-    <div role="group" aria-label={label} className="flex items-center gap-0 overflow-hidden rounded-lg border border-[#e4e4e4] w-fit">
+    <div role="group" aria-label={label} className="flex items-center gap-0 overflow-hidden rounded-lg border border-line w-fit">
       <button
         type="button"
         aria-label={label ? `Decrease ${label.toLowerCase()}` : "Decrease"}
         onClick={() => onChange(String(Math.max(min, num - 1)))}
-        className="flex h-10 w-10 items-center justify-center bg-[#f9f9f9] text-lg font-bold text-[#222628] hover:bg-[#eeeeee] transition-colors"
+        className="flex h-10 w-10 items-center justify-center bg-surface-muted text-lg font-bold text-heading hover:bg-line transition-colors"
       >
         −
       </button>
-      <span aria-live="polite" className="flex h-10 w-14 items-center justify-center text-sm font-bold text-slate-800">
+      <span aria-live="polite" className="flex h-10 w-14 items-center justify-center text-sm font-bold text-heading">
         {num}
       </span>
       <button
         type="button"
         aria-label={label ? `Increase ${label.toLowerCase()}` : "Increase"}
         onClick={() => onChange(String(Math.min(max, num + 1)))}
-        className="flex h-10 w-10 items-center justify-center bg-[#f9f9f9] text-lg font-bold text-[#222628] hover:bg-[#eeeeee] transition-colors"
+        className="flex h-10 w-10 items-center justify-center bg-surface-muted text-lg font-bold text-heading hover:bg-line transition-colors"
       >
         +
       </button>
@@ -128,8 +128,8 @@ const Stepper = ({
 /* ─── Ref panel row ─── */
 const RefRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col gap-0.5">
-    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
-    <span className="text-sm font-semibold text-slate-700">{value || "—"}</span>
+    <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
+    <span className="text-sm font-semibold text-body">{value || "—"}</span>
   </div>
 );
 
@@ -196,15 +196,15 @@ const VenueTechnicalRequirements = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-line bg-surface"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <h2 className="text-[22px] font-bold text-[#222628]">
+      <div className="px-8 py-6 border-b border-line">
+        <h2 className="text-[22px] font-bold text-heading">
           Venue &amp; Technical Infrastructure
         </h2>
-        <p className="mt-1 text-sm text-[#969798]">
+        <p className="mt-1 text-sm text-muted">
           Rigging, power, internet, COI, and venue access details — used to scope labor and logistics.
         </p>
       </div>
@@ -213,8 +213,8 @@ const VenueTechnicalRequirements = ({
 
         {/* ── Reference Panel (read-only) ── */}
         {(loadInDate || strikeDate || numberOfEventRooms || ledWallMaxWidth) && (
-          <div className="mb-6 rounded-xl border border-[#e4e4e4] bg-[#fbfbfb] px-5 py-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          <div className="mb-6 rounded-xl border border-line bg-surface-muted px-5 py-4">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">
               From your venue &amp; room specs
             </p>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -232,13 +232,13 @@ const VenueTechnicalRequirements = ({
 
         {/* ── Union Advisory Banner ── */}
         {showUnionBanner && (
-          <div className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <div className="mb-6 flex gap-3 rounded-xl border border-warning/40 bg-warning-soft px-5 py-4">
             <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
             <div>
-              <p className="text-sm font-bold text-amber-800">
+              <p className="text-sm font-bold text-warning-strong">
                 {isUnionVenue === "YES" ? "Union Venue Detected" : "Union Status Not Confirmed"}
               </p>
-              <p className="mt-0.5 text-xs text-amber-700">
+              <p className="mt-0.5 text-xs text-warning-strong">
                 Union venues require certified riggers and IBEW-jurisdictioned electricians for power drops. Labor rates, call times, and crew minimums are set by the local. RFPilot will flag this in the proposal.
               </p>
             </div>
@@ -314,7 +314,7 @@ const VenueTechnicalRequirements = ({
         <div className="mb-6">
           <div className={labelClass}>
           <span id="venue-tech-rigging-required-label" className="flex items-center gap-[inherit]">
-          Rigging Required? <span className="text-red-500">*</span></span>
+          Rigging Required? <span className="text-danger-strong">*</span></span>
           <InfoTooltip text="Flown elements include speakers, lighting trusses, LED walls, or screens suspended from the ceiling. Most venues require certified riggers for any overhead load." />
           </div>
           <YesNo
@@ -329,7 +329,7 @@ const VenueTechnicalRequirements = ({
             }
           />
           {showErrors && !data.riggingRequired && (
-            <p role="alert" className="mt-1 text-xs text-red-500">Required</p>
+            <p role="alert" className="mt-1 text-xs text-danger-strong">Required</p>
           )}
 
           {data.riggingRequired === "YES" && (
@@ -372,9 +372,9 @@ const VenueTechnicalRequirements = ({
 
         {/* Smart power suggestion */}
         {suggestHighPower && (
-          <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
+          <div className="mb-4 flex gap-3 rounded-xl border border-warning/40 bg-warning-soft px-5 py-3">
             <span className="shrink-0 text-amber-500">⚡</span>
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-warning-strong">
               Your LED wall exceeds 60 ft wide — a 400A minimum power drop is strongly recommended. Select 400A or higher below.
             </p>
           </div>
@@ -383,7 +383,7 @@ const VenueTechnicalRequirements = ({
         <div className="mb-6">
           <div className={labelClass}>
           <span id="venue-tech-power-drops-required-label" className="flex items-center gap-[inherit]">
-          Power Drops Required? <span className="text-red-500">*</span></span>
+          Power Drops Required? <span className="text-danger-strong">*</span></span>
           <InfoTooltip text="Dedicated drops provide isolated electrical circuits for AV equipment, preventing interference and tripped breakers from shared venue power." />
           </div>
           <YesNo
@@ -398,7 +398,7 @@ const VenueTechnicalRequirements = ({
             }
           />
           {showErrors && !data.powerDropsRequired && (
-            <p role="alert" className="mt-1 text-xs text-red-500">Required</p>
+            <p role="alert" className="mt-1 text-xs text-danger-strong">Required</p>
           )}
 
           {data.powerDropsRequired === "YES" && (
@@ -419,8 +419,8 @@ const VenueTechnicalRequirements = ({
                       onClick={() => onChange({ powerDropAmperage: opt })}
                       className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
                         data.powerDropAmperage === opt
-                          ? "border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]"
-                          : "border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300"
+                          ? "border-action bg-action/10 text-heading"
+                          : "border-line bg-surface text-muted hover:border-control"
                       }`}
                     >
                       {opt}
@@ -449,7 +449,7 @@ const VenueTechnicalRequirements = ({
 
         <div className="mb-6">
           <p id="venue-tech-wireless-internet-required-label" className={labelClass}>
-            Wireless Internet Required? <span className="text-red-500">*</span>
+            Wireless Internet Required? <span className="text-danger-strong">*</span>
             <InfoTooltip text="Indicates whether WiFi coverage is needed for attendees, crew, or AV systems. Required for live polling, digital Q&A, event apps, and streaming encoders." />
           </p>
           <YesNo
@@ -463,13 +463,13 @@ const VenueTechnicalRequirements = ({
             }
           />
           {showErrors && !data.wirelessInternetRequired && (
-            <p role="alert" className="mt-1 text-xs text-red-500">Required</p>
+            <p role="alert" className="mt-1 text-xs text-danger-strong">Required</p>
           )}
 
           {data.wirelessInternetRequired === "YES" && (
             <div className={subPanelClass}>
               <p className={subPanelHeader}>Internet Use Cases</p>
-              <p className="mb-3 text-xs text-slate-500">
+              <p className="mb-3 text-xs text-muted">
                 Select all that apply — RFPilot uses this to specify bandwidth requirements per use case.
               </p>
               <div className="flex flex-wrap gap-3">
@@ -504,15 +504,15 @@ const VenueTechnicalRequirements = ({
           <textarea id="venue-tech-coi-requirements"
             rows={4}
             maxLength={500}
-            className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
+            className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20"
             placeholder="Paste the venue's COI requirements, additional insured language, or submission deadline…"
             value={data.coiRequirements}
             onChange={(e) => onChange({ coiRequirements: e.target.value })}
           />
-          <p className={`mt-1 text-right text-xs ${coiLen >= 450 ? "text-amber-500" : "text-slate-400"}`}>
+          <p className={`mt-1 text-right text-xs ${coiLen >= 450 ? "text-amber-500" : "text-muted"}`}>
             {coiLen}/500
           </p>
-          <button type="button" onClick={onOpenVenueCoiDocuments} className="mt-2 text-xs font-semibold text-[#1DBFD3] hover:underline">
+          <button type="button" onClick={onOpenVenueCoiDocuments} className="mt-2 text-xs font-semibold text-action hover:underline">
             Upload COI or venue documents in Reference Materials →
           </button>
         </div>
@@ -526,17 +526,17 @@ const VenueTechnicalRequirements = ({
           <textarea id="venue-tech-venue-access-requirements"
             rows={3}
             maxLength={400}
-            className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
+            className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20"
             placeholder="e.g. Load-in after 6am only, freight elevator reservations required 48hrs in advance, all crew must badge in at security…"
             value={data.venueAccessRequirements}
             onChange={(e) =>
               onChange({ venueAccessRequirements: e.target.value })
             }
           />
-          <p className={`mt-1 text-right text-xs ${accessLen >= 360 ? "text-amber-500" : "text-slate-400"}`}>
+          <p className={`mt-1 text-right text-xs ${accessLen >= 360 ? "text-amber-500" : "text-muted"}`}>
             {accessLen}/400
           </p>
-          <button type="button" onClick={onOpenVenueCoiDocuments} className="mt-2 text-xs font-semibold text-[#1DBFD3] hover:underline">
+          <button type="button" onClick={onOpenVenueCoiDocuments} className="mt-2 text-xs font-semibold text-action hover:underline">
             Add venue access documents in Reference Materials →
           </button>
         </div>
@@ -544,11 +544,11 @@ const VenueTechnicalRequirements = ({
       </div>
 
       {/* ── Footer ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-line">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           {STANDALONE_VIDEO_RECORDING_STEP_ENABLED

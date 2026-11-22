@@ -52,9 +52,9 @@ export const defaultContentCreative = (): ContentCreativeData => ({
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-muted border-b border-line pb-2";
 
 /* ─── Ownership options ─── */
 const OWNERSHIP_OPTS = [
@@ -68,14 +68,14 @@ const ownershipCls = (opt: string, value: string): string => {
   const base =
     "flex h-9 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-3 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
+    return `${base} border-line bg-surface text-muted hover:border-control`;
   if (opt === "Client / Internal Team")
-    return `${base} border-[#1DBFD3] bg-[#1DBFD3]/5 text-brand-dark`;
+    return `${base} border-action bg-action/5 text-brand-dark`;
   if (opt === "AV Vendor")
-    return `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#0097cc]`;
+    return `${base} border-action bg-action/10 text-action`;
   if (opt === "TBD")
-    return `${base} border-amber-400 bg-amber-50 text-amber-700`;
-  return `${base} border-slate-300 bg-slate-100 text-slate-500`;
+    return `${base} border-amber-400 bg-warning-soft text-warning-strong`;
+  return `${base} border-control bg-line text-muted`;
 };
 
 /* ─── Mini Yes/No (for live data feeds toggle) ─── */
@@ -83,8 +83,8 @@ const miniYesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-9 min-w-[56px] cursor-pointer items-center justify-center rounded-md border px-3 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
-  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
+    return `${base} border-line bg-surface text-muted hover:border-control`;
+  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-success-strong`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
 
@@ -100,9 +100,9 @@ interface MatrixRowProps {
 const MatrixRow = ({ label, helpText, value, onChange, warning }: MatrixRowProps) => {
   const labelId = useId();
   return (
-    <div className="py-4 border-b border-[#f0f2f8] last:border-0">
+    <div className="py-4 border-b border-line last:border-0">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <span className="flex items-center gap-1 text-sm font-semibold text-[#222628]">
+        <span className="flex items-center gap-1 text-sm font-semibold text-heading">
           <span id={labelId}>{label}</span>
           <InfoTooltip text={helpText} />
         </span>
@@ -121,7 +121,7 @@ const MatrixRow = ({ label, helpText, value, onChange, warning }: MatrixRowProps
         </div>
       </div>
       {warning && (
-        <p role="status" className="mt-2 text-xs font-medium text-amber-600">⚠ {warning}</p>
+        <p role="status" className="mt-2 text-xs font-medium text-warning-strong">⚠ {warning}</p>
       )}
     </div>
   );
@@ -145,27 +145,27 @@ const GatewayCard = ({
     onClick={onClick}
     className={`flex w-full flex-col rounded-xl border-2 p-5 text-left transition-all ${
       isSelected
-        ? "border-[#1DBFD3] bg-[#1DBFD3]/5"
-        : "border-[#e4e4e4] bg-white hover:border-[#1DBFD3]/40"
+        ? "border-action bg-action/5"
+        : "border-line bg-surface hover:border-action/40"
     }`}
   >
     <div className="flex items-center gap-3 mb-2">
       <div
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-          isSelected ? "border-[#1DBFD3] bg-[#1DBFD3]" : "border-[#e4e4e4]"
+          isSelected ? "border-action bg-action" : "border-line"
         }`}
       >
-        {isSelected && <div className="theme-preserve-white h-2 w-2 rounded-full bg-white" />}
+        {isSelected && <div className="theme-preserve-white h-2 w-2 rounded-full bg-surface" />}
       </div>
       <span
         className={`text-sm font-bold ${
-          isSelected ? "text-[#1DBFD3]" : "text-[#222628]"
+          isSelected ? "text-action" : "text-heading"
         }`}
       >
         {title}
       </span>
     </div>
-    <p className="ml-8 text-xs leading-relaxed text-[#969798]">{description}</p>
+    <p className="ml-8 text-xs leading-relaxed text-muted">{description}</p>
   </button>
 );
 
@@ -213,13 +213,13 @@ const ContentCreativeStep = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-line bg-surface"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <h2 className="text-[22px] font-bold text-[#222628]">Content &amp; Creative</h2>
-        <p className="mt-1 text-sm text-[#969798]">
+      <div className="px-8 py-6 border-b border-line">
+        <h2 className="text-[22px] font-bold text-heading">Content &amp; Creative</h2>
+        <p className="mt-1 text-sm text-muted">
           Graphics, presentations, video, and content ownership matrix.
         </p>
       </div>
@@ -232,7 +232,7 @@ const ContentCreativeStep = ({
           <div className={labelClass}>
           <span id="content-creative-services-needed-label" className="flex items-center gap-[inherit]">
           Content / Creative Services Needed?{" "}
-          <span className="text-red-500">*</span></span>
+          <span className="text-danger-strong">*</span></span>
           <InfoTooltip text="Do you need the AV vendor to provide any content design or creative production services beyond live show technical execution? This includes designing slide templates, producing opener videos, building lower-third graphics, or creating sizzle reels. Select No if you have a separate creative agency handling all content and the AV vendor will only execute the live show." />
           </div>
           <div role="group" aria-labelledby="content-creative-services-needed-label" className="grid grid-cols-2 gap-4 mt-2">
@@ -253,11 +253,11 @@ const ContentCreativeStep = ({
 
         {/* ── NO state info panel ── */}
         {safeData.contentServicesNeeded === "NO" && (
-          <div className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] px-6 py-5">
-            <p className="text-sm font-semibold text-[#222628]">
+          <div className="rounded-xl border border-line bg-surface-muted px-6 py-5">
+            <p className="text-sm font-semibold text-heading">
               Section 4 will be omitted from your proposal
             </p>
-            <p className="mt-1 text-xs text-[#969798]">
+            <p className="mt-1 text-xs text-muted">
               The AV vendor will execute the live show only. All content is being handled by your agency or in-house team.
             </p>
           </div>
@@ -268,16 +268,16 @@ const ContentCreativeStep = ({
           <>
             <div>
               <p className={groupLabelClass}>Content Responsibility Matrix</p>
-              <p className="mb-1 text-xs text-slate-500 italic">
+              <p className="mb-1 text-xs text-muted italic">
                 Select an owner for each content element. This table appears verbatim in Section 4 of your proposal.
               </p>
-              <p className="mb-5 text-[11px] text-[#969798] italic">
+              <p className="mb-5 text-[11px] text-muted italic">
                 &quot;The table below defines content ownership responsibilities. Vendors must confirm their ability to deliver all items marked as AV Vendor responsibility and flag any items requiring clarification. TBD items should be addressed in the vendor&apos;s questions.&quot;
               </p>
 
               {/* Legend */}
               <div className="mb-4 flex flex-wrap items-center gap-3">
-                <span className="text-xs text-[#969798] font-semibold uppercase tracking-wide">Key:</span>
+                <span className="text-xs text-muted font-semibold uppercase tracking-wide">Key:</span>
                 {OWNERSHIP_OPTS.map((opt) => (
                   <span key={opt.value} className={`text-xs px-2 py-1 rounded border font-semibold ${ownershipCls(opt.value, opt.value)}`}>
                     {opt.label}
@@ -285,7 +285,7 @@ const ContentCreativeStep = ({
                 ))}
               </div>
 
-              <div className="rounded-xl border border-[#e4e4e4] overflow-hidden">
+              <div className="rounded-xl border border-line overflow-hidden">
                 <div className="px-5">
 
                   {/* Field 2 */}
@@ -321,7 +321,7 @@ const ContentCreativeStep = ({
                   />
 
                   {showLegacyVideoOwner && (
-                    <div className="border-b border-[#f0f2f8] bg-amber-50/60 px-3 py-3 text-xs text-amber-800">
+                    <div className="border-b border-line bg-warning-soft px-3 py-3 text-xs text-warning-strong">
                       Legacy Motion Graphics / Opener Video owner: <strong>{legacyVideoOwner}</strong>. Assign the two new deliverables independently before saving to replace this combined value.
                     </div>
                   )}
@@ -351,9 +351,9 @@ const ContentCreativeStep = ({
                   />
 
                   {/* Field 8 — Live Data Feeds (two-step: Yes/No then ownership) */}
-                  <div className="py-4 border-b border-[#f0f2f8]">
+                  <div className="py-4 border-b border-line">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <span id="content-creative-live-data-label" className="flex items-center gap-1 text-sm font-semibold text-[#222628]">
+                      <span id="content-creative-live-data-label" className="flex items-center gap-1 text-sm font-semibold text-heading">
                         Live Data Feeds / Real-Time Displays
                         <InfoTooltip text="Do you need live data, leaderboards, real-time polling results, or dynamic content displayed on screens during the event? Examples: sales contest leaderboards, live Twitter feeds, attendee polling. Complex scope — typically requires custom integrations." />
                       </span>
@@ -404,7 +404,7 @@ const ContentCreativeStep = ({
                       </div>
                     </div>
                     {safeData.liveDataFeeds.needed === "YES" && (
-                      <p className="mt-2 text-xs font-medium text-amber-600">
+                      <p className="mt-2 text-xs font-medium text-warning-strong">
                         ⚡ Complex scope — an RFPilot producer call may be needed to confirm feasibility.
                       </p>
                     )}
@@ -447,7 +447,7 @@ const ContentCreativeStep = ({
               <div className={labelClass}>
               <label htmlFor="content-creative-creative-direction-notes" className="flex items-center gap-[inherit]">
               Creative Direction Notes
-              <span className="ml-2 text-xs font-normal normal-case tracking-normal text-slate-400">
+              <span className="ml-2 text-xs font-normal normal-case tracking-normal text-muted">
               (Optional)
               </span></label>
               <InfoTooltip text="Describe your visual identity, color palette, theme direction, creative references, or anything that helps vendors understand your aesthetic. Brand guides and logo files can be added under Uploads & Co-Vendors. The more specific you are, the better vendors can tailor their creative pitch." />
@@ -455,13 +455,13 @@ const ContentCreativeStep = ({
               <textarea id="content-creative-creative-direction-notes"
                 rows={5}
                 maxLength={1000}
-                className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
+                className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20"
                 placeholder={`e.g., "The Summit visual identity uses a dark navy and electric teal palette with bold, kinetic typography. The 2026 theme is 'Velocity' — content should feel forward-momentum, cinematic, with high-contrast graphics. Brand guide attached under Uploads & Co-Vendors."`}
                 value={safeData.creativeDirectionNotes}
                 onChange={(e) => onChange({ creativeDirectionNotes: e.target.value })}
               />
               <div className="mt-1 flex justify-end">
-                <span className={`text-xs ${notesLen > 900 ? "text-amber-600" : "text-[#969798]"}`}>
+                <span className={`text-xs ${notesLen > 900 ? "text-warning-strong" : "text-muted"}`}>
                   {notesLen}/1,000
                 </span>
               </div>
@@ -472,11 +472,11 @@ const ContentCreativeStep = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-line">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           {isInPersonOnly ? "Room Specifications" : "Hybrid & Virtual"}

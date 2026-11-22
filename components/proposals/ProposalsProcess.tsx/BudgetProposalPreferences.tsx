@@ -14,14 +14,14 @@ import { InfoTooltip, toggleItem } from "./shared";
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
+  "w-full rounded-lg border border-control bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-muted";
 const subPanelClass =
-  "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4";
-const errorClass = "mt-1 text-sm text-red-500 normal-case";
+  "mt-3 rounded-xl border border-line bg-surface-muted p-4";
+const errorClass = "mt-1 text-sm text-danger-strong normal-case";
 
 type DatePickerFormat = "dd-MM-yyyy" | "yyyy-MM-dd" | "MM-dd-yyyy";
 
@@ -52,8 +52,8 @@ const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
-  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
+    return `${base} border-line bg-surface text-muted hover:border-control`;
+  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-success-strong`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
 
@@ -78,7 +78,7 @@ const YesNo = ({
 );
 
 const Group = ({ label }: { label: string }) => (
-  <div className="mb-5 mt-8 border-t border-[#f0f0f0] pt-6 first:mt-0 first:border-0 first:pt-0">
+  <div className="mb-5 mt-8 border-t border-line pt-6 first:mt-0 first:border-0 first:pt-0">
     <p className={groupLabelClass}>{label}</p>
   </div>
 );
@@ -107,7 +107,7 @@ const SelectField = ({
     aria-labelledby={labelledBy}
     value={value}
     onChange={(e) => onChange(e.target.value)}
-    className={`${inputClass} ${hasError && !value ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+    className={`${inputClass} ${hasError && !value ? "border-danger-strong ring-1 ring-red-400/20" : ""}`}
   >
     <option value="">{placeholder}</option>
     {options.map((o) => (
@@ -132,8 +132,8 @@ const BUDGET_TIERS = [
 const tierCardCls = (val: string, selected: string): string => {
   const base =
     "relative flex flex-col rounded-xl border-2 px-3 py-3 cursor-pointer transition-all select-none text-left";
-  if (selected === val) return `${base} border-[#1DBFD3] bg-[#1DBFD3]/5`;
-  return `${base} border-[#e4e4e4] bg-white hover:border-[#1DBFD3]/40`;
+  if (selected === val) return `${base} border-action bg-action/5`;
+  return `${base} border-line bg-surface hover:border-action/40`;
 };
 
 /* ─── Budget flexibility pills ─── */
@@ -148,8 +148,8 @@ const flexPillCls = (opt: string, selected: string): string => {
   const base =
     "rounded-full border px-4 py-1.5 text-xs font-semibold cursor-pointer transition-all";
   if (selected === opt)
-    return `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]`;
-  return `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
+    return `${base} border-action bg-action/10 text-heading`;
+  return `${base} border-line bg-surface text-muted hover:border-control`;
 };
 
 /* ─── Proposal format options ─── */
@@ -205,15 +205,15 @@ const FORMAT_OPTIONS: {
 const formatCardCls = (checked: boolean): string => {
   const base =
     "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all cursor-pointer";
-  if (checked) return `${base} border-[#1DBFD3] bg-[#1DBFD3]/5`;
-  return `${base} border-[#e4e4e4] bg-white hover:border-slate-300`;
+  if (checked) return `${base} border-action bg-action/5`;
+  return `${base} border-line bg-surface hover:border-control`;
 };
 
 const formatCheckCls = (checked: boolean): string => {
   const base =
     "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all";
-  if (checked) return `${base} border-[#1DBFD3] bg-[#1DBFD3]`;
-  return `${base} border-[#e4e4e4]`;
+  if (checked) return `${base} border-action bg-action`;
+  return `${base} border-line`;
 };
 
 /* ─── Evaluation matrix criteria ─── */
@@ -467,17 +467,17 @@ const BudgetProposalPreferences = ({
 
   return (
     <section
-      className="flex min-h-screen flex-col rounded-md border border-[#e4e4e4] bg-white"
+      className="flex min-h-screen flex-col rounded-md border border-line bg-surface"
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
     >
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <h2 className="text-[22px] font-bold text-[#222628]">
+      <div className="px-8 py-6 border-b border-line">
+        <h2 className="text-[22px] font-bold text-heading">
           {mode === "basic" ? "Investment & Timeline" : "Investment & Evaluation"}
         </h2>
-        <p className="mt-1 text-sm text-[#969798]">
+        <p className="mt-1 text-sm text-muted">
           {mode === "basic"
             ? "Confirm a planning budget and a realistic procurement timeline."
             : "Investment tier, evaluation matrix, proposal format requirements, and procurement timeline."}
@@ -494,7 +494,7 @@ const BudgetProposalPreferences = ({
         {/* Field 1 — Budget Tier Cards */}
         <div className="mb-6">
           <p id="budget-estimated-av-budget-range-label" className={labelClass}>
-            Estimated AV Budget Range <span className="text-red-500">*</span>
+            Estimated AV Budget Range <span className="text-danger-strong">*</span>
             <InfoTooltip text="Select the range that best represents your total AV and production budget across all rooms, all days — including gear, labor, freight, and expendables. If unsure, select 'Not Yet Determined' and we'll help establish a realistic range." />
           </p>
 
@@ -512,12 +512,12 @@ const BudgetProposalPreferences = ({
                     ★ Producer Call
                   </span>
                 )}
-                <span className="text-sm font-bold leading-tight text-[#222628]">
+                <span className="text-sm font-bold leading-tight text-heading">
                   {tier.value}
                 </span>
-                <span className="mt-0.5 text-xs text-slate-500">{tier.range}</span>
+                <span className="mt-0.5 text-xs text-muted">{tier.range}</span>
                 {safeData.estimatedAvBudget === tier.value && (
-                  <span className="absolute right-2 top-2 text-xs font-bold text-[#1DBFD3]">
+                  <span className="absolute right-2 top-2 text-xs font-bold text-action">
                     ✓
                   </span>
                 )}
@@ -531,9 +531,9 @@ const BudgetProposalPreferences = ({
 
           {/* Budget Reality Engine warning */}
           {showRealityWarning && (
-            <div className="mt-3 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="mt-3 flex gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3">
               <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-warning-strong">
                 <strong>Budget Reality Check:</strong> Your event includes multiple high-complexity
                 elements that typically exceed the{" "}
                 <strong>{safeData.estimatedAvBudget}</strong> tier. Vendors may decline to bid or
@@ -592,7 +592,7 @@ const BudgetProposalPreferences = ({
 
         <div className="mb-6">
           <p id="budget-proposal-format-requested-label" className={labelClass}>
-            Proposal Format Requested <span className="text-red-500">*</span>
+            Proposal Format Requested <span className="text-danger-strong">*</span>
             <InfoTooltip text="Select everything you want included in vendor proposals. At least one selection is required. 'Itemized Gear List' + 'All-In Total' together give you the most flexibility to compare vendors." />
           </p>
 
@@ -622,16 +622,16 @@ const BudgetProposalPreferences = ({
                   </span>
                   <span className="flex-1">
                     <span className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-[#222628]">
+                      <span className="text-sm font-semibold text-heading">
                         {opt.label}
                       </span>
                       {suggested && (
-                        <span className="rounded-full bg-[#1DBFD3]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#1DBFD3]">
+                        <span className="rounded-full bg-action/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-action">
                           Suggested
                         </span>
                       )}
                     </span>
-                    <span className="block text-xs text-slate-500">{opt.desc}</span>
+                    <span className="block text-xs text-muted">{opt.desc}</span>
                   </span>
                 </button>
               );
@@ -640,17 +640,17 @@ const BudgetProposalPreferences = ({
 
           {/* Auto-added items (read-only) */}
           {autoAddedFormats.length > 0 && (
-            <div className="mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-3">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <div className="mt-3 rounded-xl border border-line bg-surface-muted p-3">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted">
                 Auto-added based on your event profile
               </p>
               <div className="space-y-2">
                 {autoAddedFormats.map((f) => (
                   <div key={f.label} className="flex items-start gap-2">
-                    <span className="mt-0.5 shrink-0 text-xs text-[#1DBFD3]">⚡</span>
+                    <span className="mt-0.5 shrink-0 text-xs text-action">⚡</span>
                     <div>
-                      <span className="text-xs font-semibold text-[#222628]">{f.label}</span>
-                      <span className="ml-1 text-xs text-slate-500">— {f.desc}</span>
+                      <span className="text-xs font-semibold text-heading">{f.label}</span>
+                      <span className="ml-1 text-xs text-muted">— {f.desc}</span>
                     </div>
                   </div>
                 ))}
@@ -668,20 +668,20 @@ const BudgetProposalPreferences = ({
         ════════════════════════════════════════ */}
         <Group label="Weighted Evaluation Matrix" />
 
-        <p className="mb-4 text-xs text-slate-500">
+        <p className="mb-4 text-xs text-muted">
           Criteria weights must total exactly 100%. Conditional rows activate based on your event
           profile. Use <strong>Auto-balance</strong> to distribute any remainder automatically.
         </p>
 
         {/* Deactivation banners */}
         {showHybridBanner && (
-          <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="mb-4 flex gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3">
             <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
             <div>
-              <p className="text-sm font-bold text-amber-800">
+              <p className="text-sm font-bold text-warning-strong">
                 Hybrid / Virtual Capability Deactivated
               </p>
-              <p className="mt-0.5 text-xs text-amber-700">
+              <p className="mt-0.5 text-xs text-warning-strong">
                 This criterion ({safeData.evaluationMatrix.hybridVirtual}%) has been removed
                 because your event is In-Person Only. Use auto-balance to redistribute this weight
                 to active criteria.
@@ -690,13 +690,13 @@ const BudgetProposalPreferences = ({
           </div>
         )}
         {showScenicBanner && (
-          <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="mb-4 flex gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3">
             <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
             <div>
-              <p className="text-sm font-bold text-amber-800">
+              <p className="text-sm font-bold text-warning-strong">
                 Creative &amp; Scenic Design Deactivated
               </p>
-              <p className="mt-0.5 text-xs text-amber-700">
+              <p className="mt-0.5 text-xs text-warning-strong">
                 This criterion ({safeData.evaluationMatrix.creativeScenic}%) has been removed
                 because no scenic design or content services are in scope. Use auto-balance to
                 redistribute this weight to active criteria.
@@ -709,36 +709,36 @@ const BudgetProposalPreferences = ({
             a starting point the planner accepts, not a silent decision that
             reaches the RFP as though they had chosen it. */}
         {!safeData.evaluationMatrixConfirmed && (
-          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-sm font-semibold text-amber-900">
+          <div className="mb-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3">
+            <p className="text-sm font-semibold text-warning-strong">
               These are RFPilot&apos;s suggested weightings — not yet your choice.
             </p>
-            <p className="mt-1 text-xs text-amber-800">
+            <p className="mt-1 text-xs text-warning-strong">
               Vendors are scored against them, so they stay out of the proposal until you accept or adjust
               them. Change any weight to make it yours, or confirm the suggestion as it stands.
             </p>
             <button
               type="button"
               onClick={confirmMatrix}
-              className="mt-2 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100"
+              className="mt-2 rounded-lg border border-amber-400 bg-surface px-3 py-1.5 text-xs font-bold text-warning-strong hover:bg-amber-100"
             >
               Use these weightings
             </button>
           </div>
         )}
         {safeData.evaluationMatrixConfirmed && (
-          <p className="mb-3 px-1 text-xs font-semibold text-emerald-700">
+          <p className="mb-3 px-1 text-xs font-semibold text-success-strong">
             ✓ Weightings confirmed — these will be published to vendors.
           </p>
         )}
 
         {/* Matrix table */}
-        <div className="mb-3 overflow-hidden rounded-xl border border-[#e4e4e4]">
-          <div className="grid grid-cols-[1fr_90px] border-b border-[#e4e4e4] bg-[#fbfbfb] px-4 py-2.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+        <div className="mb-3 overflow-hidden rounded-xl border border-line">
+          <div className="grid grid-cols-[1fr_90px] border-b border-line bg-surface-muted px-4 py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted">
               Criterion &amp; Scoring Guide
             </span>
-            <span className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-center text-[10px] font-bold uppercase tracking-widest text-muted">
               Weight
             </span>
           </div>
@@ -758,15 +758,15 @@ const BudgetProposalPreferences = ({
             return (
               <div
                 key={crit.key}
-                className="grid grid-cols-[1fr_90px] items-center border-b border-[#f0f0f0] px-4 py-3 last:border-0"
+                className="grid grid-cols-[1fr_90px] items-center border-b border-line px-4 py-3 last:border-0"
               >
                 <div>
-                  <span id={`budget-weight-${crit.key}-label`} className="block text-sm font-semibold text-[#222628]">
+                  <span id={`budget-weight-${crit.key}-label`} className="block text-sm font-semibold text-heading">
                     {crit.label}
                   </span>
-                  <span className="block text-xs italic text-slate-400">{guide}</span>
+                  <span className="block text-xs italic text-muted">{guide}</span>
                   {warnZero && (
-                    <span role="alert" className="block text-[10px] text-red-500">
+                    <span role="alert" className="block text-[10px] text-danger-strong">
                       Weight cannot be 0 for this criterion.
                     </span>
                   )}
@@ -780,13 +780,13 @@ const BudgetProposalPreferences = ({
                     max={100}
                     value={w}
                     onChange={(e) => updateMatrix(crit.key, e.target.value)}
-                    className={`w-14 rounded-lg border px-2 py-1.5 text-center text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20 ${
+                    className={`w-14 rounded-lg border px-2 py-1.5 text-center text-sm font-bold text-heading focus:outline-none focus:ring-2 focus:ring-focus/20 ${
                       warnZero
-                        ? "border-red-400 focus:border-red-400"
-                        : "border-[#e4e4e4] focus:border-[#1DBFD3]"
+                        ? "border-danger-strong focus:border-danger-strong"
+                        : "border-line focus:border-action"
                     }`}
                   />
-                  <span className="text-xs text-slate-400">%</span>
+                  <span className="text-xs text-muted">%</span>
                 </div>
               </div>
             );
@@ -797,7 +797,7 @@ const BudgetProposalPreferences = ({
         <div className="mb-6 flex flex-wrap items-center gap-3 px-1">
           <div
             className={`flex items-center gap-2 text-sm font-bold ${
-              matrixOk ? "text-emerald-600" : "text-red-500"
+              matrixOk ? "text-success-strong" : "text-danger-strong"
             }`}
           >
             <span
@@ -807,7 +807,7 @@ const BudgetProposalPreferences = ({
             />
             Total: {activeSum}% / 100%
             {!matrixOk && (
-              <span className="text-xs font-normal text-slate-500">
+              <span className="text-xs font-normal text-muted">
                 {remaining > 0
                   ? `(${remaining}% unallocated)`
                   : `(${Math.abs(remaining)}% over)`}
@@ -818,13 +818,13 @@ const BudgetProposalPreferences = ({
             <button
               type="button"
               onClick={quickBalance}
-              className="ml-auto rounded-lg border border-[#1DBFD3] px-3 py-1.5 text-xs font-semibold text-[#1DBFD3] transition-colors hover:bg-[#1DBFD3]/5"
+              className="ml-auto rounded-lg border border-action px-3 py-1.5 text-xs font-semibold text-action transition-colors hover:bg-action/5"
             >
               Auto-balance {remaining > 0 ? `+${remaining}%` : `${remaining}%`}
             </button>
           )}
           {showErrors && !matrixOk && (
-            <p role="alert" className="w-full text-xs text-red-500">
+            <p role="alert" className="w-full text-xs text-danger-strong">
               Weights must total exactly 100% before your proposal can be generated. Current total:{" "}
               {activeSum}%.
             </p>
@@ -852,7 +852,7 @@ const BudgetProposalPreferences = ({
           <div className={labelClass}>
           <label htmlFor="budget-sustainability-dei-practices" className="flex items-center gap-[inherit]">
           Sustainability &amp; DEI Practices
-          <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+          <span className="ml-2 text-xs font-normal normal-case text-muted">(optional)</span></label>
           <InfoTooltip text="Describe any sustainability or DEI (diversity, equity, and inclusion) requirements or preferences vendors should address in their proposal." />
           </div>
           <textarea id="budget-sustainability-dei-practices"
@@ -877,7 +877,7 @@ const BudgetProposalPreferences = ({
           <div>
             <div className={labelClass}>
             <span className="flex items-center gap-[inherit]">
-            Vendor Questions Due <span className="text-red-500">*</span></span>
+            Vendor Questions Due <span className="text-danger-strong">*</span></span>
             <InfoTooltip text="The deadline for vendors to submit clarifying questions about the proposal." />
             </div>
             <GlobalDateInput
@@ -891,7 +891,7 @@ const BudgetProposalPreferences = ({
               onChange={(value) => onChange({ vendorQuestionsDueDate: fromDateToIso(value) })}
               {...timelineBounds("vendorQuestionsDueDate")}
               showTodayShortcut
-              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorQuestionsDueDate) || timelineError("vendorQuestionsDueDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorQuestionsDueDate) || timelineError("vendorQuestionsDueDate") ? "border-danger-strong ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.vendorQuestionsDueDate && (
               <p className={errorClass}>Required.</p>
@@ -901,7 +901,7 @@ const BudgetProposalPreferences = ({
           <div>
             <div className={labelClass}>
             <span className="flex items-center gap-[inherit]">
-            Response to Vendor Questions <span className="text-red-500">*</span></span>
+            Response to Vendor Questions <span className="text-danger-strong">*</span></span>
             <InfoTooltip text="The date by which you'll respond to vendor questions submitted above." />
             </div>
             <GlobalDateInput
@@ -915,7 +915,7 @@ const BudgetProposalPreferences = ({
               onChange={(value) => onChange({ responseToVendorQuestionsDate: fromDateToIso(value) })}
               {...timelineBounds("responseToVendorQuestionsDate")}
               showTodayShortcut
-              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.responseToVendorQuestionsDate) || timelineError("responseToVendorQuestionsDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.responseToVendorQuestionsDate) || timelineError("responseToVendorQuestionsDate") ? "border-danger-strong ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.responseToVendorQuestionsDate && (
               <p className={errorClass}>Required.</p>
@@ -929,7 +929,7 @@ const BudgetProposalPreferences = ({
           <div>
             <div className={labelClass}>
             <span className="flex items-center gap-[inherit]">
-            Proposal Submission Due <span className="text-red-500">*</span></span>
+            Proposal Submission Due <span className="text-danger-strong">*</span></span>
             <InfoTooltip text="The deadline for vendors to submit their completed proposals." />
             </div>
             <GlobalDateInput
@@ -943,7 +943,7 @@ const BudgetProposalPreferences = ({
               onChange={(value) => onChange({ proposalSubmissionDueDate: fromDateToIso(value) })}
               {...timelineBounds("proposalSubmissionDueDate")}
               showTodayShortcut
-              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.proposalSubmissionDueDate) || timelineError("proposalSubmissionDueDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.proposalSubmissionDueDate) || timelineError("proposalSubmissionDueDate") ? "border-danger-strong ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.proposalSubmissionDueDate && (
               <p className={errorClass}>Required.</p>
@@ -953,7 +953,7 @@ const BudgetProposalPreferences = ({
           <div>
             <div className={labelClass}>
             <span className="flex items-center gap-[inherit]">
-            Shortlist Notification <span className="text-red-500">*</span></span>
+            Shortlist Notification <span className="text-danger-strong">*</span></span>
             <InfoTooltip text="The date by which shortlisted vendors will be notified." />
             </div>
             <GlobalDateInput
@@ -967,7 +967,7 @@ const BudgetProposalPreferences = ({
               onChange={(value) => onChange({ shortlistNotificationDate: fromDateToIso(value) })}
               {...timelineBounds("shortlistNotificationDate")}
               showTodayShortcut
-              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.shortlistNotificationDate) || timelineError("shortlistNotificationDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.shortlistNotificationDate) || timelineError("shortlistNotificationDate") ? "border-danger-strong ring-1 ring-red-400/20" : ""}`}
             />
             {showErrors && !safeData.shortlistNotificationDate && (
               <p className={errorClass}>Required.</p>
@@ -981,7 +981,7 @@ const BudgetProposalPreferences = ({
           <div className={labelClass}>
           <span id="budget-will-vendors-be-given-an-opportu-label" className="flex items-center gap-[inherit]">
           Will Vendors Be Given an Opportunity to Present if Shortlisted?{" "}
-          <span className="text-red-500">*</span></span>
+          <span className="text-danger-strong">*</span></span>
           <InfoTooltip text="If yes, shortlisted vendors will be invited to present their proposal before final selection." />
           </div>
           <YesNo
@@ -1000,7 +1000,7 @@ const BudgetProposalPreferences = ({
           {safeData.vendorPresentationOpportunity === "YES" && (
             <div className={subPanelClass}>
               <label className={`${labelClass} mt-0`}>
-                Presentation Date <span className="text-red-500">*</span>
+                Presentation Date <span className="text-danger-strong">*</span>
               </label>
               <div className="max-w-60">
                 <GlobalDateInput
@@ -1014,7 +1014,7 @@ const BudgetProposalPreferences = ({
                   onChange={(value) => onChange({ vendorPresentationDate: fromDateToIso(value) })}
                   {...timelineBounds("vendorPresentationDate")}
                   showTodayShortcut
-                  inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorPresentationDate) || timelineError("vendorPresentationDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+                  inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorPresentationDate) || timelineError("vendorPresentationDate") ? "border-danger-strong ring-1 ring-red-400/20" : ""}`}
                 />
               </div>
               {showErrors && !safeData.vendorPresentationDate && (
@@ -1029,7 +1029,7 @@ const BudgetProposalPreferences = ({
         <div className="mb-6">
           <div className={labelClass}>
           <span className="flex items-center gap-[inherit]">
-          Vendor Selection <span className="text-red-500">*</span></span>
+          Vendor Selection <span className="text-danger-strong">*</span></span>
           <InfoTooltip text="The date by which the vendor will be selected." />
           </div>
           <div className="max-w-60">
@@ -1044,7 +1044,7 @@ const BudgetProposalPreferences = ({
               onChange={(value) => onChange({ vendorSelectionDate: fromDateToIso(value) })}
               {...timelineBounds("vendorSelectionDate")}
               showTodayShortcut
-              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorSelectionDate) || timelineError("vendorSelectionDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${(showErrors && !safeData.vendorSelectionDate) || timelineError("vendorSelectionDate") ? "border-danger-strong ring-1 ring-red-400/20" : ""}`}
             />
           </div>
           {showErrors && !safeData.vendorSelectionDate && (
@@ -1072,7 +1072,7 @@ const BudgetProposalPreferences = ({
               onChange={(value) => onChange({ decisionDate: fromDateToIso(value) })}
               {...timelineBounds("decisionDate")}
               showTodayShortcut
-              inputClassName={`${inputClass} pr-12 ${timelineError("decisionDate") ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
+              inputClassName={`${inputClass} pr-12 ${timelineError("decisionDate") ? "border-danger-strong ring-1 ring-red-400/20" : ""}`}
             />
           </div>
           {timelineError("decisionDate") && <p className={errorClass}>{timelineError("decisionDate")}</p>}
@@ -1097,7 +1097,7 @@ const BudgetProposalPreferences = ({
           />
           {safeData.competitiveBid === "YES" && (
             <div className={subPanelClass}>
-              <label htmlFor="budget-competitive-bid" className="mb-2 block text-xs font-bold uppercase tracking-widest text-[#969798]">
+              <label htmlFor="budget-competitive-bid" className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted">
                 How many vendors are being solicited?
               </label>
               <input
@@ -1123,7 +1123,7 @@ const BudgetProposalPreferences = ({
           data-assistant-field-key="/content/budgetPreferences/producerCallRequested"
         >
           <label id="budget-producer-call-label" className={labelClass}>
-            Setup a call with an RFPilot producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement? <span className="text-red-500">*</span>
+            Setup a call with an RFPilot producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement? <span className="text-danger-strong">*</span>
           </label>
           <YesNo
             labelledBy="budget-producer-call-label"
@@ -1134,7 +1134,7 @@ const BudgetProposalPreferences = ({
             <div className={subPanelClass}>
               <a
                 href="#"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1DBFD3] hover:underline"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-action hover:underline"
               >
                 Schedule a call with your RFPilot producer
                 <ExternalLink size={13} />
@@ -1152,7 +1152,7 @@ const BudgetProposalPreferences = ({
         <div className="mb-6">
           <div className={labelClass}>
           <span id="budget-how-did-you-hear-about-this-tool-label" className="flex items-center gap-[inherit]">
-          How did you hear about this tool? <span className="text-red-500">*</span></span>
+          How did you hear about this tool? <span className="text-danger-strong">*</span></span>
           <InfoTooltip text="Helps us understand where our clients are finding us so we can improve outreach and support." />
           </div>
           <SelectField
@@ -1170,7 +1170,7 @@ const BudgetProposalPreferences = ({
           />
           {safeData.howDidYouHear === "Other" && (
             <div className={subPanelClass}>
-              <label htmlFor="budget-how-did-you-hear-about-this-tool" className="mb-2 block text-xs font-bold uppercase tracking-widest text-[#969798]">
+              <label htmlFor="budget-how-did-you-hear-about-this-tool" className="mb-2 block text-xs font-bold uppercase tracking-widest text-muted">
                 Please specify
               </label>
               <textarea
@@ -1197,11 +1197,11 @@ const BudgetProposalPreferences = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-line">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           {mode === "basic" ? "Room specifications" : "Venue & Technical"}

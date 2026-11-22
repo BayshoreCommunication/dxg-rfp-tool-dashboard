@@ -9,14 +9,14 @@ import type { ProposalExperienceMode } from "@/lib/proposals/proposalExperience"
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20 placeholder:text-[#b0bace]";
-const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
-const errorClass = "mt-1 text-sm text-red-500 normal-case";
+  "w-full rounded-lg border border-control bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20 placeholder:text-muted";
+const groupLabelClass = "mb-4 text-xs font-bold uppercase tracking-widest text-muted";
+const errorClass = "mt-1 text-sm text-danger-strong normal-case";
 
 const Group = ({ label }: { label: string }) => (
-  <div className="mb-5 mt-8 border-t border-[#f0f0f0] pt-6 first:mt-0 first:border-0 first:pt-0">
+  <div className="mb-5 mt-8 border-t border-line pt-6 first:mt-0 first:border-0 first:pt-0">
     <p className={groupLabelClass}>{label}</p>
   </div>
 );
@@ -61,20 +61,20 @@ const pillCls = (active: boolean): string => {
   const base =
     "flex h-10 cursor-pointer items-center justify-center rounded-md border px-4 text-sm font-semibold transition-all";
   return active
-    ? `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]`
-    : `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
+    ? `${base} border-action bg-action/10 text-heading`
+    : `${base} border-line bg-surface text-muted hover:border-control`;
 };
 
 const phoneTypePillCls = (opt: string, selected: string): string => {
   const base = "rounded-full border px-4 py-1.5 text-xs font-semibold cursor-pointer transition-all";
   return selected === opt
-    ? `${base} border-[#1DBFD3] bg-[#1DBFD3]/10 text-[#222628]`
-    : `${base} border-[#e4e4e4] bg-white text-slate-500 hover:border-slate-300`;
+    ? `${base} border-action bg-action/10 text-heading`
+    : `${base} border-line bg-surface text-muted hover:border-control`;
 };
 
 const errInputCls = (val: string, showErrors: boolean): string =>
   showErrors && !val.trim()
-    ? `${inputClass} border-red-400 ring-1 ring-red-400/20 bg-red-50/30`
+    ? `${inputClass} border-danger-strong ring-1 ring-red-400/20 bg-danger-soft`
     : inputClass;
 
 /* ─── Additional Contact Card ─── */
@@ -99,37 +99,37 @@ const AdditionalContactCard = ({
   const up = (p: Partial<AdditionalContact>) => onChange({ ...contact, ...p });
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#e4e4e4] bg-white">
+    <div className="overflow-hidden rounded-xl border border-line bg-surface">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fbfbfb]"
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-muted"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1DBFD3]/10 text-xs font-bold text-[#1DBFD3]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-action/10 text-xs font-bold text-action">
             {index + 1}
           </span>
           <div>
-            <span className="text-sm font-bold text-[#222628]">
+            <span className="text-sm font-bold text-heading">
               {contact.fullName || `Additional Contact ${index + 1}`}
             </span>
             {contact.titleAndRole && !open && (
-              <span className="ml-2 text-xs text-slate-400">{contact.titleAndRole}</span>
+              <span className="ml-2 text-xs text-muted">{contact.titleAndRole}</span>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2">
           {hasData && <span className="h-2 w-2 rounded-full bg-emerald-400" />}
           {open ? (
-            <ChevronUp size={16} className="text-slate-400" />
+            <ChevronUp size={16} className="text-muted" />
           ) : (
-            <ChevronDown size={16} className="text-slate-400" />
+            <ChevronDown size={16} className="text-muted" />
           )}
         </div>
       </button>
 
       {open && (
-        <div className="border-t border-[#f0f0f0] px-4 pb-4 pt-4">
+        <div className="border-t border-line px-4 pb-4 pt-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor={`${uid}-full-name`} className={labelClass}>Full Name</label>
@@ -191,7 +191,7 @@ const AdditionalContactCard = ({
             <button
               type="button"
               onClick={onRemove}
-              className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-500"
+              className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-danger-strong"
             >
               <X size={13} /> Remove contact
             </button>
@@ -293,13 +293,13 @@ const ContactInfo = ({
       id="contact-publish-section"
       aria-labelledby="contact-publish-heading"
       tabIndex={-1}
-      className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-[#e4e4e4] bg-white focus:outline-none"
+      className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-line bg-surface focus:outline-none"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="border-b border-[#e4e4e4] px-8 py-6">
-        <h2 id="contact-publish-heading" className="text-[22px] font-bold text-[#222628]">Contact &amp; Publish</h2>
-        <p className="mt-1 text-sm text-[#969798]">
+      <div className="border-b border-line px-8 py-6">
+        <h2 id="contact-publish-heading" className="text-[22px] font-bold text-heading">Contact &amp; Publish</h2>
+        <p className="mt-1 text-sm text-muted">
           Primary contact details for proposal delivery, vendor communications, and the RFPilot portal.
         </p>
       </div>
@@ -317,7 +317,7 @@ const ContactInfo = ({
           <div>
             <div className={labelClass}>
             <label htmlFor="contactFirstName" className="flex items-center gap-[inherit]">
-              First Name <span className="text-red-500">*</span></label>
+              First Name <span className="text-danger-strong">*</span></label>
             <InfoTooltip text="Your legal first name as it appears on correspondence. Shown on the proposal cover page and all vendor portal communications." />
           </div>
             <input
@@ -335,7 +335,7 @@ const ContactInfo = ({
           <div>
             <div className={labelClass}>
             <label htmlFor="contactLastName" className="flex items-center gap-[inherit]">
-              Last Name <span className="text-red-500">*</span></label>
+              Last Name <span className="text-danger-strong">*</span></label>
             <InfoTooltip text="Your legal last name for correspondence and proposal documentation." />
           </div>
             <input
@@ -357,7 +357,7 @@ const ContactInfo = ({
           {mode === "advanced" && <div>
             <div className={labelClass}>
             <label htmlFor="contactTitle" className="flex items-center gap-[inherit]">
-              Job Title <span className="text-red-500">*</span></label>
+              Job Title <span className="text-danger-strong">*</span></label>
             <InfoTooltip text="Your professional title as it should appear on the proposal. Appears in the Primary Contact box on the cover page alongside your organization." />
           </div>
             <input
@@ -375,7 +375,7 @@ const ContactInfo = ({
           <div>
             <div className={labelClass}>
             <label htmlFor="contactOrganization" className="flex items-center gap-[inherit]">
-              Organization (Display Name) <span className="text-red-500">*</span></label>
+              Organization (Display Name) <span className="text-danger-strong">*</span></label>
             <InfoTooltip text="Your organization's common display name for the contact box — e.g. 'Apex Dynamics'. For the full legal name used in document headers, see below." />
           </div>
             <input
@@ -396,7 +396,7 @@ const ContactInfo = ({
         <div className="mb-6">
           <div className={labelClass}>
             <label htmlFor="contactEmail" className="flex items-center gap-[inherit]">
-            Email Address <span className="text-red-500">*</span></label>
+            Email Address <span className="text-danger-strong">*</span></label>
             <InfoTooltip text="All vendor questions, proposal notifications, and portal activity alerts will be sent here. Use your professional work email — not a personal address or unmonitored shared mailbox." />
           </div>
           <input
@@ -409,7 +409,7 @@ const ContactInfo = ({
             placeholder="e.g. s.jennings@apexdynamics.com"
             className={
               showErrors && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeData.contactEmail)
-                ? `${inputClass} border-red-400 ring-1 ring-red-400/20 bg-red-50/30`
+                ? `${inputClass} border-danger-strong ring-1 ring-red-400/20 bg-danger-soft`
                 : inputClass
             }
           />
@@ -420,9 +420,9 @@ const ContactInfo = ({
             <p id="contactEmail-format-error" role="alert" className={errorClass}>Enter a valid email address.</p>
           )}
           {sharedMailboxAdvisory && (
-            <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <div className="mt-2 flex gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2">
               <span className="shrink-0 text-amber-500">⚠</span>
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-warning-strong">
                 This appears to be a shared mailbox. Vendor communications and portal notifications
                 will go to this address — confirm it is monitored regularly.
               </p>
@@ -435,7 +435,7 @@ const ContactInfo = ({
         <div className="mb-6">
           <div className={labelClass}>
             <label htmlFor="contactPhone" className="flex items-center gap-[inherit]">
-            Phone Number <span className="text-red-500">*</span></label>
+            Phone Number <span className="text-danger-strong">*</span></label>
             <InfoTooltip text="Best number to reach you for vendor questions, production calls, and urgent communications. Mobile numbers are preferred for event professionals who are often on-site." />
           </div>
           <div className="flex gap-3">
@@ -453,7 +453,7 @@ const ContactInfo = ({
               value={safeData.contactPhoneExt}
               onChange={(e) => onChange({ contactPhoneExt: e.target.value })}
               placeholder="Ext."
-              className="w-24 rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20 placeholder:text-[#b0bace]"
+              className="w-24 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20 placeholder:text-muted"
             />
           </div>
           {showErrors && !safeData.contactPhone.trim() && (
@@ -483,7 +483,7 @@ const ContactInfo = ({
         <div className="mb-6">
           <div className={labelClass}>
             <label htmlFor="organizationLegalName" className="flex items-center gap-[inherit]">
-            Organization / Company Legal Name <span className="text-red-500">*</span></label>
+            Organization / Company Legal Name <span className="text-danger-strong">*</span></label>
             <InfoTooltip text="Full legal name of your organization as it should appear on all official documents including vendor contracts, NDAs, and the proposal header. May differ from the display name — e.g. 'Apex Dynamics Corporation' vs 'Apex Dynamics'." />
           </div>
           <input
@@ -498,14 +498,14 @@ const ContactInfo = ({
             <p id="organizationLegalName-error" role="alert" className={errorClass}>Legal organization name is required.</p>
           )}
           {safeData.organizationLegalName && (
-            <div className="mt-2 rounded-lg border border-[#eeeeee] bg-[#f9f9f9] px-3 py-2">
-              <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
+            <div className="mt-2 rounded-lg border border-line bg-surface-muted px-3 py-2">
+              <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">
                 Cover Page Subtitle Preview
               </p>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-body">
                 <span className="font-semibold">{safeData.organizationLegalName}</span>
                 {" | "}
-                <span className="text-slate-400">[Venue name from Venue &amp; Schedule]</span>
+                <span className="text-muted">[Venue name from Venue &amp; Schedule]</span>
               </p>
             </div>
           )}
@@ -517,7 +517,7 @@ const ContactInfo = ({
         <div id="invitation-recipients-section" tabIndex={-1} className="scroll-mt-6 focus:outline-none" />
         <Group label="Additional Contacts" />
 
-        <p className="mb-5 text-xs text-slate-500">
+        <p className="mb-5 text-xs text-muted">
           Add team members who should receive vendor communications or portal notifications — AV
           liaison, contracts manager, or on-site coordinator. Optional, up to 3.
         </p>
@@ -542,7 +542,7 @@ const ContactInfo = ({
           <button
             type="button"
             onClick={addAdditionalContact}
-            className="flex items-center gap-1.5 text-sm font-semibold text-[#1DBFD3] hover:underline"
+            className="flex items-center gap-1.5 text-sm font-semibold text-action hover:underline"
           >
             <PlusCircle size={16} /> Add additional contact
           </button>
@@ -632,18 +632,18 @@ const ContactInfo = ({
 
         {/* ── Cover page contact box preview ── */}
         {coverPreviewVisible && (
-          <div className="mb-6 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4">
-            <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">
+          <div className="mb-6 rounded-xl border border-line bg-surface-muted p-4">
+            <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-muted">
               Cover Page — Primary Contact Box Preview
             </p>
-            <div className="space-y-0.5 text-xs text-slate-700">
+            <div className="space-y-0.5 text-xs text-body">
               {(safeData.contactFirstName || safeData.contactLastName) && (
-                <p className="text-sm font-bold text-[#222628]">
+                <p className="text-sm font-bold text-heading">
                   {safeData.contactFirstName} {safeData.contactLastName}
                 </p>
               )}
               {(safeData.contactTitle || safeData.contactOrganization) && (
-                <p className="text-slate-500">
+                <p className="text-muted">
                   {[safeData.contactTitle, safeData.contactOrganization]
                     .filter(Boolean)
                     .join(", ")}
@@ -657,8 +657,8 @@ const ContactInfo = ({
                 </p>
               )}
               {safeData.additionalContacts.filter((c) => c.fullName || c.email).length > 0 && (
-                <div className="mt-2 border-t border-[#eeeeee] pt-2">
-                  <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                <div className="mt-2 border-t border-line pt-2">
+                  <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">
                     Additional Contacts
                   </p>
                   {safeData.additionalContacts
@@ -667,9 +667,9 @@ const ContactInfo = ({
                       <div key={i} className="mt-1">
                         <span className="font-semibold">{c.fullName}</span>
                         {c.titleAndRole && (
-                          <span className="text-slate-400"> — {c.titleAndRole}</span>
+                          <span className="text-muted"> — {c.titleAndRole}</span>
                         )}
-                        {c.email && <span className="block text-slate-500">{c.email}</span>}
+                        {c.email && <span className="block text-muted">{c.email}</span>}
                       </div>
                     ))}
                 </div>
@@ -679,11 +679,11 @@ const ContactInfo = ({
         )}
 
         {/* ── Submit banner ── */}
-        <div className="rounded-xl border border-[#1DBFD3]/30 bg-[#f0fbff] p-5">
-          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#1DBFD3]">
+        <div className="rounded-xl border border-action/30 bg-brand-soft p-5">
+          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-action">
             {isEditMode ? "Ready to publish your changes?" : "Ready to publish your proposal?"}
           </p>
-          <p className="text-sm text-[#4a5a8a]">
+          <p className="text-sm text-body">
             <strong>{isEditMode ? "Publish updated proposal" : "Publish Proposal"}</strong> saves this
             information and makes the proposal live for vendors. Nobody is emailed yet:
             choosing which vendors to invite is the very next step.
@@ -693,11 +693,11 @@ const ContactInfo = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between border-t border-[#e4e4e4] px-8 py-5">
+      <div className="flex items-center justify-between border-t border-line px-8 py-5">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           {mode === "basic" ? "Investment & Timeline" : "Uploads & Co-Vendors"}
@@ -709,13 +709,13 @@ const ContactInfo = ({
               type="button"
               onClick={onSaveAsDraft}
               disabled={isSubmitting || isSavingDraft}
-              className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              className="flex items-center gap-2 rounded-xl border border-control bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             >
               {isSavingDraft ? "Saving…" : "Save as Draft"}
             </button>
           )}
           {publishBlockReason && (
-            <p id="publish-block-reason" role="status" className="max-w-56 text-right text-xs font-semibold leading-5 text-amber-700">
+            <p id="publish-block-reason" role="status" className="max-w-56 text-right text-xs font-semibold leading-5 text-warning-strong">
               {publishBlockReason}
             </p>
           )}

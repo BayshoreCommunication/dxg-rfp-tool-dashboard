@@ -32,16 +32,16 @@ export default function TemplateSelection({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-line bg-surface"
       style={{
         fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)`,
       }}
     >
-      <div className="px-6 py-5 border-b border-[#e4e4e4]">
-        <h2 className="text-[20px] font-semibold text-[#222628]">
+      <div className="px-6 py-5 border-b border-line">
+        <h2 className="text-[20px] font-semibold text-heading">
           Choose Proposal Template
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-muted">
           Select how this proposal will be presented. The selected template is
           saved with the proposal.
         </p>
@@ -54,11 +54,11 @@ export default function TemplateSelection({
             onClick={() => onSelect("template-one")}
             className={`${cardBaseClass} ${
               templateId === "template-one"
-                ? "border-[#1DBFD3] bg-[#1DBFD3]/5 shadow-[0_0_0_2px_rgba(33,140,203,0.2)]"
-                : "border-slate-200 bg-white hover:border-[#1DBFD3]/50"
+                ? "border-action bg-action/5 shadow-[0_0_0_2px_rgba(33,140,203,0.2)]"
+                : "border-line bg-surface hover:border-action/50"
             }`}
           >
-            <div className="relative h-40 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="relative h-40 overflow-hidden rounded-xl border border-line bg-surface">
               <Image
                 src="/assets/template-modern-preview.svg"
                 alt="Modern template preview"
@@ -67,8 +67,8 @@ export default function TemplateSelection({
               />
             </div>
             <div className="mt-3 text-left">
-              <p className="text-sm font-bold text-slate-900">Modern</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-bold text-heading">Modern</p>
+              <p className="text-xs text-muted">
                 Modern, bold, sectioned presentation layout.
               </p>
             </div>
@@ -79,11 +79,11 @@ export default function TemplateSelection({
             onClick={() => onSelect("template-two")}
             className={`${cardBaseClass} ${
               templateId === "template-two"
-                ? "border-[#1DBFD3] bg-[#1DBFD3]/5 shadow-[0_0_0_2px_rgba(33,140,203,0.2)]"
-                : "border-slate-200 bg-white hover:border-[#1DBFD3]/50"
+                ? "border-action bg-action/5 shadow-[0_0_0_2px_rgba(33,140,203,0.2)]"
+                : "border-line bg-surface hover:border-action/50"
             }`}
           >
-            <div className="relative h-40 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="relative h-40 overflow-hidden rounded-xl border border-line bg-surface">
               <Image
                 src="/assets/template-classic-preview.svg"
                 alt="Classic template preview"
@@ -92,8 +92,8 @@ export default function TemplateSelection({
               />
             </div>
             <div className="mt-3 text-left">
-              <p className="text-sm font-bold text-slate-900">Classic</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-bold text-heading">Classic</p>
+              <p className="text-xs text-muted">
                 Clean executive summary style with compact sections.
               </p>
             </div>
@@ -101,17 +101,17 @@ export default function TemplateSelection({
         </div>
 
         {hasError && (
-          <p className="mt-3 text-sm font-medium text-red-500">
+          <p className="mt-3 text-sm font-medium text-danger-strong">
             Please select a template before continuing.
           </p>
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e4e4e4]">
+      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-line">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           <ArrowLeft size={15} className="shrink-0" />
@@ -120,7 +120,7 @@ export default function TemplateSelection({
         <button
           type="button"
           onClick={() => onCreate("unsubmitted")}
-          className="h-10 px-6 rounded-md border border-[#e4e4e4] bg-white hover:bg-gray-50 text-sm font-bold text-[#222628] transition-colors"
+          className="h-10 px-6 rounded-md border border-line bg-surface hover:bg-gray-50 text-sm font-bold text-heading transition-colors"
         >
           {draftActionLabel}
         </button>

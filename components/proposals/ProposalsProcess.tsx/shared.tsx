@@ -25,8 +25,8 @@ export const PillRadio = ({
   <label
     className={`flex items-center gap-2 px-5 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
       checked
-        ? "border-[#1DBFD3] bg-white text-[#222628]"
-        : "border-[#e4e4e4] bg-white text-[#969798] hover:border-[#1DBFD3]/60"
+        ? "border-action bg-surface text-heading"
+        : "border-line bg-surface text-muted hover:border-action/60"
     }`}
   >
     <input
@@ -45,11 +45,11 @@ export const PillRadio = ({
 export const RadioIndicator = ({ checked }: { checked: boolean }) => (
   <span
     aria-hidden="true"
-    className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border transition-all peer-focus-visible:ring-4 peer-focus-visible:ring-[#1DBFD3]/15 ${
-      checked ? "border-[#1DBFD3]" : "border-[#8b989f]"
+    className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border transition-all peer-focus-visible:ring-4 peer-focus-visible:ring-focus/15 ${
+      checked ? "border-action" : "border-control"
     }`}
   >
-    {checked && <span className="h-2 w-2 rounded-full bg-[#1DBFD3]" />}
+    {checked && <span className="h-2 w-2 rounded-full bg-action" />}
   </span>
 );
 
@@ -65,16 +65,16 @@ export const PillCheckbox = ({
   <label
     className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 cursor-pointer text-sm font-semibold transition-all select-none ${
       checked
-        ? "border-[#1DBFD3] bg-white text-[#222628]"
-        : "border-[#e4e4e4] bg-white text-[#969798] hover:border-[#1DBFD3]/60"
+        ? "border-action bg-surface text-heading"
+        : "border-line bg-surface text-muted hover:border-action/60"
     }`}
   >
     <span
       className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        checked ? "border-[#1DBFD3]" : "border-[#e4e4e4]"
+        checked ? "border-action" : "border-line"
       }`}
     >
-      {checked && <span className="w-2 h-2 rounded-full bg-[#1DBFD3]" />}
+      {checked && <span className="w-2 h-2 rounded-full bg-action" />}
     </span>
     <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
     {label}
@@ -181,8 +181,8 @@ export const InfoTooltip = ({ text }: { text: string }) => {
           event.stopPropagation();
           toggle();
         }}
-        className={`inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/40 ${
-          pos ? "text-[#1DBFD3]" : "text-[#b0b9d1] hover:text-[#1DBFD3]"
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40 ${
+          pos ? "text-action" : "text-muted hover:text-action"
         }`}
       >
         <Info size={13} aria-hidden />
@@ -211,7 +211,7 @@ export const InfoTooltip = ({ text }: { text: string }) => {
             }
             askAssistant(event.currentTarget);
           }}
-          className="relative z-10 inline-flex h-7 touch-manipulation items-center gap-1.5 rounded-md px-1 text-[13px] font-semibold normal-case tracking-normal text-[#1DBFD3] transition hover:bg-[#eafafd] hover:text-[#109aaf] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DBFD3]/35 active:scale-[0.98]"
+          className="relative z-10 inline-flex h-7 touch-manipulation items-center gap-1.5 rounded-md px-1 text-[13px] font-semibold normal-case tracking-normal text-action transition hover:bg-brand-soft hover:text-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/35 active:scale-[0.98]"
         >
           <Sparkles size={17} strokeWidth={2.25} aria-hidden />
           Ask AI

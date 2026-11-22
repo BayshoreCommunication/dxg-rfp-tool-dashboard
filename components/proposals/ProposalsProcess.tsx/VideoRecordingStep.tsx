@@ -61,20 +61,20 @@ export const defaultVideoRecording = (): VideoRecordingData => ({
 
 /* ─── Style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
+  "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-action focus:outline-none focus:ring-2 focus:ring-focus";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798] border-b border-[#e4e4e4] pb-2";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-muted border-b border-line pb-2";
 const subPanelClass =
-  "mt-3 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-4 space-y-4";
+  "mt-3 rounded-xl border border-[#eeeeee] bg-surface-muted p-4 space-y-4";
 
 /* ─── Yes/No buttons ─── */
 const yesNoCls = (opt: "YES" | "NO", value: string): string => {
   const base =
     "flex h-10 min-w-[72px] cursor-pointer items-center justify-center rounded-md border px-5 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
+    return `${base} border-line bg-white text-muted hover:border-slate-300`;
   if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
   return `${base} border-rose-400 bg-rose-50 text-rose-700`;
 };
@@ -113,25 +113,25 @@ const GatewayCard = ({
     onClick={onClick}
     className={`flex w-full flex-col rounded-xl border-2 p-5 text-left transition-all ${
       isSelected
-        ? "border-[#1DBFD3] bg-[#1DBFD3]/5"
-        : "border-[#e4e4e4] bg-white hover:border-[#1DBFD3]/40"
+        ? "border-action bg-[#1DBFD3]/5"
+        : "border-line bg-white hover:border-action/40"
     }`}
   >
     <div className="flex items-center gap-3 mb-2">
       <div
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-          isSelected ? "border-[#1DBFD3] bg-[#1DBFD3]" : "border-[#e4e4e4]"
+          isSelected ? "border-action bg-[#1DBFD3]" : "border-line"
         }`}
       >
         {isSelected && <div className="theme-preserve-white h-2 w-2 rounded-full bg-white" />}
       </div>
       <span
-        className={`text-sm font-bold ${isSelected ? "text-[#1DBFD3]" : "text-[#222628]"}`}
+        className={`text-sm font-bold ${isSelected ? "text-action" : "text-heading"}`}
       >
         {title}
       </span>
     </div>
-    <p className="ml-8 text-xs leading-relaxed text-[#969798]">{description}</p>
+    <p className="ml-8 text-xs leading-relaxed text-muted">{description}</p>
   </button>
 );
 
@@ -180,13 +180,13 @@ const VideoRecordingStep = ({
 
   return (
     <section
-      className="flex flex-col min-h-screen rounded-md border border-[#e4e4e4] bg-white"
+      className="flex flex-col min-h-screen rounded-md border border-line bg-white"
       style={{ fontFamily: `"${proposalSettings.branding.defaultFont}", var(--font-sans)` }}
     >
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <h2 className="text-[22px] font-bold text-[#222628]">Video Recording &amp; Broadcast</h2>
-        <p className="mt-1 text-sm text-[#969798]">
+      <div className="px-8 py-6 border-b border-line">
+        <h2 className="text-[22px] font-bold text-heading">Video Recording &amp; Broadcast</h2>
+        <p className="mt-1 text-sm text-muted">
           Cameras, recording specs, deliverables, and post-production requirements.
         </p>
       </div>
@@ -233,9 +233,9 @@ const VideoRecordingStep = ({
 
         {/* NO state info panel */}
         {safeData.videoRecordingRequired === "NO" && (
-          <div className="rounded-xl border border-[#e4e4e4] bg-[#f9f9f9] px-6 py-5">
-            <p className="text-sm font-semibold text-[#222628]">Section 5 will be omitted from your proposal</p>
-            <p className="mt-1 text-xs text-[#969798]">
+          <div className="rounded-xl border border-line bg-surface-muted px-6 py-5">
+            <p className="text-sm font-semibold text-heading">Section 5 will be omitted from your proposal</p>
+            <p className="mt-1 text-xs text-muted">
               The AV vendor will execute the live show only. No cameras or recording equipment will be scoped.
             </p>
           </div>
@@ -316,7 +316,7 @@ const VideoRecordingStep = ({
                     <InfoTooltip text="Do you need edited video deliverables — highlight reels or polished session edits — in addition to raw footage? Edited deliverables require a video editor, time, and an approval workflow." />
                   </label>
                   {suggestEdited && (
-                    <p className="mb-2 text-xs font-medium text-[#1DBFD3]">
+                    <p className="mb-2 text-xs font-medium text-action">
                       ⚡ You assigned Sizzle/Recap Video to the AV vendor under Content &amp; Creative — enabling an edited deliverable here is recommended.
                     </p>
                   )}
@@ -339,7 +339,7 @@ const VideoRecordingStep = ({
 
                   {safeData.editedDeliverable.needed === "YES" && (
                     <div className={subPanelClass}>
-                      <p className="text-xs font-bold uppercase tracking-wide text-[#969798]">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted">
                         Edited Deliverable Details
                       </p>
 
@@ -490,7 +490,7 @@ const VideoRecordingStep = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-line">
         <button
           type="button"
           onClick={onBack}

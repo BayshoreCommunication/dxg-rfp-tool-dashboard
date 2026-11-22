@@ -335,21 +335,21 @@ const unionVenueCls = (opt: "YES" | "NO" | "NOT_SURE", value: string): string =>
   const base =
     "flex h-10 cursor-pointer items-center justify-center rounded-md border px-4 text-sm font-semibold transition-all";
   if (value !== opt)
-    return `${base} border-[#e4e4e4] bg-white text-[#969798] hover:border-slate-300`;
-  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-emerald-700`;
+    return `${base} border-line bg-surface text-muted hover:border-control`;
+  if (opt === "YES") return `${base} border-emerald-400 bg-emerald-50 text-success-strong`;
   if (opt === "NO") return `${base} border-rose-400 bg-rose-50 text-rose-700`;
-  return `${base} border-amber-400 bg-amber-50 text-amber-700`;
+  return `${base} border-amber-400 bg-warning-soft text-warning-strong`;
 };
 
 /* ─── Shared style constants ─── */
 const labelClass =
-  "mb-2 flex items-center gap-1 text-sm font-bold text-[#222628] uppercase tracking-wide";
+  "mb-2 flex items-center gap-1 text-sm font-bold text-heading uppercase tracking-wide";
 const inputClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20";
+  "w-full rounded-lg border border-control bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20";
 const selectClass =
-  "w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20 appearance-none";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading focus:border-action focus:outline-none focus:ring-2 focus:ring-focus/20 appearance-none";
 const groupLabelClass =
-  "mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]";
+  "mb-4 text-xs font-bold uppercase tracking-widest text-muted";
 
 interface Props {
   data: VenueScheduleData;
@@ -383,7 +383,7 @@ const VenueScheduleStep = ({
 
   const err = (val: string) =>
     showErrors && !val.trim()
-      ? "border-red-400 focus:border-red-400 focus:ring-red-200"
+      ? "border-danger-strong focus:border-danger-strong focus:ring-red-200"
       : "";
 
   const fieldErrors = venueScheduleValidationErrors(
@@ -398,7 +398,7 @@ const VenueScheduleStep = ({
   );
   const orderErr = (key: ScheduleDateKey) =>
     fieldErrors[key]
-      ? " border-red-400 focus:border-red-400 focus:ring-red-200"
+      ? " border-danger-strong focus:border-danger-strong focus:ring-red-200"
       : "";
 
   /* Show Start/End calendars are additionally clamped to the event window */
@@ -462,13 +462,13 @@ const VenueScheduleStep = ({
     : [];
 
   return (
-    <section id="venue-schedule-section" tabIndex={-1} className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-[#e4e4e4] bg-white focus:outline-none">
+    <section id="venue-schedule-section" tabIndex={-1} className="flex min-h-screen scroll-mt-6 flex-col rounded-md border border-line bg-surface focus:outline-none">
       {/* ── Header ── */}
-      <div className="px-8 py-6 border-b border-[#e4e4e4]">
-        <h2 className="text-[22px] font-bold text-[#222628]">
+      <div className="px-8 py-6 border-b border-line">
+        <h2 className="text-[22px] font-bold text-heading">
           Venue and Overall Event Schedule
         </h2>
-        <p className="mt-1 text-sm text-[#969798]">
+        <p className="mt-1 text-sm text-muted">
           {mode === "basic"
             ? "Confirm the venue and location. Production timing can be added in Advanced mode."
             : "Venue details, union detection, and production timeline."}
@@ -485,7 +485,7 @@ const VenueScheduleStep = ({
           <div className="mb-5">
             <div className={labelClass}>
             <label htmlFor="venue-schedule-venue-name" className="flex items-center gap-[inherit]">
-            Venue Name <span className="text-red-500">*</span></label>
+            Venue Name <span className="text-danger-strong">*</span></label>
             <InfoTooltip text="Full official name of the venue as it appears on the venue's website or contract. Appears on the cover subtitle, Section 1 Scope Overview, Section 6 Venue row, and the union note callout." />
             </div>
             <input id="venue-schedule-venue-name"
@@ -498,9 +498,9 @@ const VenueScheduleStep = ({
             />
             <div className="mt-1 flex justify-between items-start">
               {showErrors && !safeData.venueName.trim() ? (
-                <p role="alert" className="text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="text-xs text-danger-strong normal-case">Required</p>
               ) : <span />}
-              <span className="text-xs text-[#969798] shrink-0 ml-2">
+              <span className="text-xs text-muted shrink-0 ml-2">
                 {safeData.venueName.length}/120
               </span>
             </div>
@@ -512,14 +512,14 @@ const VenueScheduleStep = ({
             <div>
               <div className={labelClass}>
               <label id="venue-schedule-state-label" className="flex items-center gap-[inherit]">
-              State <span className="text-red-500">*</span></label>
+              State <span className="text-danger-strong">*</span></label>
               <InfoTooltip text="State or region. Used for jurisdiction context, union market detection, and time zone auto-detection. Selecting a state automatically suggests the correct time zone below." />
               </div>
               <GlobalSelect id="venue-schedule-state"
                 aria-label="Venue state"
                 value={safeData.venueState}
                 onChange={(e) => handleStateChange(e.target.value)}
-                className={`${selectClass} ${showErrors && !safeData.venueState ? "border-red-400 focus:border-red-400" : ""}`}
+                className={`${selectClass} ${showErrors && !safeData.venueState ? "border-danger-strong focus:border-danger-strong" : ""}`}
               >
                 <option value="">Select state...</option>
                 {US_STATES.map((s) => (
@@ -527,13 +527,13 @@ const VenueScheduleStep = ({
                 ))}
               </GlobalSelect>
               {showErrors && !safeData.venueState && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">Required</p>
               )}
             </div>
             <div>
               <div className={labelClass}>
               <label htmlFor="venue-schedule-city" className="flex items-center gap-[inherit]">
-              City <span className="text-red-500">*</span></label>
+              City <span className="text-danger-strong">*</span></label>
               <InfoTooltip text="The city where the venue is located. Compared against 20 known union markets to trigger the union jurisdiction advisory banner." />
               </div>
               <input id="venue-schedule-city"
@@ -545,14 +545,14 @@ const VenueScheduleStep = ({
                 className={`${inputClass} ${err(safeData.venueCity)}`}
               />
               {showErrors && !safeData.venueCity.trim() && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">Required</p>
               )}
             </div>
           </div>
 
           {/* Union market detection banner */}
           {unionDetected && (safeData.venueCity || safeData.venueState) && (
-            <div className="mb-5 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+            <div className="mb-5 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-soft p-3 text-xs text-warning-strong">
               <span className="mt-0.5 shrink-0">⚠️</span>
               <span>
                 <strong>Union Market Detected:</strong>{" "}
@@ -568,13 +568,13 @@ const VenueScheduleStep = ({
             <div>
               <div className={labelClass}>
               <label id="venue-schedule-venue-type-label" className="flex items-center gap-[inherit]">
-              Venue Type <span className="text-red-500">*</span></label>
+              Venue Type <span className="text-danger-strong">*</span></label>
               <InfoTooltip text="Convention centers and arenas typically have union labor requirements; hotels and resorts vary. Helps vendors gauge infrastructure and labor expectations." />
               </div>
               <GlobalSelect id="venue-schedule-venue-type" aria-labelledby="venue-schedule-venue-type-label"
                 value={safeData.venueType}
                 onChange={(e) => onChange({ venueType: e.target.value })}
-                className={`${selectClass} ${showErrors && !safeData.venueType ? "border-red-400 focus:border-red-400" : ""}`}
+                className={`${selectClass} ${showErrors && !safeData.venueType ? "border-danger-strong focus:border-danger-strong" : ""}`}
               >
                 <option value="">Select venue type...</option>
                 {VENUE_TYPE_OPTIONS.map((opt) => (
@@ -582,19 +582,19 @@ const VenueScheduleStep = ({
                 ))}
               </GlobalSelect>
               {showErrors && !safeData.venueType && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">Required</p>
               )}
             </div>
             <div>
               <div className={labelClass}>
               <label id="venue-schedule-venue-confirmed-status-label" className="flex items-center gap-[inherit]">
-              Venue Confirmed Status <span className="text-red-500">*</span></label>
+              Venue Confirmed Status <span className="text-danger-strong">*</span></label>
               <InfoTooltip text="Is your venue locked in? Vendors use this to gauge how firmly location specs can be relied upon. Unconfirmed venues may surface as a flag chip on the cover." />
               </div>
               <GlobalSelect id="venue-schedule-venue-confirmed-status" aria-labelledby="venue-schedule-venue-confirmed-status-label"
                 value={safeData.venueConfirmedStatus}
                 onChange={(e) => onChange({ venueConfirmedStatus: e.target.value })}
-                className={`${selectClass} ${showErrors && !safeData.venueConfirmedStatus ? "border-red-400 focus:border-red-400" : ""}`}
+                className={`${selectClass} ${showErrors && !safeData.venueConfirmedStatus ? "border-danger-strong focus:border-danger-strong" : ""}`}
               >
                 <option value="">Select status...</option>
                 <option value="CONTRACT_SIGNED">Contract signed — fully confirmed</option>
@@ -603,7 +603,7 @@ const VenueScheduleStep = ({
                 <option value="NOT_SELECTED">Not yet selected — vendor recommendations welcome</option>
               </GlobalSelect>
               {showErrors && !safeData.venueConfirmedStatus && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">Required</p>
               )}
             </div>
           </div>
@@ -614,7 +614,7 @@ const VenueScheduleStep = ({
               <div className={labelClass}>
               <label htmlFor="venue-schedule-venue-address" className="flex items-center gap-[inherit]">
               Venue Address
-              <span className="ml-1 text-[#969798] text-xs font-normal normal-case tracking-normal">(optional)</span></label>
+              <span className="ml-1 text-muted text-xs font-normal normal-case tracking-normal">(optional)</span></label>
               <InfoTooltip text="Full street address including ZIP code. Used for freight delivery coordination and vendor logistics planning." />
               </div>
               <input id="venue-schedule-venue-address"
@@ -628,7 +628,7 @@ const VenueScheduleStep = ({
             <div>
               <div className={labelClass}>
               <label id="venue-schedule-time-zone-label" className="flex items-center gap-[inherit]">
-              Time Zone <span className="text-red-500">*</span></label>
+              Time Zone <span className="text-danger-strong">*</span></label>
               <InfoTooltip text="Time zone of the venue. Appended to all times in the Section 1 timeline, Section 9 proposal deadline, and venue section. Auto-detected when you select a state above." />
               </div>
               <GlobalSelect id="venue-schedule-time-zone"
@@ -638,7 +638,7 @@ const VenueScheduleStep = ({
                   lastAutomaticTimeZoneRef.current = null;
                   onChange({ timeZone: e.target.value });
                 }}
-                className={`${selectClass} ${showErrors && !safeData.timeZone ? "border-red-400 focus:border-red-400" : ""}`}
+                className={`${selectClass} ${showErrors && !safeData.timeZone ? "border-danger-strong focus:border-danger-strong" : ""}`}
               >
                 <option value="">Select time zone...</option>
                 {hasCustomStoredTimeZone && (
@@ -651,10 +651,10 @@ const VenueScheduleStep = ({
                 ))}
               </GlobalSelect>
               {showErrors && !safeData.timeZone && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">Required</p>
               )}
               {suggestedTimeZone && normalizedSelectedTimeZone === suggestedTimeZone && (
-                <p className="mt-1 text-xs text-[#1DBFD3] normal-case">
+                <p className="mt-1 text-xs text-action normal-case">
                   Auto-detected from {safeData.venueCity || safeData.venueState}
                 </p>
               )}
@@ -669,7 +669,7 @@ const VenueScheduleStep = ({
           <div className="mb-5">
             <p id="venue-schedule-does-your-contract-with-the-venue-requir-label" className={labelClass}>
               Does Your Contract With the Venue Require You to Use Union, Teamster, or In-House Labor?{" "}
-              <span className="text-red-500">*</span>
+              <span className="text-danger-strong">*</span>
               <InfoTooltip text="Some venue contracts mandate certified union AV technicians (IATSE, IBEW), Teamsters, or in-house labor for certain tasks. This triggers jurisdiction fields and adds a compliance note to Section 6, alerting vendors to budget union minimums and call times. If unsure, contact your venue's event services team." />
             </p>
             <div role="group" aria-labelledby="venue-schedule-does-your-contract-with-the-venue-requir-label" className="flex gap-3">
@@ -700,25 +700,25 @@ const VenueScheduleStep = ({
               </button>
             </div>
             {showErrors && !safeData.isUnionVenue && (
-              <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
+              <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">Required</p>
             )}
             {safeData.isUnionVenue === "NOT_SURE" && (
-              <p className="mt-2 text-xs text-amber-700 normal-case">
+              <p className="mt-2 text-xs text-warning-strong normal-case">
                 Contact your venue&apos;s event services team — they will confirm jurisdiction before your proposal is sent.
               </p>
             )}
 
             {/* Union sub-panel */}
             {safeData.isUnionVenue === "YES" && (
-              <div className="mt-4 rounded-xl border border-[#eeeeee] bg-[#f9f9f9] p-5">
-                <p className="mb-4 text-xs font-bold uppercase tracking-widest text-[#969798]">
+              <div className="mt-4 rounded-xl border border-line bg-surface-muted p-5">
+                <p className="mb-4 text-xs font-bold uppercase tracking-widest text-muted">
                   Union Jurisdictions — Select All That Apply
                 </p>
 
                 <div className="mb-4">
                   <p id="venue-schedule-active-unions-at-this-venue-label" className={labelClass}>
                     Active Unions at This Venue
-                    <span className="ml-1 text-xs font-normal normal-case text-slate-400">(conditional)</span>
+                    <span className="ml-1 text-xs font-normal normal-case text-muted">(conditional)</span>
                     <InfoTooltip text="Most large convention centers have multiple unions (e.g., IATSE for stage labor, IBEW for electrical, Teamsters for freight). Your venue coordinator can provide the complete list." />
                   </p>
                   <div role="group" aria-labelledby="venue-schedule-active-unions-at-this-venue-label" className="flex flex-wrap gap-3">
@@ -758,7 +758,7 @@ const VenueScheduleStep = ({
                   <div className={`${labelClass} mt-0`}>
                   <label htmlFor="venue-schedule-details-or-contract-language" className="flex items-center gap-[inherit]">
                   Details or Contract Language
-                  <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                  <span className="ml-1 text-xs font-normal normal-case text-muted">(optional)</span></label>
                   <InfoTooltip text="Add any specific details, jurisdictions, or contract language vendors should be aware of." />
                   </div>
                   <textarea id="venue-schedule-details-or-contract-language"
@@ -766,7 +766,7 @@ const VenueScheduleStep = ({
                     value={safeData.unionLaborDetails}
                     onChange={(e) => onChange({ unionLaborDetails: e.target.value })}
                     placeholder="e.g. IATSE Local 720 required for all rigging and electrical work per venue contract."
-                    className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#1DBFD3] focus:ring-2 focus:ring-[#1DBFD3]/20"
+                    className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-heading outline-none focus:border-action focus:ring-2 focus:ring-focus/20"
                   />
                 </div>
               </div>
@@ -783,7 +783,7 @@ const VenueScheduleStep = ({
             <div>
               <div className={labelClass}>
               <span className="flex items-center gap-[inherit]">
-              Load-In Date &amp; Time <span className="text-red-500">*</span></span>
+              Load-In Date &amp; Time <span className="text-danger-strong">*</span></span>
               <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue — this is the earliest you can start setup, not the show start. Typical load-in is 1–3 days before show day for large events." />
               </div>
               <GlobalDateTimeInput
@@ -801,17 +801,17 @@ const VenueScheduleStep = ({
                   onChange({ loadInDate: date, loadInTime: time });
                 }}
                 {...scheduleBounds(safeData, "loadInDate")}
-                inputClassName={`${inputClass} pr-12${safeData.loadInDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("loadInDate")}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
+                inputClassName={`${inputClass} pr-12${safeData.loadInDate === "" && showErrors ? " border-danger-strong focus:border-danger-strong focus:ring-red-200" : ""}${orderErr("loadInDate")}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-action hover:text-action"
                 placeholder="Select date & time"
               />
               {fieldErrors.loadInDate && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">
                   {fieldErrors.loadInDate}
                 </p>
               )}
               {!fieldErrors.loadInDate && rangeWarnings.loadInDate && (
-                <p className="mt-1 text-xs text-amber-600 normal-case">
+                <p className="mt-1 text-xs text-warning-strong normal-case">
                   {rangeWarnings.loadInDate}
                 </p>
               )}
@@ -839,21 +839,21 @@ const VenueScheduleStep = ({
                 }}
                 {...scheduleBounds(safeData, "rehearsalDate")}
                 inputClassName={`${inputClass} pr-12${orderErr("rehearsalDate")}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-action hover:text-action"
                 placeholder="Select date & time (optional)"
               />
               {fieldErrors.rehearsalDate && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">
                   {fieldErrors.rehearsalDate}
                 </p>
               )}
               {!fieldErrors.rehearsalDate && rangeWarnings.rehearsalDate && (
-                <p className="mt-1 text-xs text-amber-600 normal-case">
+                <p className="mt-1 text-xs text-warning-strong normal-case">
                   {rangeWarnings.rehearsalDate}
                 </p>
               )}
               {!safeData.rehearsalDate && (
-                <p className="mt-1 text-xs text-amber-600 normal-case">
+                <p className="mt-1 text-xs text-warning-strong normal-case">
                   Leave blank if no formal rehearsal — timeline will show &quot;TBD&quot;.
                 </p>
               )}
@@ -865,7 +865,7 @@ const VenueScheduleStep = ({
             <div>
               <div className={labelClass}>
               <label id="venue-schedule-show-start-date-time-label" className="flex items-center gap-[inherit]">
-              Show Start Date &amp; Time <span className="text-red-500">*</span></label>
+              Show Start Date &amp; Time <span className="text-danger-strong">*</span></label>
               <InfoTooltip text="When does the show/general session officially begin? Populates the Section 1 timeline and is used to calculate overall production runtime alongside Show End." />
               </div>
               <GlobalDateTimeInput id="venue-schedule-show-start-date-time" ariaLabelledBy="venue-schedule-show-start-date-time-label"
@@ -880,24 +880,24 @@ const VenueScheduleStep = ({
                   onChange({ showStartDate: date, showStartTime: time });
                 }}
                 {...showFieldBounds("showStartDate")}
-                inputClassName={`${inputClass} pr-12${safeData.showStartDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("showStartDate")}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
+                inputClassName={`${inputClass} pr-12${safeData.showStartDate === "" && showErrors ? " border-danger-strong focus:border-danger-strong focus:ring-red-200" : ""}${orderErr("showStartDate")}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-action hover:text-action"
                 placeholder="Select date & time"
               />
               {fieldErrors.showStartDate && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">
                   {fieldErrors.showStartDate}
                 </p>
               )}
               {showErrors && !safeData.showStartDate.trim() && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">Required</p>
               )}
             </div>
 
             <div>
               <div className={labelClass}>
               <label id="venue-schedule-show-end-date-time-label" className="flex items-center gap-[inherit]">
-              Show End Date &amp; Time <span className="text-red-500">*</span></label>
+              Show End Date &amp; Time <span className="text-danger-strong">*</span></label>
               <InfoTooltip text="When does the show/general session officially end? Must be on or after Show Start. Populates the Section 1 timeline and marks the end of live production." />
               </div>
               <GlobalDateTimeInput id="venue-schedule-show-end-date-time" ariaLabelledBy="venue-schedule-show-end-date-time-label"
@@ -912,17 +912,17 @@ const VenueScheduleStep = ({
                   onChange({ showEndDate: date, showEndTime: time });
                 }}
                 {...showFieldBounds("showEndDate")}
-                inputClassName={`${inputClass} pr-12${safeData.showEndDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("showEndDate")}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
+                inputClassName={`${inputClass} pr-12${safeData.showEndDate === "" && showErrors ? " border-danger-strong focus:border-danger-strong focus:ring-red-200" : ""}${orderErr("showEndDate")}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-action hover:text-action"
                 placeholder="Select date & time"
               />
               {fieldErrors.showEndDate && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">
                   {fieldErrors.showEndDate}
                 </p>
               )}
               {showErrors && !safeData.showEndDate.trim() && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">Required</p>
               )}
             </div>
           </div>
@@ -932,7 +932,7 @@ const VenueScheduleStep = ({
             <div>
               <div className={labelClass}>
               <label id="venue-schedule-strike-date-time-label" className="flex items-center gap-[inherit]">
-              Strike Date &amp; Time <span className="text-red-500">*</span></label>
+              Strike Date &amp; Time <span className="text-danger-strong">*</span></label>
               <InfoTooltip text="When must all equipment be fully removed from the venue? This is your final load-out deadline per the venue contract — typically the same evening as final show day or early next morning. Union venues may have strict overtime rules after the contracted strike window." />
               </div>
               <GlobalDateTimeInput id="venue-schedule-strike-date-time" ariaLabelledBy="venue-schedule-strike-date-time-label"
@@ -947,17 +947,17 @@ const VenueScheduleStep = ({
                   onChange({ strikeDate: date, strikeTime: time });
                 }}
                 {...scheduleBounds(safeData, "strikeDate")}
-                inputClassName={`${inputClass} pr-12${safeData.strikeDate === "" && showErrors ? " border-red-400 focus:border-red-400 focus:ring-red-200" : ""}${orderErr("strikeDate")}`}
-                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-[#1DBFD3] hover:text-[#0069a0]"
+                inputClassName={`${inputClass} pr-12${safeData.strikeDate === "" && showErrors ? " border-danger-strong focus:border-danger-strong focus:ring-red-200" : ""}${orderErr("strikeDate")}`}
+                buttonClassName="absolute right-3 top-1/2 -translate-y-1/2 text-action hover:text-action"
                 placeholder="Select date & time"
               />
               {fieldErrors.strikeDate && (
-                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-danger-strong normal-case">
                   {fieldErrors.strikeDate}
                 </p>
               )}
               {!fieldErrors.strikeDate && rangeWarnings.strikeDate && (
-                <p className="mt-1 text-xs text-amber-600 normal-case">
+                <p className="mt-1 text-xs text-warning-strong normal-case">
                   {rangeWarnings.strikeDate}
                 </p>
               )}
@@ -967,11 +967,11 @@ const VenueScheduleStep = ({
       </div>
 
       {/* ── Footer Nav ── */}
-      <div className="flex items-center justify-between px-8 py-5 border-t border-[#e4e4e4]">
+      <div className="flex items-center justify-between px-8 py-5 border-t border-line">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-body shadow-sm hover:bg-surface-muted hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowLeft size={15} className="shrink-0" />
           Event Overview

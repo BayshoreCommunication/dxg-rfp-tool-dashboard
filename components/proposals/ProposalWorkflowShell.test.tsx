@@ -137,8 +137,8 @@ describe("ProposalWorkflowShell", () => {
       expect(stage.querySelector("svg")).toBeInTheDocument();
       // The selected stage keeps the blue highlight; other completed stages
       // read as done in emerald.
-      if (index === 0) expect(indicator).toHaveClass("bg-[#0069a0]", "text-white");
-      else expect(indicator).toHaveClass("bg-[#087f69]", "text-white");
+      if (index === 0) expect(indicator).toHaveClass("bg-action", "text-on-action");
+      else expect(indicator).toHaveClass("bg-success", "text-on-action");
     }
   });
 
@@ -151,7 +151,7 @@ describe("ProposalWorkflowShell", () => {
     render(<ProposalWorkflowShell proposalId={PROPOSAL_ID} />);
 
     const draftStage = screen.getByRole("button", { name: /Review the Draft/ });
-    expect(draftStage).toHaveClass("bg-[#f8fafb]");
+    expect(draftStage).toHaveClass("bg-surface-muted");
     fireEvent.click(draftStage);
 
     await waitFor(() => expect(draftStage).toHaveAttribute("aria-current", "step"));
