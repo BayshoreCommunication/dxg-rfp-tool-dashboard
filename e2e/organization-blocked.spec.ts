@@ -56,6 +56,24 @@ const expectSignedOutWithMessage = async (page: Page) => {
   expect(await sessionCookies(page)).toEqual([]);
 };
 
+// A server action the old page had already queued can be answered while the browser is leaving
+// for the sign-in page. Next rejects it with this text; nothing is shown. No other error may occur.
+const KNOWN_REJECTION_WHILE_LEAVING = "An unexpected response was received from the server.";
+
+const collectPageErrors = (page: Page) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  return errors;
+};
+
+const expectNoUnknownPageErrors = (errors: string[]) => {
+  expect(errors.filter((message) => message !== KNOWN_REJECTION_WHILE_LEAVING)).toEqual([]);
+};
+
+// The Auth.js session as the server sees it (this path is outside the proxy).
+const readSession = async (page: Page): Promise<Record<string, unknown> | null> =>
+  (await page.request.get("/api/auth/session")).json();
+
 test.afterEach(async ({ page }) => {
   await setBlock(page, {});
 });
@@ -94,6 +112,7 @@ test("the sign-in page shows the message for ?error=ORGANIZATION_BLOCKED", async
 test("a signed-in member lands on sign-in with the message when the block lands", async ({
   page,
 }, testInfo) => {
+  const pageErrors = collectPageErrors(page);
   await signIn(page);
   await setBlock(page, { requests: true });
 
@@ -113,11 +132,13 @@ test("a signed-in member lands on sign-in with the message when the block lands"
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/sign-in\?callbackUrl=%2Fdashboard$/);
   await expect(page.getByRole("alert").filter({ hasText: "paused" })).toHaveCount(0);
+  expectNoUnknownPageErrors(pageErrors);
 });
 
 test("a signed-in member who stays in the app is signed out by their next click", async ({
   page,
 }) => {
+  const pageErrors = collectPageErrors(page);
   await signIn(page);
   await setBlock(page, { requests: true });
 
@@ -127,4 +148,91 @@ test("a signed-in member who stays in the app is signed out by their next click"
   });
   await expectSignedOutWithMessage(page);
   expect((await readBlock(page)).refreshCalls).toBe(0);
+  expectNoUnknownPageErrors(pageErrors);
+});
+
+test("background requests neither sign the member out nor lose the message", async ({
+  page,
+}, testInfo) => {
+  const pageErrors = collectPageErrors(page);
+  await signIn(page);
+  // Let the page finish its own requests, so the only ones from here on are the ones below.
+  await page.waitForLoadState("networkidle");
+  await setBlock(page, { requests: true });
+
+  const backgroundFetch = (path: string, method: "GET" | "POST") =>
+    page.evaluate(
+      async ([url, verb]) => {
+        const response = await fetch(url, {
+          method: verb,
+          ...(verb === "POST"
+            ? { headers: { "Content-Type": "application/json" }, body: "{}" }
+            : {}),
+        });
+        return {
+          status: response.status,
+          redirected: response.redirected,
+          body: (await response.json().catch(() => null)) as Record<string, unknown> | null,
+        };
+      },
+      [path, method] as const,
+    );
+
+  // The first refused request is a background fetch, not a click. It ends the session
+  // (the mark on the cookie), and nothing the member can see happens.
+  const first = await backgroundFetch("/api/ai-assistant/proposals", "GET");
+  expect(first.status).toBe(401);
+  expect(await readSession(page)).toMatchObject({
+    authError: "SessionExpired",
+    authEndReason: "ORGANIZATION_BLOCKED",
+  });
+
+  // More background requests of the ended session: each is refused with the code. None is
+  // redirected, none reads as a success, none removes the cookie.
+  for (const [path, method] of [
+    ["/api/ai-assistant/proposals", "GET"],
+    ["/api/ai-assistant/events", "POST"],
+    ["/api/proposal-pdf", "POST"],
+  ] as const) {
+    const refused = await backgroundFetch(path, method);
+    expect(refused, `${method} ${path}`).toEqual({
+      status: 401,
+      redirected: false,
+      body: { success: false, code: "ORGANIZATION_BLOCKED", message: MESSAGE },
+    });
+  }
+  // A router prefetch of a page, as a production build sends for a visible link.
+  const prefetch = await page.evaluate(async () => {
+    const response = await fetch("/proposals?_rsc=prefetch", {
+      headers: { rsc: "1", "next-router-prefetch": "1" },
+    });
+    return { status: response.status, redirected: response.redirected };
+  });
+  expect(prefetch).toEqual({ status: 401, redirected: false });
+
+  await expect(page).toHaveURL(/\/dashboard$/);
+  expect(await sessionCookies(page)).not.toEqual([]);
+  expect(await readSession(page)).toMatchObject({ authEndReason: "ORGANIZATION_BLOCKED" });
+
+  // The member's next click, on a link inside the app (a router request of the ended session).
+  await page.evaluate(() => {
+    document.querySelector<HTMLAnchorElement>('a[href="/proposals"]')?.click();
+  });
+  await expectSignedOutWithMessage(page);
+  await page.screenshot({ path: testInfo.outputPath("after-background-requests.png"), fullPage: true });
+  expect((await readBlock(page)).refreshCalls).toBe(0);
+  expectNoUnknownPageErrors(pageErrors);
+});
+
+test("the exit route does not sign out a member whose organization is not blocked", async ({
+  page,
+}) => {
+  await signIn(page);
+
+  // A link to the exit, followed by a signed-in member of an organization that is not blocked.
+  await page.goto("/api/auth/organization-blocked");
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
+  await expect(page.getByTestId("role-dashboard")).toBeVisible({ timeout: 20_000 });
+  expect(await sessionCookies(page)).not.toEqual([]);
+  expect(await readSession(page)).toMatchObject({ user: { email: "assistant-e2e@example.com" } });
 });
