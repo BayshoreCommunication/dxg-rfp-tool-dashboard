@@ -8,6 +8,8 @@
    backend callback → /sso/complete?handoff=… → signIn("sso") posts
    { handoff, bind: <cookie> } to /api/auth/sso/exchange. */
 
+import { ORGANIZATION_BLOCKED_MESSAGE } from "./organizationBlocked";
+
 export const SSO_BIND_COOKIE = "rfp_sso_bind";
 export const SSO_BIND_MAX_AGE_SECONDS = 10 * 60;
 
@@ -171,6 +173,7 @@ export const SSO_ERROR_MESSAGES: Record<string, string> = {
   SSO_INVALID_REQUEST: "That sign-in link isn't valid. Please start again.",
   // Shared with the other sign-in paths
   ORGANIZATION_SETUP_REQUIRED: ORGANIZATION_SETUP_REQUIRED_MESSAGE,
+  ORGANIZATION_BLOCKED: ORGANIZATION_BLOCKED_MESSAGE,
   USER_BLOCKED: "Your account has been blocked. Please contact support.",
   MEMBERSHIP_INACTIVE:
     "Your organization membership isn't active. Contact your organization's admin.",

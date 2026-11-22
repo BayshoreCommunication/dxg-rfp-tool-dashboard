@@ -27,6 +27,7 @@ import {
 } from "@/lib/server/twoFactorPending";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
 import { revokeCurrentBackendSession } from "@/lib/server/backendLogout";
+import { ORGANIZATION_BLOCKED_MESSAGE } from "@/lib/auth/organizationBlocked";
 import { hasSsoErrorMessage, sanitizeHandoff, ssoErrorMessage } from "@/lib/auth/sso";
 
 import { BACKEND_URL } from "@/lib/config";
@@ -187,6 +188,7 @@ const SIGN_IN_ERROR_MESSAGES: Record<string, string> = {
   WRONG_PASSWORD: "Incorrect password. Please try again.",
   USER_BLOCKED: "Your account has been blocked. Please contact support.",
   MEMBERSHIP_INACTIVE: "Your organization membership isn't active. Contact your organization's admin.",
+  ORGANIZATION_BLOCKED: ORGANIZATION_BLOCKED_MESSAGE,
   RATE_LIMITED: "Too many attempts. Wait a few minutes and try again.",
   server_unavailable: "Could not reach the server. Please try again.",
 };
