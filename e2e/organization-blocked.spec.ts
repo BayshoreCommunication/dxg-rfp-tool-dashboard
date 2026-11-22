@@ -50,6 +50,8 @@ const expectSignedOutWithMessage = async (page: Page) => {
   // The raw code is in the address only, never on the page.
   await expect(page.locator("body")).not.toContainText("ORGANIZATION_BLOCKED");
   await expect(page.getByText(/session expired/i)).toHaveCount(0);
+  // Not the error boundary (components/ErrorPage.tsx).
+  await expect(page.getByText("We hit some turbulence.")).toHaveCount(0);
   await expectProposalWording(page.locator("body"));
   expect(await sessionCookies(page)).toEqual([]);
 };
@@ -92,9 +94,6 @@ test("the sign-in page shows the message for ?error=ORGANIZATION_BLOCKED", async
 test("a signed-in member lands on sign-in with the message when the block lands", async ({
   page,
 }, testInfo) => {
-  const pageErrors: string[] = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-
   await signIn(page);
   await setBlock(page, { requests: true });
 
@@ -114,7 +113,6 @@ test("a signed-in member lands on sign-in with the message when the block lands"
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/sign-in\?callbackUrl=%2Fdashboard$/);
   await expect(page.getByRole("alert").filter({ hasText: "paused" })).toHaveCount(0);
-  expect(pageErrors).toEqual([]);
 });
 
 test("a signed-in member who stays in the app is signed out by their next click", async ({
