@@ -188,6 +188,41 @@ body {
   color: #0786cf !important;
 }
 
+/* Settings dialog (components/settings/SettingsModal.tsx). The settings screens are built as
+   bordered full-page cards with large titles; inside the dialog they become the quiet grey
+   panels of its design. Matched on the shared card classes (sectionClass in
+   components/organization/members/ui.tsx and its copies in components/settings), so the full
+   /settings pages are unchanged. */
+.settings-dialog-body [data-settings-section] > [class~="px-6"] {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.settings-dialog-body :is(section, div)[class~="border-[#e4e4e4]"][class~="py-6"] {
+  border-color: transparent;
+  border-radius: 16px;
+  background-color: #f6f6f7;
+  padding: 20px 22px;
+}
+
+.settings-dialog-body :is(h2, h3)[class~="md:text-[26px]"] {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.settings-dialog-body [class~="animate-pulse"][class~="bg-slate-100"] {
+  background-color: #e8e9ec;
+}
+
+/* Dark: one step up from the dialog's own #0d1d28 surface. */
+.dark .settings-dialog-body :is(section, div)[class~="border-[#e4e4e4]"][class~="py-6"] {
+  background-color: #12242f;
+}
+
+.dark .settings-dialog-body [class~="animate-pulse"][class~="bg-slate-100"] {
+  background-color: #1b2d3a;
+}
+
 html,
 body {
   max-width: 100%;

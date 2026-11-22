@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { toast } from 'react-toastify'
+import { SettingsAccessProvider } from '@/components/settings/SettingsAccessContext'
+import { settingsAccessForRoles } from '@/components/settings/settingsAccess'
 import VendorListSettings from './VendorListSettings'
 import type { Vendor } from './vendorListModel'
 
@@ -46,7 +48,8 @@ beforeEach(() => {
 })
 
 it('lists vendors with their category and contacts', async () => {
-  render(<VendorListSettings canEdit />)
+  // The layout tells the tab strip which sections this member has.
+  render(<SettingsAccessProvider value={settingsAccessForRoles(['organization_admin'])}><VendorListSettings canEdit /></SettingsAccessProvider>)
   expect(await screen.findByText('Brightline AV')).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'Vendor list' })).toBeInTheDocument()
   expect(screen.getByText('jane@brightline.test')).toBeInTheDocument()

@@ -6,12 +6,10 @@ import { useEffect, useState } from "react";
 import { useInSettingsModal } from "./SettingsModalContext";
 import { useSettingsSections } from "./useSettingsSections";
 
-// `vendorsLink` shows the Vendors tab straight away on a page that already knows the member can
-// read the list; other pages find out after mounting.
-const TopHeader = ({ vendorsLink = false, templatesLink = false }: { vendorsLink?: boolean; templatesLink?: boolean } = {}) => {
+const TopHeader = () => {
   const pathname = usePathname();
   const inModal = useInSettingsModal();
-  const sections = useSettingsSections({ vendorsKnown: vendorsLink, templatesKnown: templatesLink });
+  const sections = useSettingsSections();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 

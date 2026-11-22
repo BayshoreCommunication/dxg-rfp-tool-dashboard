@@ -1,5 +1,6 @@
 import { signOutAction } from "@/app/actions/auth";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { SettingsAccessProvider } from "@/components/settings/SettingsAccessContext";
 import Sidebar from "./Sidebar";
 
 jest.mock("next/navigation", () => ({
@@ -21,12 +22,6 @@ jest.mock("@/app/actions/vendorResponse", () => ({
 }));
 jest.mock("@/app/actions/supportDesk", () => ({
   getSupportUnreadCountAction: jest.fn().mockResolvedValue(0),
-}));
-jest.mock("@/app/actions/vendorList", () => ({
-  getVendorListAccessAction: jest.fn().mockResolvedValue({ canRead: true }),
-}));
-jest.mock("@/app/actions/proposalTemplates", () => ({
-  getTemplateAccessAction: jest.fn().mockResolvedValue({ canUse: false }),
 }));
 jest.mock("@/config/navigation", () => ({
   navigationConfig: [
@@ -84,13 +79,22 @@ describe("Sidebar AI Assistant launcher", () => {
       message: "Signed out successfully",
     });
 
+    // The layout's settings access: this member can read vendors but not use templates.
     render(
-      <Sidebar
-        currentUser={{
-          name: "Akib Rahman",
-          email: "akib.swop@gmail.com",
+      <SettingsAccessProvider
+        value={{
+          role: "planner",
+          vendors: { canRead: true, canEdit: false },
+          templates: { canUse: false, canManage: false },
         }}
-      />,
+      >
+        <Sidebar
+          currentUser={{
+            name: "Akib Rahman",
+            email: "akib.swop@gmail.com",
+          }}
+        />
+      </SettingsAccessProvider>,
     );
 
     const accountButton = screen.getByRole("button", {

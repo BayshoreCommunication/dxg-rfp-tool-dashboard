@@ -1,9 +1,12 @@
 import { getAssistantAccessAction } from "@/app/actions/aiAssistant";
 import { auth } from "@/auth";
 import PostSignInNotice from "@/components/auth/PostSignInNotice";
+import { SettingsAccessProvider } from "@/components/settings/SettingsAccessContext";
+import { settingsAccessForRoles } from "@/components/settings/settingsAccess";
 import DevThemeToggle from "@/components/layout/DevThemeToggle";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { getMemberIdentity } from "@/lib/server/memberIdentity";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
@@ -22,12 +25,15 @@ export default async function RootLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
-  const [access, session] = await Promise.all([
+  const [access, session, identity] = await Promise.all([
     process.env.NEXT_PUBLIC_AI_ASSISTANT_ENABLED === "true"
       ? getAssistantAccessAction()
       : null,
     auth(),
+    getMemberIdentity(),
   ]);
+  // One read of the session's roles for every settings menu and the settings dialog.
+  const settingsAccess = settingsAccessForRoles(identity.roles);
   const assistantEnabled = access?.success === true && access.data.enabled;
   const showLocalThemePreview = process.env.NODE_ENV === "development";
 
@@ -51,21 +57,23 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <ToastProvider>
-          <PostSignInNotice />
-          <LayoutWrapper
-            assistantEnabled={assistantEnabled}
-            currentUser={
-              session?.user
-                ? {
-                    name: session.user.name,
-                    email: session.user.email,
-                  }
-                : undefined
-            }
-          >
-            {children}
-          </LayoutWrapper>
-          {modal}
+          <SettingsAccessProvider value={settingsAccess}>
+            <PostSignInNotice />
+            <LayoutWrapper
+              assistantEnabled={assistantEnabled}
+              currentUser={
+                session?.user
+                  ? {
+                      name: session.user.name,
+                      email: session.user.email,
+                    }
+                  : undefined
+              }
+            >
+              {children}
+            </LayoutWrapper>
+            {modal}
+          </SettingsAccessProvider>
         </ToastProvider>
         {showLocalThemePreview && <DevThemeToggle defaultDark />}
         <Analytics />
