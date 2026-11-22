@@ -1,6 +1,8 @@
 import { RFP_NOUN } from '@/test/wording'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { toast } from 'react-toastify'
+import { SettingsAccessProvider } from '@/components/settings/SettingsAccessContext'
+import { settingsAccessForRoles } from '@/components/settings/settingsAccess'
 import TemplateListSettings from './TemplateListSettings'
 import type { RfpTemplate } from './templateModel'
 
@@ -45,7 +47,8 @@ beforeEach(() => {
 })
 
 it('lists templates with their scope and state, under the Templates tab', async () => {
-  render(<TemplateListSettings access={OWNER} />)
+  // The layout tells the tab strip which sections this member has.
+  render(<SettingsAccessProvider value={settingsAccessForRoles(['owner'])}><TemplateListSettings access={OWNER} /></SettingsAccessProvider>)
   expect(await screen.findByText('Annual kickoff')).toBeInTheDocument()
   expect(mockList).toHaveBeenCalledWith({ search: '', scope: 'all', status: 'active', limit: 50, offset: 0 })
   expect(screen.getByRole('link', { name: 'Templates' })).toHaveAttribute('aria-current', 'page')

@@ -1,10 +1,4 @@
-import SettingsModal from "@/components/settings/SettingsModal";
-import SettingsTeamsPage from "@/app/(page)/settings/teams/page";
-
-export default function SettingsTeamsModalPage() {
-  return (
-    <SettingsModal>
-      <SettingsTeamsPage />
-    </SettingsModal>
-  );
+// Claims this settings URL for the dialog in ../layout.tsx, which renders the section itself.
+export default function SettingsSectionModalPage() {
+  return null;
 }

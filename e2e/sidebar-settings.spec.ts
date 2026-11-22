@@ -16,12 +16,10 @@ const signInAs = async (page: Page, role: "owner" | "viewer") => {
 };
 
 // `next dev` compiles an intercepting route the first time it is asked for, and a soft navigation
-// that lands mid-compile falls back to the full page. Ask for the dialog routes once up front
+// that lands mid-compile falls back to the full page. Ask for the dialog route once up front
 // (the same request a client navigation makes) so the click below meets a compiled route.
-const warmDialogRoutes = async (page: Page) => {
-  for (const path of ["/settings", "/settings/teams"]) {
-    await page.request.get(path, { headers: { RSC: "1", "Next-Url": "/dashboard" }, timeout: 120_000 });
-  }
+const warmDialogRoute = async (page: Page) => {
+  await page.request.get("/settings", { headers: { RSC: "1", "Next-Url": "/dashboard" }, timeout: 120_000 });
 };
 
 test.beforeEach(async ({}, testInfo) => {
@@ -31,7 +29,7 @@ test.beforeEach(async ({}, testInfo) => {
 
 test("Settings opens as a dialog with a section list and closes back to the page", async ({ page }) => {
   await signInAs(page, "owner");
-  await warmDialogRoutes(page);
+  await warmDialogRoute(page);
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
   await expect(sidebar.getByRole("link", { name: "Support" })).toBeVisible();
 
@@ -41,12 +39,28 @@ test("Settings opens as a dialog with a section list and closes back to the page
   await expect(page).toHaveURL(/\/settings$/);
   await page.screenshot({ path: process.env.SHOTS_DIR ? `${process.env.SHOTS_DIR}/settings-modal.png` : undefined });
 
-  const teamsTab = dialog.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Teams" });
+  // Sections switch inside the dialog: the address follows, with no navigation to wait for.
+  const sectionList = dialog.getByRole("navigation", { name: "Settings sections" });
+  const teamsTab = sectionList.getByRole("link", { name: "Teams" });
   await teamsTab.click();
   await expect(page).toHaveURL(/\/settings\/teams$/);
-  // The tab is marked current only once the navigation has committed; closing mid-transition
-  // would cancel it.
   await expect(teamsTab).toHaveAttribute("aria-current", "page");
+  await expect(dialog.locator('[data-settings-section="/settings/teams"]')).toBeVisible();
+
+  // Going back to a section shows what it already loaded: the Users list is there at once.
+  await sectionList.getByRole("link", { name: "Users" }).click();
+  await expect(page).toHaveURL(/\/settings\/users$/);
+  const usersSection = dialog.locator('[data-settings-section="/settings/users"]');
+  await expect(usersSection.getByRole("table")).toBeVisible();
+  await teamsTab.click();
+  await sectionList.getByRole("link", { name: "Users" }).click();
+  await expect(usersSection.getByRole("table")).toBeVisible({ timeout: 500 });
+  await page.screenshot({ path: process.env.SHOTS_DIR ? `${process.env.SHOTS_DIR}/settings-modal-users.png` : undefined });
+  if (process.env.SHOTS_DIR) {
+    await page.evaluate(() => document.documentElement.classList.remove("dark"));
+    await page.screenshot({ path: `${process.env.SHOTS_DIR}/settings-modal-users-light.png` });
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+  }
 
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();

@@ -1,10 +1,4 @@
-import SettingsModal from "@/components/settings/SettingsModal";
-import SettingsTemplatesPage from "@/app/(page)/settings/templates/page";
-
-export default function SettingsTemplatesModalPage() {
-  return (
-    <SettingsModal>
-      <SettingsTemplatesPage />
-    </SettingsModal>
-  );
+// Claims this settings URL for the dialog in ../layout.tsx, which renders the section itself.
+export default function SettingsSectionModalPage() {
+  return null;
 }

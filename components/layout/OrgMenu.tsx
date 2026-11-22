@@ -2,15 +2,11 @@
 
 import {
   Bell,
-  Building2,
   ChevronsUpDown,
-  FileStack,
   LoaderCircle,
   LogOut,
   ShieldCheck,
   UserRound,
-  Users,
-  UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -29,12 +25,6 @@ const getInitials = (name?: string | null, email?: string | null) => {
   return source.slice(0, 2).toUpperCase();
 };
 
-const ORG_ICONS: Record<string, React.ReactNode> = {
-  "/settings/users": <Users size={16} aria-hidden />,
-  "/settings/teams": <UsersRound size={16} aria-hidden />,
-  "/settings/vendors": <Building2 size={16} aria-hidden />,
-  "/settings/templates": <FileStack size={16} aria-hidden />,
-};
 const ORG_HREFS = ["/settings/users", "/settings/teams", "/settings/vendors", "/settings/templates"];
 
 const itemClass =
@@ -141,7 +131,7 @@ export default function OrgMenu({
                   onClick={() => setOpen(false)}
                   className={itemClass}
                 >
-                  {ORG_ICONS[item.href]}
+                  <item.icon size={16} aria-hidden />
                   {item.label}
                 </Link>
               ))}

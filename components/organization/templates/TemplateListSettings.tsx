@@ -192,7 +192,7 @@ export default function TemplateListSettings({ access: initialAccess }: Props) {
 
   return (
     <div className="space-y-6 px-6 pb-8">
-      <TopHeader templatesLink />
+      <TopHeader />
       <section className={sectionClass} aria-labelledby="template-list-title">
         <div>
           <h2 id="template-list-title" className={sectionTitleClass}>Proposal templates</h2>
