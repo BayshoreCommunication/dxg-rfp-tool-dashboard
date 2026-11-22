@@ -17,6 +17,7 @@ import EventForm from "./ProposalsProcess.tsx/EventForm";
 import ProcessList from "./ProposalsProcess.tsx/ProcessList";
 import RoomAndProductionStep, { defaultRoom, firstIncompleteRoom, roomLabel } from "./ProposalsProcess.tsx/RoomAndProductionStep";
 import HybridVirtualStep from "./ProposalsProcess.tsx/HybridVirtualStep";
+import HybridNotApplicable from "./ProposalsProcess.tsx/HybridNotApplicable";
 import VenueScheduleStep, { defaultVenueSchedule, venueScheduleValidationErrors, type VenueScheduleData } from "./ProposalsProcess.tsx/VenueScheduleStep";
 import ContentCreativeStep, { defaultContentCreative, type ContentCreativeData } from "./ProposalsProcess.tsx/ContentCreativeStep";
 import VideoRecordingStep, { defaultVideoRecording, type VideoRecordingData } from "./ProposalsProcess.tsx/VideoRecordingStep";
@@ -43,6 +44,8 @@ import {
   buildVendorReadyStatementOfWork,
   omitStandaloneVideoRecording,
   procurementTimelineIssues,
+  adjacentApplicableStep,
+  proposalSections,
   proposalStepOrder,
   resolveProposalStep,
   STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
@@ -1956,6 +1959,11 @@ const AddNewProposal = ({
   const visibleCompletedSteps = visibleStepOrder.filter((step) =>
     completedStepIds.includes(step),
   ).length;
+  // Every section the planner can open. Hybrid & Virtual stays listed for in-person events,
+  // marked not applicable; Continue/Back and the completion count use only applicable sections.
+  const sections = proposalSections(experienceMode, proposalData.event.eventFormat);
+  const sectionIds = sections.map((section) => section.id);
+  const notApplicableStepIds = sections.filter((section) => !section.applicable).map((section) => section.id);
   const normalizeRoomByRoomForSubmit = (
     roomByRoom: RoomByRoomData,
   ): RoomByRoomData => {
@@ -2456,10 +2464,9 @@ const AddNewProposal = ({
       return;
     }
 
-    setProposalProcessStep((current) => {
-      const index = visibleStepOrder.indexOf(current);
-      return visibleStepOrder[index + 1] ?? current;
-    });
+    setProposalProcessStep((current) =>
+      adjacentApplicableStep(experienceMode, proposalData.event.eventFormat, current, 1),
+    );
     setShowErrors(false);
   };
   const handleUploadAndContinue = async () => {
@@ -2513,19 +2520,19 @@ const AddNewProposal = ({
   };
   const backHandler = () =>
     setProposalProcessStep((current) => {
-      const index = visibleStepOrder.indexOf(current);
-      if (index <= 0) return isEditMode ? current : 0;
-      return visibleStepOrder[index - 1];
+      const previous = adjacentApplicableStep(experienceMode, proposalData.event.eventFormat, current, -1);
+      if (previous === current) return isEditMode ? current : 0;
+      return previous;
     });
 
   const navigateToStep = (step: number) => {
-    if (!visibleStepOrder.includes(step)) return;
+    if (!sectionIds.includes(step)) return;
     setProposalProcessStep(step);
     setShowErrors(false);
   };
 
   const navigateToReviewTarget = (step: number, targetId?: string) => {
-    if (!visibleStepOrder.includes(step)) return;
+    if (!sectionIds.includes(step)) return;
     if (targetId === "statement-of-work-section") setExperienceMode("advanced");
     navigateToStep(step);
     window.setTimeout(() => {
@@ -2541,8 +2548,8 @@ const AddNewProposal = ({
     if (mode === experienceMode) return;
     setExperienceMode(mode);
     setAssumptionsApproved(false);
-    const nextOrder = proposalStepOrder(mode, proposalData.event.eventFormat);
-    if (!nextOrder.includes(proposalProcessStep)) setProposalProcessStep(nextOrder[0]);
+    const nextIds = proposalSections(mode, proposalData.event.eventFormat).map((section) => section.id);
+    if (!nextIds.includes(proposalProcessStep)) setProposalProcessStep(nextIds[0]);
     addAuditEntry(
       mode === "basic" ? "Switched to essential-question mode" : "Opened advanced production controls",
       "user",
@@ -2716,6 +2723,7 @@ const AddNewProposal = ({
             onModeChange={handleModeChange}
             completedSteps={visibleCompletedSteps}
             totalSteps={visibleStepOrder.length}
+            notApplicableCount={notApplicableStepIds.length}
             issues={checklistIssues}
             onIssueClick={handleChecklistIssue}
           />
@@ -2728,6 +2736,9 @@ const AddNewProposal = ({
                 onModeChange={handleModeChange}
                 completedSteps={visibleCompletedSteps}
                 totalSteps={visibleStepOrder.length}
+                notApplicableCount={notApplicableStepIds.length}
+                saveState={autosaveEligible ? autosaveState : undefined}
+                onRetrySave={() => void autosave.retry()}
                 issues={checklistIssues}
                 onIssueClick={handleChecklistIssue}
                 compact
@@ -2811,7 +2822,14 @@ const AddNewProposal = ({
                 }}
               />
             )}
-            {proposalProcessStep === 4 && (
+            {proposalProcessStep === 4 && isInPersonOnly && (
+              <HybridNotApplicable
+                onBack={backHandler}
+                onContinue={continueHandler}
+                onChangeFormat={() => navigateToStep(1)}
+              />
+            )}
+            {proposalProcessStep === 4 && !isInPersonOnly && (
               <HybridVirtualStep
                 data={proposalData.hybridVirtual}
                 onChange={(updates) =>
@@ -2982,22 +3000,12 @@ const AddNewProposal = ({
             <ProcessList
               activeStep={proposalProcessStep}
               hideStepIds={Array.from({ length: 10 }, (_, index) => index + 1).filter(
-                (step) => !visibleStepOrder.includes(step),
+                (step) => !sectionIds.includes(step),
               )}
+              notApplicableStepIds={notApplicableStepIds}
               onStepChange={navigateToStep}
               completedStepIds={completedStepIds}
               mode={experienceMode}
-              autosaveStatus={autosaveEligible
-                ? autosaveState === "saving"
-                  ? "Saving…"
-                  : autosaveState === "saved"
-                    ? "All changes saved"
-                    : autosaveState === "error"
-                      ? "Save failed. Latest changes are not saved."
-                      : "Auto-save on"
-                : undefined}
-              autosaveError={autosaveState === "error"}
-              onAutosaveRetry={() => void autosave.retry()}
             />
           </div>
         </div>

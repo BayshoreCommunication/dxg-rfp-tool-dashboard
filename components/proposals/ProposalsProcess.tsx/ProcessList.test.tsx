@@ -32,18 +32,18 @@ describe("ProcessList", () => {
     const { rerender } = render(<ProcessList activeStep={10} completedStepIds={[1, 2]} />);
     const completedLabel = screen.getByText("Event Overview");
     const incompleteLabel = screen.getByText("Venue & Technical");
-    expect(completedLabel.className).toContain("#087f69");
-    expect(incompleteLabel.className).not.toContain("#087f69");
+    expect(completedLabel.className).toContain("text-success-strong");
+    expect(incompleteLabel.className).not.toContain("text-success-strong");
 
     // Without the prop the positional fallback still applies.
     rerender(<ProcessList activeStep={10} />);
-    expect(screen.getByText("Venue & Technical").className).toContain("#087f69");
+    expect(screen.getByText("Venue & Technical").className).toContain("text-success-strong");
   });
 
   it("never paints the step the planner is standing on as complete", () => {
     render(<ProcessList activeStep={2} completedStepIds={[1, 2, 3]} />);
-    expect(screen.getByText("Venue & Schedule").className).not.toContain("#087f69");
-    expect(screen.getByText("Event Overview").className).toContain("#087f69");
+    expect(screen.getByText("Venue & Schedule").className).not.toContain("text-success-strong");
+    expect(screen.getByText("Event Overview").className).toContain("text-success-strong");
   });
 
   it("connects each step through the center of its status circle", () => {
@@ -70,8 +70,8 @@ describe("ProcessList", () => {
 
     expect(selectedStep).toHaveClass(
       "border",
-      "border-[#b9def2]",
-      "bg-white",
+      "border-action/40",
+      "bg-surface",
       "focus-visible:ring-inset",
     );
     expect(selectedStep).not.toHaveClass("ring-1", "ring-[#d6dfe4]");
@@ -93,8 +93,8 @@ describe("ProcessList", () => {
       "text-xs",
       "leading-[17px]",
     );
-    expect(screen.getByText("Workflow sections")).toHaveClass("text-[11px]");
-    expect(screen.getByRole("status")).toHaveClass("text-[11px]");
+    expect(screen.getByText("Workflow sections")).toHaveClass("text-xs");
+    expect(screen.getByRole("status")).toHaveClass("text-xs");
   });
 
   it("uses a compact horizontal navigator before the desktop rail breakpoint", () => {
@@ -179,5 +179,33 @@ describe("ProcessList", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Save failed");
     await user.click(screen.getByRole("button", { name: "Retry save" }));
     expect(onAutosaveRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists a not-applicable section with its own state instead of hiding it", () => {
+    const onStepChange = jest.fn();
+    render(
+      <ProcessList
+        activeStep={3}
+        notApplicableStepIds={[4]}
+        completedStepIds={[1, 2, 4]}
+        onStepChange={onStepChange}
+      />,
+    );
+
+    const hybrid = screen.getByRole("button", { name: "Go to Hybrid & Virtual, not applicable" });
+    expect(within(hybrid).getByText("Not applicable")).toBeInTheDocument();
+    // A not-applicable section is never painted as complete, even if listed as such.
+    expect(within(hybrid).queryByText("Conditional")).not.toBeInTheDocument();
+    expect(hybrid.querySelector("svg")).toBeNull();
+    expect(screen.getByText("Hybrid & Virtual").className).toContain("text-muted");
+    hybrid.click();
+    expect(onStepChange).toHaveBeenCalledWith(4);
+  });
+
+  it("shows nine numbered sections for Advanced mode when only the retired recording step is hidden", () => {
+    render(<ProcessList activeStep={1} hideStepIds={[6]} notApplicableStepIds={[4]} />);
+    expect(screen.getAllByRole("button", { name: /^Go to / })).toHaveLength(9);
+    expect(screen.queryByText("Video Recording")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Go to Contact & Publish" })).toHaveTextContent("9");
   });
 });
