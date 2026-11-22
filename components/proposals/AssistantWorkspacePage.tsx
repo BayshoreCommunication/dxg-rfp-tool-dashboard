@@ -50,7 +50,8 @@ import {
   getProposalByIdAction,
 } from '@/app/actions/proposals';
 import { getUserData } from '@/app/actions/user';
-import AssistantOrb from '@/components/ai/shared/AssistantOrb';
+import ProposalEntry from './ProposalEntry';
+import { RailDetails, RailSources, RailSummary } from './AssistantRail';
 import TypingIndicator from '@/components/ai/shared/TypingIndicator';
 import type { ProposalData } from '@/components/proposals/AddNewProposal';
 import {
@@ -768,8 +769,6 @@ export const mentionedFieldAnswers = (
   );
 };
 
-const ACCENT = '#00c2c9';
-const DEEP = '#087f69';
 
 const runLabels: Record<
   ConversationRunType,
@@ -1320,18 +1319,18 @@ function SourceChips({
   if (chips.length === 0) return null;
   return (
     <div className="mb-3">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+      <p className="text-xs font-bold uppercase tracking-widest text-muted">
         Sources
       </p>
       <ul className="mt-1.5 flex flex-wrap gap-1.5">
         {chips.map((chip) => (
           <li
             key={chip.label}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700"
+            className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface-muted px-2.5 py-1 text-xs text-body"
           >
             <FileText
               size={11}
-              className="shrink-0 text-slate-400"
+              className="shrink-0 text-muted"
               aria-hidden
             />
             <span
@@ -1340,7 +1339,7 @@ function SourceChips({
             >
               {chip.label}
             </span>
-            <span className="rounded-full bg-white px-1.5 text-[10px] font-semibold text-slate-500">
+            <span className="rounded-full bg-surface px-1.5 text-xs font-semibold text-muted">
               {chip.count}
             </span>
           </li>
@@ -1355,10 +1354,10 @@ function SourceChips({
 // Cards that still need an editor handoff can opt into the quiet tertiary link;
 // the completed-questions card keeps the user in the conversation instead.
 const ACTION_BASE =
-  'inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:min-h-0 sm:w-auto sm:shrink-0';
-const ACTION_PRIMARY = `${ACTION_BASE} bg-[#087f69] text-white hover:bg-[#0a9a81]`;
-const ACTION_SECONDARY = `${ACTION_BASE} border border-[#087f69] bg-white text-[#087f69] hover:bg-emerald-50`;
-const ACTION_TERTIARY = `${ACTION_BASE} px-1 text-slate-500 underline underline-offset-2 hover:text-slate-800`;
+  'inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:min-h-0 sm:w-auto sm:shrink-0';
+const ACTION_PRIMARY = `${ACTION_BASE} bg-action text-on-action hover:bg-action-hover`;
+const ACTION_SECONDARY = `${ACTION_BASE} border border-action bg-surface text-action hover:bg-brand-soft`;
+const ACTION_TERTIARY = `${ACTION_BASE} px-1 text-muted underline underline-offset-2 hover:text-heading`;
 
 function CardActionRow({
   proposalId,
@@ -1427,12 +1426,12 @@ function SkeletonCard({ label }: { label: string }) {
   return (
     <div
       role="status"
-      className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      className="w-full max-w-3xl rounded-2xl border border-line bg-surface p-4 shadow-sm"
     >
-      <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
+      <p className="flex items-center gap-2 text-xs font-medium text-muted">
         <span
           aria-hidden
-          className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#00c2c9] border-t-transparent"
+          className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-focus border-t-transparent"
         />
         {label} You can keep working while this finishes.
       </p>
@@ -1456,29 +1455,29 @@ function DraftProgressCard({ updating }: { updating: boolean }) {
           : 'Creating your proposal draft'
       }
       data-testid="draft-progress-card"
-      className="w-full max-w-3xl overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]"
+      className="w-full max-w-3xl overflow-hidden rounded-2xl border border-success/40 bg-surface shadow-card"
     >
-      <div className="flex items-start gap-3 bg-gradient-to-r from-emerald-50 via-white to-cyan-50/70 px-4 py-4 dark:from-[#0b3033] dark:via-[#0d1d28] dark:to-[#0a2632] sm:px-5">
-        <span className="relative mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#087f69] text-white shadow-sm">
+      <div className="flex items-start gap-3 bg-brand-soft px-4 py-4 sm:px-5">
+        <span className="relative mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-action text-on-action shadow-sm">
           <FileText size={17} aria-hidden />
           <span
             aria-hidden
-            className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full border-2 border-white bg-[#00c2c9]"
+            className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full border-2 border-white bg-action"
           />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-bold text-slate-900">
+            <h3 className="text-sm font-bold text-heading">
               {updating
                 ? 'Updating your proposal draft…'
                 : 'Creating your proposal draft…'}
             </h3>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/40 bg-surface px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-success-strong">
               <Loader2 size={10} className="animate-spin" aria-hidden />
               In progress
             </span>
           </div>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
+          <p className="mt-1 text-sm leading-relaxed text-body">
             Using your latest proposal details and answers. You can keep
             working while this finishes.
           </p>
@@ -1523,11 +1522,11 @@ function DraftSendFailureCard({
 // An invalid answer (backend 422) keeps the question and shows the validation
 // message so the user can re-answer.
 const ANSWER_FIELD_CLASS =
-  'min-h-10 min-w-0 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 disabled:cursor-not-allowed disabled:bg-slate-50 sm:flex-1';
+  'min-h-10 min-w-0 w-full rounded-lg border border-control bg-surface px-3 py-2 text-sm text-heading outline-none transition-colors placeholder:text-muted focus:border-focus focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-surface-muted sm:flex-1';
 const PRIMARY_BUTTON_CLASS =
-  'min-h-10 w-full rounded-lg bg-[#087f69] px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:shrink-0';
+  'min-h-10 w-full rounded-lg bg-action px-3.5 py-2 text-xs font-semibold text-on-action transition-opacity hover:bg-action-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:shrink-0';
 const SKIP_BUTTON_CLASS =
-  'min-h-10 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50';
+  'min-h-10 rounded-lg border border-control bg-surface px-3.5 py-2 text-xs font-semibold text-body transition-colors hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50';
 
 export function isBeforeLocalToday(
   candidate: Date,
@@ -1801,12 +1800,12 @@ function GuidedQuestionCard({
       data-testid="guided-question-card"
       className={
         reviewMode
-          ? 'mt-2 w-full rounded-xl border border-cyan-200 bg-cyan-50/40 p-3'
-          : 'my-2 w-full max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm'
+          ? 'mt-2 w-full rounded-xl border border-action/30 bg-brand-soft p-3'
+          : 'my-2 w-full max-w-3xl rounded-2xl border border-warning/40 bg-warning-soft p-4 shadow-sm'
       }
     >
       <div className="flex flex-wrap items-center gap-2">
-        <p className={`text-[11px] font-bold uppercase tracking-widest ${reviewMode ? 'text-[#087f69]' : 'text-amber-700'}`}>
+        <p className={`text-xs font-bold uppercase tracking-widest ${reviewMode ? 'text-action' : 'text-amber-700'}`}>
           {reviewMode
             ? 'Edit extracted detail'
             : clarification
@@ -1816,17 +1815,17 @@ function GuidedQuestionCard({
                 : `Guided question ${current}`}
         </p>
         {impactLabel && (
-          <span className={`rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold ${reviewMode ? 'border-cyan-200 text-[#087f69]' : 'border-amber-300 text-amber-800'}`}>
+          <span className={`rounded-full border bg-surface px-2 py-0.5 text-xs font-semibold ${reviewMode ? 'border-line-strong text-action' : 'border-amber-300 text-amber-800'}`}>
             {impactLabel}
           </span>
         )}
         {question.severity === 'blocking' && (
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">
+          <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">
             Blocking
           </span>
         )}
       </div>
-      <p className="mt-2 text-sm font-medium text-slate-900">
+      <p className="mt-2 text-sm font-medium text-heading">
         {displayQuestionPrompt(question)}
       </p>
 
@@ -1861,16 +1860,16 @@ function GuidedQuestionCard({
                   setPendingOption(option);
                   onAnswer(option);
                 }}
-                className={`max-w-full whitespace-normal break-words rounded-full border text-left text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
+                className={`max-w-full whitespace-normal break-words rounded-full border text-left text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
                   question.options.length > 5
                     ? 'px-3 py-1.5'
                     : 'px-4 py-2'
                 } ${
                   active
-                    ? 'border-[#087f69] bg-[#087f69] text-white'
+                    ? 'border-action bg-action text-on-action'
                     : isSuggested
-                      ? 'border-[#00c2c9] bg-[#00c2c9]/10 text-[#087f69] hover:border-[#087f69]'
-                      : 'border-slate-300 bg-white text-slate-700 hover:border-[#00c2c9] hover:bg-[#00c2c9]/10 hover:text-[#087f69]'
+                      ? 'border-action bg-brand-soft text-action hover:border-action'
+                      : 'border-control bg-surface text-body hover:border-action hover:bg-brand-soft hover:text-action'
                 }`}
               >
                 {active ? 'Saving…' : option}
@@ -1932,8 +1931,8 @@ function GuidedQuestionCard({
                 error={displayError ?? undefined}
                 ariaInvalid={!!displayError}
                 ariaDescribedBy={displayError ? errorId : undefined}
-                inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
-                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-9 text-sm text-heading outline-none transition-colors placeholder:text-muted focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
+                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted transition-colors hover:text-action"
                 constrainToScrollParent
               />
             </div>
@@ -1990,8 +1989,8 @@ function GuidedQuestionCard({
                 error={displayError ?? undefined}
                 ariaInvalid={!!displayError}
                 ariaDescribedBy={displayError ? errorId : undefined}
-                inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-16 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
-                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69]"
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-16 text-sm text-heading outline-none transition-colors placeholder:text-muted focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
+                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted transition-colors hover:text-action"
                 placeholder="Select date & time"
                 constrainToScrollParent
               />
@@ -2018,8 +2017,8 @@ function GuidedQuestionCard({
                 error={displayError ?? undefined}
                 ariaInvalid={!!displayError}
                 ariaDescribedBy={displayError ? errorId : undefined}
-                inputClassName={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#00c2c9] focus:ring-2 focus:ring-[#00c2c9]/25 ${busy ? 'cursor-not-allowed bg-slate-50' : ''}`}
-                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9]/35"
+                inputClassName={`w-full rounded-lg border border-slate-300 bg-surface px-3 py-2 pr-9 text-sm text-heading outline-none transition-colors placeholder:text-muted focus:border-focus focus:ring-2 focus:ring-focus/25 ${busy ? 'cursor-not-allowed bg-surface-muted' : ''}`}
+                buttonClassName="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted transition-colors hover:text-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/35"
                 constrainToScrollParent
               />
             </div>
@@ -2068,7 +2067,7 @@ function GuidedQuestionCard({
         </form>
       )}
       {prefilled && !displayError && (
-        <p role="note" className="mt-2 text-xs text-slate-600">
+        <p role="note" className="mt-2 text-xs text-body">
           {reviewMode
             ? 'Saved to your proposal. Change it only if needed.'
             : answerType === 'choice'
@@ -2117,21 +2116,21 @@ function SuggestedAnswersReviewCard({
       data-testid="suggested-answers-review"
       aria-labelledby="suggested-answers-title"
       aria-busy={revealing || undefined}
-      className={`my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm ${revealing ? 'dxg-reveal-in' : ''}`}
+      className={`my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-action/30 bg-surface shadow-sm ${revealing ? 'dxg-reveal-in' : ''}`}
     >
-      <div className="border-b border-cyan-100 bg-cyan-50/70 px-4 py-3.5">
+      <div className="border-b border-action/30 bg-brand-soft px-4 py-3.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#087f69]">
+            <p className="text-xs font-bold uppercase tracking-widest text-action">
               Proposal details
             </p>
-            <h3 id="suggested-answers-title" className="mt-1 text-sm font-bold text-slate-900">
+            <h3 id="suggested-answers-title" className="mt-1 text-sm font-bold text-heading">
               {revealing
                 ? `Saving ${shownQuestions.length} of ${questions.length} ${questions.length === 1 ? 'detail' : 'details'}`
                 : `${questions.length} saved ${questions.length === 1 ? 'detail' : 'details'}`}
             </h3>
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-white px-2 py-1 text-[10px] font-bold text-emerald-700">
+          <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-surface px-2 py-1 text-xs font-bold text-success-strong">
             {saving ? (
               <Loader2 size={12} className="animate-spin" aria-hidden />
             ) : (
@@ -2140,37 +2139,39 @@ function SuggestedAnswersReviewCard({
             {saving ? 'Saving details' : 'Saved'}
           </span>
         </div>
-        <p className="mt-1 text-xs leading-5 text-slate-600">
+        <p className="mt-1 text-xs leading-5 text-body">
           Answers from your brief and guided questions are included here. Edit only what needs changing.
         </p>
       </div>
 
-      <dl className="divide-y divide-slate-100 px-4">
+      <dl className="divide-y divide-line px-4">
         {shownQuestions.map((question, index) => {
           const label = questionFieldLabel(question);
           const editing = editingQuestionId === question.id;
           const newest = revealing && index === shownQuestions.length - 1;
           return (
+            // dt and dd are direct children of the row so the list is valid; the Edit button lives
+            // inside the dd with the value it edits.
             <div key={question.id} className={`py-3 ${newest ? 'dxg-reveal-row -mx-4 px-4' : ''}`}>
-              <div className="flex items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <dt className="text-xs font-semibold text-slate-500">{label}</dt>
-                  <dd className="mt-0.5 break-words text-sm font-medium text-slate-900">
+              <dt className="text-xs font-semibold text-muted">{label}</dt>
+              <dd className="mt-0.5">
+                <div className="flex items-start gap-3">
+                  <span className="min-w-0 flex-1 break-words text-sm font-medium text-heading">
                     {question.reviewAnswer ?? question.suggestedAnswer}
-                  </dd>
-                </div>
-                <button
-                  type="button"
-                  aria-label={`Edit ${label}`}
-                  disabled={busy}
-                  onClick={() => onEdit(question.id)}
-                  className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-[#087f69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <PencilLine size={13} aria-hidden />
-                  {editing ? 'Editing' : 'Edit'}
-                </button>
-              </div>
-              {editing ? editor : null}
+                  </span>
+                    <button
+                      type="button"
+                      aria-label={`Edit ${label}`}
+                      disabled={busy}
+                      onClick={() => onEdit(question.id)}
+                      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-body transition-colors hover:border-action hover:bg-brand-soft hover:text-action focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <PencilLine size={13} aria-hidden />
+                      {editing ? 'Editing' : 'Edit'}
+                    </button>
+                    </div>
+                {editing ? editor : null}
+              </dd>
             </div>
           );
         })}
@@ -2293,18 +2294,18 @@ function ContextRunCard({
     animate && !typed.done && onThisLine ? ' dxg-reveal-caret' : '';
 
   return (
-    <div className={`w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${animate ? 'dxg-reveal-in' : ''}`}>
+    <div className={`w-full max-w-3xl rounded-2xl border border-line bg-surface p-4 shadow-sm ${animate ? 'dxg-reveal-in' : ''}`}>
       <SourceChips chips={chips} />
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+      <p className="text-xs font-bold uppercase tracking-widest text-muted">
         Extracted from your sources
       </p>
       {/* The full text stays available to assistive tech while it types. */}
       {animate && !typed.done && <p className="sr-only">{message.content} {followUp}</p>}
-      <p aria-hidden={animate && !typed.done ? true : undefined} className={`mt-1.5 whitespace-pre-wrap text-sm text-slate-800${caret(!typingFollowUp || !followUp)}`}>
+      <p aria-hidden={animate && !typed.done ? true : undefined} className={`mt-1.5 whitespace-pre-wrap text-sm text-body${caret(!typingFollowUp || !followUp)}`}>
         {typed.parts[0]}
       </p>
       {followUp && typed.parts[1] && (
-        <p aria-hidden={animate && !typed.done ? true : undefined} className={`mt-2 text-sm ${fieldCount === 0 ? 'text-amber-800' : 'text-slate-600'}${caret(typingFollowUp)}`}>
+        <p aria-hidden={animate && !typed.done ? true : undefined} className={`mt-2 text-sm ${fieldCount === 0 ? 'text-amber-800' : 'text-body'}${caret(typingFollowUp)}`}>
           {typed.parts[1]}
         </p>
       )}
@@ -2327,31 +2328,31 @@ const draftRunVersion = (run: unknown): number | null => {
 
 function PreviousDraftCard({ message }: { message: ConversationMessage }) {
   return (
-    <details className="group w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 shadow-sm">
+    <details className="group w-full max-w-3xl overflow-hidden rounded-2xl border border-line bg-surface-muted shadow-sm">
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-left marker:content-none sm:px-5">
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-600">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-line text-body">
           <FileText size={15} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-bold text-slate-700">
+            <span className="text-sm font-bold text-body">
               Previous proposal draft
             </span>
-            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            <span className="rounded-full border border-line bg-surface px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-muted">
               Superseded
             </span>
           </span>
-          <span className="mt-0.5 block text-xs text-slate-500">
+          <span className="mt-0.5 block text-xs text-muted">
             A newer draft is now the current version.
           </span>
         </span>
         <ChevronDown
           size={16}
-          className="shrink-0 text-slate-400 transition-transform group-open:rotate-180"
+          className="shrink-0 text-muted transition-transform group-open:rotate-180"
           aria-hidden
         />
       </summary>
-      <div className="border-t border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 sm:px-5">
+      <div className="border-t border-line bg-surface px-4 py-3 text-sm text-body sm:px-5">
         <p className="whitespace-pre-wrap">{message.content}</p>
       </div>
     </details>
@@ -2380,7 +2381,7 @@ function InformationGapsList({ paragraphs }: { paragraphs: ProposalDraftSection[
     return (
       <div className="space-y-3">
         {paragraphs.map((paragraph, index) => (
-          <p key={index} className="text-sm leading-6 text-slate-700">
+          <p key={index} className="text-sm leading-6 text-body">
             {paragraph.text}
           </p>
         ))}
@@ -2389,7 +2390,7 @@ function InformationGapsList({ paragraphs }: { paragraphs: ProposalDraftSection[
   }
   return (
     <div>
-      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+      <p className="text-xs font-semibold text-muted dark:text-slate-400">
         {items.length} {items.length === 1 ? 'detail' : 'details'} still needed
       </p>
       <ul
@@ -2399,7 +2400,7 @@ function InformationGapsList({ paragraphs }: { paragraphs: ProposalDraftSection[
         {items.map((item, index) => (
           <li
             key={`${item}-${index}`}
-            className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50/55 px-3 py-2.5 text-sm leading-5 text-slate-700 dark:border-amber-300/15 dark:bg-amber-300/[0.06] dark:text-slate-200"
+            className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2.5 text-sm leading-5 text-body dark:border-amber-300/15 dark:bg-amber-300/[0.06] dark:text-slate-200"
           >
             <span
               aria-hidden="true"
@@ -2470,36 +2471,36 @@ function DraftRunCard({
     ? `Complete ${missingDetailCount} missing ${missingDetailCount === 1 ? 'detail' : 'details'}`
     : 'Complete proposal details';
   return (
-    <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]">
-      <header className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-cyan-50/60 px-4 py-4 dark:from-[#0b3033] dark:via-[#0d1d28] dark:to-[#0a2632] sm:px-5">
+    <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_10px_30px_-18px_rgba(15,23,42,0.35)]">
+      <header className="border-b border-line bg-brand-soft px-4 py-4 sm:px-5">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#087f69] text-white shadow-sm">
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-action text-on-action shadow-sm">
             <FileText size={17} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-sm font-bold text-heading">
                 {updated
                   ? 'Updated proposal draft ready'
                   : 'Proposal draft ready'}
               </h3>
-              <span className="rounded-full border border-emerald-200 bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+              <span className="rounded-full border border-success/40 bg-white/80 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-success-strong">
                 Current draft
               </span>
               {!previewLoading && sections.length > 0 && (
-                <span className="rounded-full border border-emerald-200 bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                <span className="rounded-full border border-success/40 bg-white/80 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-success-strong">
                   {sections.length} {sections.length === 1 ? 'section' : 'sections'}
                 </span>
               )}
             </div>
-            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-body">
               {message.content}
             </p>
           </div>
         </div>
       </header>
       {stale && (
-        <div className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 sm:mx-5">
+        <div className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warning/40 bg-warning-soft px-3 py-2.5 sm:mx-5">
           <p className="flex min-w-0 items-start gap-2 text-xs leading-relaxed text-amber-900">
             <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
             This draft was written before your latest answers.
@@ -2509,7 +2510,7 @@ function DraftRunCard({
             onClick={onRegenerate}
             disabled={draftBusy}
             aria-busy={draftBusy}
-            className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:min-h-0 sm:w-auto sm:shrink-0"
+            className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-surface px-3 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:min-h-0 sm:w-auto sm:shrink-0"
           >
             {draftBusy && <Loader2 size={12} className="animate-spin" aria-hidden />}
             {draftBusy ? 'Generating…' : 'Regenerate draft'}
@@ -2520,8 +2521,8 @@ function DraftRunCard({
         {previewLoading ? (
           <div role="status" className="space-y-3" aria-label="Loading draft preview">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
-                <div className="h-2.5 w-28 animate-pulse rounded bg-slate-200" />
+              <div key={item} className="rounded-xl border border-line bg-surface-muted p-4">
+                <div className="h-2.5 w-28 animate-pulse rounded bg-line" />
                 <div className="mt-3 h-2.5 w-full animate-pulse rounded bg-slate-100" />
                 <div className="mt-2 h-2.5 w-4/5 animate-pulse rounded bg-slate-100" />
               </div>
@@ -2537,13 +2538,13 @@ function DraftRunCard({
                 <section
                   key={section.id}
                   data-testid={`draft-section-${section.key}`}
-                  className={`rounded-xl border p-4 shadow-[0_4px_14px_-12px_rgba(15,23,42,0.45)] ${isOverview ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white'}`}
+                  className={`rounded-xl border p-4 shadow-[0_4px_14px_-12px_rgba(15,23,42,0.45)] ${isOverview ? 'border-success/40 bg-success-soft' : 'border-line bg-surface'}`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${isOverview ? 'bg-[#087f69] text-white' : 'bg-emerald-50 text-[#087f69]'}`}>
+                    <span className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isOverview ? 'bg-action text-on-action' : 'bg-success-soft text-action'}`}>
                       {sectionIndex + 1}
                     </span>
-                    <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-600">
+                    <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-body">
                       {section.heading}
                     </h4>
                   </div>
@@ -2553,7 +2554,7 @@ function DraftRunCard({
                     ) : section.paragraphs.length > 0 ? (
                       section.paragraphs.map((paragraph, index) => (
                         <div key={index}>
-                          <p className="text-sm leading-6 text-slate-700">
+                          <p className="text-sm leading-6 text-body">
                             <DraftHighlightedText
                               text={paragraph.text}
                               sectionKey={section.key}
@@ -2562,7 +2563,7 @@ function DraftRunCard({
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm italic leading-6 text-slate-400">
+                      <p className="text-sm italic leading-6 text-muted">
                         Nothing supported by evidence yet for this
                         section.
                       </p>
@@ -2573,13 +2574,13 @@ function DraftRunCard({
             })}
           </article>
         ) : (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center">
-            <p className="text-sm font-medium text-slate-700">The draft is ready to review in the editor.</p>
-            <p className="mt-1 text-xs text-slate-500">Open it to review and refine the full proposal.</p>
+          <div className="rounded-xl border border-dashed border-slate-300 bg-surface-muted px-4 py-5 text-center">
+            <p className="text-sm font-medium text-body">The draft is ready to review in the editor.</p>
+            <p className="mt-1 text-xs text-muted">Open it to review and refine the full proposal.</p>
           </div>
         )}
       </div>
-      <footer className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-5">
+      <footer className="flex flex-wrap items-center gap-2 border-t border-line bg-surface-muted px-4 py-3 sm:px-5">
         <Link href={detailsHref} className={ACTION_PRIMARY}>
           <ListChecks size={13} aria-hidden />
           {detailsActionLabel}
@@ -2609,7 +2610,7 @@ function ExtractionNextStepCard({
   readinessBusy: boolean;
 }) {
   return (
-    <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="w-full max-w-3xl rounded-2xl border border-line bg-surface p-4 shadow-sm">
       <CardActionRow
         proposalId={proposalId}
         hasDraft={hasDraft}
@@ -2672,8 +2673,8 @@ function CompletionCard({
     : null;
   const weakest = report ? weakestSections(report) : [];
   return (
-    <div data-testid="completion-card" className="w-full max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-      <p className="text-sm font-semibold text-emerald-900">
+    <div data-testid="completion-card" className="w-full max-w-3xl rounded-2xl border border-success/40 bg-success-soft p-4 shadow-sm">
+      <p className="text-sm font-semibold text-success-strong">
         {/* Not "X% complete": the stepper uses "complete" for how far
             through the workflow a proposal is, and this measures how much of
             the questionnaire is filled in. Two different questions deserve two
@@ -2692,13 +2693,13 @@ function CompletionCard({
           className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-emerald-100"
         >
           <div
-            className="h-full rounded-full bg-[#087f69]"
+            className="h-full rounded-full bg-action"
             style={{ width: `${percent}%` }}
           />
         </div>
       )}
       {percent === null && checking && (
-        <p role="status" className="mt-1 text-xs text-emerald-800">
+        <p role="status" className="mt-1 text-xs text-success-strong">
           Checking what&rsquo;s left…
         </p>
       )}
@@ -2707,7 +2708,7 @@ function CompletionCard({
           {weakest.map((section) => (
             <li
               key={section.section || section.label}
-              className="flex items-baseline justify-between gap-3 rounded-lg border border-emerald-100 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+              className="flex items-baseline justify-between gap-3 rounded-lg border border-success/30 bg-surface px-2.5 py-1.5 text-xs text-body"
             >
               <span
                 className="min-w-0 truncate"
@@ -2715,7 +2716,7 @@ function CompletionCard({
               >
                 {section.label}
               </span>
-              <span className="shrink-0 font-semibold tabular-nums text-slate-500">
+              <span className="shrink-0 font-semibold tabular-nums text-muted">
                 {section.filled}/{section.total}
               </span>
             </li>
@@ -2762,15 +2763,15 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
     (f) => f.severity === 'warning',
   ).length;
   return (
-    <div data-testid="guidance-card" className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+    <div data-testid="guidance-card" className="w-full max-w-3xl rounded-2xl border border-line bg-surface p-4 shadow-sm">
+      <p className="text-xs font-bold uppercase tracking-widest text-muted">
         Results — Readiness check
       </p>
       <div className="mt-2 flex items-baseline justify-between gap-3">
-        <p className="text-sm font-semibold text-slate-900">
+        <p className="text-sm font-semibold text-heading">
           Overall completeness
         </p>
-        <p className="text-xl font-bold text-slate-900">
+        <p className="text-xl font-bold text-heading">
           {Math.round(report.overallCompleteness * 100)}%
         </p>
       </div>
@@ -2779,13 +2780,13 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
         className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100"
       >
         <div
-          className="h-full rounded-full bg-[#087f69]"
+          className="h-full rounded-full bg-action"
           style={{
             width: `${Math.round(report.overallCompleteness * 100)}%`,
           }}
         />
       </div>
-      <p className="mt-2 text-sm text-slate-700">
+      <p className="mt-2 text-sm text-body">
         {visibleFindings.length === 0
           ? 'No issues found. Your proposal fields look consistent.'
           : `${visibleFindings.length} finding${visibleFindings.length === 1 ? '' : 's'} — ${blocking} blocking, ${warnings} worth reviewing.`}
@@ -2793,12 +2794,12 @@ function GuidanceCard({ report }: { report: GuidanceReport }) {
       {visibleFindings.slice(0, 3).map((finding) => (
         <p
           key={`${finding.code}-${finding.paths.join(',')}`}
-          className="mt-1.5 rounded-lg border border-slate-100 bg-slate-50 p-2 text-xs text-slate-700"
+          className="mt-1.5 rounded-lg border border-line bg-surface-muted p-2 text-xs text-body"
         >
           {finding.message}
         </p>
       ))}
-      <p className="mt-2 text-[11px] text-slate-400">
+      <p className="mt-2 text-xs text-muted">
         Verified checks based on your proposal details.
       </p>
     </div>
@@ -2817,13 +2818,13 @@ function InvestmentCard({
       ? `Estimated investment ${roundedMoney(report.totalLowMinor, report.currency)} – ${roundedMoney(report.totalHighMinor, report.currency)} (mid ${roundedMoney(report.totalMidMinor, report.currency)}).`
       : 'Investment guidance generated — some categories need more information before an estimate is possible.';
   return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:max-w-[85%]">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+    <div className="w-full rounded-2xl border border-line bg-surface p-4 shadow-sm sm:max-w-[85%]">
+      <p className="text-xs font-bold uppercase tracking-widest text-muted">
         Results — Investment guidance
       </p>
-      <p className="mt-2 text-sm text-slate-800">{summary}</p>
+      <p className="mt-2 text-sm text-body">{summary}</p>
       {declaredBudget && (
-        <p className="mt-2 rounded-lg border border-cyan-100 bg-cyan-50 p-2 text-xs text-slate-700">
+        <p className="mt-2 rounded-lg border border-action/30 bg-brand-soft p-2 text-xs text-body">
           Your stated planning budget is{' '}
           <strong>{declaredBudget}</strong>. The estimate below is
           scope-based guidance, not a replacement for that budget.
@@ -2834,7 +2835,7 @@ function InvestmentCard({
           {report.lineItems.slice(0, 5).map((item) => (
             <li
               key={item.label}
-              className="flex flex-col items-start gap-1 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+              className="flex flex-col items-start gap-1 rounded-lg border border-line bg-surface-muted px-2.5 py-1.5 text-xs text-body sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
               <span className="truncate">{item.label}</span>
               <span className="font-semibold sm:shrink-0">
@@ -2848,13 +2849,13 @@ function InvestmentCard({
         </ul>
       )}
       {report.refusals.length > 0 && (
-        <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+        <p className="mt-2 rounded-lg border border-warning/40 bg-warning-soft p-2 text-xs text-amber-800">
           {report.refusals.length} categor
           {report.refusals.length === 1 ? 'y' : 'ies'} need more
           information: {report.refusals.map((r) => r.ask).join(' ')}
         </p>
       )}
-      <p className="mt-2 text-[11px] text-slate-400">
+      <p className="mt-2 text-xs text-muted">
         Range guidance from approved pricing records.
       </p>
     </div>
@@ -2865,7 +2866,7 @@ function AssistantTurnAvatar({ busy }: { busy?: boolean }) {
   return (
     <div
       aria-hidden
-      className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#087f69]/15 bg-gradient-to-br from-[#087f69]/10 to-[#00c2c9]/10 text-[#087f69] ${busy ? 'motion-safe:animate-pulse' : ''}`}
+      className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-action/20 bg-brand-soft text-action ${busy ? 'motion-safe:animate-pulse' : ''}`}
     >
       <Sparkles size={15} strokeWidth={2} />
     </div>
@@ -4471,7 +4472,7 @@ export default function AssistantWorkspacePage({
       return (
         <li
           key={message.id}
-          className="text-center text-xs text-slate-400"
+          className="text-center text-xs text-muted"
         >
           {message.content}
         </li>
@@ -4492,11 +4493,11 @@ export default function AssistantWorkspacePage({
         <li key={message.id} className="flex flex-col gap-1.5">
           {asked && (
             <div className="flex justify-start">
-              <div className="max-w-[90%] py-1 text-sm text-slate-600 md:max-w-[75%] md:rounded-2xl md:rounded-bl-md md:border md:border-slate-200 md:bg-white md:px-4 md:py-2.5">
-                <p className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <div className="max-w-[90%] py-1 text-sm text-body md:max-w-[75%] md:rounded-2xl md:rounded-bl-md md:border md:border-line md:bg-surface md:px-4 md:py-2.5">
+                <p className="mb-1 flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted">
                   Asked
                   {askedImpact && (
-                    <span className="font-semibold normal-case tracking-normal text-slate-400">
+                    <span className="font-semibold normal-case tracking-normal text-muted">
                       · {askedImpact}
                     </span>
                   )}
@@ -4506,9 +4507,9 @@ export default function AssistantWorkspacePage({
             </div>
           )}
           <div className="flex justify-end">
-              <div className="max-w-[88%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 sm:max-w-[75%]">
+              <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-heading sm:max-w-[75%]">
               {message.kind === 'question_answer' && (
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#087f69]">
+                <p className="mb-1 text-xs font-bold uppercase tracking-widest text-action">
                   Answer
                 </p>
               )}
@@ -4518,7 +4519,7 @@ export default function AssistantWorkspacePage({
                   {message.attachments.map((attachment) => (
                     <li
                       key={attachment.sourceId}
-                      className="rounded-full border border-[#00c2c9]/40 bg-white px-2 py-0.5 text-xs text-slate-600"
+                      className="rounded-full border border-focus/40 bg-surface px-2 py-0.5 text-xs text-body"
                     >
                       <span
                         className="max-w-[10rem] truncate align-middle"
@@ -4655,17 +4656,17 @@ export default function AssistantWorkspacePage({
       );
     }
     return wrapAssistantTurn(
-      <div className="w-full max-w-3xl py-1 text-sm leading-6 text-slate-800 md:rounded-2xl md:border md:border-slate-200 md:bg-white md:p-4 md:leading-normal md:shadow-sm">
+      <div className="w-full max-w-3xl py-1 text-sm leading-6 text-body md:rounded-2xl md:border md:border-line md:bg-surface md:p-4 md:leading-normal md:shadow-sm">
         <p className="whitespace-pre-wrap">{message.content}</p>
         {(message.actions?.length ?? 0) > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
             {message.actions?.includes(
               'download_room_schedule_template',
             ) && (
               <a
                 href="/files/RFPilot%20schedule-example-sheet.xlsx"
                 download
-                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#008ad2] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#006fa8] sm:w-auto"
+                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#218ccb] px-3 py-2 text-center text-xs font-semibold text-white transition-colors hover:bg-[#006fa8] sm:w-auto"
               >
                 <Download size={14} aria-hidden />
                 Download Sample Sheet
@@ -4675,7 +4676,7 @@ export default function AssistantWorkspacePage({
               proposalId && (
                 <Link
                   href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(proposalId)}&step=3`}
-                  className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#008ad2] bg-white px-3 py-2 text-center text-xs font-semibold text-[#008ad2] transition-colors hover:bg-[#008ad2]/5 sm:w-auto"
+                  className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#218ccb] bg-surface px-3 py-2 text-center text-xs font-semibold text-[#218ccb] transition-colors hover:bg-[#218ccb]/5 sm:w-auto"
                 >
                   <Upload size={14} aria-hidden />
                   Open Room Specifications &amp; Upload
@@ -4807,9 +4808,6 @@ export default function AssistantWorkspacePage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStarter, started]);
 
-  const starterButtonClass =
-    'inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50/60 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white';
-
   // Drag-and-drop onto the whole workspace card. The paperclip is an
   // unlabelled icon, and uploading a brief is the product's strongest path,
   // so the card itself accepts files. Dropping only stages chips, exactly
@@ -4898,14 +4896,14 @@ export default function AssistantWorkspacePage({
       {inputClarification && (
         <p
           role="alert"
-          className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+          className="mb-2 rounded-xl border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-amber-900"
         >
           {inputClarification}
         </p>
       )}
       {isListening || isTranscribing ? (
-        <div className="rounded-3xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm sm:p-5">
-          <p className="mb-4 text-center text-lg font-semibold text-slate-900">
+        <div className="rounded-3xl border border-line bg-surface-muted p-4 shadow-sm sm:p-5">
+          <p className="mb-4 text-center text-lg font-semibold text-heading">
             {isTranscribing ? 'Transcribing…' : 'Ready when you are.'}
           </p>
           <div
@@ -4951,7 +4949,7 @@ export default function AssistantWorkspacePage({
                   type="button"
                   aria-label="Finish voice input"
                   onClick={finishVoiceInput}
-                  className="theme-preserve-light grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white text-[#202020] transition-colors hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="theme-preserve-light grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-surface text-[#202020] transition-colors hover:bg-line focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   <Square size={13} fill="currentColor" aria-hidden />
                 </button>
@@ -4960,12 +4958,12 @@ export default function AssistantWorkspacePage({
           </div>
         </div>
       ) : (
-      <div className="rounded-[1.75rem] border border-slate-200 bg-white p-1.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.55)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#00c2c9] focus-within:shadow-[0_0_0_3px_rgba(0,194,201,0.12)] md:rounded-2xl md:p-2 md:shadow-sm">
+      <div className="rounded-[1.75rem] border border-control bg-surface p-1.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.55)] transition-[border-color,box-shadow] duration-200 focus-within:border-focus focus-within:ring-2 focus-within:ring-focus md:rounded-2xl md:p-2 md:shadow-sm">
         {aiHaltedMessage ? (
           <p
             role="status"
             data-testid="ai-unavailable-notice"
-            className="mb-1.5 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 md:rounded-xl"
+            className="mb-1.5 flex items-start gap-2 rounded-2xl border border-warning/40 bg-warning-soft px-3 py-2 text-xs leading-5 text-amber-900 md:rounded-xl"
           >
             <TriangleAlert size={14} className="mt-0.5 shrink-0 text-amber-600" aria-hidden />
             <span>{aiHaltedMessage}</span>
@@ -4976,11 +4974,11 @@ export default function AssistantWorkspacePage({
             {staged.map((file, index) => (
               <li
                 key={`${file.name}-${index}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface-muted px-2.5 py-1 text-xs text-body"
               >
                 <FileText
                   size={12}
-                  className="shrink-0 text-slate-400"
+                  className="shrink-0 text-muted"
                   aria-hidden
                 />
                 <span
@@ -4989,7 +4987,7 @@ export default function AssistantWorkspacePage({
                 >
                   {file.name}
                 </span>
-                <span className="shrink-0 text-[10px] text-slate-400">
+                <span className="shrink-0 text-xs text-muted">
                   {formatFileSize(file.size)}
                 </span>
                 <button
@@ -4997,7 +4995,7 @@ export default function AssistantWorkspacePage({
                   aria-label={`Remove ${file.name}`}
                   onClick={() => removeStaged(index)}
                   disabled={sendBusy}
-                  className="shrink-0 rounded-full p-0.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="shrink-0 rounded-full p-0.5 text-muted transition-colors hover:bg-line hover:text-heading disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <X size={12} aria-hidden />
                 </button>
@@ -5024,7 +5022,7 @@ export default function AssistantWorkspacePage({
             onClick={() => fileInputRef.current?.click()}
             disabled={attachDisabled}
             title={attachDisabledTitle}
-            className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-surface-muted hover:text-heading disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <Paperclip size={17} aria-hidden />
           </button>
@@ -5035,7 +5033,7 @@ export default function AssistantWorkspacePage({
               onClick={() => startVoiceInput()}
               disabled={sendBusy}
               title="Describe your event by voice"
-              className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-surface-muted hover:text-heading disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Mic size={17} aria-hidden />
             </button>
@@ -5054,7 +5052,7 @@ export default function AssistantWorkspacePage({
             }
             aria-label="Message the proposal assistant"
             aria-describedby="proposal-message-character-limit"
-            className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-slate-900 outline-none placeholder:text-slate-400 max-sm:!h-9 max-sm:!max-h-9 max-sm:overflow-x-auto max-sm:overflow-y-hidden max-sm:whitespace-nowrap max-sm:text-[11px] max-sm:leading-5"
+            className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-heading outline-none placeholder:text-muted max-sm:!h-9 max-sm:!max-h-9 max-sm:overflow-x-auto max-sm:overflow-y-hidden max-sm:whitespace-nowrap max-sm:text-[11px] max-sm:leading-5"
           />
           <button
             type="button"
@@ -5077,17 +5075,14 @@ export default function AssistantWorkspacePage({
               sendLocked ||
               aiHalted
             }
-            className={`grid h-10 shrink-0 place-items-center rounded-full border border-white/30 p-0 text-white shadow-[0_5px_14px_-5px_rgba(8,145,150,0.85)] transition-[transform,box-shadow,filter,opacity] duration-150 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_8px_18px_-6px_rgba(8,145,150,0.9)] active:translate-y-0 active:scale-95 active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:translate-y-0 disabled:scale-100 disabled:opacity-55 disabled:shadow-none ${started ? 'w-10' : 'grid-flow-col gap-1.5 px-4'}`}
-            style={{
-              background: `linear-gradient(135deg, ${ACCENT} 0%, ${DEEP} 100%)`,
-            }}
+            className={`grid h-10 shrink-0 place-items-center rounded-full border border-transparent bg-action p-0 text-on-action shadow-card transition-[transform,box-shadow,background-color,opacity] duration-150 hover:-translate-y-0.5 hover:bg-action-hover active:translate-y-0 active:scale-95 active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:translate-y-0 disabled:scale-100 disabled:opacity-55 disabled:shadow-none ${started ? 'w-10' : 'grid-flow-col gap-1.5 px-4'}`}
           >
             {chatBusy || sendBusy || sendLocked ? (
               <Loader2 size={17} className="animate-spin" aria-hidden />
             ) : (
               <>
                 {!started && (
-                  <span className="text-xs font-bold">Send</span>
+                  <span className="text-xs font-semibold">Send</span>
                 )}
                 <ArrowUp size={17} strokeWidth={2.4} aria-hidden />
               </>
@@ -5097,7 +5092,7 @@ export default function AssistantWorkspacePage({
         <p
           id="proposal-message-character-limit"
           className={text.length >= MESSAGE_LIMIT_WARNING_AT
-            ? 'mt-1 text-right text-[11px] text-slate-500'
+            ? 'mt-1 text-right text-xs text-muted'
             : 'sr-only'}
         >
           {text.length.toLocaleString()} of {PROPOSAL_MESSAGE_MAX_CHARACTERS.toLocaleString()} characters
@@ -5168,7 +5163,7 @@ export default function AssistantWorkspacePage({
               };
 
   return (
-    <div className="h-[calc(100dvh-8.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 overflow-hidden bg-white md:h-auto md:min-h-[calc(100svh-9rem)] md:overflow-visible md:bg-white md:py-2 lg:bg-slate-100/70 xl:flex xl:h-[calc(100dvh-3rem)] xl:min-h-0 xl:flex-col xl:overflow-hidden">
+    <div className="h-[calc(100dvh-8.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 overflow-hidden bg-surface md:h-auto md:min-h-[calc(100svh-9rem)] md:overflow-visible md:bg-surface md:py-2 lg:bg-slate-100/70 xl:flex xl:h-[calc(100dvh-3rem)] xl:min-h-0 xl:flex-col xl:overflow-hidden">
       {/* Shared keyframes for continuous status indicators. */}
       <style>{`
         @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-0.25rem); opacity: 1; } }
@@ -5184,7 +5179,7 @@ export default function AssistantWorkspacePage({
           <Link
             href="/proposals"
             aria-label="Back to all proposals"
-            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-semibold text-slate-600 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 font-semibold text-body transition-colors hover:bg-surface hover:text-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
           >
             <ArrowLeft size={14} aria-hidden />
             All proposals
@@ -5192,7 +5187,7 @@ export default function AssistantWorkspacePage({
           <span aria-hidden className="text-slate-300">
             /
           </span>
-          <span className="font-semibold text-slate-900">
+          <span className="font-semibold text-heading">
             {proposalId ? eventName || 'Untitled proposal' : 'New proposal'}
           </span>
         </nav>
@@ -5209,148 +5204,40 @@ export default function AssistantWorkspacePage({
           onDragOver={onWorkspaceDragOver}
           onDragLeave={onWorkspaceDragLeave}
           onDrop={onWorkspaceDrop}
-          className="relative order-2 flex h-full min-h-0 max-h-none flex-1 flex-col overflow-hidden border-0 bg-white p-0 shadow-none md:h-[calc(100svh-18rem)] md:min-h-[30rem] md:max-h-[calc(100svh-18rem)] md:rounded-3xl md:border md:border-slate-200 md:p-6 md:shadow-sm lg:h-[calc(100svh-10rem)] lg:min-h-[36rem] lg:max-h-[calc(100svh-10rem)] lg:p-7 xl:order-1 xl:h-full xl:min-h-0 xl:max-h-none"
+          className="relative order-2 flex h-full min-h-0 max-h-none flex-1 flex-col overflow-hidden border-0 bg-surface p-0 shadow-none md:h-[calc(100svh-18rem)] md:min-h-[30rem] md:max-h-[calc(100svh-18rem)] md:rounded-3xl md:border md:border-line md:p-6 md:shadow-sm lg:h-[calc(100svh-10rem)] lg:min-h-[36rem] lg:max-h-[calc(100svh-10rem)] lg:p-7 xl:order-1 xl:h-full xl:min-h-0 xl:max-h-none"
         >
           {dragActive && (
             <div
               role="status"
               data-testid="attachment-dropzone"
-              className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-[#00c2c9] bg-white/90 text-center md:rounded-3xl"
+              className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-focus bg-surface/90 text-center md:rounded-3xl"
             >
-              <Upload size={26} aria-hidden className="text-[#00aeb5]" />
-              <p className="text-base font-semibold text-slate-900">
+              <Upload size={26} aria-hidden className="text-action" />
+              <p className="text-base font-semibold text-heading">
                 {attachDisabled ? attachDisabledTitle : 'Drop to attach'}
               </p>
               {!attachDisabled && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted">
                   {ACCEPTED_ATTACHMENT_LABEL}, up to {MAX_STAGED_FILES} files per message
                 </p>
               )}
             </div>
           )}
           {!started ? (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 py-6 text-center md:justify-center md:p-0">
-                <AssistantOrb className="h-24 w-24 sm:h-28 sm:w-28" />
-                <div className="max-w-xl">
-                  <h1 className="text-balance text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-                    {/* The profile resolves after mount, so server and first
-                        client render use the same timezone-neutral greeting. */}
-                    {firstName ? `Good ${dayPart()}, ${firstName}` : 'Welcome'}
-                  </h1>
-                  <p
-                    className="mt-2 text-base font-semibold md:text-xl"
-                    style={{ color: ACCENT }}
-                  >
-                    Let’s build your event proposal
-                  </p>
-                  {/* First-run definition: the one sentence that says what
-                      the product does, what an RFP is, and that nothing goes
-                      out without the planner. The old "Tell me what you're
-                      planning" and "Include if you know" lines were dropped:
-                      the starters and the composer placeholder say it. */}
-                  <p
-                    data-testid="assistant-product-definition"
-                    className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600"
-                  >
-                    RFPilot turns your event details into an AV production proposal,
-                    the request you send to vendors so they can quote. Nothing
-                    goes out until you pick vendors.
-                  </p>
-                </div>
-                <div
-                  role="group"
-                  aria-label="Ways to start"
-                  data-testid="assistant-starters"
-                  className="w-full max-w-2xl"
-                >
-                  {/* One row of compact chips. The explanatory line each chip
-                      used to carry repeated step 1, so it moved into the
-                      chip's tooltip. */}
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void startFromExampleBrief()}
-                      disabled={exampleBriefBusy || attachDisabled}
-                      aria-busy={exampleBriefBusy}
-                      title={
-                        attachDisabled
-                          ? attachDisabledTitle
-                          : 'A fictional summit brief, so you can watch RFPilot read a document'
-                      }
-                      className={starterButtonClass}
-                    >
-                      {exampleBriefBusy ? (
-                        <Loader2
-                          size={15}
-                          aria-hidden
-                          className="shrink-0 animate-spin text-[#00aeb5]"
-                        />
-                      ) : (
-                        <Sparkles
-                          size={15}
-                          aria-hidden
-                          className="shrink-0 text-[#00aeb5]"
-                        />
-                      )}
-                      Try an example brief
-                    </button>
-                    <button
-                      type="button"
-                      onClick={startFromUpload}
-                      disabled={attachDisabled}
-                      title={
-                        attachDisabled
-                          ? attachDisabledTitle
-                          : 'PDF, DOCX, XLSX, CSV or TXT'
-                      }
-                      className={starterButtonClass}
-                    >
-                      <Upload
-                        size={15}
-                        aria-hidden
-                        className="shrink-0 text-[#00aeb5]"
-                      />
-                      Upload my brief or old proposal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={startFromScratch}
-                      title="Drops a sample description into the box for you to edit"
-                      className={starterButtonClass}
-                    >
-                      <PencilLine
-                        size={15}
-                        aria-hidden
-                        className="shrink-0 text-[#00aeb5]"
-                      />
-                      Describe it from scratch
-                    </button>
-                    {extraStarter}
-                  </div>
-                  {starterError && (
-                    <p
-                      role="alert"
-                      className="mx-auto mt-2 max-w-lg rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-800"
-                    >
-                      {starterError}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="w-full shrink-0 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-4 md:mx-auto md:max-w-xl md:bg-transparent md:px-0 md:pb-0 md:pt-4">
-                {composer}
-                {/* The one visible line that says what the paperclip and
-                    the drop target accept. Empty state only; once the
-                    thread starts, the chips and thread carry the context. */}
-                <p
-                  data-testid="attachment-caption"
-                  className="mt-2 text-center text-[11px] leading-4 text-slate-500"
-                >
-                  Drop a file here or use the paperclip: {ACCEPTED_ATTACHMENT_LABEL}, up to {MAX_STAGED_FILES} per message.
-                </p>
-              </div>
-            </div>
+            <ProposalEntry
+              greeting={firstName ? `Good ${dayPart()}, ${firstName}` : 'Welcome'}
+              composer={composer}
+              extraStarter={extraStarter}
+              onExample={() => void startFromExampleBrief()}
+              onUpload={startFromUpload}
+              onScratch={startFromScratch}
+              exampleBusy={exampleBriefBusy}
+              attachDisabled={attachDisabled}
+              attachDisabledTitle={attachDisabledTitle}
+              starterError={starterError}
+              acceptedLabel={ACCEPTED_ATTACHMENT_LABEL}
+              maxFiles={MAX_STAGED_FILES}
+            />
           ) : (
             <>
               <div
@@ -5368,33 +5255,33 @@ export default function AssistantWorkspacePage({
                   </p>
                 )}
                 {loading && !attachmentTurn && pending.length === 0 && messages.length === 0 && (
-                  <p role="status" className="text-sm text-slate-500">
+                  <p role="status" className="text-sm text-muted">
                     Loading the conversation…
                   </p>
                 )}
                 <ol className="space-y-3">
                   {!loading && !loadError && !firstContributionReceived && !sourceExtractionInProgress && !chatBusy && !sendLocked && !extractionFailureBlocksQuestions && (
-                    <li className="rounded-2xl border border-cyan-100 bg-cyan-50/50 p-5 text-sm leading-6 text-slate-700">
+                    <li className="rounded-2xl border border-action/30 bg-brand-soft p-5 text-sm leading-6 text-body">
                       Share a few event details or attach a brief below. I’ll review what you send before asking the next question.
                     </li>
                   )}
                   {threadMessages.flatMap(message => [
                     renderMessage(message),
                     ...(message.id === persistedAttachmentTurn?.id && !attachmentAcknowledged
-                      ? [wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">{ATTACHMENT_ACKNOWLEDGEMENT}</div>, 'attachment-acknowledgement')]
+                      ? [wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-line bg-surface p-4 text-sm leading-6 text-body shadow-sm">{ATTACHMENT_ACKNOWLEDGEMENT}</div>, 'attachment-acknowledgement')]
                       : []),
                   ])}
                   {showLocalAttachment && attachmentTurn && (
                     <li data-testid="attachment-user-turn" className="flex justify-end">
-                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 sm:max-w-[75%]">
+                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-heading sm:max-w-[75%]">
                         <p className="whitespace-pre-wrap">{attachmentTurn.content}</p>
                         <ul className="mt-2 flex flex-wrap gap-1.5">
-                          {attachmentTurn.filenames.map((name, index) => <li key={`${index}:${name}`} className="max-w-full break-all rounded-full border border-[#00c2c9]/40 bg-white px-2 py-0.5 text-xs text-slate-600">{name}</li>)}
+                          {attachmentTurn.filenames.map((name, index) => <li key={`${index}:${name}`} className="max-w-full break-all rounded-full border border-focus/40 bg-surface px-2 py-0.5 text-xs text-body">{name}</li>)}
                         </ul>
                       </div>
                     </li>
                   )}
-                  {showLocalAttachment && wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">{ATTACHMENT_ACKNOWLEDGEMENT}</div>, 'attachment-acknowledgement')}
+                  {showLocalAttachment && wrapAssistantTurn(<div data-testid="attachment-acknowledgement" className="rounded-2xl border border-line bg-surface p-4 text-sm leading-6 text-body shadow-sm">{ATTACHMENT_ACKNOWLEDGEMENT}</div>, 'attachment-acknowledgement')}
                   {sourceExtractionInProgress && !extractionSendFailure && (
                     wrapAssistantTurn(
                       <SourceIntakeProgress phase={sourceIntakePhase} />,
@@ -5477,14 +5364,14 @@ export default function AssistantWorkspacePage({
                       key={entry.localId}
                       className="flex justify-end"
                     >
-                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-4 py-2.5 text-sm text-slate-900 opacity-90 sm:max-w-[75%]">
+                      <div className="max-w-[88%] rounded-2xl rounded-br-md border border-action/30 bg-brand-soft px-4 py-2.5 text-sm text-heading opacity-90 sm:max-w-[75%]">
                         <p className="whitespace-pre-wrap">
                           {entry.content}
                         </p>
                         {entry.state === 'sending' && (
                           <p
                             role="status"
-                            className="mt-1 text-xs text-slate-500"
+                            className="mt-1 text-xs text-muted"
                           >
                             Sending…
                           </p>
@@ -5521,8 +5408,8 @@ export default function AssistantWorkspacePage({
                       >
                         <p role="alert">{`${notice.filename} couldn’t be processed — ${notice.reason === 'blocked' ? 'the file did not pass security checks. Please attach a different file.' : notice.reason === 'timeout' ? 'the file check is taking longer than expected. I haven’t read its details yet.' : 'try re-uploading, or check its status again.'}`}</p>
                         <div className="mt-3 flex flex-wrap gap-3">
-                          {notice.reason !== 'blocked' && <button type="button" onClick={() => retryFileCheck(notice.sourceId)} className="min-h-10 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold">Retry file check</button>}
-                          <button type="button" onClick={() => fileInputRef.current?.click()} className="min-h-10 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold">Choose another file</button>
+                          {notice.reason !== 'blocked' && <button type="button" onClick={() => retryFileCheck(notice.sourceId)} className="min-h-10 rounded-lg border border-red-200 bg-surface px-3 text-xs font-semibold">Retry file check</button>}
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className="min-h-10 rounded-lg border border-red-200 bg-surface px-3 text-xs font-semibold">Choose another file</button>
                           <button type="button" onClick={continueWithoutFiles} className="min-h-10 text-xs font-semibold underline underline-offset-2">Continue without these files</button>
                         </div>
                       </div>
@@ -5557,7 +5444,7 @@ export default function AssistantWorkspacePage({
                     <li className="flex justify-start">
                       <p
                         role="status"
-                        className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-[#00c2c9]/30 bg-[#00c2c9]/10 px-3.5 py-2 text-xs font-semibold text-[#087f69]"
+                        className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-action/30 bg-brand-soft px-3.5 py-2 text-xs font-semibold text-action"
                       >
                         <Loader2 size={13} className="animate-spin" aria-hidden />
                         Saving {bulkAnswerProgress.current} of {bulkAnswerProgress.total} details…
@@ -5646,7 +5533,7 @@ export default function AssistantWorkspacePage({
                     <li className="flex justify-start">
                       <p
                         role="status"
-                        className="inline-flex max-w-full items-center gap-1.5 whitespace-normal break-words rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-800"
+                        className="inline-flex max-w-full items-center gap-1.5 whitespace-normal break-words rounded-2xl border border-success/40 bg-success-soft px-3.5 py-1.5 text-xs font-semibold text-success-strong"
                       >
                         {lastConfirmed.label}: {lastConfirmed.value} ✓
                       </p>
@@ -5774,7 +5661,7 @@ export default function AssistantWorkspacePage({
                 </ol>
                 <div ref={threadEndRef} className="h-2 scroll-mb-4" />
               </div>
-              <div className="w-full shrink-0 border-t border-slate-100 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 md:mt-4 md:border-0 md:bg-transparent md:p-0">
+              <div className="w-full shrink-0 border-t border-line bg-surface px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 md:mt-4 md:border-0 md:bg-transparent md:p-0">
                 {composer}
               </div>
             </>
@@ -5794,28 +5681,28 @@ export default function AssistantWorkspacePage({
               aria-label="Toggle AI workspace tools"
               aria-expanded={toolsOpen}
               onClick={() => setToolsOpen((open) => !open)}
-              className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-[#e5f4f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00c2c9] xl:hidden"
+              className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-[#e5f4f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus xl:hidden"
             >
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#087f69]/15 bg-[#087f69]/10 text-[#087f69]">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-action/20 bg-brand-soft text-action">
                 <Sparkles size={15} aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#087f69]">
+                <span className="block text-xs font-bold uppercase tracking-[0.16em] text-action">
                   AI workspace
                 </span>
-                <span className="block truncate text-xs font-semibold text-slate-700">
+                <span className="block truncate text-xs font-semibold text-body">
                   {aiStatus.title}
                 </span>
               </span>
               <ChevronDown
                 size={17}
-                className={`shrink-0 text-slate-400 transition-transform ${toolsOpen ? 'rotate-180' : ''}`}
+                className={`shrink-0 text-muted transition-transform ${toolsOpen ? 'rotate-180' : ''}`}
                 aria-hidden
               />
             </button>
             <aside
               aria-label="Proposal assistant tools"
-              className={`${toolsOpen ? 'flex' : 'hidden'} max-h-[min(56dvh,34rem)] w-full shrink-0 flex-col overflow-hidden border-t border-slate-200 bg-slate-50/80 p-2 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 xl:flex xl:h-full xl:max-h-none xl:min-h-0 xl:w-full xl:rounded-3xl xl:border xl:border-slate-200/80 xl:bg-white/45 xl:shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] xl:backdrop-blur-sm`}
+              className={`${toolsOpen ? 'flex' : 'hidden'} max-h-[min(56dvh,34rem)] w-full shrink-0 flex-col overflow-hidden border-t border-line bg-surface-muted p-2 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 xl:flex xl:h-full xl:max-h-none xl:min-h-0 xl:w-full xl:rounded-3xl xl:border xl:border-line xl:bg-white/45 xl:shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)] xl:backdrop-blur-sm`}
             >
             <div
               data-testid="proposal-assistant-tools-scroll"
@@ -5824,91 +5711,42 @@ export default function AssistantWorkspacePage({
               aria-label="AI workspace overview and questions"
               className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl pr-1 outline-none [scrollbar-gutter:stable] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
             >
-            <section
-              aria-labelledby="rail-ai-title"
-              tabIndex={0}
-              className="relative overflow-hidden rounded-2xl border border-cyan-200/80 bg-gradient-to-br from-[#062f3a] via-[#075569] to-[#087f69] p-4 text-white shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[#00c2c9] focus-visible:ring-offset-2"
-            >
-              <div
-                aria-hidden
-                className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-[#00c2c9]/30 blur-2xl motion-safe:animate-[ai-glow_2.8s_ease-in-out_infinite]"
-              />
-              <div className="relative flex items-start gap-3">
-                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10">
-                  {aiWorking && (
-                    <span className="absolute inset-[-4px] rounded-2xl border border-dashed border-[#67e8f9]/70 motion-safe:animate-[ai-orbit_5s_linear_infinite]" />
-                  )}
-                  <Sparkles size={18} aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-100">
-                    AI workspace
-                  </p>
-                  <h2
-                    id="rail-ai-title"
-                    className="mt-1 text-sm font-bold"
-                  >
-                    {aiStatus.title}
-                  </h2>
-                  <p className="mt-1 text-xs leading-relaxed text-cyan-50/80">
-                    {aiStatus.detail}
-                  </p>
-                </div>
-              </div>
-              <dl className="relative mt-4 grid grid-cols-3 gap-2">
-                <div className="rounded-xl border border-white/15 bg-white/10 p-2">
-                  <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
-                    Documents
-                  </dt>
-                  <dd className="mt-0.5 text-sm font-bold">
-                    {readySources.length}
-                  </dd>
-                </div>
-                <div className="rounded-xl border border-white/15 bg-white/10 p-2">
-                  <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
-                    Details captured
-                  </dt>
-                  <dd className="mt-0.5 text-sm font-bold">
-                    {railDetailCount}
-                  </dd>
-                </div>
-                <div className="rounded-xl border border-white/15 bg-white/10 p-2">
-                  <dt className="text-[9px] uppercase tracking-wide text-cyan-100/70">
-                    Questions completed
-                  </dt>
-                  <dd className="mt-0.5 text-sm font-bold">
-                    {totalIntakeCount > 0 ? `${completedIntakeCount}/${totalIntakeCount}` : '—'}
-                  </dd>
-                </div>
-              </dl>
-              <div className="relative mt-3 flex items-center gap-2 text-[10px] font-semibold text-cyan-50/80">
-                <span
-                  className={`h-2 w-2 rounded-full ${aiWorking ? 'bg-cyan-300 motion-safe:animate-pulse' : 'bg-emerald-300'}`}
-                />
-                {aiWorking
-                  ? 'AI is actively working'
-                  : 'Your files and answers stay private to this proposal'}
-              </div>
-            </section>
+            <RailSummary
+              title={aiStatus.title}
+              detail={aiStatus.detail}
+              working={aiWorking}
+              documents={readySources.length}
+              details={railDetailCount}
+              questions={totalIntakeCount > 0 ? `${completedIntakeCount}/${totalIntakeCount}` : '—'}
+            />
             {/* Key questions checklist: every guided question the assistant
                 asks, ticked once it is answered or skipped, so the planner can
                 see how far along the intake is without scrolling the thread. */}
+            <RailDetails
+              rows={overviewRows}
+              editHref={proposalId ? `/proposals/proposal-edit?proposalId=${encodeURIComponent(proposalId)}` : null}
+            />
+            <RailSources
+              sources={sources
+                .filter((source) => source.origin === 'upload')
+                .map((source) => ({ id: source.id, name: source.originalFilename, status: source.status }))}
+            />
             <section
               aria-labelledby="rail-questions-title"
-              className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4"
+              className="min-w-0 rounded-2xl border border-line bg-surface p-3 shadow-card sm:p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                 <h2
                   id="rail-questions-title"
-                  className="text-[15px] font-bold text-slate-900"
+                  className="text-[15px] font-bold text-heading"
                 >
                   Key questions
                 </h2>
               </div>
               {sourceExtractionInProgress || extractionFailureBlocksQuestions ? (
-                <p className="mt-3 text-xs leading-5 text-slate-600">{sourceExtractionInProgress ? 'I’ll review your attachment first. Then we’ll confirm what I found and fill in any missing details, one step at a time.' : 'Resolve the attachment issue in the conversation, or choose to continue without it.'}</p>
+                <p className="mt-3 text-xs leading-5 text-body">{sourceExtractionInProgress ? 'I’ll review your attachment first. Then we’ll confirm what I found and fill in any missing details, one step at a time.' : 'Resolve the attachment issue in the conversation, or choose to continue without it.'}</p>
               ) : coreChecklist.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-400">
+                <p className="mt-2 text-xs text-muted">
                   {questionsComplete
                     ? 'All key questions answered.'
                     : 'Questions will appear here once the assistant reviews your event.'}
@@ -5922,16 +5760,16 @@ export default function AssistantWorkspacePage({
                     aria-valuemax={totalIntakeCount}
                     aria-valuenow={completedIntakeCount}
                     aria-valuetext={`${completedIntakeCount} of ${totalIntakeCount} questions completed`}
-                    className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+                    className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-line"
                   >
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-[#2fc6f5] to-[#087f69] transition-[width] duration-500"
+                      className="h-full rounded-full bg-action transition-[width] duration-500"
                       style={{
                         width: `${Math.round((completedIntakeCount / totalIntakeCount) * 100)}%`,
                       }}
                     />
                   </div>
-                  <p className="mt-2.5 text-xs leading-5 text-slate-500">
+                  <p className="mt-2.5 text-xs leading-5 text-muted">
                     {remainingIntakeCount === 0
                       ? extraQuestions.some(question => question.status === 'open')
                         ? 'Key questions complete. Let’s resolve the additional clarifications.'
@@ -5944,7 +5782,7 @@ export default function AssistantWorkspacePage({
                   </p>
                   {questionGroups.map(group => (
                   <div key={group.label} className="min-w-0">
-                  {group.title && <h3 className="mt-3 border-t border-slate-100 pt-3 text-[13px] font-bold text-slate-800">{group.title}</h3>}
+                  {group.title && <h3 className="mt-3 border-t border-line pt-3 text-[13px] font-bold text-heading">{group.title}</h3>}
                   <ol aria-label={group.label} className="mt-3 min-w-0 space-y-1">
                     {group.items.map((question, index) => {
                       const resolved = question.status !== 'open';
@@ -5965,10 +5803,10 @@ export default function AssistantWorkspacePage({
                           aria-current={isCurrent ? 'step' : undefined}
                           className={`flex min-w-0 items-start gap-2.5 rounded-xl border px-2.5 py-1.5 ${
                             isCurrent
-                              ? 'border-amber-200 bg-amber-50/80'
+                              ? 'border-action/40 bg-brand-soft'
                               : resolved
-                                ? 'border-transparent bg-white'
-                                : 'border-slate-100 bg-slate-50/70'
+                                ? 'border-transparent bg-surface'
+                                : 'border-line bg-surface-muted'
                           }`}
                         >
                           <span
@@ -5977,11 +5815,11 @@ export default function AssistantWorkspacePage({
                             className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                               resolved
                                 ? skipped
-                                  ? 'border-slate-300 bg-slate-300 text-white'
-                                  : 'border-emerald-500 bg-emerald-500 text-white'
+                                  ? 'border-control bg-control text-on-action'
+                                  : 'border-success bg-success text-on-action'
                                 : isCurrent
-                                  ? 'border-amber-400 bg-white'
-                                  : 'border-slate-300 bg-white'
+                                  ? 'border-action bg-surface'
+                                  : 'border-control bg-surface'
                             }`}
                           >
                             {notApplicable ? <span aria-hidden>−</span> : resolved ? <Check size={11} strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-amber-400" /> : null}
@@ -5990,8 +5828,8 @@ export default function AssistantWorkspacePage({
                             <p
                               className={`text-[13px] leading-[1.35rem] [overflow-wrap:anywhere] ${
                                 resolved
-                                  ? 'font-medium text-slate-500'
-                                  : 'font-semibold text-slate-800'
+                                  ? 'font-medium text-muted'
+                                  : 'font-semibold text-heading'
                               }`}
                             >
                               {`${index + 1}. ${displayQuestionPrompt(question)}`}

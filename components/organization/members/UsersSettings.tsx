@@ -214,7 +214,7 @@ export default function UsersSettings({ sessionRole = null }: Props) {
                         <tr key={member.userId} className={member.status === "deactivated" ? "bg-slate-50/60 text-slate-400" : "text-slate-700"}>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2fc6f5] to-[#008ad2] text-xs font-bold uppercase text-white">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2fc6f5] to-[#218ccb] text-xs font-bold uppercase text-white">
                                 {name.slice(0, 2)}
                               </span>
                               <div className="min-w-0">
@@ -294,7 +294,7 @@ export default function UsersSettings({ sessionRole = null }: Props) {
                 {access.canInvite
                   ? "As a Team Manager you can invite Planners and Viewers into the teams you manage."
                   : "Ask an Admin if you need someone added, or your role changed."}{" "}
-                <Link href="/settings/teams" className="inline-flex items-center gap-1 font-semibold text-[#008ad2] hover:underline">
+                <Link href="/settings/teams" className="inline-flex items-center gap-1 font-semibold text-[#218ccb] hover:underline">
                   <Users size={13} aria-hidden="true" /> See teams
                 </Link>
               </p>

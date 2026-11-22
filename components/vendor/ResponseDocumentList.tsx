@@ -116,7 +116,7 @@ export default function ResponseDocumentList({
                 target="_blank"
                 rel="noreferrer"
                 aria-label={`Open ${name}`}
-                className="col-start-3 row-start-1 inline-flex min-h-9 items-center gap-1.5 justify-self-end rounded-lg border border-slate-200 bg-white px-3 text-xs font-extrabold text-[#0075b4] hover:border-[#008ad2] hover:bg-sky-50 md:col-start-auto md:row-start-auto print:hidden"
+                className="col-start-3 row-start-1 inline-flex min-h-9 items-center gap-1.5 justify-self-end rounded-lg border border-slate-200 bg-white px-3 text-xs font-extrabold text-[#0075b4] hover:border-[#218ccb] hover:bg-sky-50 md:col-start-auto md:row-start-auto print:hidden"
               >
                 Open <ExternalLink size={13} aria-hidden="true" />
               </a>

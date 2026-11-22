@@ -23,20 +23,20 @@ export default async function RfpAccessPage({ params }: { params: Promise<{ id: 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        <Link href="/proposals" className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-500 hover:text-[#008ad2]">
+        <Link href="/proposals" className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-500 hover:text-[#218ccb]">
           <ArrowLeft size={14} aria-hidden="true" />Back to proposals
         </Link>
         <header className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Access</p>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#218ccb]">Access</p>
           <h1 className="mt-2 break-words text-3xl font-extrabold tracking-tight text-slate-950 [overflow-wrap:anywhere]">{snapshot.title}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             See who owns this proposal, which team it belongs to, and who else can open it. Team managers see every proposal on their team.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(id)}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]">
+            <Link href={`/proposals/proposal-edit?proposalId=${encodeURIComponent(id)}`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#218ccb] hover:text-[#218ccb]">
               <Pencil size={14} aria-hidden="true" />Open proposal
             </Link>
-            <Link href={`/proposals/${encodeURIComponent(id)}/intelligence`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]">
+            <Link href={`/proposals/${encodeURIComponent(id)}/intelligence`} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#218ccb] hover:text-[#218ccb]">
               <BarChart3 size={14} aria-hidden="true" />Vendor responses
             </Link>
           </div>

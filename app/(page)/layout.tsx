@@ -17,8 +17,10 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
+  modal,
 }: Readonly<{
   children: React.ReactNode;
+  modal: React.ReactNode;
 }>) {
   const [access, session] = await Promise.all([
     process.env.NEXT_PUBLIC_AI_ASSISTANT_ENABLED === "true"
@@ -63,6 +65,7 @@ export default async function RootLayout({
           >
             {children}
           </LayoutWrapper>
+          {modal}
         </ToastProvider>
         {showLocalThemePreview && <DevThemeToggle defaultDark />}
         <Analytics />

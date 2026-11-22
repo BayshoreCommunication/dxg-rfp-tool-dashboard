@@ -1745,6 +1745,14 @@ describe("AssistantWorkspacePage", () => {
     expect(review).toHaveTextContent("1 saved detail");
     expect(review).toHaveTextContent(`${loadInDate} at 07:30`);
     expect(screen.queryByText(`Production load-in: ${loadInDate} at 07:30 ✓`)).not.toBeInTheDocument();
+
+    // The saved details are a valid definition list: each row holds only a dt and a dd, and the
+    // Edit button lives inside the dd with the value it edits.
+    const list = review.querySelector("dl") as HTMLElement;
+    for (const row of Array.from(list.children)) {
+      expect(Array.from(row.children).map((child) => child.tagName)).toEqual(["DT", "DD"]);
+      expect(within(row as HTMLElement).getByRole("button", { name: /^Edit / })).toBeInTheDocument();
+    }
   });
 
   test("venue-name guidance points undecided users to Skip, not a missing option", () => {
@@ -2711,6 +2719,41 @@ describe("AssistantWorkspacePage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Continue without extraction" }));
 
     expect(await screen.findByText("When does the event start?")).toBeInTheDocument();
+  });
+
+  test("the rail lists the captured details read-only and the uploaded documents with their state", async () => {
+    mockedGetConversation.mockResolvedValue(conversationWithQuestion);
+    mockedGetProposal.mockResolvedValue({
+      success: true,
+      message: "ok",
+      data: { _id: PROPOSAL_ID, event: { eventName: "Northstar Summit", attendees: "500" }, venueSchedule: { venueName: "Hall A" } },
+    });
+    mockedListSources.mockResolvedValue({
+      success: true,
+      correlationId: "test-correlation",
+      data: [
+        { id: "src-1", status: "ready", confidentiality: "non_confidential", originalFilename: "venue.pdf", createdAt: "2026-07-21T10:00:00.000Z", origin: "upload" },
+        { id: "src-2", status: "scanning", confidentiality: "non_confidential", originalFilename: "floorplan.pdf", createdAt: "2026-07-21T10:00:00.000Z", origin: "upload" },
+        { id: "src-3", status: "ready", confidentiality: "non_confidential", originalFilename: "notes.txt", createdAt: "2026-07-21T10:00:00.000Z", origin: "notes" },
+      ],
+    });
+
+    render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);
+
+    const details = (await screen.findByRole("heading", { name: "Proposal details" })).closest("section") as HTMLElement;
+    expect(await within(details).findByText("Northstar Summit")).toBeInTheDocument();
+    expect(within(details).getByText("Hall A")).toBeInTheDocument();
+    expect(within(details).getByRole("link", { name: /Edit all details/ })).toHaveAttribute(
+      "href",
+      `/proposals/proposal-edit?proposalId=${PROPOSAL_ID}`,
+    );
+
+    const sources = (await screen.findByRole("heading", { name: "Source documents" })).closest("section") as HTMLElement;
+    expect(await within(sources).findByText("venue.pdf")).toBeInTheDocument();
+    expect(within(sources).getByText("floorplan.pdf")).toBeInTheDocument();
+    expect(within(sources).queryByText("notes.txt")).not.toBeInTheDocument();
+    expect(within(sources).getByText("Ready")).toBeInTheDocument();
+    expect(within(sources).getByText("Checking")).toBeInTheDocument();
   });
 
   test("the Extract requirements command auto-selects ready sources and sends the intent", async () => {

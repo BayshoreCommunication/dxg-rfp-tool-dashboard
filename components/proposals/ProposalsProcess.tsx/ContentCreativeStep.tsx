@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useId } from "react";
 import { InfoTooltip } from "./shared";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { STANDALONE_VIDEO_RECORDING_STEP_ENABLED } from "@/lib/proposals/proposalExperience";
@@ -96,31 +97,35 @@ interface MatrixRowProps {
   warning?: string;
 }
 
-const MatrixRow = ({ label, helpText, value, onChange, warning }: MatrixRowProps) => (
-  <div className="py-4 border-b border-[#f0f2f8] last:border-0">
-    <div className="flex items-center justify-between gap-4 flex-wrap">
-      <span className="flex items-center gap-1 text-sm font-semibold text-[#222628]">
-        {label}
-        <InfoTooltip text={helpText} />
-      </span>
-      <div className="flex gap-2">
-        {OWNERSHIP_OPTS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            className={ownershipCls(opt.value, value)}
-            onClick={() => onChange(opt.value)}
-          >
-            {opt.label}
-          </button>
-        ))}
+const MatrixRow = ({ label, helpText, value, onChange, warning }: MatrixRowProps) => {
+  const labelId = useId();
+  return (
+    <div className="py-4 border-b border-[#f0f2f8] last:border-0">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <span className="flex items-center gap-1 text-sm font-semibold text-[#222628]">
+          <span id={labelId}>{label}</span>
+          <InfoTooltip text={helpText} />
+        </span>
+        <div role="group" aria-labelledby={labelId} className="flex gap-2">
+          {OWNERSHIP_OPTS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              aria-pressed={value === opt.value}
+              className={ownershipCls(opt.value, value)}
+              onClick={() => onChange(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
+      {warning && (
+        <p role="status" className="mt-2 text-xs font-medium text-amber-600">⚠ {warning}</p>
+      )}
     </div>
-    {warning && (
-      <p className="mt-2 text-xs font-medium text-amber-600">⚠ {warning}</p>
-    )}
-  </div>
-);
+  );
+};
 
 /* ─── Gateway card ─── */
 const GatewayCard = ({
@@ -136,6 +141,7 @@ const GatewayCard = ({
 }) => (
   <button
     type="button"
+    aria-pressed={isSelected}
     onClick={onClick}
     className={`flex w-full flex-col rounded-xl border-2 p-5 text-left transition-all ${
       isSelected
@@ -223,12 +229,13 @@ const ContentCreativeStep = ({
 
         {/* Field 1 — Gateway */}
         <div>
-          <label className={labelClass}>
-            Content / Creative Services Needed?{" "}
-            <span className="text-red-500">*</span>
-            <InfoTooltip text="Do you need the AV vendor to provide any content design or creative production services beyond live show technical execution? This includes designing slide templates, producing opener videos, building lower-third graphics, or creating sizzle reels. Select No if you have a separate creative agency handling all content and the AV vendor will only execute the live show." />
-          </label>
-          <div className="grid grid-cols-2 gap-4 mt-2">
+          <div className={labelClass}>
+          <span id="content-creative-services-needed-label" className="flex items-center gap-[inherit]">
+          Content / Creative Services Needed?{" "}
+          <span className="text-red-500">*</span></span>
+          <InfoTooltip text="Do you need the AV vendor to provide any content design or creative production services beyond live show technical execution? This includes designing slide templates, producing opener videos, building lower-third graphics, or creating sizzle reels. Select No if you have a separate creative agency handling all content and the AV vendor will only execute the live show." />
+          </div>
+          <div role="group" aria-labelledby="content-creative-services-needed-label" className="grid grid-cols-2 gap-4 mt-2">
             <GatewayCard
               isSelected={safeData.contentServicesNeeded === "YES"}
               title="Yes — I need creative/content services from the AV vendor"
@@ -346,16 +353,17 @@ const ContentCreativeStep = ({
                   {/* Field 8 — Live Data Feeds (two-step: Yes/No then ownership) */}
                   <div className="py-4 border-b border-[#f0f2f8]">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <span className="flex items-center gap-1 text-sm font-semibold text-[#222628]">
+                      <span id="content-creative-live-data-label" className="flex items-center gap-1 text-sm font-semibold text-[#222628]">
                         Live Data Feeds / Real-Time Displays
                         <InfoTooltip text="Do you need live data, leaderboards, real-time polling results, or dynamic content displayed on screens during the event? Examples: sales contest leaderboards, live Twitter feeds, attendee polling. Complex scope — typically requires custom integrations." />
                       </span>
                       <div className="flex flex-col items-end gap-2">
-                        <div className="flex gap-2">
+                        <div role="group" aria-labelledby="content-creative-live-data-label" className="flex gap-2">
                           {(["YES", "NO"] as const).map((opt) => (
                             <button
                               key={opt}
                               type="button"
+                              aria-pressed={safeData.liveDataFeeds.needed === opt}
                               className={miniYesNoCls(opt, safeData.liveDataFeeds.needed)}
                               onClick={() =>
                                 onChange({
@@ -372,11 +380,12 @@ const ContentCreativeStep = ({
                           ))}
                         </div>
                         {safeData.liveDataFeeds.needed === "YES" && (
-                          <div className="flex gap-2">
+                          <div role="group" aria-label="Live data feed ownership" className="flex gap-2">
                             {OWNERSHIP_OPTS.map((opt) => (
                               <button
                                 key={opt.value}
                                 type="button"
+                                aria-pressed={safeData.liveDataFeeds.ownership === opt.value}
                                 className={ownershipCls(opt.value, safeData.liveDataFeeds.ownership)}
                                 onClick={() =>
                                   onChange({
@@ -435,14 +444,15 @@ const ContentCreativeStep = ({
             {/* Field 12 — Creative Direction Notes */}
             <div>
               <p className={groupLabelClass}>Creative Direction</p>
-              <label className={labelClass}>
-                Creative Direction Notes
-                <span className="ml-2 text-xs font-normal normal-case tracking-normal text-slate-400">
-                  (Optional)
-                </span>
-                <InfoTooltip text="Describe your visual identity, color palette, theme direction, creative references, or anything that helps vendors understand your aesthetic. Brand guides and logo files can be added under Uploads & Co-Vendors. The more specific you are, the better vendors can tailor their creative pitch." />
-              </label>
-              <textarea
+              <div className={labelClass}>
+              <label htmlFor="content-creative-creative-direction-notes" className="flex items-center gap-[inherit]">
+              Creative Direction Notes
+              <span className="ml-2 text-xs font-normal normal-case tracking-normal text-slate-400">
+              (Optional)
+              </span></label>
+              <InfoTooltip text="Describe your visual identity, color palette, theme direction, creative references, or anything that helps vendors understand your aesthetic. Brand guides and logo files can be added under Uploads & Co-Vendors. The more specific you are, the better vendors can tailor their creative pitch." />
+              </div>
+              <textarea id="content-creative-creative-direction-notes"
                 rows={5}
                 maxLength={1000}
                 className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"

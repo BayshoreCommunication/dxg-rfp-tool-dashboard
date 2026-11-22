@@ -13,10 +13,14 @@ import { SUPPORT_UPDATED_EVENT } from "@/lib/support/realtime";
 import {
   BellDot,
   Bot,
+  LifeBuoy,
   LoaderCircle,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
 } from "lucide-react";
+import OrgMenu from "@/components/layout/OrgMenu";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -102,7 +106,7 @@ function AccountMenu({
         className={cn(
           "group relative grid place-items-center rounded-full border border-primary/30 bg-primary/10 font-extrabold text-primary transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:text-[#38bdf8] dark:focus-visible:ring-offset-[#0d1d28]",
           "h-10 w-10 text-xs",
-          open && "border-primary/50 bg-primary/15 shadow-[0_10px_24px_-16px_rgba(0,138,210,0.9)]",
+          open && "border-primary/50 bg-primary/15 shadow-[0_10px_24px_-16px_rgba(33,140,203,0.9)]",
         )}
       >
         {initials}
@@ -167,14 +171,73 @@ function AccountMenu({
   );
 }
 
+function SidebarRow({
+  href,
+  icon,
+  label,
+  active,
+  badge,
+  collapsed,
+  compact = false,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  badge: number | null;
+  collapsed: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      title={collapsed ? label : undefined}
+      aria-label={collapsed ? label : undefined}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group relative flex w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        compact ? "h-11" : "h-12",
+        collapsed && "justify-center px-0",
+        active
+          ? "bg-primary text-white shadow-[0_10px_24px_-14px_rgba(0,138,210,0.9)]"
+          : "text-slate-600 hover:bg-primary/5 hover:text-primary dark:text-slate-300",
+      )}
+    >
+      <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+        {icon}
+        {badge !== null && collapsed && (
+          <span className="pointer-events-none absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#008ad2] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
+      </span>
+      {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
+      {!collapsed && badge !== null && (
+        <span
+          className={cn(
+            "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-black leading-none",
+            active ? "bg-white/25 text-white" : "bg-slate-100 text-slate-600",
+          )}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 const Sidebar = ({
   assistantOpen = false,
   onOpenAssistant,
   currentUser,
+  collapsed = false,
+  onToggleCollapsed,
 }: {
   assistantOpen?: boolean;
   onOpenAssistant?: () => void;
   currentUser?: SidebarUser;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }) => {
   const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -186,6 +249,16 @@ const Sidebar = ({
   const isItemActive = (item: NavItem) =>
     pathname === item.href ||
     (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
+
+  const badgeFor = (item: NavItem) =>
+    item.id === "vendor-responses" && vendorUnreadCount > 0
+      ? vendorUnreadCount
+      : item.id === "support" && supportUnreadCount > 0
+        ? supportUnreadCount
+        : null;
+  // Support lives in the footer, with Settings; everything else is main navigation.
+  const supportItem = navigationConfig.find((item) => item.id === "support");
+  const mainNavItems = navigationConfig.filter((item) => item.id !== "support");
 
   const signOutHandler = async () => {
     if (signingOut) return;
@@ -331,156 +404,140 @@ const Sidebar = ({
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-50 hidden h-dvh min-h-0 w-[90px] flex-col overflow-visible border-r border-gray-200 bg-white lg:flex">
-      <div className="flex h-[68px] shrink-0 items-center justify-center border-b border-gray-200">
-        <Link
-          href="/dashboard"
-          aria-label="Go to dashboard"
-          className="group flex h-12 w-12 items-center justify-center overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+      <aside
+        aria-label="Sidebar"
+        data-collapsed={collapsed}
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 hidden h-dvh min-h-0 flex-col overflow-visible border-r border-gray-200 bg-white transition-[width] duration-200 lg:flex dark:border-[#22343f] dark:bg-[#0d1d28]",
+          collapsed ? "w-[88px]" : "w-[248px]",
+        )}
+      >
+        <div
+          className={cn(
+            "flex h-[68px] shrink-0 items-center border-b border-gray-200 px-3 dark:border-[#22343f]",
+            collapsed ? "justify-center" : "justify-between",
+          )}
         >
-          {avatarUrl ? (
+          <Link
+            href="/dashboard"
+            aria-label="Go to dashboard"
+            className="group flex h-12 min-w-0 items-center gap-2 overflow-hidden rounded-xl transition-all duration-200 hover:-translate-y-0.5"
+          >
             <Image
               src={avatarUrl}
-              alt={"Logo"}
+              alt="Logo"
               width={64}
               height={64}
-              className="h-full w-full object-contain p-1.5"
+              className="h-12 w-12 shrink-0 object-contain p-1.5"
             />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              Logo
-            </div>
+            {!collapsed && (
+              <span className="truncate text-base font-extrabold text-slate-900 dark:text-white">
+                RFPilot
+              </span>
+            )}
+          </Link>
+          {!collapsed && onToggleCollapsed && (
+            <button
+              type="button"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              onClick={onToggleCollapsed}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-[#12293a]"
+            >
+              <PanelLeftClose size={18} aria-hidden />
+            </button>
           )}
-        </Link>
-      </div>
+        </div>
 
-      <nav
-        aria-label="Primary navigation"
-        className="sidebar-scrollbar flex min-h-0 flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-4"
-      >
-        {navigationConfig.map((item) => {
-          const isActive = isItemActive(item);
-          const badge =
-            item.id === "vendor-responses" && vendorUnreadCount > 0
-              ? vendorUnreadCount
-              : item.id === "support" && supportUnreadCount > 0
-                ? supportUnreadCount
-                : null;
-
-          return (
-            <Link
+        <nav
+          aria-label="Primary navigation"
+          className="sidebar-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-4"
+        >
+          {collapsed && onToggleCollapsed && (
+            <button
+              type="button"
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+              onClick={onToggleCollapsed}
+              className="mb-2 grid h-10 w-full place-items-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-[#12293a]"
+            >
+              <PanelLeftOpen size={18} aria-hidden />
+            </button>
+          )}
+          {mainNavItems.map((item) => (
+            <SidebarRow
               key={item.id}
               href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className="block w-full"
-            >
-              <div
-                className={cn(
-                  "group relative flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-3 transition-all duration-200",
-                  isActive
-                    ? "bg-linear-to-b from-primary/10 to-primary/5"
-                    : "hover:bg-primary/5",
-                )}
-              >
-                {isActive && (
-                  <div className="absolute -left-3 top-1/2 h-7 w-[4px] -translate-y-1/2 rounded-r-full bg-primary shadow-[2px_0_8px_rgba(0,138,210,0.4)]" />
-                )}
+              icon={item.icon}
+              label={item.title}
+              active={isItemActive(item)}
+              badge={badgeFor(item)}
+              collapsed={collapsed}
+            />
+          ))}
+        </nav>
 
-                <div
-                  className={cn(
-                    "relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
-                    isActive
-                      ? "bg-primary/15 text-primary"
-                      : "text-gray-400 group-hover:bg-primary/10 group-hover:text-primary",
-                  )}
-                >
-                  {item.icon}
-                  {badge !== null && (
-                    <span className="pointer-events-none absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#008ad2] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
-                      {badge > 99 ? "99+" : badge}
-                    </span>
-                  )}
-                </div>
+        <div
+          data-testid="sidebar-footer-divider"
+          className="mx-4 h-px shrink-0 bg-linear-to-r from-transparent via-gray-200 to-transparent dark:via-[#283c4a]"
+        />
 
-                <span
-                  className={cn(
-                    "mt-0.5 w-full whitespace-normal break-normal text-center text-[9.5px] font-bold leading-[1.08] tracking-wide",
-                    isActive
-                      ? "text-primary"
-                      : "text-gray-500 group-hover:text-primary",
-                  )}
-                >
-                  {item.title}
-                </span>
-              </div>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div
-        data-testid="sidebar-footer-divider"
-        className="mx-4 h-px shrink-0 bg-linear-to-r from-transparent via-gray-200 to-transparent dark:via-[#283c4a]"
-      />
-
-      <div className="flex shrink-0 flex-col items-center gap-2 px-2.5 py-3">
-        {onOpenAssistant && (
-          <button
-            id="ai-assistant-launcher"
-            type="button"
-            aria-label={
-              assistantOpen
-                ? "Hide AI Assistant popup"
-                : "Open AI Assistant"
-            }
-            aria-haspopup="dialog"
-            aria-expanded={assistantOpen}
-            title="AI Assistant"
-            onClick={onOpenAssistant}
-            className={cn(
-              "group relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-[background-color,border-color,color,box-shadow] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-              assistantOpen
-                ? "border-[#0e1b2b] bg-[#0e1b2b] text-white shadow-[0_14px_30px_-16px_rgba(14,27,43,0.9)]"
-                : "border-primary/25 bg-primary/10 text-[#009da4] shadow-[0_14px_30px_-18px_rgba(0,194,201,0.9)] hover:border-primary/45 hover:bg-primary/15",
-            )}
-          >
-            <span
+        <div className="flex shrink-0 flex-col gap-1 px-3 py-3">
+          {onOpenAssistant && (
+            <button
+              id="ai-assistant-launcher"
+              type="button"
+              aria-label={
+                assistantOpen ? "Hide AI Assistant popup" : "Open AI Assistant"
+              }
+              aria-haspopup="dialog"
+              aria-expanded={assistantOpen}
+              title="AI Assistant"
+              onClick={onOpenAssistant}
               className={cn(
-                "flex transition-transform duration-300 ease-out group-hover:-translate-y-0.5 motion-reduce:transform-none",
-                !assistantOpen &&
-                  "motion-safe:animate-[assistant-float_3.8s_ease-in-out_infinite]",
+                "group flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                collapsed && "justify-center px-0",
+                assistantOpen
+                  ? "bg-[#0e1b2b] text-white"
+                  : "text-[#009da4] hover:bg-primary/10",
               )}
             >
-              <Bot size={21} strokeWidth={2.2} aria-hidden />
-            </span>
-          </button>
-        )}
-
-        <Link
-          href="/notification"
-          title="Notifications"
-          className={cn(
-            "relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200",
-            pathname.startsWith("/notification")
-              ? "border-primary/20 bg-primary/10 text-primary shadow-[0_10px_25px_-18px_rgba(0,138,210,0.95)]"
-              : "border-slate-200 bg-white text-slate-500 hover:border-primary/10 hover:bg-primary/5 hover:text-primary",
+              <Bot size={20} strokeWidth={2.2} aria-hidden />
+              {!collapsed && <span>AI Assistant</span>}
+            </button>
           )}
-        >
-          <BellDot size={19} strokeWidth={2.1} />
-          {unreadCount > 0 && (
-            <span className="pointer-events-none absolute right-0 top-0 inline-flex h-4 min-w-[20px] translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-black leading-none text-white ring-2 ring-white shadow-[0_8px_18px_-8px_rgba(244,63,94,0.95)]">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </Link>
 
-        <AccountMenu
-          currentUser={currentUser}
-          signingOut={signingOut}
-          onSignOut={() => void signOutHandler()}
-          placement="desktop"
-        />
-      </div>
+          {supportItem && (
+            <SidebarRow
+              href={supportItem.href}
+              icon={<LifeBuoy size={20} aria-hidden />}
+              label="Support"
+              active={isItemActive(supportItem)}
+              badge={badgeFor(supportItem)}
+              collapsed={collapsed}
+              compact
+            />
+          )}
+          <SidebarRow
+            href="/settings"
+            icon={<Settings size={20} aria-hidden />}
+            label="Settings"
+            active={pathname.startsWith("/settings")}
+            badge={null}
+            collapsed={collapsed}
+            compact
+          />
+
+          <div className="mt-2">
+            <OrgMenu
+              currentUser={currentUser}
+              unreadCount={unreadCount}
+              signingOut={signingOut}
+              onSignOut={() => void signOutHandler()}
+              collapsed={collapsed}
+            />
+          </div>
+        </div>
       </aside>
 
     <header
@@ -592,7 +649,7 @@ const Sidebar = ({
               >
                 {item.icon}
                 {badge !== null && (
-                  <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#008ad2] px-1 text-[9px] font-black text-white ring-2 ring-white">
+                  <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#218ccb] px-1 text-[9px] font-black text-white ring-2 ring-white">
                     {badge > 99 ? "99+" : badge}
                   </span>
                 )}

@@ -58,7 +58,7 @@ export default function VendorResponseSelectionPanel({
                       : new Set(responses.map((response) => response.responseId)),
                   )
                 }
-                className="h-4 w-4 accent-[#008ad2]"
+                className="h-4 w-4 accent-[#218ccb]"
               />
               Select all
             </label>
@@ -119,7 +119,7 @@ export default function VendorResponseSelectionPanel({
               className={cn(
                 "rounded-3xl transition",
                 checked &&
-                  "[&_article]:border-brand [&_article]:shadow-[0_8px_24px_rgba(0,138,210,0.10)]",
+                  "[&_article]:border-brand [&_article]:shadow-[0_8px_24px_rgba(33,140,203,0.10)]",
               )}
             >
               {selecting ? (
@@ -135,7 +135,7 @@ export default function VendorResponseSelectionPanel({
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleResponse(response.responseId)}
-                    className="h-4 w-4 accent-[#008ad2]"
+                    className="h-4 w-4 accent-[#218ccb]"
                   />
                   <span className="truncate">
                     Select {response.vendorName || "vendor response"}

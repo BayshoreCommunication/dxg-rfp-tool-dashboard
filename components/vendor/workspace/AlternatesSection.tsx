@@ -54,7 +54,7 @@ export default function AlternatesSection({
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4">
         <BadgeDollarSign
           size={20}
-          className="text-[#008ad2]"
+          className="text-[#218ccb]"
           aria-hidden="true"
         />
         <p className="text-sm text-[#52687b]">
@@ -201,7 +201,7 @@ export default function AlternatesSection({
             </label>
             <label className="mt-3 flex items-center gap-2 text-xs font-bold text-[#42576a]">
               <input
-                className="h-4 w-4 accent-[#008ad2]"
+                className="h-4 w-4 accent-[#218ccb]"
                 type="checkbox"
                 checked={alternate.recommended}
                 disabled={disabled}
@@ -225,7 +225,7 @@ export default function AlternatesSection({
         <button
           type="button"
           disabled={disabled}
-          className="mt-4 inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-4 py-2.5 text-sm font-extrabold text-[#0075b4] hover:bg-[#eef8fd] disabled:opacity-50"
+          className="mt-4 inline-flex items-center gap-2 rounded-md border border-[#218ccb] px-4 py-2.5 text-sm font-extrabold text-[#0075b4] hover:bg-[#eef8fd] disabled:opacity-50"
           onClick={() =>
             onChange({
               ...response,

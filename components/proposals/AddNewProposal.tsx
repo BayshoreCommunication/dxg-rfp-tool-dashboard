@@ -8,7 +8,7 @@ import {
 } from "@/app/actions/proposals";
 import { getSettingsAction } from "@/app/actions/settings";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import AddProposalUpload from "./AddProposalUpload";
 import BudgetProposalPreferences from "./ProposalsProcess.tsx/BudgetProposalPreferences";
@@ -24,6 +24,7 @@ import UploadsReferenceMaterials from "./ProposalsProcess.tsx/UploadsReferenceMa
 import VenueTechnicalRequirements from "./ProposalsProcess.tsx/VenueTechnicalRequirements";
 import ProposalSuccessfullyCreate from "./ProposalSuccessfullyCreate";
 import SaveCopyModal from "./SaveCopyModal";
+import { useProposalAutosave } from "./useProposalAutosave";
 import ProposalWorkflowShell from "./ProposalWorkflowShell";
 import ProposalContextPanel from "./ProposalContextPanel";
 import ProposalDraftPanel from "./ProposalDraftPanel";
@@ -1441,13 +1442,7 @@ const AddNewProposal = ({
   // Room the step should open and scroll to after it blocked Continue. The
   // token makes a repeat attempt on the same room re-trigger the scroll.
   const [focusRoom, setFocusRoom] = useState<{ index: number; token: number } | null>(null);
-  // Autosave. The wizard held hours of room-by-room detail in memory with the
-  // only save on the last page, so a refresh or a stray click lost all of it.
-  const [autosaveState, setAutosaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  /** Serialized payload last known to be on the server; guards no-op writes. */
-  const savedSnapshotRef = useRef<string | null>(null);
-  const autosaveInFlightRef = useRef(false);
-
+  // Autosave state lives in useProposalAutosave (declared below, next to the payload it saves).
   const [proposalSettings, setProposalSettings] = useState<ProposalSettings>(
     defaultProposalSettings,
   );
@@ -2193,59 +2188,40 @@ const AddNewProposal = ({
     !loadingExisting &&
     proposalData.proposalStatus === "unsubmitted";
 
-  useEffect(() => {
-    if (!autosaveEligible) return;
-    const snapshot = JSON.stringify(buildProposalPayload());
-    // First pass after load records what the server already has, so opening a
-    // proposal and touching nothing writes nothing.
-    if (savedSnapshotRef.current === null) {
-      savedSnapshotRef.current = snapshot;
-      return;
-    }
-    if (snapshot === savedSnapshotRef.current) return;
-    if (isSubmitting || isSavingDraft) return;
-
-    const timer = window.setTimeout(async () => {
-      if (autosaveInFlightRef.current) return;
-      autosaveInFlightRef.current = true;
-      setAutosaveState("saving");
-      try {
-        const result = await updateProposalAction(proposalId as string, {
-          ...JSON.parse(snapshot),
-          status: "unsubmitted",
-          isDraft: true,
-        });
-        if (result.success) {
-          savedSnapshotRef.current = snapshot;
-          setAutosaveState("saved");
-        } else {
-          // Surfaced quietly: the planner keeps working and the explicit save
-          // still reports properly, but they are told the copy is not safe yet.
-          setAutosaveState("error");
-        }
-      } catch {
-        setAutosaveState("error");
-      } finally {
-        autosaveInFlightRef.current = false;
-      }
-    }, 1500);
-    return () => window.clearTimeout(timer);
+  // The hook owns debouncing, the in-flight rescheduling and failure recovery. `snapshot` is the
+  // serialized payload, so equal strings mean nothing changed and nothing is written.
+  const autosaveSnapshot = useMemo(
+    () => (autosaveEligible ? JSON.stringify(buildProposalPayload()) : ""),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autosaveEligible, proposalId, proposalData, rooms, proposalSettings, isSubmitting, isSavingDraft]);
+    [autosaveEligible, proposalData, rooms, proposalSettings],
+  );
+  const autosave = useProposalAutosave({
+    enabled: autosaveEligible,
+    snapshot: autosaveSnapshot,
+    paused: isSubmitting || isSavingDraft,
+    save: async (snapshot) => {
+      const result = await updateProposalAction(proposalId as string, {
+        ...JSON.parse(snapshot),
+        status: "unsubmitted",
+        isDraft: true,
+      });
+      return result.success;
+    },
+  });
+  const autosaveState = autosave.state;
 
   // An autosave may still be pending when the tab closes; warn rather than
   // silently dropping the last edits.
+  const { hasUnsavedChanges } = autosave;
   useEffect(() => {
     const warnIfUnsaved = (event: BeforeUnloadEvent) => {
-      if (!autosaveEligible || savedSnapshotRef.current === null) return;
-      if (JSON.stringify(buildProposalPayload()) === savedSnapshotRef.current) return;
+      if (!autosaveEligible || !hasUnsavedChanges()) return;
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", warnIfUnsaved);
     return () => window.removeEventListener("beforeunload", warnIfUnsaved);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autosaveEligible, proposalData, rooms, proposalSettings]);
+  }, [autosaveEligible, hasUnsavedChanges]);
 
   const handleSubmit = async (
     statusOverride?: "unsubmitted" | "submitted",
@@ -2291,8 +2267,7 @@ const AddNewProposal = ({
       if (result.success) {
         // The server now matches what was just sent, so the pending autosave
         // has nothing left to write and the unsaved-changes warning clears.
-        savedSnapshotRef.current = JSON.stringify(payload);
-        setAutosaveState("saved");
+        autosave.markSaved(JSON.stringify(payload));
         if (asDraft) {
           toast.success("Draft saved successfully!");
           router.push("/proposals");
@@ -2424,15 +2399,15 @@ const AddNewProposal = ({
           if (normalized.roomByRoom && normalized.roomByRoom.length > 0) {
             setRooms(normalized.roomByRoom.map((r) => ({ ...defaultRoom(), ...r })));
           }
-          toast.success("? Fields pre-filled from your document!");
+          toast.success("Fields pre-filled from your document.");
         } else {
           toast.info(
-            "No matching fields found � please fill the form manually.",
+            "No matching fields found. Please fill the form manually.",
           );
         }
       } catch {
         toast.info(
-          "Couldn't read the document � please fill the form manually.",
+          "Couldn't read the document. Please fill the form manually.",
         );
       } finally {
         setIsExtracting(false);
@@ -2457,7 +2432,7 @@ const AddNewProposal = ({
       reportIncompleteRoom();
       return;
     }
-    // Steps 4 (Hybrid & Virtual), 5 (Content & Creative), 6 (Video Recording) � no required validation
+    // Steps 4 (Hybrid & Virtual), 5 (Content & Creative), 6 (Video Recording) - no required validation
     if (proposalProcessStep === 7 && !isVenueStepValid()) {
       return;
     }
@@ -2663,10 +2638,10 @@ const AddNewProposal = ({
     >
       {loadingExisting && (
         <div className="flex w-full flex-col gap-4 @min-[1000px]:flex-row">
-          {/* Form card skeleton � 80% */}
+          {/* Form card skeleton - 80% */}
           <div className="min-w-0 flex-1 space-y-6">
             <div className="flex min-h-screen flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #2fc6f5, #008ad2)" }} />
+              <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #2fc6f5, #218ccb)" }} />
               <div className="flex-1 space-y-6 p-8">
                 <div className="space-y-1">
                   <div className="h-6 w-48 animate-pulse rounded-lg bg-slate-200" />
@@ -2692,11 +2667,11 @@ const AddNewProposal = ({
               </div>
               <div className="flex justify-between border-t border-slate-100 px-8 py-4">
                 <div className="h-9 w-24 animate-pulse rounded-xl bg-slate-100" />
-                <div className="h-9 w-28 animate-pulse rounded-xl bg-[#008ad2]/20" />
+                <div className="h-9 w-28 animate-pulse rounded-xl bg-[#218ccb]/20" />
               </div>
             </div>
           </div>
-          {/* Step sidebar skeleton � 20% */}
+          {/* Step sidebar skeleton - 20% */}
           <div className="w-full shrink-0 space-y-2 @min-[1000px]:w-[288px]">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               {Array.from({ length: 9 }).map((_, i) => (
@@ -3018,10 +2993,11 @@ const AddNewProposal = ({
                   : autosaveState === "saved"
                     ? "All changes saved"
                     : autosaveState === "error"
-                      ? "Save failed"
+                      ? "Save failed. Latest changes are not saved."
                       : "Auto-save on"
                 : undefined}
               autosaveError={autosaveState === "error"}
+              onAutosaveRetry={() => void autosave.retry()}
             />
           </div>
         </div>

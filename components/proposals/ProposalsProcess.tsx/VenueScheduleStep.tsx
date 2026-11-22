@@ -483,11 +483,12 @@ const VenueScheduleStep = ({
 
           {/* Venue Name */}
           <div className="mb-5">
-            <label className={labelClass}>
-              Venue Name <span className="text-red-500">*</span>
-              <InfoTooltip text="Full official name of the venue as it appears on the venue's website or contract. Appears on the cover subtitle, Section 1 Scope Overview, Section 6 Venue row, and the union note callout." />
-            </label>
-            <input
+            <div className={labelClass}>
+            <label htmlFor="venue-schedule-venue-name" className="flex items-center gap-[inherit]">
+            Venue Name <span className="text-red-500">*</span></label>
+            <InfoTooltip text="Full official name of the venue as it appears on the venue's website or contract. Appears on the cover subtitle, Section 1 Scope Overview, Section 6 Venue row, and the union note callout." />
+            </div>
+            <input id="venue-schedule-venue-name"
               type="text"
               maxLength={120}
               value={safeData.venueName}
@@ -497,7 +498,7 @@ const VenueScheduleStep = ({
             />
             <div className="mt-1 flex justify-between items-start">
               {showErrors && !safeData.venueName.trim() ? (
-                <p className="text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="text-xs text-red-500 normal-case">Required</p>
               ) : <span />}
               <span className="text-xs text-[#969798] shrink-0 ml-2">
                 {safeData.venueName.length}/120
@@ -509,11 +510,12 @@ const VenueScheduleStep = ({
               before the planner enters a city. */}
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
-              <label className={labelClass}>
-                State <span className="text-red-500">*</span>
-                <InfoTooltip text="State or region. Used for jurisdiction context, union market detection, and time zone auto-detection. Selecting a state automatically suggests the correct time zone below." />
-              </label>
-              <GlobalSelect
+              <div className={labelClass}>
+              <label id="venue-schedule-state-label" className="flex items-center gap-[inherit]">
+              State <span className="text-red-500">*</span></label>
+              <InfoTooltip text="State or region. Used for jurisdiction context, union market detection, and time zone auto-detection. Selecting a state automatically suggests the correct time zone below." />
+              </div>
+              <GlobalSelect id="venue-schedule-state"
                 aria-label="Venue state"
                 value={safeData.venueState}
                 onChange={(e) => handleStateChange(e.target.value)}
@@ -525,15 +527,16 @@ const VenueScheduleStep = ({
                 ))}
               </GlobalSelect>
               {showErrors && !safeData.venueState && (
-                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
             </div>
             <div>
-              <label className={labelClass}>
-                City <span className="text-red-500">*</span>
-                <InfoTooltip text="The city where the venue is located. Compared against 20 known union markets to trigger the union jurisdiction advisory banner." />
-              </label>
-              <input
+              <div className={labelClass}>
+              <label htmlFor="venue-schedule-city" className="flex items-center gap-[inherit]">
+              City <span className="text-red-500">*</span></label>
+              <InfoTooltip text="The city where the venue is located. Compared against 20 known union markets to trigger the union jurisdiction advisory banner." />
+              </div>
+              <input id="venue-schedule-city"
                 type="text"
                 aria-label="Venue city"
                 value={safeData.venueCity}
@@ -542,7 +545,7 @@ const VenueScheduleStep = ({
                 className={`${inputClass} ${err(safeData.venueCity)}`}
               />
               {showErrors && !safeData.venueCity.trim() && (
-                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
             </div>
           </div>
@@ -563,11 +566,12 @@ const VenueScheduleStep = ({
           {/* Venue Type + Venue Confirmed Status */}
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
-              <label className={labelClass}>
-                Venue Type <span className="text-red-500">*</span>
-                <InfoTooltip text="Convention centers and arenas typically have union labor requirements; hotels and resorts vary. Helps vendors gauge infrastructure and labor expectations." />
-              </label>
-              <GlobalSelect
+              <div className={labelClass}>
+              <label id="venue-schedule-venue-type-label" className="flex items-center gap-[inherit]">
+              Venue Type <span className="text-red-500">*</span></label>
+              <InfoTooltip text="Convention centers and arenas typically have union labor requirements; hotels and resorts vary. Helps vendors gauge infrastructure and labor expectations." />
+              </div>
+              <GlobalSelect id="venue-schedule-venue-type" aria-labelledby="venue-schedule-venue-type-label"
                 value={safeData.venueType}
                 onChange={(e) => onChange({ venueType: e.target.value })}
                 className={`${selectClass} ${showErrors && !safeData.venueType ? "border-red-400 focus:border-red-400" : ""}`}
@@ -578,15 +582,16 @@ const VenueScheduleStep = ({
                 ))}
               </GlobalSelect>
               {showErrors && !safeData.venueType && (
-                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
             </div>
             <div>
-              <label className={labelClass}>
-                Venue Confirmed Status <span className="text-red-500">*</span>
-                <InfoTooltip text="Is your venue locked in? Vendors use this to gauge how firmly location specs can be relied upon. Unconfirmed venues may surface as a flag chip on the cover." />
-              </label>
-              <GlobalSelect
+              <div className={labelClass}>
+              <label id="venue-schedule-venue-confirmed-status-label" className="flex items-center gap-[inherit]">
+              Venue Confirmed Status <span className="text-red-500">*</span></label>
+              <InfoTooltip text="Is your venue locked in? Vendors use this to gauge how firmly location specs can be relied upon. Unconfirmed venues may surface as a flag chip on the cover." />
+              </div>
+              <GlobalSelect id="venue-schedule-venue-confirmed-status" aria-labelledby="venue-schedule-venue-confirmed-status-label"
                 value={safeData.venueConfirmedStatus}
                 onChange={(e) => onChange({ venueConfirmedStatus: e.target.value })}
                 className={`${selectClass} ${showErrors && !safeData.venueConfirmedStatus ? "border-red-400 focus:border-red-400" : ""}`}
@@ -598,7 +603,7 @@ const VenueScheduleStep = ({
                 <option value="NOT_SELECTED">Not yet selected — vendor recommendations welcome</option>
               </GlobalSelect>
               {showErrors && !safeData.venueConfirmedStatus && (
-                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
             </div>
           </div>
@@ -606,12 +611,13 @@ const VenueScheduleStep = ({
           {/* Venue Address + Time Zone */}
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
-              <label className={labelClass}>
-                Venue Address
-                <span className="ml-1 text-[#969798] text-xs font-normal normal-case tracking-normal">(optional)</span>
-                <InfoTooltip text="Full street address including ZIP code. Used for freight delivery coordination and vendor logistics planning." />
-              </label>
-              <input
+              <div className={labelClass}>
+              <label htmlFor="venue-schedule-venue-address" className="flex items-center gap-[inherit]">
+              Venue Address
+              <span className="ml-1 text-[#969798] text-xs font-normal normal-case tracking-normal">(optional)</span></label>
+              <InfoTooltip text="Full street address including ZIP code. Used for freight delivery coordination and vendor logistics planning." />
+              </div>
+              <input id="venue-schedule-venue-address"
                 type="text"
                 value={safeData.venueAddress}
                 onChange={(e) => onChange({ venueAddress: e.target.value })}
@@ -620,11 +626,12 @@ const VenueScheduleStep = ({
               />
             </div>
             <div>
-              <label className={labelClass}>
-                Time Zone <span className="text-red-500">*</span>
-                <InfoTooltip text="Time zone of the venue. Appended to all times in the Section 1 timeline, Section 9 proposal deadline, and venue section. Auto-detected when you select a state above." />
-              </label>
-              <GlobalSelect
+              <div className={labelClass}>
+              <label id="venue-schedule-time-zone-label" className="flex items-center gap-[inherit]">
+              Time Zone <span className="text-red-500">*</span></label>
+              <InfoTooltip text="Time zone of the venue. Appended to all times in the Section 1 timeline, Section 9 proposal deadline, and venue section. Auto-detected when you select a state above." />
+              </div>
+              <GlobalSelect id="venue-schedule-time-zone"
                 aria-label="Venue time zone"
                 value={displayedTimeZoneValue}
                 onChange={(e) => {
@@ -644,7 +651,7 @@ const VenueScheduleStep = ({
                 ))}
               </GlobalSelect>
               {showErrors && !safeData.timeZone && (
-                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
               {suggestedTimeZone && normalizedSelectedTimeZone === suggestedTimeZone && (
                 <p className="mt-1 text-xs text-[#1DBFD3] normal-case">
@@ -660,12 +667,12 @@ const VenueScheduleStep = ({
           <p className={groupLabelClass}>Union Status</p>
 
           <div className="mb-5">
-            <label className={labelClass}>
+            <p id="venue-schedule-does-your-contract-with-the-venue-requir-label" className={labelClass}>
               Does Your Contract With the Venue Require You to Use Union, Teamster, or In-House Labor?{" "}
               <span className="text-red-500">*</span>
               <InfoTooltip text="Some venue contracts mandate certified union AV technicians (IATSE, IBEW), Teamsters, or in-house labor for certain tasks. This triggers jurisdiction fields and adds a compliance note to Section 6, alerting vendors to budget union minimums and call times. If unsure, contact your venue's event services team." />
-            </label>
-            <div className="flex gap-3">
+            </p>
+            <div role="group" aria-labelledby="venue-schedule-does-your-contract-with-the-venue-requir-label" className="flex gap-3">
               <button
                 type="button"
                 className={unionVenueCls("YES", safeData.isUnionVenue)}
@@ -693,7 +700,7 @@ const VenueScheduleStep = ({
               </button>
             </div>
             {showErrors && !safeData.isUnionVenue && (
-              <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+              <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
             )}
             {safeData.isUnionVenue === "NOT_SURE" && (
               <p className="mt-2 text-xs text-amber-700 normal-case">
@@ -709,12 +716,12 @@ const VenueScheduleStep = ({
                 </p>
 
                 <div className="mb-4">
-                  <label className={labelClass}>
+                  <p id="venue-schedule-active-unions-at-this-venue-label" className={labelClass}>
                     Active Unions at This Venue
                     <span className="ml-1 text-xs font-normal normal-case text-slate-400">(conditional)</span>
                     <InfoTooltip text="Most large convention centers have multiple unions (e.g., IATSE for stage labor, IBEW for electrical, Teamsters for freight). Your venue coordinator can provide the complete list." />
-                  </label>
-                  <div className="flex flex-wrap gap-3">
+                  </p>
+                  <div role="group" aria-labelledby="venue-schedule-active-unions-at-this-venue-label" className="flex flex-wrap gap-3">
                     {UNION_OPTIONS.map((opt) => (
                       <PillCheckbox
                         key={opt}
@@ -732,10 +739,10 @@ const VenueScheduleStep = ({
 
                 {unionJurisdictions.includes("Other") && (
                   <div className="mb-4">
-                    <label className={labelClass}>
+                    <label htmlFor="venue-schedule-other-union-specify" className={labelClass}>
                       Other Union — Specify
                     </label>
-                    <input
+                    <input id="venue-schedule-other-union-specify"
                       type="text"
                       value={safeData.unionJurisdictionOther}
                       onChange={(e) =>
@@ -748,12 +755,13 @@ const VenueScheduleStep = ({
                 )}
 
                 <div>
-                  <label className={`${labelClass} mt-0`}>
-                    Details or Contract Language
-                    <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span>
-                    <InfoTooltip text="Add any specific details, jurisdictions, or contract language vendors should be aware of." />
-                  </label>
-                  <textarea
+                  <div className={`${labelClass} mt-0`}>
+                  <label htmlFor="venue-schedule-details-or-contract-language" className="flex items-center gap-[inherit]">
+                  Details or Contract Language
+                  <span className="ml-1 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                  <InfoTooltip text="Add any specific details, jurisdictions, or contract language vendors should be aware of." />
+                  </div>
+                  <textarea id="venue-schedule-details-or-contract-language"
                     rows={3}
                     value={safeData.unionLaborDetails}
                     onChange={(e) => onChange({ unionLaborDetails: e.target.value })}
@@ -773,10 +781,11 @@ const VenueScheduleStep = ({
           {/* Load-In + Rehearsal */}
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
-              <label className={labelClass}>
-                Load-In Date &amp; Time <span className="text-red-500">*</span>
-                <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue — this is the earliest you can start setup, not the show start. Typical load-in is 1–3 days before show day for large events." />
-              </label>
+              <div className={labelClass}>
+              <span className="flex items-center gap-[inherit]">
+              Load-In Date &amp; Time <span className="text-red-500">*</span></span>
+              <InfoTooltip text="When does your AV team have access to begin load-in? Confirm with the venue — this is the earliest you can start setup, not the show start. Typical load-in is 1–3 days before show day for large events." />
+              </div>
               <GlobalDateTimeInput
                 label="Load-In date and time"
                 hideLabel
@@ -797,7 +806,7 @@ const VenueScheduleStep = ({
                 placeholder="Select date & time"
               />
               {fieldErrors.loadInDate && (
-                <p className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
                   {fieldErrors.loadInDate}
                 </p>
               )}
@@ -809,10 +818,11 @@ const VenueScheduleStep = ({
             </div>
 
             <div>
-              <label className={labelClass}>
-                Rehearsal Date &amp; Time
-                <InfoTooltip text="When is your speaker/tech rehearsal scheduled? Most productions run a full tech rehearsal the day before show day. Leave blank if no formal rehearsal is planned — timeline column will display 'TBD'." />
-              </label>
+              <div className={labelClass}>
+              <span className="flex items-center gap-[inherit]">
+              Rehearsal Date &amp; Time</span>
+              <InfoTooltip text="When is your speaker/tech rehearsal scheduled? Most productions run a full tech rehearsal the day before show day. Leave blank if no formal rehearsal is planned — timeline column will display 'TBD'." />
+              </div>
               <GlobalDateTimeInput
                 label="Rehearsal date and time"
                 hideLabel
@@ -833,7 +843,7 @@ const VenueScheduleStep = ({
                 placeholder="Select date & time (optional)"
               />
               {fieldErrors.rehearsalDate && (
-                <p className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
                   {fieldErrors.rehearsalDate}
                 </p>
               )}
@@ -853,11 +863,12 @@ const VenueScheduleStep = ({
           {/* Show Start + Show End */}
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
-              <label className={labelClass}>
-                Show Start Date &amp; Time <span className="text-red-500">*</span>
-                <InfoTooltip text="When does the show/general session officially begin? Populates the Section 1 timeline and is used to calculate overall production runtime alongside Show End." />
-              </label>
-              <GlobalDateTimeInput
+              <div className={labelClass}>
+              <label id="venue-schedule-show-start-date-time-label" className="flex items-center gap-[inherit]">
+              Show Start Date &amp; Time <span className="text-red-500">*</span></label>
+              <InfoTooltip text="When does the show/general session officially begin? Populates the Section 1 timeline and is used to calculate overall production runtime alongside Show End." />
+              </div>
+              <GlobalDateTimeInput id="venue-schedule-show-start-date-time" ariaLabelledBy="venue-schedule-show-start-date-time-label"
                 hideLabel
                 showFormatInLabel={false}
                 showTime
@@ -874,21 +885,22 @@ const VenueScheduleStep = ({
                 placeholder="Select date & time"
               />
               {fieldErrors.showStartDate && (
-                <p className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
                   {fieldErrors.showStartDate}
                 </p>
               )}
               {showErrors && !safeData.showStartDate.trim() && (
-                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
             </div>
 
             <div>
-              <label className={labelClass}>
-                Show End Date &amp; Time <span className="text-red-500">*</span>
-                <InfoTooltip text="When does the show/general session officially end? Must be on or after Show Start. Populates the Section 1 timeline and marks the end of live production." />
-              </label>
-              <GlobalDateTimeInput
+              <div className={labelClass}>
+              <label id="venue-schedule-show-end-date-time-label" className="flex items-center gap-[inherit]">
+              Show End Date &amp; Time <span className="text-red-500">*</span></label>
+              <InfoTooltip text="When does the show/general session officially end? Must be on or after Show Start. Populates the Section 1 timeline and marks the end of live production." />
+              </div>
+              <GlobalDateTimeInput id="venue-schedule-show-end-date-time" ariaLabelledBy="venue-schedule-show-end-date-time-label"
                 hideLabel
                 showFormatInLabel={false}
                 showTime
@@ -905,12 +917,12 @@ const VenueScheduleStep = ({
                 placeholder="Select date & time"
               />
               {fieldErrors.showEndDate && (
-                <p className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
                   {fieldErrors.showEndDate}
                 </p>
               )}
               {showErrors && !safeData.showEndDate.trim() && (
-                <p className="mt-1 text-xs text-red-500 normal-case">Required</p>
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">Required</p>
               )}
             </div>
           </div>
@@ -918,11 +930,12 @@ const VenueScheduleStep = ({
           {/* Strike */}
           <div className="mb-5 grid grid-cols-2 gap-5">
             <div>
-              <label className={labelClass}>
-                Strike Date &amp; Time <span className="text-red-500">*</span>
-                <InfoTooltip text="When must all equipment be fully removed from the venue? This is your final load-out deadline per the venue contract — typically the same evening as final show day or early next morning. Union venues may have strict overtime rules after the contracted strike window." />
-              </label>
-              <GlobalDateTimeInput
+              <div className={labelClass}>
+              <label id="venue-schedule-strike-date-time-label" className="flex items-center gap-[inherit]">
+              Strike Date &amp; Time <span className="text-red-500">*</span></label>
+              <InfoTooltip text="When must all equipment be fully removed from the venue? This is your final load-out deadline per the venue contract — typically the same evening as final show day or early next morning. Union venues may have strict overtime rules after the contracted strike window." />
+              </div>
+              <GlobalDateTimeInput id="venue-schedule-strike-date-time" ariaLabelledBy="venue-schedule-strike-date-time-label"
                 hideLabel
                 showFormatInLabel={false}
                 showTime
@@ -939,7 +952,7 @@ const VenueScheduleStep = ({
                 placeholder="Select date & time"
               />
               {fieldErrors.strikeDate && (
-                <p className="mt-1 text-xs text-red-500 normal-case">
+                <p role="alert" className="mt-1 text-xs text-red-500 normal-case">
                   {fieldErrors.strikeDate}
                 </p>
               )}

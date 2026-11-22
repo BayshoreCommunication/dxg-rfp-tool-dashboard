@@ -217,8 +217,8 @@ function WhatNext({ blocked, mappings, vendorName, vendorEmail, proposalId, prop
           ? `${name} left ${gaps.length} ${gaps.length === 1 ? "requirement" : "requirements"} unanswered or only partly answered. You can ask them about it, or compare all vendors as things stand.`
           : `${name} covered every requirement. Compare all vendors when you are ready.`}</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {gaps.length > 0 && <Link href={askHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#008ad2] px-3.5 text-xs font-bold text-white hover:bg-[#0076b4]"><MailPlus size={13} aria-hidden="true"/>Ask {name} about the {gaps.length === 1 ? "gap" : `${gaps.length} gaps`}</Link>}
-          <Link href={compareHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-bold text-slate-800 hover:border-[#008ad2]">Compare all vendors <ArrowRight size={13} aria-hidden="true"/></Link>
+          {gaps.length > 0 && <Link href={askHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#218ccb] px-3.5 text-xs font-bold text-white hover:bg-[#0076b4]"><MailPlus size={13} aria-hidden="true"/>Ask {name} about the {gaps.length === 1 ? "gap" : `${gaps.length} gaps`}</Link>}
+          <Link href={compareHref} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-bold text-slate-800 hover:border-[#218ccb]">Compare all vendors <ArrowRight size={13} aria-hidden="true"/></Link>
         </div>
       </>}
   </div>;
@@ -288,8 +288,8 @@ export default function VendorFactsSection({ proposalId, proposalTitle, vendorNa
     {result?.run.status === "succeeded" && <>
       {result.run.contradictionCount > 0 && <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800"><CircleAlert size={14}/>{name} gave conflicting answers in places. They are kept side by side under Numbers and dates they gave so you can decide which is right.</p>}
       <div className="mt-4 flex gap-2 border-b border-slate-200" role="tablist" aria-label="Analysis views">
-        <button type="button" role="tab" aria-selected={tab === "mappings"} onClick={() => setTab("mappings")} className={`border-b-2 px-3 py-2 text-sm font-bold ${tab === "mappings" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>What they answered</button>
-        <button type="button" role="tab" aria-selected={tab === "facts"} onClick={() => setTab("facts")} className={`border-b-2 px-3 py-2 text-sm font-bold ${tab === "facts" ? "border-[#008ad2] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Numbers and dates they gave</button>
+        <button type="button" role="tab" aria-selected={tab === "mappings"} onClick={() => setTab("mappings")} className={`border-b-2 px-3 py-2 text-sm font-bold ${tab === "mappings" ? "border-[#218ccb] text-[#0076b4]" : "border-transparent text-slate-500"}`}>What they answered</button>
+        <button type="button" role="tab" aria-selected={tab === "facts"} onClick={() => setTab("facts")} className={`border-b-2 px-3 py-2 text-sm font-bold ${tab === "facts" ? "border-[#218ccb] text-[#0076b4]" : "border-transparent text-slate-500"}`}>Numbers and dates they gave</button>
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-600">{tab === "mappings"
         ? `Each thing you asked for, and whether ${name} covered it. Sorted into what they answered, partly answered, and did not answer.`

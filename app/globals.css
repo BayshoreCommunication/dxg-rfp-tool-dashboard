@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
 @custom-variant dark (&:where(.dark, .dark *));
 /* A window big enough for a card sized to it (AuthShell's `fit`): two panels side by side (lg)
    and tall enough that the brand panel's text and a step's buttons are not cut off. */
@@ -38,7 +39,7 @@
   ─────────────────────────────────────────────────────── */
 
   /* Primary — Water Blue */
-  --color-brand:        #008ad2;
+  --color-brand:        #218ccb;
   --color-brand-light:  #2fc6f5; /* Medium Turquoise */
   --color-brand-dark:   #0069a0;
   --color-brand-muted:  #e0f1fa;
@@ -1910,9 +1911,9 @@ strong {
 
 .dark :is(
   [class~="hover:border-[#006fa9]"]:hover,
-  [class~="hover:border-[#008ad2]"]:hover,
-  [class~="hover:border-[#008ad2]/30"]:hover,
-  [class~="hover:border-[#008ad2]/40"]:hover,
+  [class~="hover:border-[#218ccb]"]:hover,
+  [class~="hover:border-[#218ccb]/30"]:hover,
+  [class~="hover:border-[#218ccb]/40"]:hover,
   [class~="hover:border-[#00c2c9]"]:hover,
   [class~="hover:border-[#00c2c9]/40"]:hover,
   [class~="hover:border-[#00c2c9]/50"]:hover,
@@ -1972,7 +1973,7 @@ strong {
   [class~="hover:text-[#0069a0]"]:hover,
   [class~="hover:text-[#0076b4]"]:hover,
   [class~="hover:text-[#0079ba]"]:hover,
-  [class~="hover:text-[#008ad2]"]:hover,
+  [class~="hover:text-[#218ccb]"]:hover,
   [class~="hover:text-[#009da4]"]:hover,
   [class~="hover:text-[#00aeb5]"]:hover,
   [class~="hover:text-[#087f69]"]:hover,
@@ -2007,8 +2008,8 @@ strong {
 }
 
 .dark :is(
-  [class~="focus:border-[#008ad2]"]:focus,
-  [class~="focus:border-[#008ad2]/40"]:focus,
+  [class~="focus:border-[#218ccb]"]:focus,
+  [class~="focus:border-[#218ccb]/40"]:focus,
   [class~="focus:border-[#00c2c9]"]:focus,
   [class~="focus:border-[#00c2c9]/60"]:focus,
   [class~="focus:border-[#1DBFD3]"]:focus,
@@ -2032,7 +2033,7 @@ strong {
 }
 
 .dark :is(
-  [class~="focus-within:border-[#008ad2]"]:focus-within,
+  [class~="focus-within:border-[#218ccb]"]:focus-within,
   [class~="focus-within:border-[#00c2c9]"]:focus-within,
   [class~="focus-within:border-[#00c2c9]/70"]:focus-within,
   [class~="focus-within:border-primary"]:focus-within
@@ -2041,14 +2042,14 @@ strong {
 }
 
 .dark :is(
-  [class~="focus-within:text-[#008ad2]"]:focus-within,
+  [class~="focus-within:text-[#218ccb]"]:focus-within,
   [class~="focus-within:text-primary"]:focus-within
 ) {
   color: #67e8f9;
 }
 
 .dark .group:hover :is(
-  [class~="group-hover:text-[#008ad2]"],
+  [class~="group-hover:text-[#218ccb]"],
   [class~="group-hover:text-[#00aeb5]"],
   [class~="group-hover:text-[#087f69]"],
   [class~="group-hover:text-[#109aaf]"],

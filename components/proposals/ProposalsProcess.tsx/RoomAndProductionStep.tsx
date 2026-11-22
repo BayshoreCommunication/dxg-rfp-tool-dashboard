@@ -406,13 +406,16 @@ const yesNoCls = (opt: "Yes" | "No", value: string): string => {
 const YesNo = ({
   value,
   onChange,
+  labelledBy,
 }: {
   value: string;
   onChange: (v: "Yes" | "No") => void;
+  /** id of the visible question text, so the pair is announced as a named group. */
+  labelledBy?: string;
 }) => (
-  <div className="flex gap-3">
-    <button type="button" className={yesNoCls("Yes", value)} onClick={() => onChange("Yes")}>✓ Yes</button>
-    <button type="button" className={yesNoCls("No", value)} onClick={() => onChange("No")}>✗ No</button>
+  <div role="group" aria-labelledby={labelledBy} className="flex gap-3">
+    <button type="button" aria-pressed={value === "Yes"} className={yesNoCls("Yes", value)} onClick={() => onChange("Yes")}>✓ Yes</button>
+    <button type="button" aria-pressed={value === "No"} className={yesNoCls("No", value)} onClick={() => onChange("No")}>✗ No</button>
   </div>
 );
 
@@ -803,11 +806,12 @@ const RoomForm = ({
     <div className="space-y-5 px-6 py-6">
 
       <div>
-        <label className={labelClass}>
-          Physical Room Name <span className="text-red-500">*</span>
-          <InfoTooltip text="The venue room shared by every function listed below. Example: 'A-110-112'." />
-        </label>
-        <input
+        <div className={labelClass}>
+        <label htmlFor={`${uid}-physical-room-name`} className="flex items-center gap-[inherit]">
+        Physical Room Name <span className="text-red-500">*</span></label>
+        <InfoTooltip text="The venue room shared by every function listed below. Example: 'A-110-112'." />
+        </div>
+        <input id={`${uid}-physical-room-name`}
           maxLength={200}
           className={`${inputClass} ${errCls(data.roomLocation)}`}
           value={data.roomLocation}
@@ -855,8 +859,8 @@ const RoomForm = ({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className={labelClass}>Function Name <span className="text-red-500">*</span></label>
-                <input
+                <label htmlFor={`${uid}-function-name`} className={labelClass}>Function Name <span className="text-red-500">*</span></label>
+                <input id={`${uid}-function-name`}
                   maxLength={200}
                   className={`${inputClass} ${errCls(entry.functionName)}`}
                   value={entry.functionName}
@@ -865,8 +869,8 @@ const RoomForm = ({
                 />
               </div>
               <div>
-                <label className={labelClass}># of Attendees <span className="text-red-500">*</span></label>
-                <input
+                <label htmlFor={`${uid}-of-attendees`} className={labelClass}># of Attendees <span className="text-red-500">*</span></label>
+                <input id={`${uid}-of-attendees`}
                   type="number"
                   min={1}
                   max={50000}
@@ -876,12 +880,12 @@ const RoomForm = ({
                   placeholder="e.g. 160"
                 />
                 {showErrors && !isPositiveIntegerText(entry.estimatedAttendees) && (
-                  <p className="mt-1 text-xs text-red-500">Enter a whole number greater than zero.</p>
+                  <p role="alert" className="mt-1 text-xs text-red-500">Enter a whole number greater than zero.</p>
                 )}
               </div>
               <div>
-                <label className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
-                <GlobalSelect
+                <label id={`${uid}-room-setup-label`} className={labelClass}>Room Setup <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                <GlobalSelect id={`${uid}-room-setup`} aria-labelledby={`${uid}-room-setup-label`}
                   className={inputClass}
                   value={entry.roomSetup}
                   onChange={(event) => updateFunction(functionIndex, { roomSetup: event.target.value })}
@@ -1098,12 +1102,13 @@ const RoomForm = ({
 
       {/* Stage Dimensions */}
       <div>
-        <label className={labelClass}>
-          Stage Dimensions
-          <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-          <InfoTooltip text="Stage dimensions in feet — Width × Depth × Height (optional). Standard general session stage is 60ft x 24ft; large keynote stages run 100–200ft wide. If no formal stage: enter 'Floor presentation — no stage.'" />
-        </label>
-        <input
+        <div className={labelClass}>
+        <label htmlFor={`${uid}-stage-dimensions`} className="flex items-center gap-[inherit]">
+        Stage Dimensions
+        <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+        <InfoTooltip text="Stage dimensions in feet — Width × Depth × Height (optional). Standard general session stage is 60ft x 24ft; large keynote stages run 100–200ft wide. If no formal stage: enter 'Floor presentation — no stage.'" />
+        </div>
+        <input id={`${uid}-stage-dimensions`}
           className={inputClass}
           value={data.stageDimensions}
           onChange={(e) => onChange({ stageDimensions: e.target.value })}
@@ -1115,11 +1120,13 @@ const RoomForm = ({
       <Group label="Audio" />
 
       <div>
-        <label className={labelClass}>
-          Audio System Required? <span className="text-red-500">*</span>
-          <InfoTooltip text="Does this room need a full audio system (speakers, mixing, microphones)? Almost all production rooms require this. Select No only for spaces like a quiet VIP lounge with no programmed content." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-audio-system-required`} className="flex items-center gap-[inherit]">
+        Audio System Required? <span className="text-red-500">*</span></span>
+        <InfoTooltip text="Does this room need a full audio system (speakers, mixing, microphones)? Almost all production rooms require this. Select No only for spaces like a quiet VIP lounge with no programmed content." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-audio-system-required`}
           value={data.audioSystemRequired}
           onChange={(v) => onChange({ audioSystemRequired: v })}
         />
@@ -1131,12 +1138,14 @@ const RoomForm = ({
             <div className="grid grid-cols-2 gap-5 mb-4">
               {/* Podium Mic */}
               <div>
-                <label className={labelClass}>
-                  Podium Mic Required?
-                  <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span>
-                  <InfoTooltip text="Fixed microphone mounted at the lectern for standing presenters. Separate from handheld or lavalier mics for moving presenters." />
-                </label>
+                <div className={labelClass}>
+                <span id={`${uid}-yn-podium-mic-required-conditio`} className="flex items-center gap-[inherit]">
+                Podium Mic Required?
+                <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></span>
+                <InfoTooltip text="Fixed microphone mounted at the lectern for standing presenters. Separate from handheld or lavalier mics for moving presenters." />
+                </div>
                 <YesNo
+ labelledBy={`${uid}-yn-podium-mic-required-conditio`}
                   value={data.podiumMic.podiumMic}
                   onChange={(v) =>
                     onChange({ podiumMic: { ...data.podiumMic, podiumMic: v } })
@@ -1146,12 +1155,13 @@ const RoomForm = ({
 
               {/* Audience Q&A Style */}
               <div>
-                <label className={labelClass}>
-                  Audience Q&amp;A Style
-                  <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span>
-                  <InfoTooltip text="How will audience questions be taken? Passed handheld is most common under 500 people; floor mics for larger rooms; digital tools work best for hybrid events." />
-                </label>
-                <GlobalSelect
+                <div className={labelClass}>
+                <label id={`${uid}-audience-q-a-style-label`} className="flex items-center gap-[inherit]">
+                Audience Q&amp;A Style
+                <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></label>
+                <InfoTooltip text="How will audience questions be taken? Passed handheld is most common under 500 people; floor mics for larger rooms; digital tools work best for hybrid events." />
+                </div>
+                <GlobalSelect id={`${uid}-audience-q-a-style`} aria-labelledby={`${uid}-audience-q-a-style-label`}
                   className={inputClass}
                   value={data.audienceQa.audienceQaMethod}
                   onChange={(e) =>
@@ -1181,11 +1191,13 @@ const RoomForm = ({
 
             {/* Wireless Mics */}
             <div className="mb-4">
-              <label className={labelClass}>
-                Wireless Mics?
-                <InfoTooltip text="Battery-powered microphones for speakers who move on stage. Specify quantity so the AV company can allocate transmitters and receivers." />
-              </label>
+              <div className={labelClass}>
+              <span id={`${uid}-yn-wireless-mics`} className="flex items-center gap-[inherit]">
+              Wireless Mics?</span>
+              <InfoTooltip text="Battery-powered microphones for speakers who move on stage. Specify quantity so the AV company can allocate transmitters and receivers." />
+              </div>
               <YesNo
+ labelledBy={`${uid}-yn-wireless-mics`}
                 value={data.wirelessMics.wirelessMics}
                 onChange={(v) =>
                   onChange({
@@ -1201,8 +1213,8 @@ const RoomForm = ({
               {data.wirelessMics.wirelessMics === "Yes" && (
                 <div className="mt-3 grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`${labelClass} mt-0`}>Quantity</label>
-                    <input
+                    <label htmlFor={`${uid}-quantity`} className={`${labelClass} mt-0`}>Quantity</label>
+                    <input id={`${uid}-quantity`}
                       type="number"
                       className={inputClass}
                       placeholder="How many?"
@@ -1215,8 +1227,8 @@ const RoomForm = ({
                     />
                   </div>
                   <div>
-                    <label className={`${labelClass} mt-0`}>Type</label>
-                    <GlobalSelect
+                    <label id={`${uid}-type-label`} className={`${labelClass} mt-0`}>Type</label>
+                    <GlobalSelect id={`${uid}-type`} aria-labelledby={`${uid}-type-label`}
                       className={inputClass}
                       value={data.wirelessMics.wirelessMicsType}
                       onChange={(e) =>
@@ -1255,11 +1267,13 @@ const RoomForm = ({
 
             {/* Audio Recording */}
             <div>
-              <label className={labelClass}>
-                Audio Recording?
-                <InfoTooltip text="Whether the audio from this session should be captured to a file for post-event distribution or review." />
-              </label>
+              <div className={labelClass}>
+              <span id={`${uid}-yn-audio-recording`} className="flex items-center gap-[inherit]">
+              Audio Recording?</span>
+              <InfoTooltip text="Whether the audio from this session should be captured to a file for post-event distribution or review." />
+              </div>
               <YesNo
+ labelledBy={`${uid}-yn-audio-recording`}
                 value={data.audioRecording}
                 onChange={(v) => onChange({ audioRecording: v })}
               />
@@ -1273,11 +1287,13 @@ const RoomForm = ({
 
       {/* LED Wall */}
       <div>
-        <label className={labelClass}>
-          LED Wall Required? <span className="text-red-500">*</span>
-          <InfoTooltip text="Will this room use an LED video wall as the primary stage backdrop? LED walls deliver the highest visual impact but significantly increase budget. If No, screens will use projection or standard displays." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-led-wall-required`} className="flex items-center gap-[inherit]">
+        LED Wall Required? <span className="text-red-500">*</span></span>
+        <InfoTooltip text="Will this room use an LED video wall as the primary stage backdrop? LED walls deliver the highest visual impact but significantly increase budget. If No, screens will use projection or standard displays." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-led-wall-required`}
           value={data.ledWall}
           onChange={(v) =>
             onChange({
@@ -1294,8 +1310,8 @@ const RoomForm = ({
           <div className={subPanelClass}>
             <p className={subPanelHeader}>LED Wall Specifications</p>
             <div className="mb-5 max-w-xs">
-              <label className={labelClass}>Number of LED Walls <span className="text-red-500">*</span></label>
-              <input
+              <label htmlFor={`${uid}-number-of-led-walls`} className={labelClass}>Number of LED Walls <span className="text-red-500">*</span></label>
+              <input id={`${uid}-number-of-led-walls`}
                 type="number"
                 min={1}
                 max={20}
@@ -1318,47 +1334,47 @@ const RoomForm = ({
                   <p className="mb-4 text-sm font-bold text-[#222628]">LED Wall {wallIndex + 1}</p>
                   <div className="mb-4 grid grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Width (ft) <span className="text-red-500">*</span></label>
-                      <input type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.width) > 0) ? "border-red-400" : ""}`} placeholder="e.g. 40" value={wall.width} onChange={(event) => updateLedWall(wallIndex, { width: event.target.value })} />
+                      <label htmlFor={`${uid}-width-ft`} className={labelClass}>Width (ft) <span className="text-red-500">*</span></label>
+                      <input id={`${uid}-width-ft`} type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.width) > 0) ? "border-red-400" : ""}`} placeholder="e.g. 40" value={wall.width} onChange={(event) => updateLedWall(wallIndex, { width: event.target.value })} />
                     </div>
                     <div>
-                      <label className={labelClass}>Height (ft) <span className="text-red-500">*</span></label>
-                      <input type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.height) > 0) ? "border-red-400" : ""}`} placeholder="e.g. 15" value={wall.height} onChange={(event) => updateLedWall(wallIndex, { height: event.target.value })} />
+                      <label htmlFor={`${uid}-height-ft`} className={labelClass}>Height (ft) <span className="text-red-500">*</span></label>
+                      <input id={`${uid}-height-ft`} type="number" min={0.1} step="any" className={`${inputClass} ${showErrors && !(Number(wall.height) > 0) ? "border-red-400" : ""}`} placeholder="e.g. 15" value={wall.height} onChange={(event) => updateLedWall(wallIndex, { height: event.target.value })} />
                     </div>
                   </div>
                   <div className="mb-4 grid grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Shape <span className="text-red-500">*</span></label>
-                      <GlobalSelect className={`${inputClass} ${showErrors && !wall.shape ? "border-red-400" : ""}`} value={wall.shape} onChange={(event) => updateLedWall(wallIndex, { shape: event.target.value })}>
+                      <label id={`${uid}-shape-label`} className={labelClass}>Shape <span className="text-red-500">*</span></label>
+                      <GlobalSelect id={`${uid}-shape`} aria-labelledby={`${uid}-shape-label`} className={`${inputClass} ${showErrors && !wall.shape ? "border-red-400" : ""}`} value={wall.shape} onChange={(event) => updateLedWall(wallIndex, { shape: event.target.value })}>
                         <option value="">Select shape…</option>
                         <option>Flat / Straight</option><option>Curved</option><option>Multi-Panel / Segmented</option><option>Wraparound</option>
                       </GlobalSelect>
                     </div>
                     <div>
-                      <label className={labelClass}>Pixel Pitch <span className="text-red-500">*</span></label>
-                      <GlobalSelect className={`${inputClass} ${showErrors && !wall.pixelPitch ? "border-red-400" : ""}`} value={wall.pixelPitch} onChange={(event) => updateLedWall(wallIndex, { pixelPitch: event.target.value })}>
+                      <label id={`${uid}-pixel-pitch-label`} className={labelClass}>Pixel Pitch <span className="text-red-500">*</span></label>
+                      <GlobalSelect id={`${uid}-pixel-pitch`} aria-labelledby={`${uid}-pixel-pitch-label`} className={`${inputClass} ${showErrors && !wall.pixelPitch ? "border-red-400" : ""}`} value={wall.pixelPitch} onChange={(event) => updateLedWall(wallIndex, { pixelPitch: event.target.value })}>
                         <option value="">Select preference…</option>
                         <option>1.9mm or finer (Premium)</option><option>2.6mm (Standard)</option><option>3.9mm (Acceptable for distance)</option><option>Vendor Recommendation</option>
                       </GlobalSelect>
                     </div>
                   </div>
                   <div className="mb-4">
-                    <label className={labelClass}>Switcher / Processor <span className="text-red-500">*</span></label>
-                    <GlobalSelect className={`${inputClass} ${showErrors && !wall.switcher ? "border-red-400" : ""}`} value={wall.switcher} onChange={(event) => updateLedWall(wallIndex, { switcher: event.target.value })}>
+                    <label id={`${uid}-switcher-processor-label`} className={labelClass}>Switcher / Processor <span className="text-red-500">*</span></label>
+                    <GlobalSelect id={`${uid}-switcher-processor`} aria-labelledby={`${uid}-switcher-processor-label`} className={`${inputClass} ${showErrors && !wall.switcher ? "border-red-400" : ""}`} value={wall.switcher} onChange={(event) => updateLedWall(wallIndex, { switcher: event.target.value })}>
                       <option value="">Select preference…</option>
                       {LED_SWITCHER_OPTIONS.map((option) => <option key={option}>{option}</option>)}
                     </GlobalSelect>
                   </div>
                   <div>
-                    <label className={labelClass}>Additional Notes <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
-                    <textarea rows={2} className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm" value={wall.notes} onChange={(event) => updateLedWall(wallIndex, { notes: event.target.value })} />
+                    <label htmlFor={`${uid}-additional-notes`} className={labelClass}>Additional Notes <span className="text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+                    <textarea id={`${uid}-additional-notes`} rows={2} className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm" value={wall.notes} onChange={(event) => updateLedWall(wallIndex, { notes: event.target.value })} />
                   </div>
                   {Number(wall.width) >= 60 && <p className="mt-3 text-xs text-amber-700">Large LED wall: walls ≥ 60ft may trigger a Producer Insight Call recommendation.</p>}
                 </div>
               ))}
             </div>
             {showErrors && ledWallPlanMissingFields(data).length > 0 && (
-              <p className="mt-3 text-xs text-red-500">Complete: {ledWallPlanMissingFields(data).join(", ")}.</p>
+              <p role="alert" className="mt-3 text-xs text-red-500">Complete: {ledWallPlanMissingFields(data).join(", ")}.</p>
             )}
           </div>
         )}
@@ -1366,11 +1382,13 @@ const RoomForm = ({
 
       {/* Large Monitors */}
       <div>
-        <label className={labelClass}>
-          Large Monitors or Screen &amp; Projector?
-          <InfoTooltip text="Audience-facing displays for content viewing. Used when LED wall is not specified or in addition to it." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-large-monitors-or-screen-amp`} className="flex items-center gap-[inherit]">
+        Large Monitors or Screen &amp; Projector?</span>
+        <InfoTooltip text="Audience-facing displays for content viewing. Used when LED wall is not specified or in addition to it." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-large-monitors-or-screen-amp`}
           value={data.largeMonitorsOrScreenProjector.largeMonitorsOrScreenProjector}
           onChange={(v) =>
             onChange({
@@ -1389,8 +1407,8 @@ const RoomForm = ({
         {data.largeMonitorsOrScreenProjector.largeMonitorsOrScreenProjector === "Yes" && (
           <div className="mt-3 grid grid-cols-2 gap-4">
             <div>
-              <label className={`${labelClass} mt-0`}># of Monitors</label>
-              <input
+              <label htmlFor={`${uid}-of-monitors`} className={`${labelClass} mt-0`}># of Monitors</label>
+              <input id={`${uid}-of-monitors`}
                 type="number"
                 min={0}
                 className={inputClass}
@@ -1409,8 +1427,8 @@ const RoomForm = ({
               />
             </div>
             <div>
-              <label className={`${labelClass} mt-0`}># of Screens</label>
-              <input
+              <label htmlFor={`${uid}-of-screens`} className={`${labelClass} mt-0`}># of Screens</label>
+              <input id={`${uid}-of-screens`}
                 type="number"
                 min={0}
                 className={inputClass}
@@ -1540,11 +1558,11 @@ const RoomForm = ({
 
       {/* Video Format / Aspect Ratio */}
       <div>
-        <label className={labelClass}>
+        <p id={`${uid}-video-format-aspect-ratio-label`} className={labelClass}>
           Video Format / Aspect Ratio <span className="text-red-500">*</span>
           <InfoTooltip text="What video aspect ratio will source content be produced in? 16:9 HD is most common; 4K is preferred for LED walls and large screens; ultrawide and custom ratios require specialized content production." />
-        </label>
-        <div className="flex flex-wrap gap-3">
+        </p>
+        <div role="group" aria-labelledby={`${uid}-video-format-aspect-ratio-label`} className="flex flex-wrap gap-3">
           {[
             "16:9 Native 4K",
             "16:9 Native 1080p HD",
@@ -1566,11 +1584,13 @@ const RoomForm = ({
 
       {/* Scenic Stage Design */}
       <div>
-        <label className={labelClass}>
-          Scenic Stage Design Required? <span className="text-red-500">*</span>
-          <InfoTooltip text="Do you need custom scenic elements built for the stage — set pieces, branded scenic walls, custom podium? Scenic adds production value but increases budget and load-in time. A producer call is recommended." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-scenic-stage-design-required`} className="flex items-center gap-[inherit]">
+        Scenic Stage Design Required? <span className="text-red-500">*</span></span>
+        <InfoTooltip text="Do you need custom scenic elements built for the stage — set pieces, branded scenic walls, custom podium? Scenic adds production value but increases budget and load-in time. A producer call is recommended." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-scenic-stage-design-required`}
           value={data.scenicStageDesign}
           onChange={(v) =>
             onChange({
@@ -1582,12 +1602,13 @@ const RoomForm = ({
         {data.scenicStageDesign === "Yes" && (
           <div className={subPanelClass}>
             <p className={subPanelHeader}>Scenic Notes</p>
-            <label className={labelClass}>
-              Describe Your Scenic Vision
-              <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span>
-              <InfoTooltip text="Set pieces, branded elements, color direction, and reference materials. Upload mood boards in Section 7 — Uploads & Co-Vendors." />
-            </label>
-            <textarea
+            <div className={labelClass}>
+            <label htmlFor={`${uid}-describe-your-scenic-vision`} className="flex items-center gap-[inherit]">
+            Describe Your Scenic Vision
+            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></label>
+            <InfoTooltip text="Set pieces, branded elements, color direction, and reference materials. Upload mood boards in Section 7 — Uploads & Co-Vendors." />
+            </div>
+            <textarea id={`${uid}-describe-your-scenic-vision`}
               rows={3}
               maxLength={600}
               className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
@@ -1616,11 +1637,13 @@ const RoomForm = ({
 
       {/* Video Playback */}
       <div>
-        <label className={labelClass}>
-          Video Playback?
-          <InfoTooltip text="Pre-recorded video content — sizzle reels, intro videos, b-roll — to be played during the session. Specify the number of clips." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-video-playback`} className="flex items-center gap-[inherit]">
+        Video Playback?</span>
+        <InfoTooltip text="Pre-recorded video content — sizzle reels, intro videos, b-roll — to be played during the session. Specify the number of clips." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-video-playback`}
           value={data.videoPlayback.videoPlayback}
           onChange={(v) =>
             onChange({
@@ -1645,11 +1668,11 @@ const RoomForm = ({
               }
             />
             <div>
-              <label className={`${labelClass} mt-0`}>
+              <p id={`${uid}-video-format-aspect-ratio-2-label`} className={`${labelClass} mt-0`}>
                 Video Format / Aspect Ratio
                 <InfoTooltip text="The aspect ratio the playback video content is produced in." />
-              </label>
-              <div className="flex flex-wrap gap-3">
+              </p>
+              <div role="group" aria-labelledby={`${uid}-video-format-aspect-ratio-2-label`} className="flex flex-wrap gap-3">
                 {VIDEO_PLAYBACK_FORMAT_OPTIONS.map((opt) => (
                   <PillRadio
                     key={opt}
@@ -1671,11 +1694,13 @@ const RoomForm = ({
 
       {/* Cameras */}
       <div>
-        <label className={labelClass}>
-          Cameras?
-          <InfoTooltip text="Camera coverage for IMAG or recording. Choose a specific typed plan, or ask the vendor to recommend the right plan for this room." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-cameras`} className="flex items-center gap-[inherit]">
+        Cameras?</span>
+        <InfoTooltip text="Camera coverage for IMAG or recording. Choose a specific typed plan, or ask the vendor to recommend the right plan for this room." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-cameras`}
           value={data.cameras.cameras}
           onChange={(v) =>
             onChange({
@@ -1692,8 +1717,8 @@ const RoomForm = ({
         />
         {data.cameras.cameras === "Yes" && (
           <div className={subPanelClass}>
-            <label className={labelClass}>Camera Planning Approach <span className="text-red-500">*</span></label>
-            <div className="flex flex-wrap gap-3">
+            <p id={`${uid}-camera-planning-approach-label`} className={labelClass}>Camera Planning Approach <span className="text-red-500">*</span></p>
+            <div role="group" aria-labelledby={`${uid}-camera-planning-approach-label`} className="flex flex-wrap gap-3">
               {[CAMERA_PLAN_SPECIFIC, CAMERA_PLAN_VENDOR_RECOMMENDATION].map((option) => (
                 <PillRadio
                   key={option}
@@ -1716,8 +1741,8 @@ const RoomForm = ({
             {data.cameras.cameraPlanMode === CAMERA_PLAN_SPECIFIC && (
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className={labelClass}>Camera Type <span className="text-red-500">*</span></label>
-                  <GlobalSelect
+                  <label id={`${uid}-camera-type-label`} className={labelClass}>Camera Type <span className="text-red-500">*</span></label>
+                  <GlobalSelect id={`${uid}-camera-type`} aria-labelledby={`${uid}-camera-type-label`}
                     className={inputClass}
                     value={data.cameras.cameraType}
                     onChange={(event) => onChange({ cameras: {
@@ -1735,30 +1760,32 @@ const RoomForm = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   {[CAMERA_TYPE_PTZ, CAMERA_TYPE_BOTH].includes(data.cameras.cameraType) && (
-                    <div><label className={labelClass}>PTZ Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.ptzCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, ptzCameraQty: event.target.value } })} /></div>
+                    <div><label htmlFor={`${uid}-ptz-quantity`} className={labelClass}>PTZ Quantity <span className="text-red-500">*</span></label><input id={`${uid}-ptz-quantity`} type="number" min={1} className={inputClass} value={data.cameras.ptzCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, ptzCameraQty: event.target.value } })} /></div>
                   )}
                   {[CAMERA_TYPE_STUDIO, CAMERA_TYPE_BOTH].includes(data.cameras.cameraType) && (
-                    <div><label className={labelClass}>Studio / Broadcast Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.studioCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, studioCameraQty: event.target.value } })} /></div>
+                    <div><label htmlFor={`${uid}-studio-broadcast-quantity`} className={labelClass}>Studio / Broadcast Quantity <span className="text-red-500">*</span></label><input id={`${uid}-studio-broadcast-quantity`} type="number" min={1} className={inputClass} value={data.cameras.studioCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, studioCameraQty: event.target.value } })} /></div>
                   )}
                   {data.cameras.cameraType === CAMERA_TYPE_OTHER && (
-                    <><div><label className={labelClass}>Other Camera Type <span className="text-red-500">*</span></label><input className={inputClass} value={data.cameras.otherCameraType} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraType: event.target.value } })} /></div><div><label className={labelClass}>Quantity <span className="text-red-500">*</span></label><input type="number" min={1} className={inputClass} value={data.cameras.otherCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraQty: event.target.value } })} /></div></>
+                    <><div><label htmlFor={`${uid}-other-camera-type`} className={labelClass}>Other Camera Type <span className="text-red-500">*</span></label><input id={`${uid}-other-camera-type`} className={inputClass} value={data.cameras.otherCameraType} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraType: event.target.value } })} /></div><div><label htmlFor={`${uid}-quantity-2`} className={labelClass}>Quantity <span className="text-red-500">*</span></label><input id={`${uid}-quantity-2`} type="number" min={1} className={inputClass} value={data.cameras.otherCameraQty} onChange={(event) => onChange({ cameras: { ...data.cameras, otherCameraQty: event.target.value } })} /></div></>
                   )}
                 </div>
                 {cameraPlanTotal(data.cameras) > 0 && <p className="text-xs font-semibold text-[#0069a0]">Derived total: {cameraPlanTotal(data.cameras)} camera(s)</p>}
               </div>
             )}
-            {showErrors && cameraPlanMissingFields(data.cameras).length > 0 && <p className="mt-2 text-xs text-red-500">Complete: {cameraPlanMissingFields(data.cameras).join(", ")}.</p>}
+            {showErrors && cameraPlanMissingFields(data.cameras).length > 0 && <p role="alert" className="mt-2 text-xs text-red-500">Complete: {cameraPlanMissingFields(data.cameras).join(", ")}.</p>}
           </div>
         )}
       </div>
 
       {/* Video Recording */}
       <div>
-        <label className={labelClass}>
-          Video Recording?
-          <InfoTooltip text="Whether the session should be recorded. 'Camera Feed Only' captures the stage image. 'Presentation Only' captures slides. 'Side by Side' combines both." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-video-recording`} className="flex items-center gap-[inherit]">
+        Video Recording?</span>
+        <InfoTooltip text="Whether the session should be recorded. 'Camera Feed Only' captures the stage image. 'Presentation Only' captures slides. 'Side by Side' combines both." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-video-recording`}
           value={data.videoRecording.videoRecording}
           onChange={(v) =>
             onChange({
@@ -1792,8 +1819,8 @@ const RoomForm = ({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className={labelClass}>Recording Format</label>
-                <GlobalSelect
+                <label id={`${uid}-recording-format-label`} className={labelClass}>Recording Format</label>
+                <GlobalSelect id={`${uid}-recording-format`}
                   aria-label="Recording format"
                   className={`${inputClass} appearance-none`}
                   value={data.videoRecording.recordingCodec}
@@ -1814,8 +1841,9 @@ const RoomForm = ({
                 </GlobalSelect>
               </div>
               <div>
-                <label className={labelClass}>4K Recording?</label>
+                <label id={`${uid}-yn-4k-recording`} className={labelClass}>4K Recording?</label>
                 <YesNo
+                  labelledBy={`${uid}-yn-4k-recording`}
                   value={data.videoRecording.recordIn4k}
                   onChange={(recordIn4k) =>
                     onChange({
@@ -1831,11 +1859,13 @@ const RoomForm = ({
 
       {/* Presentation Laptops */}
       <div>
-        <label className={labelClass}>
-          Presentation Laptops?
-          <InfoTooltip text="Laptops provided by the AV company to run presenter slideshows or media playback." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-presentation-laptops`} className="flex items-center gap-[inherit]">
+        Presentation Laptops?</span>
+        <InfoTooltip text="Laptops provided by the AV company to run presenter slideshows or media playback." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-presentation-laptops`}
           value={data.presentationLaptops.presentationLaptops}
           onChange={(v) =>
             onChange({
@@ -1867,10 +1897,10 @@ const RoomForm = ({
       <Group label="Lighting" />
 
       <div>
-        <label className={labelClass}>
+        <p id={`${uid}-lighting-requirements-label`} className={labelClass}>
           Lighting Requirements <span className="text-red-500">*</span>
           <InfoTooltip text="Select all lighting types needed. Backlighting and audience lighting are essential if you have cameras and IMAG. Moving lights add energy but require a Lighting Director (L1) on crew." />
-        </label>
+        </p>
         <p className="mb-3 text-xs text-slate-500 normal-case">
           Select all that apply, or select &quot;None / Minimal&quot; if house lighting only.
           {lighting.includes("Moving Lights / Programmable Effects") && (
@@ -1879,7 +1909,7 @@ const RoomForm = ({
             </span>
           )}
         </p>
-        <div className="flex flex-wrap gap-3">
+        <div role="group" aria-labelledby={`${uid}-lighting-requirements-label`} className="flex flex-wrap gap-3">
           {LIGHTING_OPTIONS.map((opt) => (
             <PillCheckbox
               key={opt}
@@ -1894,7 +1924,7 @@ const RoomForm = ({
           ))}
         </div>
         {showErrors && lighting.length === 0 && (
-          <p className="mt-2 text-sm normal-case text-red-500">
+          <p role="alert" className="mt-2 text-sm normal-case text-red-500">
             Please select at least one lighting option or &quot;None / Minimal&quot;.
           </p>
         )}
@@ -1904,11 +1934,13 @@ const RoomForm = ({
       <Group label="Confidence Monitors" />
 
       <div>
-        <label className={labelClass}>
-          Confidence Monitors Required? <span className="text-red-500">*</span>
-          <InfoTooltip text="Confidence monitors are screens on the front of stage facing presenters, showing their slides and/or notes. Standard for any event with prepared keynote presentations." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-confidence-monitors-required`} className="flex items-center gap-[inherit]">
+        Confidence Monitors Required? <span className="text-red-500">*</span></span>
+        <InfoTooltip text="Confidence monitors are screens on the front of stage facing presenters, showing their slides and/or notes. Standard for any event with prepared keynote presentations." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-confidence-monitors-required`}
           value={data.confidenceMonitorsRequired}
           onChange={(v) =>
             onChange({
@@ -1931,11 +1963,12 @@ const RoomForm = ({
             <p className={subPanelHeader}>Monitor Sub-Questions</p>
             <div className="grid grid-cols-3 gap-5">
               <div>
-                <label className={labelClass}>
-                  Program Monitors (qty)
-                  <InfoTooltip text="Screens showing the current slide or live program feed — what the audience sees. Standard setup: 2 monitors angled toward stage left and stage right." />
-                </label>
-                <input
+                <div className={labelClass}>
+                <label htmlFor={`${uid}-program-monitors-qty`} className="flex items-center gap-[inherit]">
+                Program Monitors (qty)</label>
+                <InfoTooltip text="Screens showing the current slide or live program feed — what the audience sees. Standard setup: 2 monitors angled toward stage left and stage right." />
+                </div>
+                <input id={`${uid}-program-monitors-qty`}
                   type="number"
                   min={0}
                   max={10}
@@ -1953,11 +1986,12 @@ const RoomForm = ({
                 />
               </div>
               <div>
-                <label className={labelClass}>
-                  Notes Monitors (qty)
-                  <InfoTooltip text="Screens showing speaker notes or teleprompter text. Often combined with teleprompter operators." />
-                </label>
-                <input
+                <div className={labelClass}>
+                <label htmlFor={`${uid}-notes-monitors-qty`} className="flex items-center gap-[inherit]">
+                Notes Monitors (qty)</label>
+                <InfoTooltip text="Screens showing speaker notes or teleprompter text. Often combined with teleprompter operators." />
+                </div>
+                <input id={`${uid}-notes-monitors-qty`}
                   type="number"
                   min={0}
                   max={10}
@@ -1975,11 +2009,13 @@ const RoomForm = ({
                 />
               </div>
               <div>
-                <label className={labelClass}>
-                  Speaker Timer?
-                  <InfoTooltip text="Countdown display visible to the speaker showing remaining session time. Essential for tightly scheduled programs with multiple speakers." />
-                </label>
+                <div className={labelClass}>
+                <span id={`${uid}-yn-speaker-timer`} className="flex items-center gap-[inherit]">
+                Speaker Timer?</span>
+                <InfoTooltip text="Countdown display visible to the speaker showing remaining session time. Essential for tightly scheduled programs with multiple speakers." />
+                </div>
                 <YesNo
+ labelledBy={`${uid}-yn-speaker-timer`}
                   value={data.speakerTimer}
                   onChange={(v) => onChange({ speakerTimer: v })}
                 />
@@ -1993,11 +2029,13 @@ const RoomForm = ({
       <Group label="Teleprompter" />
 
       <div>
-        <label className={labelClass}>
-          Teleprompter Required? <span className="text-red-500">*</span>
-          <InfoTooltip text="Will any speakers use a teleprompter (scrolling script on glass panels)? Common for CEOs, scripted keynotes, and broadcast-quality productions. Requires a dedicated teleprompter operator." />
-        </label>
+        <div className={labelClass}>
+        <span id={`${uid}-yn-teleprompter-required`} className="flex items-center gap-[inherit]">
+        Teleprompter Required? <span className="text-red-500">*</span></span>
+        <InfoTooltip text="Will any speakers use a teleprompter (scrolling script on glass panels)? Common for CEOs, scripted keynotes, and broadcast-quality productions. Requires a dedicated teleprompter operator." />
+        </div>
         <YesNo
+ labelledBy={`${uid}-yn-teleprompter-required`}
           value={data.teleprompterRequired}
           onChange={(v) =>
             onChange({
@@ -2013,12 +2051,14 @@ const RoomForm = ({
             <p className={subPanelHeader}>Teleprompter Sub-Questions</p>
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <label className={labelClass}>
-                  Bilingual Teleprompter?
-                  <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span>
-                  <InfoTooltip text="Will the teleprompter operate in multiple languages simultaneously? Bilingual operators are specialized — flag this early. Common for international audiences and dual-language broadcasts." />
-                </label>
+                <div className={labelClass}>
+                <span id={`${uid}-yn-bilingual-teleprompter-condi`} className="flex items-center gap-[inherit]">
+                Bilingual Teleprompter?
+                <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span></span>
+                <InfoTooltip text="Will the teleprompter operate in multiple languages simultaneously? Bilingual operators are specialized — flag this early. Common for international audiences and dual-language broadcasts." />
+                </div>
                 <YesNo
+ labelledBy={`${uid}-yn-bilingual-teleprompter-condi`}
                   value={data.teleprompterBilingual}
                   onChange={(v) => onChange({ teleprompterBilingual: v })}
                 />
@@ -2029,12 +2069,12 @@ const RoomForm = ({
                 )}
               </div>
               <div>
-                <label className={labelClass}>
+                <p id={`${uid}-languages-label`} className={labelClass}>
                   Languages
                   <span className="ml-2 text-xs font-normal normal-case text-slate-400">(conditional)</span>
                   <InfoTooltip text="Languages the teleprompter content will be displayed in. Each additional language typically requires a separate operator. Minimum 2 if bilingual." />
-                </label>
-                <div className="flex flex-wrap gap-2">
+                </p>
+                <div role="group" aria-labelledby={`${uid}-languages-label`} className="flex flex-wrap gap-2">
                   {TELEPROMPTER_LANGUAGES.map((lang) => (
                     <PillCheckbox
                       key={lang}
@@ -2086,14 +2126,14 @@ const RoomForm = ({
           showErrors && data.showCrewNeeded.length === 0 ? "bg-red-50" : ""
         }`}
       >
-        <label className={labelClass}>
+        <p id={`${uid}-show-crew-needed-label`} className={labelClass}>
           Show Crew Needed <span className="text-red-500">*</span>
           <InfoTooltip text="Select all technical crew roles needed for this room. Each role generates a line item in the Show Crew callout bar. Teleprompter Operators and Breakout Room Managers route to the Special Note box." />
-        </label>
+        </p>
         <p className="mb-3 text-xs text-slate-400 normal-case">
           Select &quot;Vendor Recommendation Requested&quot; to let the AV vendor propose the right crew.
         </p>
-        <div className="flex flex-wrap gap-3">
+        <div role="group" aria-labelledby={`${uid}-show-crew-needed-label`} className="flex flex-wrap gap-3">
           {CREW_ROLES.map(({ label: role }) => (
             <PillCheckbox
               key={role}
@@ -2133,17 +2173,18 @@ const RoomForm = ({
         )}
 
         {showErrors && data.showCrewNeeded.length === 0 && (
-          <p className="mt-2 text-sm normal-case text-red-500">Please select at least one crew role.</p>
+          <p role="alert" className="mt-2 text-sm normal-case text-red-500">Please select at least one crew role.</p>
         )}
       </div>
 
       <div>
-        <label className={labelClass}>
-          Other Roles or Support Needed?{" "}
-          <span className="font-normal normal-case tracking-normal text-slate-400 text-xs">(Optional)</span>
-          <InfoTooltip text="Any additional positions not listed — e.g. LED technician, drone operator, or show caller support." />
-        </label>
-        <textarea
+        <div className={labelClass}>
+        <label htmlFor={`${uid}-other-roles-or-support-needed`} className="flex items-center gap-[inherit]">
+        Other Roles or Support Needed?{" "}
+        <span className="font-normal normal-case tracking-normal text-slate-400 text-xs">(Optional)</span></label>
+        <InfoTooltip text="Any additional positions not listed — e.g. LED technician, drone operator, or show caller support." />
+        </div>
+        <textarea id={`${uid}-other-roles-or-support-needed`}
           rows={3}
           className="w-full resize-none rounded-lg border border-[#e4e4e4] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1DBFD3] focus:outline-none focus:ring-2 focus:ring-[#1DBFD3]/20"
           placeholder="Write here…"
@@ -2564,13 +2605,14 @@ const RoomAndProductionStep = ({
       {/* Number of Event Rooms — stepper */}
       <div className="px-6 pt-6">
         <div className="mb-6 rounded-md border border-[#e4e4e4] p-5">
-          <label className={labelClass}>
+          <p id="room-number-of-event-rooms-label" className={labelClass}>
             Number of Event Rooms <span className="text-red-500">*</span>
             <InfoTooltip text="How many separate rooms require AV production? Each room gets its own specification module below. Example: 1 General Session + 1 Breakout + 1 VIP Lounge = 3 rooms." />
-          </label>
-          <div className="flex items-center gap-3">
+          </p>
+          <div role="group" aria-labelledby="room-number-of-event-rooms-label" className="flex items-center gap-3">
             <button
               type="button"
+              aria-label="Decrease number of event rooms"
               onClick={() =>
                 onNumberOfEventRoomsChange(String(Math.max(1, roomCount - 1)))
               }
@@ -2580,6 +2622,7 @@ const RoomAndProductionStep = ({
             </button>
             <input
               type="number"
+              aria-labelledby="room-number-of-event-rooms-label"
               min={1}
               value={numberOfEventRooms}
               onChange={(e) =>
@@ -2591,6 +2634,7 @@ const RoomAndProductionStep = ({
             />
             <button
               type="button"
+              aria-label="Increase number of event rooms"
               onClick={() => onNumberOfEventRoomsChange(String(roomCount + 1))}
               className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e4e4e4] bg-white text-lg font-bold text-[#222628] hover:bg-[#f9f9f9] transition-colors select-none"
             >
@@ -2610,15 +2654,16 @@ const RoomAndProductionStep = ({
 
         {/* Schedule upload */}
         <div className="mb-6 rounded-md border border-[#e4e4e4] p-5">
-          <label className={labelClass}>
-            Upload Room Schedule
-            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-            <InfoTooltip text="Upload an Excel (.xlsx) schedule to bulk-create room modules. Each schedule row becomes a separate module, so the same physical room can contain multiple functions on the same date. This replaces the current room list." />
-          </label>
+          <div className={labelClass}>
+          <label htmlFor="room-upload-room-schedule" className="flex items-center gap-[inherit]">
+          Upload Room Schedule
+          <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+          <InfoTooltip text="Upload an Excel (.xlsx) schedule to bulk-create room modules. Each schedule row becomes a separate module, so the same physical room can contain multiple functions on the same date. This replaces the current room list." />
+          </div>
           <p className="mb-3 text-xs text-slate-500 normal-case">
             Rows with the same room name are grouped into one physical room. Each row remains a separate function schedule sharing that room&apos;s AV specifications.
           </p>
-          <input
+          <input id="room-upload-room-schedule"
             ref={fileInputRef}
             type="file"
             accept=".xlsx,.xls"

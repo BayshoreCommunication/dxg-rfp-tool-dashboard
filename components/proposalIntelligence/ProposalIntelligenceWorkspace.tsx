@@ -58,7 +58,7 @@ function EvidenceDrawer({ selection, onClose }: { selection: EvidenceSelection; 
       <aside role="dialog" aria-modal="true" aria-labelledby="evidence-drawer-title" className="h-full w-full max-w-xl overflow-y-auto bg-white shadow-2xl">
         <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-5">
           <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Cited vendor evidence</p>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#218ccb]">Cited vendor evidence</p>
             <h2 id="evidence-drawer-title" className="mt-1 text-lg font-extrabold text-slate-950">
               {selection.title}
             </h2>
@@ -87,7 +87,7 @@ function EvidenceDrawer({ selection, onClose }: { selection: EvidenceSelection; 
                       {evidence.supportRole && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800">{label(evidence.supportRole)}</span>}
                     </div>
                     <p className="mt-2 text-[11px] font-semibold leading-5 text-slate-500">{locatorText(evidence.locator)}</p>
-                    <blockquote className="mt-3 border-l-2 border-[#008ad2] pl-3 text-sm leading-6 text-slate-700"><EvidenceExcerpt content={evidence.excerpt} context={[selection.title]}/></blockquote>
+                    <blockquote className="mt-3 border-l-2 border-[#218ccb] pl-3 text-sm leading-6 text-slate-700"><EvidenceExcerpt content={evidence.excerpt} context={[selection.title]}/></blockquote>
                     <details className="mt-3">
                       <summary className="cursor-pointer text-[10px] font-bold text-slate-400">Verification details</summary>
                       <p className="mt-1 break-all font-mono text-[10px] text-slate-400">Evidence checksum {evidence.contentChecksum}</p>
@@ -539,14 +539,14 @@ export default function ProposalIntelligenceWorkspace({ proposalId, proposalTitl
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1500px]">
-        <Link href={`/proposals/${proposalId}/intelligence`} className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-500 hover:text-[#008ad2]">
+        <Link href={`/proposals/${proposalId}/intelligence`} className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-500 hover:text-[#218ccb]">
           <ArrowLeft size={14} />
           Proposal intelligence home
         </Link>
         <header className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Comparison results</p>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#218ccb]">Comparison results</p>
               <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{proposalTitle}</h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 Comparison from {formatIntelligenceTimestamp(workspace.run.createdAt)} · {workspace.run.participantCount} vendors

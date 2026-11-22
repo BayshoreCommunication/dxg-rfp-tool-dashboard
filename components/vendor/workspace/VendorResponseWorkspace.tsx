@@ -1051,7 +1051,7 @@ export default function VendorResponseWorkspace({
                 saveState !== "saved"
               }
               onClick={() => void finalize()}
-              className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md bg-[#008ad2] px-5 text-sm font-extrabold text-white hover:bg-[#0075b4] disabled:cursor-not-allowed disabled:bg-[#d4dce3] disabled:text-[#8394a3]"
+              className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md bg-[#218ccb] px-5 text-sm font-extrabold text-white hover:bg-[#0075b4] disabled:cursor-not-allowed disabled:bg-[#d4dce3] disabled:text-[#8394a3]"
             >
               <Send size={15} aria-hidden="true" />
               {submitting ? "Submitting…" : "Submit proposal"}
@@ -1174,7 +1174,7 @@ function WorkspaceLoading({ title }: { title: string }) {
     <main className="grid min-h-screen place-items-center bg-[#f3f6f8] px-5">
       <div className="w-full max-w-md rounded-lg border border-[#dce4eb] bg-white p-8 text-center shadow-sm">
         <Loader2
-          className="mx-auto animate-spin text-[#008ad2]"
+          className="mx-auto animate-spin text-[#218ccb]"
           size={28}
           aria-hidden="true"
         />
@@ -1217,7 +1217,7 @@ export function WorkspaceProblem({
         {onRetry ? (
           <button
             type="button"
-            className="mt-6 inline-flex items-center gap-2 rounded-md bg-[#008ad2] px-5 py-2.5 text-sm font-extrabold text-white hover:bg-[#0075b4]"
+            className="mt-6 inline-flex items-center gap-2 rounded-md bg-[#218ccb] px-5 py-2.5 text-sm font-extrabold text-white hover:bg-[#0075b4]"
             onClick={onRetry}
           >
             <RefreshCw size={15} aria-hidden="true" /> Try again

@@ -25,11 +25,11 @@ export default function SupportCenter({ tickets, pagination, errorMessage, view,
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 px-4 pb-16 pt-6 sm:px-6">
       <header className="relative">
-        <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-gradient-to-r from-[#008ad2]/5 via-[#008ad2]/3 to-slate-900/5 blur-2xl" />
+        <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-gradient-to-r from-[#218ccb]/5 via-[#218ccb]/3 to-slate-900/5 blur-2xl" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <span className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[#008ad2]">
-              <Sparkles size={10} className="fill-[#008ad2]" aria-hidden="true" />
+            <span className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[#218ccb]">
+              <Sparkles size={10} className="fill-[#218ccb]" aria-hidden="true" />
               Talk to a person at RFPilot
             </span>
             <h1 className="text-[30px] font-black leading-none tracking-tight text-slate-900">Support</h1>
@@ -68,7 +68,7 @@ export default function SupportCenter({ tickets, pagination, errorMessage, view,
           <h2 id="requests-title" className="text-base font-bold text-slate-900">
             Your requests
             {unread > 0 && (
-              <span className="ml-2 rounded-full bg-[#008ad2]/10 px-2 py-0.5 text-[11px] font-bold text-[#0069a0]">
+              <span className="ml-2 rounded-full bg-[#218ccb]/10 px-2 py-0.5 text-[11px] font-bold text-[#0069a0]">
                 {unread} new repl{unread === 1 ? "y" : "ies"}
               </span>
             )}
@@ -113,9 +113,9 @@ export default function SupportCenter({ tickets, pagination, errorMessage, view,
                 <li key={ticket.id}>
                   <Link
                     href={`/support/${ticket.id}`}
-                    className={`flex items-start gap-3 px-5 py-4 transition hover:bg-slate-50 ${isUnread ? "bg-[#008ad2]/[0.03]" : ""}`}
+                    className={`flex items-start gap-3 px-5 py-4 transition hover:bg-slate-50 ${isUnread ? "bg-[#218ccb]/[0.03]" : ""}`}
                   >
-                    <span className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${isUnread ? "bg-[#008ad2]" : "bg-transparent"}`} aria-hidden="true" />
+                    <span className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${isUnread ? "bg-[#218ccb]" : "bg-transparent"}`} aria-hidden="true" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-bold text-slate-400">#{ticket.ticketNumber}</span>

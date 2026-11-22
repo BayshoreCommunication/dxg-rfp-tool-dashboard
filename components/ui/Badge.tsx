@@ -4,7 +4,11 @@ import type { ReactNode } from "react";
 // with text that keeps WCAG AA contrast on it, in the light theme and under the dark theme's
 // remapping of these classes (app/globals.css).
 
-export type BadgeTone = "gray" | "blue" | "amber" | "purple" | "green" | "muted";
+// The first six tones are the original palette-class tones and keep their classes so the dark
+// theme's existing remap still applies. The semantic tones below use the token layer.
+export type BadgeTone =
+  | "gray" | "blue" | "amber" | "purple" | "green" | "muted"
+  | "success" | "warning" | "danger" | "info";
 
 const TONES: Record<BadgeTone, string> = {
   gray: "border-slate-300 bg-slate-50 text-slate-700",
@@ -14,6 +18,10 @@ const TONES: Record<BadgeTone, string> = {
   green: "border-emerald-200 bg-emerald-50 text-emerald-800",
   // Quieter than gray: no outline, for things that are out of the way (archived).
   muted: "border-transparent bg-slate-100 text-slate-600",
+  success: "border-success/40 bg-success-soft text-success-strong",
+  warning: "border-warning/50 bg-warning-soft text-warning-strong",
+  danger: "border-danger/40 bg-danger-soft text-danger-strong",
+  info: "border-action/40 bg-brand-soft text-action",
 };
 
 export type BadgeProps = {

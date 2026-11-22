@@ -30,7 +30,7 @@ export default function GlossaryDialog() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"
+        className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-extrabold text-slate-800 hover:border-[#218ccb] hover:text-[#218ccb]"
       >
         <BookOpen size={15} aria-hidden="true" />
         What do these words mean?

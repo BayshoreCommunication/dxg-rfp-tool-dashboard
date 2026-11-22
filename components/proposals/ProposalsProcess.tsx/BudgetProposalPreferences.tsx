@@ -60,11 +60,14 @@ const yesNoCls = (opt: "YES" | "NO", value: string): string => {
 const YesNo = ({
   value,
   onChange,
+  labelledBy,
 }: {
   value: string;
   onChange: (v: "YES" | "NO") => void;
+  /** id of the visible question text, so the pair is announced as a named group. */
+  labelledBy?: string;
 }) => (
-  <div className="flex gap-3">
+  <div role="group" aria-labelledby={labelledBy} className="flex gap-3">
     <button type="button" aria-pressed={value === "YES"} className={yesNoCls("YES", value)} onClick={() => onChange("YES")}>
       ✓ Yes
     </button>
@@ -87,14 +90,21 @@ const SelectField = ({
   options,
   placeholder,
   hasError,
+  labelledBy,
+  id,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
   placeholder: string;
   hasError?: boolean;
+  /** id of the visible label text. */
+  labelledBy?: string;
+  id?: string;
 }) => (
   <GlobalSelect
+    id={id}
+    aria-labelledby={labelledBy}
     value={value}
     onChange={(e) => onChange(e.target.value)}
     className={`${inputClass} ${hasError && !value ? "border-red-400 ring-1 ring-red-400/20" : ""}`}
@@ -483,12 +493,12 @@ const BudgetProposalPreferences = ({
 
         {/* Field 1 — Budget Tier Cards */}
         <div className="mb-6">
-          <label className={labelClass}>
+          <p id="budget-estimated-av-budget-range-label" className={labelClass}>
             Estimated AV Budget Range <span className="text-red-500">*</span>
             <InfoTooltip text="Select the range that best represents your total AV and production budget across all rooms, all days — including gear, labor, freight, and expendables. If unsure, select 'Not Yet Determined' and we'll help establish a realistic range." />
-          </label>
+          </p>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div role="group" aria-labelledby="budget-estimated-av-budget-range-label" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {BUDGET_TIERS.map((tier) => (
               <button
                 key={tier.value}
@@ -555,11 +565,11 @@ const BudgetProposalPreferences = ({
 
         {/* Field 2 — Investment Flexibility */}
         <div className="mb-6">
-          <label className={labelClass}>
+          <p id="budget-investment-flexibility-label" className={labelClass}>
             Investment Flexibility
             <InfoTooltip text="How firm is this budget? This signals to vendors whether to submit their best scope or most cost-effective option. 'Value-Engineering Welcome' tells vendors you want creative alternatives that optimize cost without sacrificing impact." />
-          </label>
-          <div className="flex flex-wrap gap-2">
+          </p>
+          <div role="group" aria-labelledby="budget-investment-flexibility-label" className="flex flex-wrap gap-2">
             {FLEXIBILITY_OPTIONS.map((opt) => (
               <button
                 key={opt}
@@ -581,12 +591,12 @@ const BudgetProposalPreferences = ({
         <Group label="Proposal Format Requirements" />
 
         <div className="mb-6">
-          <label className={labelClass}>
+          <p id="budget-proposal-format-requested-label" className={labelClass}>
             Proposal Format Requested <span className="text-red-500">*</span>
             <InfoTooltip text="Select everything you want included in vendor proposals. At least one selection is required. 'Itemized Gear List' + 'All-In Total' together give you the most flexibility to compare vendors." />
-          </label>
+          </p>
 
-          <div className="space-y-2">
+          <div role="group" aria-labelledby="budget-proposal-format-requested-label" className="space-y-2">
             {FORMAT_OPTIONS.map((opt) => {
               const checked = safeData.proposalFormatPreferences.includes(opt.label);
               const suggested = isSuggested(opt);
@@ -751,12 +761,12 @@ const BudgetProposalPreferences = ({
                 className="grid grid-cols-[1fr_90px] items-center border-b border-[#f0f0f0] px-4 py-3 last:border-0"
               >
                 <div>
-                  <span className="block text-sm font-semibold text-[#222628]">
+                  <span id={`budget-weight-${crit.key}-label`} className="block text-sm font-semibold text-[#222628]">
                     {crit.label}
                   </span>
                   <span className="block text-xs italic text-slate-400">{guide}</span>
                   {warnZero && (
-                    <span className="block text-[10px] text-red-500">
+                    <span role="alert" className="block text-[10px] text-red-500">
                       Weight cannot be 0 for this criterion.
                     </span>
                   )}
@@ -764,6 +774,8 @@ const BudgetProposalPreferences = ({
                 <div className="flex items-center justify-center gap-1">
                   <input
                     type="number"
+                    aria-labelledby={`budget-weight-${crit.key}-label`}
+                    aria-invalid={warnZero ? true : undefined}
                     min={0}
                     max={100}
                     value={w}
@@ -812,7 +824,7 @@ const BudgetProposalPreferences = ({
             </button>
           )}
           {showErrors && !matrixOk && (
-            <p className="w-full text-xs text-red-500">
+            <p role="alert" className="w-full text-xs text-red-500">
               Weights must total exactly 100% before your proposal can be generated. Current total:{" "}
               {activeSum}%.
             </p>
@@ -821,11 +833,12 @@ const BudgetProposalPreferences = ({
 
         {/* Scoring Notes */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Scoring Notes / Key Decision Factors
-            <InfoTooltip text="Any additional context about how proposals will be evaluated — scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
-          </label>
-          <textarea
+          <div className={labelClass}>
+          <label htmlFor="budget-scoring-notes-key-decision-factors" className="flex items-center gap-[inherit]">
+          Scoring Notes / Key Decision Factors</label>
+          <InfoTooltip text="Any additional context about how proposals will be evaluated — scoring rubrics, weighting rationale, or special requirements not captured in the matrix above." />
+          </div>
+          <textarea id="budget-scoring-notes-key-decision-factors"
             rows={3}
             value={safeData.scoringNotes}
             onChange={(e) => onChange({ scoringNotes: e.target.value })}
@@ -836,12 +849,13 @@ const BudgetProposalPreferences = ({
 
         {/* Sustainability & DEI Practices */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Sustainability &amp; DEI Practices
-            <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span>
-            <InfoTooltip text="Describe any sustainability or DEI (diversity, equity, and inclusion) requirements or preferences vendors should address in their proposal." />
-          </label>
-          <textarea
+          <div className={labelClass}>
+          <label htmlFor="budget-sustainability-dei-practices" className="flex items-center gap-[inherit]">
+          Sustainability &amp; DEI Practices
+          <span className="ml-2 text-xs font-normal normal-case text-slate-400">(optional)</span></label>
+          <InfoTooltip text="Describe any sustainability or DEI (diversity, equity, and inclusion) requirements or preferences vendors should address in their proposal." />
+          </div>
+          <textarea id="budget-sustainability-dei-practices"
             rows={3}
             value={safeData.sustainabilityDeiNotes}
             onChange={(e) => onChange({ sustainabilityDeiNotes: e.target.value })}
@@ -861,10 +875,11 @@ const BudgetProposalPreferences = ({
         {/* Vendor Questions Due + Response to Vendor Questions */}
         <div className="mb-6 grid grid-cols-2 gap-5">
           <div>
-            <label className={labelClass}>
-              Vendor Questions Due <span className="text-red-500">*</span>
-              <InfoTooltip text="The deadline for vendors to submit clarifying questions about the proposal." />
-            </label>
+            <div className={labelClass}>
+            <span className="flex items-center gap-[inherit]">
+            Vendor Questions Due <span className="text-red-500">*</span></span>
+            <InfoTooltip text="The deadline for vendors to submit clarifying questions about the proposal." />
+            </div>
             <GlobalDateInput
               id="vendorQuestionsDueDate"
               label="Vendor Questions Due"
@@ -884,10 +899,11 @@ const BudgetProposalPreferences = ({
             {timelineError("vendorQuestionsDueDate") && <p className={errorClass}>{timelineError("vendorQuestionsDueDate")}</p>}
           </div>
           <div>
-            <label className={labelClass}>
-              Response to Vendor Questions <span className="text-red-500">*</span>
-              <InfoTooltip text="The date by which you'll respond to vendor questions submitted above." />
-            </label>
+            <div className={labelClass}>
+            <span className="flex items-center gap-[inherit]">
+            Response to Vendor Questions <span className="text-red-500">*</span></span>
+            <InfoTooltip text="The date by which you'll respond to vendor questions submitted above." />
+            </div>
             <GlobalDateInput
               id="responseToVendorQuestionsDate"
               label="Response to Vendor Questions"
@@ -911,10 +927,11 @@ const BudgetProposalPreferences = ({
         {/* Proposal Submission Due + Shortlist Notification */}
         <div className="mb-6 grid grid-cols-2 gap-5">
           <div>
-            <label className={labelClass}>
-              Proposal Submission Due <span className="text-red-500">*</span>
-              <InfoTooltip text="The deadline for vendors to submit their completed proposals." />
-            </label>
+            <div className={labelClass}>
+            <span className="flex items-center gap-[inherit]">
+            Proposal Submission Due <span className="text-red-500">*</span></span>
+            <InfoTooltip text="The deadline for vendors to submit their completed proposals." />
+            </div>
             <GlobalDateInput
               id="proposalSubmissionDueDate"
               label="Proposal Submission Due"
@@ -934,10 +951,11 @@ const BudgetProposalPreferences = ({
             {timelineError("proposalSubmissionDueDate") && <p className={errorClass}>{timelineError("proposalSubmissionDueDate")}</p>}
           </div>
           <div>
-            <label className={labelClass}>
-              Shortlist Notification <span className="text-red-500">*</span>
-              <InfoTooltip text="The date by which shortlisted vendors will be notified." />
-            </label>
+            <div className={labelClass}>
+            <span className="flex items-center gap-[inherit]">
+            Shortlist Notification <span className="text-red-500">*</span></span>
+            <InfoTooltip text="The date by which shortlisted vendors will be notified." />
+            </div>
             <GlobalDateInput
               id="shortlistNotificationDate"
               label="Shortlist Notification"
@@ -960,12 +978,14 @@ const BudgetProposalPreferences = ({
 
         {/* Vendor Presentation Opportunity */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Will Vendors Be Given an Opportunity to Present if Shortlisted?{" "}
-            <span className="text-red-500">*</span>
-            <InfoTooltip text="If yes, shortlisted vendors will be invited to present their proposal before final selection." />
-          </label>
+          <div className={labelClass}>
+          <span id="budget-will-vendors-be-given-an-opportu-label" className="flex items-center gap-[inherit]">
+          Will Vendors Be Given an Opportunity to Present if Shortlisted?{" "}
+          <span className="text-red-500">*</span></span>
+          <InfoTooltip text="If yes, shortlisted vendors will be invited to present their proposal before final selection." />
+          </div>
           <YesNo
+ labelledBy="budget-will-vendors-be-given-an-opportu-label"
             value={safeData.vendorPresentationOpportunity}
             onChange={(v) =>
               onChange({
@@ -1007,10 +1027,11 @@ const BudgetProposalPreferences = ({
 
         {/* Vendor Selection */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Vendor Selection <span className="text-red-500">*</span>
-            <InfoTooltip text="The date by which the vendor will be selected." />
-          </label>
+          <div className={labelClass}>
+          <span className="flex items-center gap-[inherit]">
+          Vendor Selection <span className="text-red-500">*</span></span>
+          <InfoTooltip text="The date by which the vendor will be selected." />
+          </div>
           <div className="max-w-60">
             <GlobalDateInput
               id="vendorSelectionDate"
@@ -1034,10 +1055,11 @@ const BudgetProposalPreferences = ({
 
         {/* Target Decision Date */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Target Decision Date
-            <InfoTooltip text="The date by which you plan to award or select a vendor. Helps us schedule follow-ups appropriately." />
-          </label>
+          <div className={labelClass}>
+          <span className="flex items-center gap-[inherit]">
+          Target Decision Date</span>
+          <InfoTooltip text="The date by which you plan to award or select a vendor. Helps us schedule follow-ups appropriately." />
+          </div>
           <div className="max-w-60">
             <GlobalDateInput
               id="decisionDate"
@@ -1058,11 +1080,13 @@ const BudgetProposalPreferences = ({
 
         {/* Competitive Bid */}
         <div className="mb-6">
-          <label className={labelClass}>
-            Competitive Bid?
-            <InfoTooltip text="Are multiple vendors being solicited for this proposal? Helps us understand the competitive context and tailor our response strategy." />
-          </label>
+          <div className={labelClass}>
+          <span id="budget-competitive-bid-label" className="flex items-center gap-[inherit]">
+          Competitive Bid?</span>
+          <InfoTooltip text="Are multiple vendors being solicited for this proposal? Helps us understand the competitive context and tailor our response strategy." />
+          </div>
           <YesNo
+ labelledBy="budget-competitive-bid-label"
             value={safeData.competitiveBid}
             onChange={(v) =>
               onChange({
@@ -1073,10 +1097,11 @@ const BudgetProposalPreferences = ({
           />
           {safeData.competitiveBid === "YES" && (
             <div className={subPanelClass}>
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
+              <label htmlFor="budget-competitive-bid" className="mb-2 block text-xs font-bold uppercase tracking-widest text-[#969798]">
                 How many vendors are being solicited?
-              </p>
+              </label>
               <input
+                id="budget-competitive-bid"
                 type="number"
                 min="1"
                 value={safeData.numberOfProposals}
@@ -1097,10 +1122,11 @@ const BudgetProposalPreferences = ({
           className="mb-6"
           data-assistant-field-key="/content/budgetPreferences/producerCallRequested"
         >
-          <label className={labelClass}>
+          <label id="budget-producer-call-label" className={labelClass}>
             Setup a call with an RFPilot producer helps clarify requirements, improve vendor responses, and advise on negotiation tactics with venues prior to signing an agreement? <span className="text-red-500">*</span>
           </label>
           <YesNo
+            labelledBy="budget-producer-call-label"
             value={safeData.callWithDxgProducer}
             onChange={(v) => onChange({ callWithDxgProducer: v })}
           />
@@ -1124,11 +1150,13 @@ const BudgetProposalPreferences = ({
         <Group label="Referral" />
 
         <div className="mb-6">
-          <label className={labelClass}>
-            How did you hear about this tool? <span className="text-red-500">*</span>
-            <InfoTooltip text="Helps us understand where our clients are finding us so we can improve outreach and support." />
-          </label>
+          <div className={labelClass}>
+          <span id="budget-how-did-you-hear-about-this-tool-label" className="flex items-center gap-[inherit]">
+          How did you hear about this tool? <span className="text-red-500">*</span></span>
+          <InfoTooltip text="Helps us understand where our clients are finding us so we can improve outreach and support." />
+          </div>
           <SelectField
+ labelledBy="budget-how-did-you-hear-about-this-tool-label"
             value={safeData.howDidYouHear}
             onChange={(v) =>
               onChange({
@@ -1142,10 +1170,11 @@ const BudgetProposalPreferences = ({
           />
           {safeData.howDidYouHear === "Other" && (
             <div className={subPanelClass}>
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#969798]">
+              <label htmlFor="budget-how-did-you-hear-about-this-tool" className="mb-2 block text-xs font-bold uppercase tracking-widest text-[#969798]">
                 Please specify
-              </p>
+              </label>
               <textarea
+                id="budget-how-did-you-hear-about-this-tool"
                 rows={2}
                 value={safeData.howDidYouHearOther}
                 onChange={(e) => onChange({ howDidYouHearOther: e.target.value })}

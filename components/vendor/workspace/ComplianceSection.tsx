@@ -39,9 +39,9 @@ export default function ComplianceSection({ questionnaire, response, onChange, s
             {questionnaire.acknowledgements.map((acknowledgement) => {
               const answer = response.acknowledgements.find((entry) => entry.acknowledgementId === acknowledgement.acknowledgementId);
               return (
-                <label key={acknowledgement.acknowledgementId} className="flex cursor-pointer items-start gap-3 rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4 text-sm text-[#334b60] focus-within:border-[#008ad2] focus-within:ring-3 focus-within:ring-[#dff3fc]">
+                <label key={acknowledgement.acknowledgementId} className="flex cursor-pointer items-start gap-3 rounded-md border border-[#dce4eb] bg-[#f8fafb] p-4 text-sm text-[#334b60] focus-within:border-[#218ccb] focus-within:ring-3 focus-within:ring-[#dff3fc]">
                   <input
-                    className="mt-0.5 h-4 w-4 accent-[#008ad2]"
+                    className="mt-0.5 h-4 w-4 accent-[#218ccb]"
                     type="checkbox"
                     checked={answer?.accepted ?? false}
                     disabled={disabled}

@@ -123,7 +123,7 @@ export default function DocumentsSection({
       }
     >
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-[#d8ebf5] bg-[#eef8fd] p-4">
-        <ShieldCheck size={21} className="text-[#008ad2]" aria-hidden="true" />
+        <ShieldCheck size={21} className="text-[#218ccb]" aria-hidden="true" />
         <div>
           <p className="text-sm font-extrabold text-[#16283c]">
             Private and scan-checked
@@ -255,7 +255,7 @@ export default function DocumentsSection({
                   disabled={
                     disabled || !canUpload || !files.length || Boolean(busy)
                   }
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#008ad2] px-4 text-sm font-extrabold text-white hover:bg-[#0075b4] disabled:bg-[#d4dce3] disabled:text-[#8394a3]"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#218ccb] px-4 text-sm font-extrabold text-white hover:bg-[#0075b4] disabled:bg-[#d4dce3] disabled:text-[#8394a3]"
                   onClick={() => void upload(category.purposeId)}
                 >
                   <FilePlus2 size={15} aria-hidden="true" />

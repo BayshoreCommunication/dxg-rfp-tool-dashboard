@@ -17,13 +17,13 @@ export const sectionTitleClass = "text-xl font-semibold leading-none text-[#2226
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2";
 export const primaryButtonClass =
   `inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-[13px] font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.30)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 ${focusRing}`;
-export const primaryButtonStyle = { background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" };
+export const primaryButtonStyle = { background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" };
 export const secondaryButtonClass =
   `inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`;
 export const dangerButtonClass =
   `inline-flex items-center justify-center gap-2 rounded-md bg-rose-600 px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
 export const linkButtonClass =
-  `rounded px-2 py-1 text-xs font-semibold text-[#008ad2] transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent ${focusRing}`;
+  `rounded px-2 py-1 text-xs font-semibold text-[#218ccb] transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent ${focusRing}`;
 
 const BADGE_TONES = {
   sky: "border-sky-100 bg-sky-50 text-sky-700",
@@ -61,7 +61,7 @@ export const InlineError = ({ children }: { children: ReactNode }) => (
 
 export const EmptyState = ({ icon, title, body, action }: { icon: ReactNode; title: string; body?: string; action?: ReactNode }) => (
   <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-[#e4e4e4] bg-[#fafbfc] px-6 py-12 text-center">
-    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-sky-50 text-[#008ad2]">{icon}</div>
+    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-sky-50 text-[#218ccb]">{icon}</div>
     <p className="text-sm font-semibold text-[#222628]">{title}</p>
     {body && <p className="mt-1 max-w-md text-sm text-slate-500">{body}</p>}
     {action && <div className="mt-4">{action}</div>}

@@ -41,7 +41,7 @@ type FieldGroup = {
 const FIELD_GROUPS: FieldGroup[] = [
   {
     label: "1 · Event Overview",
-    color: "border-[#008ad2] bg-[#008ad2]/5 text-[#0069a0]",
+    color: "border-[#218ccb] bg-[#218ccb]/5 text-[#0069a0]",
     fields: [
       "Event name, theme & edition year",
       "Start / end dates & venue city",
@@ -467,7 +467,7 @@ function GuideModal({ onClose }: { onClose: () => void }) {
         {/* Gradient header */}
         <div
           className="px-6 py-5"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" }}
         >
           <div className="flex items-start justify-between">
             <div>
@@ -560,13 +560,13 @@ function GuideModal({ onClose }: { onClose: () => void }) {
             onClick={downloadSamplePdf}
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-100"
           >
-            <Download size={15} className="text-[#008ad2]" />
+            <Download size={15} className="text-[#218ccb]" />
             Download Sample (PDF)
           </button>
           <button
             onClick={onClose}
             className="rounded-xl px-5 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" }}
           >
             Got it
           </button>
@@ -594,7 +594,7 @@ function ExtractionLoader({ fileName }: { fileName: string }) {
       <div className="mb-8 text-center">
         <div
           className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg shadow-cyan-500/30"
-          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+          style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" }}
         >
           <Loader2 className="h-7 w-7 animate-spin text-white" />
         </div>
@@ -663,7 +663,7 @@ function ExtractionLoader({ fileName }: { fileName: string }) {
           className="h-2 rounded-full transition-all duration-700 ease-out"
           style={{
             width: `${progress}%`,
-            background: "linear-gradient(90deg, #2fc6f5 0%, #008ad2 100%)",
+            background: "linear-gradient(90deg, #2fc6f5 0%, #218ccb 100%)",
           }}
         />
       </div>
@@ -754,7 +754,7 @@ export default function AddProposalUpload({
           <div
             className="mb-5 flex w-full items-center justify-between gap-4 rounded-xl px-5 py-4"
             style={{
-              background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)",
+              background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)",
               boxShadow: "0 4px 20px rgba(14,165,233,0.25)",
             }}
           >
@@ -776,7 +776,7 @@ export default function AddProposalUpload({
             <button
               type="button"
               onClick={() => setShowGuide(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-[#008ad2] shadow-sm transition-all hover:scale-105"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-[#218ccb] shadow-sm transition-all hover:scale-105"
               style={{ background: "rgba(255,255,255,0.92)" }}
             >
               <HelpCircle size={12} />
@@ -801,7 +801,7 @@ export default function AddProposalUpload({
                 <p className="text-sm font-semibold text-slate-700">
                   PDF, DOC, DOCX, CSV
                 </p>
-                <label className="mt-5 inline-flex cursor-pointer rounded-xl bg-[#008ad2] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#0069a0]">
+                <label className="mt-5 inline-flex cursor-pointer rounded-xl bg-[#218ccb] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#0069a0]">
                   Browse File
                   <input
                     type="file"
@@ -842,7 +842,7 @@ export default function AddProposalUpload({
                   <button
                     type="button"
                     onClick={onContinueWithUpload}
-                    className="mx-auto w-full max-w-[200px] rounded-xl bg-[#008ad2] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#0069a0]"
+                    className="mx-auto w-full max-w-[200px] rounded-xl bg-[#218ccb] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#0069a0]"
                   >
                     Continue
                   </button>

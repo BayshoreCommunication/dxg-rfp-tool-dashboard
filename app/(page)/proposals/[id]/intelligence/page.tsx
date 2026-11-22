@@ -112,12 +112,12 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <Link href="/proposals" className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-500 hover:text-[#008ad2]"><ArrowLeft size={14} />Back to proposals</Link>
+        <Link href="/proposals" className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-500 hover:text-[#218ccb]"><ArrowLeft size={14} />Back to proposals</Link>
         <header className="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-5 sm:p-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#008ad2]">Proposal intelligence</p>
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#218ccb]">Proposal intelligence</p>
                 <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{title}</h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">RFPilot reads every response you receive, checks it against the requirements you approved, and lines the vendors up side by side with each claim linked back to the vendor&rsquo;s own words. It suggests a starting score from that evidence. You confirm or change it, and you choose the vendor.</p>
                 <div className="mt-4"><GlossaryDialog /></div>
@@ -128,7 +128,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
         <div className="mt-4"><RfpAccessPanel proposalId={id} /></div>
 
         <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="step-one-title">
-          <p className="text-xs font-extrabold uppercase tracking-wide text-[#008ad2]">Step 1 · Approve your requirements</p>
+          <p className="text-xs font-extrabold uppercase tracking-wide text-[#218ccb]">Step 1 · Approve your requirements</p>
           <div className="mt-2 flex items-start gap-3">
             <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${approvedSet ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{approvedSet ? <CheckCircle2 size={19} /> : <AlertTriangle size={19} />}</span>
             <div>
@@ -136,7 +136,7 @@ export default async function ProposalIntelligencePage({ params }: { params: Pro
               <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{approvedSet ? `Version ${approvedSet.version} contains ${approvedSet.requirement_count} requirements, approved${approvedSet.approved_at ? ` on ${formatIntelligenceTimestamp(approvedSet.approved_at)}` : ""} in the requirement checklist. It is locked so every vendor is judged against the same list.` : "Review and approve your requirement checklist to begin. Every vendor will be compared against the same approved list."}</p>
             </div>
           </div>
-          <Link href={requirementRegistryHref(id, intelligencePath)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#008ad2] hover:text-[#008ad2]"><FileStack size={15} />{approvedSet ? "Open requirement checklist" : "Approve your requirements"}</Link>
+          <Link href={requirementRegistryHref(id, intelligencePath)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-800 hover:border-[#218ccb] hover:text-[#218ccb]"><FileStack size={15} />{approvedSet ? "Open requirement checklist" : "Approve your requirements"}</Link>
         </section>
 
         <ProposalIntelligenceLiveRun

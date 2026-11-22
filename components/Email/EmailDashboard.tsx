@@ -183,14 +183,14 @@ export default function EmailDashboard() {
             key={campaign._id}
             className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6"
           >
-            <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#008ad2]/5 blur-3xl" />
+            <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-[#218ccb]/5 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-14 -left-14 h-40 w-40 rounded-full bg-[#2563eb]/5 blur-3xl" />
 
             <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               {/* Left side */}
               <div className="min-w-0 flex-1">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#008ad2]/30 bg-[#008ad2]/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-dark">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#218ccb]/30 bg-[#218ccb]/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-dark">
                     Proposal Email
                   </span>
                   {/* <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500">
@@ -380,7 +380,7 @@ function CampaignRecipients({
       aria-label="Campaign recipients"
     >
       <span className="inline-flex min-h-8 shrink-0 items-center gap-1.5 text-xs font-bold text-slate-500">
-        <Mail size={14} className="text-[#008ad2]" aria-hidden="true" />
+        <Mail size={14} className="text-[#218ccb]" aria-hidden="true" />
         Recipients
       </span>
       <div className="flex min-w-0 flex-1 flex-wrap gap-2">

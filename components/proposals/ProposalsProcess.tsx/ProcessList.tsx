@@ -54,6 +54,7 @@ const ProcessList = ({
   mode = "advanced",
   autosaveStatus,
   autosaveError = false,
+  onAutosaveRetry,
 }: {
   activeStep?: number;
   hideStepIds?: number[];
@@ -63,6 +64,8 @@ const ProcessList = ({
   mode?: ProposalExperienceMode;
   autosaveStatus?: string;
   autosaveError?: boolean;
+  /** Shown as a Retry button next to a failed autosave. */
+  onAutosaveRetry?: () => void;
 }) => {
   const visibleSteps = steps
     .filter((s) => !hideStepIds.includes(s.id))
@@ -103,6 +106,15 @@ const ProcessList = ({
           >
             {autosaveStatus}
           </p>
+        )}
+        {autosaveStatus && autosaveError && onAutosaveRetry && (
+          <button
+            type="button"
+            onClick={onAutosaveRetry}
+            className="shrink-0 rounded-md border border-red-300 bg-white px-2 py-0.5 text-xs font-semibold text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069a0]"
+          >
+            Retry save
+          </button>
         )}
       </div>
 

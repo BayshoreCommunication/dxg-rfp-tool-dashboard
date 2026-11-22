@@ -57,7 +57,7 @@ function PixelGrid() {
         <span
           key={index}
           data-attachment-loader-pixel
-          className="size-1 rounded-[1px] bg-[#087f90]"
+          className="size-1 rounded-[1px] bg-action"
           style={{
             opacity: 0.15,
             animation: `dxg-source-pixel-on 650ms ease-in-out ${delay}ms infinite`,
@@ -85,7 +85,7 @@ export default function SourceIntakeProgress({ phase }: { phase: SourceIntakePha
       <span className="dxg-source-shimmer truncate text-[13px] font-semibold">
         {current.title}
       </span>
-      <span aria-hidden="true" className="shrink-0 font-mono text-xs tabular-nums text-slate-400">
+      <span aria-hidden="true" className="shrink-0 font-mono text-xs tabular-nums text-muted">
         {elapsed}
       </span>
       <span className="sr-only">{current.detail}</span>

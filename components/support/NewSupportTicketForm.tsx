@@ -78,7 +78,7 @@ export default function NewSupportTicketForm({
           }}
           maxLength={SUBJECT_MAX}
           placeholder="e.g. Vendors say the response link has expired"
-          className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#008ad2] focus:ring-2 focus:ring-[#008ad2]/15"
+          className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#218ccb] focus:ring-2 focus:ring-[#218ccb]/15"
         />
       </div>
 
@@ -90,7 +90,7 @@ export default function NewSupportTicketForm({
               key={option.value}
               className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition ${
                 category === option.value
-                  ? "border-[#008ad2] bg-[#008ad2]/5"
+                  ? "border-[#218ccb] bg-[#218ccb]/5"
                   : "border-slate-200 bg-white hover:border-slate-300"
               }`}
             >
@@ -103,7 +103,7 @@ export default function NewSupportTicketForm({
                   setCategory(option.value);
                   if (error) setError(null);
                 }}
-                className="mt-1 h-3.5 w-3.5 accent-[#008ad2]"
+                className="mt-1 h-3.5 w-3.5 accent-[#218ccb]"
               />
               <span>
                 <span className="block font-semibold text-slate-800">{option.label}</span>
@@ -128,7 +128,7 @@ export default function NewSupportTicketForm({
           maxLength={BODY_MAX}
           rows={6}
           placeholder="What were you trying to do, what did you expect, and what happened instead? Include the proposal name and any reference ID from an error message."
-          className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#008ad2] focus:ring-2 focus:ring-[#008ad2]/15"
+          className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#218ccb] focus:ring-2 focus:ring-[#218ccb]/15"
         />
         <p className="mt-1 text-right text-[11px] text-slate-400">
           {body.length}/{BODY_MAX}

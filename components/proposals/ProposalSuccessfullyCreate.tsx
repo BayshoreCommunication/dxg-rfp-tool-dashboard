@@ -31,9 +31,9 @@ const stepState = (index: number, stage: Stage): "done" | "current" | "upcoming"
 };
 
 const secondaryButton =
-  "inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008ad2]";
+  "inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#218ccb]";
 const primaryButton =
-  "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#008ad2] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-sky-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600";
+  "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#218ccb] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-sky-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600";
 
 /**
  * What the planner sees after "Publish proposal". Publishing makes the RFP
@@ -70,7 +70,7 @@ const ProposalSuccessfullyCreate = ({
                   state === "done"
                     ? "border-emerald-600 bg-emerald-600 text-white"
                     : state === "current"
-                      ? "border-[#008ad2] bg-[#008ad2] text-white"
+                      ? "border-[#218ccb] bg-[#218ccb] text-white"
                       : "border-slate-300 bg-white text-slate-400"
                 }`}
                 aria-hidden="true"
@@ -114,7 +114,7 @@ const ProposalSuccessfullyCreate = ({
             <p className="text-xs text-slate-500">
               Not ready to invite anyone? You can send invitations any time from Email.
             </p>
-            <button type="button" onClick={() => setStage("skipped")} className="min-h-10 rounded-xl px-4 text-sm font-bold text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008ad2]">
+            <button type="button" onClick={() => setStage("skipped")} className="min-h-10 rounded-xl px-4 text-sm font-bold text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#218ccb]">
               Skip for now
             </button>
           </div>
@@ -129,7 +129,7 @@ const ProposalSuccessfullyCreate = ({
           </h3>
           <ul className="mt-3 flex flex-wrap gap-2" aria-label="Invited vendors">
             {invited.map((email) => (
-              <li key={email} className="inline-flex items-center gap-1.5 rounded-md border border-[#008ad2]/30 bg-white px-2.5 py-1 text-[12px] font-medium text-brand-dark">
+              <li key={email} className="inline-flex items-center gap-1.5 rounded-md border border-[#218ccb]/30 bg-white px-2.5 py-1 text-[12px] font-medium text-brand-dark">
                 <Mail size={12} aria-hidden="true" /> {email}
               </li>
             ))}
@@ -137,7 +137,7 @@ const ProposalSuccessfullyCreate = ({
           <p className="mt-3 text-sm text-slate-600">
             Each vendor received their own secure link and cannot see the other recipients. Replies land in Vendor Responses.
           </p>
-          <button type="button" onClick={() => setStage("invite")} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#008ad2]/30 bg-white px-4 text-sm font-bold text-brand-dark hover:bg-[#008ad2]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008ad2]">
+          <button type="button" onClick={() => setStage("invite")} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#218ccb]/30 bg-white px-4 text-sm font-bold text-brand-dark hover:bg-[#218ccb]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#218ccb]">
             <Send size={14} aria-hidden="true" /> Invite more vendors
           </button>
         </section>
@@ -152,7 +152,7 @@ const ProposalSuccessfullyCreate = ({
           <p className="mt-2 text-sm text-slate-600">
             The proposal is live, but no vendor knows about it until you send an invitation. You can do that now or later from Email.
           </p>
-          <button type="button" onClick={() => setStage("invite")} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#008ad2] px-4 text-sm font-bold text-white hover:bg-sky-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
+          <button type="button" onClick={() => setStage("invite")} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#218ccb] px-4 text-sm font-bold text-white hover:bg-sky-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
             <ArrowLeft size={14} aria-hidden="true" /> Invite vendors now
           </button>
         </section>

@@ -205,7 +205,7 @@ export default function CrewSection({
                     onClick={() => {
                       uploadForId.current = member.crewMemberId;
                     }}
-                    className={`inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-3 py-2 text-xs font-extrabold text-[#0075b4] ${disabled || showPlaceholder || !canUpload || !imageCategory ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#eef8fd]"}`}
+                    className={`inline-flex items-center gap-2 rounded-md border border-[#218ccb] px-3 py-2 text-xs font-extrabold text-[#0075b4] ${disabled || showPlaceholder || !canUpload || !imageCategory ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#eef8fd]"}`}
                   >
                     <ImageUp size={14} aria-hidden="true" />
                     {uploadingId === member.crewMemberId
@@ -241,7 +241,7 @@ export default function CrewSection({
       <button
         type="button"
         disabled={disabled || questionnaire.crew.roles.length === 0}
-        className="mt-4 inline-flex items-center gap-2 rounded-md border border-[#008ad2] px-4 py-2.5 text-sm font-extrabold text-[#0075b4] hover:bg-[#eef8fd] disabled:opacity-50"
+        className="mt-4 inline-flex items-center gap-2 rounded-md border border-[#218ccb] px-4 py-2.5 text-sm font-extrabold text-[#0075b4] hover:bg-[#eef8fd] disabled:opacity-50"
         onClick={() =>
           onChange({
             ...response,

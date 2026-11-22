@@ -47,14 +47,14 @@ export default function VerifyDomainBanner({ prompt }: { prompt: VerifyDomainPro
           <p>
             <span className="font-semibold">{at} isn&apos;t verified yet.</span> After you publish its DNS TXT record,
             open{" "}
-            <Link href="/settings/security" className="font-semibold text-[#008ad2] hover:underline">Security</Link>{" "}
+            <Link href="/settings/security" className="font-semibold text-[#218ccb] hover:underline">Security</Link>{" "}
             and press <span className="font-semibold">Check now</span>. Until then, auto-approve for new colleagues stays off.
           </p>
         ) : (
           <p>
             <span className="font-semibold">Verify {at}</span> so colleagues who sign up are asked to join your
             organization, and so you can let them in without review.{" "}
-            <Link href="/settings/security" className="font-semibold text-[#008ad2] hover:underline">Verify domain</Link>
+            <Link href="/settings/security" className="font-semibold text-[#218ccb] hover:underline">Verify domain</Link>
           </p>
         )}
       </div>

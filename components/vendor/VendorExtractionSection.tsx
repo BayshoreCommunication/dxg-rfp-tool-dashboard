@@ -148,7 +148,7 @@ export default function VendorExtractionSection({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 id="evidence-extraction-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
-            <FileSearch size={17} className="text-[#008ad2]" /> Files read
+            <FileSearch size={17} className="text-[#218ccb]" /> Files read
           </h3>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
             Whether each file could be read, and how much of it. Everything below in this response is built only from this text.

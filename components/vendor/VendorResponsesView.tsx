@@ -151,14 +151,14 @@ export default function VendorResponsesView({
     <section className="flex h-[calc(100dvh-3rem)] min-h-0 flex-col overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_55px_-34px_rgba(15,23,42,0.35)]">
       <header className="flex shrink-0 flex-col gap-4 border-b border-slate-200/80 px-5 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#008ad2] text-white shadow-[0_10px_22px_-12px_rgba(0,138,210,0.85)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#218ccb] text-white shadow-[0_10px_22px_-12px_rgba(33,140,203,0.85)]">
             <Inbox size={20} strokeWidth={2.2} />
           </div>
           <div>
             {backHref && (
               <Link
                 href={backHref}
-                className="mb-1 inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-[#008ad2] hover:text-[#0076b4]"
+                className="mb-1 inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-[#218ccb] hover:text-[#0076b4]"
               >
                 <ArrowLeft size={12} aria-hidden="true" /> All proposals
               </Link>
@@ -171,7 +171,7 @@ export default function VendorResponsesView({
             <p className="mt-0.5 text-xs text-slate-500">
               {totalCount} {totalCount === 1 ? "vendor response" : "vendor responses"}
               {unreadCount > 0 && (
-                <span className="ml-2 font-bold text-[#008ad2]">
+                <span className="ml-2 font-bold text-[#218ccb]">
                   · {unreadCount} unread
                 </span>
               )}
@@ -191,7 +191,7 @@ export default function VendorResponsesView({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search responses"
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-10 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#008ad2]/40 focus:bg-white focus:ring-4 focus:ring-[#008ad2]/10"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-10 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#218ccb]/40 focus:bg-white focus:ring-4 focus:ring-[#218ccb]/10"
             />
           </label>
           <button
@@ -201,7 +201,7 @@ export default function VendorResponsesView({
             className={cn(
               "flex h-10 shrink-0 items-center gap-2 rounded-xl border px-3.5 text-xs font-bold transition",
               unreadOnly
-                ? "border-[#008ad2]/30 bg-[#008ad2]/10 text-[#0076b4]"
+                ? "border-[#218ccb]/30 bg-[#218ccb]/10 text-[#0076b4]"
                 : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
             )}
           >
@@ -236,7 +236,7 @@ export default function VendorResponsesView({
                   {query.trim() ? (
                     <Search size={22} className="text-slate-400" />
                   ) : (
-                    <Inbox size={22} className="text-[#008ad2]" />
+                    <Inbox size={22} className="text-[#218ccb]" />
                   )}
                 </div>
                 <div>
@@ -268,18 +268,18 @@ export default function VendorResponsesView({
                         className={cn(
                           "group relative flex w-full gap-3 rounded-2xl px-3 py-3.5 text-left transition",
                           isSelected
-                            ? "bg-[#eaf7fd] shadow-[inset_0_0_0_1px_rgba(0,138,210,0.1)]"
+                            ? "bg-[#eaf7fd] shadow-[inset_0_0_0_1px_rgba(33,140,203,0.1)]"
                             : "hover:bg-slate-50",
                         )}
                       >
                         {isSelected && (
-                          <span className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-[#008ad2]" />
+                          <span className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-[#218ccb]" />
                         )}
                         <div
                           className={cn(
                             "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-extrabold",
                             isSelected
-                              ? "bg-[#008ad2] text-white"
+                              ? "bg-[#218ccb] text-white"
                               : "bg-slate-100 text-slate-500 group-hover:bg-slate-200/70",
                           )}
                         >
@@ -303,9 +303,9 @@ export default function VendorResponsesView({
                           </div>
                           <div className="mt-1 flex items-center gap-2">
                             {!item.isRead && (
-                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#008ad2]" />
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#218ccb]" />
                             )}
-                            <p className="truncate text-[11px] font-semibold text-[#008ad2]">
+                            <p className="truncate text-[11px] font-semibold text-[#218ccb]">
                               {item.proposalTitle}
                             </p>
                           </div>
@@ -354,13 +354,13 @@ export default function VendorResponsesView({
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className="flex items-center gap-2 text-xs font-bold text-slate-500 transition hover:text-[#008ad2] lg:hidden"
+                className="flex items-center gap-2 text-xs font-bold text-slate-500 transition hover:text-[#218ccb] lg:hidden"
               >
                 <ArrowLeft size={15} />
                 Back to inbox
               </button>
               <div className="hidden items-center gap-2 text-xs font-semibold text-slate-400 lg:flex">
-                <CheckCheck size={15} className="text-[#008ad2]" />
+                <CheckCheck size={15} className="text-[#218ccb]" />
                 Response opened
               </div>
               <button
@@ -381,7 +381,7 @@ export default function VendorResponsesView({
                   returnTo="/vendor-responses"
                 />
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#008ad2] text-base font-extrabold text-white shadow-[0_12px_28px_-16px_rgba(0,138,210,0.9)]">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#218ccb] text-base font-extrabold text-white shadow-[0_12px_28px_-16px_rgba(33,140,203,0.9)]">
                     {initials(selected.vendorName)}
                   </div>
                   <div className="min-w-0 flex-1 pt-0.5">
@@ -401,13 +401,13 @@ export default function VendorResponsesView({
                     </p>
                     <Link
                       href={requirementRegistryHref(selected.proposalId, "/vendor-responses")}
-                      className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#008ad2]/25 bg-[#eaf7fd] px-3 text-xs font-extrabold text-[#0076b4] transition hover:border-[#008ad2]/40 hover:bg-[#dff3fc]"
+                      className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#218ccb]/25 bg-[#eaf7fd] px-3 text-xs font-extrabold text-[#0076b4] transition hover:border-[#218ccb]/40 hover:bg-[#dff3fc]"
                     >
                       <ClipboardList size={14} /> Review proposal requirements
                     </Link>
                     <Link
                       href={`/vendor-responses/${selected._id}`}
-                      className="ml-2 mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-700 transition hover:border-[#008ad2]/30 hover:text-[#0076b4]"
+                      className="ml-2 mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-700 transition hover:border-[#218ccb]/30 hover:text-[#0076b4]"
                     >
                       <ExternalLink size={14} aria-hidden="true" /> Open version
                       history
@@ -460,11 +460,11 @@ export default function VendorResponsesView({
                                 href={document.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#008ad2]/30 hover:bg-[#008ad2]/5 hover:text-[#0076b4]"
+                                className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#218ccb]/30 hover:bg-[#218ccb]/5 hover:text-[#0076b4]"
                               >
                                 <FileText
                                   size={16}
-                                  className="text-[#008ad2]"
+                                  className="text-[#218ccb]"
                                 />
                                 <span className="min-w-0 flex-1 truncate">
                                   {document.name}
@@ -518,7 +518,7 @@ export default function VendorResponsesView({
         ) : (
           <div className="hidden flex-1 items-center justify-center p-8 text-center lg:flex">
             <div>
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-[#008ad2] shadow-sm ring-1 ring-slate-200">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-[#218ccb] shadow-sm ring-1 ring-slate-200">
                 <Mail size={25} />
               </div>
               <h2 className="mt-5 text-lg font-extrabold text-slate-800">
@@ -553,7 +553,7 @@ function ResponseFact({
   const content = href ? (
     <a
       href={href}
-      className="break-all font-bold text-[#008ad2] hover:underline"
+      className="break-all font-bold text-[#218ccb] hover:underline"
     >
       {value}
     </a>

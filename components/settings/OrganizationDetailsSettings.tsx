@@ -182,7 +182,7 @@ export default function OrganizationDetailsSettings() {
                 type="submit"
                 disabled={!dirty || saving}
                 className="rounded-md px-5 py-2.5 text-[13px] font-bold text-white shadow-[0_4px_20px_rgba(14,165,233,0.30)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-                style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+                style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" }}
               >
                 {saving ? "Saving..." : "Save organization details"}
               </button>

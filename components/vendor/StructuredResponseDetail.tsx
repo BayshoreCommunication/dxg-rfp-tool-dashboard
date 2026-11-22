@@ -97,7 +97,7 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-950">
-              <BadgeCheck size={17} className="text-[#008ad2]" aria-hidden="true" />
+              <BadgeCheck size={17} className="text-[#218ccb]" aria-hidden="true" />
               Structured response · questionnaire v{questionnaire.questionnaireVersion}
             </h3>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">
@@ -105,10 +105,10 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
             </p>
           </div>
           <div className="flex flex-wrap gap-2 print:hidden">
-            <a href={reviewHref} target="_blank" rel="noopener" className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-800 hover:border-[#008ad2]">
+            <a href={reviewHref} target="_blank" rel="noopener" className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-800 hover:border-[#218ccb]">
               <Printer size={14} aria-hidden="true" /> Print view
             </a>
-            <a href={`${exportBase}&format=pdf`} download className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-800 hover:border-[#008ad2]">
+            <a href={`${exportBase}&format=pdf`} download className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-800 hover:border-[#218ccb]">
               <Download size={14} aria-hidden="true" /> Download review
             </a>
           </div>
@@ -144,7 +144,7 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
       </section>
 
       <section className="rounded-2xl border border-slate-200 p-5" aria-labelledby="company-heading">
-        <div className="flex items-center justify-between gap-3"><h3 id="company-heading" className="flex items-center gap-2 text-base font-extrabold text-slate-950"><Building2 size={17} className="text-[#008ad2]" aria-hidden="true" />Company profile</h3><Provenance kind="vendor" /></div>
+        <div className="flex items-center justify-between gap-3"><h3 id="company-heading" className="flex items-center gap-2 text-base font-extrabold text-slate-950"><Building2 size={17} className="text-[#218ccb]" aria-hidden="true" />Company profile</h3><Provenance kind="vendor" /></div>
         <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
           <Definition label="Legal name" value={response.companyProfile.legalName} />
           {response.companyProfile.dba ? <Definition label="DBA" value={response.companyProfile.dba} /> : null}
@@ -179,7 +179,7 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
       </section>
 
       <section className="rounded-2xl border border-slate-200 p-5" aria-labelledby="pricing-heading">
-        <div className="flex items-center justify-between gap-3"><h3 id="pricing-heading" className="flex items-center gap-2 text-base font-extrabold text-slate-950"><Calculator size={17} className="text-[#008ad2]" aria-hidden="true" />Pricing summary</h3><Provenance kind="calculated" /></div>
+        <div className="flex items-center justify-between gap-3"><h3 id="pricing-heading" className="flex items-center gap-2 text-base font-extrabold text-slate-950"><Calculator size={17} className="text-[#218ccb]" aria-hidden="true" />Pricing summary</h3><Provenance kind="calculated" /></div>
         <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
           <Definition label="Equipment subtotal" value={formatMoney(calculation.equipmentSubtotalMinor, currency, precision)} />
           <Definition label="Labor subtotal" value={formatMoney(calculation.laborSubtotalMinor, currency, precision)} />
@@ -192,8 +192,8 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2 print:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 p-5"><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-950"><Users size={17} className="text-[#008ad2]" aria-hidden="true" />Crew</h3>{response.crew.length ? <ul className="mt-3 divide-y divide-slate-100">{response.crew.map((member) => <li key={member.crewMemberId} className="py-3"><p className="text-sm font-extrabold text-slate-900">{member.name} <span className="font-semibold text-slate-500">· {roleById.get(member.roleId) ?? member.roleId}</span></p><p className="mt-1 text-xs leading-5 text-slate-600">{member.bio}</p></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">No crew listed.</p>}</div>
-        <div className="rounded-2xl border border-slate-200 p-5"><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-950"><BedDouble size={17} className="text-[#008ad2]" aria-hidden="true" />Travel and lodging</h3><p className="mt-3 text-sm text-slate-600">{response.travel.lodgingRequests.length} lodging request{response.travel.lodgingRequests.length === 1 ? "" : "s"} · <strong className="text-slate-900">{calculation.requestedRoomNights} server-calculated room nights</strong></p></div>
+        <div className="rounded-2xl border border-slate-200 p-5"><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-950"><Users size={17} className="text-[#218ccb]" aria-hidden="true" />Crew</h3>{response.crew.length ? <ul className="mt-3 divide-y divide-slate-100">{response.crew.map((member) => <li key={member.crewMemberId} className="py-3"><p className="text-sm font-extrabold text-slate-900">{member.name} <span className="font-semibold text-slate-500">· {roleById.get(member.roleId) ?? member.roleId}</span></p><p className="mt-1 text-xs leading-5 text-slate-600">{member.bio}</p></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">No crew listed.</p>}</div>
+        <div className="rounded-2xl border border-slate-200 p-5"><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-950"><BedDouble size={17} className="text-[#218ccb]" aria-hidden="true" />Travel and lodging</h3><p className="mt-3 text-sm text-slate-600">{response.travel.lodgingRequests.length} lodging request{response.travel.lodgingRequests.length === 1 ? "" : "s"} · <strong className="text-slate-900">{calculation.requestedRoomNights} server-calculated room nights</strong></p></div>
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2 print:grid-cols-2">

@@ -136,9 +136,9 @@ export default function InviteDialog({ access, teams, onClose, onInvited }: Prop
             {roles.map((option) => (
               <label
                 key={option}
-                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors ${role === option ? "border-[#008ad2] bg-sky-50/60" : "border-slate-200 hover:border-slate-300"}`}
+                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors ${role === option ? "border-[#218ccb] bg-sky-50/60" : "border-slate-200 hover:border-slate-300"}`}
               >
-                <input type="radio" name="invite-role" value={option} checked={role === option} onChange={() => setRole(option)} disabled={busy} className="mt-1 accent-[#008ad2]" />
+                <input type="radio" name="invite-role" value={option} checked={role === option} onChange={() => setRole(option)} disabled={busy} className="mt-1 accent-[#218ccb]" />
                 <span>
                   <span className="block text-sm font-semibold text-slate-800">{ROLE_LABELS[option]}</span>
                   <span className="block text-xs leading-5 text-slate-500">{ROLE_DESCRIPTIONS[option]}</span>

@@ -16,6 +16,10 @@ describe("Badge", () => {
     ["purple", "bg-violet-50", "text-violet-800"],
     ["green", "bg-emerald-50", "text-emerald-800"],
     ["muted", "bg-slate-100", "text-slate-600"],
+    ["success", "bg-success-soft", "text-success-strong"],
+    ["warning", "bg-warning-soft", "text-warning-strong"],
+    ["danger", "bg-danger-soft", "text-danger-strong"],
+    ["info", "bg-brand-soft", "text-action"],
   ])("the %s tone pairs its surface with readable text", (tone, surface, text) => {
     render(<Badge tone={tone}>Label</Badge>);
     expect(screen.getByText("Label")).toHaveClass(surface, text);

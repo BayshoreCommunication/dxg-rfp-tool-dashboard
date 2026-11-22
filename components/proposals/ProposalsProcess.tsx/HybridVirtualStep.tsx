@@ -79,12 +79,15 @@ const YesNo = ({
   name,
   value,
   onChange,
+  labelledBy,
 }: {
   name: string;
   value: "YES" | "NO" | "";
   onChange: (v: "YES" | "NO") => void;
+  /** id of the visible question text, so the pair is announced as a named group. */
+  labelledBy?: string;
 }) => (
-  <div className="flex gap-3">
+  <div role="radiogroup" aria-labelledby={labelledBy} className="flex gap-3">
     {(["YES", "NO"] as const).map((opt) => (
       <label key={opt} className={yesNoCls(opt, value)}>
         <input
@@ -192,11 +195,12 @@ const HybridVirtualStep = ({
             {/* Row: Attendee Estimate + Streaming Platform */}
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <label className={labelClass}>
-                  Virtual Attendee Estimate
-                  <InfoTooltip text="Expected number of remote viewers. Helps vendors size streaming infrastructure — CDN, encoding bandwidth, and platform licensing tiers." />
-                </label>
-                <input
+                <div className={labelClass}>
+                <label htmlFor="hybrid-virtual-attendee-estimate" className="flex items-center gap-[inherit]">
+                Virtual Attendee Estimate</label>
+                <InfoTooltip text="Expected number of remote viewers. Helps vendors size streaming infrastructure — CDN, encoding bandwidth, and platform licensing tiers." />
+                </div>
+                <input id="hybrid-virtual-attendee-estimate"
                   type="number"
                   className={inputClass}
                   placeholder="e.g. 3500"
@@ -208,11 +212,12 @@ const HybridVirtualStep = ({
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Streaming Platform
-                  <InfoTooltip text="The platform delivering the virtual experience to remote attendees. If unsure, select 'Vendor Recommendation Needed' — RFPilot will suggest the best fit based on your scope." />
-                </label>
-                <GlobalSelect
+                <div className={labelClass}>
+                <label id="hybrid-streaming-platform-label" className="flex items-center gap-[inherit]">
+                Streaming Platform</label>
+                <InfoTooltip text="The platform delivering the virtual experience to remote attendees. If unsure, select 'Vendor Recommendation Needed' — RFPilot will suggest the best fit based on your scope." />
+                </div>
+                <GlobalSelect id="hybrid-streaming-platform" aria-labelledby="hybrid-streaming-platform-label"
                   className={`${inputClass} appearance-none`}
                   value={safeData.streamingPlatform}
                   onChange={(e) =>
@@ -248,11 +253,12 @@ const HybridVirtualStep = ({
             {/* Row: Platform Integration + Stream Ownership */}
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <label className={labelClass}>
-                  Platform Integration with In-Room AV?
-                  <InfoTooltip text="Whether the streaming platform connects directly with the in-room video signal chain. Deep integration requires additional switching and encoding gear — affects technical scope and crew count." />
-                </label>
-                <YesNo
+                <div className={labelClass}>
+                <span id="hybrid-platformIntegrationWithAv-label" className="flex items-center gap-[inherit]">
+                Platform Integration with In-Room AV?</span>
+                <InfoTooltip text="Whether the streaming platform connects directly with the in-room video signal chain. Deep integration requires additional switching and encoding gear — affects technical scope and crew count." />
+                </div>
+                <YesNo labelledBy="hybrid-platformIntegrationWithAv-label"
                   name="platformIntegrationWithAv"
                   value={safeData.platformIntegrationWithAv}
                   onChange={(v) => onChange({ platformIntegrationWithAv: v })}
@@ -260,11 +266,12 @@ const HybridVirtualStep = ({
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Stream Ownership
-                  <InfoTooltip text="Clarifies who operates and manages the live stream. 'AV Vendor Owns Full Stream' means RFPilot handles everything end-to-end. 'Client Owns Platform' means RFPilot provides the feed but the client manages delivery." />
-                </label>
-                <GlobalSelect
+                <div className={labelClass}>
+                <label id="hybrid-stream-ownership-label" className="flex items-center gap-[inherit]">
+                Stream Ownership</label>
+                <InfoTooltip text="Clarifies who operates and manages the live stream. 'AV Vendor Owns Full Stream' means RFPilot handles everything end-to-end. 'Client Owns Platform' means RFPilot provides the feed but the client manages delivery." />
+                </div>
+                <GlobalSelect id="hybrid-stream-ownership" aria-labelledby="hybrid-stream-ownership-label"
                   className={`${inputClass} appearance-none`}
                   value={safeData.streamOwnership}
                   onChange={(e) =>
@@ -291,11 +298,12 @@ const HybridVirtualStep = ({
 
               {/* Remote Speakers */}
               <div>
-                <label className={labelClass}>
-                  Remote Speakers Presenting Into Room?
-                  <InfoTooltip text="Whether any presenters will join virtually and be displayed on screen in the physical room. Requires a dedicated encoder/decoder setup, confidence monitor for virtual feed, and an operator to manage the handoff." />
-                </label>
-                <YesNo
+                <div className={labelClass}>
+                <span id="hybrid-remoteSpeakers-label" className="flex items-center gap-[inherit]">
+                Remote Speakers Presenting Into Room?</span>
+                <InfoTooltip text="Whether any presenters will join virtually and be displayed on screen in the physical room. Requires a dedicated encoder/decoder setup, confidence monitor for virtual feed, and an operator to manage the handoff." />
+                </div>
+                <YesNo labelledBy="hybrid-remoteSpeakers-label"
                   name="remoteSpeakers"
                   value={safeData.remoteSpeakers.remoteSpeakers}
                   onChange={(v) =>
@@ -316,11 +324,12 @@ const HybridVirtualStep = ({
                   <SubPanel>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className={labelClass}>
-                          How Many Remote Speakers?
-                          <InfoTooltip text="The number of virtual presenters who need to be brought into the room. Each additional speaker may require a separate encoding input and dedicated operator attention." />
-                        </label>
-                        <input
+                        <div className={labelClass}>
+                        <label htmlFor="hybrid-how-many-remote-speakers" className="flex items-center gap-[inherit]">
+                        How Many Remote Speakers?</label>
+                        <InfoTooltip text="The number of virtual presenters who need to be brought into the room. Each additional speaker may require a separate encoding input and dedicated operator attention." />
+                        </div>
+                        <input id="hybrid-how-many-remote-speakers"
                           type="number"
                           className={inputClass}
                           placeholder="e.g. 3"
@@ -336,11 +345,12 @@ const HybridVirtualStep = ({
                         />
                       </div>
                       <div>
-                        <label className={labelClass}>
-                          Remote Feed Platform
-                          <InfoTooltip text="The app remote speakers will use to connect. StreamYard and Riverside are most AV-friendly for broadcast integration; Zoom and Teams require NDI or hardware bridging." />
-                        </label>
-                        <GlobalSelect
+                        <div className={labelClass}>
+                        <label id="hybrid-remote-feed-platform-label" className="flex items-center gap-[inherit]">
+                        Remote Feed Platform</label>
+                        <InfoTooltip text="The app remote speakers will use to connect. StreamYard and Riverside are most AV-friendly for broadcast integration; Zoom and Teams require NDI or hardware bridging." />
+                        </div>
+                        <GlobalSelect id="hybrid-remote-feed-platform" aria-labelledby="hybrid-remote-feed-platform-label"
                           className={`${inputClass} appearance-none`}
                           value={safeData.remoteSpeakers.remoteFeedPlatform}
                           onChange={(e) =>
@@ -362,11 +372,12 @@ const HybridVirtualStep = ({
                       </div>
                     </div>
                     <div>
-                      <label className={labelClass}>
-                        Tech Rehearsal Owner
-                        <InfoTooltip text="Who is responsible for running the pre-event tech rehearsal with remote speakers. Affects producer scheduling and pre-show call sheet." />
-                      </label>
-                      <GlobalSelect
+                      <div className={labelClass}>
+                      <label id="hybrid-tech-rehearsal-owner-label" className="flex items-center gap-[inherit]">
+                      Tech Rehearsal Owner</label>
+                      <InfoTooltip text="Who is responsible for running the pre-event tech rehearsal with remote speakers. Affects producer scheduling and pre-show call sheet." />
+                      </div>
+                      <GlobalSelect id="hybrid-tech-rehearsal-owner" aria-labelledby="hybrid-tech-rehearsal-owner-label"
                         className={`${inputClass} appearance-none`}
                         value={safeData.remoteSpeakers.techRehearsalOwner}
                         onChange={(e) =>
@@ -393,11 +404,12 @@ const HybridVirtualStep = ({
               {/* Live Virtual Q&A */}
               <div className="space-y-6">
                 <div>
-                  <label className={labelClass}>
-                    Live Virtual Q&amp;A Integration?
-                    <InfoTooltip text="Whether virtual attendees can submit questions in real time during sessions. Requires platform integration and a dedicated operator to moderate and display questions." />
-                  </label>
-                  <YesNo
+                  <div className={labelClass}>
+                  <span id="hybrid-liveVirtualQa-label" className="flex items-center gap-[inherit]">
+                  Live Virtual Q&amp;A Integration?</span>
+                  <InfoTooltip text="Whether virtual attendees can submit questions in real time during sessions. Requires platform integration and a dedicated operator to moderate and display questions." />
+                  </div>
+                  <YesNo labelledBy="hybrid-liveVirtualQa-label"
                     name="liveVirtualQa"
                     value={safeData.liveVirtualQa}
                     onChange={(v) => onChange({ liveVirtualQa: v })}
@@ -406,11 +418,12 @@ const HybridVirtualStep = ({
 
                 {/* Virtual-Only Breakout Sessions */}
                 <div>
-                  <label className={labelClass}>
-                    Virtual-Only Breakout Sessions?
-                    <InfoTooltip text="Whether the event includes separate breakout rooms or tracks for virtual-only attendees. A platform capability that affects producer workload and platform configuration scope." />
-                  </label>
-                  <YesNo
+                  <div className={labelClass}>
+                  <span id="hybrid-virtualOnlyBreakouts-label" className="flex items-center gap-[inherit]">
+                  Virtual-Only Breakout Sessions?</span>
+                  <InfoTooltip text="Whether the event includes separate breakout rooms or tracks for virtual-only attendees. A platform capability that affects producer workload and platform configuration scope." />
+                  </div>
+                  <YesNo labelledBy="hybrid-virtualOnlyBreakouts-label"
                     name="virtualOnlyBreakouts"
                     value={safeData.virtualOnlyBreakouts}
                     onChange={(v) => onChange({ virtualOnlyBreakouts: v })}
@@ -429,11 +442,12 @@ const HybridVirtualStep = ({
             {/* Row: Virtual Producer + Closed Captions */}
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <label className={labelClass}>
-                  Dedicated Virtual Producer?
-                  <InfoTooltip text="An RFPilot producer whose sole focus is managing the virtual side of the show — monitoring stream health, managing remote speaker handoffs, moderating virtual Q&A, and troubleshooting platform issues in real time. Strongly recommended for events with 500+ virtual attendees or multiple remote speakers." />
-                </label>
-                <YesNo
+                <div className={labelClass}>
+                <span id="hybrid-dedicatedVirtualProducer-label" className="flex items-center gap-[inherit]">
+                Dedicated Virtual Producer?</span>
+                <InfoTooltip text="An RFPilot producer whose sole focus is managing the virtual side of the show — monitoring stream health, managing remote speaker handoffs, moderating virtual Q&A, and troubleshooting platform issues in real time. Strongly recommended for events with 500+ virtual attendees or multiple remote speakers." />
+                </div>
+                <YesNo labelledBy="hybrid-dedicatedVirtualProducer-label"
                   name="dedicatedVirtualProducer"
                   value={safeData.dedicatedVirtualProducer}
                   onChange={(v) => onChange({ dedicatedVirtualProducer: v })}
@@ -441,11 +455,12 @@ const HybridVirtualStep = ({
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Closed Captions / Translation?
-                  <InfoTooltip text="Live closed captioning delivered to virtual attendees. Required for ADA compliance in many jurisdictions and for events with international audiences." />
-                </label>
-                <YesNo
+                <div className={labelClass}>
+                <span id="hybrid-closedCaptions-label" className="flex items-center gap-[inherit]">
+                Closed Captions / Translation?</span>
+                <InfoTooltip text="Live closed captioning delivered to virtual attendees. Required for ADA compliance in many jurisdictions and for events with international audiences." />
+                </div>
+                <YesNo labelledBy="hybrid-closedCaptions-label"
                   name="closedCaptions"
                   value={safeData.closedCaptions.closedCaptions}
                   onChange={(v) =>
@@ -466,11 +481,12 @@ const HybridVirtualStep = ({
                   <SubPanel>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className={labelClass}>
-                          Languages
-                          <InfoTooltip text="Each language that needs to be captioned. Each additional language typically requires a separate captioner or AI processing stream — select all that apply." />
-                        </label>
-                        <div className="flex flex-col gap-2 mt-1">
+                        <div className={labelClass}>
+                        <span id="hybrid-caption-languages-label" className="flex items-center gap-[inherit]">
+                        Languages</span>
+                        <InfoTooltip text="Each language that needs to be captioned. Each additional language typically requires a separate captioner or AI processing stream — select all that apply." />
+                        </div>
+                        <div role="group" aria-labelledby="hybrid-caption-languages-label" className="flex flex-col gap-2 mt-1">
                           {captionLanguageOptions.map((lang) => (
                             <label
                               key={lang}
@@ -520,11 +536,12 @@ const HybridVirtualStep = ({
                         </div>
                       </div>
                       <div>
-                        <label className={labelClass}>
-                          Caption Source
-                          <InfoTooltip text="AI auto-captions are fast and affordable but have accuracy limitations. 'AI with Human Review' balances cost and accuracy. Human CART captioners provide near-perfect accuracy — required for legal, medical, or government events." />
-                        </label>
-                        <GlobalSelect
+                        <div className={labelClass}>
+                        <label id="hybrid-caption-source-label" className="flex items-center gap-[inherit]">
+                        Caption Source</label>
+                        <InfoTooltip text="AI auto-captions are fast and affordable but have accuracy limitations. 'AI with Human Review' balances cost and accuracy. Human CART captioners provide near-perfect accuracy — required for legal, medical, or government events." />
+                        </div>
+                        <GlobalSelect id="hybrid-caption-source" aria-labelledby="hybrid-caption-source-label"
                           className={`${inputClass} appearance-none`}
                           value={safeData.closedCaptions.captionType}
                           onChange={(e) =>
@@ -551,11 +568,12 @@ const HybridVirtualStep = ({
             {/* Row: On-Demand + Sponsor Overlays + Virtual Networking */}
             <div className="grid grid-cols-3 gap-5">
               <div>
-                <label className={labelClass}>
-                  On-Demand Recording?
-                  <InfoTooltip text="Whether the stream will be recorded and made available for viewing after the event. Requires cloud storage, post-event processing, and delivery setup." />
-                </label>
-                <YesNo
+                <div className={labelClass}>
+                <span id="hybrid-onDemandRecording-label" className="flex items-center gap-[inherit]">
+                On-Demand Recording?</span>
+                <InfoTooltip text="Whether the stream will be recorded and made available for viewing after the event. Requires cloud storage, post-event processing, and delivery setup." />
+                </div>
+                <YesNo labelledBy="hybrid-onDemandRecording-label"
                   name="onDemandRecording"
                   value={safeData.onDemandRecording}
                   onChange={(v) => onChange({ onDemandRecording: v })}
@@ -563,11 +581,12 @@ const HybridVirtualStep = ({
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Sponsor Overlays on Stream?
-                  <InfoTooltip text="Branded lower-thirds, full-screen sponsor bumpers, or overlay graphics displayed during the virtual broadcast. Requires a graphics operator and pre-built assets." />
-                </label>
-                <YesNo
+                <div className={labelClass}>
+                <span id="hybrid-sponsorOverlays-label" className="flex items-center gap-[inherit]">
+                Sponsor Overlays on Stream?</span>
+                <InfoTooltip text="Branded lower-thirds, full-screen sponsor bumpers, or overlay graphics displayed during the virtual broadcast. Requires a graphics operator and pre-built assets." />
+                </div>
+                <YesNo labelledBy="hybrid-sponsorOverlays-label"
                   name="sponsorOverlays"
                   value={safeData.sponsorOverlays}
                   onChange={(v) => onChange({ sponsorOverlays: v })}
@@ -575,11 +594,12 @@ const HybridVirtualStep = ({
               </div>
 
               <div>
-                <label className={labelClass}>
+                <p id="hybrid-virtual-networking-label" className={labelClass}>
                   Virtual Networking?
                   <InfoTooltip text="Whether the platform includes virtual breakout rooms or structured networking sessions for remote attendees. Affects producer workload and platform configuration scope." />
-                </label>
+                </p>
                 <YesNo
+                  labelledBy="hybrid-virtual-networking-label"
                   name="virtualNetworking"
                   value={safeData.virtualNetworking}
                   onChange={(v) => onChange({ virtualNetworking: v })}

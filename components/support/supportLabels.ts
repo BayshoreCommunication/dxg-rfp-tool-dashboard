@@ -31,7 +31,7 @@ export const statusClass = (status: SupportTicketStatus): string => {
     case "open":
       return "bg-amber-50 text-amber-700 ring-amber-200";
     case "waiting_on_customer":
-      return "bg-[#008ad2]/10 text-[#0069a0] ring-[#008ad2]/20";
+      return "bg-[#218ccb]/10 text-[#0069a0] ring-[#218ccb]/20";
     case "resolved":
       return "bg-emerald-50 text-emerald-700 ring-emerald-200";
     case "closed":

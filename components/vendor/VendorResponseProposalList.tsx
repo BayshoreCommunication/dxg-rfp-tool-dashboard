@@ -31,8 +31,8 @@ const pageHref = (page: number, search: string) => {
 
 function ProposalCard({ proposal }: { proposal: VendorResponseProposalSummary }) {
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#008ad2]/30 hover:shadow-lg">
-      <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-[#008ad2]/5 blur-3xl" />
+    <article className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#218ccb]/30 hover:shadow-lg">
+      <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-[#218ccb]/5 blur-3xl" />
       <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -52,7 +52,7 @@ function ProposalCard({ proposal }: { proposal: VendorResponseProposalSummary })
             {/* Same destination as "View responses", the row's only link. */}
             <Link
               href={`/vendor-responses/proposals/${encodeURIComponent(proposal.proposalId)}`}
-              className="min-w-0 truncate rounded-sm underline-offset-4 transition-colors hover:text-[#008ad2] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              className="min-w-0 truncate rounded-sm underline-offset-4 transition-colors hover:text-[#218ccb] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
               {proposal.proposalTitle}
             </Link>
@@ -81,7 +81,7 @@ function ProposalCard({ proposal }: { proposal: VendorResponseProposalSummary })
           <Link
             href={`/vendor-responses/proposals/${encodeURIComponent(proposal.proposalId)}`}
             aria-label={`View ${proposal.responseCount} responses for ${proposal.proposalTitle}`}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-[#2fc6f5] to-[#008ad2] px-5 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-[#2fc6f5] to-[#218ccb] px-5 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
           >
             View responses <ArrowRight size={16} aria-hidden="true" />
           </Link>
@@ -105,11 +105,11 @@ export default function VendorResponseProposalList({
   return (
     <section className="space-y-7">
       <header className="relative px-6">
-        <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-gradient-to-r from-[#008ad2]/5 via-[#008ad2]/3 to-slate-900/5 blur-2xl" />
+        <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-gradient-to-r from-[#218ccb]/5 via-[#218ccb]/3 to-slate-900/5 blur-2xl" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <span className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[#008ad2]">
-              <Sparkles size={10} className="fill-[#008ad2]" aria-hidden="true" />
+            <span className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[#218ccb]">
+              <Sparkles size={10} className="fill-[#218ccb]" aria-hidden="true" />
               What vendors sent back
             </span>
             <h1 className="text-[30px] font-black leading-none tracking-tight text-slate-900">
@@ -125,7 +125,7 @@ export default function VendorResponseProposalList({
                 <p className="text-xl font-black leading-none text-slate-800">{responseCount}</p>
                 <p className="mt-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Responses</p>
               </div>
-              <div className="rounded-xl border border-[#008ad2]/20 bg-[#eaf7fd] px-4 py-2.5">
+              <div className="rounded-xl border border-[#218ccb]/20 bg-[#eaf7fd] px-4 py-2.5">
                 <p className="text-xl font-black leading-none text-[#0076b4]">{data?.unreadCount ?? 0}</p>
                 <p className="mt-1 text-[9px] font-extrabold uppercase tracking-widest text-[#0076b4]/70">Unread</p>
               </div>
@@ -138,13 +138,13 @@ export default function VendorResponseProposalList({
         <form action="/vendor-responses" method="get" className="flex flex-col gap-3 sm:flex-row">
           <label className="group relative flex-1">
             <span className="sr-only">Search proposals with vendor responses</span>
-            <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#008ad2]" aria-hidden="true" />
+            <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#218ccb]" aria-hidden="true" />
             <input
               name="search"
               type="search"
               defaultValue={search}
               placeholder="Search proposals with responses..."
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-5 text-[13px] text-slate-700 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-[#008ad2] focus:ring-4 focus:ring-[#008ad2]/10"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-5 text-[13px] text-slate-700 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-[#218ccb] focus:ring-4 focus:ring-[#218ccb]/10"
             />
           </label>
           <button type="submit" className="h-12 rounded-xl bg-slate-800 px-6 text-[13px] font-bold text-white transition-colors hover:bg-slate-700">
@@ -166,7 +166,7 @@ export default function VendorResponseProposalList({
           </div>
         ) : proposals.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf7fd] text-[#008ad2]">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf7fd] text-[#218ccb]">
               {search ? <Search size={23} aria-hidden="true" /> : <Inbox size={23} aria-hidden="true" />}
             </div>
             <h2 className="mt-4 text-lg font-extrabold text-slate-800">

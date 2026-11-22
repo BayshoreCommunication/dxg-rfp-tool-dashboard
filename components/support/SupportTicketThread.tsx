@@ -337,7 +337,7 @@ export default function SupportTicketThread({
               <SupportDateTime value={closesAt} />.
             </p>
           )}
-          <div className="flex flex-wrap items-end gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 transition focus-within:border-[#008ad2] focus-within:ring-2 focus-within:ring-[#008ad2]/15">
+          <div className="flex flex-wrap items-end gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 transition focus-within:border-[#218ccb] focus-within:ring-2 focus-within:ring-[#218ccb]/15">
             <AttachmentPicker files={files} onChange={setFiles} disabled={isPending} iconOnly />
             <textarea
               ref={composer}

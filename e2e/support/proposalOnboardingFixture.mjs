@@ -23,6 +23,7 @@ export async function handleProposalOnboarding(req, res, url) {
       if (input.delays) state.delays = input.delays;
       if (input.scan) state.scan = input.scan;
       if (input.intakeProgress) state.intakeProgress = input.intakeProgress;
+      if (input.proposal) state.proposal = input.proposal;
       if (Array.isArray(input.questions)) {
         state.questions = input.questions;
         state.messages = [message({ role: 'user', kind: 'instruction', content: 'Help me plan an event.' })];
@@ -46,7 +47,7 @@ export async function handleProposalOnboarding(req, res, url) {
     json(res, { data: { _id: proposalId, version: 1, isDraft: true, status: 'unsubmitted', event: { eventName: state.eventName } } }); return true;
   }
   if (path === `/api/proposals/${proposalId}` && req.method === 'GET') {
-    json(res, { data: { _id: proposalId, version: 1, isDraft: true, status: 'unsubmitted', event: { eventName: state.eventName } } }); return true;
+    json(res, { data: { _id: proposalId, version: 1, isDraft: true, status: 'unsubmitted', event: { eventName: state.eventName }, ...(state.proposal ?? {}) } }); return true;
   }
   const base = `/api/v1/proposals/${proposalId}`;
   if (path === `${base}/sources/upload-session`) {

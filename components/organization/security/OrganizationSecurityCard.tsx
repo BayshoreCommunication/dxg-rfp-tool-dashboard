@@ -96,7 +96,7 @@ const OrganizationSecurityCard = ({ settings, myTwoFactorEnabled, onSettingsChan
           onClick={onToggle}
           disabled={busy}
           className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition ${
-            settings.requireTwoFactor ? "bg-[#008ad2]" : "bg-slate-300"
+            settings.requireTwoFactor ? "bg-[#218ccb]" : "bg-slate-300"
           } disabled:opacity-60`}
         >
           <span

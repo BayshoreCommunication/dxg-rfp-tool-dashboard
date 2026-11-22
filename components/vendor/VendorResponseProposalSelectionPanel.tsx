@@ -51,7 +51,7 @@ export default function VendorResponseProposalSelectionPanel({
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {selecting ? (
           <>
-            <label className="mr-auto inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 focus-within:ring-2 focus-within:ring-[#008ad2]">
+            <label className="mr-auto inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 focus-within:ring-2 focus-within:ring-[#218ccb]">
               <input
                 type="checkbox"
                 checked={allSelected}
@@ -64,7 +64,7 @@ export default function VendorResponseProposalSelectionPanel({
                         ),
                   )
                 }
-                className="h-4 w-4 accent-[#008ad2]"
+                className="h-4 w-4 accent-[#218ccb]"
               />
               Select all on this page
             </label>
@@ -74,7 +74,7 @@ export default function VendorResponseProposalSelectionPanel({
             <button
               type="button"
               onClick={leaveSelection}
-              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 transition hover:border-[#008ad2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2]"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 transition hover:border-[#218ccb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb]"
             >
               Cancel
             </button>
@@ -100,7 +100,7 @@ export default function VendorResponseProposalSelectionPanel({
           <button
             type="button"
             onClick={() => setSelecting(true)}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 transition hover:border-[#008ad2] hover:text-[#0076b4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008ad2]"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 transition hover:border-[#218ccb] hover:text-[#0076b4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#218ccb]"
           >
             <SquareMousePointer size={15} aria-hidden="true" /> Select responses
           </button>
@@ -118,16 +118,16 @@ export default function VendorResponseProposalSelectionPanel({
               className={cn(
                 "rounded-2xl transition",
                 checked &&
-                  "[&_article]:border-[#008ad2] [&_article]:shadow-[0_8px_24px_rgba(0,138,210,0.10)]",
+                  "[&_article]:border-[#218ccb] [&_article]:shadow-[0_8px_24px_rgba(33,140,203,0.10)]",
               )}
             >
               {selecting ? (
                 <label
                   className={cn(
-                    "mb-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 text-sm font-bold transition focus-within:ring-2 focus-within:ring-[#008ad2]",
+                    "mb-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 text-sm font-bold transition focus-within:ring-2 focus-within:ring-[#218ccb]",
                     checked
-                      ? "border-[#008ad2] bg-[#eaf7fd] text-[#0076b4]"
-                      : "border-slate-200 bg-white text-slate-800 hover:border-[#008ad2]",
+                      ? "border-[#218ccb] bg-[#eaf7fd] text-[#0076b4]"
+                      : "border-slate-200 bg-white text-slate-800 hover:border-[#218ccb]",
                   )}
                 >
                   <input
@@ -135,7 +135,7 @@ export default function VendorResponseProposalSelectionPanel({
                     checked={checked}
                     onChange={() => toggleProposal(proposal.proposalId)}
                     aria-label={`Select ${count} ${responseWord(count)} for ${proposal.proposalTitle}`}
-                    className="h-4 w-4 accent-[#008ad2]"
+                    className="h-4 w-4 accent-[#218ccb]"
                   />
                   <span className="min-w-0 truncate">
                     {proposal.proposalTitle}

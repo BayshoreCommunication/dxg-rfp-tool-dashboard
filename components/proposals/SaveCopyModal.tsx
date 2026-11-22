@@ -134,7 +134,7 @@ export default function SaveCopyModal({
               value={eventName}
               onChange={(e) => setEventName(e.target.value)}
               placeholder="Enter event name for the copy"
-              className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40 ${
+              className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#218ccb]/40 ${
                 showErrors && !eventName.trim()
                   ? "border-red-400 bg-red-50"
                   : "border-[#e4e4e4] bg-white"
@@ -159,7 +159,7 @@ export default function SaveCopyModal({
                 value={dateForPicker(startDate)}
                 onChange={(date) => setStartDate(date ? formatDate(date, "yyyy-MM-dd") : "")}
                 disabled={saving}
-                inputClassName="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 pr-12 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40"
+                inputClassName="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 pr-12 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#218ccb]/40"
               />
             </div>
             <div>
@@ -174,7 +174,7 @@ export default function SaveCopyModal({
                 value={dateForPicker(endDate)}
                 onChange={(date) => setEndDate(date ? formatDate(date, "yyyy-MM-dd") : "")}
                 disabled={saving}
-                inputClassName="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 pr-12 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#008ad2]/40"
+                inputClassName="w-full rounded-lg border border-[#e4e4e4] bg-white px-3 py-2 pr-12 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#218ccb]/40"
               />
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function SaveCopyModal({
             onClick={handleConfirm}
             disabled={saving}
             className="h-10 rounded-lg px-4 text-sm font-bold text-white shadow-[0_4px_14px_0_rgba(14,165,233,0.35)] transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 sm:px-6"
-            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #008ad2 100%)" }}
+            style={{ background: "linear-gradient(135deg, #2fc6f5 0%, #218ccb 100%)" }}
           >
             {saving ? "Saving..." : "Save Copy"}
           </button>

@@ -80,7 +80,7 @@ export default function ProposalFilters({
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search
               size={18}
-              className="text-slate-400 group-focus-within:text-[#008ad2] transition-colors duration-200"
+              className="text-slate-400 group-focus-within:text-[#218ccb] transition-colors duration-200"
             />
           </div>
           <input
@@ -88,7 +88,7 @@ export default function ProposalFilters({
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search proposals by name, client, or ID..."
-            className="w-full h-12 pl-11 pr-5 bg-white border border-slate-200 rounded-xl shadow-sm text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:ring-4 focus:ring-[#008ad2]/10 focus:border-[#008ad2] transition-all"
+            className="w-full h-12 pl-11 pr-5 bg-white border border-slate-200 rounded-xl shadow-sm text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:ring-4 focus:ring-[#218ccb]/10 focus:border-[#218ccb] transition-all"
           />
         </div>
 
@@ -97,7 +97,7 @@ export default function ProposalFilters({
           aria-controls="proposal-status-filters"
           aria-expanded={filtersOpen}
           onClick={() => setFiltersOpen((open) => !open)}
-          className="flex items-center justify-center gap-2 h-12 px-5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[13px] font-bold shadow-sm hover:bg-slate-50 hover:text-[#008ad2] hover:border-[#008ad2]/30 transition-all duration-200 shrink-0"
+          className="flex items-center justify-center gap-2 h-12 px-5 bg-white border border-slate-200 rounded-xl text-slate-600 text-[13px] font-bold shadow-sm hover:bg-slate-50 hover:text-[#218ccb] hover:border-[#218ccb]/30 transition-all duration-200 shrink-0"
         >
           <SlidersHorizontal size={16} />
           Filters
