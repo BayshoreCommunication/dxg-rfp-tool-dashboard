@@ -62,6 +62,16 @@ const handleAuthenticatedRequest = (
     pathname !== "/sign-in" &&
     pathname !== "/sign-up"
   ) {
+    // A server action is a fetch: it cannot follow a redirect to a page.
+    // Answer the way a redirecting action does, and the browser goes there.
+    if (request.headers.has("next-action")) {
+      return new NextResponse(null, {
+        headers: {
+          "x-action-redirect": `${ORGANIZATION_BLOCKED_SIGN_OUT_PATH};replace`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
     return NextResponse.redirect(
       new URL(ORGANIZATION_BLOCKED_SIGN_OUT_PATH, request.url),
     );

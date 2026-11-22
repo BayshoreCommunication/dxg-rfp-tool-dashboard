@@ -6,17 +6,14 @@ import { getBackendSession } from "@/lib/server/backendSession";
 // is sent here. The session cookie is removed and they land on the sign-in
 // page with the message.
 //
-// It acts only on a session already marked that way, so a link to this route
-// cannot sign anyone else out or show them the message.
+// Only a session already marked that way is signed out, so a link to this
+// route cannot sign anyone else out: a member with a live session is sent on
+// to their dashboard by the proxy. The browser may ask twice for one refused
+// request (a router fetch, then the page load), so the second visit, with the
+// cookie gone, gets the same answer.
 export async function GET() {
   const state = await getBackendSession();
-  if (!state.organizationBlocked) {
-    return new Response(null, {
-      status: 303,
-      headers: { Location: "/sign-in", "Cache-Control": "no-store" },
-    });
-  }
-  await signOut({ redirect: false });
+  if (state.organizationBlocked) await signOut({ redirect: false });
   return new Response(null, {
     status: 303,
     headers: {

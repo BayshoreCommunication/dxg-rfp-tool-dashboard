@@ -117,14 +117,16 @@ test("a signed-in member lands on sign-in with the message when the block lands"
   expect(pageErrors).toEqual([]);
 });
 
-test("a signed-in member who stays on the page is signed out by their next action", async ({
+test("a signed-in member who stays in the app is signed out by their next click", async ({
   page,
 }) => {
   await signIn(page);
   await setBlock(page, { requests: true });
 
-  // No full page load: a link in the sidebar, as the member would click it.
-  await page.goto("/dashboard");
+  // No full page load: a link inside the app, as the member would click it.
+  await page.evaluate(() => {
+    document.querySelector<HTMLAnchorElement>('a[href="/proposals"]')?.click();
+  });
   await expectSignedOutWithMessage(page);
   expect((await readBlock(page)).refreshCalls).toBe(0);
 });
