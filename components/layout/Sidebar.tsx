@@ -201,7 +201,8 @@ function SidebarRow({
         compact ? "h-11" : "h-12",
         collapsed && "justify-center px-0",
         active
-          ? "bg-primary text-white shadow-[0_10px_24px_-14px_rgba(0,138,210,0.9)]"
+          ? // Brand dark, not brand blue: white on #218ccb is 3.7:1, below WCAG AA; #0069a0 is 5.95:1.
+            "bg-brand-dark text-white shadow-[0_10px_24px_-14px_rgba(0,105,160,0.9)]"
           : "text-slate-600 hover:bg-primary/5 hover:text-primary dark:text-slate-300",
       )}
     >
