@@ -3,31 +3,17 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getTemplateAccessAction } from "@/app/actions/proposalTemplates";
-import { getVendorListAccessAction } from "@/app/actions/vendorList";
-
-// Settings sections, shown as links under the heading. One entry per page.
-const SETTINGS_LINKS = [
-  { href: "/settings", label: "General" },
-  { href: "/settings/users", label: "Users" },
-  { href: "/settings/teams", label: "Teams" },
-  { href: "/settings/security", label: "Security" },
-];
-
-// ORG-607: shown to every role that can read the vendor list (not to a Viewer).
-const VENDORS_LINK = { href: "/settings/vendors", label: "Vendors" };
-
-// ORG-605: shown to every role that can use RFP templates (not to a Viewer).
-const TEMPLATES_LINK = { href: "/settings/templates", label: "Templates" };
+import { useInSettingsModal } from "./SettingsModalContext";
+import { useSettingsSections } from "./useSettingsSections";
 
 // `vendorsLink` shows the Vendors tab straight away on a page that already knows the member can
 // read the list; other pages find out after mounting.
 const TopHeader = ({ vendorsLink = false, templatesLink = false }: { vendorsLink?: boolean; templatesLink?: boolean } = {}) => {
   const pathname = usePathname();
+  const inModal = useInSettingsModal();
+  const sections = useSettingsSections({ vendorsKnown: vendorsLink, templatesKnown: templatesLink });
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [showVendors, setShowVendors] = useState(vendorsLink);
-  const [showTemplates, setShowTemplates] = useState(templatesLink);
 
   useEffect(() => {
     // Hydration guard: date/time text must be initialized on the client.
@@ -37,32 +23,6 @@ const TopHeader = ({ vendorsLink = false, templatesLink = false }: { vendorsLink
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    if (vendorsLink) return;
-    let active = true;
-    getVendorListAccessAction()
-      .then((access) => {
-        if (active) setShowVendors(access.canRead);
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, [vendorsLink]);
-
-  useEffect(() => {
-    if (templatesLink) return;
-    let active = true;
-    getTemplateAccessAction()
-      .then((access) => {
-        if (active) setShowTemplates(access.canUse);
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, [templatesLink]);
 
   const formattedDate = currentTime
     ? currentTime.toLocaleDateString("en-US", {
@@ -79,6 +39,9 @@ const TopHeader = ({ vendorsLink = false, templatesLink = false }: { vendorsLink
     if (h < 17) return "Good afternoon";
     return "Good evening";
   };
+
+  // The settings modal has its own section list and title.
+  if (inModal) return null;
 
   return (
     <div className="relative">
@@ -114,7 +77,7 @@ const TopHeader = ({ vendorsLink = false, templatesLink = false }: { vendorsLink
       </div>
 
       <nav aria-label="Settings sections" className="relative mt-5 flex gap-1 overflow-x-auto border-b border-[#e4e4e4]">
-        {[...SETTINGS_LINKS, ...(showVendors ? [VENDORS_LINK] : []), ...(showTemplates ? [TEMPLATES_LINK] : [])].map((link) => {
+        {sections.map((link) => {
           const active = (pathname ?? "/settings") === link.href;
           return (
             <Link

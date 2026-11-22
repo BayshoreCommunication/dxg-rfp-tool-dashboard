@@ -22,6 +22,12 @@ jest.mock("@/app/actions/vendorResponse", () => ({
 jest.mock("@/app/actions/supportDesk", () => ({
   getSupportUnreadCountAction: jest.fn().mockResolvedValue(0),
 }));
+jest.mock("@/app/actions/vendorList", () => ({
+  getVendorListAccessAction: jest.fn().mockResolvedValue({ canRead: true }),
+}));
+jest.mock("@/app/actions/proposalTemplates", () => ({
+  getTemplateAccessAction: jest.fn().mockResolvedValue({ canUse: false }),
+}));
 jest.mock("@/config/navigation", () => ({
   navigationConfig: [
     {
@@ -29,6 +35,12 @@ jest.mock("@/config/navigation", () => ({
       title: "Proposals",
       href: "/proposals",
       icon: <span aria-hidden>P</span>,
+    },
+    {
+      id: "support",
+      title: "Support",
+      href: "/support",
+      icon: <span aria-hidden>S</span>,
     },
   ],
 }));
@@ -85,18 +97,24 @@ describe("Sidebar AI Assistant launcher", () => {
       name: "Open account menu for Akib Rahman",
     });
     expect(accountButton).toHaveTextContent("AR");
-    expect(accountButton).toHaveClass("h-10", "w-10", "text-xs");
-    expect(screen.queryByText("akib.swop@gmail.com")).not.toBeInTheDocument();
+    // The card shows who is signed in before it is opened.
+    expect(accountButton).toHaveTextContent("Akib Rahman");
+    expect(accountButton).toHaveTextContent("akib.swop@gmail.com");
 
     fireEvent.click(accountButton);
 
-    expect(screen.getByText("Akib Rahman")).toBeInTheDocument();
-    expect(screen.getByText("akib.swop@gmail.com")).toBeInTheDocument();
     expect(screen.queryByText("Administrator")).not.toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Settings" })).toHaveAttribute(
+    expect(screen.getByRole("menuitem", { name: "Notifications" })).toHaveAttribute(
       "href",
-      "/settings",
+      "/notification",
     );
+    expect(await screen.findByRole("menuitem", { name: "Users" })).toHaveAttribute(
+      "href",
+      "/settings/users",
+    );
+    expect(await screen.findByRole("menuitem", { name: "Vendors" })).toBeInTheDocument();
+    // The member cannot use templates in this fixture, so the item is absent.
+    expect(screen.queryByRole("menuitem", { name: "Templates" })).not.toBeInTheDocument();
 
     const signOutButton = screen.getByRole("menuitem", { name: "Sign out" });
     expect(signOutButton).toHaveTextContent("Sign out");
@@ -108,6 +126,31 @@ describe("Sidebar AI Assistant launcher", () => {
       expect(signOutButton).toBeDisabled();
       expect(signOutButton).toHaveTextContent("Signing out");
     });
+  });
+
+  test("pins Support and Settings in the footer and collapses to icons", () => {
+    const onToggleCollapsed = jest.fn();
+    const { rerender } = render(
+      <Sidebar onToggleCollapsed={onToggleCollapsed} />,
+    );
+
+    const footerLinks = ["Support", "Settings"].map((name) =>
+      screen.getAllByRole("link", { name }).find((link) =>
+        link.closest("aside"),
+      ),
+    );
+    expect(footerLinks[0]).toHaveAttribute("href", "/support");
+    expect(footerLinks[1]).toHaveAttribute("href", "/settings");
+    // Support is not part of the main navigation list.
+    const primary = screen.getByRole("navigation", { name: "Primary navigation" });
+    expect(primary).not.toHaveTextContent("Support");
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(onToggleCollapsed).toHaveBeenCalledTimes(1);
+
+    rerender(<Sidebar collapsed onToggleCollapsed={onToggleCollapsed} />);
+    expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
   });
 
   test("provides compact navigation controls for small screens", () => {
