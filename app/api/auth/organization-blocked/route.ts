@@ -1,22 +1,59 @@
 import { signOut } from "@/auth";
-import { ORGANIZATION_BLOCKED_SIGN_IN_PATH } from "@/lib/auth/organizationBlocked";
+import {
+  isOrganizationBlockedBody,
+  ORGANIZATION_BLOCKED_SIGN_IN_PATH,
+} from "@/lib/auth/organizationBlocked";
+import { isPrefetchRequest } from "@/lib/auth/requestKind";
+import { AUTH_API_ORIGIN, fetchWithTimeout } from "@/lib/authRefresh";
 import { getBackendSession } from "@/lib/server/backendSession";
 
-// A member whose session was ended because RFPilot paused their organization
-// is sent here. The session cookie is removed and they land on the sign-in
-// page with the message.
+// The exit for a member whose organization RFPilot paused: the session cookie
+// is removed and they land on the sign-in page with the message.
 //
-// Only a session already marked that way is signed out, so a link to this
-// route cannot sign anyone else out: a member with a live session is sent on
-// to their dashboard by the proxy. The browser may ask more than once for one
-// refused request, so a visit with the cookie already gone gets the same answer.
-const endBlockedSession = async () => {
-  const state = await getBackendSession();
-  if (state.organizationBlocked) await signOut({ redirect: false });
+// Who is signed out here:
+// - a session already marked as ended by the block (the proxy sends page
+//   loads and server actions of such a session here);
+// - a live session for which the backend itself answers 401
+//   ORGANIZATION_BLOCKED right now. A page that saw the refusal while it
+//   rendered could not mark the session, and redirects here.
+// Nobody else: an ordinary live or expired session is left as it is, so a
+// link to this route cannot sign anyone out. Its redirect then takes a live
+// session back to the dashboard (proxy) and anyone else to the sign-in page.
+//
+// A prefetch never signs out: its answer is not shown, so the message would
+// be lost. A visit with the cookie already gone gets the same redirect.
+const backendSaysBlocked = async (accessToken: string) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${AUTH_API_ORIGIN}/api/notifications/unread-count`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      },
+    );
+    return (
+      response.status === 401 &&
+      isOrganizationBlockedBody(await response.json().catch(() => null))
+    );
+  } catch {
+    return false;
+  }
 };
 
-export async function GET() {
-  await endBlockedSession();
+const endBlockedSession = async (request: Request) => {
+  if (isPrefetchRequest(request.headers)) return;
+  const state = await getBackendSession();
+  const blocked =
+    state.organizationBlocked === true ||
+    (!state.expired &&
+      Boolean(state.accessToken) &&
+      (await backendSaysBlocked(state.accessToken!)));
+  if (blocked) await signOut({ redirect: false });
+};
+
+export async function GET(request: Request) {
+  await endBlockedSession(request);
   return new Response(null, {
     status: 303,
     headers: {
@@ -29,8 +66,8 @@ export async function GET() {
 // Server actions the page had already queued when the first one was refused
 // are sent here by the router while it leaves. Answer each the way a
 // redirecting action does, so none of them fails on the way out.
-export async function POST() {
-  await endBlockedSession();
+export async function POST(request: Request) {
+  await endBlockedSession(request);
   return new Response(null, {
     headers: {
       "x-action-redirect": `${ORGANIZATION_BLOCKED_SIGN_IN_PATH};replace`,
