@@ -132,3 +132,60 @@ for (const theme of ["light", "dark"] as const) {
     ).toEqual([]);
   });
 }
+
+const builderUrl = (step: number) => `/proposals/proposal-edit?proposalId=cccccccccccccccccccccccc&step=${step}`;
+
+test.describe("proposal builder sections", () => {
+  test.beforeEach(async ({}, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chromium", "Desktop covers the markup.");
+  });
+
+  test("an in-person event lists nine sections, with Hybrid & Virtual not applicable and skipped by Back and Continue", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.request.post(fixture, { data: { reset: true } });
+    await page.goto(builderUrl(4));
+
+    const navigator = page.getByTestId("proposal-process-list");
+    await expect(navigator.getByRole("button", { name: /^Go to / })).toHaveCount(9);
+    await expect(navigator.getByRole("button", { name: "Go to Video Recording" })).toHaveCount(0);
+    const hybrid = navigator.getByRole("button", { name: "Go to Hybrid & Virtual, not applicable" });
+    await expect(hybrid).toHaveAttribute("aria-current", "step");
+    await expect(hybrid).toContainText("Not applicable");
+
+    // The not-applicable page explains itself, and the readiness count does not include it.
+    await expect(page.getByRole("heading", { level: 2, name: "Hybrid & Virtual Production" })).toBeVisible();
+    await expect(page.getByText("Not applicable to this event")).toBeVisible();
+    await expect(page.getByText(/of 8 sections complete · 1 not applicable/)).toBeVisible();
+
+    // Continue skips ahead to Content & Creative; Back from there skips over it to Room Specifications.
+    await page.getByRole("button", { name: /Continue/ }).click();
+    await expect(navigator.getByRole("button", { name: "Go to Content & Creative" })).toHaveAttribute("aria-current", "step");
+    await page.getByRole("button", { name: /Room Specifications|Back/ }).first().click();
+    await expect(navigator.getByRole("button", { name: "Go to Room Specifications" })).toHaveAttribute("aria-current", "step");
+
+    // The format link takes the planner to Event Overview.
+    await navigator.getByRole("button", { name: "Go to Hybrid & Virtual, not applicable" }).click();
+    await page.getByRole("button", { name: "Change event format" }).click();
+    await expect(navigator.getByRole("button", { name: "Go to Event Overview" })).toHaveAttribute("aria-current", "step");
+  });
+
+  for (const theme of ["light", "dark"] as const) {
+    for (const step of [1, 4]) {
+      test(`the builder header, navigator and section ${step} have no serious accessibility violations (${theme})`, async ({ page }) => {
+        test.setTimeout(90_000);
+        await page.request.post(fixture, { data: { reset: true } });
+        await page.goto(builderUrl(step));
+        await expect(page.getByTestId("proposal-process-list")).toBeVisible();
+        const isDark = await page.locator("html").evaluate((element) => element.classList.contains("dark"));
+        if ((theme === "dark") !== isDark) await page.getByTestId("dev-theme-toggle").click();
+        await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+
+        const results = await new AxeBuilder({ page }).include('[data-testid="proposal-editor-layout"]').withTags(["wcag2a", "wcag2aa"]).analyze();
+        const blocking = results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""));
+        expect(
+          blocking.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).slice(0, 3).join(" | ")}`),
+        ).toEqual([]);
+      });
+    }
+  }
+});
