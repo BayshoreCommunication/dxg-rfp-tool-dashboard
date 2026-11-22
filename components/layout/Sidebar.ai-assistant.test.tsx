@@ -1,6 +1,5 @@
 import { signOutAction } from "@/app/actions/auth";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { SettingsAccessProvider } from "@/components/settings/SettingsAccessContext";
 import Sidebar from "./Sidebar";
 
 jest.mock("next/navigation", () => ({
@@ -79,22 +78,13 @@ describe("Sidebar AI Assistant launcher", () => {
       message: "Signed out successfully",
     });
 
-    // The layout's settings access: this member can read vendors but not use templates.
     render(
-      <SettingsAccessProvider
-        value={{
-          role: "planner",
-          vendors: { canRead: true, canEdit: false },
-          templates: { canUse: false, canManage: false },
+      <Sidebar
+        currentUser={{
+          name: "Akib Rahman",
+          email: "akib.swop@gmail.com",
         }}
-      >
-        <Sidebar
-          currentUser={{
-            name: "Akib Rahman",
-            email: "akib.swop@gmail.com",
-          }}
-        />
-      </SettingsAccessProvider>,
+      />,
     );
 
     const accountButton = screen.getByRole("button", {
@@ -112,13 +102,21 @@ describe("Sidebar AI Assistant launcher", () => {
       "href",
       "/notification",
     );
-    expect(await screen.findByRole("menuitem", { name: "Users" })).toHaveAttribute(
-      "href",
-      "/settings/users",
-    );
-    expect(await screen.findByRole("menuitem", { name: "Vendors" })).toBeInTheDocument();
-    // The member cannot use templates in this fixture, so the item is absent.
-    expect(screen.queryByRole("menuitem", { name: "Templates" })).not.toBeInTheDocument();
+    // Organization pages and account settings live in the Settings dialog only.
+    for (const duplicate of ["Users", "Teams", "Vendors", "Templates", "Account security", "Account details"]) {
+      expect(screen.queryByRole("menuitem", { name: duplicate })).not.toBeInTheDocument();
+    }
+
+    // The theme switch flips the page and remembers the choice, and the menu stays open.
+    const darkMode = screen.getByRole("menuitemcheckbox", { name: "Dark mode" });
+    expect(darkMode).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(darkMode);
+    expect(document.documentElement).toHaveClass("dark");
+    expect(window.localStorage.getItem("rfpilot:theme")).toBe("dark");
+    await waitFor(() => expect(darkMode).toHaveAttribute("aria-checked", "true"));
+    fireEvent.click(darkMode);
+    expect(document.documentElement).not.toHaveClass("dark");
+    expect(window.localStorage.getItem("rfpilot:theme")).toBe("light");
 
     const signOutButton = screen.getByRole("menuitem", { name: "Sign out" });
     expect(signOutButton).toHaveTextContent("Sign out");

@@ -6,10 +6,11 @@ import { useInSettingsModal } from "./SettingsModalContext";
 import { settingsAccessForRoles } from "./settingsAccess";
 
 const back = jest.fn();
+const replace = jest.fn();
 let mockPathname = "/settings/teams";
 jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
-  useRouter: () => ({ back }),
+  useRouter: () => ({ back, replace }),
 }));
 
 // Each section is replaced by a probe that counts its mounts: a mount is a fresh data load.
@@ -54,16 +55,13 @@ const navLink = (name: string) =>
 const settingsDialog = () => document.querySelector('[role="dialog"][aria-label="Settings"]') as HTMLElement | null;
 
 describe("SettingsModal", () => {
-  let replaceState: jest.SpyInstance;
-
   beforeEach(() => {
     back.mockClear();
     mockPathname = "/settings/teams";
     for (const key of Object.keys(mockMounts)) delete mockMounts[key];
-    replaceState = jest.spyOn(window.history, "replaceState").mockImplementation(() => undefined);
+    replace.mockClear();
   });
   afterEach(() => {
-    replaceState.mockRestore();
     jest.restoreAllMocks();
   });
 
@@ -92,12 +90,12 @@ describe("SettingsModal", () => {
     expect(navLink("Templates")).toBeNull();
   });
 
-  test("switching section rewrites the address without navigating and keeps visited sections loaded", async () => {
+  test("switching section shows it at once without navigating, and keeps visited sections loaded", async () => {
     render(<Harness />);
     await screen.findByText("Teams section in dialog");
 
     fireEvent.click(navLink("Users"));
-    expect(replaceState).toHaveBeenLastCalledWith(null, "", "/settings/users");
+    expect(replace).not.toHaveBeenCalled();
     expect(navLink("Users")).toHaveAttribute("aria-current", "page");
     expect(await screen.findByText("Users section in dialog")).toBeVisible();
     expect(screen.getByText("Teams section in dialog")).not.toBeVisible();
@@ -121,7 +119,6 @@ describe("SettingsModal", () => {
   test("a modified click is left to the browser", () => {
     render(<Harness />);
     fireEvent.click(navLink("Users"), { metaKey: true });
-    expect(replaceState).not.toHaveBeenCalled();
     expect(navLink("Teams")).toHaveAttribute("aria-current", "page");
   });
 
