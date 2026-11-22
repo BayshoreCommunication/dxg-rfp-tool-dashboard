@@ -66,6 +66,14 @@ test("Settings opens as a dialog with a section list and closes back to the page
   await expect(dialog).toBeHidden();
   await expect(page).toHaveURL(/\/dashboard$/);
 
+  // Reopening shows what the dialog already loaded: no skeleton, the Users list is there at once.
+  await sidebar.getByRole("link", { name: "Settings" }).click();
+  await expect(dialog).toBeVisible();
+  await sectionList.getByRole("link", { name: "Users" }).click();
+  await expect(usersSection.getByRole("table")).toBeVisible({ timeout: 500 });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
   // A direct visit still renders the full page, with no dialog.
   await page.goto("/settings/teams");
   await expect(page.getByRole("dialog", { name: "Settings" })).toHaveCount(0);
