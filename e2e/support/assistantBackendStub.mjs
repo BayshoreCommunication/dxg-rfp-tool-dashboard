@@ -8,6 +8,7 @@ import { handleSecurityPage } from './securityPageFixture.mjs';
 import { handlePlanEntitlements } from './planEntitlementsFixture.mjs';
 import { handleProposalTemplates } from './proposalTemplatesFixture.mjs';
 import { handleSettings, resetSettings } from './settingsFixture.mjs';
+import { handleOrganizationBlocked, resetOrganizationBlocked } from './organizationBlockedFixture.mjs';
 
 const port = Number(process.env.ASSISTANT_E2E_BACKEND_PORT || 8011);
 const threads = new Map();
@@ -171,6 +172,9 @@ const streamAssistantResponse = async (request, response, thread) => {
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
   const pathname = url.pathname;
+  // RFPilot paused the organization (organizationBlockedFixture.mjs). First, as the backend
+  // decides it before any route. Off unless a spec switches it on.
+  if (await handleOrganizationBlocked(request, response, url)) return;
   if (await handleProposalOnboarding(request, response, url)) return;
   // Settings > Security for the role accounts, and the support button's unread count
   // (securityPageFixture.mjs).
@@ -205,6 +209,7 @@ const server = http.createServer(async (request, response) => {
     for (const release of pendingDeletions) release();
     pendingDeletions.clear();
     resetSettings();
+    resetOrganizationBlocked();
     json(response, 200, { reset: true });
     return;
   }
