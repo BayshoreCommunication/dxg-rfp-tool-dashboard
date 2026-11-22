@@ -8,9 +8,11 @@ import DevThemeToggle from "@/components/layout/DevThemeToggle";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { getMemberIdentity } from "@/lib/server/memberIdentity";
+import { THEME_INIT_SCRIPT } from "@/lib/themeScript";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
+import Script from "next/script";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -46,6 +48,11 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* The member's saved light or dark choice, applied before the page shows. next/script
+            keeps it out of React's hydration; a plain <script> here caused a hydration error. */}
+        <Script id="rfpilot-theme" strategy="beforeInteractive">
+          {THEME_INIT_SCRIPT}
+        </Script>
         {/* Signature cursive fonts – loaded via <link> for print/PDF templates */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
@@ -79,7 +86,7 @@ export default async function RootLayout({
             </SettingsModal>
           </SettingsAccessProvider>
         </ToastProvider>
-        {showLocalThemePreview && <DevThemeToggle defaultDark />}
+        {showLocalThemePreview && <DevThemeToggle />}
         <Analytics />
         <SpeedInsights />
       </body>

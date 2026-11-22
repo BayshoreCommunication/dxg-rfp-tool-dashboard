@@ -21,6 +21,7 @@ import {
   Settings,
 } from "lucide-react";
 import OrgMenu from "@/components/layout/OrgMenu";
+import ThemeMenuItem from "@/components/layout/ThemeMenuItem";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -147,6 +148,7 @@ function AccountMenu({
               <Settings size={16} aria-hidden />
               Settings
             </Link>
+            <ThemeMenuItem className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" />
           </div>
 
           <div className="border-t border-slate-100 p-1.5">

@@ -5,13 +5,11 @@ import {
   ChevronsUpDown,
   LoaderCircle,
   LogOut,
-  ShieldCheck,
-  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useSettingsSections } from "@/components/settings/useSettingsSections";
 import { cn } from "@/lib/utils";
+import ThemeMenuItem from "./ThemeMenuItem";
 
 export type OrgMenuUser = {
   name?: string | null;
@@ -25,14 +23,12 @@ const getInitials = (name?: string | null, email?: string | null) => {
   return source.slice(0, 2).toUpperCase();
 };
 
-const ORG_HREFS = ["/settings/users", "/settings/teams", "/settings/vendors", "/settings/templates"];
-
 const itemClass =
   "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:text-slate-300 dark:hover:bg-[#12293a] dark:hover:text-white";
 
-// The card pinned to the bottom of the sidebar. It opens a grouped menu: who you are, the
-// organization pages you can reach, and your own account. Items follow the same role gating as
-// the settings sections (a Viewer never sees Vendors or Templates).
+// The card pinned to the bottom of the sidebar. It opens a short menu: who you are, your
+// notifications, the light or dark theme, and sign out. Organization pages live in the Settings dialog only (Settings is
+// pinned just above this card), so nothing here duplicates a settings section.
 export default function OrgMenu({
   currentUser,
   unreadCount,
@@ -48,12 +44,10 @@ export default function OrgMenu({
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const sections = useSettingsSections();
   const displayName =
     currentUser?.name?.trim() || currentUser?.email?.split("@")[0] || "Your account";
   const displayEmail = currentUser?.email?.trim() || "Email unavailable";
   const initials = getInitials(currentUser?.name, currentUser?.email);
-  const orgItems = sections.filter((section) => ORG_HREFS.includes(section.href));
 
   useEffect(() => {
     if (!open) return;
@@ -118,30 +112,7 @@ export default function OrgMenu({
             <p className="mt-0.5 truncate text-xs text-slate-500">{displayEmail}</p>
           </div>
 
-          {orgItems.length > 0 && (
-            <div className="border-t border-slate-100 p-1.5 dark:border-[#22343f]">
-              <p className="px-3 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Organization
-              </p>
-              {orgItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  role="menuitem"
-                  onClick={() => setOpen(false)}
-                  className={itemClass}
-                >
-                  <item.icon size={16} aria-hidden />
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          )}
-
           <div className="border-t border-slate-100 p-1.5 dark:border-[#22343f]">
-            <p className="px-3 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Personal
-            </p>
             <Link href="/notification" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
               <Bell size={16} aria-hidden />
               <span className="flex-1">Notifications</span>
@@ -151,14 +122,7 @@ export default function OrgMenu({
                 </span>
               )}
             </Link>
-            <Link href="/settings/security" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
-              <ShieldCheck size={16} aria-hidden />
-              Account security
-            </Link>
-            <Link href="/settings" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
-              <UserRound size={16} aria-hidden />
-              Account details
-            </Link>
+            <ThemeMenuItem className={itemClass} />
           </div>
 
           <div className="border-t border-slate-100 p-1.5 dark:border-[#22343f]">

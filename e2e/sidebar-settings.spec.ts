@@ -39,17 +39,16 @@ test("Settings opens as a dialog with a section list and closes back to the page
   await expect(page).toHaveURL(/\/settings$/);
   await page.screenshot({ path: process.env.SHOTS_DIR ? `${process.env.SHOTS_DIR}/settings-modal.png` : undefined });
 
-  // Sections switch inside the dialog: the address follows, with no navigation to wait for.
+  // Sections switch inside the dialog with no navigation: the address stays on /settings.
   const sectionList = dialog.getByRole("navigation", { name: "Settings sections" });
   const teamsTab = sectionList.getByRole("link", { name: "Teams" });
   await teamsTab.click();
-  await expect(page).toHaveURL(/\/settings\/teams$/);
   await expect(teamsTab).toHaveAttribute("aria-current", "page");
+  await expect(page).toHaveURL(/\/settings$/);
   await expect(dialog.locator('[data-settings-section="/settings/teams"]')).toBeVisible();
 
   // Going back to a section shows what it already loaded: the Users list is there at once.
   await sectionList.getByRole("link", { name: "Users" }).click();
-  await expect(page).toHaveURL(/\/settings\/users$/);
   const usersSection = dialog.locator('[data-settings-section="/settings/users"]');
   await expect(usersSection.getByRole("table")).toBeVisible();
   await teamsTab.click();
@@ -79,15 +78,27 @@ test("Settings opens as a dialog with a section list and closes back to the page
   await expect(page.getByRole("dialog", { name: "Settings" })).toHaveCount(0);
 });
 
-test("the account card lists organization pages and the sidebar collapses to icons", async ({ page }) => {
+test("the account card has notifications, the theme switch and sign out, and the sidebar collapses to icons", async ({ page }) => {
   await signInAs(page, "viewer");
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
   await sidebar.getByRole("button", { name: /account menu for/ }).click();
   const menu = page.getByRole("menu", { name: "Account options" });
-  await expect(menu.getByRole("menuitem", { name: "Users" })).toBeVisible();
-  // A Viewer has no Vendors or Templates.
-  await expect(menu.getByRole("menuitem", { name: "Vendors" })).toHaveCount(0);
+  await expect(menu.getByRole("menuitem", { name: "Notifications" })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
+  // Organization pages live in the Settings dialog only.
+  await expect(menu.getByRole("menuitem", { name: "Users" })).toHaveCount(0);
+  await expect(menu.getByRole("menuitem", { name: "Account details" })).toHaveCount(0);
+
+  // The theme switch changes the page at once and the choice survives a reload.
+  const darkMode = menu.getByRole("menuitemcheckbox", { name: "Dark mode" });
+  const html = page.locator("html");
+  const startedDark = (await darkMode.getAttribute("aria-checked")) === "true";
+  await darkMode.click();
+  await expect(darkMode).toHaveAttribute("aria-checked", String(!startedDark));
+  await expect(html).toHaveClass(startedDark ? /^(?!.*\bdark\b)/ : /\bdark\b/);
+  await page.reload();
+  await expect(html).toHaveClass(startedDark ? /^(?!.*\bdark\b)/ : /\bdark\b/);
+  await sidebar.getByRole("button", { name: /account menu for/ }).click();
   await page.screenshot({ path: process.env.SHOTS_DIR ? `${process.env.SHOTS_DIR}/org-menu.png` : undefined });
   await page.keyboard.press("Escape");
 

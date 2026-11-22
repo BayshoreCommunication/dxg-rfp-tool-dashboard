@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DevThemeToggle from "./DevThemeToggle";
 
 describe("DevThemeToggle", () => {
@@ -12,8 +12,8 @@ describe("DevThemeToggle", () => {
     delete document.documentElement.dataset.theme;
   });
 
-  test("switches the local preview between dark and light", () => {
-    render(<DevThemeToggle defaultDark />);
+  test("switches the local preview between dark and light", async () => {
+    render(<DevThemeToggle />);
 
     const toggle = screen.getByRole("button", {
       name: "Disable local dark mode preview",
@@ -23,11 +23,19 @@ describe("DevThemeToggle", () => {
     fireEvent.click(toggle);
     expect(document.documentElement).not.toHaveClass("dark");
     expect(document.documentElement).toHaveAttribute("data-theme", "light");
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-pressed", "false"));
 
     fireEvent.click(toggle);
     expect(document.documentElement).toHaveClass("dark");
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-pressed", "true"));
+  });
+
+  test("follows a theme change made elsewhere, such as the account menu", async () => {
+    render(<DevThemeToggle />);
+    document.documentElement.classList.remove("dark");
+    expect(
+      await screen.findByRole("button", { name: "Enable local dark mode preview" }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 });

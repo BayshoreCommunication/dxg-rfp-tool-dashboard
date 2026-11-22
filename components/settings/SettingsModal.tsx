@@ -115,9 +115,11 @@ export function SettingsDialogOpener() {
 // settings routes only open it. A direct visit to /settings still renders the full page.
 //
 // Speed:
-// - The dialog renders the sections itself instead of navigating between routes. Switching
-//   section swaps which panel is visible and rewrites the address with replaceState, so there is
-//   no server round trip.
+// - The dialog renders the sections itself. Switching section only swaps which panel is visible:
+//   no navigation and no change to the address, which stays on the settings link that opened
+//   the dialog. (Rewriting the address on each switch, with history.replaceState or
+//   router.replace, raced with Next.js: a server action or a late navigation could write an
+//   older address back, moving the dialog to another section or reopening it after Back.)
 // - A section stays mounted once opened, and hovering or focusing a section in the list starts
 //   loading it before the click.
 // - Closing hides the dialog instead of unmounting it, so reopening within
@@ -185,8 +187,6 @@ export default function SettingsModal({ children }: { children?: ReactNode }) {
     if (href === active) return;
     scrollPositions.current.set(active, bodyRef.current?.scrollTop ?? 0);
     setActive(href);
-    // Keep the address in step without a navigation; Back still closes the dialog.
-    window.history.replaceState(null, "", href);
   };
 
   const markTouched = (href: string) => (event: SyntheticEvent) => {
