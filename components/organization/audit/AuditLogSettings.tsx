@@ -17,8 +17,6 @@ import {
   filterProblem,
   formatAuditTime,
   hasFilters,
-  SUPPORT_ACTOR,
-  SUPPORT_LABEL,
   targetLabel,
   toAuditQuery,
   type AuditEvent,
@@ -59,7 +57,6 @@ const ActorCell = ({ event }: { event: AuditEvent }) => (
     {event.actor.kind === "member" && event.actor.email && event.actor.email !== event.actor.name ? (
       <p className="truncate text-xs text-slate-500">{event.actor.email}</p>
     ) : null}
-    {event.actor.kind === "support" ? <p className="text-xs text-slate-500">RFPilot staff</p> : null}
   </div>
 );
 
@@ -76,6 +73,8 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // The last "Load more" brought nothing to show, and older pages remain.
+  const [nothingNew, setNothingNew] = useState(false);
   // Only the newest request may update the list, so a slow answer can't overwrite a newer filter.
   const requestRef = useRef(0);
 
@@ -84,6 +83,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
   const load = useCallback(async (next: AuditFilters) => {
     const request = ++requestRef.current;
     setLoading(true);
+    setNothingNew(false);
     const result = await listAuditEventsAction(toAuditQuery(next));
     if (request !== requestRef.current) return;
     setLoading(false);
@@ -112,11 +112,11 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
     if (request !== requestRef.current) return;
     if (result.success && result.data) {
       const page = result.data;
-      setEvents((current) => {
-        const seen = new Set((current ?? []).map((event) => event.id));
-        return [...(current ?? []), ...page.events.filter((event) => !seen.has(event.id))];
-      });
+      const seen = new Set((events ?? []).map((event) => event.id));
+      const added = page.events.filter((event) => !seen.has(event.id));
+      setEvents([...(events ?? []), ...added]);
       setNextCursor(page.nextCursor);
+      setNothingNew(added.length === 0 && Boolean(page.nextCursor));
     } else {
       toast.error(auditErrorMessage(result, "More activity couldn't be loaded. Try again."));
     }
@@ -131,6 +131,10 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
       toast.error(auditErrorMessage(result, "The export couldn't be created. Try again."));
       return;
     }
+    if (result.data.rows === 0) {
+      toast.info("There's nothing to export for this range.");
+      return;
+    }
     downloadCsv(result.data.csv, result.data.fileName);
     if (result.data.truncated) toast.warn(`The export holds the newest ${result.data.rows.toLocaleString("en-US")} events. Narrow the dates to get the rest.`);
     else toast.success(`Exported ${result.data.rows.toLocaleString("en-US")} event${result.data.rows === 1 ? "" : "s"}.`);
@@ -142,6 +146,11 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
   }, []);
 
   const filtered = hasFilters(filters);
+  const loadMoreButton = nextCursor ? (
+    <button type="button" className={secondaryButtonClass} onClick={() => void loadMore()} disabled={loadingMore}>
+      {loadingMore ? <Spinner /> : null} Load more
+    </button>
+  ) : null;
 
   return (
     <div className="space-y-6 px-6 pb-8" data-testid="audit-log">
@@ -154,7 +163,7 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
           <div className="min-w-0">
             <h2 id="audit-log-title" className={sectionTitleClass}>Audit log</h2>
             <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              Sign-ins, security changes, invitations, role and team changes, proposal sharing and RFPilot Support access in your organization. Entries can&apos;t be edited or deleted.
+              Sign-ins, security changes, invitations, role and team changes and proposal sharing in your organization. Entries can&apos;t be edited or deleted.
             </p>
           </div>
           <button type="button" className={secondaryButtonClass} onClick={() => void exportCsv()} disabled={exporting || Boolean(problem)}>
@@ -167,7 +176,6 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
             <label htmlFor="audit-actor" className={labelClass}>User</label>
             <select id="audit-actor" className={inputClass} value={filters.actor} onChange={(event) => change({ actor: event.target.value })}>
               <option value="">Everyone</option>
-              <option value={SUPPORT_ACTOR}>{SUPPORT_LABEL}</option>
               {members.map((member) => (
                 <option key={member.userId} value={member.userId}>{memberDisplayName(member)}</option>
               ))}
@@ -220,6 +228,12 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
             </div>
           ) : events === null ? (
             <TableSkeleton rows={6} />
+          ) : events.length === 0 && nextCursor ? (
+            // Nothing to show on the pages read so far, and older ones remain.
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-500" role="status">Nothing to show in the most recent activity. Load more to see older activity.</p>
+              {loadMoreButton}
+            </div>
           ) : events.length === 0 ? (
             <EmptyState
               icon={<ScrollText size={20} />}
@@ -273,12 +287,9 @@ export default function AuditLogSettings({ initialPage, initialError, options, m
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-slate-500" role="status">
                   Showing {events.length.toLocaleString("en-US")} event{events.length === 1 ? "" : "s"}{nextCursor ? ", newest first" : ""}.
+                  {nothingNew && nextCursor ? " Nothing more to show yet. Load more to see older activity." : ""}
                 </p>
-                {nextCursor ? (
-                  <button type="button" className={secondaryButtonClass} onClick={() => void loadMore()} disabled={loadingMore}>
-                    {loadingMore ? <Spinner /> : null} Load more
-                  </button>
-                ) : null}
+                {loadMoreButton}
               </div>
             </>
           )}

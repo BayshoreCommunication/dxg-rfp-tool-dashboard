@@ -163,7 +163,7 @@ export default function NewSupportTicketForm({
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#218ccb] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#0076b4] disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#0076b4] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#0069a0] disabled:opacity-60"
         >
           {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
           Send to RFPilot support

@@ -10,7 +10,6 @@ import {
   Calculator,
   CheckCircle2,
   Download,
-  FileText,
   History,
   Printer,
   Users,
@@ -87,6 +86,9 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
   const purposeById = new Map(questionnaire.documents.categories.map((item) => [item.purposeId, item.label]));
   const changes = structuredSectionChanges(version, parentVersion);
   const exportBase = `/api/vendor-responses/${encodeURIComponent(responseId)}/submission-export?versionId=${encodeURIComponent(version.versionId)}`;
+  // Print view and Download review are the same printable document: the PDF
+  // is this page printed on the server.
+  const reviewHref = `/response-review/${encodeURIComponent(responseId)}?versionId=${encodeURIComponent(version.versionId)}`;
 
   return (
     <div className="mt-5 space-y-5" data-testid="structured-response-detail">
@@ -103,14 +105,11 @@ export default function StructuredResponseDetail({ responseId, version, parentVe
             </p>
           </div>
           <div className="flex flex-wrap gap-2 print:hidden">
-            <button type="button" onClick={() => window.print()} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-800 hover:border-[#218ccb]">
+            <a href={reviewHref} target="_blank" rel="noopener" className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-800 hover:border-[#218ccb]">
               <Printer size={14} aria-hidden="true" /> Print view
-            </button>
+            </a>
             <a href={`${exportBase}&format=pdf`} download className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-800 hover:border-[#218ccb]">
               <Download size={14} aria-hidden="true" /> Download review
-            </a>
-            <a href={`${exportBase}&format=json`} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-800 hover:border-[#218ccb]">
-              <FileText size={14} aria-hidden="true" /> Export data
             </a>
           </div>
         </div>

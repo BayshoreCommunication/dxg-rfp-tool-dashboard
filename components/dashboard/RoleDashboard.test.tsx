@@ -6,6 +6,8 @@ jest.mock("@/app/actions/rfpDashboard", () => ({
   listDashboardRfpsAction: jest.fn(),
   getDashboardRfpSummaryAction: jest.fn(),
 }));
+jest.mock("@/app/actions/overview", () => ({ getDashboardOverviewAction: jest.fn() }));
+jest.mock("@/app/actions/vendorResponse", () => ({ getVendorResponsesAction: jest.fn() }));
 jest.mock("@/app/actions/organizationMembers", () => ({ listMembersAction: jest.fn() }));
 jest.mock("@/app/actions/teams", () => ({ listTeamsAction: jest.fn() }));
 jest.mock("@/components/entitlements/planGate", () => ({ loadRfpUsage: jest.fn() }));
@@ -23,6 +25,8 @@ jest.mock("@/app/actions/proposals", () => ({ copyProposalAction: jest.fn(), del
 
 import { auth } from "@/auth";
 import { listMembersAction } from "@/app/actions/organizationMembers";
+import { getDashboardOverviewAction } from "@/app/actions/overview";
+import { getVendorResponsesAction } from "@/app/actions/vendorResponse";
 import { getDashboardRfpSummaryAction, listDashboardRfpsAction } from "@/app/actions/rfpDashboard";
 import { listTeamsAction } from "@/app/actions/teams";
 import { loadRfpUsage } from "@/components/entitlements/planGate";
@@ -38,6 +42,8 @@ const TEAM = "c".repeat(24);
 const mockedIdentity = jest.mocked(getMemberIdentity);
 const mockedList = jest.mocked(listDashboardRfpsAction);
 const mockedSummary = jest.mocked(getDashboardRfpSummaryAction);
+const mockedOverview = jest.mocked(getDashboardOverviewAction);
+const mockedVendorResponses = jest.mocked(getVendorResponsesAction);
 const mockedMembers = jest.mocked(listMembersAction);
 const mockedTeams = jest.mocked(listTeamsAction);
 const mockedUsage = jest.mocked(loadRfpUsage);
@@ -51,7 +57,12 @@ const listOf = (count: number, total = count, page = 1) =>
     pagination: { total, page, limit: 10, totalPages: Math.ceil(total / 10) },
   });
 
-const summaryData = toRfpSummary({ total: 2, activeRfps: 2, responsesReceived: 3, awardedThisQuarter: 0, byStage: { sent: 2 }, quarter: { label: "2026-Q4", start: "", end: "", timeZone: "UTC" } });
+const summaryData = toRfpSummary({ byStage: { sent: 2 }, quarter: { label: "2026-Q4", start: "", end: "", timeZone: "UTC" } });
+// The signed-in member's own totals, whatever the list shows.
+const overviewData = { totalProposals: 6, totalEmailSent: 22, totalEmailClicked: 14, totalProposalViews: 1234 };
+const vendorResponsesData = { success: true, data: [], pagination: { total: 14, page: 1, limit: 1, totalPages: 14 }, unreadCount: 3 };
+const statCards = () => screen.queryByRole("region", { name: "Your totals" });
+const cardValue = (id: string) => screen.getByTestId(`stat-card-${id}-value`).textContent;
 
 const signInAs = (roles: string[], userId: string | null = ME) => mockedIdentity.mockResolvedValue({ userId, roles });
 
@@ -68,13 +79,15 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockedList.mockResolvedValue({ success: true, message: "OK", data: listOf(2) });
   mockedSummary.mockResolvedValue({ success: true, message: "OK", data: summaryData });
+  mockedOverview.mockResolvedValue({ success: true, message: "OK", data: overviewData });
+  mockedVendorResponses.mockResolvedValue(vendorResponsesData);
   mockedMembers.mockResolvedValue({ success: true, message: "OK", data: [] });
   mockedTeams.mockResolvedValue({ success: true, message: "OK", data: [] });
   mockedUsage.mockResolvedValue(null);
 });
 
 describe("RoleDashboard", () => {
-  test("Planner: everything is asked for the planner's own proposals, and the summary uses the list's filters", async () => {
+  test("Planner: everything is asked for the planner's own proposals, and the status counts use the list's scope", async () => {
     signInAs(["planner"]);
     await renderDashboard({ stage: "sent", search: "gala", owner: PRIYA, view: "organization" });
 
@@ -83,9 +96,9 @@ describe("RoleDashboard", () => {
     const { page, limit, sortBy, sortOrder, ...listFilters } = mainListQuery();
     expect(listFilters).toEqual({ owner: ME, search: "gala", stage: "sent" });
     expect({ page, limit, sortBy, sortOrder }).toEqual({ page: "1", limit: "10", sortBy: "updatedAt", sortOrder: "desc" });
-    // PRD P0-8: the counts come from the same scoped query as the list.
-    expect(summaryQueries()).toContainEqual(listFilters);
-    expect(summaryQueries()).toContainEqual({ owner: ME, search: "gala", stage: "draft,sent,receiving_responses,under_review,awarded,archived" });
+    // PRD P0-8: the status-tab counts come from the same scope as the list, across every stage.
+    // That is the only summary read: the filtered summary went with the three summary cards.
+    expect(summaryQueries()).toEqual([{ owner: ME, search: "gala", stage: "draft,sent,receiving_responses,under_review,awarded,archived" }]);
     // Deadlines and new submissions are the planner's own too.
     expect(listQueries().every((query) => query.owner === ME)).toBe(true);
     expect(listQueries()).toContainEqual(expect.objectContaining({ stage: "receiving_responses", limit: "5" }));
@@ -101,7 +114,7 @@ describe("RoleDashboard", () => {
 
     const { owner, page } = mainListQuery();
     expect({ owner, page }).toEqual({ owner: PRIYA, page: "1" });
-    expect(summaryQueries()).toContainEqual({ owner: PRIYA });
+    expect(summaryQueries()).toEqual([{ owner: PRIYA, stage: "draft,sent,receiving_responses,under_review,awarded,archived" }]);
     expect(mockedMembers).not.toHaveBeenCalled();
     openFilters();
     const planner = screen.getByLabelText("Planner");
@@ -125,14 +138,16 @@ describe("RoleDashboard", () => {
     const { page, limit, sortBy, sortOrder, ...listFilters } = mainListQuery();
     expect(listFilters).toEqual({ team: TEAM, venueCity: "Chicago", eventFrom: "2027-01-01", eventTo: "2027-03-31" });
     expect([page, limit, sortBy, sortOrder]).toEqual(["1", "10", "updatedAt", "desc"]);
-    expect(summaryQueries()).toContainEqual(listFilters);
+    expect(summaryQueries()).toEqual([{ ...listFilters, stage: "draft,sent,receiving_responses,under_review,awarded,archived" }]);
     // No personal panels on the organization view: one list call only.
     expect(mockedList).toHaveBeenCalledTimes(1);
     // Viewers can't own proposals and archived teams aren't offered.
     openFilters();
     expect(within(screen.getByLabelText("Planner")).getAllByRole("option").map((option) => option.textContent)).toEqual(["All planners", "Priya Planner"]);
     expect(within(screen.getByLabelText("Team", { selector: "select" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["All teams", "Corporate Events"]);
-    expect(within(screen.getByRole("region", { name: "Summary" })).getByTestId("summary-responses")).toHaveTextContent("3");
+    // The cards are the Admin's own totals, not the organization's, and the summary row is gone.
+    expect(within(statCards()!).getByTestId("stat-card-proposals-value")).toHaveTextContent("6");
+    expect(screen.queryByRole("region", { name: "Summary" })).not.toBeInTheDocument();
   });
 
   test("Owner: My Proposals narrows to the Owner's own proposals", async () => {
@@ -141,7 +156,7 @@ describe("RoleDashboard", () => {
     expect(mainListQuery().owner).toBe(ME);
   });
 
-  test("Viewer: one scoped list, no summary row, no create button, and filters from the URL are ignored", async () => {
+  test("Viewer: one scoped list, no stat cards, no create button, and filters from the URL are ignored", async () => {
     signInAs(["viewer"]);
     await renderDashboard({ view: "organization", owner: PRIYA, team: TEAM, venueCity: "Chicago" });
 
@@ -153,7 +168,10 @@ describe("RoleDashboard", () => {
     // Only the status-tab counts are asked of the summary endpoint.
     expect(summaryQueries()).toEqual([{ stage: "draft,sent,receiving_responses,under_review,awarded,archived" }]);
     expect(screen.queryByRole("link", { name: /New Proposal/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Summary" })).not.toBeInTheDocument();
+    // A Viewer owns nothing: no cards, and the totals aren't even asked for.
+    expect(statCards()).not.toBeInTheDocument();
+    expect(mockedOverview).not.toHaveBeenCalled();
+    expect(mockedVendorResponses).not.toHaveBeenCalled();
     expect(mockedMembers).not.toHaveBeenCalled();
   });
 
@@ -163,7 +181,7 @@ describe("RoleDashboard", () => {
     const { page, limit, sortBy, sortOrder, ...listFilters } = mainListQuery();
     expect(listFilters).toEqual({ search: "summit", stage: "draft" });
     expect([page, limit, sortBy, sortOrder]).toEqual(["3", "10", "eventName", "desc"]);
-    expect(summaryQueries()).toContainEqual(listFilters);
+    expect(summaryQueries()).toEqual([{ search: "summit", stage: "draft,sent,receiving_responses,under_review,awarded,archived" }]);
     expect(screen.getByRole("searchbox")).toHaveValue("summit");
   });
 
@@ -192,20 +210,66 @@ describe("RoleDashboard", () => {
     expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
   });
 
-  test("when every stat is zero one card replaces them, with a create button unless the plan is at its limit", async () => {
+  test.each([["planner"], ["team_manager"], ["organization_admin"], ["owner"]])("%s: the five stat cards show the member's own totals, read on the server with the page's other reads", async (role) => {
+    signInAs([role]);
+    await renderDashboard({ stage: "sent", search: "gala" });
+
+    // Asked once each, with no filter, view or role: they are the member's own whatever the list shows.
+    expect(mockedOverview.mock.calls).toEqual([[]]);
+    expect(mockedVendorResponses.mock.calls).toEqual([[{ page: 1, limit: 1 }]]);
+    expect(["proposals", "sent", "clicked", "views", "vendor-responses"].map(cardValue)).toEqual(["6", "22", "14", "1,234", "14"]);
+    expect(screen.getByTestId("stat-card-vendor-responses-badge")).toHaveTextContent("3 unread");
+    expect(within(statCards()!).getByText("Counts for the proposals you own. The view and filters below don't change them.")).toBeInTheDocument();
+  });
+
+  test("a failed overview leaves its cards unavailable, with no made-up zeros, and the rest of the dashboard renders", async () => {
     signInAs(["planner"]);
-    mockedSummary.mockResolvedValue({ success: true, message: "OK", data: toRfpSummary({ total: 2, byStage: { draft: 2 } }) });
+    mockedOverview.mockResolvedValue({ success: false, message: "Error fetching dashboard overview", status: 500 });
     const { unmount } = await renderDashboard();
-    const summary = screen.getByRole("region", { name: "Summary" });
-    expect(within(summary).getByTestId("summary-empty")).toHaveTextContent("No proposal activity yet");
-    expect(within(summary).queryByTestId("summary-active")).not.toBeInTheDocument();
-    expect(within(summary).getByRole("link", { name: "New Proposal" })).toHaveAttribute("href", "/proposals/add-new-proposal");
+
+    expect(["proposals", "sent", "clicked", "views"].map(cardValue)).toEqual(["—", "—", "—", "—"]);
+    expect(cardValue("vendor-responses")).toBe("14");
+    expect(within(statCards()!).queryByText("0")).not.toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-stat-cards-unavailable")).toHaveTextContent("We couldn't load some of your totals. Reload the page to try again.");
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(3);
+    expect(screen.getByRole("region", { name: "Upcoming deadlines" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     unmount();
 
-    mockedUsage.mockResolvedValue({ used: 2, limit: 2, atLimit: true, planName: "Free trial", onPlan: "on the free trial" });
+    // An answer with no totals in it, and a vendor-responses read that failed too.
+    mockedOverview.mockResolvedValue({ success: true, message: "OK", data: null });
+    mockedVendorResponses.mockResolvedValue({ success: false, message: "Error fetching vendor responses", data: [] });
     await renderDashboard();
-    expect(screen.getByTestId("summary-empty")).toBeInTheDocument();
-    expect(screen.queryByTestId("summary-empty-create")).not.toBeInTheDocument();
+    expect(["proposals", "sent", "clicked", "views", "vendor-responses"].map(cardValue)).toEqual(["—", "—", "—", "—", "—"]);
+    expect(screen.queryByTestId("stat-card-vendor-responses-badge")).not.toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-stat-cards-unavailable")).toHaveTextContent("We couldn't load your totals.");
+    expect(screen.getByRole("table")).toBeInTheDocument();
+  });
+
+  test("the three summary cards and their empty card are gone, whatever the summary endpoint answers", async () => {
+    signInAs(["planner"]);
+    // Only drafts: this used to swap the three cards for a "No proposal activity yet" card.
+    mockedSummary.mockResolvedValue({ success: true, message: "OK", data: toRfpSummary({ byStage: { draft: 2 } }) });
+    await renderDashboard();
+    expect(screen.queryByRole("region", { name: "Summary" })).not.toBeInTheDocument();
+    for (const id of ["summary-active", "summary-responses", "summary-awarded", "summary-empty", "summary-empty-create"]) {
+      expect(screen.queryByTestId(id)).not.toBeInTheDocument();
+    }
+    expect(statCards()).toBeInTheDocument();
+    // The way to start a proposal is still the header's button.
+    expect(screen.getByRole("link", { name: /New Proposal/ })).toHaveAttribute("href", "/proposals/add-new-proposal");
+  });
+
+  test("a brand-new account gets the ways to start instead of five zeros", async () => {
+    signInAs(["planner"]);
+    mockedList.mockResolvedValue({ success: true, message: "OK", data: listOf(0) });
+    mockedSummary.mockResolvedValue({ success: true, message: "OK", data: toRfpSummary(null) });
+    mockedOverview.mockResolvedValue({ success: true, message: "OK", data: { totalProposals: 0, totalEmailSent: 0, totalEmailClicked: 0, totalProposalViews: 0 } });
+    await renderDashboard();
+    expect(screen.getByTestId("first-run-dashboard")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Create your first proposal" })).toBeInTheDocument();
+    expect(statCards()).not.toBeInTheDocument();
   });
 
   test("a refused load (404 for another organization's data) renders a message instead of throwing", async () => {
@@ -252,6 +316,8 @@ describe("RoleDashboard", () => {
     await renderDashboard();
     expect(mockedList).not.toHaveBeenCalled();
     expect(mockedSummary).not.toHaveBeenCalled();
+    expect(mockedOverview).not.toHaveBeenCalled();
+    expect(statCards()).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Your session has ended.");
     expect(screen.queryByRole("link", { name: /New Proposal/ })).not.toBeInTheDocument();
   });

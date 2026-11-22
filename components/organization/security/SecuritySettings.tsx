@@ -9,7 +9,6 @@ import {
   type OrganizationSecurity,
   type TwoFactorStatus,
 } from "@/app/actions/security";
-import SupportAccessLink from "../supportAccess/SupportAccessLink";
 import DomainsCard from "./DomainsCard";
 import OrganizationSecurityCard from "./OrganizationSecurityCard";
 import SingleSignOnSection from "./SingleSignOnCard";
@@ -92,7 +91,6 @@ const SecuritySettings = () => {
             onSetUpMyTwoFactor={() => setStartSignal((n) => n + 1)}
           />
           <DomainsCard />
-          <SupportAccessLink />
         </>
       ) : null}
       {org.state === "denied" ? (

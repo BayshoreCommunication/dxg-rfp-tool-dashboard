@@ -116,6 +116,23 @@ describe('OnboardingWizard', () => {
     expect(screen.getByRole('heading', { name: 'Invite your team' })).toBeInTheDocument()
   })
 
+  it('offers the roles the invite dialog offers an Owner, Team Manager included, with Planner chosen', async () => {
+    mockInvite.mockResolvedValue({ success: true, message: 'OK', data: { email: 'maya@acme.test' } })
+    render(<OnboardingWizard firstName="Pat" profile={profile({ onboardingStep: 'team' })} navigate={jest.fn()} />)
+
+    const role = screen.getByLabelText('Role') as HTMLSelectElement
+    expect(Array.from(role.options).map((option) => option.value)).toEqual(['organization_admin', 'team_manager', 'planner', 'viewer'])
+    expect(Array.from(role.options).map((option) => option.textContent?.split(' — ')[0])).toEqual(['Admin', 'Team Manager', 'Planner', 'Viewer'])
+    expect(role).toHaveValue('planner')
+
+    // A new organization has no teams: the Team Manager invitation goes out without one.
+    fireEvent.change(screen.getByLabelText('Email addresses'), { target: { value: 'maya@acme.test' } })
+    fireEvent.change(role, { target: { value: 'team_manager' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send invitations' }))
+    expect(await screen.findByText('1 invitation sent')).toBeInTheDocument()
+    expect(mockInvite).toHaveBeenCalledWith({ email: 'maya@acme.test', role: 'team_manager', teamId: null })
+  })
+
   it('invites several people at once and then goes to the dashboard', async () => {
     mockBulkInvite.mockResolvedValue({
       success: true,

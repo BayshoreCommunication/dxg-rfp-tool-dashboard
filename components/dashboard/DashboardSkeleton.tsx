@@ -2,8 +2,9 @@ const DashboardSkeleton = () => {
   return (
     <>
       <div className="px-5">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, idx) => (
+        {/* The five stat cards (TopCardItem), in the same grid. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, idx) => (
             <div
               key={idx}
               className="min-h-[160px] rounded-2xl border border-slate-200 bg-slate-100/70 p-6 animate-pulse"

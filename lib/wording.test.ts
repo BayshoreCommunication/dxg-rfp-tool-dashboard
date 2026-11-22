@@ -15,6 +15,7 @@ const ALLOWED: Array<[file: string, text: string]> = [
   // The RFPilot wordmark, drawn as "RFP" + an accented "ilot".
   ["components/proposalTemplate/ProposalRfpTemplate.tsx", 'RFP<span className="dxg-brand-wordmark-accent">ilot</span>'],
   ["components/vendor/workspace/VendorResponseWorkspace.tsx", 'RFP<span className="text-[#2fc6f5]">ilot</span>'],
+  ["components/vendor/VendorResponseDocument.tsx", "RFP<span>ilot</span>"],
 ];
 
 // Files an open pull request is rewording itself; none at the moment. Add a pattern here while
@@ -55,5 +56,13 @@ describe("user-facing wording", () => {
     expect(RFP_NOUN.test("RFPilot Support")).toBe(false);
     expect(RFP_NOUN.test("INVALID_RFP_SELECTION rfpId RfpUsage")).toBe(false);
     expect(withoutComments('a // RFP\n"https://x" /* RFP\nRFP */ b')).not.toMatch(RFP_NOUN);
+    // A "/*" inside a string is not a comment: a JSON-pointer key used to open one and hide
+    // every string up to the next "*/".
+    const flagged = (source: string) =>
+      withoutComments(source).split("\n").filter((line) => RFP_NOUN.test(line));
+    expect(flagged('"/a/*": "RFP Timeline",\n"/b/*/c": 1')).toEqual(['"/a/*": "RFP Timeline",']);
+    expect(flagged("const u = 'https://x/*'; const m = 'An RFP'; // RFP\n/* RFP */ const n = `RFP ${1}`;")).toHaveLength(2);
+    expect(flagged('<p>It isn\'t here</p> {/* RFP */} // RFP\n<!-- RFP -->')).toEqual([]);
+    expect(withoutComments('a /* b\nc */ d\n"e" // f').split("\n")).toHaveLength(3);
   });
 });

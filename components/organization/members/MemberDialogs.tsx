@@ -119,7 +119,7 @@ function ChangeRoleDialog({ member: initial, members, onClose, onDone, refresh }
             <span>
               <span className="block text-sm font-semibold text-slate-800">
                 {ROLE_LABELS[option]}
-                {initial.role === option && <span className="ml-2 text-xs font-medium text-slate-400">Current</span>}
+                {initial.role === option && <span className="ml-2 text-xs font-medium text-slate-500">Current</span>}
               </span>
               <span className="block text-xs leading-5 text-slate-500">{ROLE_DESCRIPTIONS[option]}</span>
             </span>

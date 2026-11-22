@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 import { BACKEND_URL } from "@/lib/config";
 import { authenticatedBackendFetch } from "@/lib/server/backendClient";
-import { renderHtmlToPdf } from "@/lib/server/proposalPdf";
+import { getVendorSubmissionDetailAction } from "@/app/actions/vendorResponse";
+import { generateProposalPdf } from "@/lib/server/proposalPdf";
 import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -26,8 +27,41 @@ export async function GET(
   if (!/^[a-f0-9]{24}$/i.test(id) || !/^[a-f0-9]{24}$/i.test(versionId)) {
     return new Response("Invalid response export", { status: 400 });
   }
-  // The backend renders the review document as HTML; the PDF is that same
-  // document printed here, so the two downloads can never disagree.
+  if (format === "pdf") {
+    // The PDF is the printable review page (/response-review/:id) printed by
+    // headless Chrome, so "Download review" and "Print view" show one document.
+    // Reading the detail first confirms access before Chrome is launched.
+    const detail = await getVendorSubmissionDetailAction(id);
+    if (!detail.success) {
+      return new Response(detail.message, { status: 404, headers: { "Cache-Control": "private, no-store" } });
+    }
+    const version = detail.data.versions.find((entry) => entry.versionId === versionId);
+    if (!version?.structuredResponse) {
+      return new Response("This version has no printable review", { status: 404 });
+    }
+    const target = new URL(
+      `/response-review/${encodeURIComponent(id)}?versionId=${encodeURIComponent(versionId)}`,
+      request.nextUrl.origin,
+    );
+    try {
+      const pdf = await generateProposalPdf({
+        url: target.toString(),
+        cookie: request.headers.get("cookie") || undefined,
+      });
+      const name = (version.vendorName || "vendor").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "vendor";
+      return new Response(new Uint8Array(pdf), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${name}-response-v${version.versionNumber}.pdf"`,
+          "Cache-Control": "private, no-store",
+        },
+      });
+    } catch (error) {
+      console.error("Vendor response PDF generation failed:", error);
+      return new Response("PDF could not be generated", { status: 500 });
+    }
+  }
+
   const upstreamFormat = format === "json" ? "json" : "html";
   let upstream: Response;
   try {
@@ -40,31 +74,6 @@ export async function GET(
   }
   const disposition = upstream.headers.get("content-disposition")
     ?? `attachment; filename="vendor-response.${upstreamFormat}"`;
-
-  if (format === "pdf") {
-    if (!upstream.ok) {
-      return new Response(await upstream.arrayBuffer(), {
-        status: upstream.status,
-        headers: {
-          "Content-Type": upstream.headers.get("content-type") ?? "text/plain",
-          "Cache-Control": "private, no-store",
-        },
-      });
-    }
-    try {
-      const pdf = await renderHtmlToPdf(await upstream.text());
-      return new Response(new Uint8Array(pdf), {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": disposition.replace(/\.html(["']?)\s*$/i, ".pdf$1"),
-          "Cache-Control": "private, no-store",
-        },
-      });
-    } catch (error) {
-      console.error("Vendor response PDF generation failed:", error);
-      return new Response("PDF could not be generated", { status: 500 });
-    }
-  }
 
   return new Response(await upstream.arrayBuffer(), {
     status: upstream.status,

@@ -46,10 +46,11 @@ const setTheme = async (page: Page, theme: "light" | "dark") => {
   if ((await toggle.getAttribute("aria-pressed")) !== String(theme === "dark")) await toggle.dispatchEvent("click");
   if (theme === "dark") await expect(page.locator("html")).toHaveClass(/dark/);
   else await expect(page.locator("html")).not.toHaveClass(/dark/);
+  // Colours cross-fade when the theme flips; axe has to measure the settled ones.
+  await page.waitForFunction(() => document.getAnimations().every((animation) => !(animation instanceof CSSTransition) || animation.playState !== "running"));
 };
 
-// `skip` leaves out rules that fail on markup this change did not touch (the dialogs' grey field
-// labels fail colour contrast on main today).
+// `skip` leaves out rules that fail on markup a change did not touch.
 const seriousViolations = async (page: Page, selector: string, skip: string[] = []) => {
   const result = await new AxeBuilder({ page }).include(selector).withTags(["wcag2a", "wcag2aa"]).disableRules(skip).analyze();
   return result.violations
@@ -136,25 +137,35 @@ for (const role of ["owner", "admin"] as const) {
       return;
     }
 
-    // The same one-line summaries sit next to the role picker when inviting…
-    await setTheme(page, "light");
-    await page.getByRole("button", { name: "Invite people" }).click();
-    const invite = page.getByRole("dialog", { name: "Invite people" });
-    await expect(invite.getByText("Manages people, teams, security and every proposal.")).toBeVisible();
-    await expect(invite.getByText("Read-only: sees only the proposals shared with them.")).toBeVisible();
-    expect(await seriousViolations(page, "dialog[open]", ["color-contrast"])).toEqual([]);
-    await page.screenshot({ path: testInfo.outputPath(`${role}-invite-dialog.png`) });
-    await invite.getByRole("button", { name: "Cancel" }).click();
+    // The same one-line summaries sit next to the role picker when inviting and when changing a
+    // member's role. Both dialogs pass axe, colour contrast included, in the light theme and the
+    // dark one.
+    for (const theme of ["light", "dark"] as const) {
+      await setTheme(page, theme);
+      await page.getByRole("button", { name: "Invite people" }).click();
+      const invite = page.getByRole("dialog", { name: "Invite people" });
+      await expect(invite.getByText("Manages people, teams, security and every proposal.")).toBeVisible();
+      await expect(invite.getByText("Read-only: sees only the proposals shared with them.")).toBeVisible();
+      await expect(invite.getByRole("radio")).toHaveCount(4);
+      for (const label of ["Email addresses", "Role", "Team (optional)"]) await expect(invite.getByText(label, { exact: true })).toBeVisible();
+      expect(await seriousViolations(page, "dialog[open]"), `${theme}: invite dialog`).toEqual([]);
+      await expectProposalWording(invite);
+      await page.screenshot({ path: testInfo.outputPath(`${role}-invite-dialog-${theme}.png`) });
+      await invite.getByRole("button", { name: "Cancel" }).click();
+      await expect(invite).toHaveCount(0);
 
-    // …and when changing a member's role.
-    await page.getByRole("button", { name: "Actions for Priya Planner" }).click();
-    await page.getByRole("menuitem", { name: "Change role" }).click();
-    const change = page.getByRole("dialog", { name: "Change role" });
-    await expect(change.getByText("Works on their own proposals and those of teams they manage.")).toBeVisible();
-    await expect(change.getByText("What each role can do")).toBeVisible();
-    expect(await seriousViolations(page, "dialog[open]", ["color-contrast"])).toEqual([]);
-    await page.screenshot({ path: testInfo.outputPath(`${role}-change-role-dialog.png`) });
-    await change.getByRole("button", { name: "Cancel" }).click();
+      await page.getByRole("button", { name: "Actions for Priya Planner" }).click();
+      await page.getByRole("menuitem", { name: "Change role" }).click();
+      const change = page.getByRole("dialog", { name: "Change role" });
+      await expect(change.getByText("Works on their own proposals and those of teams they manage.")).toBeVisible();
+      await expect(change.getByText("What each role can do")).toBeVisible();
+      await expect(change.getByText("Current", { exact: true })).toBeVisible();
+      expect(await seriousViolations(page, "dialog[open]"), `${theme}: change-role dialog`).toEqual([]);
+      await expectProposalWording(change);
+      await page.screenshot({ path: testInfo.outputPath(`${role}-change-role-dialog-${theme}.png`) });
+      await change.getByRole("button", { name: "Cancel" }).click();
+      await expect(change).toHaveCount(0);
+    }
 
     expect(problems.get(page)).toEqual([]);
   });
@@ -185,6 +196,60 @@ for (const role of ["planner", "viewer"] as const) {
     expect(problems.get(page)).toEqual([]);
   });
 }
+
+// Defect A: the setup wizard's invite step offers what the regular invite dialog offers an Owner,
+// Team Manager included, and the invitation goes out with no team (a new organization has none).
+test.describe("new organization setup", () => {
+  const welcomeStub = `${backendOrigin}/__e2e/welcome`;
+  test.beforeEach(async ({ request }) => {
+    await request.post(welcomeStub, { data: { on: true } });
+  });
+  test.afterEach(async ({ request }) => {
+    await request.post(welcomeStub, { data: { on: false } });
+  });
+
+  test("the invite step lists Admin, Team Manager, Planner and Viewer, and invites a Team Manager", async ({ page, request }, testInfo) => {
+    await page.goto("/sign-in");
+    await page.getByPlaceholder("name@company.com").fill("owner-e2e@example.com");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.locator('input[type="password"]').fill("role-e2e-password");
+    await page.getByRole("button", { name: "Sign In to Dashboard" }).click();
+    // An organization still in onboarding is sent to the wizard, at the step it had reached.
+    await expect(page).toHaveURL(/\/welcome$/, { timeout: 120_000 });
+    await expect(page.getByRole("heading", { name: "Invite your team" })).toBeVisible();
+
+    const role = page.getByLabel("Role");
+    await expect(role.locator("option")).toHaveText([/^Admin — /, /^Team Manager — /, /^Planner — /, /^Viewer — /]);
+    await expect(role).toHaveValue("planner");
+    // The form answers once the page has hydrated; a bad address being pointed out shows it has.
+    // Cleared first on every try: text typed before hydration is already the field's value, and
+    // React ignores an input event that sets the value it already has.
+    const emails = page.getByLabel("Email addresses");
+    await expect(async () => {
+      await emails.fill("");
+      await emails.fill("not-an-address");
+      await baseExpect(page.getByText("Check this address: not-an-address")).toBeVisible({ timeout: 1_000 });
+    }).toPass();
+    await emails.fill("");
+    await role.selectOption("team_manager");
+    await expect(role).toHaveValue("team_manager");
+    const main = page.locator("form").filter({ has: role });
+    await expectProposalWording(main);
+    expect(await seriousViolations(page, "form")).toEqual([]);
+    await noSidewaysScroll(page);
+    await page.screenshot({ path: testInfo.outputPath("welcome-invite-role-team-manager.png"), fullPage: true });
+
+    await emails.fill("maya.manager@example.com");
+    await page.getByRole("button", { name: "Send invitations" }).click();
+    await expect(page.getByText("1 invitation sent")).toBeVisible();
+    const sent = (await (await request.get(welcomeStub)).json()) as { invitations: { email: string; role: string; teamId: string | null }[] };
+    expect(sent.invitations.map(({ email, role: invitedAs, teamId }) => ({ email, role: invitedAs, teamId }))).toEqual([
+      { email: "maya.manager@example.com", role: "team_manager", teamId: null },
+    ]);
+    await page.screenshot({ path: testInfo.outputPath("welcome-invitation-sent.png"), fullPage: true });
+    expect(problems.get(page)).toEqual([]);
+  });
+});
 
 test.describe("proposal list title", () => {
   const TITLE = "QA ONLY — Annual Leadership Summit";

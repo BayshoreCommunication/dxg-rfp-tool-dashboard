@@ -244,7 +244,7 @@ export const ROLE_ACCESS_GROUPS: readonly RoleAccessGroup[] = [
   },
   {
     id: "security",
-    title: "Security and support",
+    title: "Security",
     rows: [
       {
         id: "security-own",
@@ -262,13 +262,6 @@ export const ROLE_ACCESS_GROUPS: readonly RoleAccessGroup[] = [
         id: "security-reset-2fa",
         capability: "Reset a member's two-factor authentication",
         source: "routes/organizationSecurityRoute.ts POST /members/:userId/two-factor/reset (organization:manage)",
-        access: adminsOnly,
-      },
-      {
-        id: "support-access",
-        capability: "Give RFPilot Support access to a proposal or the whole organization, and take it back",
-        note: "Access always has an end date, 30 days at most.",
-        source: "routes/supportAccessRoute.ts (organization:manage); scope: grantSupport; docs/API.md Support access grants",
         access: adminsOnly,
       },
       {

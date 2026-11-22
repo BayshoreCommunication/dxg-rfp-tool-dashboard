@@ -12,6 +12,7 @@ import {
   formatDay,
   formatEventDates,
   formatInstant,
+  hasRowActions,
   rfpRowHref,
   rowActionsFor,
   rowIdentifiers,
@@ -23,7 +24,6 @@ import {
   listQuery,
   optionsFromItems,
   parseDashboardState,
-  quarterLabel,
   rfpViewHref,
   scopeQuery,
   stageCountQuery,
@@ -124,7 +124,7 @@ describe("role dashboards: the list and its counts share one query", () => {
     expect(scopeQuery(parseDashboardState({}, "viewer"), USER)).toEqual({});
   });
 
-  test("the summary gets exactly the list's filters; the list adds only paging and sorting", () => {
+  test("the list sends the scope, the selected stage, paging and sorting; the status-tab counts are asked with the same filters", () => {
     const filters = filterQuery(state, USER);
     expect(filters).toEqual({ owner: OTHER, team: TEAM, venueCity: "Chicago", eventFrom: "2026-01-01", search: "gala", stage: "sent" });
     const { page, limit, sortBy, sortOrder, ...rest } = listQuery(state, USER);
@@ -183,25 +183,77 @@ describe("role dashboards: links and labels", () => {
     expect(rfpRowHref(row, { canEdit: false })).toBe(`/proposal/gala-${USER}`);
   });
 
-  test("row actions: Owners and Admins on any proposal, creators on their own, Viewers and archived rows none", () => {
+  describe("row actions", () => {
     const all = { canEdit: true, canDuplicate: true, canArchive: true };
     const none = { canEdit: false, canDuplicate: false, canArchive: false };
-    const mine = { stage: "sent" as const, ownerUserId: USER };
-    const theirs = { stage: "draft" as const, ownerUserId: OTHER };
-    expect(rowActionsFor(theirs, "owner", USER)).toEqual(all);
-    expect(rowActionsFor(theirs, "organization_admin", USER)).toEqual(all);
-    expect(rowActionsFor(mine, "planner", USER)).toEqual(all);
-    expect(rowActionsFor(mine, "team_manager", USER)).toEqual(all);
-    expect(rowActionsFor(theirs, "planner", USER)).toEqual(none);
-    // A team's or a shared proposal: the list doesn't say what the member may do, so nothing is offered.
-    expect(rowActionsFor(theirs, "team_manager", USER)).toEqual(none);
-    for (const role of ["owner", "organization_admin", "team_manager", "planner", "viewer"] as const) {
-      expect(rowActionsFor({ stage: "archived", ownerUserId: USER }, role, USER)).toEqual(none);
-    }
-    expect(rowActionsFor(mine, "viewer", USER)).toEqual(none);
-    expect(rowActionsFor(theirs, "viewer", USER)).toEqual(none);
-    // Nobody to compare with: no row is "mine".
-    expect(rowActionsFor({ stage: "sent", ownerUserId: null }, "planner", null)).toEqual(none);
+    const ROLES = ["owner", "organization_admin", "team_manager", "planner", "viewer"] as const;
+    const flags = (canEdit: boolean, canDuplicate: boolean, canArchive: boolean) => ({ canEdit, canDuplicate, canArchive });
+
+    test("each action follows the row's own flag, whatever the role and whoever owns the row", () => {
+      for (const canEdit of [true, false]) for (const canDuplicate of [true, false]) for (const canArchive of [true, false]) {
+        const permissions = flags(canEdit, canDuplicate, canArchive);
+        for (const role of ROLES) for (const ownerUserId of [USER, OTHER, null]) {
+          expect(rowActionsFor({ stage: "sent", ownerUserId, permissions }, role, USER)).toEqual(permissions);
+        }
+      }
+    });
+
+    test("a Team Manager gets the menu on a managed team's proposal, a view-only share gets Duplicate alone", () => {
+      const theirs = { stage: "sent" as const, ownerUserId: OTHER };
+      expect(rowActionsFor({ ...theirs, permissions: all }, "team_manager", USER)).toEqual(all);
+      const viewShare = rowActionsFor({ ...theirs, permissions: flags(false, true, false) }, "planner", USER);
+      expect(viewShare).toEqual(flags(false, true, false));
+      expect(hasRowActions(viewShare)).toBe(true);
+      // The backend never grants a Viewer anything; their own row included.
+      const viewer = rowActionsFor({ stage: "sent", ownerUserId: USER, permissions: none }, "viewer", USER);
+      expect(viewer).toEqual(none);
+      expect(hasRowActions(viewer)).toBe(false);
+    });
+
+    test("an archived row offers nothing, whatever its flags say (it is restored from the proposal list)", () => {
+      for (const role of ROLES) {
+        expect(rowActionsFor({ stage: "archived", ownerUserId: USER, permissions: all }, role, USER)).toEqual(none);
+        expect(rowActionsFor({ stage: "archived", ownerUserId: USER }, role, USER)).toEqual(none);
+      }
+    });
+
+    test("fallback, an item without flags (older API): Owners and Admins on any proposal, creators on their own, Viewers none", () => {
+      const mine = { stage: "sent" as const, ownerUserId: USER };
+      const theirs = { stage: "draft" as const, ownerUserId: OTHER };
+      expect(rowActionsFor(theirs, "owner", USER)).toEqual(all);
+      expect(rowActionsFor(theirs, "organization_admin", USER)).toEqual(all);
+      expect(rowActionsFor(mine, "planner", USER)).toEqual(all);
+      expect(rowActionsFor(mine, "team_manager", USER)).toEqual(all);
+      expect(rowActionsFor(theirs, "planner", USER)).toEqual(none);
+      expect(rowActionsFor(theirs, "team_manager", USER)).toEqual(none);
+      expect(rowActionsFor(mine, "viewer", USER)).toEqual(none);
+      expect(rowActionsFor(theirs, "viewer", USER)).toEqual(none);
+      // Nobody to compare with: no row is "mine".
+      expect(rowActionsFor({ stage: "sent", ownerUserId: null }, "planner", null)).toEqual(none);
+    });
+
+    test("a present but malformed value fails closed, even for an Owner: the old rule is not consulted", () => {
+      const row = { stage: "sent" as const, ownerUserId: USER };
+      for (const permissions of [null, {}, { canEdit: false }, { canEdit: "true", canDuplicate: "true", canArchive: "true" }]) {
+        for (const role of ROLES) {
+          expect(rowActionsFor({ ...row, permissions: permissions as never }, role, USER)).toEqual(none);
+        }
+      }
+      expect(rowActionsFor({ ...row, permissions: { canDuplicate: true } as never }, "owner", USER)).toEqual(flags(false, true, false));
+    });
+
+    test("the list keeps the flags the backend sent, fails closed on a malformed value and leaves the key off only when none was sent", () => {
+      const list = toRfpList({ items: [
+        { id: USER, eventName: "With flags", stage: "sent", permissions: { canEdit: false, canDuplicate: true, canArchive: false } },
+        { id: OTHER, eventName: "Older API", stage: "sent" },
+        { id: TEAM, eventName: "Partial", stage: "sent", permissions: { canEdit: "yes", canArchive: true } },
+        { id: "d".repeat(24), eventName: "Null", stage: "sent", permissions: null },
+      ] });
+      expect(list.items.map((item) => item.permissions)).toEqual([flags(false, true, false), undefined, flags(false, false, true), none]);
+      expect("permissions" in list.items[1]).toBe(false);
+      // Through the whole path, as an Owner: only the row without the key gets the old rule.
+      expect(list.items.map((item) => rowActionsFor(item, "owner", USER))).toEqual([flags(false, true, false), all, flags(false, false, true), none]);
+    });
   });
 
   test("the line under a name is the event dates, or the short ID; same-named rows always differ", () => {
@@ -277,11 +329,6 @@ describe("role dashboards: links and labels", () => {
     expect(upcomingDeadlines(rows, "2026-11-10", 2).map((row) => row.id)).toEqual(["today", "due"]);
   });
 
-  test("quarter label", () => {
-    expect(quarterLabel({ label: "2026-Q4", start: "", end: "", timeZone: "UTC" })).toBe("Q4 2026");
-    expect(quarterLabel(null)).toBe("this quarter");
-  });
-
   test("refusals are plain sentences that never show a code, and say proposal, not RFP", () => {
     const messages = [
       dashboardErrorMessage("DASHBOARD_FILTER_INVALID", 400),
@@ -302,10 +349,11 @@ describe("role dashboards: links and labels", () => {
 
 describe("role dashboards: reading backend payloads", () => {
   test("a summary with missing fields reads as zeros", () => {
-    expect(toRfpSummary(null)).toMatchObject({ total: 0, activeRfps: 0, responsesReceived: 0, awardedThisQuarter: 0, quarter: null });
+    expect(toRfpSummary(null)).toEqual({ responsesReceived: 0, byStage: { draft: 0, sent: 0, receiving_responses: 0, under_review: 0, awarded: 0, archived: 0 }, quarter: null });
     const summary = toRfpSummary({ total: 4, activeRfps: 2, responsesReceived: 7, awardedThisQuarter: 1, byStage: { draft: 1, sent: 2, awarded: 1 }, quarter: { label: "2026-Q4", start: "s", end: "e", timeZone: "America/Chicago" } });
     expect(summary.byStage).toEqual({ draft: 1, sent: 2, receiving_responses: 0, under_review: 0, awarded: 1, archived: 0 });
     expect(summary.quarter?.timeZone).toBe("America/Chicago");
+    expect(summary.responsesReceived).toBe(7);
   });
 
   test("list rows without an id are dropped and unknown stages read as draft", () => {

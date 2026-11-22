@@ -1523,6 +1523,15 @@ describe("AssistantWorkspacePage", () => {
     );
   });
 
+  test("the automatic room-schedule prompt is no longer shown in the conversation", () => {
+    const base = { intent: null, runType: null, runId: null, jobId: null, status: "complete", createdAt: "2026-07-21T10:00:00.000Z", attachments: [] };
+    const messages = [
+      { ...base, id: "auto", ordinal: 1, role: "assistant", kind: "status", content: "Next, add room specifications. If you have a room schedule, download the sample sheet, add one row per function, and upload it in Room Specifications. Functions with the same Room Name will share AV specifications.", actions: ["download_room_schedule_template", "open_room_specifications"] },
+      { ...base, id: "asked", ordinal: 2, role: "assistant", kind: "status", content: "For several room functions, use the room schedule template.", actions: ["download_room_schedule_template", "open_room_specifications"] },
+    ] as Parameters<typeof visibleRunMessages>[0];
+    expect(visibleRunMessages(messages).map(message => message.id)).toEqual(["asked"]);
+  });
+
   test("guided flow shows one question at a time with progress, impact tag, and a remaining count in the rail", async () => {
     mockedGetConversation.mockResolvedValue(conversationWithGuidedQuestions([startDateQuestion, roomsQuestion]));
     render(<AssistantWorkspacePage initialProposalId={PROPOSAL_ID} />);

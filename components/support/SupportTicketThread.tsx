@@ -106,7 +106,7 @@ const MessageRow = ({
         <article
           className={`px-4 py-2.5 text-sm shadow-sm ${
             mine
-              ? `bg-[#218ccb] text-white ${endsGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`
+              ? `bg-[#0076b4] text-white ${endsGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`
               : `border border-slate-200 bg-white text-slate-800 ${endsGroup ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`
           } ${pending ? "opacity-70" : ""}`}
         >
@@ -361,7 +361,7 @@ export default function SupportTicketThread({
               disabled={isPending}
               aria-label="Send"
               title="Send (Enter)"
-              className={`order-3 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#218ccb] text-sm font-bold text-white shadow-sm transition hover:bg-[#0076b4] disabled:opacity-60 w-9`}
+              className={`order-3 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#0076b4] text-sm font-bold text-white shadow-sm transition hover:bg-[#0069a0] disabled:opacity-60 w-9`}
             >
               {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowUp className="h-4 w-4" aria-hidden="true" />}
             </button>

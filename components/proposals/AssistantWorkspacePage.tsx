@@ -93,6 +93,13 @@ import {
 import { takeProposalHandoffDraft } from '@/lib/aiAssistant/handoff';
 import SourceIntakeProgress, { type SourceIntakePhase } from './SourceIntakeProgress';
 import {
+  REVEAL_GRACE_MS,
+  REVEAL_INTRO_MS,
+  usePrefersReducedMotion,
+  useStaggeredCount,
+  useTypewriter,
+} from './extractionReveal';
+import {
   isStandaloneVideoRecordingPath,
   STANDALONE_VIDEO_RECORDING_STEP_ENABLED,
 } from '@/lib/proposals/proposalExperience';
@@ -836,6 +843,7 @@ export const visibleRunMessages = (
   }
   return messages.filter(
     (message) =>
+      !isAutomaticRoomScheduleGuidance(message) &&
       !(
         message.runType &&
         message.status === 'failed' &&
@@ -843,6 +851,14 @@ export const visibleRunMessages = (
       ),
   );
 };
+
+// The backend still appends this room-schedule prompt once the room-count
+// question is settled; the product no longer shows it. A planner who asks
+// about room schedules still gets the chat reply with the same actions.
+const isAutomaticRoomScheduleGuidance = (message: ConversationMessage) =>
+  message.role === 'assistant' &&
+  message.kind === 'status' &&
+  message.content.startsWith('Next, add room specifications.');
 
 // A run-result message is inserted immediately after the action-request that
 // created it. Keeping this relationship in the conversation history lets a
@@ -897,7 +913,11 @@ const questionFieldLabel = (
   const words = segment
     .replace(/([A-Z])/g, ' $1')
     .toLowerCase()
-    .trim();
+    .trim()
+    // camelCase loses acronyms and hyphens: inHouseAvRequired read as
+    // "In house av required".
+    .replace(/\bin house\b/g, 'in-house')
+    .replace(/\b(av|led|ptz|ip|url)\b/g, (acronym) => acronym.toUpperCase());
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
@@ -2075,6 +2095,8 @@ function SuggestedAnswersReviewCard({
   error,
   editor,
   onEdit,
+  visibleCount = questions.length,
+  revealing = false,
 }: {
   questions: ConversationQuestion[];
   editingQuestionId: string | null;
@@ -2082,12 +2104,19 @@ function SuggestedAnswersReviewCard({
   error: string | null;
   editor: ReactNode;
   onEdit: (questionId: string) => void;
+  /** During a brief's reveal, how many rows are shown so far. */
+  visibleCount?: number;
+  revealing?: boolean;
 }) {
+  const shownQuestions = questions.slice(0, visibleCount);
+  const waitingRows = Math.min(2, questions.length - shownQuestions.length);
+  const saving = revealing || (busy && !editingQuestionId);
   return (
     <section
       data-testid="suggested-answers-review"
       aria-labelledby="suggested-answers-title"
-      className="my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-action/30 bg-surface shadow-sm"
+      aria-busy={revealing || undefined}
+      className={`my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-action/30 bg-surface shadow-sm ${revealing ? 'dxg-reveal-in' : ''}`}
     >
       <div className="border-b border-action/30 bg-brand-soft px-4 py-3.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2096,16 +2125,18 @@ function SuggestedAnswersReviewCard({
               Proposal details
             </p>
             <h3 id="suggested-answers-title" className="mt-1 text-sm font-bold text-heading">
-              {questions.length} saved {questions.length === 1 ? 'detail' : 'details'}
+              {revealing
+                ? `Saving ${shownQuestions.length} of ${questions.length} ${questions.length === 1 ? 'detail' : 'details'}`
+                : `${questions.length} saved ${questions.length === 1 ? 'detail' : 'details'}`}
             </h3>
           </div>
           <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-surface px-2 py-1 text-xs font-bold text-success-strong">
-            {busy && !editingQuestionId ? (
+            {saving ? (
               <Loader2 size={12} className="animate-spin" aria-hidden />
             ) : (
               <Check size={12} aria-hidden />
             )}
-            {busy && !editingQuestionId ? 'Saving details' : 'Saved'}
+            {saving ? 'Saving details' : 'Saved'}
           </span>
         </div>
         <p className="mt-1 text-xs leading-5 text-body">
@@ -2114,13 +2145,14 @@ function SuggestedAnswersReviewCard({
       </div>
 
       <dl className="divide-y divide-line px-4">
-        {questions.map((question) => {
+        {shownQuestions.map((question, index) => {
           const label = questionFieldLabel(question);
           const editing = editingQuestionId === question.id;
+          const newest = revealing && index === shownQuestions.length - 1;
           return (
             // dt and dd are direct children of the row so the list is valid; the Edit button lives
             // inside the dd with the value it edits.
-            <div key={question.id} className="py-3">
+            <div key={question.id} className={`py-3 ${newest ? 'dxg-reveal-row -mx-4 px-4' : ''}`}>
               <dt className="text-xs font-semibold text-muted">{label}</dt>
               <dd className="mt-0.5">
                 <div className="flex items-start gap-3">
@@ -2143,6 +2175,12 @@ function SuggestedAnswersReviewCard({
             </div>
           );
         })}
+        {Array.from({ length: Math.max(0, waitingRows) }, (_, index) => (
+          <div key={`waiting-${index}`} aria-hidden="true" className="py-3">
+            <div className="dxg-reveal-skeleton h-2.5 w-24" />
+            <div className="dxg-reveal-skeleton mt-2 h-3 w-2/5" />
+          </div>
+        ))}
       </dl>
 
       {error && (
@@ -2156,16 +2194,47 @@ function SuggestedAnswersReviewCard({
   );
 }
 
+// Holds the details card's place while a brief is read, so the extracted
+// rows arrive into a card that is already there instead of pushing the
+// thread down all at once.
+function ProposalDetailsSkeleton({ label }: { label: string }) {
+  return (
+    <div
+      data-testid="proposal-details-skeleton"
+      role="status"
+      className="my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm"
+    >
+      <div className="border-b border-cyan-100 bg-cyan-50/70 px-4 py-3.5">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#087f69]">
+          Proposal details
+        </p>
+        <p className="mt-1 text-sm font-bold text-slate-900">{label}</p>
+      </div>
+      <div aria-hidden="true" className="space-y-4 px-4 py-4">
+        {['w-3/5', 'w-2/5', 'w-1/2', 'w-1/3'].map((width) => (
+          <div key={width}>
+            <div className="dxg-reveal-skeleton h-2.5 w-24" />
+            <div className={`dxg-reveal-skeleton mt-2 h-3 ${width}`} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Completed extraction stays in the conversation: source evidence and a clear
 // next step, without sending the user away to the proposal editor.
 function ContextRunCard({
   proposalId,
   message,
   sourcesById,
+  animate = false,
 }: {
   proposalId: string;
   message: ConversationMessage;
   sourcesById: Map<string, PrivateDocumentSource>;
+  /** True only for the run that just finished in this session. */
+  animate?: boolean;
 }) {
   const [chips, setChips] = useState<
     Array<{ label: string; count: number }>
@@ -2213,17 +2282,33 @@ function ContextRunCard({
     };
   }, [proposalId, message.runId, sourcesById]);
 
+  const followUp =
+    fieldCount === 0
+      ? 'I couldn’t identify proposal details in this file. You can attach a clearer brief or enter the details below.'
+      : fieldCount !== null && fieldCount > 0
+        ? 'I’ve pulled out the key details from your brief. Review them together, then we’ll ask only about anything missing.'
+        : '';
+  const typed = useTypewriter([message.content, followUp], { enabled: animate });
+  const typingFollowUp = typed.parts[0].length === message.content.length;
+  const caret = (onThisLine: boolean) =>
+    animate && !typed.done && onThisLine ? ' dxg-reveal-caret' : '';
+
   return (
-    <div className="w-full max-w-3xl rounded-2xl border border-line bg-surface p-4 shadow-sm">
+    <div className={`w-full max-w-3xl rounded-2xl border border-line bg-surface p-4 shadow-sm ${animate ? 'dxg-reveal-in' : ''}`}>
       <SourceChips chips={chips} />
       <p className="text-xs font-bold uppercase tracking-widest text-muted">
         Extracted from your sources
       </p>
-      <p className="mt-1.5 whitespace-pre-wrap text-sm text-body">
-        {message.content}
+      {/* The full text stays available to assistive tech while it types. */}
+      {animate && !typed.done && <p className="sr-only">{message.content} {followUp}</p>}
+      <p aria-hidden={animate && !typed.done ? true : undefined} className={`mt-1.5 whitespace-pre-wrap text-sm text-body${caret(!typingFollowUp || !followUp)}`}>
+        {typed.parts[0]}
       </p>
-      {fieldCount === 0 && <p className="mt-2 text-sm text-amber-800">I couldn’t identify proposal details in this file. You can attach a clearer brief or enter the details below.</p>}
-      {fieldCount !== null && fieldCount > 0 && <p className="mt-2 text-sm text-body">I’ve pulled out the key details from your brief. Review them together, then we’ll ask only about anything missing.</p>}
+      {followUp && typed.parts[1] && (
+        <p aria-hidden={animate && !typed.done ? true : undefined} className={`mt-2 text-sm ${fieldCount === 0 ? 'text-amber-800' : 'text-body'}${caret(typingFollowUp)}`}>
+          {typed.parts[1]}
+        </p>
+      )}
     </div>
   );
 }
@@ -3285,13 +3370,24 @@ export default function AssistantWorkspacePage({
   // Extracted defaults and completed guided answers share one persistent
   // review. If the planner started typing before a late suggestion arrived,
   // keep that live control mounted so their work is never replaced.
+  // Same canonical order as the checklist (event name, dates, format, venue…);
+  // database return order put "End date" above "Event name". Defaults are
+  // saved in this order too, so the reveal follows the list top to bottom.
+  // Answered checklist items drop their questionId, so match by field path too.
+  const corePathOrder = new Map(
+    intakeProgress?.items.map((item, index) => [item.key, index] as const) ?? [],
+  );
+  const canonicalIndex = (question: ConversationQuestion) =>
+    coreQuestionOrder.get(question.id) ??
+    corePathOrder.get(question.paths[0] ?? '') ??
+    Number.MAX_SAFE_INTEGER;
   const suggestedReviewQuestions = activeQuestions.filter(
     (question) =>
       (question.status === 'open' || question.status === 'answered') &&
       hasReviewAnswer(question) &&
       (!reviewEditedQuestionIds.includes(question.id) ||
         reviewEditingQuestionId === question.id),
-  );
+  ).sort((a, b) => canonicalIndex(a) - canonicalIndex(b));
   const editingSuggestedQuestion = reviewEditingQuestionId
     ? (activeQuestions.find(
         (question) => question.id === reviewEditingQuestionId,
@@ -4077,6 +4173,80 @@ export default function AssistantWorkspacePage({
   // persisted run before it reaches a terminal status. Each clears on success
   // or failure, so a question can never stay hidden past a terminal outcome.
   const extractionPending = sourceExtractionInProgress;
+
+  // --- Brief extraction reveal -------------------------------------------
+  // Extraction returns everything in one response, which used to land as
+  // three cards at once (sources, all details, the next question). When a
+  // brief finishes reading in this session, show it in order instead: the
+  // sources card types in, detail rows join one by one as they are saved,
+  // then a one-line hand-off and the first question. Reopening an existing
+  // conversation, or reduced motion, shows everything at once as before.
+  // Nothing here changes what is saved or when.
+  const reducedMotion = usePrefersReducedMotion();
+  const [extractionSeen, setExtractionSeen] = useState(false);
+  const [revealIntroDone, setRevealIntroDone] = useState(false);
+  const [revealGraceOver, setRevealGraceOver] = useState(false);
+  const [revealHandOff, setRevealHandOff] = useState(false);
+  if (extractionPending && !extractionSeen) {
+    // Adjusting state during render (React's documented pattern) so the
+    // finished cards' first render already knows they are part of a reveal.
+    setExtractionSeen(true);
+    setRevealIntroDone(false);
+    setRevealGraceOver(false);
+    setRevealHandOff(false);
+  }
+  // A failed send or extraction is not a reveal: its error shows at once and
+  // nothing waits behind a placeholder.
+  const revealAborted =
+    extractionFailureBlocksQuestions || !!sendError || !!extractionSendFailure;
+  const revealActive =
+    !reducedMotion && extractionSeen && !extractionPending && !revealAborted;
+  useEffect(() => {
+    if (!revealActive) return;
+    const intro = window.setTimeout(() => setRevealIntroDone(true), REVEAL_INTRO_MS);
+    const grace = window.setTimeout(() => setRevealGraceOver(true), REVEAL_GRACE_MS);
+    return () => {
+      window.clearTimeout(intro);
+      window.clearTimeout(grace);
+    };
+  }, [revealActive]);
+  const reviewRowCount = suggestedReviewQuestions.length;
+  // Rows join as the extracted defaults are actually saved (one request each).
+  const savedReviewRows =
+    bulkAnswerProgress && !reviewEditingQuestionId
+      ? Math.max(0, reviewRowCount - (bulkAnswerProgress.total - bulkAnswerProgress.current))
+      : reviewRowCount;
+  const shownReviewRows = useStaggeredCount(revealIntroDone ? savedReviewRows : 0, {
+    enabled: revealActive,
+  });
+  const revealSettling =
+    revealActive &&
+    (!revealIntroDone ||
+      !!bulkAnswerProgress ||
+      shownReviewRows < reviewRowCount ||
+      (reviewRowCount === 0 && !revealGraceOver));
+  if (
+    (revealActive && !revealSettling) ||
+    (extractionSeen && !extractionPending && (reducedMotion || revealAborted))
+  ) {
+    setExtractionSeen(false);
+    setRevealHandOff(revealActive && reviewRowCount > 0);
+  }
+  const reviewCardVisibleRows = revealActive ? shownReviewRows : reviewRowCount;
+  const showDetailsSkeleton =
+    !reducedMotion &&
+    ((extractionPending && !extractionSendFailure && sourceIntakePhase === 'reading') ||
+      (revealSettling && shownReviewRows === 0 && (reviewRowCount > 0 || !revealGraceOver)));
+  // The rail counts what the planner can see in the details card, so the two
+  // never disagree (the overview alone missed due date and in-house AV).
+  const railDetailCount = revealActive
+    ? shownReviewRows
+    : Math.max(overviewDetailCount, reviewRowCount);
+  useEffect(() => {
+    if (!revealActive && !revealHandOff) return;
+    threadEndRef.current?.scrollIntoView?.({ block: 'end' });
+  }, [revealActive, revealHandOff, shownReviewRows, revealIntroDone]);
+
   const currentVenueSchedule =
     proposal && isRecord(proposal.venueSchedule)
       ? proposal.venueSchedule
@@ -4457,6 +4627,7 @@ export default function AssistantWorkspacePage({
           proposalId={proposalId}
           message={message}
           sourcesById={sourcesById}
+          animate={revealActive && message.id === latestContextRun?.id}
         />,
         message.id,
       );
@@ -5118,6 +5289,16 @@ export default function AssistantWorkspacePage({
                       true,
                     )
                   )}
+                  {showDetailsSkeleton && !revealHandOff && (
+                    <li className="flex items-start gap-2.5 sm:gap-3">
+                      <span aria-hidden="true" className="mt-0.5 h-8 w-8 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <ProposalDetailsSkeleton
+                          label={extractionPending ? 'Finding details in your brief…' : 'Organizing what I found…'}
+                        />
+                      </div>
+                    </li>
+                  )}
                   {showExtractionNextStep && !questionsComplete && proposalId && (
                     <li className="flex justify-start">
                       <ExtractionNextStepCard
@@ -5271,6 +5452,7 @@ export default function AssistantWorkspacePage({
                     </li>
                   )}
                   {suggestedReviewQuestions.length > 0 &&
+                    reviewCardVisibleRows > 0 &&
                     !chatBusy &&
                     !loading &&
                     !extractionPending &&
@@ -5341,6 +5523,8 @@ export default function AssistantWorkspacePage({
                               setSuggestedReviewError(null);
                               setReviewEditingQuestionId(questionId);
                             }}
+                            visibleCount={reviewCardVisibleRows}
+                            revealing={revealSettling}
                           />
                         </div>
                       </li>
@@ -5365,8 +5549,9 @@ export default function AssistantWorkspacePage({
                     !loading &&
                     !bulkAnswerProgress &&
                     !extractionPending &&
+                    !revealSettling &&
                     !extractionFailureBlocksQuestions && (
-                      <li data-testid="guided-question-row" className="flex scroll-mt-4 items-start gap-2.5 py-1 sm:gap-3">
+                      <li data-testid="guided-question-row" className={`flex scroll-mt-4 items-start gap-2.5 py-1 sm:gap-3 ${revealHandOff ? 'dxg-reveal-in' : ''}`}>
                         <span aria-hidden="true" className="mt-0.5 h-8 w-8 shrink-0" />
                         <div className="min-w-0 flex-1">
                           <GuidedQuestionCard
@@ -5531,7 +5716,7 @@ export default function AssistantWorkspacePage({
               detail={aiStatus.detail}
               working={aiWorking}
               documents={readySources.length}
-              details={overviewDetailCount}
+              details={railDetailCount}
               questions={totalIntakeCount > 0 ? `${completedIntakeCount}/${totalIntakeCount}` : '—'}
             />
             {/* Key questions checklist: every guided question the assistant

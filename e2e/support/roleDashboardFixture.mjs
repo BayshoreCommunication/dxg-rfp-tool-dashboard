@@ -1,6 +1,14 @@
 // Local-only stand-in for the backend's dashboard endpoints (GET /api/v1/rfps and
 // /api/v1/rfps/summary, ORG-401), the member and team lists the Admin filters read, and the two
 // row actions the dashboard calls for these accounts (archive and copy). Synthetic data only.
+// Every listed row carries `permissions` the way the backend computes them (rfpRowPermissions),
+// except one row that is served without, like an item from an API that doesn't send them yet.
+// On request (POST /__e2e/dashboard?proposalsPage=on) the same rows are also served to the
+// Proposals page (GET /api/proposals); a plain POST /__e2e/dashboard turns that off again.
+// The stat cards' two reads are here too: GET /api/dashboard/overview (the signed-in member's own
+// totals, whatever their role) and the totals of GET /api/vendor-responses, which
+// planEntitlementsFixture.mjs answers after its plan gate. POST /__e2e/dashboard?overview=down
+// makes the overview fail until the next plain POST.
 // The product calls these "proposals"; the API paths and fields keep their older name. Like the real backend it scopes every answer to the signed-in member's
 // role, and the summary is computed from the same filtered set as the list.
 
@@ -52,6 +60,7 @@ const rfp = (n, eventName, stage, owner, team, city, startOffset, invited, respo
   createdAt: at(-30 - n),
   updatedAt: at(-n),
   sharedWith: [],
+  editSharedWith: [],
   ...extra,
 });
 
@@ -59,6 +68,15 @@ const A = DASHBOARD_ACCOUNTS;
 // What the row actions changed since the last reset: proposals archived from the dashboard and
 // the copies asked for. Copies are never listed by the dashboard endpoints (as in the backend).
 const changes = { archived: new Set(), copies: [] };
+
+// Stat cards: what only the overview knows about a member's own proposals, and how many of the
+// responses to them are unread. Anyone not listed has none.
+const OWN_ACTIVITY = {
+  [id("1")]: { emailClicked: 1, proposalViews: 7, unread: 1 },
+  [id("2")]: { emailClicked: 2, proposalViews: 18, unread: 0 },
+  [id("4")]: { emailClicked: 9, proposalViews: 1234, unread: 3 },
+};
+let overviewDown = false;
 
 // Built per request so "today" never drifts from the test's clock.
 const rfps = () => seedRfps().map((row) => (changes.archived.has(row.id) ? { ...row, stage: "archived" } : row));
@@ -71,10 +89,13 @@ const seedRfps = () => [
   rfp(5, "Holiday Town Hall", "awarded", A["planner-e2e@example.com"], CORPORATE, "Chicago", 30, 3, 3),
   rfp(6, "Partner Summit 2025", "archived", A["planner-e2e@example.com"], CORPORATE, "Denver", -200, 4, 2),
   rfp(7, "Engineering Offsite", "sent", PETER, CORPORATE, "Seattle", 12, 3, 0),
-  rfp(8, "Investor Day", "receiving_responses", PETER, CORPORATE, "New York", 60, 4, 1),
+  // Served without `permissions` (older API): the dashboard falls back to its old rule for it.
+  rfp(8, "Investor Day", "receiving_responses", PETER, CORPORATE, "New York", 60, 4, 1, { withoutPermissions: true }),
   rfp(9, "Regional Roadshow", "draft", A["manager-e2e@example.com"], CORPORATE, "Chicago", 90, 0, 0),
   rfp(10, "Trade Show Booth AV", "receiving_responses", FIONA, FIELD, "Las Vegas", 25, 5, 2, { sharedWith: [id("5")] }),
-  rfp(11, "Field Kickoff", "draft", FIONA, FIELD, "Dallas", 100, 0, 0),
+  // Shared to view with Priya (a Planner) and Maya (a Team Manager who doesn't manage Field
+  // Marketing). A draft with no responses, so no other spec's totals for those accounts move.
+  rfp(11, "Field Kickoff", "draft", FIONA, FIELD, "Dallas", 100, 0, 0, { sharedWith: [id("4"), id("3")] }),
   rfp(12, "Board Meeting AV", "awarded", A["owner-e2e@example.com"], null, "Chicago", 15, 2, 2),
   rfp(13, "All-Hands Broadcast", "sent", A["admin-e2e@example.com"], null, "Chicago", 8, 3, 0),
   // Three proposals with one name: two on the same dates and one with no dates yet.
@@ -82,8 +103,10 @@ const seedRfps = () => [
   rfp(15, "Northstar Leadership Summit 2027", "draft", FIONA, FIELD, "Orlando", 150, 0, 0),
   rfp(16, "Northstar Leadership Summit 2027", "draft", FIONA, FIELD, null, null, 0, 0),
   // Enough organization-wide rows for a second page.
+  // The first one is shared for editing with Priya (a Planner): a draft with no responses.
   ...Array.from({ length: 20 }, (_, index) =>
-    rfp(20 + index, `Regional Meetup ${String(index + 1).padStart(2, "0")}`, index % 2 ? "sent" : "draft", FIONA, FIELD, index % 3 ? "Dallas" : "Houston", 120 + index, index % 2 ? 2 : 0, 0)),
+    rfp(20 + index, `Regional Meetup ${String(index + 1).padStart(2, "0")}`, index % 2 ? "sent" : "draft", FIONA, FIELD, index % 3 ? "Dallas" : "Houston", 120 + index, index % 2 ? 2 : 0, 0,
+      index === 0 ? { editSharedWith: [id("4")] } : {})),
 ];
 
 export const dashboardAccessToken = (account) =>
@@ -106,10 +129,54 @@ const isAdmin = (actor) => actor.roles.includes("owner") || actor.roles.includes
 // own proposals for Planners, plus anything shared with the member.
 const visibleTo = (actor) => (row) => {
   if (isAdmin(actor)) return true;
-  if (row.sharedWith.includes(actor.userId)) return true;
+  if (row.sharedWith.includes(actor.userId) || row.editSharedWith.includes(actor.userId)) return true;
   if (actor.roles.includes("viewer")) return false;
   if (row.ownerUserId === actor.userId) return true;
   return actor.roles.includes("team_manager") && TEAMS.some((team) => team.id === row.teamId && team.managers.includes(actor.userId));
+};
+
+// The proposals a member owns, archived ones included: shares and managed teams don't count.
+const ownedBy = (actor) => rfps().filter((row) => row.ownerUserId === actor.userId);
+
+// GET /api/dashboard/overview. An opaque token (the older specs) is a member with no proposals.
+const handleOverview = (request, response, url) => {
+  if (request.method !== "GET" || url.pathname !== "/api/dashboard/overview") return false;
+  if (overviewDown) {
+    json(response, 500, { success: false, message: "Error fetching dashboard overview" });
+    return true;
+  }
+  const actor = actorOf(request);
+  const own = actor ? ownedBy(actor) : [];
+  const activity = (actor && OWN_ACTIVITY[actor.userId]) || { emailClicked: 0, proposalViews: 0 };
+  json(response, 200, {
+    success: true,
+    message: "Dashboard overview fetched successfully",
+    data: {
+      totals: {
+        totalProposals: own.length,
+        totalEmailSent: own.reduce((sum, row) => sum + row.vendorsInvited, 0),
+        totalEmailClicked: activity.emailClicked,
+        totalProposalViews: activity.proposalViews,
+      },
+      latestProposals: [],
+    },
+  });
+  return true;
+};
+
+// The stat cards' read of GET /api/vendor-responses (every response to a proposal the member
+// owns, no proposal or campaign filter): its total and unread count, or null for any other
+// request. The sidebar's own unread read sends no `unreadOnly` and keeps its answer of 0, so
+// other specs' sidebars don't change.
+export const dashboardVendorResponseTotals = (request, url) => {
+  const params = url.searchParams;
+  if (!params.has("unreadOnly") || params.has("proposalId") || params.has("campaignId")) return null;
+  const actor = actorOf(request);
+  if (!actor) return null;
+  return {
+    total: ownedBy(actor).reduce((sum, row) => sum + row.vendorsResponded, 0),
+    unreadCount: OWN_ACTIVITY[actor.userId]?.unread ?? 0,
+  };
 };
 
 const OBJECT_ID = /^[0-9a-f]{24}$/i;
@@ -144,19 +211,80 @@ const json = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 
-const publicRow = (row) => {
-  const copy = { ...row };
-  delete copy.sharedWith;
-  return copy;
-};
-
-// May this member change the proposal (rfpAccessPolicy: organization-wide roles, the owner, a
-// manager of its team)? A Viewer never may.
+// May this member change the proposal (rfpAccessPolicy "edit" and "archive": organization-wide
+// roles, the owner, a manager of its team)? A Viewer never may, and a view-only share adds nothing.
+const mayWrite = (actor) => !actor.roles.includes("viewer");
 const mayChange = (actor, row) =>
-  !actor.roles.includes("viewer")
+  mayWrite(actor)
   && (isAdmin(actor)
     || row.ownerUserId === actor.userId
     || (actor.roles.includes("team_manager") && TEAMS.some((team) => team.id === row.teamId && team.managers.includes(actor.userId))));
+
+// rfpRowPermissions: each flag is the answer the mutation endpoint below gives. A copy only
+// reads its source, so it follows view access plus a role that can write.
+// An edit share lets a role that can write edit, and nothing else: archive is never shared.
+const permissionsFor = (actor, row) => ({
+  canEdit: mayChange(actor, row) || (mayWrite(actor) && row.editSharedWith.includes(actor.userId)),
+  canDuplicate: mayWrite(actor) && visibleTo(actor)(row),
+  canArchive: mayChange(actor, row),
+});
+
+const withPermissions = (actor, row, item) => (row.withoutPermissions ? item : { ...item, permissions: permissionsFor(actor, row) });
+
+const publicRow = (actor) => (row) => {
+  const copy = { ...row };
+  delete copy.sharedWith;
+  delete copy.editSharedWith;
+  delete copy.withoutPermissions;
+  return withPermissions(actor, row, copy);
+};
+
+// The Proposals page's list (GET /api/proposals), in that endpoint's own shape, for the role
+// accounts. Off unless a spec asks for it: other specs sign in with these accounts and seed the
+// stub's generic proposal list instead.
+let proposalsPage = false;
+
+const proposalsPageRow = (actor) => (row) => withPermissions(actor, row, {
+  _id: row.id,
+  status: row.status,
+  isDraft: row.isDraft,
+  isActive: true,
+  isFavorite: false,
+  isCopy: false,
+  isArchived: row.stage === "archived",
+  ...(row.stage === "archived" ? { archivedAt: row.updatedAt } : {}),
+  viewsCount: row.vendorsResponded,
+  createdAt: row.createdAt,
+  event: { eventName: row.eventName },
+});
+
+const handleProposalsPage = (request, response, url) => {
+  if (!proposalsPage || request.method !== "GET" || url.pathname !== "/api/proposals") return false;
+  const actor = actorOf(request);
+  if (!actor) return false;
+  const params = url.searchParams;
+  const search = (params.get("search") || "").trim().toLowerCase();
+  const seen = rfps().filter(visibleTo(actor)).filter((row) => !search || row.eventName.toLowerCase().includes(search));
+  const open = seen.filter((row) => row.stage !== "archived");
+  const archived = seen.filter((row) => row.stage === "archived");
+  const drafts = open.filter((row) => row.isDraft);
+  const live = open.filter((row) => !row.isDraft);
+  // Saved copies, favourites and expired proposals: this fixture has none.
+  const rows = params.get("archived") === "true" ? archived
+    : params.get("isCopy") === "true" || params.get("favorite") === "true" || params.get("isActive") === "false" ? []
+    : params.get("isDraft") === "true" ? drafts
+    : params.get("status") === "submitted" ? live
+    : open;
+  const page = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(params.get("limit") || "10", 10) || 10));
+  json(response, 200, {
+    success: true,
+    data: rows.slice((page - 1) * limit, page * limit).map(proposalsPageRow(actor)),
+    pagination: { total: rows.length, page, limit, totalPages: Math.max(1, Math.ceil(rows.length / limit)) },
+    counts: { all: open.length, draft: drafts.length, live: live.length, favorite: 0, expired: 0, archive: archived.length, saved: 0 },
+  });
+  return true;
+};
 
 const readBody = async (request) => {
   const chunks = [];
@@ -176,6 +304,8 @@ const handleRowActions = (request, response, url) => {
     if (request.method === "POST") {
       changes.archived.clear();
       changes.copies.length = 0;
+      proposalsPage = url.searchParams.get("proposalsPage") === "on";
+      overviewDown = url.searchParams.get("overview") === "down";
     }
     json(response, 200, { archived: [...changes.archived], copies: changes.copies });
     return true;
@@ -189,7 +319,8 @@ const handleRowActions = (request, response, url) => {
     json(response, 404, { success: false, message: "Proposal not found" });
     return true;
   }
-  if (!mayChange(actor, row)) {
+  // Archiving needs the right to change the proposal; a copy only a role that can write.
+  if (!(request.method === "DELETE" ? mayChange(actor, row) : mayWrite(actor))) {
     json(response, 403, { success: false, code: "FORBIDDEN", message: "Your role doesn't allow this." });
     return true;
   }
@@ -207,6 +338,8 @@ const handleRowActions = (request, response, url) => {
 
 export function handleRoleDashboard(request, response, url) {
   if (handleRowActions(request, response, url)) return true;
+  if (handleProposalsPage(request, response, url)) return true;
+  if (handleOverview(request, response, url)) return true;
   if (request.method !== "GET") return false;
   const pathname = url.pathname;
   const handled = ["/api/v1/rfps", "/api/v1/rfps/summary", "/api/organization/members", "/api/v1/teams"].includes(pathname);
@@ -283,7 +416,7 @@ export function handleRoleDashboard(request, response, url) {
   json(response, 200, {
     success: true,
     data: {
-      items: sorted.slice((page - 1) * limit, page * limit).map(publicRow),
+      items: sorted.slice((page - 1) * limit, page * limit).map(publicRow(actor)),
       pagination: { total: rows.length, page, limit, totalPages: Math.ceil(rows.length / limit) },
     },
   });

@@ -33,7 +33,10 @@ describe("dashboard RFP actions (ORG-402 over the ORG-401 endpoints)", () => {
     mockedFetch.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { total: 3, activeRfps: 2, responsesReceived: 5, awardedThisQuarter: 1, byStage: { sent: 2, awarded: 1 } } }));
     const result = await getDashboardRfpSummaryAction({ stage: "sent", venueCity: "New York" });
     expect(calledPath()).toBe("/api/v1/rfps/summary?stage=sent&venueCity=New+York");
-    expect(result.data).toMatchObject({ activeRfps: 2, responsesReceived: 5, awardedThisQuarter: 1 });
+    expect(result.data).toMatchObject({ responsesReceived: 5, byStage: { sent: 2, awarded: 1 } });
+    // Totals nothing shows any more aren't read.
+    expect(result.data).not.toHaveProperty("activeRfps");
+    expect(result.data).not.toHaveProperty("awardedThisQuarter");
   });
 
   test("another organization's data is a 404 the caller can show, not a crash", async () => {
