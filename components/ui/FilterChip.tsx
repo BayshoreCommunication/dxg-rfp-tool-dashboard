@@ -29,7 +29,8 @@ export default function FilterChip({ label, value, removeHref, onRemove, classNa
         <span className="font-semibold">{label}:</span> {value}
       </span>
       {removeHref ? (
-        <Link href={removeHref} aria-label={removeLabel} className={removeClass}>
+        // Removing a filter only rewrites this page's query, so it must not jump to the top.
+        <Link href={removeHref} scroll={false} aria-label={removeLabel} className={removeClass}>
           <X size={13} aria-hidden="true" />
         </Link>
       ) : onRemove ? (

@@ -102,6 +102,7 @@ const ViewTabs = ({ views, state }: { views: DashboardView[]; state: DashboardSt
         <Link
           key={view}
           href={dashboardHref({ ...withoutFilters(state), stage: null }, { view }, views[0])}
+          scroll={false}
           aria-current={selected ? "page" : undefined}
           className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${focusRing} ${
             selected ? "border-sky-700 bg-sky-700 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -190,6 +191,7 @@ const StageTabs = ({ state, counts, defaultView }: { state: DashboardState; coun
           <Link
             key={tab.stage ?? "open"}
             href={dashboardHref(state, { stage: tab.stage, page: 1 }, defaultView)}
+            scroll={false}
             aria-current={selected ? "true" : undefined}
             className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 text-[13px] font-semibold transition-colors ${focusRing} ${
               selected ? "border-sky-700 bg-sky-50 text-sky-800" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
@@ -228,6 +230,7 @@ const FilterChips = ({ state, owners, teams, defaultView }: { state: DashboardSt
       {dates && <FilterChip label="Event dates" value={dates} removeHref={without({ eventFrom: "", eventTo: "" })} />}
       <Link
         href={dashboardHref(withoutFilters(state), {}, defaultView)}
+        scroll={false}
         className={`inline-flex min-h-7 items-center rounded-md px-2 text-xs font-semibold text-sky-800 underline underline-offset-2 hover:text-sky-900 ${focusRing}`}
       >
         Clear all
@@ -345,7 +348,7 @@ const Pagination = ({ list, state, defaultView }: { list: RfpList; state: Dashbo
         <ul className="flex flex-wrap items-center gap-1.5">
           <li>
             {page > 1 ? (
-              <Link href={dashboardHref(state, { page: page - 1 }, defaultView)} className={linkClass}>
+              <Link href={dashboardHref(state, { page: page - 1 }, defaultView)} scroll={false} className={linkClass}>
                 <ChevronLeft size={14} aria-hidden="true" /> Previous
               </Link>
             ) : (
@@ -359,6 +362,7 @@ const Pagination = ({ list, state, defaultView }: { list: RfpList; state: Dashbo
               <li key={entry} className="hidden sm:block">
                 <Link
                   href={dashboardHref(state, { page: entry }, defaultView)}
+                  scroll={false}
                   aria-label={`Page ${entry}`}
                   aria-current={entry === page ? "page" : undefined}
                   className={entry === page ? `inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-sm font-bold text-white ${focusRing}` : linkClass}
@@ -371,7 +375,7 @@ const Pagination = ({ list, state, defaultView }: { list: RfpList; state: Dashbo
           <li className="px-1 text-sm text-slate-600 sm:sr-only">Page {page} of {totalPages}</li>
           <li>
             {page < totalPages ? (
-              <Link href={dashboardHref(state, { page: page + 1 }, defaultView)} className={linkClass}>
+              <Link href={dashboardHref(state, { page: page + 1 }, defaultView)} scroll={false} className={linkClass}>
                 Next <ChevronRight size={14} aria-hidden="true" />
               </Link>
             ) : (
@@ -406,6 +410,7 @@ const EmptyList = ({ state, defaultView }: { state: DashboardState; defaultView:
       {narrowed && (
         <Link
           href={dashboardHref({ ...withoutFilters(state), stage: null }, {}, defaultView)}
+          scroll={false}
           className={`mt-4 inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 ${focusRing}`}
         >
           Clear filters
@@ -482,7 +487,7 @@ export default function RoleDashboardView(props: RoleDashboardViewProps) {
               <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 <p className="font-semibold">{error}</p>
                 <p className="mt-1">
-                  <Link href={dashboardHref(state, {}, defaultView)} className={`font-semibold underline ${focusRing}`}>Try again</Link>
+                  <Link href={dashboardHref(state, {}, defaultView)} scroll={false} className={`font-semibold underline ${focusRing}`}>Try again</Link>
                   {" or "}
                   <Link href="/dashboard" className={`font-semibold underline ${focusRing}`}>reset the dashboard</Link>.
                 </p>
