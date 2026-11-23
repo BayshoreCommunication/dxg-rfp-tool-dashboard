@@ -73,4 +73,17 @@ describe("SupportFab", () => {
     expect(screen.queryByTestId("support-fab")).not.toBeInTheDocument();
     expect(getSupportUnreadCountAction).not.toHaveBeenCalled();
   });
+
+  // Dragged to the right edge the label used to wrap onto a second line, which
+  // turned the pill into a two-line box: the label and the avatar hold their size.
+  test("the label never wraps, however near an edge it sits", () => {
+    render(<SupportFab />);
+    const fab = screen.getByTestId("support-fab");
+    press(fab, 100, 100);
+    move(fab, 2000, 100);
+    release(fab, 2000, 100);
+    expect(fab.className).toContain("whitespace-nowrap");
+    expect(screen.getByText("Need support?").closest("button")).toBe(fab);
+    expect(fab.querySelector(".support-fab-avatar")?.className).toContain("shrink-0");
+  });
 });
