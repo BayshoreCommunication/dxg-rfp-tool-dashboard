@@ -13,10 +13,20 @@ type Position = { x: number; y: number };
 type StoredPosition = Position & { viewportWidth: number };
 const VIEWPORT_TOLERANCE_PX = 200;
 
-const clamp = (position: Position, width: number, height: number): Position => ({
-  x: Math.min(Math.max(EDGE_PADDING, position.x), Math.max(EDGE_PADDING, window.innerWidth - width - EDGE_PADDING)),
-  y: Math.min(Math.max(EDGE_PADDING, position.y), Math.max(EDGE_PADDING, window.innerHeight - height - EDGE_PADDING)),
+// `window.innerWidth` counts the scrollbar, so clamping against it tucked the fab underneath
+// it; `documentElement.clientWidth/Height` is the space the page actually gets.
+const viewport = () => ({
+  width: document.documentElement.clientWidth,
+  height: document.documentElement.clientHeight,
 });
+
+const clamp = (position: Position, width: number, height: number): Position => {
+  const { width: vw, height: vh } = viewport();
+  return {
+    x: Math.min(Math.max(EDGE_PADDING, position.x), Math.max(EDGE_PADDING, vw - width - EDGE_PADDING)),
+    y: Math.min(Math.max(EDGE_PADDING, position.y), Math.max(EDGE_PADDING, vh - height - EDGE_PADDING)),
+  };
+};
 
 const readStoredPosition = (): Position | null => {
   try {
@@ -26,7 +36,7 @@ const readStoredPosition = (): Position | null => {
     if (typeof parsed.x !== "number" || typeof parsed.y !== "number") return null;
     // A spot chosen on a desktop window means nothing on a phone (and vice
     // versa): fall back to the default corner when the screen is very different.
-    if (typeof parsed.viewportWidth === "number" && Math.abs(parsed.viewportWidth - window.innerWidth) > VIEWPORT_TOLERANCE_PX) {
+    if (typeof parsed.viewportWidth === "number" && Math.abs(parsed.viewportWidth - viewport().width) > VIEWPORT_TOLERANCE_PX) {
       return null;
     }
     return { x: parsed.x, y: parsed.y };
@@ -122,7 +132,7 @@ export default function SupportFab() {
         setPosition((current) => {
           if (current) {
             try {
-              const stored: StoredPosition = { ...current, viewportWidth: window.innerWidth };
+              const stored: StoredPosition = { ...current, viewportWidth: viewport().width };
               window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
             } catch {
               // Remembering the spot is a convenience only.

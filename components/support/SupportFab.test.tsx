@@ -86,4 +86,30 @@ describe("SupportFab", () => {
     expect(screen.getByText("Need support?").closest("button")).toBe(fab);
     expect(fab.querySelector(".support-fab-avatar")?.className).toContain("shrink-0");
   });
+
+  // A classic scrollbar makes window.innerWidth wider than the page the fab may use, and
+  // headless Chromium's overlay scrollbars hide that from the e2e run, so it is pinned here:
+  // the fab clamps against documentElement.clientWidth, not innerWidth, or it slides under it.
+  test("it stays clear of the scrollbar, not just of the window", () => {
+    const pageWidth = 985; // a 1000px window with a 15px scrollbar
+    const realInnerWidth = window.innerWidth;
+    const realClientWidth = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth");
+    Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
+    Object.defineProperty(document.documentElement, "clientWidth", { value: pageWidth, configurable: true });
+    Object.defineProperty(document.documentElement, "clientHeight", { value: 800, configurable: true });
+    try {
+      render(<SupportFab />);
+      const fab = screen.getByTestId("support-fab");
+      press(fab, 100, 100);
+      move(fab, 5000, 100); // shove it as far right as it will go
+      release(fab, 5000, 100);
+      const left = Number.parseFloat(fab.style.left);
+      expect(left + fab.offsetWidth).toBeLessThanOrEqual(pageWidth);
+    } finally {
+      Object.defineProperty(window, "innerWidth", { value: realInnerWidth, configurable: true });
+      delete (document.documentElement as unknown as Record<string, unknown>).clientWidth;
+      delete (document.documentElement as unknown as Record<string, unknown>).clientHeight;
+      if (realClientWidth) Object.defineProperty(Element.prototype, "clientWidth", realClientWidth);
+    }
+  });
 });

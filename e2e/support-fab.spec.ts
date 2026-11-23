@@ -33,6 +33,9 @@ test("the support launcher stays a one-line pill when the window narrows", async
         right: Math.round(box.right),
         avatarWidth: Math.round(avatar.getBoundingClientRect().width),
         viewport: window.innerWidth,
+        // The page's own width: `innerWidth` counts the scrollbar, this does not.
+        pageWidth: document.documentElement.clientWidth,
+        scrollbar: window.innerWidth - document.documentElement.clientWidth,
       };
     });
 
@@ -65,8 +68,9 @@ test("the support launcher stays a one-line pill when the window narrows", async
       expect(Math.abs(now.height - parked.height), `${at}: pill grew taller`).toBeLessThanOrEqual(2);
       expect(Math.abs(now.avatarWidth - parked.avatarWidth), `${at}: avatar squeezed`).toBeLessThanOrEqual(2);
     }
-    // It also keeps its 8px of breathing room instead of sitting flush on the edge.
+    // It also keeps its 8px of breathing room, clear of the scrollbar, not just of the window.
     expect(now.right, `${at}: hangs off the edge`).toBeLessThan(now.viewport);
+    expect(now.right, `${at}: sits under the scrollbar`).toBeLessThanOrEqual(now.pageWidth);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       `${at}: page scrolls sideways`,
