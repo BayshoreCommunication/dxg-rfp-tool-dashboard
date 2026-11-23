@@ -55,15 +55,30 @@ it('lists the templates the member can start from, grouped, and nothing that is 
   expect(dialog.textContent).not.toMatch(RFP_NOUN)
 })
 
-it('creates a proposal from the chosen template and opens it', async () => {
-  mockCreate.mockResolvedValue({ success: true, message: 'OK', data: { proposalId: 'p9', eventName: 'Spring summit', presentationLayout: 'template-one' } })
-  const dialog = await openPicker()
-  fireEvent.click(await within(dialog).findByRole('radio', { name: /Annual kickoff/ }))
-  fireEvent.change(within(dialog).getByLabelText('Event name (optional)'), { target: { value: 'Spring summit' } })
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Create proposal' }))
-  await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/proposals/proposal-edit?proposalId=p9'))
-  expect(mockCreate).toHaveBeenCalledWith('t1', 'Spring summit')
-  expect(toast.success).toHaveBeenCalledWith('Proposal started from Annual kickoff.')
+// Where the new proposal opens follows NEXT_PUBLIC_CONVERSATIONS_ENABLED, which rfpHref reads
+// on every call. Both branches are set here rather than left to whatever the env happens to say.
+describe.each([
+  ['on', 'true', '/proposals/p9/assistant'],
+  ['off', 'false', '/proposals/proposal-edit?proposalId=p9'],
+])('creates a proposal from the chosen template and opens it (conversations %s)', (_name, flag, href) => {
+  const previous = process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED = flag
+  })
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_CONVERSATIONS_ENABLED = previous
+  })
+
+  it(`opens ${href}`, async () => {
+    mockCreate.mockResolvedValue({ success: true, message: 'OK', data: { proposalId: 'p9', eventName: 'Spring summit', presentationLayout: 'template-one' } })
+    const dialog = await openPicker()
+    fireEvent.click(await within(dialog).findByRole('radio', { name: /Annual kickoff/ }))
+    fireEvent.change(within(dialog).getByLabelText('Event name (optional)'), { target: { value: 'Spring summit' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create proposal' }))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith(href))
+    expect(mockCreate).toHaveBeenCalledWith('t1', 'Spring summit')
+    expect(toast.success).toHaveBeenCalledWith('Proposal started from Annual kickoff.')
+  })
 })
 
 it('filters the list as the member types', async () => {
