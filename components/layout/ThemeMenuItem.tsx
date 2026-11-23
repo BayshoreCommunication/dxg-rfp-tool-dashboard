@@ -27,7 +27,11 @@ export default function ThemeMenuItem({ className }: { className: string }) {
       >
         <span
           className={cn(
-            "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+            // `left-0` anchors the knob: a button's UA `text-align: center` otherwise puts the
+            // static position mid-track, pushing the knob 18px right and off the end when on.
+            // `bg-[#ffffff]` keeps it white: globals.css repaints `.dark .bg-white` as #0d1d28,
+            // which made the knob vanish into the blue track in dark mode.
+            "absolute left-0 top-0.5 h-4 w-4 rounded-full bg-[#ffffff] shadow transition-transform",
             dark ? "translate-x-[18px]" : "translate-x-0.5",
           )}
         />

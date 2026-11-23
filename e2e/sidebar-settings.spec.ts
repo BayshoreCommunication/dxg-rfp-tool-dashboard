@@ -93,9 +93,43 @@ test("the account card has notifications, the theme switch and sign out, and the
   const darkMode = menu.getByRole("menuitemcheckbox", { name: "Dark mode" });
   const html = page.locator("html");
   const startedDark = (await darkMode.getAttribute("aria-checked")) === "true";
+
+  // The knob has to read as on/off in both themes. It used to sit 18px right of where
+  // it belonged (a button's UA `text-align: center` moved the static position), so "on"
+  // pushed it clean off the track, and `.dark .bg-white` repainted it #0d1d28, which hid
+  // it against the blue track.
+  const knobLook = () =>
+    darkMode.evaluate((el) => {
+      const track = el.lastElementChild as HTMLElement;
+      const knob = track.firstElementChild as HTMLElement;
+      const t = track.getBoundingClientRect();
+      const k = knob.getBoundingClientRect();
+      return {
+        offset: Math.round(k.left - t.left),
+        trackWidth: Math.round(t.width),
+        knobWidth: Math.round(k.width),
+        knobColor: getComputedStyle(knob).backgroundColor,
+      };
+    });
+  const expectReadableKnob = async (on: boolean, where: string) => {
+    // transition-transform keeps moving the knob after the click: poll until it settles.
+    await expect
+      .poll(async () => {
+        const look = await knobLook();
+        return look.offset > look.trackWidth / 2 - look.knobWidth / 2;
+      }, { message: `${where}: knob never reached the ${on ? "on" : "off"} end` })
+      .toBe(on);
+    const look = await knobLook();
+    expect(look.knobColor, `${where}: knob is not white`).toBe("rgb(255, 255, 255)");
+    expect(look.offset, `${where}: knob starts outside the track`).toBeGreaterThanOrEqual(0);
+    expect(look.offset + look.knobWidth, `${where}: knob runs past the track`).toBeLessThanOrEqual(look.trackWidth);
+  };
+  await expectReadableKnob(startedDark, startedDark ? "dark/on" : "light/off");
+
   await darkMode.click();
   await expect(darkMode).toHaveAttribute("aria-checked", String(!startedDark));
   await expect(html).toHaveClass(startedDark ? /^(?!.*\bdark\b)/ : /\bdark\b/);
+  await expectReadableKnob(!startedDark, startedDark ? "light/off" : "dark/on");
   await page.reload();
   await expect(html).toHaveClass(startedDark ? /^(?!.*\bdark\b)/ : /\bdark\b/);
   await sidebar.getByRole("button", { name: /account menu for/ }).click();
